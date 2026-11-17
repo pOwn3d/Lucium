@@ -199,7 +199,7 @@ export async function smokeSidebar(ctx: SmokeContext, check: (name: string, ok: 
   // ======== nested folders ========
   const subMenu = menuItems({ kind: 'folder', id: newFolder!.id }, browser, store, win, { headers: true })
   const folderLabels = subMenu.map((i) => i.label ?? '——')
-  check('the folder menu offers a sub-folder, the links, a copy, archiving and deletion, in blocks', JSON.stringify(folderLabels) === JSON.stringify(['Créer et copier', 'Nouveau sous-dossier', frenchSpaces('Transformer « Nouveau dossier » en espace'), 'Copier tous les liens', 'Copier tous les liens en Markdown', 'Personnaliser', 'Renommer…', 'Organiser', 'Dupliquer', 'Mettre au début d’Aujourd’hui', 'Mettre en bas de la liste', 'Ne jamais réveiller automatiquement', 'Archiver le dossier', 'Supprimer', 'Supprimer le dossier (garder les onglets)']), folderLabels.join(' | '))
+  check('the folder menu offers a sub-folder, the links, a copy, archiving and deletion, in blocks', JSON.stringify(folderLabels) === JSON.stringify(['Créer et copier', 'Nouveau sous-dossier', frenchSpaces('Transformer « Nouveau dossier » en espace'), 'Copier tous les liens', 'Copier tous les liens en Markdown', 'Personnaliser', 'Changer l’icône…', 'Renommer…', 'Organiser', 'Dupliquer', 'Mettre au début d’Aujourd’hui', 'Mettre en bas de la liste', 'Ne jamais réveiller automatiquement', 'Archiver le dossier', 'Supprimer', 'Supprimer le dossier (garder les onglets)']), folderLabels.join(' | '))
   click(subMenu, 'Nouveau sous-dossier')
   const child = store.get().folders.find((f) => f.parentId === newFolder!.id)
   check('"Nouveau sous-dossier" creates a folder inside it', !!child && child.spaceId === spaceId)

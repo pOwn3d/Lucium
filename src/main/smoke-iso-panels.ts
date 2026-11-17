@@ -527,17 +527,23 @@ async function isoPanelsChecks(ctx: SmokeContext, check: Check, atEnd: (step: ()
   await sleep(500)
   const barBounds = barWin?.getBounds()
   check('little: the window of the first state opens inside the screen', !!barBounds && barBounds.x >= area.x && barBounds.y >= area.y && barBounds.x + barBounds.width <= area.x + area.width && barBounds.y + barBounds.height <= area.y + area.height, JSON.stringify({ barBounds, area }))
+  // A mini window opens in the middle of the work area of the screen (PR #13): the centre of the card is the centre of the work area, to a pixel of rounding.
+  check('little: the window of the first state opens in the middle of the work area', !!barBounds && near(barBounds.x + barBounds.width / 2, area.x + area.width / 2, 2) && near(barBounds.y + barBounds.height / 2, area.y + area.height / 2, 2), JSON.stringify({ barBounds, area }))
   check('little: the window of the first state is not resizable and has no page yet', !!barWin && barWin.isResizable() === false && little.states().find((st) => st.id === barId)?.bar === true && littleWc(barId, 'page') === undefined)
   const barParts = barWc ? await evaluate<{ input: boolean; close: boolean; rows: number }>(barWc, `({ input: !!document.querySelector('.palette-input'), close: !!document.querySelector('.palette-close'), rows: document.querySelectorAll('.results li[role="option"]').length })`) : null
   check('little: the first state shows the field, the close button and a list of answers', !!barParts && barParts.input && barParts.close && barParts.rows > 0, JSON.stringify(barParts))
-  // Typing an address and Return: the window grows to hold the page, its top and right edge stay.
+  // Typing an address and Return: the window grows to hold the page, around its centre (it used to keep its top and right edge: a window opened in the middle of the
+  // screen stays in the middle, and one the user moved stays where they put it).
   if (barWc && barBounds) {
     await typeText(barWc, `${base}/little-a`)
     await press(barWc, 'Return')
     check('little: Return on an address loads the page in the same window and the window leaves its first state', await waitFor(() => little.states().find((st) => st.id === barId)?.bar === false && little.states().find((st) => st.id === barId)?.url === `${base}/little-a`, 8000), JSON.stringify(little.states().find((st) => st.id === barId)))
     await sleep(600)
     const grown = barWin!.getBounds()
-    check('little: it grew toward the left and the bottom: same top, same right edge, larger, and now resizable', grown.width > barBounds.width && grown.height > barBounds.height && near(grown.x + grown.width, barBounds.x + barBounds.width) && near(grown.y, barBounds.y) && barWin!.isResizable(), JSON.stringify({ grown, barBounds }))
+    const centre = (r: { x: number; y: number; width: number; height: number }) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 })
+    // The centre moves by half a pixel at most (the new origin is rounded), and the grown window stays inside the work area: the bar is in its middle, so nothing pushes it.
+    const insideArea = grown.x >= area.x && grown.y >= area.y && grown.x + grown.width <= area.x + area.width && grown.y + grown.height <= area.y + area.height
+    check('little: it grew around its centre: same centre, larger on every side, inside the work area, and now resizable', grown.width > barBounds.width && grown.height > barBounds.height && near(centre(grown).x, centre(barBounds).x, 1) && near(centre(grown).y, centre(barBounds).y, 1) && grown.x < barBounds.x && grown.y < barBounds.y && insideArea && barWin!.isResizable(), JSON.stringify({ grown, barBounds, area }))
     const header = await rectOf(barWc, '.la-header')
     check('little: then the header shows, with the page below it', !!header && header.height > 0, JSON.stringify(header))
     // The shortcuts, with the focus in the page.
