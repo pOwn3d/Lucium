@@ -1,7 +1,7 @@
 import { isSiteAddress } from '@shared/site-search'
 import { isOllamaAddress, listOllamaModels, testOllamaConnection } from '@shared/ollama'
 import { writeFileSync } from 'node:fs'
-import { app, BrowserWindow, clipboard, dialog, ipcMain as electronIpc, net, ShareMenu, type WebContents } from 'electron'
+import { BrowserWindow, clipboard, dialog, ipcMain as electronIpc, net, ShareMenu, type WebContents } from 'electron'
 import {
   Channel,
   type CommandBarMode,
@@ -78,9 +78,10 @@ import { LOCAL_FILES_MAX, localFileUrls } from '@shared/local-documents'
 import { DROPPED_LINKS_MAX, droppedLinkUrls } from '@shared/dropped-links'
 import { isHistoryDay } from '@shared/history-days'
 import { HISTORY_URL_MAX } from '@shared/state-clean'
-import { schemesToRegister } from '@shared/default-browser'
+import type { DefaultBrowserOutcome } from '@shared/default-browser'
+import { isDefaultBrowser, makeDefaultBrowser } from './default-browser'
+import { systemDefaultBrowserPorts } from './default-browser-ports'
 import { tabCloseAction } from '@shared/tab-close'
-import { isBuiltApp } from '../runtime'
 import { settingsPath } from '@shared/settings-path'
 
 const HISTORY_LIMIT_MAX = 500
@@ -88,7 +89,6 @@ const HISTORY_LIMIT_MAX = 500
 const QR_TEXT_MAX = 4096
 /** A multiple selection or drag can hold many tabs, not an unbounded list. */
 const TAB_IDS_MAX = 1000
-const WEB_SCHEMES = ['http', 'https']
 const NAV_COMMANDS = new Set<NavCommand>(['back', 'forward', 'reload', 'stop'])
 const DOWNLOAD_COMMANDS = new Set<DownloadCommand>(['open', 'reveal', 'cancel', 'clear', 'pause', 'resume', 'open-with'])
 const MENU_KINDS = new Set<MenuTarget['kind']>(['tab', 'space', 'folder', 'download', 'split', 'nav', 'favorite', 'workview', 'extensions', 'readable'])
@@ -258,12 +258,8 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
     await loadExtensionFromDialog(browser, store, win)
   })
 
-  ipcMain.handle(Channel.defaultBrowser, (e) => guard(e.sender, Channel.defaultBrowser) && WEB_SCHEMES.every((scheme) => app.isDefaultProtocolClient(scheme)))
-  ipcMain.handle(Channel.setDefaultBrowser, (e) => {
-    // A development copy of Electron never registers (shared/default-browser.ts): the answer is "not done", which the window says.
-    const schemes = schemesToRegister(isBuiltApp())
-    return guard(e.sender, Channel.setDefaultBrowser) && schemes.length > 0 && schemes.map((scheme) => app.setAsDefaultProtocolClient(scheme)).every(Boolean)
-  })
+  ipcMain.handle(Channel.defaultBrowser, async (e) => guard(e.sender, Channel.defaultBrowser) && (await isDefaultBrowser(systemDefaultBrowserPorts())))
+  ipcMain.handle(Channel.setDefaultBrowser, async (e): Promise<DefaultBrowserOutcome> => (guard(e.sender, Channel.setDefaultBrowser) ? makeDefaultBrowser(systemDefaultBrowserPorts()) : 'failed'))
   ipcMain.handle(Channel.appIconIssue, (e) => (guard(e.sender, Channel.appIconIssue) ? appIconIssue() : null))
   ipcMain.handle(Channel.clearProfile, async (e, profileId: unknown) => {
     if (guard(e.sender, Channel.clearProfile) && typeof profileId === 'string') await browser.clearProfile(profileId)

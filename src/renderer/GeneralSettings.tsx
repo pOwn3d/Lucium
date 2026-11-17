@@ -26,13 +26,18 @@ export function DefaultBrowserRow() {
   const [defaultNote, setDefaultNote] = useState('')
   useEffect(() => {
     let live = true
-    void api()
-      .defaultBrowser()
-      .then((value) => live && setIsDefault(value))
-      // The answer stays unknown and the button is not drawn: the log says why.
-      .catch((error: unknown) => console.warn('[settings] whether Lucium is the default browser could not be read:', error))
+    const ask = (): void =>
+      void api()
+        .defaultBrowser()
+        .then((value) => live && setIsDefault(value))
+        // The answer stays unknown and the button is not drawn: the log says why.
+        .catch((error: unknown) => console.warn('[settings] whether Lucium is the default browser could not be read:', error))
+    ask()
+    // Windows leaves the choice to its own Settings: ask again when the user comes back from there.
+    window.addEventListener('focus', ask)
     return () => {
       live = false
+      window.removeEventListener('focus', ask)
     }
   }, [])
 
@@ -40,8 +45,9 @@ export function DefaultBrowserRow() {
     setDefaultNote('')
     void api()
       .setDefaultBrowser()
-      .then((done) => {
-        if (!done) setDefaultNote(t('general-settings.navigateur-par-defaut-echec'))
+      .then((outcome) => {
+        if (outcome === 'failed') setDefaultNote(t('general-settings.navigateur-par-defaut-echec'))
+        else if (outcome === 'system-settings') setDefaultNote(t('general-settings.navigateur-par-defaut-parametres'))
         return api().defaultBrowser().then(setIsDefault)
       })
       .catch((error: unknown) => {

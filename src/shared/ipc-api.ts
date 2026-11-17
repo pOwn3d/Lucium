@@ -22,6 +22,7 @@ import type { BoostShareRequest, ShareReply } from './boost-share'
 import type { ScriptPreviewReply } from './boost'
 import type { WindowSidebarChange } from './window-sidebar'
 import type { AppIconIssue } from './icons'
+import type { DefaultBrowserOutcome } from './default-browser'
 import type { OmniboxRequest } from './omnibox'
 import type { BackupListing, BackupRestoreResult } from './session-backups'
 import type { LockConfig, LockReply, UnlockRequest } from './lock'
@@ -145,8 +146,8 @@ export interface LuciumApi {
   reloadSpaceTabs(): void
   /** Whether Lucium is the system's default web browser. */
   defaultBrowser(): Promise<boolean>
-  /** Asks the system to make Lucium the default web browser; resolves to whether it accepted. */
-  setDefaultBrowser(): Promise<boolean>
+  /** Asks the system to make Lucium the default web browser: `done`, `system-settings` (Windows: Settings was opened, the choice is the user's) or `failed`. */
+  setDefaultBrowser(): Promise<DefaultBrowserOutcome>
   /** Why the Dock does not show the icon chosen in Settings › Icône (its picture is missing from the application); null when it does. */
   appIconIssue(): Promise<AppIconIssue | null>
   /** Erases cookies, storage and cache of a profile and reloads its open tabs. */

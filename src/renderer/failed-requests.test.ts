@@ -86,7 +86,7 @@ describe('« Définir comme navigateur par défaut » of the welcome', () => {
     const container = await shown(createElement(WelcomeSheet), {
       importSources: () => Promise.resolve([]),
       defaultBrowser: () => (asked++ === 0 ? Promise.resolve(false) : refused()),
-      setDefaultBrowser: () => Promise.resolve(),
+      setDefaultBrowser: () => Promise.resolve('done'),
       openOverlay: () => undefined,
       closeOverlay: () => undefined,
       dispatch: () => Promise.resolve()
