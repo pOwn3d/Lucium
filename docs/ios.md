@@ -43,8 +43,11 @@ ios/
   Contracts/             fichiers communs au Mac (TypeScript) et à l'iPhone (Swift) : vecteurs d'adresses, état de référence
   LuciumKit/             paquet Swift : la logique pure (état et fichier d'état, opérations d'onglets, règle du sommeil, adresses, plus tard la synchro) ; testé sur le Mac sans simulateur
   Lucium/                l'application : SwiftUI, WebKit, textes (Localizable.xcstrings), règles du bloqueur
-  LuciumTests/           tests XCTest hébergés dans l'application (simulateur)
+  Lucium/FilterLists/    les listes du bloqueur converties et leur registre : GÉNÉRÉ par scripts/ios-filter-lists.mjs, non versionné (§6.3)
+  LuciumTests/           tests XCTest hébergés dans l'application (simulateur) ; Fixtures/ : la liste d'essai convertie (§6.3, §11)
 scripts/ios-check.sh     paquet + projet + tests sur simulateur sans fenêtre (+ captures sur demande)
+scripts/ios-filter-lists.mjs   prépare les listes du bloqueur : télécharge celles du Mac, les convertit, écrit ios/Lucium/FilterLists/ (§6.3)
+scripts/ios-filter-lists/      le convertisseur (abp-to-webkit.ts), le registre des licences (embedded-lists.ts), la liste d'essai (fixtures/proof.txt) et leurs tests
 src/shared/ios-contract.test.ts   vecteurs d'adresses face au code du Mac ; catalogue de textes ; pas de couleur écrite
 src/main/ios-state-contract.test.ts   écrit ios/Contracts/state-reference.json depuis le code du Mac (le `StateStore` qui écrit state.json)
 ```
@@ -199,17 +202,51 @@ La documentation d'Apple lue ne donne **aucune limite** pour `WKContentRuleList`
 | **150 001** | **refusé** : `WKErrorDomain` code 6 | — | — |
 | 200 000 | refusé : code 6 | — | — |
 
-**Une liste accepte au plus 150 000 règles.** Le plafond est celui, connu, des bloqueurs de Safari. **Non mesuré** : le nombre de listes que `WKUserContentController` accepte ensemble, la mémoire et le coût de chargement de plusieurs listes pleines sur un vrai iPhone (un essai sur un appareil est un critère de fin de la carte « Bloqueur »). Plan : découper en plusieurs listes de moins de 150 000 règles, par catégorie (publicités, traqueurs, bannières de cookies).
+**Une liste accepte au plus 150 000 règles.** Le plafond est celui, connu, des bloqueurs de Safari. Plan retenu : une liste par fichier et par nature de règles (blocage, masquage d'éléments), chacune sous 150 000 règles (§6.3).
 
-### 6.3 Compiler les listes du Mac au format de WebKit
+**Mesuré sur les vraies listes (17 novembre 2026, simulateur iOS 26.5, Mac Apple silicon)** : les 9 listes du Mac donnent **18 fichiers, 158 280 règles** (126 209 de blocage, 32 071 de masquage) ; le plus gros fichier a 56 636 règles (EasyPrivacy, 6,4 Mo de JSON) ; **les 18 fichiers sont acceptés par WebKit, compilés en 11 secondes en tout** (plusieurs à la fois, au premier lancement ; les lancements suivants retrouvent les listes compilées dans le magasin de WebKit). Les 18 sont appliqués ensemble à **une même vue web** par un test contre une vraie page locale : `/adserver.js` et `/vendor/doubleclick.min.js`, deux chemins qu'EasyList nomme au 17 novembre 2026, n'atteignent pas le serveur, un chemin qu'aucune liste ne nomme l'atteint (le test dit, s'il échoue, que ces chemins ont peut-être quitté la liste). **Non mesuré** : la mémoire, l'énergie et le temps de chargement d'une page avec ces 18 listes sur un **vrai iPhone** (aucun appareil n'était disponible : critère de fin de la carte « Bloqueur » **non rempli sur ce point**, à faire à la main avant l'envoi en TestFlight) ; le nombre de listes que `WKUserContentController` accepte au plus (18 passent).
 
-Les listes de `src/shared/filter-lists.ts` (EasyList, EasyPrivacy, uBlock filters, AdGuard…) sont au format Adblock Plus. Il faut les **traduire** à la construction, pas sur l'appareil :
+### 6.3 Compiler les listes du Mac au format de WebKit : fait
 
-- Un script `scripts/ios-filter-lists.mjs`, qui lit les listes avec le moteur déjà présent côté Mac (`@ghostery/adblocker`, dont `parseFilters` donne les filtres réseau et cosmétiques analysés) et écrit un JSON par catégorie dans `ios/Lucium/Resources/`.
-- Correspondances : `||site.com^` → `url-filter` en expression régulière ; `$third-party` → `load-type: third-party` ; `$domain=a.com|~b.com` → `if-domain` / `unless-domain` (pas les deux dans la même règle) ; types de ressource ; exceptions `@@` → `ignore-previous-rules`, **placées après** les règles qu'elles annulent (WebKit exécute dans l'ordre) ; `##sélecteur` → `css-display-none` (par domaine avec `if-domain`).
-- **Ce qui ne passe pas** : les expressions régulières complexes (WebKit n'accepte qu'un sous-ensemble : pas de regard autour ni de références arrière : à lire, non vérifié ici), `$csp`, `$removeparam`, `$redirect`, et les scriptlets `##+js(...)` : ils se traitent à part (§6.4) ou sont écartés, **le script compte et affiche ce qu'il écarte**.
-- Au-delà de 150 000 règles : priorité aux règles les plus fréquentes (la liste est triée par poids), le reste est écarté et compté.
-- Outils existants qui font la même conversion (convertisseurs d'AdGuard ou de Brave) : **non lus ni essayés ici** ; leur licence (GPL / MPL) et leur maintenance sont à vérifier avant d'écrire notre propre convertisseur. Décision de la carte.
+Un convertisseur **écrit pour le projet** (TypeScript pur, sans dépendance ajoutée) traduit chaque liste au format Adblock Plus en règles de WebKit **à la préparation d'une build**, jamais sur l'appareil. **Décision de la carte** sur les convertisseurs existants (ceux d'AdGuard et de Brave : **non lus ni essayés ici**, leur licence non vérifiée) : un convertisseur à nous, parce qu'il garde la chaîne en Node (ni Swift ni Rust à installer pour une contribution), n'ajoute aucune dépendance à `docs/licences-tierces.md`, et compte **chaque filtre écarté et sa raison**, ce qu'on ne peut pas exiger d'un outil qu'on ne maîtrise pas.
+
+```
+node scripts/ios-filter-lists.mjs            télécharge les listes (GET public, rien d'envoyé), convertit, écrit ios/Lucium/FilterLists/
+node scripts/ios-filter-lists.mjs --from DIR lit DIR/<id>.txt : aucun réseau
+node scripts/ios-filter-lists.mjs --fixture  reconvertit la liste d'essai de ios/LuciumTests/Fixtures/ (versionnée)
+```
+
+C'est une étape de préparation d'une build, **sur le Mac du mainteneur** : l'application ne télécharge rien. Rien n'est écrit si une liste échoue (téléchargement coupé, page de portail captif, liste tronquée : la même vérification que sur le Mac, `validateFilterList`) : le dossier précédent reste tel quel. `ios/Lucium/FilterLists/` n'est **pas versionné** (20 Mo de travail d'autres personnes, régénérés depuis leurs adresses) : une copie du dépôt sans ce dossier fonctionne avec la courte liste intégrée, et l'étape d'archive (carte « Archive et TestFlight ») doit **refuser** une build qui ne l'a pas.
+
+**Ce que WebKit accepte : mesuré, pas supposé** (outil de sondage jetable, WebKit du Mac, puis contrôle final sur le simulateur iOS 26.5) : refusés : l'alternation `a|b` (« Disjunctions are not supported »), les répétitions `{n}`, `\d \w \b`, `^` ou `$` au milieu d'une expression, un caractère non ASCII, une expression vide, un sélecteur à extension (`:has-text(`), `if-domain` avec `unless-domain` dans la même règle, un domaine en majuscules ; **une seule règle refusée fait refuser toute la liste**. Acceptés : les groupes `( … )` sans alternation, `[^/]+`, `.*?`, `load-context` (`top-frame`, `child-frame`), les types `fetch`, `websocket`, `ping`, `other`, `popup`, `if-domain` jusqu'à 20 000 entrées (mesuré sur le Mac), `:has()`, `:is()`, `:not()`.
+
+| Filtre (syntaxe des listes) | Règle de WebKit |
+|---|---|
+| `||example.com^` | `url-filter` `^[a-z]+://([^/]+\.)?example\.com[^a-zA-Z0-9_.%-]` : l'hôte et ses sous-domaines, puis un séparateur |
+| `|…`, `…|`, `*`, `^` | `^`, `$`, `.*`, la classe des séparateurs ; chaque caractère d'adresse est écrit tel quel, jamais comme syntaxe |
+| `$third-party`, `$1p`, `$match-case` | `load-type`, `url-filter-is-case-sensitive` |
+| `$script`, `$image`, `$xmlhttprequest`, `$stylesheet`, `$media`, `$font`, `$ping`, `$websocket`, `$other`, `$popup` | `resource-type` (`image` ajoute `svg-document`, `xmlhttprequest` donne `raw` et `fetch`) ; les types niés (`~script`) deviennent tous les autres types |
+| `$subdocument`, `$document` | un type `document` avec `load-context` `child-frame` ou `top-frame` |
+| `$domain=a.com|b.com` ou `~a.com` | `if-domain` ou `unless-domain` (minuscules, ASCII, `*` devant pour les sous-domaines) ; les deux mélangés ne se disent pas : le filtre est écarté |
+| `@@…` | `ignore-previous-rules` |
+| `$important` | un blocage placé **après** les exceptions (elles ne le défont pas) |
+| `@@||site^$document`, `$elemhide`, `$generichide` | `ignore-previous-rules` sur la page du site (`if-domain`) : tout, le masquage seulement, le masquage générique seulement |
+| `##.ad`, `site.com##.ad`, `site.com#@#.ad` | `css-display-none` : les sélecteurs communs groupés par cent ; un par site ; une exception se dit en retirant le sélecteur de la règle du site, ou en ajoutant `unless-domain` à la règle commune |
+| `$badfilter` | le filtre qu'il nomme est retiré |
+
+**L'ordre est le sens** (WebKit applique les règles dans l'ordre : `ignore-previous-rules` n'atteint que celles qui le précèdent) : blocages, exceptions, blocages `$important`, **le bouclier**, puis les blocages qui nomment la page elle-même ou une fenêtre surgissante, puis les pages sans filtrage. Le bouclier est une règle `ignore-previous-rules` sur le document de plus haut niveau : une règle sans type n'atteint pas la page elle-même dans la syntaxe des listes, elle l'atteint dans WebKit, et sans lui taper l'adresse d'un traqueur ne chargerait rien. Les règles de masquage sont dans **un fichier à part**, après toutes les exceptions réseau : une exception `@@||site^` n'arrête pas le masquage de ce site, comme dans la syntaxe des listes.
+
+**Ce que ça donne** (les 9 listes du 17 novembre 2026) : **198 661 filtres lus, 158 280 règles écrites, 22 430 filtres écartés et comptés par raison**, dans le registre. Les plus nombreux : `##+js(…)` (15 123, les scriptlets : carte « YouTube et bannières de cookies », jamais téléchargés ni exécutés ici), les entités `site.*` (1 421), les sélecteurs à extension ou procéduraux (1 114 + 417 filtres HTML), `$redirect` (962 + 472), les sélecteurs qui portent du CSS (764 : `{ height: 1px }` dans un sélecteur est refusé), `$to`, `$removeparam`, `$denyallow`, `$urlskip`, `$csp`, les expressions régulières hors du sous-ensemble (201). Un filtre dont l'option n'a pas d'équivalent est **écarté**, jamais écrit sans elle : une règle écrite sans son option bloquerait plus que la liste ne veut.
+
+**Écarts assumés** (le convertisseur les compte ou les dit, ils sont tous testés) :
+
+- une exception ne vaut **que dans sa liste** (WebKit n'a pas d'exception entre listes), alors que le moteur du Mac fusionne toutes les listes ;
+- `^` en fin de filtre exige un caractère après : un filtre `||site/chemin^` ne reconnaît pas une adresse qui s'arrête exactement là ;
+- un filtre `domain=` qui mêle domaines et exclusions, une entité `site.*`, un sélecteur procédural, un filtre HTML, `$redirect`, `$removeparam`, `$csp`, `$replace`… sont écartés (la liste complète est dans le registre) ;
+- le masquage d'un site suit `if-domain` : le domaine de la **page de plus haut niveau**, non celui d'un cadre ;
+- au-delà de 150 000 règles dans un fichier, le convertisseur coupe la fin des blocages et le **dit** (`over-limit` dans le registre) : aucune des 9 listes n'y est (le plus gros fichier : 56 636).
+
+**Preuve** : `scripts/ios-filter-lists/fixtures/proof.txt` est une liste d'essai dans la syntaxe d'EasyList, convertie en `ios/LuciumTests/Fixtures/` ; `FilterListProofTests` la fait compiler par WebKit et la joue contre de vraies pages d'un serveur local, **un filtre par sonde** (une requête qu'il doit arrêter, une autre qu'il doit laisser passer), avec le témoin sans règle (§11). Un test Vitest garde les fichiers versionnés égaux à ce que le convertisseur écrit.
 
 ### 6.4 YouTube
 
@@ -221,10 +258,10 @@ Sur le Mac, **aucune liste n'est livrée** : elles sont téléchargées (`README
 
 **Décision du chef de projet, 17 novembre 2026 : les listes du bloqueur sont celles du Mac** (EasyList, EasyPrivacy, uBlock filters, `src/shared/filter-lists.ts`), **les licences s'affichent dans l'application**. Les options (a) « écrire les nôtres », (b) « n'embarquer que du permissif » et (c) « télécharger » sont écartées. **Confirmé par le chef de projet le 17 novembre 2026 :** les listes sont **embarquées à la construction, sans téléchargement, et ne sont mises à jour qu'avec l'application** (une nouvelle version sur l'App Store ou TestFlight) ; le tableau des connexions du §7 ne gagne donc aucune ligne.
 
-Ce que la décision demande à l'application (cartes « Bloqueur » et « Licences ») :
+Ce que la décision demande à l'application, **fait par la carte « Bloqueur »** :
 
-- un **écran des licences**, dans la page « À propos » des réglages de l'application : le texte de `LICENSE`, `NOTICE` et de `ADDITIONAL-PERMISSION-APP-STORE.txt`, puis, **pour chaque liste embarquée**, son titre, son auteur, sa licence, l'adresse de sa source et la date de la copie ; les mentions viennent du même registre que celui du Mac (`FILTER_LISTS` : `license`, `licenseUrl`, `author`, `homepage`) ;
-- le script `scripts/ios-filter-lists.mjs` (§6.3) écrit ce registre à côté des règles compilées, pour que l'écran n'ait pas de copie écrite à la main ; un test refuse une liste embarquée sans licence ni source ;
+- un **écran « Licences et crédits »** (`LicensesSheet.swift`, texte seul, en français et en anglais) : le texte de `LICENSE`, `NOTICE` et de `ADDITIONAL-PERMISSION-APP-STORE.txt` (copies mises dans l'application par `project.yml`), puis, **pour chaque liste embarquée**, son titre, son auteur, sa licence, la source, les conditions de la licence, la date de la copie et le nombre de règles retenues ; il s'ouvre par le bouton « Licences » de la feuille des onglets, **en attendant la page « À propos » des réglages** (carte « Vie privée et réglages ») ; les mentions viennent du même registre que celui du Mac (`FILTER_LISTS` : `license`, `licenseUrl`, `author`, `homepage`, lues en français et en anglais) ;
+- le script `scripts/ios-filter-lists.mjs` (§6.3) écrit ce registre (`filter-lists-registry.json`) à côté des règles, pour que l'écran n'ait pas de copie écrite à la main ; **il refuse d'écrire** une liste sans titre, auteur ou licence dans les deux langues, ou sans adresse https de la source, de la licence et de la page d'accueil (test Vitest, vu échouer), et l'application refuse de la même façon un registre qu'elle lit (`FilterListRegistry`) ;
 - les licences et l'attribution sont aussi dans `docs/licences-tierces.md` (déjà le cas pour les trois listes).
 
 **Reste à valider (non bloquant, décision du chef de projet)** : la permission additionnelle de Lucium (§9.3) ne couvre **que le code dont les titulaires l'ont accordée** ; les auteurs des listes ne l'ont pas accordée, et les licences des listes (GPL-3.0 ; CC BY-SA 3.0 au choix pour EasyList) n'ont pas été analysées face aux conditions de l'App Store. Ce n'est pas un avis juridique : une relecture par un juriste couvrirait ce point avec celui de la permission.
@@ -345,6 +382,8 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 | Logique pure (`LuciumKit` : adresses, état, fichier d'état, onglets, règle du sommeil) | Swift Testing, `swift test` | le Mac, sans simulateur | non |
 | Application (modèle, une vue par onglet, sommeil et réveil, restauration, WebKit réel, bloqueur, textes) | XCTest hébergé, `xcodebuild test` | simulateur iOS | **non** (démarré par `simctl`, jamais `Simulator.app`) |
 | Contrat avec le Mac (vecteurs, état de référence) | Vitest (`ios-contract.test.ts`, `ios-state-contract.test.ts`) puis `swift test` | le Mac, avec `pnpm test` | non |
+| Convertisseur et registre des listes (`scripts/ios-filter-lists/`) | Vitest | le Mac, avec `pnpm test` | non |
+| Preuve de blocage (liste d'essai jouée par WebKit sur de vraies pages locales), listes réelles de la build compilées | XCTest hébergé | simulateur iOS | **non** |
 | Appareil réel (gestes, PiP, FairPlay, mémoire, énergie) | à la main | iPhone/iPad | — |
 
 **Commande** : `scripts/ios-check.sh [dossier de captures]` : lance les tests du paquet, génère le projet, **crée un simulateur dédié (`Lucium-iOS-Check`), le démarre en tâche de fond (`xcrun simctl boot`, `bootstatus -b`), lance `xcodebuild test`**, prend au besoin la capture (`xcrun simctl io <id> screenshot`) et **éteint puis supprime le simulateur**. C'est **lourd** (plusieurs minutes, une grande part du processeur, environ 250 processus de simulateur) : à dire avant de le lancer sur une machine utilisée, à lancer avec `nice -n 15`, **un seul à la fois**, à éteindre aussitôt (`xcrun simctl shutdown all`). Il ne démarre jamais `Simulator.app`, ne signe rien, n'envoie rien. Les simulateurs déjà présents sur le Mac du mainteneur ne sont pas touchés.
@@ -390,6 +429,10 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 | La vignette est prise à la sortie de l'écran | appel retiré de `leaveActiveTab` | `testAPictureOfThePageIsKeptWhenATabLeavesTheScreen` (la vignette est lue : le milieu est rouge, comme la page) |
 | Chaque profil a son magasin | identifiant constant | `testEveryAwakeTabHasItsOwnViewAndEachProfileItsOwnDataStore` |
 | Le plafond de vues est tenu | plafond ignoré | `testTabsBeyondTheCapSleepTheLeastRecentlyShownFirst` |
+
+**Mutations du convertisseur et du registre** (carte « Bloqueur », chacune appliquée puis retirée, le test échoue) : alternation acceptée dans une expression ; bouclier retiré ; blocages `$important` avant les exceptions ; séparateur réduit à `/` ; sélecteur procédural gardé ; CSS dans un sélecteur gardé ; domaines mêlés gardés ; option inconnue ignorée au lieu d'écarter le filtre ; exception de masquage ignorée ; `$badfilter` ignoré ; limite de 150 000 non appliquée ; nom d'hôte non vérifié ; alternation d'une expression régulière non découpée ; blocages de fenêtres surgissantes envoyés avec les blocages ; adresse de la licence, auteur ou limite de règles non vérifiés dans le registre ; écriture atomique du script (liste en échec : rien n'est écrit).
+
+**Mutations de la preuve sur simulateur** (la liste d'essai est reconvertie avec la faute, le test de WebKit échoue) : pas de bouclier ; blocages `$important` avant les exceptions ; exceptions de masquage ignorées ; `$generichide` qui arrête tout le masquage ; drapeau `third-party` perdu ; exception de page limitée aux chargements de document ; `domain=` ignoré. **Mutations du code de l'application** : listes d'un ancien exemplaire gardées dans le magasin ; listes recompilées à chaque lancement ; une liste en échec qui emporte les autres ; vues sans les listes ; registre illisible non signalé ; texte de la licence absent de l'application ; seul le masquage rendu au lieu des deux fichiers ; et, dans `LuciumKit` : sources `http` acceptées, schéma inconnu accepté, nom de liste sans l'empreinte du contenu, licence absente acceptée.
 
 Le test du bloqueur contient son propre **témoin** : la même page, sans les règles, charge bien les deux scripts (un test qui passe avec et sans la règle ne protège rien).
 
@@ -483,11 +526,11 @@ Un module `src/main/sync/` (écoute TLS, appairage, fusion), une page de Réglag
 
 ## 14. Vérifié, supposé, à valider
 
-**Vérifié** (essayé dans ce dépôt, simulateur iOS 26.5) : un projet XcodeGen + paquet local se génère et se compile pour le simulateur sans signature ; 25 tests XCTest passent ; un `WKWebView` charge une page d'un serveur local en http (**sans exception d'`App Transport Security`** : l'adresse `127.0.0.1` passe) ; une règle de contenu bloque une requête réelle avant qu'elle n'atteigne le serveur ; deux profils ont deux magasins de données ; les textes français et anglais sont dans la build ; la limite de 150 000 règles par liste ; le simulateur se démarre sans `Simulator.app` ; les 29 vecteurs d'adresses donnent le même résultat côté Mac et côté Swift ; **(noyau navigateur)** un onglet endormi reprend sa page **avec son historique** (`interactionState` rendu à WebKit), un redémarrage ramène les espaces, les onglets et l'historique de l'onglet montré, la vignette d'un onglet qui quitte l'écran est celle de sa page (pas une image vide), un état de version supérieure ou abîmé est mis de côté sans être supprimé ni réécrit, et une écriture qui échoue est dite et n'arrête pas la navigation.
+**Vérifié** (essayé dans ce dépôt, simulateur iOS 26.5) : un projet XcodeGen + paquet local se génère et se compile pour le simulateur sans signature ; 25 tests XCTest passent ; un `WKWebView` charge une page d'un serveur local en http (**sans exception d'`App Transport Security`** : l'adresse `127.0.0.1` passe) ; une règle de contenu bloque une requête réelle avant qu'elle n'atteigne le serveur ; deux profils ont deux magasins de données ; les textes français et anglais sont dans la build ; la limite de 150 000 règles par liste ; le simulateur se démarre sans `Simulator.app` ; les 29 vecteurs d'adresses donnent le même résultat côté Mac et côté Swift ; **(noyau navigateur)** un onglet endormi reprend sa page **avec son historique** (`interactionState` rendu à WebKit), un redémarrage ramène les espaces, les onglets et l'historique de l'onglet montré, la vignette d'un onglet qui quitte l'écran est celle de sa page (pas une image vide), un état de version supérieure ou abîmé est mis de côté sans être supprimé ni réécrit, et une écriture qui échoue est dite et n'arrête pas la navigation ; **les 9 listes du Mac converties (158 280 règles en 18 fichiers) sont acceptées par WebKit et compilées en 11 secondes ; la liste d'essai est jouée par de vraies pages** (§6.3).
 
 **Lu dans la documentation d'Apple** : les directives de l'App Store citées au §9 (sauf 5.1.1, 5.1.2, 5.2 : résumé) ; les pages `WKContentRuleList`, `WKContentRuleListStore`, `WKWebExtension`, l'entitlement `com.apple.developer.web-browser`, `NSLocalNetworkUsageDescription`, `NSBonjourServices`, l'entitlement multicast, l'aide d'App Store Connect (TestFlight, fiche, rôles, confidentialité).
 
-**Supposé ou non lu** : la GPL et l'App Store (§9.3 : permission accordée, texte non relu par un juriste) ; les licences des listes embarquées face aux conditions de l'App Store (§6.5) ; le comportement de `upgradeKnownHostsToHTTPS` ; FairPlay / EME dans un `WKWebView` tiers ; l'AutoFill des mots de passe dans un `WKWebView` tiers ; la clé `CFBundleURLTypes` ; `-allowProvisioningUpdates` ; `ITSAppUsesNonExemptEncryption` et la liste des API « à raison requise » (pages d'Apple illisibles) ; la mémoire de plusieurs listes pleines ; iOS 27.0 (installé, non essayé) ; tout ce qui se joue sur un appareil réel.
+**Supposé ou non lu** : la GPL et l'App Store (§9.3 : permission accordée, texte non relu par un juriste) ; les licences des listes embarquées face aux conditions de l'App Store (§6.5) ; le comportement de `upgradeKnownHostsToHTTPS` ; FairPlay / EME dans un `WKWebView` tiers ; l'AutoFill des mots de passe dans un `WKWebView` tiers ; la clé `CFBundleURLTypes` ; `-allowProvisioningUpdates` ; `ITSAppUsesNonExemptEncryption` et la liste des API « à raison requise » (pages d'Apple illisibles) ; la mémoire, l'énergie et le temps de chargement des 18 fichiers de règles sur un vrai iPhone (le simulateur les compile et les accepte) ; iOS 27.0 (installé, non essayé) ; tout ce qui se joue sur un appareil réel.
 
 ## 15. Décisions du chef de projet (17 novembre 2026)
 
@@ -508,4 +551,4 @@ Les sept questions de décision de l'étude ont reçu leur réponse le 17 novemb
 8. **L'*issue* publique** (modification significative, `GOVERNANCE.md` : 7 jours de commentaire) : **ouverte le 17 novembre 2026, [#42](https://github.com/pOwn3d/Lucium/issues/42), commentaires jusqu'au 24 novembre 2026**. Le chef de projet est le seul mainteneur et décide seul (`GOVERNANCE.md`, « Today there is one maintainer ») : la pull request #28 a été fusionnée **avant** cette période, et l'issue le dit ; toute remarque peut rouvrir la décision (changement des documents ou du code, retour en arrière).
 9. **Compte** : créer l'App ID et la fiche, remplir le formulaire de l'entitlement de navigateur par défaut, héberger la politique de confidentialité, vérifier que le nom « Lucium » est libre (§10.2). C'est le chef de projet, avec son compte Apple Developer.
 
-**Cartes à écrire à la suite** (non créées par cette modification) : écran des licences et registre des listes (§6.5) ; remplacement des symboles du système par les icônes du projet et import de l'icône de l'application ; textes de la fiche en anglais et en français ; création de l'App ID.
+**Cartes à écrire à la suite** (non créées par cette modification) : (l'écran des licences et le registre des listes sont faits : §6.5) ; remplacement des symboles du système par les icônes du projet et import de l'icône de l'application ; textes de la fiche en anglais et en français ; création de l'App ID.

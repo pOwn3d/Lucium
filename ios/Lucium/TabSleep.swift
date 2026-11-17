@@ -18,7 +18,7 @@ extension BrowserModel {
         if let space = state.spaces.first(where: { $0.id == tab.spaceId }) {
             configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: ProfileStore.identifier(for: space.profileId))
         }
-        if let blocker { ContentBlocker.install(blocker, on: configuration) }
+        for list in blockers { ContentBlocker.install(list, on: configuration) }
         configuration.allowsInlineMediaPlayback = true
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.allowsBackForwardNavigationGestures = true

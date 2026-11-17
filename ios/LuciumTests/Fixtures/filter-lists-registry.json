@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "generatedAt": "2026-11-17T12:00:00Z",
+  "lists": [
+    {
+      "id": "proof",
+      "title": {
+        "en": "Lucium proof list",
+        "fr": "Liste d’essai de Lucium"
+      },
+      "category": "ads",
+      "author": {
+        "en": "The Lucium project",
+        "fr": "Le projet Lucium"
+      },
+      "license": {
+        "en": "GPL-3.0-or-later",
+        "fr": "GPL-3.0-or-later"
+      },
+      "licenseUrl": "https://www.gnu.org/licenses/gpl-3.0.html",
+      "homepage": "https://github.com/pOwn3d/Lucium",
+      "sourceUrl": "https://github.com/pOwn3d/Lucium/blob/main/scripts/ios-filter-lists/fixtures/proof.txt",
+      "fetchedAt": "2026-11-17T12:00:00Z",
+      "sourceVersion": "1",
+      "sourceSha256": "0cff46c549bd6a6382cf52859cd5c6a1b3860bf036ccaaf657fdb9a9e37cc6f2",
+      "filters": 25,
+      "dropped": {},
+      "files": [
+        {
+          "name": "proof.network.json",
+          "kind": "network",
+          "rules": 18,
+          "sha256": "6a7a68eb3f2ea966783f59089a3023de217683f4ea24ea7993a1178c609e88c1"
+        },
+        {
+          "name": "proof.cosmetic.json",
+          "kind": "cosmetic",
+          "rules": 8,
+          "sha256": "150bf8f3c221f647c5115f76440ce85f97916b5fe4738aa997e0e02e645a440a"
+        }
+      ]
+    }
+  ]
+}

@@ -10,8 +10,13 @@ Contracts/       files shared with the Mac. Address vectors: src/shared/ios-cont
                  state-reference.json: a state file written by the Mac's own store (src/main/ios-state-contract.test.ts), which LuciumKit reads, writes back and compares
 LuciumKit/       Swift package: pure logic (state format and file, tab operations, sleep rule, address rules). `swift test` runs it on the Mac, with no simulator
 Lucium/          the application (SwiftUI, WebKit, Localizable.xcstrings, blocker rules): one web view per awake tab, sleeping tabs, saved state
-LuciumTests/     XCTest bundle hosted by the application (runs on a simulator)
+Lucium/FilterLists/   the filter lists converted for WebKit, and their registry: generated, not committed (see below)
+LuciumTests/     XCTest bundle hosted by the application (runs on a simulator); Fixtures/ is the converted proof list
 ```
+
+## The filter lists of the blocker
+
+The blocker carries the lists of the Mac (EasyList, EasyPrivacy, uBlock filters…), converted to WebKit's content rules and embedded: nothing is downloaded on the phone, and they change with the application only. They are other people's work and are not committed: `node scripts/ios-filter-lists.mjs` fetches them from their public addresses, converts them (`scripts/ios-filter-lists/`), and writes `Lucium/FilterLists/` with a registry of where each comes from, which the application shows on its licenses screen. Without that folder the application runs with a short built-in list; a build that is handed out needs it. `node scripts/ios-filter-lists.mjs --from DIR` reads `DIR/<id>.txt` instead of fetching. With the folder present, `scripts/ios-check.sh` also compiles every list with WebKit. Details: [docs/ios.md](../docs/ios.md), section 6.3 (in French).
 
 ## Check it
 

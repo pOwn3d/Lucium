@@ -44,7 +44,7 @@ Licence **MPL-2.0** (lue dans le paquet), donc également compatible. Essayé av
 
 ### Listes de filtres
 
-**Aucune liste n'est livrée avec Lucium ni stockée dans le dépôt.** Elles sont téléchargées sur le Mac où Lucium tourne, depuis le site de leurs auteurs, uniquement lorsqu'une option de blocage est activée (par une requête GET, sans donnée envoyée), puis conservées telles quelles dans le dossier de données (`filters/lists/`). Chaque liste garde sa licence ; l'application ne les modifie pas.
+**Aucune liste n'est livrée avec Lucium pour Mac ni stockée dans le dépôt** (l'application iOS fait autrement : voir plus bas). Elles sont téléchargées sur le Mac où Lucium tourne, depuis le site de leurs auteurs, uniquement lorsqu'une option de blocage est activée (par une requête GET, sans donnée envoyée), puis conservées telles quelles dans le dossier de données (`filters/lists/`). Chaque liste garde sa licence ; l'application ne les modifie pas.
 
 | Liste | URL officielle | Licence déclarée | Attribution |
 |---|---|---|---|
@@ -61,10 +61,19 @@ Licence **MPL-2.0** (lue dans le paquet), donc également compatible. Essayé av
 
 Points à connaître :
 
-- Le texte `LICENSE` d'uAssets est la GPL version 3 sans mention « ou ultérieure » : nous le traitons comme **GPL-3.0 seule**. Sans conséquence aujourd'hui, puisque ces listes ne sont pas redistribuées avec l'application. **Si un jour on en embarque une copie** (liste de secours livrée dans le `.app`, jeu de test), l'œuvre combinée devra être traitée comme GPL-3.0 et non « 3 ou ultérieure ».
+- Le texte `LICENSE` d'uAssets est la GPL version 3 sans mention « ou ultérieure » : nous le traitons comme **GPL-3.0 seule**. Sans conséquence pour le Mac, dont l'application ne redistribue pas ces listes. **L'application iOS en embarque une copie convertie** (section suivante) : l'ensemble qu'elle distribue est donc à traiter comme GPL-3.0 et non « 3 ou ultérieure ».
 - L'en-tête de l'EasyList Cookie List annonce CC BY 3.0 alors que l'ensemble du dépôt EasyList est en double licence GPL-3.0-or-later / CC BY-SA 3.0, et la page de licence précise que les fichiers hébergés ailleurs peuvent suivre d'autres conditions. Dans les deux cas l'obligation est la même (créditer les auteurs) et nous ne redistribuons pas la liste.
 - **Fichiers composés (`.min.txt`) et `!#include`.** Le moteur ne suit pas la directive `!#include autre-fichier.txt` : `filters.txt` d'uBlock n'a que 6 078 règles sur les 23 939 de la liste complète, `privacy.txt` et `fanboy-cookiemonster.txt` perdent aussi un fichier. Le catalogue pointe donc vers les versions où les inclusions sont résolues, et une liste qui contient encore un `!#include` est refusée au téléchargement plutôt que chargée incomplète (`validateFilterList`).
 - Les listes d'uBlock contiennent des règles `##+js(...)` (scriptlets) et des redirections vers des ressources neutralisées. Lucium n'embarque **aucune** ressource d'uAssets : avec l'option « Scriptlets et règles étendues du bloqueur », une règle ne fait que **nommer** l'un des douze scriptlets de sa propre bibliothèque (`src/preload/guard-world.ts`) ou l'une de ses ressources de remplacement (`src/shared/redirect-resources.ts`), toutes écrites pour Lucium ; une règle qui nomme autre chose est ignorée (scriptlets) ou traitée comme un blocage simple (redirections). Sans l'option, ces règles sont ignorées.
+
+### Listes de filtres embarquées dans l'application iOS
+
+L'application iPhone et iPad **embarque** neuf des listes du tableau ci-dessus (`EMBEDDED_LIST_IDS` de `scripts/ios-filter-lists/embedded-lists.ts` : EasyList, EasyPrivacy, les six listes uBlock filters et l'EasyList Cookie List ; **AdGuard Français n'est pas embarquée** : la décision du 17 novembre 2026 ne la nomme pas, et sa licence est la moins claire du catalogue), pour que le bloqueur n'ait rien à télécharger (`docs/ios.md`, section 6.5).
+
+- **Ce qui est livré** : le résultat de la conversion de chaque liste en règles de WebKit (`scripts/ios-filter-lists.mjs`), c'est-à-dire **une œuvre dérivée** de la liste, avec la liste d'origine nommée par son adresse. Les fichiers sont produits à la préparation de la build depuis les adresses du tableau ci-dessus, **jamais versionnés** dans le dépôt (`ios/Lucium/FilterLists/`, ignoré) ; le convertisseur, sous GPL-3.0-or-later avec le reste du projet, est dans le dépôt, de sorte que la copie livrée se refait à partir de sa source.
+- **Attribution** : l'application montre, pour chaque liste, son titre, son auteur, sa licence, l'adresse de sa source, celle des conditions de sa licence et la date de la copie (écran « Licences et crédits », lu dans le registre que le script écrit avec les fichiers à partir des mêmes mentions que celles du tableau). **Le script refuse d'écrire** une liste dont la licence, l'auteur ou une adresse manque.
+- **Mises à jour** : avec l'application seulement (une nouvelle version sur l'App Store ou TestFlight), jamais par un téléchargement de l'application. Le tableau des connexions de `docs/ios.md` (section 7) ne gagne donc aucune ligne.
+- **Ce que la permission additionnelle ne couvre pas** : `ADDITIONAL-PERMISSION-APP-STORE.txt` ne vaut que pour le code dont les titulaires l'ont accordée ; **les auteurs de ces listes ne l'ont pas accordée**. Les conditions de l'App Store face à la GPL-3.0 d'uBlock filters et à la double licence d'EasyList (GPL-3.0-or-later ou CC BY-SA 3.0) **n'ont pas été analysées par un juriste** : le chef de projet a décidé le 17 novembre 2026 de faire sans, et le risque est assumé par le mainteneur. Aucune relecture n'est prévue avant l'envoi.
 
 ### Listes de l'utilisateur (fichier ou texte collé)
 

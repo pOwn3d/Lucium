@@ -42,8 +42,15 @@ final class BrowserModel {
     /// Changes when a picture of a tab is stored, so that the list of tabs redraws.
     var thumbnailRevision = 0
 
+    /// The short built-in list, used when this copy carries no embedded list; `embeddedLists` gives the lists the application carries (docs/ios.md,
+    /// "Compiler les listes du Mac"), and `store` is where WebKit keeps what it compiled (tests give their own folder).
     @ObservationIgnored let rules: @MainActor () throws -> String
-    @ObservationIgnored var blocker: WKContentRuleList?
+    @ObservationIgnored let embeddedLists: @MainActor () throws -> EmbeddedLists?
+    @ObservationIgnored let store: WKContentRuleListStore
+    /// The lists applied to every web view: the embedded ones, or the short built-in one when this copy has none.
+    @ObservationIgnored var blockers: [WKContentRuleList] = []
+    /// The embedded lists that did not compile; the others still block.
+    private(set) var listFailures: [EmbeddedLists.Failure] = []
     @ObservationIgnored var stateFile: StateFile?
     @ObservationIgnored let sideStore: TabSideStore?
     @ObservationIgnored let awakeCap: Int
@@ -56,7 +63,9 @@ final class BrowserModel {
     init(state: BrowserState, styles: [String: SpaceStyle] = [:], stateFile: StateFile? = nil, sideStore: TabSideStore? = nil,
          startup: StateLoad = .fresh, awakeCap: Int = SleepPlanner.defaultCap,
          clock: @escaping @MainActor () -> Double = { (Date().timeIntervalSince1970 * 1000).rounded() },
-         rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() }) {
+         rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
+         embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
+         store: WKContentRuleListStore = .default()) {
         self.state = state.consistent() ?? Self.defaultState()
         self.styles = styles
         self.stateFile = stateFile
@@ -65,6 +74,8 @@ final class BrowserModel {
         self.awakeCap = awakeCap
         self.clock = clock
         self.rules = rules
+        self.embeddedLists = embeddedLists
+        self.store = store
         switch startup {
         case .setAside, .held: startupNoticeShown = true
         case .fresh, .loaded: startupNoticeShown = false
@@ -87,14 +98,23 @@ final class BrowserModel {
     /// Compiles the blocker, wakes the tab on screen, and only then says it is ready. Called once, before the first page load.
     func prepare() async {
         guard !isReady else { return }
-        if blocker == nil {
+        if blockers.isEmpty {
             do {
-                blocker = try await ContentBlocker.compile(rules(), identifier: ContentBlocker.builtinIdentifier)
+                if let embedded = try embeddedLists() {
+                    // The first launch compiles every embedded list (a few seconds); later launches find them in WebKit's store.
+                    let outcome = await embedded.compile(in: store)
+                    blockers = outcome.lists
+                    listFailures = outcome.failures
+                    if blockers.isEmpty { throw ContentBlocker.BlockerError.missingResource }
+                } else {
+                    // A copy with no embedded list (a checkout where the build step was not run): the short built-in list stands in.
+                    blockers = [try await ContentBlocker.compile(rules(), identifier: ContentBlocker.builtinIdentifier, in: store)]
+                }
                 blockerFailure = nil
             } catch {
                 // The person can still browse, without the blocker: the failure is kept (`blockerFailure`) and logged with its context.
                 blockerFailure = error
-                print("[blocker] rules \(ContentBlocker.builtinIdentifier) not compiled, pages load unfiltered: \(error)")
+                print("[blocker] rules not compiled, pages load unfiltered: \(error)")
             }
         }
         sideStore?.prune(keeping: state.tabs.map(\.id))
@@ -275,13 +295,15 @@ extension BrowserModel {
 
     /// The model of the running application: the state file of `directory` is read, and what it cannot read is put aside.
     static func launch(directory: URL = supportDirectory(), awakeCap: Int = SleepPlanner.defaultCap,
-                       rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() }) -> BrowserModel {
+                       rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
+                       embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
+                       store: WKContentRuleListStore = .default()) -> BrowserModel {
         var file = StateFile(url: directory.appending(path: StateFile.fileName))
         let load = file.load()
         var state = defaultState()
         if case .loaded(let loaded) = load { state = loaded }
         return BrowserModel(state: state, styles: defaultStyles, stateFile: file,
                             sideStore: TabSideStore(directory: directory.appending(path: TabSideStore.directoryName, directoryHint: .isDirectory)), startup: load,
-                            awakeCap: awakeCap, rules: rules)
+                            awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, store: store)
     }
 }

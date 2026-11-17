@@ -44,6 +44,8 @@ xcrun simctl boot "$udid" 2>/dev/null || true
 xcrun simctl bootstatus "$udid" -b >/dev/null
 
 echo "== xcodebuild test"
+# A folder for the picture of the licences screen, drawn by a test (xcodebuild hands TEST_RUNNER_* variables to the tests).
+[ -n "$shots" ] && { mkdir -p "$shots"; export TEST_RUNNER_LUCIUM_SHOTS="$(cd "$shots" && pwd)"; }
 (cd "$root/ios" && xcodebuild -project Lucium.xcodeproj -scheme Lucium -destination "id=$udid" -configuration Debug \
   CODE_SIGNING_ALLOWED=NO -parallel-testing-enabled NO test)
 
