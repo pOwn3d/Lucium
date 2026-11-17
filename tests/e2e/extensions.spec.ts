@@ -43,7 +43,8 @@ test('extension-data-apis: an extension that asked for the history reads it whil
       id
     )
   await setSettings(running.page, { extensionDataApis: true })
-  await expect.poll(async () => (await call()).ok).toBe(true)
+  // The whole answer is polled, so that a failure says what the extension answered (an error of its own, or nothing), not only that it was not ok.
+  await expect.poll(call).toMatchObject({ ok: true })
   await setSettings(running.page, { extensionDataApis: false })
   const refused = await call()
   expect(refused.ok).toBe(false)

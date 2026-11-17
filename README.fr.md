@@ -283,7 +283,7 @@ Les limites, dites simplement :
 
 ### Y a-t-il une version pour Windows, Linux ou les Mac Intel ?
 
-Non. Lucium n'est écrit, mesuré et lancé que sur macOS avec une puce Apple. Des paquets pour Windows, Linux et les Mac Intel sont configurés dans le dépôt, mais aucun n'a jamais été construit ni lancé, et aucun n'est distribué ([docs/plateformes.md](docs/plateformes.md)). Aucune date n'est promise.
+Non. Lucium n'est écrit, mesuré et lancé que sur macOS avec une puce Apple. Des paquets pour Windows, Linux et les Mac Intel sont configurés dans le dépôt, et aucun n'est distribué. Ceux de Linux (AppImage et deb, x64 et arm64) sont construits et lancés sur les serveurs de GitHub par un jeu de test automatique, mais personne n'a encore utilisé Lucium sur un bureau Linux ; Windows et les Mac Intel n'ont jamais été construits ni lancés ([docs/plateformes.md](docs/plateformes.md)). Aucune date n'est promise.
 
 ### Comment Lucium se met-il à jour ?
 

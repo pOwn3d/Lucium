@@ -70,6 +70,24 @@ export function refusedSwitches(argv: readonly string[], built: boolean = isBuil
 }
 
 /**
+ * The line the launch writes when `refusedSwitches` found something, which ends the launch (main/index.ts). Whoever reads it is rarely the one who wrote
+ * the switch: on Ubuntu 24.04 and later electron-builder's AppRun adds `--no-sandbox` by itself to an AppImage when the machine does not let an
+ * unprivileged process create a user namespace (AppArmor restricts them: `kernel.apparmor_restrict_unprivileged_userns`), and the user typed nothing.
+ * The line then says what that means and what to do, instead of calling it a development switch: Lucium never runs without the sandbox of Chromium.
+ */
+export function refusalMessage(refused: readonly string[], platform: string = process.platform): string {
+  const switches = refused.map((name) => `--${name}`).join(', ')
+  const base = `[launch] refused: this application does not start with ${switches} (development and test switches, accepted only by a run from the sources)`
+  if (platform !== 'linux' || !refused.includes('no-sandbox')) return base
+  return (
+    `${base}. If you did not write --no-sandbox, the launcher added it because the sandbox of the browser engine cannot start on this machine, and Lucium does not run without it. ` +
+    'On Ubuntu 24.04 and later AppArmor restricts the user namespaces the sandbox is made of, and an AppImage cannot carry the profile that allows them: ' +
+    'install the .deb package (it carries the profile), or allow the user namespaces on this machine, for example ' +
+    '`sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (until the next restart).'
+  )
+}
+
+/**
  * Whether the development variables (LUCIUM_EXTENSIONS, LUCIUM_DEBUG_*, LUCIUM_ANNOTATE, LUCIUM_IMPORT_APP_FOLDERS) may change the run. Never in the
  * built application: another process can set them, and LUCIUM_EXTENSIONS would load unpackaged code with the permissions of the profile.
  */

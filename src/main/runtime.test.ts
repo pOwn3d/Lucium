@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const electron = vi.hoisted(() => ({ app: { isPackaged: false } }))
 vi.mock('electron', () => electron)
 
-const { dropDevelopmentEnv, isBuiltApp, isSmokeRun, isTestEnv, mayReadDevelopmentEnv, readDevelopmentEnv, refusedSwitches, REFUSED_SWITCHES } = await import('./runtime')
+const { dropDevelopmentEnv, isBuiltApp, isSmokeRun, isTestEnv, mayReadDevelopmentEnv, readDevelopmentEnv, refusalMessage, refusedSwitches, REFUSED_SWITCHES } = await import('./runtime')
 const { annotateShareEnabled } = await import('@shared/window-share')
 const { readdirSync, readFileSync } = await import('node:fs')
 const { join } = await import('node:path')
@@ -122,6 +122,35 @@ describe('refusedSwitches: what the built application does not start with', () =
     setDefaultApp(true)
     expect(refusedSwitches([EXE, '--remote-debugging-port=0'])).toEqual([])
     delete (process as { defaultApp?: boolean }).defaultApp
+  })
+})
+
+describe('refusalMessage: what the launch says when it refuses a switch', () => {
+  const BASE = '[launch] refused: this application does not start with'
+
+  it('names each switch and keeps the line the launch check of verify:app looks for, on every system', () => {
+    for (const platform of ['darwin', 'win32', 'linux']) {
+      expect(refusalMessage(['smoke', 'remote-debugging-port'], platform)).toBe(`${BASE} --smoke, --remote-debugging-port (development and test switches, accepted only by a run from the sources)`)
+    }
+    // macOS and Windows have no AppRun that adds it: the same line as before, with no advice about Linux.
+    expect(refusalMessage(['no-sandbox'], 'darwin')).toBe(`${BASE} --no-sandbox (development and test switches, accepted only by a run from the sources)`)
+  })
+
+  it('tells a Linux user whose AppImage added --no-sandbox by itself that the sandbox cannot start, and what to do (Ubuntu 24.04, AppArmor)', () => {
+    const message = refusalMessage(['no-sandbox'], 'linux')
+    expect(message.startsWith(`${BASE} --no-sandbox`)).toBe(true)
+    expect(message).toContain('If you did not write --no-sandbox')
+    expect(message).toContain('sandbox of the browser engine')
+    expect(message).toContain('AppArmor')
+    expect(message).toContain('.deb')
+    expect(message).toContain('kernel.apparmor_restrict_unprivileged_userns=0')
+    // It stays one line: the launch writes it with console.error and verify:app reads the first line.
+    expect(message).not.toContain('\n')
+  })
+
+  it('gives that advice for --no-sandbox only: the other refused switches have nothing to do with the sandbox', () => {
+    expect(refusalMessage(['smoke'], 'linux')).not.toContain('AppArmor')
+    expect(refusalMessage(['use-mock-keychain', 'no-sandbox'], 'linux')).toContain('AppArmor')
   })
 })
 

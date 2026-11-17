@@ -240,6 +240,12 @@ async function panelWithExtensions(colorScheme: 'light' | 'dark', folders: Array
   return { overlay, card: overlay.locator('.scc'), row, body: section.locator('.scc-section-body') }
 }
 
+/**
+ * How many windows the application has, counted by the application and not by the pages Playwright lists: a tab is a page too, and whether the new tab is
+ * already listed at the moment it is counted is a matter of timing (the count of pages was one more than before, on the macOS runner and on the Linux one).
+ */
+const browserWindows = (): Promise<number> => running!.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)
+
 /** The tiles of the row (the extensions, « + », the folder) are inside the card, and no two of them share a pixel. */
 async function expectTilesApart(card: Locator, row: Locator): Promise<Box[]> {
   const cardBox = await boxOf(card)
@@ -316,13 +322,13 @@ test('site panel: the last button of the row opens the Extensions page in a tab 
   await expect(page).toBeFocused()
 
   // It opens the page of the extensions (chrome://extensions, served as lucium-ui://extensions/) in a tab of the window, no window of its own, and the panel closes.
-  const windowsBefore = running!.app.windows().length
+  const windowsBefore = await browserWindows()
   await overlay.keyboard.press('Enter')
   await expect
     .poll(() => running!.app.evaluate(({ webContents }) => webContents.getAllWebContents().map((contents) => contents.getURL())), { message: 'the Extensions page in a tab' })
     .toContain('lucium-ui://extensions/')
   expect(running!.app.windows().some((one) => one.url().includes('extensions.html'))).toBe(false)
-  expect(running!.app.windows().length).toBe(windowsBefore)
+  expect(await browserWindows(), 'no window of its own').toBe(windowsBefore)
   await expect.poll(() => overlayShown(running!.app), { message: 'the panel closed' }).toBe(false)
 })
 
@@ -419,7 +425,7 @@ test('site panel: the menu of an extension switches it off and on, removes it af
   await expect(overlay.locator('.scc-ext-done')).toContainText(third.name)
 
   // « Gérer… » opens the page of the extension in a tab of the window (chrome://extensions/?id=…, served as lucium-ui://extensions/?id=…), no window of its own.
-  const windowsBefore = running!.app.windows().length
+  const windowsBefore = await browserWindows()
   await tileOf(second.name).click({ button: 'right' })
   await menu.getByRole('menuitem', { name: MENU_ENTRY.manage }).click()
   const secondId = (await extensionsOf(running!.page)).find((one) => one.name === second.name && one.profileId === 'default')!.id
@@ -427,7 +433,7 @@ test('site panel: the menu of an extension switches it off and on, removes it af
     .poll(() => running!.app.evaluate(({ webContents }) => webContents.getAllWebContents().map((contents) => contents.getURL())), { message: 'the Extensions page in a tab' })
     .toContain(`lucium-ui://extensions/?id=${secondId}&profile=default`)
   expect(running!.app.windows().some((one) => one.url().includes('extensions.html'))).toBe(false)
-  expect(running!.app.windows().length).toBe(windowsBefore)
+  expect(await browserWindows(), 'no window of its own').toBe(windowsBefore)
 })
 
 test('site panel: over a dark page, the menu of an extension, a tile that is off and the question read as they do over a light one', async () => {

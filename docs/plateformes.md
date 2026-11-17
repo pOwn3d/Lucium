@@ -2,19 +2,19 @@
 
 La variante DRM a son propre document : `docs/drm.md`.
 
-**Règle de lecture.** Lucium n'est écrit, mesuré et lancé que sur macOS, Apple silicon. Tout ce qui suit pour Windows et Linux est **préparé sans avoir été exécuté**. Ce qui est *vérifié* l'est par des tests unitaires qui jouent un autre système sur un Mac, par la lecture du code d'`electron-builder` installé et par la validation de la configuration contre son schéma. Ce qui est *supposé* est dit comme tel. Rien n'a été empaqueté, signé ni publié pour Windows ou Linux.
+**Règle de lecture.** Lucium n'est écrit, mesuré et lancé à la main que sur macOS, Apple silicon. Tout ce qui suit pour Windows est **préparé sans avoir été exécuté**. Pour Linux, depuis le 17 novembre 2026, un jeu de test automatique (`linux.yml`, §8) construit les paquets et lance l'application sur un runner Ubuntu 24.04 de GitHub : ce qui y passe est dit « *vérifié en CI* ». Ce qui est *vérifié* l'est par des tests unitaires qui jouent un autre système sur un Mac, par la lecture du code d'`electron-builder` installé, par la validation de la configuration contre son schéma et, pour Linux, par ces exécutions en CI. Ce qui est *supposé* est dit comme tel. **Aucune machine Linux réelle (ni VM de bureau) n'a encore servi** : rien n'a été vu à l'écran par une personne. Rien n'a été signé ni publié pour Windows ou Linux.
 
 ## 1. En une page
 
 | | macOS arm64 | macOS Intel | Windows | Linux |
 |---|---|---|---|---|
-| Code de l'application | testé (tests unitaires, suites moteur) | identique, jamais lancé | relu, couche écrite, **jamais lancé** | relu, couche écrite, **jamais lancé** |
-| Empaquetage | `pnpm package` (dossier `.app`) | `dmg` + `zip` x64 préparés | NSIS x64 préparé | AppImage + deb x64 préparés |
+| Code de l'application | testé (tests unitaires, suites moteur) | identique, jamais lancé | relu, couche écrite, **jamais lancé** | tests unitaires et 183 des 187 tests E2E passent en CI (Ubuntu 24.04, écran virtuel) ; **jamais vu sur un vrai bureau** |
+| Empaquetage | `pnpm package` (dossier `.app`) | `dmg` + `zip` x64 préparés | NSIS x64 préparé | AppImage + deb x64 et arm64 **construits en CI** (non signés, 7 jours) ; le deb s'installe et démarre sur Ubuntu 24.04 |
 | Signature | aucune (ad hoc) ; variante DRM : Developer ID, notarisée | aucune | aucune (SmartScreen avertira) | sans objet |
-| Intégration continue | `ci.yml` (tests unitaires et build non signée, à chaque pull request), `smoke-macos.yml` (chaîne moteur : à la main, sur un tag et chaque semaine), `e2e.yml` (chaque nuit), `build.yml` (à la main et sur un tag) | `build.yml` (à la main et sur un tag, ne peut pas le lancer) | `build.yml` (à la main et sur un tag, expérimental) | `ci.yml` (typage, lint et tests, à chaque envoi et pull request) + `build.yml` (expérimental) |
-| Ce qui manque | signature + notarisation de la build standard | un Mac Intel (ou Rosetta) pour essayer | tout essai sur une vraie machine (installeur `.nsh` et noms de fichiers écrits, jamais exécutés) ; signature (aucun certificat : carte à part) | tout essai ; bac à sable sur Ubuntu 24.04 ; Wayland |
+| Intégration continue | `ci.yml` (tests unitaires et build non signée, à chaque pull request), `smoke-macos.yml` (chaîne moteur : à la main, sur un tag et chaque semaine), `e2e.yml` (chaque nuit), `build.yml` (à la main et sur un tag) | `build.yml` (à la main et sur un tag, ne peut pas le lancer) | `build.yml` (à la main et sur un tag, expérimental) | `ci.yml` (typage, lint et tests, à chaque envoi et pull request) + **`linux.yml`** (paquets x64 et arm64, démarrage du deb et de l'AppImage, E2E sous Xvfb : sur une pull request qui touche le code, chaque nuit, à la main) + `build.yml` (expérimental) |
+| Ce qui manque | signature + notarisation de la build standard | un Mac Intel (ou Rosetta) pour essayer | tout essai sur une vraie machine (installeur `.nsh` et noms de fichiers écrits, jamais exécutés) ; signature (aucun certificat : carte à part) | un essai sur un vrai bureau (VM, carte 388) ; extensions à service worker (§8) ; Wayland ; AppImage sur Ubuntu 24.04 sans réglage (§8) |
 
-Ce document couvre : ce qui est propre à macOS (§2), la couche de plateforme testée (§3), la configuration `electron-builder.yml` (§5), le brouillon `.github/workflows/build.yml` (§5), le cask Homebrew (§7). La couche n'a aucun réglage : elle remplace des appels directs par des appels qui, sur macOS, font la même chose.
+Ce document couvre : ce qui est propre à macOS (§2), la couche de plateforme testée (§3), la configuration `electron-builder.yml` (§5), le brouillon `.github/workflows/build.yml` (§5), le cask Homebrew (§7), le jeu de test Linux en CI et la liste de contrôle d'un premier essai (§8). La couche n'a aucun réglage : elle remplace des appels directs par des appels qui, sur macOS, font la même chose.
 
 ## 2. Ce qui est propre à macOS
 
@@ -122,11 +122,11 @@ Côté interface surtout ; les fonctions pures existent et sont testées.
 
 ## 5. Construction : `electron-builder.yml` et `build.yml`
 
-Configuration ajoutée **sans toucher** à `identity: null`, `extendInfo`, `electronFuses`, `extraResources` ni `asarUnpack`. Elle est **valide contre le schéma** d'`electron-builder` (un témoin négatif, une clé mal écrite, est bien refusé). Elle n'a encore servi à construire ni pour Windows ni pour Linux.
+Configuration ajoutée **sans toucher** à `identity: null`, `extendInfo`, `electronFuses`, `extraResources` ni `asarUnpack`. Elle est **valide contre le schéma** d'`electron-builder` (un témoin négatif, une clé mal écrite, est bien refusé). Elle n'a encore servi à construire pour Windows ; pour Linux, elle sert à chaque exécution du workflow `linux.yml` (§8).
 
 - **Windows** : `nsis`, x64, assistant en plusieurs pages, installation par utilisateur (`perMachine: false`), dossier modifiable. **Non signé, et c'est acceptable pour un premier essai** : aucun certificat n'est configuré (le projet est open source, pas de budget) ; Windows SmartScreen avertira (« Windows a protégé votre ordinateur » : *Informations complémentaires* puis *Exécuter quand même*). La signature (Authenticode) est une carte à part (identité du titulaire et budget à décider) ; `AGENTS.md` §7 la réserve au mainteneur et interdit toute étape de signature dans un workflow. `win.icon` pointe sur `build/icon.ico`.
 - **Registre (`build/installer.nsh`)**, écrit, **jamais exécuté** (le premier essai de compilation sera celui de la CI) : `electron-builder` l'inclut de lui-même et appelle ses macros `customInstall` et `customUnInstall` (lues dans `templates/nsis` d'`app-builder-lib` 26.18). Il écrit, sous la racine de l'installation (`SHELL_CONTEXT` : `HKCU` pour l'installation par utilisateur), l'entrée « Programmes par défaut » de Windows (`Software\Clients\StartMenuInternet\Lucium` avec `Capabilities\URLAssociations` `http` et `https`, `RegisteredApplications`, un ProgID `LuciumURL` dont la commande reçoit l'adresse après `--`) et le schéma `lucium://`, et supprime tout cela à la désinstallation et à la mise à jour. Effet attendu, **supposé** : Lucium apparaît dans *Paramètres › Applications › Applications par défaut* et l'utilisateur peut le choisir pour http et https (Windows 10 et 11 ne laissent aucun programme se mettre par défaut tout seul). Pas d'association de fichiers (`.html`, PDF, images) : l'application lit un lien sur sa ligne de commande, pas un chemin de fichier. Pas de description dans les « Capabilities » : ce serait un texte d'interface dans une seule langue.
-- **Linux** : `AppImage` et `deb`, x64. Catégorie `Network;WebBrowser`, types MIME `x-scheme-handler/http`, `x-scheme-handler/https`, `text/html`, `application/xhtml+xml` (pour que l'environnement de bureau propose Lucium comme navigateur ; `%U` est ajouté par l'outil).
+- **Linux** : `AppImage` et `deb`, x64 (le workflow `linux.yml` construit aussi l'arm64 avec `--arm64`, sans changer ce fichier). Catégorie `Network;WebBrowser`, types MIME `x-scheme-handler/http`, `x-scheme-handler/https`, `text/html`, `application/xhtml+xml` (pour que l'environnement de bureau propose Lucium comme navigateur ; `%U` est ajouté par l'outil).
 - **Champs descriptifs** (`extraMetadata`) : `homepage`, `author` (nom et adresse `contact@lucium.app`, la même que celle des signalements de sécurité, `SECURITY.md`) et `desktopName`. Un `.deb` refuse de se construire sans adresse de mainteneur ni page d'accueil (code d'`electron-builder` lu). **Ces trois champs entrent dans le `package.json` de l'application empaquetée sur tous les systèmes, macOS compris** ; rien ne les lit à l'exécution. À défaire si on préfère les passer en ligne de commande (`-c.extraMetadata…`) pour le seul Linux.
 - **macOS** : voir §6.
 
@@ -163,20 +163,61 @@ Le cask décrit l'image disque que publie le mainteneur (variante DRM, puce Appl
 
 Le dépôt officiel `homebrew/cask` attendra : seuils de notoriété (90 forks, 90 observateurs ou 225 étoiles quand l'auteur propose son propre projet) et ancienneté du dépôt (30 jours) ; détail dans [homebrew.md](homebrew.md#un-tap-à-nous-pas-homebrewcask-pour-linstant). Le cask ne retire jamais la marque de quarantaine : l'image est notarisée, Gatekeeper l'accepte telle quelle. Une archive x64 (§6) demanderait une `url` par processeur.
 
-## 8. Premier essai sur Windows ou Linux : liste de contrôle
+## 8. Linux : le jeu de test en CI, puis la liste de contrôle d'un premier essai (Windows ou Linux)
 
-À faire dans l'ordre, une machine à la fois (ne pas lancer `pnpm test:engine` sur une machine qu'on utilise : de vraies fenêtres s'ouvrent).
+### 8.1 Le jeu de test Linux (`.github/workflows/linux.yml`)
 
-0. Avant tout : installer l'installeur NSIS non signé (artefact de la CI, ou `electron-builder --win nsis --x64` sur la machine) ; SmartScreen avertit, passer par *Informations complémentaires*.
-1. `pnpm install`, `pnpm typecheck`, `pnpm test` : noter les tests qui échouent (chemins `/tmp`, séparateurs, `isAbsolute`) ; ce sont les premières choses à rendre indépendantes du système.
-2. `pnpm build` puis `electron .` : la fenêtre s'ouvre-t-elle, avec une barre de titre système ? Le bandeau de la barre latérale est-il décalé (réserve de 76 px) ? Les vues superposées transparentes (barre flottante, panneaux) restent-elles transparentes ?
-3. `LUCIUM_SMOKE_ONLY=platforms electron . --smoke --user-data-dir=<dossier jetable>` : le fichier `smoke-platforms.ts` est écrit pour les trois systèmes.
-4. Menu : « Lucium » (À propos, Réglages, Quitter) ; raccourcis (Ctrl) ; les 15 raccourcis `Ctrl+Alt+…` avec un clavier AZERTY.
-5. Liens ouverts depuis une autre application (première instance et seconde), navigateur par défaut : *Paramètres › Applications › Applications par défaut* liste-t-il Lucium (entrées de `build/installer.nsh`) ? Après désinstallation, les clés `Software\Clients\StartMenuInternet\Lucium`, `Software\Classes\LuciumURL` et `Software\Classes\lucium` ont-elles disparu (`regedit`, lecture seule) ?
-6. Import depuis les autres navigateurs : les dossiers supposés existent-ils ?
-7. Téléchargement d'un fichier au nom exotique (`CON.txt`, `a:b?.pdf`, un nom de 300 caractères dans un dossier profond : les règles de `file-names.ts`) ; « Afficher dans le dossier » ; corbeille.
-8. Correcteur orthographique : quel trafic réseau au premier champ de texte ?
-9. Empaquetage (`build.yml` avec `package`) puis installation propre ; SmartScreen ; bac à sable de Chromium sous Ubuntu 24.04 (`kernel.apparmor_restrict_unprivileged_userns` : un AppImage ne peut pas porter de profil AppArmor ; ne pas contourner par `--no-sandbox`, à trancher) ; `libfuse2` pour lancer un AppImage.
+Workflow « Linux » : sur une pull request qui touche le code, le paquetage ou les tests (pas sur une pull request qui ne change que de la documentation), chaque nuit à 03 h 30 UTC et à la main. Rien ne s'ouvre sur un poste : un écran virtuel (Xvfb) sur un runner Ubuntu 24.04 de GitHub. Ni signature, ni publication, ni secret ; aucun de ses jobs n'est un contrôle requis de `main`.
+
+| Job | Ce qu'il fait |
+|---|---|
+| `Linux packages (x64)` et `(arm64)` | `electron-builder --linux AppImage deb`, non signé ; contrôle du contenu du deb ; **installe le deb avec `apt` et le lance** (Ubuntu 24.04 : le profil AppArmor est chargé par le script d'installation) ; lance l'AppImage telle que la machine la reçoit, puis une fois les espaces de noms d'utilisateur autorisés. Les paquets sont gardés 7 jours, sous le nom `lucium-linux-<arch>-UNSIGNED-check-build` |
+| `E2E (Linux, xvfb)` | la suite Playwright de `tests/e2e` (187 tests, environ 13 minutes) contre le binaire Linux d'Electron et l'interface construite. Elle ne peut pas viser le paquet : ses fusibles sont fermés (`enableNodeCliInspectArguments: false`) et il refuse `--remote-debugging-port`, par lequel Playwright pilote Electron. Résultats (traces des échecs, `junit.xml`) gardés 14 jours : `e2e-linux-results` |
+
+**Télécharger les paquets** : onglet *Actions* du dépôt › workflow *Linux* › une exécution › *Artifacts* (`lucium-linux-x64-UNSIGNED-check-build`, `lucium-linux-arm64-UNSIGNED-check-build`). Ce sont des paquets de contrôle (non signés, sans la variante DRM) : le nom de chaque fichier le dit, personne ne doit les prendre pour un téléchargement de Lucium. L'arm64 est celui d'une machine virtuelle Linux sur un Mac Apple silicon.
+
+**Le bac à sable de Chromium n'est jamais coupé.** Ubuntu 24.04 restreint les espaces de noms d'utilisateur (`kernel.apparmor_restrict_unprivileged_userns=1`, constaté sur le runner, x64 et arm64), dont le bac à sable est fait. Ce que la CI a constaté :
+
+| Cas | Résultat (vérifié en CI, x64 et arm64) |
+|---|---|
+| Le **deb** installé par `apt` | le script d'installation d'`electron-builder` charge `/etc/apparmor.d/lucium` (profil qui autorise `userns` pour `/opt/Lucium/lucium`) : l'application démarre, une fenêtre s'ouvre, chaque processus de rendu a son filtre seccomp (`Seccomp: 2`), aucun processus n'a `--no-sandbox` |
+| Le binaire d'Electron des tests E2E | aucun profil ne le nomme : `scripts/linux-ci.sh sandbox-profile` charge le même profil pour lui, sans rien relâcher d'autre |
+| L'**AppImage telle quelle** sur Ubuntu 24.04 | **refusée, à dessein.** Le script de lancement de l'AppImage (`AppRun`, d'`electron-builder`) ajoute `--no-sandbox` quand `unshare -Ur true` échoue, et Lucium refuse ce commutateur (`REFUSED_SWITCHES`) : code de sortie 1 et une ligne qui dit pourquoi et quoi faire. Un AppImage ne peut pas porter de profil AppArmor |
+| L'AppImage une fois les espaces de noms autorisés (`sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`) | elle démarre, bac à sable actif, avec `libfuse2t64` installé (Ubuntu 24.04 ne l'a pas par défaut) |
+
+Conséquence à retenir : **sur Ubuntu 24.04 et plus, le deb est la forme qui marche sans réglage ; l'AppImage demande que l'administrateur autorise les espaces de noms d'utilisateur.** Rien n'a été décidé au-delà (pas de `--no-sandbox` par défaut, pas de profil par utilisateur) : choix à confirmer avec la carte 388.
+
+**Défauts trouvés par cette CI et corrigés** (chacun avec son test, vu échouer sans le correctif) :
+
+- **Le deb contenait 68 fichiers inscriptibles par tout le monde** (modes 0666 et 0777), dont l'exécutable `/opt/Lucium/lucium` : l'archive d'Electron les porte et `electron-builder` les copie. `scripts/after-pack.cjs` remet 0755 (dossiers, exécutables) et 0644 (`scripts/linux-modes.cjs`), et le workflow échoue si un fichier du deb est inscriptible par le groupe ou les autres.
+- **La ligne de refus de `--no-sandbox`** disait « commutateurs de développement et de test » à une personne qui n'avait rien tapé (c'est l'`AppRun` qui l'ajoute). Sous Linux elle dit maintenant pourquoi et quoi faire (`refusalMessage`, `src/main/runtime.ts`).
+
+**E2E sous Linux : 183 passent, 1 est sauté, 3 échouent** (dernière exécution mesurée).
+
+| Test | État | Raison |
+|---|---|---|
+| `settings.spec.ts` (comparaison visuelle des Réglages) | sauté hors macOS, la raison est dans le rapport | les images de référence sont celles du runner macOS (`-darwin-ci.png`) ; aucune n'est gardée pour Linux. Elles seraient dessinées et comparées par le workflow Linux comme celles de macOS : non fait |
+| `command-bar.spec.ts` « omnibox-keywords » et `extensions.spec.ts` « extension-data-apis » | **échouent sous Linux seulement** (passent sur le runner macOS) | le service worker d'une extension démarre **sans `chrome.omnibox` ni les autres API que les scripts de `extension-shims.js` définissent** (`Cannot read properties of undefined (reading 'onInputStarted')`, puis « Service worker registration failed. Status code: 15 »), alors que les scripts sont bien enregistrés dans la session (`lucium-shims-sw`, `crx-mv3-preload`, `lucium-patches-sw`). **Cause non trouvée** : à chercher dans la VM avec les outils de développement du worker. Ce sont les deux seuls tests qui s'appuient sur un service worker d'extension : **on ne sait pas encore si les extensions à service worker marchent sous Linux** |
+| `site-panel.spec.ts` « the row of the extensions goes to the line with six of them » | échoue **aussi sur macOS** (non lié à Linux) | le test attend 8 tuiles (6 extensions, « + » et le dossier) ; la rangée en porte 9 depuis que le bouton « Ouvrir la page Extensions » existe. Attente périmée, non corrigée ici (hors du périmètre) |
+
+Ce que la CI a aussi rendu juste : « ⌥⌘-clic » ouvre bien une mini-fenêtre sous Linux avec **Ctrl+Alt**-clic (la touche « nouvel onglet » de Chromium est Ctrl hors macOS ; le test visait `Meta`, la touche Windows). Le test passe avec `ControlOrMeta`. Deux tests de `site-panel.spec.ts` comptaient les pages que Playwright liste (course avec l'apparition de l'onglet, rouges aussi sur macOS) : ils comptent maintenant les fenêtres de l'application.
+
+**Ce que ce jeu de test ne prouve pas (supposé)** : l'aspect (aucune capture regardée par une personne), un vrai bureau (GNOME, KDE, Wayland : Xvfb est X11 sans gestionnaire de fenêtres), la barre de titre du système, le menu et les raccourcis d'un clavier réel (AZERTY), les liens ouverts depuis une autre application et le navigateur par défaut, l'import depuis les autres navigateurs, les téléchargements et « Afficher dans le dossier », le correcteur orthographique, l'accélération graphique (le runner n'a pas de GPU : rendu logiciel), le trousseau (pas de service Secret Service sur le runner : le coffre de mots de passe n'y est pas exercé), l'installation depuis un centre de logiciels, la mise à jour.
+
+### 8.2 Liste de contrôle d'un premier essai (à la main, sur une machine réelle)
+
+À faire dans l'ordre, une machine à la fois (ne pas lancer `pnpm test:engine` sur une machine qu'on utilise : de vraies fenêtres s'ouvrent). Ce qui est déjà couvert par la CI (§8.1) est dit ; le reste attend la machine (carte 388).
+
+0. Avant tout (Windows) : installer l'installeur NSIS non signé (artefact de la CI, ou `electron-builder --win nsis --x64` sur la machine) ; SmartScreen avertit, passer par *Informations complémentaires*.
+1. `pnpm install`, `pnpm typecheck`, `pnpm test` : **vérifié en CI** (`Unit tests (Linux)`, contrôle requis). Les chemins `/tmp`, séparateurs et `isAbsolute` passent.
+2. `pnpm build` puis `electron .` : **partiellement vérifié en CI** (l'application démarre sous Xvfb, 183 tests E2E passent). Reste à regarder : la fenêtre a-t-elle une barre de titre système ? Le bandeau de la barre latérale est-il décalé (réserve de 76 px) ? Les vues superposées transparentes (barre flottante, panneaux) restent-elles transparentes ?
+3. `LUCIUM_SMOKE_ONLY=platforms electron . --smoke --user-data-dir=<dossier jetable>` : **non fait** (la chaîne moteur ne tourne que sur macOS, `smoke-macos.yml`). Le fichier `smoke-platforms.ts` est écrit pour les trois systèmes.
+4. Menu : « Lucium » (À propos, Réglages, Quitter) ; raccourcis (Ctrl) ; les 15 raccourcis `Ctrl+Alt+…` avec un clavier AZERTY. **Supposé** (la CI n'a pas de clavier réel ; `Ctrl+Alt`-clic sur un lien est vérifié).
+5. Liens ouverts depuis une autre application (première instance et seconde), navigateur par défaut. **Non fait** sous Linux. Windows : *Paramètres › Applications › Applications par défaut* liste-t-il Lucium (entrées de `build/installer.nsh`) ? Après désinstallation, les clés `Software\Clients\StartMenuInternet\Lucium`, `Software\Classes\LuciumURL` et `Software\Classes\lucium` ont-elles disparu (`regedit`, lecture seule) ?
+6. Import depuis les autres navigateurs : les dossiers supposés existent-ils ? **Non fait.**
+7. Téléchargement d'un fichier au nom exotique (`CON.txt`, `a:b?.pdf`, un nom de 300 caractères dans un dossier profond : les règles de `file-names.ts`) ; « Afficher dans le dossier » ; corbeille. **Non fait** (les tests de téléchargement passent en CI, pas ces trois points).
+8. Correcteur orthographique : quel trafic réseau au premier champ de texte ? **Non fait.**
+9. Empaquetage puis installation propre (Windows : SmartScreen) : **vérifié en CI** pour le deb (installation par `apt`, profil AppArmor, démarrage) et pour l'AppImage (démarrage, `libfuse2t64`), en x64 et en arm64 ; le comportement du bac à sable sous Ubuntu 24.04 est dans le tableau du §8.1 (pas de `--no-sandbox`). Reste : l'installation à la main sur un bureau, l'intégration au menu des applications, l'association « navigateur par défaut ».
 
 ## 9. Questions ouvertes
 

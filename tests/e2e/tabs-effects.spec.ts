@@ -266,7 +266,8 @@ test.describe('in one window', () => {
       const local = await serveSite({ '/links': linkPage('Liens', url(target)) })
       try {
         const page = await openTab(running, `${local.origin}/links`, 'Liens')
-        await page.page.click('#link', { modifiers: ['Alt', 'Meta'] })
+        // ⌥⌘ on macOS, Alt+Ctrl elsewhere: the key that opens a link in a new tab is Cmd on macOS and Ctrl on Windows and Linux, and `Meta` is the Super key there.
+        await page.page.click('#link', { modifiers: ['Alt', 'ControlOrMeta'] })
         if (on) {
           await expect.poll(littleWindows).toBe(1)
           await waitForWindow(running.app, (address) => address === url(target))

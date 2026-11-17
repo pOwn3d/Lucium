@@ -653,7 +653,9 @@ describe('the launches that must be refused', () => {
       expect(refused, launch.name).toContain(`'${launch.name}'`)
       expect(launch.args[0]?.startsWith(`--${launch.name}`)).toBe(true)
     }
-    expect(readFileSync(here('src/main/index.ts'), 'utf8')).toContain(`console.error(\`${LAUNCH_REFUSED_MARK}: this application does not start with \${refused.map((name) => \`--\${name}\`).join(', ')}`)
+    // The launch writes the line `refusalMessage` makes (runtime.ts), which opens with the mark verify:app looks for and names every refused switch.
+    expect(readFileSync(here('src/main/index.ts'), 'utf8')).toContain('console.error(refusalMessage(refused))')
+    expect(runtime).toContain(`const base = \`${LAUNCH_REFUSED_MARK}: this application does not start with \${switches} (development and test switches, accepted only by a run from the sources)\``)
   })
 
   it('judge a launch on its code, its words, its time and what it left', () => {

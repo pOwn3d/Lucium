@@ -9,9 +9,11 @@
 // 3. Electron's own demonstration application. An engine handed over as a folder (`electronDist`) is copied whole, `default_app.asar`
 //    with it: the application Electron starts when it is given none. Lucium has its own (app.asar) and never loads that one, so it is
 //    taken out before the signature seals it: the package carries no code that is not Lucium's or its engine's.
+// 4. The modes of a Linux package. The Electron archive carries 0666 and 0777; they are put back to 0644 and 0755 (scripts/linux-modes.cjs).
 const { existsSync, mkdirSync, readdirSync, rmSync } = require('node:fs')
 const { dirname, join, resolve } = require('node:path')
 const { noticesDirs, putElectronNotices, shippedNoticeProblems } = require('./notices/shipped-notices.cjs')
+const { normalizeLinuxModes } = require('./linux-modes.cjs')
 
 /** The Electron distribution the build is made on: the one handed to electron-builder (`electronDist`, the castLabs build), else the package's. */
 function engineDist(context) {
@@ -34,6 +36,12 @@ exports.default = async function afterPack(context) {
   if (existsSync(demo)) {
     rmSync(demo)
     console.log('after-pack: default_app.asar, the demonstration application of Electron, taken out of the package')
+  }
+
+  // The modes of a Linux package (scripts/linux-modes.cjs): the Electron archive carries 0666 and 0777, which the package must not.
+  if (context.electronPlatformName === 'linux') {
+    const changed = normalizeLinuxModes(context.appOutDir)
+    console.log(`after-pack: the modes of ${changed} file(s) and folder(s) set to those of a package (nothing writable by group or others)`)
   }
 
   if (context.electronPlatformName !== 'darwin') return

@@ -32,7 +32,7 @@ Be kind and specific. Say what is good. Separate what must change from what is a
 
 ## Running the engine test on a pull request
 
-The required checks of a pull request open no window. The engine chain (`pnpm test:engine`) runs in the workflow **Smoke (macOS)**: every week, on a version tag and on demand. The end-to-end tests run in the workflow **E2E**: every night on `main` and on demand. Neither runs on a pull request. For a change that touches `src/main/`, windows, menus, extensions or an Electron version bump:
+The required checks of a pull request open no window. The engine chain (`pnpm test:engine`) runs in the workflow **Smoke (macOS)**: every week, on a version tag and on demand. The end-to-end tests run in the workflow **E2E**: every night on `main` and on demand. Neither runs on a pull request. The workflow **Linux** (`linux.yml`) is the Linux counterpart: the unsigned AppImage and deb for x64 and arm64, started on an Ubuntu 24.04 runner, and the end-to-end suite under Xvfb. It runs on a pull request that touches the code, every night and on demand, and opens nothing on your machine; read it on a change to the packaging, the sandbox or the platform layer. For a change that touches `src/main/`, windows, menus, extensions or an Electron version bump:
 
 - if the branch is in the main repository (Dependabot's are), run **Smoke (macOS)** from the Actions tab on that branch (*Run workflow*): it runs the chain, the comparison with the reference of the engine and the two suites that run apart; or
 - check the branch out locally and run `pnpm test:engine` when you are not using the machine (it opens windows and takes the focus), then `pnpm compat:compare`, which sets the report of the run against `compat/baseline-electron-<version>.json` and lists what the run lost.
@@ -51,7 +51,7 @@ Do not run code from a fork on a machine that holds secrets without reading it f
 - Your own changes come by pull request too ([GOVERNANCE.md](../../GOVERNANCE.md#the-rules-of-main)): the same required checks, the same squash merge. While there is one maintainer nobody else approves them: read your own diff as you would read someone else's before merging.
 - **Your own commits carry your sign-off, and only yours.** Git has no `commit.signoff` setting (only `format.signOff`, for patches): use `git commit -s`, or a `prepare-commit-msg` hook that adds your `Signed-off-by` with `git interpret-trailers`. A contributor signs their own commits; you never write the line for them, and the squash keeps theirs (above).
 - **The first export to the public repository is one commit, signed by the maintainer in their own name**: they are its author and the one who submits it.
-- The scheduled runs (the end-to-end tests every night, the engine chain every week) are not required checks, so nothing stops a merge when one is red: read them, and a release starts by reading them ([release-process.md](release-process.md)).
+- The scheduled runs (the end-to-end tests and the Linux suite every night, the engine chain every week) are not required checks, so nothing stops a merge when one is red: read them, and a release starts by reading them ([release-process.md](release-process.md)).
 
 ## Issues and labels
 
