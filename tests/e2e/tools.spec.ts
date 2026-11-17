@@ -385,14 +385,15 @@ test('auto-scroll: a middle click on the page and the pointer below it scroll th
 test('warn-close-window: closing a window of several tabs waits for the question while on; off, the window closes', async () => {
   await openTab(running, url('/a'), 'Page A')
   await openTab(running, url('/b'), 'Page B')
-  const windows = () => running.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((window) => window.webContents.getURL().endsWith('/index.html')).length)
+  // A window that is being closed is still in the list for a moment and its web contents is already destroyed (the call then throws): it is not counted.
+  const windows = () => running.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed() && !window.webContents.isDestroyed() && window.webContents.getURL().endsWith('/index.html')).length)
   /** Opens a second window (⌘N: it lists the same tabs) and closes it as its red button does. */
   const closeSecond = async (): Promise<void> => {
     const before = await windows()
     await chooseMenuEntry(running.app, 'CmdOrCtrl+N')
     await expect.poll(windows).toBe(before + 1)
     await running.app.evaluate(({ BrowserWindow }) => {
-      const mains = BrowserWindow.getAllWindows().filter((window) => window.webContents.getURL().endsWith('/index.html')).sort((x, y) => x.id - y.id)
+      const mains = BrowserWindow.getAllWindows().filter((window) => !window.isDestroyed() && !window.webContents.isDestroyed() && window.webContents.getURL().endsWith('/index.html')).sort((x, y) => x.id - y.id)
       mains.at(-1)?.close()
     })
   }
