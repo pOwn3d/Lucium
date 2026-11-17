@@ -161,7 +161,10 @@ export async function smokeSleep({ browser, store, win }: SmokeContext, check: C
     const b = await open(`${base}/sl-b`)
     check('the page of a background tab is alive before the sweep', live(a) && live(b) && runtimeOf(a)?.awake === true, JSON.stringify({ a: [live(a), runtimeOf(a)], b: [live(b), runtimeOf(b)] }))
     const blocker = await why(a)
-    const slept = await sweep()
+    let slept = await sweep()
+    // A sweep that the application started a moment ago may still be under way: the call above joins it (sleepSweep), and it judged the tabs as they were before
+    // this tab was idle. Seen twice on a runner: the blocker was null, and the sweep returned nothing. One more sweep, once that one is over, says what the delay does.
+    if (blocker === null && !slept.includes(a)) slept = [...slept, ...(await sweep())]
     check('the sweep puts the idle background tab to sleep and returns it', blocker === null && slept.includes(a) && !live(a), JSON.stringify({ blocker, slept }))
     check('and leaves the selected tab awake', live(b) && !slept.includes(b))
     check('the sidebar shows the sleeping tab as asleep', runtimeOf(a)?.awake === false)
