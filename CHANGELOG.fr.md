@@ -9,6 +9,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 - **Liens déposés sur une fenêtre** : un lien glissé d’une autre application (un message, un document, un terminal) sur une fenêtre de Lucium s’ouvre dans un nouvel onglet, dans l’espace affiché. Seules les adresses http et https sans nom ni mot de passe s’ouvrent, dix au plus ; une notification dit combien ont été laissées de côté.
 - **Ouvrir avec** : « Ouvrir avec » du Finder propose Lucium pour les documents PDF et les images (PNG, JPEG, GIF, WebP, SVG), jamais comme application par défaut.
 
+### Corrections
+
+- **Icônes de site** : un fichier d’icône piégé, un kilooctet de commentaires à la suite, pouvait figer Lucium : la vérification qui distingue une icône vectorielle d’une page d’erreur prenait un temps exponentiel. Elle lit maintenant le début du fichier en temps linéaire.
+
 ## [1.1.2] - 2026-11-17
 
 La connexion sur accounts.google.com et accounts.youtube.com ne reste plus sur une page blanche après une redirection, comme elle le pouvait dans la 1.1.1.

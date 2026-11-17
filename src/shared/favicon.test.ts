@@ -357,6 +357,22 @@ describe('what an answer must be to be kept as an icon', () => {
     expect(sniffImage(Uint8Array.from([0, 0, 1, 0, 0, 0, 0, 0]))).toBeNull()
   })
 
+  it('reads the root of a vector picture in linear time, however many comments come before it', () => {
+    // The bytes come from the site. A run of `--><!--` was the worst case of the old pattern: the lazy comment split it in 2^n ways before it
+    // settled that no <svg> follows (several seconds for these thirty, and for the 145 that fit in the kilobyte read, far longer than anyone waits).
+    const run = '<!--' + '--><!--'.repeat(30)
+    const started = performance.now()
+    expect(sniffImage(bytes(run))).toBeNull()
+    expect(performance.now() - started).toBeLessThan(250)
+    // The same run closed and followed by a root is a picture, and so are the comments one after the other.
+    expect(sniffImage(bytes(run + '--><svg></svg>'))).toBe('svg')
+    expect(sniffImage(bytes('<!-- a --><!-- b -->\n<svg></svg>'))).toBe('svg')
+    // Text between the pieces of the prolog is not a prolog (the old pattern let a comment swallow it).
+    expect(sniffImage(bytes('<!-- a --> text <!-- b --><svg></svg>'))).toBeNull()
+    // A comment never closed ends the prolog: no root after it.
+    expect(sniffImage(bytes('<!-- never closed <svg></svg>'))).toBeNull()
+  })
+
   it('accepts a picture sent as an image, or as binary data, and refuses everything the page itself should have been', () => {
     expect(acceptIcon('image/png', PNG)).toBe(true)
     expect(acceptIcon('image/x-icon', ICON)).toBe(true)
