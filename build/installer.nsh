@@ -11,9 +11,9 @@
 ; below are written under whichever root the installer was started for, never under both.
 ;
 ; Not done, on purpose: associations for .html/.pdf/images (the application reads a link given on its command line, not a file path: opening a local
-; file from Explorer is not written), and anything about the native messaging hosts of extensions (Lucium reads only the manifests of its own folder
-; on Windows, not a registry key: see nativeHostDirs in src/shared/native-messaging.ts). The uninstaller still deletes the key a registry-based lookup
-; would use, so that nothing is left behind the day it is written.
+; file from Explorer is not written), and anything about the native messaging hosts of extensions (Lucium reads Chrome's keys, written by the installers of
+; the hosts, when the user allows them, never one of its own: see nativeHostRegistryKeys in src/shared/native-messaging.ts). The uninstaller still deletes
+; Software\Lucium\NativeMessagingHosts, a key nothing reads or writes today, so that nothing is left behind the day something does.
 
 !define LUCIUM_CLIENT_KEY "Software\Clients\StartMenuInternet\${PRODUCT_NAME}"
 !define LUCIUM_URL_PROGID "LuciumURL"
@@ -58,7 +58,7 @@
   DeleteRegKey SHELL_CONTEXT "${LUCIUM_CLIENT_KEY}"
   DeleteRegKey SHELL_CONTEXT "Software\Classes\${LUCIUM_URL_PROGID}"
   DeleteRegKey SHELL_CONTEXT "Software\Classes\lucium"
-  ; The key a registry-based lookup of native messaging hosts would use (Software\Lucium\NativeMessagingHosts\<host>): not read today, deleted so
-  ; that the day it is, an uninstall leaves nothing.
+  ; A key of Lucium's own for native messaging hosts (Software\Lucium\NativeMessagingHosts\<host>): not read today (only Chrome's keys are, under a
+  ; setting), deleted so that the day it is, an uninstall leaves nothing.
   DeleteRegKey SHELL_CONTEXT "Software\${PRODUCT_NAME}\NativeMessagingHosts"
 !macroend

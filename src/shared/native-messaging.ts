@@ -162,8 +162,62 @@ export function hostEnvironment(env: Readonly<Record<string, string | undefined>
 export function nativeHostDirs(userData: string, home: string, includeChrome: boolean, platform: PlatformId = 'darwin'): string[] {
   const own = `${userData}/NativeMessagingHosts`
   if (!includeChrome) return [own]
-  // Chrome on Windows finds a host through a registry key, not a folder: there is nothing to read here (docs/plateformes.md).
+  // Chrome on Windows finds a host through a registry key, not a folder: those keys are `nativeHostRegistryKeys`, read by main/shell/native-messaging-registry.ts.
   if (platform === 'win32') return [own]
   if (platform === 'linux') return [own, `${home}/.config/google-chrome/NativeMessagingHosts`, '/etc/opt/chrome/native-messaging-hosts']
   return [own, `${home}/Library/Application Support/Google/Chrome/NativeMessagingHosts`, '/Library/Google/Chrome/NativeMessagingHosts']
+}
+
+/** One place of the Windows registry where Chrome looks for a host: a root, the view of it (32 or 64 bit programs), and the key. */
+export interface HostRegistryKey {
+  hive: 'HKCU' | 'HKLM'
+  view: 32 | 64
+  key: string
+}
+
+/**
+ * Where Chrome registers a native messaging host on Windows: `Software\Google\Chrome\NativeMessagingHosts\<name>`, whose default value is the full path of
+ * the manifest (developer.chrome.com, "Native messaging host location"). Chrome asks the 32-bit view first and then the 64-bit one; the user's root comes
+ * before the machine's, as the folders of the other systems do. Like those folders, they are Chrome's, not Lucium's: nothing is listed unless the user
+ * asked for them (`includeChrome`), and nothing off Windows, where the manifests are in folders (`nativeHostDirs`).
+ */
+export function nativeHostRegistryKeys(hostName: string, includeChrome: boolean, platform: PlatformId = 'darwin'): HostRegistryKey[] {
+  // The name goes into a command line: only a valid one is ever written there, whoever calls.
+  if (!includeChrome || platform !== 'win32' || !isValidHostName(hostName)) return []
+  const key = `Software\\Google\\Chrome\\NativeMessagingHosts\\${hostName}`
+  return [
+    { hive: 'HKCU', view: 32, key },
+    { hive: 'HKCU', view: 64, key },
+    { hive: 'HKLM', view: 32, key },
+    { hive: 'HKLM', view: 64, key }
+  ]
+}
+
+/**
+ * The default value of the key at the top of a `reg export` file (a `.reg` file, read as text), or null when there is none or it is not a plain string.
+ * What the sub-keys hold (the export goes down the tree) and the values that are not the default one are not read. A value is written between quotes with
+ * `\\` and `\"` escaped; a value of another type (`@=hex(2):…`, `@=dword:…`) has no quotes and is ignored.
+ */
+export function parseRegistryExport(text: string): string | null {
+  let inFirstKey = false
+  for (const line of text.split(/\r?\n/)) {
+    if (line.startsWith('[')) {
+      if (inFirstKey) return null
+      inFirstKey = true
+      continue
+    }
+    if (!inFirstKey) continue
+    const match = /^@="((?:[^"\\]|\\.)*)"\s*$/.exec(line)
+    if (match) return match[1]!.replace(/\\(["\\])/g, '$1')
+  }
+  return null
+}
+
+/**
+ * Whether a path named by the registry is one Lucium reads a manifest from: a drive letter and a path (`C:\…`). A network path (`\\server\share`) would make
+ * the machine sign in to another one to read a file, and `\\?\` and `\\.\` name devices; any program of the user can write the registry, and none of them is a
+ * place where a manifest is.
+ */
+export function isRegistryManifestPath(path: string): boolean {
+  return /^[A-Za-z]:[\\/][^\0]+$/.test(path)
 }

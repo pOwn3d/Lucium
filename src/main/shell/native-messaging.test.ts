@@ -203,6 +203,93 @@ describe('NativeHosts.connect', () => {
     expect(spawned).toEqual([])
   })
 
+  describe('with the registry of Windows (the manifests that Chrome\'s keys name)', () => {
+    const throughRegistry = (files: () => AsyncIterable<string>) =>
+      new NativeHosts({ dirs: () => [dir], registryManifests: files, spawn: ((path: string, args: string[]) => {
+          spawned.push({ path, args })
+          return new FakeChild()
+        }) as never, deliver: (_ext, portId, event) => events.push({ portId, event }), platform: SYSTEM })
+    async function* named(...files: string[]): AsyncGenerator<string> {
+      yield* files
+    }
+
+    it('starts the host a registry key names when no folder has it', async () => {
+      const elsewhere = join(root, 'registered.json')
+      writeFileSync(elsewhere, manifest('com.example.host'))
+      const viaRegistry = throughRegistry(() => named(elsewhere))
+      viaRegistry.connect(EXT, 'com.example.host', 'p1')
+      await settle()
+      expect(spawned).toEqual([{ path: binary, args: [`chrome-extension://${EXT}/`] }])
+      viaRegistry.closeAll()
+    })
+
+    it('prefers the manifest of its own folder, and does not ask the registry at all then', async () => {
+      writeFileSync(join(dir, 'com.example.host.json'), manifest('com.example.host'))
+      const ask = vi.fn(() => named(join(root, 'registered.json')))
+      const viaRegistry = throughRegistry(ask)
+      viaRegistry.connect(EXT, 'com.example.host', 'p1')
+      await settle()
+      expect(spawned).toHaveLength(1)
+      expect(ask).not.toHaveBeenCalled()
+      viaRegistry.closeAll()
+    })
+
+    it('goes on to the next key when a key names a manifest that is gone, and stops at the first manifest that is there', async () => {
+      const first = join(root, 'first.json')
+      const second = join(root, 'second.json')
+      writeFileSync(first, manifest('com.example.host', ['chrome-extension://zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz/']))
+      writeFileSync(second, manifest('com.example.host'))
+      const viaRegistry = throughRegistry(() => named(join(root, 'gone.json'), first, second))
+      viaRegistry.connect(EXT, 'com.example.host', 'p1')
+      await settle()
+      // The first manifest that exists decides, as it does between folders: this extension is not allowed by it, the next is not tried.
+      expect(lastEvent()).toEqual({ type: 'disconnect', error: NATIVE_ERRORS.forbidden })
+      expect(spawned).toEqual([])
+    })
+
+    it('reports a host that no key names as not found', async () => {
+      const viaRegistry = throughRegistry(() => named())
+      viaRegistry.connect(EXT, 'com.example.missing', 'p1')
+      await settle()
+      expect(lastEvent()).toEqual({ type: 'disconnect', error: NATIVE_ERRORS.notFound })
+      expect(spawned).toEqual([])
+    })
+
+    it('reports a registry that cannot be read as a failure to start, and says why in the journal', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      try {
+        const viaRegistry = throughRegistry(async function* () {
+          throw new Error('reg.exe did not answer')
+        })
+        viaRegistry.connect(EXT, 'com.example.host', 'p1')
+        await settle()
+        expect(lastEvent()).toEqual({ type: 'disconnect', error: NATIVE_ERRORS.startFailed })
+        expect(spawned).toEqual([])
+        expect(warn).toHaveBeenCalledWith(expect.stringContaining('com.example.host'), 'reg.exe did not answer')
+      } finally {
+        warn.mockRestore()
+      }
+    })
+
+    it('does not read a file that is not a manifest, a folder or one far too large, whatever a key says', async () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      try {
+        const big = join(root, 'big.json')
+        writeFileSync(big, `{"name":"com.example.host","pad":"${'x'.repeat(100 * 1024)}"}`)
+        for (const odd of [root, big]) {
+          const viaRegistry = throughRegistry(() => named(odd))
+          viaRegistry.connect(EXT, 'com.example.host', `p-${odd}`)
+          await settle()
+          expect(lastEvent()).toEqual({ type: 'disconnect', error: NATIVE_ERRORS.startFailed })
+        }
+        expect(spawned).toEqual([])
+        expect(warn).toHaveBeenCalledTimes(2)
+      } finally {
+        warn.mockRestore()
+      }
+    })
+  })
+
   it('refuses an extension that the manifest does not allow, without starting the host', async () => {
     writeFileSync(join(dir, 'com.example.host.json'), manifest('com.example.host', ['chrome-extension://zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz/']))
     hosts.connect(EXT, 'com.example.host', 'p1')

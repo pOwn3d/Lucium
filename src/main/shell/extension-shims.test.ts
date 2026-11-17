@@ -10,7 +10,14 @@ vi.mock('electron', () => ({
   BrowserWindow: { getFocusedWindow: () => focus.window }
 }))
 
+// The real lookup of the registry, watched: what it is asked for, and under which switch, is what these tests read.
+vi.mock('./native-messaging-registry', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('./native-messaging-registry')>()
+  return { ...actual, registeredManifests: vi.fn(actual.registeredManifests) }
+})
+
 const { ExtensionShims } = await import('./extension-shims')
+const { registeredManifests } = await import('./native-messaging-registry')
 
 const EXT = 'abcdefghijklmnopabcdefghijklmnop'
 const OTHER = 'ponmlkjihgfedcbaponmlkjihgfedcba'
@@ -206,6 +213,19 @@ describe('native ports and the context that opened them', () => {
   beforeEach(() => vi.useRealTimers())
 
   const connect = (r: Rig, portId: string, over: Partial<{ extensionId: string; profileId: string; context: string }> = {}) => call(r, 'nativeMessaging', 'connect', ['com.example.host', portId], over)
+
+  it('looks in the registry for the hosts of Chrome only when the user allowed them (the switch of their folders)', async () => {
+    const r = rig()
+    vi.mocked(registeredManifests).mockClear()
+    await connect(r, 'p1')
+    await vi.waitFor(() => expect(registeredManifests).toHaveBeenCalledTimes(1))
+    expect(vi.mocked(registeredManifests).mock.calls[0]![1]).toBe(false)
+    r.setState({ settings: { chromeNativeHosts: true } })
+    await connect(r, 'p2')
+    await vi.waitFor(() => expect(registeredManifests).toHaveBeenCalledTimes(2))
+    expect(vi.mocked(registeredManifests).mock.calls[1]![1]).toBe(true)
+    expect(vi.mocked(registeredManifests).mock.calls[1]![0]).toBe('com.example.host')
+  })
 
   it('closes the ports of a page or worker that is gone, and lets the worker they held go', async () => {
     const r = rig()

@@ -1,9 +1,10 @@
 import { spawn as nodeSpawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { readFile, realpath, stat } from 'node:fs/promises'
+import { realpath, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { checkHostManifest, encodeFrame, FrameDecoder, hostEnvironment, isValidHostName, NATIVE_ERRORS } from '@shared/native-messaging'
 import type { PlatformId } from '@shared/platform'
+import { readBoundedText } from './bounded-file'
 
 /** What happens on a port, for the context that opened it. */
 export type PortEvent = { type: 'message'; message: unknown } | { type: 'disconnect'; error: string | null }
@@ -14,6 +15,11 @@ export interface NativeHostsOptions {
    * browsers registered for themselves are not started unless the user copies their manifest here.
    */
   dirs: () => string[]
+  /**
+   * Windows: the manifests the registry names for a host (Chrome's keys), asked for only when no folder has the manifest. Empty when there is nothing to
+   * look for there; it throws when the registry cannot be read, and the port ends as a host that did not start.
+   */
+  registryManifests?: (hostName: string) => AsyncIterable<string>
   deliver: (extensionId: string, portId: string, event: PortEvent) => void
   spawn?: typeof nodeSpawn
   /** The system whose rules read a manifest (the form of an absolute path). macOS when not given. */
@@ -27,6 +33,8 @@ const MAX_PORTS_PER_EXTENSION = 16
 /** A host that does not leave when its pipe closes is stopped after this, and killed for good if it ignores that too. */
 const KILL_AFTER_MS = 2000
 const KILL_FOR_GOOD_AFTER_MS = 2000
+/** A host manifest is a few lines of JSON; a file larger than this is not one. */
+const MAX_MANIFEST_BYTES = 64 * 1024
 /** What a port holds for a host that is not running yet: a page that posts in a loop must not fill the memory while the host starts. */
 const MAX_QUEUED_MESSAGES = 256
 const MAX_QUEUED_BYTES = 16 * 1024 * 1024
@@ -137,30 +145,47 @@ export class NativeHosts {
   private async resolveHost(extensionId: string, hostName: string): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
     if (!isValidHostName(hostName)) return { ok: false, error: NATIVE_ERRORS.invalidName }
     for (const dir of this.options.dirs()) {
-      let text: string
+      const found = await this.fromManifest(join(dir, `${hostName}.json`), extensionId, hostName)
+      if (found) return found
+    }
+    // Last, the registry keys of Chrome (Windows): a manifest of Lucium's own folder is the user's choice and wins over what an installer wrote there.
+    if (this.options.registryManifests) {
       try {
-        text = await readFile(join(dir, `${hostName}.json`), 'utf8')
+        for await (const file of this.options.registryManifests(hostName)) {
+          const found = await this.fromManifest(file, extensionId, hostName)
+          if (found) return found
+        }
       } catch (error) {
-        // A manifest that is not in this folder is the normal case: look in the next one. Anything else is worth knowing.
-        if ((error as NodeJS.ErrnoException).code === 'ENOENT') continue
-        console.warn(`[native] cannot read the manifest of ${hostName} in ${dir}:`, (error as Error).message)
+        console.warn(`[native] the registry cannot be read for ${hostName}:`, (error as Error).message)
         return { ok: false, error: NATIVE_ERRORS.startFailed }
       }
-      const check = checkHostManifest(text, hostName, extensionId, this.options.platform)
-      if (!check.ok) return check
-      // The program that was looked at is the one that is started: the link is followed once, here, and the file it leads to is what is run.
-      let real: string
-      try {
-        real = await realpath(check.manifest.path)
-      } catch (error) {
-        console.warn(`[native] the program of ${hostName} (${check.manifest.path}) cannot be resolved:`, (error as Error).message)
-        return { ok: false, error: NATIVE_ERRORS.startFailed }
-      }
-      const file = await stat(real).catch(() => null)
-      if (!file?.isFile()) return { ok: false, error: NATIVE_ERRORS.startFailed }
-      return { ok: true, path: real }
     }
     return { ok: false, error: NATIVE_ERRORS.notFound }
+  }
+
+  /** The program a manifest names, once the manifest has been read and checked; null when there is no manifest at that place (the next one is looked at). */
+  private async fromManifest(file: string, extensionId: string, hostName: string): Promise<{ ok: true; path: string } | { ok: false; error: string } | null> {
+    // A manifest is a few lines: a path that comes from the registry is not trusted to lead to one (a device, a huge file).
+    const read = await readBoundedText(file, MAX_MANIFEST_BYTES)
+    if (!read.ok) {
+      // A manifest that is not at this place is the normal case: look in the next one. Anything else is worth knowing.
+      if (read.reason === 'not-found') return null
+      console.warn(`[native] cannot read the manifest of ${hostName} at ${file}: ${read.reason}${read.detail ? ` (${read.detail})` : ''}`)
+      return { ok: false, error: NATIVE_ERRORS.startFailed }
+    }
+    const check = checkHostManifest(read.text, hostName, extensionId, this.options.platform)
+    if (!check.ok) return check
+    // The program that was looked at is the one that is started: the link is followed once, here, and the file it leads to is what is run.
+    let real: string
+    try {
+      real = await realpath(check.manifest.path)
+    } catch (error) {
+      console.warn(`[native] the program of ${hostName} (${check.manifest.path}) cannot be resolved:`, (error as Error).message)
+      return { ok: false, error: NATIVE_ERRORS.startFailed }
+    }
+    const info = await stat(real).catch(() => null)
+    if (!info?.isFile()) return { ok: false, error: NATIVE_ERRORS.startFailed }
+    return { ok: true, path: real }
   }
 
   private async start(port: Port, hostName: string): Promise<void> {

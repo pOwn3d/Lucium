@@ -13,6 +13,7 @@ import { currentPlatform } from '../platform'
 import type { StateStore } from '../store'
 import type { Browser, HistoryLog } from './browser'
 import { NativeHosts, type PortEvent } from './native-messaging'
+import { registeredManifests } from './native-messaging-registry'
 import { shownState } from './lock-state'
 import { getLockService } from '../lock-service'
 import { t } from '@shared/i18n'
@@ -72,6 +73,8 @@ export class ExtensionShims {
     this.hosts = new NativeHosts({
       // The hosts registered for another browser are not Lucium's to start unless the user chose so (Réglages › Extensions et outils › Plus de réglages): by default only its own data folder counts.
       dirs: () => nativeHostDirs(app.getPath('userData'), app.getPath('home'), this.store.get().settings.chromeNativeHosts, currentPlatform().id),
+      // Windows: the registry keys where Chrome's hosts are written, under the same switch as the folders.
+      registryManifests: (hostName) => registeredManifests(hostName, this.store.get().settings.chromeNativeHosts, currentPlatform().id),
       platform: currentPlatform().id,
       deliver: (extensionId, portId, event) => this.deliverPortEvent(extensionId, portId, event)
     })
