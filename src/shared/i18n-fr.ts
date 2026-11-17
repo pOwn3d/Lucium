@@ -2221,6 +2221,8 @@ export const fr = {
   'ipc.fichiers-non-ouverts': 'Certains fichiers n’ont pas été ouverts : Lucium n’ouvre que des pages web, des PDF, des images, du texte, du son et des vidéos, {max} au plus à la fois.',
   'ipc.les-ongl-space': 'Les onglets de cet espace n’ont pas pu être actualisés.',
   'ipc.les-onglets-n-ont-pas-pu-etre-actualises': 'Les onglets n’ont pas pu être actualisés.',
+  'ipc.liens-deposes-non-ouverts.one': '{count} lien déposé n’a pas été ouvert : Lucium n’ouvre que des adresses web en http ou https, sans nom ni mot de passe, {max} au plus à la fois.',
+  'ipc.liens-deposes-non-ouverts.other': '{count} liens déposés n’ont pas été ouverts : Lucium n’ouvre que des adresses web en http ou https, sans nom ni mot de passe, {max} au plus à la fois.',
   'key-ext-settings.aucune-extension-active-dans-cet-espace-ne': 'Aucune extension active dans cet espace ne déclare de mot-clé.',
   'key-ext-settings.deja-pris-par-une-autre-extension': 'déjà pris par une autre extension',
   'key-ext-settings.desactive-la-barre-de-commandes-ne-connait': 'Désactivé : la barre de commandes ne connaît que vos recherches dans un site.',

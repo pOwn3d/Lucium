@@ -283,6 +283,13 @@ export const SUITES: readonly SuiteEntry[] = [
     run: async (context) => (await import('./smoke-extensions-page')).runExtensionsPageSmoke(context)
   },
   {
+    name: 'dropped-links',
+    chain: false,
+    what: 'A link another application drops on a window (the road of the interface, its preload and the channel `openDroppedLinks`): a web address opens in a new tab of the space on show with no opener, a list opens each address once and no more than ten, and a script, a file, a blob, a name and a password, any other text, a field of text and what is not a text open nothing.',
+    order: 'Not in the chain: written for the change that made a dropped link open in a tab, kept out of the compat baseline until the maintainer runs it. LUCIUM_SMOKE_ONLY=dropped-links electron . --smoke --user-data-dir="$(mktemp -d)", after pnpm build; it opens windows, so the maintainer starts it (it was run in the VM only). It needs no screenshot.',
+    run: async (context) => (await import('./smoke-dropped-links')).runDroppedLinksSmoke(context)
+  },
+  {
     name: 'long-address',
     chain: true,
     what: 'The check of a tab that a redirect sends to another site at an address longer than the state keeps: the tab names the new site, its address cut.',

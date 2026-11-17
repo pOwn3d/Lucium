@@ -2217,6 +2217,8 @@ export const en: Record<MessageKey, string> = {
   'ipc.fichiers-non-ouverts': 'Some files weren’t opened: Lucium only opens web pages, PDFs, pictures, text, sound and video, {max} at most at a time.',
   'ipc.les-ongl-space': 'The tabs of this Space couldn’t be reloaded.',
   'ipc.les-onglets-n-ont-pas-pu-etre-actualises': 'The tabs couldn’t be reloaded.',
+  'ipc.liens-deposes-non-ouverts.one': '{count} dropped link wasn’t opened: Lucium only opens http and https web addresses with no user name or password, {max} at most at a time.',
+  'ipc.liens-deposes-non-ouverts.other': '{count} dropped links weren’t opened: Lucium only opens http and https web addresses with no user name or password, {max} at most at a time.',
   'key-ext-settings.aucune-extension-active-dans-cet-espace-ne': 'No active extension in this Space declares a keyword.',
   'key-ext-settings.deja-pris-par-une-autre-extension': 'already taken by another extension',
   'key-ext-settings.desactive-la-barre-de-commandes-ne-connait': 'Off: the command bar only knows your site searches.',

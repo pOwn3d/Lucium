@@ -43,6 +43,7 @@ const api: LuciumApi = {
     }
   },
   openLocalFiles: (paths) => ipcRenderer.send(Channel.openLocalFiles, paths),
+  openDroppedLinks: (text) => ipcRenderer.send(Channel.openDroppedLinks, text),
   extensionUninstall: (profileId, extensionId) => ipcRenderer.send(Channel.extensionUninstall, profileId, extensionId),
   extensionUpdates: (target) => ipcRenderer.send(Channel.extensionUpdates, target),
   answerDialog: (id, answer) => ipcRenderer.send(Channel.answerDialog, id, answer),

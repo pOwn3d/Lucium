@@ -146,6 +146,7 @@ export const Channel = {
   answerExtensionReview: 'lucium:answer-extension-review',
   openWebStore: 'lucium:open-web-store',
   openLocalFiles: 'lucium:open-local-files',
+  openDroppedLinks: 'lucium:open-dropped-links',
   extensionUninstall: 'lucium:extension-uninstall',
   extensionUpdates: 'lucium:extension-updates',
   answerPassphrase: 'lucium:answer-passphrase',

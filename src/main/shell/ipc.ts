@@ -73,8 +73,9 @@ import { FeatureGates } from './feature-gate'
 import { noteFailure } from './failure-notice'
 import { Thumbnails } from './thumbnails'
 import { rendererHosts } from './renderer-hosts'
-import { t } from '@shared/i18n'
+import { t, tp } from '@shared/i18n'
 import { LOCAL_FILES_MAX, localFileUrls } from '@shared/local-documents'
+import { DROPPED_LINKS_MAX, droppedLinkUrls } from '@shared/dropped-links'
 import { isHistoryDay } from '@shared/history-days'
 import { HISTORY_URL_MAX } from '@shared/state-clean'
 import { schemesToRegister } from '@shared/default-browser'
@@ -386,6 +387,15 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
     const { urls, refused } = localFileUrls(paths)
     urls.forEach((url, i) => browser.dispatch({ type: 'tab/open', url, background: i > 0, ...(browser.isPrivate() ? { private: true } : {}) }))
     if (refused > 0) browser.showToast(t('ipc.fichiers-non-ouverts', { max: LOCAL_FILES_MAX }))
+  })
+
+  // A link another application dropped on a window opens in new tabs of the window, in the space on show and with no opener (so no referrer): the way a link
+  // from another application opens. The interface only sends the text of the drop, which is read again here: it is a text, at most 16 KB, and every address in it
+  // is a web address with no name or password (shared/dropped-links.ts). Whatever is left out is counted, and the user is told.
+  on<[unknown]>(Channel.openDroppedLinks, (text) => {
+    const { urls, refused } = droppedLinkUrls(text)
+    urls.forEach((url, i) => browser.dispatch({ type: 'tab/open', url, background: i > 0, ...(browser.isPrivate() ? { private: true } : {}) }))
+    if (refused > 0) browser.showToast(tp('ipc.liens-deposes-non-ouverts', refused, { max: DROPPED_LINKS_MAX }))
   })
 
   on(Channel.openWebStore, () => {
