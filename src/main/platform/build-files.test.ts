@@ -56,6 +56,83 @@ describe('.github/workflows/build.yml', () => {
   })
 })
 
+// The Linux test suite (linux.yml): it starts the application on a runner, with `sudo` for the AppArmor profile and the package manager. What it must never
+// do is checked as text: switch the sandbox of Chromium off, hand anything out, sign, hold a secret, take the name of a required check, or run on the rights
+// of a fork.
+describe('.github/workflows/linux.yml', () => {
+  const workflow = code(read('.github/workflows/linux.yml'))
+  const script = code(read('scripts/linux-ci.sh'))
+  const REQUIRED_CHECKS = ['Type check', 'Lint', 'Unit tests (Linux)', 'Unit tests (macOS)', 'Build (macOS, unsigned)', 'DCO', 'PR title']
+
+  it('never switches the sandbox of Chromium off: no switch, no variable, in the workflow, its script and the launcher of the E2E tests', () => {
+    const off = /--no-sandbox|--disable-setuid-sandbox|--disable-gpu-sandbox|--disable-seccomp-filter-sandbox|ELECTRON_DISABLE_SANDBOX|\bno-sandbox\b/
+    expect(workflow).not.toMatch(off)
+    expect(code(read('tests/e2e/launch.ts').replaceAll('//', '#'))).not.toMatch(off)
+    // The script talks about the switch to find it in a process and to say that it is refused, never to pass it.
+    for (const line of script.split('\n').filter((candidate) => off.test(candidate))) expect(line).toMatch(/grep|fail |refused/)
+    // And what proves the sandbox is on: a renderer without a seccomp filter fails the smoke test.
+    expect(script).toMatch(/\[ "\$seccomp" = 2 \] \|\| \{ fail /)
+  })
+
+  it('reads no secret, signs nothing and leaves the packages on the runner', () => {
+    expect(workflow).not.toMatch(/secrets\./)
+    expect(workflow).not.toMatch(/GITHUB_TOKEN|GH_TOKEN|CSC_LINK|CSC_KEY_PASSWORD|APPLE_|WIN_CSC/)
+    expect(workflow).not.toMatch(/gh release|action-gh-release|softprops|npm publish|--publish (always|onTag|onTagOrDraft)/)
+    expect(workflow).toMatch(/--publish never/)
+    expect(workflow).toMatch(/CSC_IDENTITY_AUTO_DISCOVERY: 'false'/)
+    expect(workflow).not.toMatch(/contents: write|pull_request_target|workflow_run/)
+    expect(workflow).toMatch(/^permissions:\n {2}contents: read$/m)
+    expect(workflow.match(/^ {4}permissions:\n {6}contents: read$/gm)).toHaveLength(2)
+  })
+
+  it('runs on a pull request that touches the code, every night and by hand, and builds nothing for macOS', () => {
+    expect(workflow).toMatch(/^on:\n {2}pull_request:\n {4}paths:\n/m)
+    expect(workflow).toContain("      - 'src/**'\n")
+    expect(workflow).toContain("      - 'tests/e2e/**'\n")
+    expect(workflow).toContain("      - 'electron-builder.yml'\n")
+    expect(workflow).toMatch(/^ {2}schedule:\n {4}- cron: '\d+ \d+ \* \* \*'\n {2}workflow_dispatch:$/m)
+    expect(workflow).not.toMatch(/macos|windows/)
+  })
+
+  it('names its jobs so that none is mistaken for a required check of main, and none is one', () => {
+    const names = [...workflow.matchAll(/^ {4}name: (.+)$/gm)].map((match) => match[1]!)
+    expect(names).toEqual(['Linux packages (${{ matrix.arch }})', 'E2E (Linux, xvfb)'])
+    for (const name of names) expect(REQUIRED_CHECKS).not.toContain(name)
+    // The names ci.yml and pr-conventions.yml give the required checks are still there, written once each.
+    const gates = code(read('.github/workflows/ci.yml')) + code(read('.github/workflows/pr-conventions.yml'))
+    for (const name of REQUIRED_CHECKS) expect(gates.match(new RegExp(`^ {4}name: ${name.replace(/[()]/g, '\\$&')}$`, 'gm')), name).toHaveLength(1)
+  })
+
+  it('makes the AppImage and the deb for x64 and for arm64, unsigned, and keeps them under names that say so', () => {
+    expect(workflow).toMatch(/- arch: x64\n {12}os: ubuntu-24\.04\n {12}flag: --x64\n {10}- arch: arm64\n {12}os: ubuntu-24\.04-arm\n {12}flag: --arm64\n/)
+    expect(workflow).toMatch(/electron-builder --linux AppImage deb "\$ARCH_FLAG" --publish never/)
+    expect(workflow).toMatch(/mv "\$file" "\$\{file%\.\*\}-UNSIGNED-check-build\.\$\{file##\*\.\}"/)
+    expect(workflow).toMatch(/name: lucium-linux-\$\{\{ matrix\.arch \}\}-UNSIGNED-check-build\n {10}path: dist\/\*-UNSIGNED-check-build\.\*\n {10}if-no-files-found: error\n {10}retention-days: 7\n/)
+  })
+
+  it('starts the packages themselves: the deb installed with apt, the AppImage as the machine has it and once user namespaces are allowed', () => {
+    expect(workflow).toContain('apt-get install -y ./dist/*-UNSIGNED-check-build.deb')
+    expect(workflow).toMatch(/smoke "deb-\$\{\{ matrix\.arch \}\}" start \/usr\/bin\/lucium/)
+    expect(workflow).toMatch(/if unshare -Ur true 2>\/dev\/null; then expect=start; fi\n\s+bash scripts\/linux-ci\.sh smoke "appimage-\$\{\{ matrix\.arch \}\}-as-is" "\$expect" "\$appimage"/)
+    expect(workflow).toMatch(/bash scripts\/linux-ci\.sh unrestrict\n[\s\S]*smoke "appimage-\$\{\{ matrix\.arch \}\}-userns" start /)
+  })
+
+  it('runs the Playwright suite under a virtual screen, after the profile that lets the Electron binary of the tests create its sandbox', () => {
+    expect(workflow).toMatch(/sandbox-profile "\$\(node -p "require\('electron'\)"\)"\n/)
+    expect(workflow).toMatch(/xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' pnpm exec playwright test\n/)
+    expect(workflow.indexOf('linux-ci.sh sandbox-profile')).toBeLessThan(workflow.indexOf('pnpm exec playwright test'))
+  })
+
+  it('leaves the other workflows alone: the engine chain stays in smoke-macos.yml, and ci.yml starts no window', () => {
+    expect(workflow).not.toMatch(/pnpm test:engine/)
+    expect(code(read('.github/workflows/ci.yml'))).not.toMatch(/linux-ci\.sh|xvfb|playwright/)
+  })
+
+  it('refuses to run its script anywhere but on Linux', () => {
+    expect(script).toMatch(/if \[ "\$\(uname -s\)" != Linux \]; then\n\s+echo "linux-ci\.sh: Linux only[^\n]*\n\s+exit 2\n/)
+  })
+})
+
 describe('electron-builder.yml', () => {
   const config = code(read('electron-builder.yml'))
 

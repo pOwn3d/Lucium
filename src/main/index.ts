@@ -66,7 +66,7 @@ import { installQuitFlow, prepareQuitForUpdate } from './shell/quit-flow'
 import { createUpdateInstaller, setUpdateInstaller, updateInstaller } from './shell/app-update'
 import { installPrepareBeforeQuit, installUpdateQuitCheck } from './shell/update-quit-check'
 import { currentUpdateSources } from './shell/update-source'
-import { dropDevelopmentEnv, isBuiltApp, isSmokeRun, readDevelopmentEnv, refusedSwitches } from './runtime'
+import { dropDevelopmentEnv, isBuiltApp, isSmokeRun, readDevelopmentEnv, refusalMessage, refusedSwitches } from './runtime'
 import { formatMarker } from '@shared/perf-core'
 import { readState, StateStore, WindowView } from './store'
 import { sitesToClearOnQuit } from '@shared/site-clear'
@@ -80,7 +80,7 @@ import { localFileUrl } from '@shared/local-documents'
 // ones that weaken TLS or the keychain: runtime.ts): the launch says which one and ends here, before the instance lock and before anything is read.
 const refused = refusedSwitches(process.argv)
 if (refused.length > 0) {
-  console.error(`[launch] refused: this application does not start with ${refused.map((name) => `--${name}`).join(', ')} (development and test switches, accepted only by a run from the sources)`)
+  console.error(refusalMessage(refused))
   app.exit(1)
 }
 // The engine test: from the sources only (runtime.ts).

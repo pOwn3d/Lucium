@@ -1,0 +1,232 @@
+name: Linux
+
+# The Linux test suite, on GitHub's Ubuntu 24.04 runners: nothing of it opens a window on anybody's machine (a virtual screen, Xvfb), and nothing of it
+# is published, signed, or given a secret. Three jobs:
+#
+#   Linux packages (x64)     `electron-builder --linux AppImage deb`, unsigned, then the packages as a user gets them: the .deb is installed with apt
+#   Linux packages (arm64)   (on Ubuntu 24.04 that is where its AppArmor profile is loaded) and started, the AppImage is started, and a start that
+#                            would need `--no-sandbox` is shown to be refused. The arm64 leg is the architecture of a Linux virtual machine on a Mac.
+#   E2E (Linux, xvfb)        the Playwright suite of tests/e2e (the same run as `pnpm test:e2e`) against Electron's Linux binary and the built
+#                            interface, on a virtual screen.
+#
+# The packages are kept as artifacts for seven days, named `lucium-linux-<arch>-UNSIGNED-check-build` and every file inside
+# `…-UNSIGNED-check-build.<ext>`, the way build.yml names its check builds: nobody must take one for a download of Lucium. Unsigned, the fuses and
+# the checks of the release are not those of a build the maintainer hands out, and it is not the variant that plays protected videos. The downloads
+# are made and published by the maintainer (docs/community/release-process.md); the artifact of a run on a public repository can be fetched by any
+# signed-in GitHub user.
+#
+# Why the E2E suite does not run on the package: the package has its fuses closed (electron-builder.yml, `enableNodeCliInspectArguments: false`) and
+# refuses `--remote-debugging-port` (src/main/runtime.ts), which is how Playwright drives Electron. The suite drives the Electron binary of
+# node_modules on the output of `pnpm build`, which is the same code; what the package adds (the files it carries, the fuses, the AppArmor profile,
+# the sandbox) is what the first two jobs look at, by starting the package itself.
+#
+# THE SANDBOX OF CHROMIUM IS NEVER SWITCHED OFF. Ubuntu 24.04 restricts unprivileged user namespaces (`kernel.apparmor_restrict_unprivileged_userns=1`),
+# and the sandbox of Chromium is made of one. What each case does, and what the jobs show:
+#   - the .deb ships an AppArmor profile that lets /opt/Lucium/lucium create one (electron-builder, templates/linux/apparmor-profile.tpl): the job
+#     installs the package with apt and starts it, which fails when the profile does not load;
+#   - the E2E suite starts an Electron binary that no profile names: the step "Sandbox" loads the same profile for that binary (scripts/linux-ci.sh);
+#   - an AppImage cannot carry a profile. electron-builder's AppRun adds `--no-sandbox` when `unshare -Ur true` fails, and Lucium refuses that switch
+#     (REFUSED_SWITCHES): started on a machine that restricts user namespaces, it must end with code 1 and say why (the step "AppImage, as the
+#     machine has it"); once the restriction is lifted for the machine, it must start, sandbox on (the step after it). No step passes --no-sandbox.
+# `scripts/linux-ci.sh smoke` fails when a process of the application carries --no-sandbox, and when a renderer has no seccomp filter.
+#
+# When it runs: on a pull request that touches the code, the packaging or the tests (not on a documentation-only one), every night at 03:30 UTC
+# (after the macOS E2E run of e2e.yml), and by hand. None of the jobs is a required check of `main` (maintainers.md): a red one is read, not
+# blocking. The same Linux minutes are free on a public repository; on a private one they cost a tenth of the macOS ones.
+#
+# These jobs download outside pnpm-lock.yaml what electron-builder fetches to package for Linux (fpm, the AppImage runtime) from the releases of
+# electron-userland/electron-builder-binaries, and Electron's own binaries: the address of both must stay the default one (no mirror variable: a test
+# in src/main/platform/build-files.test.ts checks every workflow). The runner has a read-only token and no secret.
+#
+# Security: `pull_request`, never `pull_request_target`: code from a fork runs with a read-only token and no secret, and a first-time contributor's
+# run waits for the maintainer's approval. The steps that use `sudo` run on a virtual machine that is thrown away after the job.
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'tests/e2e/**'
+      - 'scripts/**'
+      - 'resources/**'
+      - 'build/**'
+      - 'patches/**'
+      - 'electron-builder.yml'
+      - 'electron.vite.config.ts'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/linux.yml'
+      - '.github/actions/**'
+  schedule:
+    # Every night, 03:30 UTC.
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: linux-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  packages:
+    name: Linux packages (${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            os: ubuntu-24.04
+            flag: --x64
+          - arch: arm64
+            os: ubuntu-24.04-arm
+            flag: --arm64
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The setup of ci.yml (see the comment there).
+      - uses: ./.github/actions/setup
+      - name: Machine
+        run: |
+          uname -a
+          grep PRETTY_NAME /etc/os-release
+          node --version
+          pnpm --version
+          bash scripts/linux-ci.sh sandbox-state
+      # The virtual screen, the tools that look at it, and what an AppImage needs to mount itself (libfuse2 is not on Ubuntu 24.04 by default).
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb x11-utils libfuse2t64
+      - name: Build
+        run: pnpm build
+      - name: Package (unsigned, nothing published)
+        env:
+          # Never look for a signing identity; no certificate is configured anywhere.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          ARCH_FLAG: ${{ matrix.flag }}
+        run: |
+          set -euo pipefail
+          pnpm exec electron-builder --linux AppImage deb "$ARCH_FLAG" --publish never
+          # The name says what each file is before it leaves the runner.
+          shopt -s nullglob
+          for file in dist/*.AppImage dist/*.deb; do
+            mv "$file" "${file%.*}-UNSIGNED-check-build.${file##*.}"
+          done
+          ls -l dist/*-UNSIGNED-check-build.*
+          [ "$(ls dist/*-UNSIGNED-check-build.AppImage | wc -l)" = 1 ]
+          [ "$(ls dist/*-UNSIGNED-check-build.deb | wc -l)" = 1 ]
+      - name: What the packages carry
+        run: |
+          set -euo pipefail
+          deb="$(ls dist/*-UNSIGNED-check-build.deb)"
+          dpkg-deb --info "$deb"
+          dpkg-deb --contents "$deb" > "$RUNNER_TEMP/deb-contents.txt"
+          # The sandbox helper, the AppArmor profile that lets the application create the user namespace of the sandbox, and the licence texts.
+          for path in 'opt/Lucium/chrome-sandbox' 'opt/Lucium/resources/apparmor-profile' 'opt/Lucium/resources/app.asar' 'opt/Lucium/LICENSES.chromium.html' 'opt/Lucium/resources/NOTICE'; do
+            grep -q " \./$path$" "$RUNNER_TEMP/deb-contents.txt" || { echo "::error::the .deb lacks $path"; exit 1; }
+          done
+          grep -E ' \./opt/Lucium/(lucium|chrome-sandbox)$' "$RUNNER_TEMP/deb-contents.txt"
+          # The test files stay out of the package (electron-builder.yml, `files`).
+          if grep -q 'out/main/smoke' "$RUNNER_TEMP/deb-contents.txt"; then echo "::error::the package carries an engine test"; exit 1; fi
+          file dist/*-UNSIGNED-check-build.AppImage
+          sha256sum dist/*-UNSIGNED-check-build.*
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lucium-linux-${{ matrix.arch }}-UNSIGNED-check-build
+          path: dist/*-UNSIGNED-check-build.*
+          if-no-files-found: error
+          retention-days: 7
+      # Installed the way a user installs it: apt resolves the libraries the package depends on, and the post-install script loads the AppArmor
+      # profile (Ubuntu 24.04). The application is then started from /usr/bin, with no switch, as a user who is not root.
+      - name: The .deb, installed and started
+        run: |
+          set -euo pipefail
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y ./dist/*-UNSIGNED-check-build.deb
+          ls -l /opt/Lucium/chrome-sandbox /etc/apparmor.d/lucium || true
+          bash scripts/linux-ci.sh smoke "deb-${{ matrix.arch }}" start /usr/bin/lucium
+      # What the machine has: on Ubuntu 24.04 user namespaces are restricted, `unshare -Ur true` of the AppRun fails, the AppRun adds --no-sandbox
+      # and Lucium refuses it; where they are usable, the application starts. Either way, the sandbox stays on.
+      - name: AppImage, as the machine has it
+        run: |
+          set -euo pipefail
+          appimage="$(ls "$PWD"/dist/*-UNSIGNED-check-build.AppImage)"
+          chmod +x "$appimage"
+          expect=refused
+          if unshare -Ur true 2>/dev/null; then expect=start; fi
+          bash scripts/linux-ci.sh smoke "appimage-${{ matrix.arch }}-as-is" "$expect" "$appimage"
+      # Once the machine allows user namespaces (a sysctl on this runner, which is thrown away), the AppImage starts, with its sandbox.
+      - name: AppImage, user namespaces allowed
+        run: |
+          set -euo pipefail
+          bash scripts/linux-ci.sh unrestrict
+          bash scripts/linux-ci.sh sandbox-state
+          bash scripts/linux-ci.sh smoke "appimage-${{ matrix.arch }}-userns" start "$(ls "$PWD"/dist/*-UNSIGNED-check-build.AppImage)"
+      - name: Keep the logs
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: linux-smoke-logs-${{ matrix.arch }}
+          path: out-linux/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  e2e:
+    name: E2E (Linux, xvfb)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The setup of ci.yml (see the comment there).
+      - uses: ./.github/actions/setup
+      - name: Machine
+        run: |
+          uname -a
+          grep PRETTY_NAME /etc/os-release
+          node --version
+          bash scripts/linux-ci.sh sandbox-state
+      # The virtual screen, and the libraries Electron loads (the ones electron-builder gives a .deb as dependencies, plus those of Chromium's own).
+      - name: System packages
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            xvfb x11-utils libgtk-3-0t64 libnotify4 libnss3 libxss1 libxtst6 xdg-utils libatspi2.0-0t64 libuuid1 libsecret-1-0 \
+            libgbm1 libasound2t64 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxfixes3 libxrandr2 libcups2t64 \
+            libatk1.0-0t64 libatk-bridge2.0-0t64 libpango-1.0-0 libcairo2 fonts-liberation
+      # A safety net when the install script of the electron package did not fetch its binary (allowBuilds in pnpm-workspace.yaml).
+      - run: node node_modules/electron/install.js
+      - name: Build
+        run: pnpm build
+      # The Electron binary of node_modules is not named by any AppArmor profile: on Ubuntu 24.04 it could not create the user namespace of its
+      # sandbox. It is given the profile the .deb ships, and nothing else is loosened (see the comment at the top of this file).
+      - name: Sandbox
+        run: bash scripts/linux-ci.sh sandbox-profile "$(node -p "require('electron')")"
+      # `pnpm test:e2e` is `electron-vite build && playwright test`: the build is the step above. A runner draws no reference picture
+      # (playwright.config.ts: `updateSnapshots: 'none'` when `CI` is set). The failures are written on the run's page and in test-results/junit.xml.
+      - name: Playwright
+        run: xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' pnpm exec playwright test
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-linux-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
