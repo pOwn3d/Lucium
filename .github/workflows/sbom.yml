@@ -59,4 +59,4 @@ jobs:
           name: lucium-sbom-cyclonedx
           path: sbom/
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 7

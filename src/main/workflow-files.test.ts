@@ -194,6 +194,6 @@ describe('.github/workflows/smoke-macos.yml', () => {
     expect(workflow).not.toMatch(/uses: pnpm\/setup/)
     expect(ci).not.toMatch(/uses: pnpm\/setup/)
     const action = code(read('.github/actions/setup/action.yml'))
-    expect(action.match(/uses: pnpm\/setup@[0-9a-f]{40}.*\n {6}with:\n {8}version: [\d.]+\n {8}cache: true\n {8}require-lockfile: true\n/g)).toHaveLength(1)
+    expect(action.match(/uses: pnpm\/setup@[0-9a-f]{40}.*\n {6}with:\n {8}version: [\d.]+\n {8}cache: \$\{\{ inputs\.cache \}\}\n {8}save-cache: .+\n {8}require-lockfile: true\n/g)).toHaveLength(1)
   })
 })

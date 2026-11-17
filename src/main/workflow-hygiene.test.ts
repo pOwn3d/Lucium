@@ -129,6 +129,36 @@ describe('every workflow of .github/workflows', () => {
   it('holds no secret, and no signing or notarization', () => {
     for (const { file, text } of [...workflows, ...localActions]) expect(text, file).not.toMatch(/\bsecrets\.|notarytool|codesign --sign|CSC_LINK|CSC_KEY_PASSWORD|APPLE_API_|LUCIUM_SIGN_IDENTITY/)
   })
+
+  // Storage is free on a public repository, but a private copy or a fork pays for it, and the project must never cost its maintainer
+  // anything: what a workflow keeps is kept for days, and written once, not once per pull request or per commit.
+  it('keeps no artifact longer than a week', () => {
+    for (const { file, text } of workflows) {
+      const lines = text.split('\n')
+      lines.forEach((line, at) => {
+        if (!/\buses:\s*actions\/upload-artifact@/.test(line)) return
+        const start = lines.findLastIndex((candidate, index) => index <= at && /^ {6}- /.test(candidate))
+        const end = lines.findIndex((candidate, index) => index > at && /^ {6}- /.test(candidate))
+        const days = Number(/^\s+retention-days: (\d+)\s*$/m.exec(lines.slice(start, end < 0 ? undefined : end).join('\n'))?.[1])
+        expect(days >= 1 && days <= 7, `${file} line ${at + 1}: retention-days is 1 to 7`).toBe(true)
+      })
+    }
+  })
+
+  it('writes the pnpm store to the cache from main only, and only for the quick checks of ci.yml', () => {
+    const setup = localActions.find((action) => action.file === '.github/actions/setup/action.yml')?.text ?? ''
+    expect(setup).toMatch(/^\s+cache: \$\{\{ inputs\.cache \}\}$/m)
+    expect(setup).toMatch(/^\s+save-cache: \$\{\{ .*github\.ref == 'refs\/heads\/main'.* \}\}$/m)
+    for (const { file, text } of workflows) {
+      if (file === 'ci.yml') expect(text, file).toMatch(/^ {10}cache: 'true'$/m)
+      else expect(text, file).not.toMatch(/\bcache:\s*'?true'?\s*$/m)
+    }
+  })
+
+  it('keeps CodeQL from saving an overlay database (hundreds of megabytes, one per run) in the cache', () => {
+    const codeql = workflows.find((workflow) => workflow.file === 'codeql.yml')?.text ?? ''
+    expect(codeql).toMatch(/^ {6}CODEQL_OVERLAY_DATABASE_MODE: none$/m)
+  })
 })
 
 /** The script of a step, as bash runs it: the lines under `run: |` of the step of that name, in that job. */

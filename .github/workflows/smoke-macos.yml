@@ -149,3 +149,4 @@ jobs:
           name: engine-run
           path: out-engine/
           if-no-files-found: warn
+          retention-days: 7
