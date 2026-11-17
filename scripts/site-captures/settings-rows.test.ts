@@ -5,7 +5,6 @@
 //
 // The interface is typed by tsconfig.web.json (DOM, JSX) and this file by tsconfig.node.json: its modules are loaded by their path, when the test runs.
 
-import { fileURLToPath } from 'node:url'
 import { createElement, type ComponentType, type Context } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
@@ -22,7 +21,9 @@ import type { Lang } from './shots'
 // Every page drawn in its parts, in two languages: a few seconds of processor on a loaded machine.
 vi.setConfig({ testTimeout: 60_000 })
 
-const fromRenderer = (name: string): Promise<Record<string, unknown>> => import(fileURLToPath(new URL(`../../src/renderer/${name}`, import.meta.url)))
+// A path from the root of the project (`/src/…`), the form Vite gives every import of a test: on Windows the module runner did not find these files by the
+// absolute path `fileURLToPath` gave (`D:\src\renderer\…`, seen in the first run of windows.yml).
+const fromRenderer = (name: string): Promise<Record<string, unknown>> => import(/* @vite-ignore */ `/src/renderer/${name}`)
 
 let CategoryContent: ComponentType<Record<string, unknown>>
 let FoldPassContext: Context<string>

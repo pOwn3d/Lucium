@@ -8,6 +8,7 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { MEDIA_BRIDGE } from '@shared/media-player'
 import { defaultSettings } from '@shared/model'
@@ -17,6 +18,7 @@ import { inertEngine, madeSessions } from './profile-made.test-support'
 import type { SwitchedPreload } from './engine/switched-preload'
 import { fakeBrowser } from './shell/browser-fake.test-support'
 import { syncHost } from './shell/sync-host.test-support'
+import { posix } from './windows.test-support'
 
 vi.mock('electron', async () => (await import('./engine/engine-constructed.test-support')).engineElectron())
 vi.mock('electron-chrome-extensions', async () => ({ ElectronChromeExtensions: (await import('./profile-made.test-support')).realLibrary() }))
@@ -25,13 +27,13 @@ vi.mock('electron-chrome-web-store', () => ({}))
 vi.mock('./blocking', () => ({ blockingService: () => ({ subscribe: () => () => {} }) }))
 vi.mock('./shell/extension-shims', () => ({ ExtensionShims: class {} }))
 
-const MAIN = new URL('./', import.meta.url).pathname
+const MAIN = fileURLToPath(new URL('./', import.meta.url))
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name)
     if (entry.isDirectory()) return sourceFiles(path)
-    return path.endsWith('.ts') && !path.endsWith('.test.ts') && !path.endsWith('.d.ts') && !/\/smoke[^/]*\.ts$/.test(path) ? [path] : []
+    return path.endsWith('.ts') && !path.endsWith('.test.ts') && !path.endsWith('.d.ts') && !/\/smoke[^/]*\.ts$/.test(posix(path)) ? [path] : []
   })
 }
 
@@ -236,7 +238,7 @@ describe('the mechanisms that cost something while they exist', () => {
     const code = codeOf(path)
     for (const [kind, pattern] of Object.entries(KINDS)) {
       const count = (code.match(pattern) ?? []).length
-      if (count > 0) found.set(`${kind}|${relative(MAIN, path)}`, count)
+      if (count > 0) found.set(`${kind}|${posix(relative(MAIN, path))}`, count)
     }
   }
 

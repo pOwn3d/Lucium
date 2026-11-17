@@ -15,6 +15,7 @@ import { downloadPack, downloadRuntime, sweepStaging, type Fetch } from './downl
 import { EngineRegistry, glossaryEngine, parseGlossary, translateWords, type TranslationEngine } from './engines'
 import { adoptFolder, fingerprint, listPacks, packDirOf, readManifest, readRuntime, readRuntimeManifest, removePack, verifyPack } from './pack-store'
 import { frenchSpaces } from '@shared/french-typography'
+import { onWindows } from '../windows.test-support'
 
 const sha = (data: string | Uint8Array): string => createHash('sha256').update(data).digest('hex')
 /** The engines here need no binary of their own. */
@@ -746,7 +747,8 @@ describe('the models: lookup, download, folder', () => {
   })
 
   // A folder that cannot be written to is not one a superuser is refused: nothing to force there.
-  it.skipIf(process.getuid?.() === 0)('says where the temporary folder is when it could not be removed, instead of leaving it unmentioned', async () => {
+  // Windows: `chmod 500` does not make a folder refuse a removal there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(process.getuid?.() === 0 || onWindows)('says where the temporary folder is when it could not be removed, instead of leaving it unmentioned', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const t = setup({ routes: routes() })

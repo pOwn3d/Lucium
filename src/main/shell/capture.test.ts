@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { OverlayRequest } from '@shared/ipc'
 
@@ -54,7 +54,7 @@ describe('saveCapture', () => {
     const b = await saveCapture(Buffer.from('b'), '-page-entiere')
     vi.setSystemTime(new Date('2026-10-24T10:00:01Z'))
     const c = await saveCapture(Buffer.from('c'), '')
-    expect([a, b, c].map((p) => p.split('/').pop())).toEqual(['capture-2026-10-24T10-00-00.png', 'capture-2026-10-24T10-00-00-page-entiere.png', 'capture-2026-10-24T10-00-01.png'])
+    expect([a, b, c].map((p) => basename(p))).toEqual(['capture-2026-10-24T10-00-00.png', 'capture-2026-10-24T10-00-00-page-entiere.png', 'capture-2026-10-24T10-00-01.png'])
   })
 })
 
@@ -290,7 +290,10 @@ describe('captureSelectionOrTell', () => {
   it('tells the user too when the picture cannot be written (a full disk)', async () => {
     const toast = vi.fn()
     vi.spyOn(console, 'error').mockImplementation(() => undefined)
-    pictures.dir = '/dev/null/not-a-folder'
+    // A file where the parent of the folder should be: it cannot be made (ENOTDIR), on every system (a path under /dev/null would be a plain folder on Windows).
+    const blocker = join(pictures.dir, 'blocker')
+    writeFileSync(blocker, 'a file')
+    pictures.dir = join(blocker, 'not-a-folder')
     await captureSelectionOrTell(browserOf(async () => Buffer.from('png')), RECT, toast)
     expect(toast).toHaveBeenCalledTimes(1)
   })

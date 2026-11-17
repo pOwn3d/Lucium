@@ -11,6 +11,7 @@ import { loadGhosteryBackend } from './ghostery-engine'
 import type { FilterEngineBackend } from './filter-engine'
 import type { FetchLike } from './list-updater'
 import { BlockingService, type BlockedRequest, type BlockingSettings } from './service'
+import { onWindows } from '../windows.test-support'
 import { listText, startTestServer, type TestServer } from './test-server'
 
 const ghostery = await loadGhosteryBackend()
@@ -117,10 +118,11 @@ describe('switching the blocker off while it works', () => {
 })
 
 // The superuser writes where a folder is read-only: these two cases cannot be set up as root.
-const asRoot = process.getuid?.() === 0
+// Windows: `chmod` on a folder does not stop a file from being written in it there, so the disk that refuses cannot be set up with it either.
+const cannotRefuseTheDisk = process.getuid?.() === 0 || onWindows
 
 describe('a disk that refuses the index', () => {
-  it.skipIf(asRoot)('does not leave a list "updating" for ever, and still tells the failure', async () => {
+  it.skipIf(cannotRefuseTheDisk)('does not leave a list "updating" for ever, and still tells the failure', async () => {
     const service = make()
     service.configure(config())
     await service.settled()
@@ -138,7 +140,7 @@ describe('a disk that refuses the index', () => {
 })
 
 describe('a damaged copy on a disk that refuses the index', () => {
-  it.skipIf(asRoot)('is told in the settings and does not stop the other lists', async () => {
+  it.skipIf(cannotRefuseTheDisk)('is told in the settings and does not stop the other lists', async () => {
     const service = make()
     service.configure(config())
     await service.settled()

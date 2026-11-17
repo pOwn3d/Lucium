@@ -1,11 +1,12 @@
 // The custom icon of the application bundle (bundle-icon.ts): what is put, taken off or left, one call at a time, what a failure says; then, on
 // macOS only, the real script on a throw-away bundle: the icon goes on and off, and the strict check of the signature fails, then passes again.
 import { execFileSync, spawnSync } from 'node:child_process'
-import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { BUNDLE_ICON_FILE, BUNDLE_ICON_SCRIPT, BundleIcon, bundleIconDeps, bundleOfExecutable, callBundleIconScript, type BundleIconDeps, type PosedIcon } from './bundle-icon'
 import { tempDir } from '../temp-dir'
+import { expectMode } from '../windows.test-support'
 
 const BUNDLE = '/Applications/Lucium.app'
 const pictureOf = (id: string): string => `${BUNDLE}/Contents/Resources/app-icons/${id}.png`
@@ -302,7 +303,7 @@ describe('the bundle and the script', () => {
     chmodSync(record, 0o644)
     const deps = bundleIconDeps({ bundle: () => null, picture: pictureOf, record: () => record, log: () => undefined })
     deps.writePosed({ bundle: BUNDLE, icon: 'cyber' })
-    expect(statSync(record).mode & 0o777).toBe(0o600)
+    expectMode(record, 0o600)
     expect(deps.readPosed()).toEqual({ bundle: BUNDLE, icon: 'cyber' })
     // Written aside and moved over the file: nothing is left beside it.
     expect(existsSync(`${record}.tmp`)).toBe(false)

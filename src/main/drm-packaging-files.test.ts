@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { ENTITLEMENTS_APP, ENTITLEMENTS_DRM, ENTITLEMENTS_HELPER, grantedEntitlements } from './mac-sign-order'
 import { KEYCHAIN_ADDON, KEYCHAIN_HELPER_BUNDLE, keychainPaths } from './vault-keychain'
 import { SYSTEM_TRANSLATE_HELPER_BUNDLE, systemTranslateHelperPath } from './translate/system'
+import { posix } from './windows.test-support'
 
 // The packaging of the keychain helper of the password vault (Touch ID) and the order of the signatures, read as text: the scripts sign with the
 // maintainer's identity and talk to castLabs' service, so none is run here. What must not change silently: EVS before the Developer ID, the fuses of
@@ -83,9 +84,10 @@ describe('scripts/package-drm.mjs', () => {
     expect(script).toMatch(/const addonShipped = join\(app, 'Contents', 'Resources', 'vault-xpc\.node'\)/)
     expect(script).toMatch(/run\('ditto', \[addonBuilt, addonShipped\]\)/)
     expect(script.indexOf("run('ditto', [addonBuilt, addonShipped])")).toBeLessThan(script.indexOf("'sign-pkg'"))
+    // The bundle is a macOS one, whose paths are written with `/`; `join` writes `\` on Windows.
     const where = keychainPaths('/x/Lucium.app/Contents/Resources')
-    expect(where.helper).toBe(`/x/Lucium.app/Contents/XPCServices/${KEYCHAIN_HELPER_BUNDLE}`)
-    expect(where.addon).toBe(`/x/Lucium.app/Contents/Resources/${KEYCHAIN_ADDON}`)
+    expect(posix(where.helper)).toBe(`/x/Lucium.app/Contents/XPCServices/${KEYCHAIN_HELPER_BUNDLE}`)
+    expect(posix(where.addon)).toBe(`/x/Lucium.app/Contents/Resources/${KEYCHAIN_ADDON}`)
     expect(script).toMatch(/const translateShipped = join\(app, 'Contents', 'Helpers', 'LuciumTranslate\.app'\)/)
     expect(script).toMatch(/run\('ditto', \[translateBuilt, translateShipped\]\)/)
     expect(script.indexOf("run('ditto', [translateBuilt, translateShipped])")).toBeLessThan(script.indexOf("'sign-pkg'"))
@@ -431,19 +433,23 @@ describe('the normal application (electron-builder.yml, package.json)', () => {
   it('carries the helper in Contents/XPCServices/ and its addon in Contents/Resources/, where vault-keychain.ts looks for them', () => {
     expect(config).toMatch(/^ {2}extraFiles:\n {4}- from: out-native\/LuciumKeychain\.xpc\n {6}to: XPCServices\/LuciumKeychain\.xpc$/m)
     expect(config).toMatch(/^ {2}extraResources:\n {4}- from: out-native\/vault-xpc\.node\n {6}to: vault-xpc\.node$/m)
-    expect(keychainPaths('/Applications/Lucium.app/Contents/Resources')).toEqual({ helper: `/Applications/Lucium.app/Contents/XPCServices/${KEYCHAIN_HELPER_BUNDLE}`, addon: `/Applications/Lucium.app/Contents/Resources/${KEYCHAIN_ADDON}` })
+    const shipped = keychainPaths('/Applications/Lucium.app/Contents/Resources')
+    expect({ helper: posix(shipped.helper), addon: posix(shipped.addon) }).toEqual({ helper: `/Applications/Lucium.app/Contents/XPCServices/${KEYCHAIN_HELPER_BUNDLE}`, addon: `/Applications/Lucium.app/Contents/Resources/${KEYCHAIN_ADDON}` })
   })
 
   it('carries the helper of the system translation beside it, where translate/system.ts looks for it', () => {
     expect(config).toMatch(/^ {4}- from: out-native\/LuciumTranslate\.app\n {6}to: Helpers\/LuciumTranslate\.app$/m)
-    expect(systemTranslateHelperPath({ built: true, resourcesPath: '/Applications/Lucium.app/Contents/Resources', appPath: '' })).toBe(`/Applications/Lucium.app/Contents/Helpers/${SYSTEM_TRANSLATE_HELPER_BUNDLE}/Contents/MacOS/lucium-translate`)
+    expect(posix(systemTranslateHelperPath({ built: true, resourcesPath: '/Applications/Lucium.app/Contents/Resources', appPath: '' }))).toBe(`/Applications/Lucium.app/Contents/Helpers/${SYSTEM_TRANSLATE_HELPER_BUNDLE}/Contents/MacOS/lucium-translate`)
   })
 
   it('leaves the helpers out of its own signature, with patterns that match each helper and its files', () => {
     const patterns = /^ {2}signIgnore:\n((?: {4}- '[^']+'\n?)+)/m.exec(config)?.[1]?.match(/'[^']+'/g)?.map((quoted) => quoted.slice(1, -1))
     expect(patterns).toEqual(['Contents/XPCServices/LuciumKeychain\\.xpc', 'Contents/Helpers/LuciumTranslate\\.app'])
-    const { helper, addon } = keychainPaths('/x/Lucium.app/Contents/Resources')
-    const translate = systemTranslateHelperPath({ built: true, resourcesPath: '/x/Lucium.app/Contents/Resources', appPath: '' })
+    // electron-builder matches these patterns against `/` paths, so the paths are written that way here whatever the system.
+    const keychain = keychainPaths('/x/Lucium.app/Contents/Resources')
+    const helper = posix(keychain.helper)
+    const addon = posix(keychain.addon)
+    const translate = posix(systemTranslateHelperPath({ built: true, resourcesPath: '/x/Lucium.app/Contents/Resources', appPath: '' }))
     expect(new RegExp(patterns![0]!).test(helper)).toBe(true)
     expect(new RegExp(patterns![1]!).test(translate)).toBe(true)
     for (const pattern of patterns!) expect(new RegExp(pattern).test('/x/Lucium.app/Contents/Frameworks/Lucium Helper.app')).toBe(false)

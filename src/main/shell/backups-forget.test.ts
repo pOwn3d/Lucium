@@ -1,7 +1,7 @@
 // The copies of the session on disk keep the Back lists of the archived tabs. Clearing the history or a site edits them in place.
 // Real files in a throw-away folder; the rules of the text of one copy are in shared/session-backups-forget.test.ts.
 
-import { chmodSync, existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ArchivedTab, ClosedHistory, SidebarState } from '@shared/model'
@@ -11,6 +11,7 @@ import { createInitialState } from '@shared/sidebar'
 import { BackupFiles } from '../backup-store'
 import { SessionBackups } from './backups'
 import { tempDir } from '../temp-dir'
+import { expectMode } from '../windows.test-support'
 
 // A rename that can be made to fail: the edited copy is written under another name first, so a failure must leave the copy as it was.
 const renaming = vi.hoisted(() => ({ fail: false }))
@@ -90,7 +91,7 @@ describe('forgetting the pages in the copies on disk', () => {
     const before = readdirSync(t.dir).sort()
     t.service.forgetPages({ profileId: 'default' })
     expect(readdirSync(t.dir).sort()).toEqual(before)
-    for (const id of t.files.ids()) expect(statSync(join(t.dir, `${id}.json`)).mode & 0o777).toBe(0o600)
+    for (const id of t.files.ids()) expectMode(join(t.dir, `${id}.json`), 0o600)
     expect(t.files.list().entries.map((entry) => entry.createdAt)).toEqual([1_700_000_100_000, 1_700_000_000_000])
   })
 

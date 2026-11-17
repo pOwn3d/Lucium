@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, truncateSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, truncateSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -6,6 +6,7 @@ import { PASSWORD_LIMITS } from '@shared/passwords'
 import { encryptExport, ExportCryptoError } from './export-crypto'
 import { PasswordVault, VaultError, openExport, parseStoredEntries } from './password-vault'
 import { VAULT_FORMAT, seal, newSealKeys } from './vault-crypto'
+import { expectMode } from './windows.test-support'
 
 const PHRASE = 'une phrase maître assez longue'
 // The cheapest cost a file may ask for: the tests are about the construction, not about how slow it is.
@@ -21,7 +22,6 @@ beforeEach(() => {
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
 
 const vault = () => new PasswordVault({ path, params: PARAMS })
-const modeOf = (file: string): number => statSync(file).mode & 0o777
 const errorOf = async (job: Promise<unknown>): Promise<unknown> => {
   try {
     await job
@@ -53,11 +53,11 @@ describe('the file', () => {
       chmodSync(`${path}.tmp`, 0o666)
       const v = vault()
       await v.create(PHRASE)
-      expect(modeOf(path)).toBe(0o600)
+      expectMode(path, 0o600)
       await v.save(LOGIN)
-      expect(modeOf(path)).toBe(0o600)
+      expectMode(path, 0o600)
       await v.changePhrase(PHRASE, 'another long enough phrase')
-      expect(modeOf(path)).toBe(0o600)
+      expectMode(path, 0o600)
       expect(existsSync(`${path}.tmp`)).toBe(false)
     } finally {
       process.umask(before)
@@ -460,7 +460,7 @@ describe('what a vault may hold', () => {
       expect(copies).toHaveLength(1)
       // The copy is the sealed file itself (nothing in the clear), private to the user.
       expect(readFileSync(join(dir, copies[0]!), 'utf8')).toBe(sealed)
-      expect(modeOf(join(dir, copies[0]!))).toBe(0o600)
+      expectMode(join(dir, copies[0]!), 0o600)
       // The log says how many, never which.
       expect(errors.mock.calls.flat().join(' ')).toContain('1 login(s)')
       expect(errors.mock.calls.flat().join(' ')).not.toMatch(/secret-user|secret-password|remote\.test/)

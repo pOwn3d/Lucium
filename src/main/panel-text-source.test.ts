@@ -4,10 +4,11 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { isPaneFile, scanSource } from './settings-text-scan'
 
-const RENDERER = join(new URL('../', import.meta.url).pathname, 'renderer')
+const RENDERER = join(fileURLToPath(new URL('../', import.meta.url)), 'renderer')
 
 /** Every file of the interface that is not a pane of the Settings window, nor a test. */
 const panelFiles = readdirSync(RENDERER)

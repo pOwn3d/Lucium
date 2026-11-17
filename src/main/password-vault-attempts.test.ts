@@ -1,12 +1,13 @@
 // The wrong master phrases of the vault are counted on the disk (`passwords.vault.attempts`, vault-attempts.ts), by every path that checks the
 // phrase, and a relaunch does not give fresh tries.
 
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExportCryptoError } from './export-crypto'
 import { PasswordVault, VaultError } from './password-vault'
+import { expectMode, onWindows } from './windows.test-support'
 
 const PHRASE = 'une phrase maître assez longue'
 const NEXT = 'another long enough phrase'
@@ -94,7 +95,7 @@ describe('the count survives a relaunch', () => {
     } finally {
       process.umask(before)
     }
-    expect(statSync(attemptsPath).mode & 0o777).toBe(0o600)
+    expectMode(attemptsPath, 0o600)
     expect(attemptsOnDisk()).toEqual({ v: 1, failures: 3, until: START + 1000 })
     const text = readFileSync(attemptsPath, 'utf8')
     expect(text.length).toBeLessThan(100)
@@ -253,7 +254,8 @@ describe('a file that cannot shut the owner out for good', () => {
     }
   })
 
-  it('is no failure at all when it cannot be read, and the reason is logged as a code without the path', async () => {
+  // Windows: a link needs a privilege to be created there, and a link to itself is not guaranteed to come back as ELOOP, the code the test reads.
+  it.skipIf(onWindows)('is no failure at all when it cannot be read, and the reason is logged as a code without the path', async () => {
     const v = await lockedVault()
     // A link to itself where the file goes: reading it fails with a code of the system, the same on every one. (A folder there is not it: on
     // Linux a folder weighs 4096 bytes, more than a file of ours, so it is set aside before any read, with nothing to log.)

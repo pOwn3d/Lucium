@@ -139,8 +139,10 @@ describe('the preload scripts of the extension runtime', () => {
 })
 
 describe('the library\'s scripts in the packaged application (Chromium cannot read them inside app.asar)', () => {
-  const PACKED = '/Applications/Lucium.app/Contents/Resources/app.asar/node_modules/electron-chrome-extensions/dist/chrome-extension-api.preload.js'
-  const UNPACKED = PACKED.replace('/app.asar/', '/app.asar.unpacked/')
+  // Written by the path module of the system, as the library's own path is (with backslashes on Windows).
+  const LIBRARY = join('node_modules', 'electron-chrome-extensions', 'dist', 'chrome-extension-api.preload.js')
+  const PACKED = join('/Applications/Lucium.app/Contents/Resources', 'app.asar', LIBRARY)
+  const UNPACKED = join('/Applications/Lucium.app/Contents/Resources', 'app.asar.unpacked', LIBRARY)
 
   it('are put back from the unpacked copy when the build unpacked them, and from where they were otherwise', () => {
     expect(readablePreloadPath(PACKED, (path) => path === UNPACKED)).toBe(UNPACKED)
@@ -148,7 +150,8 @@ describe('the library\'s scripts in the packaged application (Chromium cannot re
     expect(readablePreloadPath(PACKED, () => false)).toBe(PACKED)
     // Outside a packaged application (development, the tests) nothing is looked for.
     const exists = vi.fn(() => true)
-    expect(readablePreloadPath('/repo/node_modules/electron-chrome-extensions/dist/chrome-extension-api.preload.js', exists)).toBe('/repo/node_modules/electron-chrome-extensions/dist/chrome-extension-api.preload.js')
+    const development = join('/repo', LIBRARY)
+    expect(readablePreloadPath(development, exists)).toBe(development)
     expect(exists).not.toHaveBeenCalled()
   })
 

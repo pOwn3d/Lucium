@@ -8,7 +8,9 @@ import { join } from 'node:path'
 import { crc32 } from 'node:zlib'
 import { replaceFileDurably } from '../durable-write'
 import { DATA_FILE_MAX_BYTES, readTextBounded, SMALL_FILE_MAX_BYTES } from '../persist'
+import { currentPlatform } from '../platform'
 import type { ReviewSummary } from '@shared/custom-filter-lists'
+import { isClosedToOthers, type PlatformId } from '@shared/platform'
 
 export interface StoredList {
   /** Validators for the next conditional request. */
@@ -68,7 +70,11 @@ export class ListStore {
   /** The folders are made at the first write: a blocker that is never switched on leaves nothing on the disk. */
   private madeDirs = false
 
-  constructor(private readonly dir: string) {
+  /** `platform` is the system the modes are read on (a test plays another one). */
+  constructor(
+    private readonly dir: string,
+    private readonly platform: PlatformId = currentPlatform().id
+  ) {
     this.index = this.readIndex()
   }
 
@@ -226,7 +232,8 @@ export class ListStore {
   /** A file other users could read (copied by hand, restored from a backup) is made owner-only again, and the change is told. */
   private tighten(path: string, mode = FILE_MODE): void {
     try {
-      if ((statSync(path).mode & 0o077) === 0) return
+      // Windows reports 0666 for every file: no mode says the file is open there, and "tightening" it would be told at every launch for nothing.
+      if (isClosedToOthers(statSync(path).mode, this.platform)) return
       chmodSync(path, mode)
       console.warn(`[blocking] ${path} could be read by other users: it is now for its owner only`)
     } catch (error) {

@@ -8,6 +8,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { followAppearance, type ThemeHost } from './appearance'
+import { posix } from '../windows.test-support'
 
 function app(start: Partial<Pick<Settings, 'interfaceAppearance' | 'websiteAppearance'>> = {}) {
   const settings = { interfaceAppearance: 'auto' as Settings['interfaceAppearance'], websiteAppearance: 'auto' as Settings['websiteAppearance'], ...start }
@@ -118,7 +119,7 @@ describe('the main process', () => {
       for (const name of readdirSync(dir)) {
         const path = join(dir, name)
         if (statSync(path).isDirectory()) walk(path)
-        else if (/\.ts$/.test(name) && !/\.test\.ts$/.test(name) && !/^smoke/.test(name) && /nativeTheme\.themeSource\s*=[^=]|theme\.themeSource\s*=[^=]/.test(readFileSync(path, 'utf8'))) writers.push(path.slice(root.length))
+        else if (/\.ts$/.test(name) && !/\.test\.ts$/.test(name) && !/^smoke/.test(name) && /nativeTheme\.themeSource\s*=[^=]|theme\.themeSource\s*=[^=]/.test(readFileSync(path, 'utf8'))) writers.push(posix(path.slice(root.length)))
       }
     }
     walk(root)

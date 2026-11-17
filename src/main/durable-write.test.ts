@@ -3,11 +3,12 @@
 // full disk or a quota does, or lie about what it wrote.
 
 import * as nodeFs from 'node:fs'
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { replaceFileDurably, writeAllSync, writeDurableFile } from './durable-write'
+import { expectMode, onWindows } from './windows.test-support'
 import { LockStore } from './lock-store'
 import { PasswordVault, VaultError } from './password-vault'
 import { writeFileAtomic } from './persist'
@@ -53,7 +54,7 @@ describe('writeDurableFile', () => {
       chmodSync(path, 0o666)
       writeDurableFile(path, 'new')
       expect(readFileSync(path, 'utf8')).toBe('new')
-      expect(statSync(path).mode & 0o777).toBe(0o600)
+      expectMode(path, 0o600)
     } finally {
       process.umask(before)
     }
@@ -76,7 +77,8 @@ describe('writeDurableFile', () => {
     expect(() => writeDurableFile(join(dir, 'a.json'), TEXT)).toThrow(/short write: 0 bytes on the disk/)
   })
 
-  it('does not follow a link left in the place of the temporary file', () => {
+  // Windows: there is no O_NOFOLLOW there (it is undefined, so it adds no flag): the link is followed and the target written.
+  it.skipIf(onWindows)('does not follow a link left in the place of the temporary file', () => {
     const target = join(dir, 'target')
     writeFileSync(target, 'precious')
     const path = join(dir, 'a.json.tmp')
@@ -103,7 +105,7 @@ describe('the files that go through it', () => {
     writeFileSync(path, 'old', { mode: 0o644 })
     writeFileAtomic(path, TEXT)
     expect(readFileSync(path, 'utf8')).toBe(TEXT)
-    expect(statSync(path).mode & 0o777).toBe(0o600)
+    expectMode(path, 0o600)
     expect(existsSync(`${path}.tmp`)).toBe(false)
   })
 
@@ -120,7 +122,7 @@ describe('the files that go through it', () => {
     const path = join(dir, 'windows.json')
     writeSession(path, { main: { x: 1, y: 2, width: 900, height: 700 }, windows: [] })
     expect(JSON.parse(readFileSync(path, 'utf8')).main).toEqual({ x: 1, y: 2, width: 900, height: 700 })
-    expect(statSync(path).mode & 0o777).toBe(0o600)
+    expectMode(path, 0o600)
   })
 
   it('the extension ledger: complete and 0600', () => {
@@ -128,7 +130,7 @@ describe('the files that go through it', () => {
     const path = join(dir, 'versions.json')
     new ExtensionLedger(path).record('default', 'ext', '1.2.3')
     expect(new ExtensionLedger(path).versionOf('default', 'ext')).toBe('1.2.3')
-    expect(statSync(path).mode & 0o777).toBe(0o600)
+    expectMode(path, 0o600)
   })
 
   it('the download records: complete over short writes, and the previous file kept when the new one is short', () => {
@@ -188,7 +190,7 @@ describe('the password vault', () => {
     const empty = readFileSync(path, 'utf8')
     await v.save(LOGIN)
     expect(readFileSync(`${path}.bak`, 'utf8')).toBe(empty)
-    expect(statSync(`${path}.bak`).mode & 0o777).toBe(0o600)
+    expectMode(`${path}.bak`, 0o600)
     const one = readFileSync(path, 'utf8')
     await v.save({ ...LOGIN, username: 'bob@example.com' })
     expect(readFileSync(`${path}.bak`, 'utf8')).toBe(one)
@@ -210,7 +212,7 @@ describe('the password vault', () => {
     const empty = readFileSync(path, 'utf8')
     await v.save(LOGIN)
     expect(readFileSync(`${path}.bak`, 'utf8')).toBe(empty)
-    expect(statSync(`${path}.bak`).mode & 0o777).toBe(0o600)
+    expectMode(`${path}.bak`, 0o600)
     // The copy cannot be made either (a folder stands where the file should go): the save fails and the vault is as it was.
     rmSync(`${path}.bak`)
     mkdirSync(`${path}.bak`)
@@ -243,7 +245,7 @@ describe('replaceFileDurably, and the writers that go through it', () => {
     writeFileSync(path, 'old', { mode: 0o644 })
     replaceFileDurably(path, TEXT)
     expect(readFileSync(path, 'utf8')).toBe(TEXT)
-    expect(statSync(path).mode & 0o777).toBe(0o600)
+    expectMode(path, 0o600)
     expect(existsSync(`${path}.tmp`)).toBe(false)
   })
 
@@ -256,7 +258,8 @@ describe('replaceFileDurably, and the writers that go through it', () => {
     expect(existsSync(`${path}.tmp`)).toBe(false)
   })
 
-  it('does not write through a link left under the temporary name, and leaves the link as it found it', () => {
+  // Windows: there is no O_NOFOLLOW there (it is undefined, so it adds no flag): the link is followed and the target written.
+  it.skipIf(onWindows)('does not write through a link left under the temporary name, and leaves the link as it found it', () => {
     const path = join(dir, 'index.json')
     const elsewhere = join(dir, 'elsewhere.txt')
     writeFileSync(elsewhere, 'not ours')

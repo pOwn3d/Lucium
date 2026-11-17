@@ -154,9 +154,10 @@ export interface FeedKeys {
 /**
  * The keys of a publication: the private ones in `dir` (FEED_KEY_FILE, and NEXT_FEED_KEY_FILE and PREVIOUS_FEED_KEY_FILE when they are there), read
  * at the moment a feed is signed and never before, and `publicKeys`, the ones the builds carry. Nothing of a private key is ever returned or put in
- * a message.
+ * a message. `posixModes`: whether the mode of a private key is read. Windows reports the mode 666 for every file and has no bit to read, so a check there would refuse
+ * each key (and every publication that signs); the default is the system this runs on. The module imports nothing of the project, hence not the platform layer's fact.
  */
-export function feedKeysIn(dir: string, publicKeys: readonly string[]): FeedKeys {
+export function feedKeysIn(dir: string, publicKeys: readonly string[], posixModes: boolean = process.platform !== 'win32'): FeedKeys {
   /** The private keys of the folder with their public halves, or what is wrong. */
   const load = (): { ok: true; keys: { file: string; pem: string; publicKey: string }[] } | { ok: false; problem: string } => {
     const listed = publicKeyProblems(publicKeys)
@@ -170,7 +171,7 @@ export function feedKeysIn(dir: string, publicKeys: readonly string[]): FeedKeys
         return { ok: false, problem: `${path} does not exist: it is the private key the feed is signed with. \`node scripts/feed-key.mjs\` makes it; a key made on another Mac is brought back from its backup` }
       }
       if (!stat.isFile()) return { ok: false, problem: `${path} is not a plain file (a link or a folder): a private key is a file of its own` }
-      if ((stat.mode & 0o077) !== 0) return { ok: false, problem: `${path} can be read by other accounts (mode ${(stat.mode & 0o777).toString(8)}): chmod 600, and consider the key leaked if the Mac is shared` }
+      if (posixModes && (stat.mode & 0o077) !== 0) return { ok: false, problem: `${path} can be read by other accounts (mode ${(stat.mode & 0o777).toString(8)}): chmod 600, and consider the key leaked if the Mac is shared` }
       let pem: string
       let publicKey: string
       try {

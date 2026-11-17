@@ -3,12 +3,14 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { en } from '@shared/i18n-en'
 import { fr } from '@shared/i18n-fr'
 import { littleForms } from '@shared/little-name'
+import { posix } from './windows.test-support'
 
-const ROOT = new URL('../../', import.meta.url).pathname
+const ROOT = fileURLToPath(new URL('../../', import.meta.url))
 
 // "Little Arc" with a space is a word, hence something someone can read; in code, "little-arc" is the area of keys of the catalogues
 // (`little-arc-settings.mini-fenetre`) and `LittleArc` an identifier: neither is shown to anyone.
@@ -25,7 +27,8 @@ const scanned = (file: string, source: string): string => (CATALOGUES.includes(f
 function filesUnder(dir: string, keep: (path: string) => boolean): string[] {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const path = join(dir, entry.name)
-    return entry.isDirectory() ? filesUnder(path, keep) : keep(path) ? [path] : []
+    // `keep` reads a path written with `/` (the filters below name folders and files that way), whatever the system.
+    return entry.isDirectory() ? filesUnder(path, keep) : keep(posix(path)) ? [path] : []
   })
 }
 
@@ -106,8 +109,8 @@ describe('the code', () => {
   it('has no text of the interface, window title or label with "Little Arc" (identifiers such as LittleArc are not shown to anyone)', () => {
     expect(sources.length).toBeGreaterThan(100)
     const offending = sources
-      .filter((path) => OLD_NAME_IN_CODE.test(withoutComments(scanned(relative(ROOT, path), readFileSync(path, 'utf8')), path.endsWith('.html'))))
-      .map((path) => relative(ROOT, path))
+      .filter((path) => OLD_NAME_IN_CODE.test(withoutComments(scanned(posix(relative(ROOT, path)), readFileSync(path, 'utf8')), path.endsWith('.html'))))
+      .map((path) => posix(relative(ROOT, path)))
     expect(offending).toEqual([])
   })
 

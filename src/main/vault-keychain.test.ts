@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -23,6 +23,7 @@ import {
   type KeychainAddon,
   type KeychainTransport
 } from './vault-keychain'
+import { expectMode, posix } from './windows.test-support'
 
 // A key of the vault as the keychain keeps it: 64 bytes, recognisable in any encoding a leak could take.
 const MATERIAL = Buffer.from(Array.from({ length: 64 }, (_, i) => (i * 37 + 11) & 0xff))
@@ -216,7 +217,9 @@ describe('the transport of the built application', () => {
   // That the main process asks for it only in the built application, outside the engine test, and cancels its requests at quit: shell/password-wiring.test.ts.
 
   it('finds the helper in Contents/XPCServices of the built application and the addon in its Contents/Resources, outside app.asar', () => {
-    expect(keychainPaths('/Applications/Lucium.app/Contents/Resources')).toEqual({
+    // The bundle is a macOS one, whose paths are written with `/`; `join` writes `\` on Windows.
+    const where = keychainPaths('/Applications/Lucium.app/Contents/Resources')
+    expect({ helper: posix(where.helper), addon: posix(where.addon) }).toEqual({
       helper: '/Applications/Lucium.app/Contents/XPCServices/LuciumKeychain.xpc',
       addon: '/Applications/Lucium.app/Contents/Resources/vault-xpc.node'
     })
@@ -255,7 +258,7 @@ describe('the keychain of the vault', () => {
     expect(k.enabled()).toBe(true)
     expect(helper!.items.get(`${service}/${KEYCHAIN_ACCOUNT}`)).toBe(KEY_B64)
     const record = readFileSync(recordPath, 'utf8')
-    expect(statSync(recordPath).mode & 0o777).toBe(0o600)
+    expectMode(recordPath, 0o600)
     expect(record).not.toContain(KEY_B64)
     expect(record).not.toContain(KEY_HEX)
     expect(JSON.parse(record)).toEqual({ v: 1, service, account: KEYCHAIN_ACCOUNT, salt: SALT.toString('base64'), state: 'ZmluZ2Vycw==' })

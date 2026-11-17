@@ -1,10 +1,12 @@
 // Taking back an update Squirrel staged (squirrel-staging.ts), on stand-ins of launchctl and of the disk: nothing here touches the system (the real
 // job of an installed Lucium is named like the one below, and must not be removed by a test).
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { discardStagedUpdate, LUCIUM_BUNDLE_ID, type StagingDeps } from './squirrel-staging'
 
-const FOLDER = '/Users/someone/Library/Caches/app.lucium.browser.ShipIt'
+// Written with `join`, as the code under test writes it: a text with `/` would not be equal to it on Windows.
+const FOLDER = join('/Users/someone/Library/Caches', 'app.lucium.browser.ShipIt')
 
 /** The system as the test sets it: what each step does, and the log of what happened, in order. */
 function system(over: { run?: () => Promise<void>; names?: string[] | Error; remove?: (path: string) => Promise<void> } = {}) {
@@ -36,14 +38,14 @@ describe('discardStagedUpdate', () => {
   it('removes the job of ShipIt first, then the request and the unpacked application; the logs stay', async () => {
     const { deps, steps, logs } = system()
     await discardStagedUpdate(deps)
-    expect(steps).toEqual(['/bin/launchctl remove app.lucium.browser.ShipIt', `list ${FOLDER}`, `remove ${FOLDER}/ShipItState.plist`, `remove ${FOLDER}/update.Kp4sLeM`])
+    expect(steps).toEqual(['/bin/launchctl remove app.lucium.browser.ShipIt', `list ${FOLDER}`, `remove ${join(FOLDER, 'ShipItState.plist')}`, `remove ${join(FOLDER, 'update.Kp4sLeM')}`])
     expect(logs).toEqual([])
   })
 
   it('removes the files even when the job cannot be removed, and says so in the log', async () => {
     const { deps, steps, logs } = system({ run: () => Promise.reject(new Error('Could not find specified service')) })
     await discardStagedUpdate(deps)
-    expect(steps).toContain(`remove ${FOLDER}/update.Kp4sLeM`)
+    expect(steps).toContain(`remove ${join(FOLDER, 'update.Kp4sLeM')}`)
     expect(logs).toEqual([expect.stringContaining('app.lucium.browser.ShipIt could not be removed (Could not find specified service)')])
   })
 
@@ -57,7 +59,7 @@ describe('discardStagedUpdate', () => {
   it('fails, naming what stays, when the folder cannot be read or a file cannot be removed', async () => {
     await expect(discardStagedUpdate(system({ names: Object.assign(new Error('not permitted'), { code: 'EPERM' }) }).deps)).rejects.toThrow(`cannot read ${FOLDER}: not permitted`)
     const refused = system({ remove: (path) => (path.endsWith('update.Kp4sLeM') ? Promise.reject(new Error('busy')) : Promise.resolve()) })
-    await expect(discardStagedUpdate(refused.deps)).rejects.toThrow(`cannot remove ${FOLDER}/update.Kp4sLeM: busy`)
+    await expect(discardStagedUpdate(refused.deps)).rejects.toThrow(`cannot remove ${join(FOLDER, 'update.Kp4sLeM')}: busy`)
   })
 
   it('names the job and the folder after the identifier the application is built with', () => {

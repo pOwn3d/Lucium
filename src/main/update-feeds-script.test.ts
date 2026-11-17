@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { onWindows } from './windows.test-support'
 
 // The two update channels in scripts/build-drm-release.sh: --update-feed (stable) and --test-feed (test). The script signs with the maintainer's
 // identity, builds for two minutes and installs in /Applications, so it is never run whole here. Its first part, the reading and the checks of its
@@ -39,7 +40,8 @@ function run(args: string[], files: Record<string, string> = {}, env: Record<str
 // Each check runs the shell script of the build, several times: seconds when the whole suite shares the machine.
 const SCRIPT_RUNS = { timeout: 30_000 }
 
-describe('the part of build-drm-release.sh that is run here', SCRIPT_RUNS, () => {
+// Windows: this runs the bash script of the build, the maintainer's release tooling, on the maintainer's Mac (docs/community/release-process.md).
+describe.skipIf(onWindows)('the part of build-drm-release.sh that is run here', SCRIPT_RUNS, () => {
   it('stops before anything is built, signed or installed', () => {
     expect(script).toContain(BUILD_STARTS)
     const executed = code(argumentsPart)
@@ -48,7 +50,8 @@ describe('the part of build-drm-release.sh that is run here', SCRIPT_RUNS, () =>
   })
 })
 
-describe('--test-feed: the test channel sealed beside the stable one', SCRIPT_RUNS, () => {
+// Windows: same as above, the bash script of the build is the maintainer's release tooling.
+describe.skipIf(onWindows)('--test-feed: the test channel sealed beside the stable one', SCRIPT_RUNS, () => {
   it('hands both addresses to electron-vite, whichever way they are written', () => {
     expect(run(['--update-feed', STABLE, '--test-feed', TEST])).toEqual({ status: 0, output: `REACHED stable=${STABLE} test=${TEST}\n` })
     expect(run([`--update-feed=${STABLE}`, `--test-feed=${TEST}`])).toEqual({ status: 0, output: `REACHED stable=${STABLE} test=${TEST}\n` })

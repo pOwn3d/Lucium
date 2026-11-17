@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { PAGE_GUARD } from '../shared/page-guard'
 import { guardWorld } from './guard-world'
+import { posix } from '../main/windows.test-support'
 
 // The preload runs in Electron's isolated world; here both worlds are plain Node.
 const contextBridge = { executeInMainWorld: vi.fn() }
@@ -124,7 +125,7 @@ describe('what the page guard preload is made of', () => {
       for (const next of imports(file)) walk(next)
     }
     walk(entry)
-    return [...seen].map((file) => relative(sourceDir, file)).sort()
+    return [...seen].map((file) => posix(relative(sourceDir, file))).sort()
   }
 
   it('imports nothing but leaf modules, so that the bundle needs no shared chunk', () => {

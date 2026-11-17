@@ -7,6 +7,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSyn
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { onWindows } from './windows.test-support'
 import {
   type Env,
   MAX_EXPORT_BYTES,
@@ -31,6 +32,10 @@ import {
   unreadFiles,
   unreadReport
 } from './public-export'
+
+// Windows: the export of the public tree is the maintainer's release tooling, run on the maintainer's Mac (docs/community/release-process.md): these suites make real
+// repositories whose commits are signed with an SSH key, in a git configuration file written with POSIX paths, and run scanners that are stand-ins written as `#!/bin/sh`.
+const describeGit = describe.skipIf(onWindows)
 
 const NOREPLY = '1234+someone@users.noreply.github.com'
 const PERSONAL = 'someone@example.org'
@@ -109,7 +114,7 @@ afterAll(() => {
   rmSync(root, { recursive: true, force: true })
 })
 
-describe('the source repository', { timeout: 60_000 }, () => {
+describeGit('the source repository', { timeout: 60_000 }, () => {
   it('is exported when it is clean and HEAD is the commit expected, by its whole hash or its first digits', () => {
     const { repo, env, head } = repository()
     expect(sourceProblems(repo, head, env)).toEqual([])
@@ -143,7 +148,7 @@ describe('the source repository', { timeout: 60_000 }, () => {
   })
 })
 
-describe('the folder of the export', { timeout: 60_000 }, () => {
+describeGit('the folder of the export', { timeout: 60_000 }, () => {
   it('is a folder that is empty or does not exist yet, outside every repository', () => {
     const env = environment()
     expect(destinationProblems(folder('empty'), env)).toEqual([])
@@ -219,7 +224,7 @@ describe('what the exported files must not be or say', () => {
   })
 })
 
-describe('the tree of the export', { timeout: 60_000 }, () => {
+describeGit('the tree of the export', { timeout: 60_000 }, () => {
   it('has the hash git gives it: folders, a file that runs, a link, and names that sort around a folder', () => {
     const { repo, env } = repository({ ...SOURCES, 'a/b.txt': 'b\n', 'a.b': 'dot\n', 'a-b': 'dash\n', 'a/c/d/e.txt': 'e\n', 'scripts/é.sh': '#!/bin/sh\n' })
     chmodSync(join(repo, 'scripts/é.sh'), 0o755)
@@ -254,7 +259,7 @@ describe('the tree of the export', { timeout: 60_000 }, () => {
   })
 })
 
-describe('the complete secret scan', () => {
+describeGit('the complete secret scan', () => {
   const dir = (): string => tree(SOURCES)
   const env: Env = { PATH: process.env.PATH }
 
@@ -305,7 +310,7 @@ describe('the complete secret scan', () => {
   })
 })
 
-describe('the identity of the commit', { timeout: 60_000 }, () => {
+describeGit('the identity of the commit', { timeout: 60_000 }, () => {
   it('passes with a noreply address for the author and the committer, a signing key and signed commits', () => {
     expect(identityProblems(folder('new'), environment())).toEqual([])
     for (const address of [NOREPLY, 'someone@users.noreply.github.com']) expect(NOREPLY_ADDRESS.test(address), address).toBe(true)
@@ -336,7 +341,7 @@ describe('the identity of the commit', { timeout: 60_000 }, () => {
   })
 })
 
-describe('the commit that is prepared', { timeout: 60_000 }, () => {
+describeGit('the commit that is prepared', { timeout: 60_000 }, () => {
   /** An export of plain sources with its repository made, and the tree it must have. */
   function prepared(env: Env = environment()): { dir: string; env: Env; tree: string } {
     const source = repository({ ...SOURCES, '.gitignore': 'kept/\n', 'kept/ignored.txt': 'tracked all the same\n' }, env)
@@ -483,7 +488,7 @@ describe('the files that are not under the GPL', () => {
   })
 })
 
-describe('the whole run', { timeout: 120_000 }, () => {
+describeGit('the whole run', { timeout: 120_000 }, () => {
   it('reports the binary files it exported and did not read', () => {
     const { repo, env, head } = repository({ ...SOURCES, 'resources/icon.png': 'not really an image\n', 'docs/guide.pdf': '%PDF-1.4\n' })
     const result = runExport({ repo, check: true, expected: head, scannerPath: scanners(CLEAN), tmp: folder('tmp-unread'), env })
@@ -608,7 +613,7 @@ describe('the whole run', { timeout: 120_000 }, () => {
 
 // The script itself, run as the maintainer runs it: its arguments, what it prints (the « Not read » lines among them) and its exit code. It exports
 // the repository it is in, so it is copied, with the module it loads, into a repository made here; the scanners are the stand-ins above.
-describe('scripts/export-public.mjs, run', { timeout: 120_000 }, () => {
+describeGit('scripts/export-public.mjs, run', { timeout: 120_000 }, () => {
   const real = (path: string): string => readFileSync(join(import.meta.dirname, '..', '..', path), 'utf8')
   const SCRIPT_FILES = { 'scripts/export-public.mjs': real('scripts/export-public.mjs'), 'src/main/public-export.ts': real('src/main/public-export.ts') }
 

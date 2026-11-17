@@ -7,6 +7,7 @@ import { t } from '@shared/i18n'
 import { PRELUDE_FILE } from './content-prelude'
 import { STAGING_DIR, STORE_DIR } from './web-store-files'
 import { WebStore, type WebStoreHost } from './web-store'
+import { expectMode, onWindows } from '../windows.test-support'
 
 // The store talks to Electron only when it installs; here it is configured, and handed a library that behaves as electron-chrome-web-store.
 vi.mock('electron', () => ({ ipcMain: { handle: vi.fn() }, nativeImage: {}, net: {}, session: {}, webContents: {} }))
@@ -52,10 +53,13 @@ describe('WebStore: what an install that never finished left behind', () => {
     mkdirSync(installed)
     chmodSync(installed, 0o755)
     storeOn(userData).configure(config)
-    await vi.waitFor(() => expect(statSync(installed).mode & 0o777).toBe(0o700))
+    // The folder is closed after the staging one is cleared: waiting for that keeps the test from ending with the work under way (and gives Windows, where the mode is not read, something to wait for).
+    await vi.waitFor(() => expect(existsSync(join(userData, STAGING_DIR))).toBe(false))
+    await vi.waitFor(() => expectMode(installed, 0o700))
   })
 
-  it('does not stop the application when the folder cannot be cleared: the reason is in the journal', async () => {
+  // Windows: a path under a file is reported as not found there (which `force` hides), not as ENOTDIR.
+  it.skipIf(onWindows)('does not stop the application when the folder cannot be cleared: the reason is in the journal', async () => {
     // The folder of the data is a file: removing something under it fails with ENOTDIR, which `force` does not hide.
     const file = join(userData, 'not-a-folder')
     writeFileSync(file, 'x')
@@ -182,9 +186,11 @@ describe('WebStore: the folders an install writes', () => {
     } finally {
       process.umask(before)
     }
-    expect(modes).toEqual([0o700])
-    expect(statSync(join(userData, STORE_DIR)).mode & 0o777).toBe(0o700)
-    expect(statSync(join(userData, STORE_DIR, 'default')).mode & 0o777).toBe(0o700)
+    expect(modes).toHaveLength(1)
+    // Windows reports 0777 for a folder whatever its access list: only the other systems can say it is closed.
+    if (!onWindows) expect(modes).toEqual([0o700])
+    expectMode(join(userData, STORE_DIR), 0o700)
+    expectMode(join(userData, STORE_DIR, 'default'), 0o700)
     expect(existsSync(join(userData, STORE_DIR, 'default', EXT, '1.0_0', 'manifest.json'))).toBe(true)
   })
 })
@@ -285,7 +291,8 @@ describe('WebStore: an update that waited for the user, once they accept it', ()
     expect(w.store.pendingUpdate('default', EXT)).toBeUndefined()
   })
 
-  it('leaves the installed version loaded when the new one cannot be put in place, says so, and keeps waiting', async () => {
+  // Windows: `chmod 500` does not make a folder refuse a new folder there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(onWindows)('leaves the installed version loaded when the new one cannot be put in place, says so, and keeps waiting', async () => {
     const { w, installed } = await waitingUpdate()
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     // The folder of the extension cannot be written: the new version cannot be moved into it.

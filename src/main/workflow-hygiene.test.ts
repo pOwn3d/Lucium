@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { dirname, join, matchesGlob } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { posix } from './windows.test-support'
 
 // The workflows only run on GitHub, where a mistake is silent: an action that moved under its tag, a token with more rights than the job
 // needs, a workflow that runs the code of a pull request with the rights of the repository. The rules are checked here as text on every
@@ -22,7 +23,7 @@ const code = (text: string): string =>
 const FILES = readdirSync(here('.github/workflows')).filter((file) => /\.ya?ml$/.test(file)).sort()
 const workflows = FILES.map((file) => ({ file, text: code(read(`.github/workflows/${file}`)) }))
 /** The local actions (.github/actions/<name>/action.yml): steps shared by the workflows, held to the same rules about what they use and hold. */
-const ACTION_FILES = globSync('.github/actions/*/action.yml', { cwd: here('.') }).sort()
+const ACTION_FILES = globSync('.github/actions/*/action.yml', { cwd: here('.') }).map((file) => posix(file)).sort()
 const localActions = ACTION_FILES.map((file) => ({ file, text: code(read(file)) }))
 
 /** A top-level block (`permissions:`, `concurrency:`, `on:`): its first line and the indented lines under it. */
@@ -469,13 +470,13 @@ describe('.github/codeql/codeql-config.yml', () => {
   })
 
   it('hides nothing a file that is read depends on: no file CodeQL reads imports a file it leaves out, but the lazy load of the engine test', () => {
-    const files = ['src', 'scripts', 'tests'].flatMap((dir) => readdirSync(here(dir), { recursive: true, encoding: 'utf8' }).map((file) => `${dir}/${file}`)).filter((file) => /\.(?:tsx?|mjs|cjs|js)$/.test(file))
+    const files = ['src', 'scripts', 'tests'].flatMap((dir) => readdirSync(here(dir), { recursive: true, encoding: 'utf8' }).map((file) => `${dir}/${posix(file)}`)).filter((file) => /\.(?:tsx?|mjs|cjs|js)$/.test(file))
     const known = new Set(files)
     const isIgnored = (file: string) => ignored.some((pattern) => matchesGlob(file, pattern))
     const offenders: string[] = []
     for (const file of files.filter((f) => !isIgnored(f))) {
       for (const [, specifier] of read(file).matchAll(/(?:\bfrom|\bimport\(|\brequire\(|^import)\s*['"]([^'"]+)['"]/gm)) {
-        const target = specifier!.startsWith('@shared/') ? `src/shared/${specifier!.slice(8)}` : specifier!.startsWith('.') ? join(dirname(file), specifier!) : null
+        const target = specifier!.startsWith('@shared/') ? `src/shared/${specifier!.slice(8)}` : specifier!.startsWith('.') ? posix(join(dirname(file), specifier!)) : null
         if (target === null) continue
         const found = ['', '.ts', '.tsx', '.mjs', '.js', '/index.ts', '/index.tsx'].map((suffix) => `${target}${suffix}`).find((candidate) => known.has(candidate))
         if (found !== undefined && isIgnored(found)) offenders.push(`${file} -> ${found}`)

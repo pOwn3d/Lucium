@@ -5,6 +5,7 @@
 // registered and sent (shell/ipc-fake.test-support.ts).
 
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Channel, type LuciumApi } from '@shared/ipc'
 import { createInitialState } from '@shared/sidebar'
@@ -25,7 +26,7 @@ const shell = methodsOf(Browser.prototype)
 
 afterEach(() => vi.clearAllMocks())
 
-const read = (path: string): string => readFileSync(new URL(path, import.meta.url).pathname, 'utf8')
+const read = (path: string): string => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
 
 const base = createInitialState({ now: 0, newId: () => 'x' })
 const tab = (id: string) => ({ id, spaceId: base.activeSpaceId, url: `https://${id}.example/`, title: id, pinned: false, createdAt: 0, lastActiveAt: 0 })

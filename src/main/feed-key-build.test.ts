@@ -8,6 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { onWindows } from './windows.test-support'
 
 const script = readFileSync(fileURLToPath(new URL('../../scripts/build-drm-release.sh', import.meta.url)), 'utf8')
 const between = (from: string, to: string): string => {
@@ -68,8 +69,11 @@ function look(keys: string, asar: string): { status: number | null; output: stri
   return { status: result.status, output: `${result.stdout}${result.stderr}` }
 }
 
+// Windows: these run the bash script of the build with a stand-in `node` written as a shell script; it is the maintainer's release tooling, run on the maintainer's Mac (docs/community/release-process.md).
+const itRunsBash = it.skipIf(onWindows)
+
 describe('build-drm-release.sh, before the build', () => {
-  it('stops a build with an update feed while the public key of the feed is not filled in, and says what to run', () => {
+  itRunsBash('stops a build with an update feed while the public key of the feed is not filled in, and says what to run', () => {
     const result = ask({ feed: 'https://lucium.app/updates/darwin-arm64/feed.json', status: 1 })
     expect(result.status).toBe(2)
     expect(result.output).not.toContain('REACHED')
@@ -78,25 +82,25 @@ describe('build-drm-release.sh, before the build', () => {
     expect(result.output).toContain('CALLED node scripts/feed-key.mjs --check')
   })
 
-  it('stops a build to hand out (--notarize) the same way, with or without a feed', () => {
+  itRunsBash('stops a build to hand out (--notarize) the same way, with or without a feed', () => {
     expect(ask({ notarize: true, status: 1 }).status).toBe(2)
     expect(ask({ notarize: true, feed: 'https://lucium.app/updates/darwin-arm64/feed.json', status: 1 }).status).toBe(2)
   })
 
-  it('stops too when the check answers no key at all', () => {
+  itRunsBash('stops too when the check answers no key at all', () => {
     const result = ask({ notarize: true, status: 0, keys: '' })
     expect(result.status).toBe(2)
     expect(result.output).not.toContain('REACHED')
   })
 
-  it('goes on with the keys once they are filled in, and names them', () => {
+  itRunsBash('goes on with the keys once they are filled in, and names them', () => {
     const result = ask({ feed: 'https://lucium.app/updates/darwin-arm64/feed.json', notarize: true, keys: `${KEY}\n${OTHER}\n` })
     expect(result.status).toBe(0)
     expect(result.output).toContain(`Public key(s) of the update feed built in: ${KEY} ${OTHER}`)
     expect(result.output).toContain('REACHED the build')
   })
 
-  it('asks nothing of a build for this Mac alone: no feed, not notarized', () => {
+  itRunsBash('asks nothing of a build for this Mac alone: no feed, not notarized', () => {
     expect(ask({ status: 1 })).toEqual({ status: 0, output: 'REACHED the build\n' })
   })
 
@@ -107,13 +111,13 @@ describe('build-drm-release.sh, before the build', () => {
 })
 
 describe('build-drm-release.sh, after the build', () => {
-  it('goes on when app.asar holds every key', () => {
+  itRunsBash('goes on when app.asar holds every key', () => {
     const result = look(`${KEY}\n${OTHER}`, `…const k=["${KEY}","${OTHER}"];…`)
     expect(result.status).toBe(0)
     expect(result.output).toMatch(/Public key\(s\) of the update feed in app\.asar[\s\S]*REACHED the rest/)
   })
 
-  it('stops when app.asar lacks a key: that build would refuse every feed', () => {
+  itRunsBash('stops when app.asar lacks a key: that build would refuse every feed', () => {
     for (const asar of ['nothing of a key', `…["${KEY}"]…`]) {
       const result = look(`${KEY}\n${OTHER}`, asar)
       expect(result.status).toBe(1)
@@ -122,7 +126,7 @@ describe('build-drm-release.sh, after the build', () => {
     }
   })
 
-  it('looks for nothing in a build that asked for no key', () => {
+  itRunsBash('looks for nothing in a build that asked for no key', () => {
     expect(look('', 'nothing of a key')).toEqual({ status: 0, output: 'REACHED the rest\n' })
   })
 

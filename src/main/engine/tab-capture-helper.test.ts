@@ -6,6 +6,7 @@ import { EventEmitter } from 'node:events'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { CAPTURE_HELPER_URL } from '@shared/capture-helper-page'
 import { HELPER_SCRIPT } from '@shared/tab-capture-pcm'
+import { posix } from '../windows.test-support'
 
 interface Options {
   show?: boolean
@@ -98,8 +99,8 @@ describe('the helper page: what it is made as', () => {
     for (const off of ['nodeIntegration', 'nodeIntegrationInSubFrames', 'nodeIntegrationInWorker', 'webviewTag']) expect(preferences[off], off).toBe(false)
     expect(preferences['preload']).toBe(captureHelperPreloadPath())
     // Only the file of its own, built with the other preloads: the preload of the interface or of an extension is never this page's.
-    expect(captureHelperPreloadPath('/Applications/Lucium.app/Contents/Resources/app.asar/out/main')).toBe('/Applications/Lucium.app/Contents/Resources/app.asar/out/preload/capture-helper.js')
-    expect(captureHelperPreloadPath('/Users/jane/lucium/out/main')).toBe('/Users/jane/lucium/out/preload/capture-helper.js')
+    expect(posix(captureHelperPreloadPath('/Applications/Lucium.app/Contents/Resources/app.asar/out/main'))).toBe('/Applications/Lucium.app/Contents/Resources/app.asar/out/preload/capture-helper.js')
+    expect(posix(captureHelperPreloadPath('/Users/jane/lucium/out/main'))).toBe('/Users/jane/lucium/out/preload/capture-helper.js')
   })
 
   it('is not slowed down while nobody sees it: its timers and the reading of its sound run as if it were shown', () => {

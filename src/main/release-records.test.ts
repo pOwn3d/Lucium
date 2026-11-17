@@ -13,8 +13,10 @@ const COMMIT = '1234567890abcdef1234567890abcdef12345678'
 const OTHER_COMMIT = 'fedcba0987654321fedcba0987654321fedcba09'
 const HASH = 'a'.repeat(64)
 const REPORT_HASH = 'd'.repeat(64)
-const REPORT = '/repo/out-engine/report.json'
-const RECORD = '/repo/out-engine/release-run.json'
+// Written with `join`, as the code under test writes them: the fake effects compare paths as texts, and Windows spells them with `\`.
+const ARCHIVE = join('/repo', 'dist-drm', 'Lucium-0.3.0-arm64.zip')
+const REPORT = join('/repo', 'out-engine', 'report.json')
+const RECORD = join('/repo', 'out-engine', 'release-run.json')
 
 interface World {
   /** What `git rev-parse HEAD` answers, call after call (the last one is repeated). */
@@ -34,7 +36,7 @@ function world(change: World = {}) {
   const written: Record<string, string> = {}
   const removed: string[] = []
   const scripts: string[] = []
-  const files = new Set<string>(['/repo/dist-drm/Lucium-0.3.0-arm64.zip', REPORT].filter((path) => !change.missing?.includes(path)))
+  const files = new Set<string>([ARCHIVE, REPORT].filter((path) => !change.missing?.includes(path)))
   let revParse = 0
   let status = 0
   const next = (values: string[] | undefined, at: number, fallback: string): string => values?.[Math.min(at, values.length - 1)] ?? fallback
@@ -110,8 +112,8 @@ describe('what Git says of the working tree', () => {
 })
 
 describe('the build record that is written', () => {
-  const input = { version: '0.3.0', archive: '/repo/dist-drm/Lucium-0.3.0-arm64.zip', start: { commit: COMMIT, modified: false } }
-  const FILE = '/repo/dist-drm/Lucium-0.3.0-arm64.build.json'
+  const input = { version: '0.3.0', archive: ARCHIVE, start: { commit: COMMIT, modified: false } }
+  const FILE = join('/repo', 'dist-drm', 'Lucium-0.3.0-arm64.build.json')
 
   it('is beside the archive, names it with its sum and the commit, and is one the publication reads', () => {
     const w = world()

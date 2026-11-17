@@ -2,9 +2,10 @@ import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
+import { onWindows } from './windows.test-support'
 import {
   DEFAULT_NOTARY_PROFILE,
   assessProblem,
@@ -38,10 +39,12 @@ import {
 // The disk image of a release (scripts/make-dmg.mjs). Nothing here touches a keychain, Apple or the disk: the commands are planned and checked as
 // text, and the order of the steps is run against fake effects that record what would have been run.
 const VERSION = '0.2.12'
-const APP = '/repo/dist-drm/mac-arm64/Lucium.app'
-const OUT = '/repo/dist-drm'
-const TMP = '/var/tmp-root'
-const WORK = `${TMP}/lucium-dmg-${VERSION}-aB3dEf`
+// The paths are written with `join`, as the code under test writes them: `\` on Windows, where a text with `/` would not be equal to them.
+const APP = join('/repo', 'dist-drm', 'mac-arm64', 'Lucium.app')
+const OUT = join('/repo', 'dist-drm')
+const TMP = join('/var', 'tmp-root')
+const WORK = join(TMP, `lucium-dmg-${VERSION}-aB3dEf`)
+const STAGE = join(WORK, 'stage')
 // Made-up identities: the real one is in the keychain of the Mac that builds.
 const IDENTITY = 'Developer ID Application: Example Org (ABCDE12345)'
 const OTHER_IDENTITY = 'Developer ID Application: Other Org (ZYXWV98765)'
@@ -51,6 +54,10 @@ const CDHASH = '1234567890abcdef1234567890abcdef12345678'
 const INPUT: DmgInput = { version: VERSION, app: APP, outDir: OUT, tmpRoot: TMP, signIdentity: null, notaryProfile: 'lucium', dryRun: false }
 const PLAN = dmgPlan({ app: APP, work: WORK, outDir: OUT, version: VERSION, identity: IDENTITY, profile: 'lucium' })
 const DMG = `Lucium-${VERSION}-arm64.dmg`
+const WORK_DMG = join(WORK, DMG)
+const OUT_DMG = join(OUT, DMG)
+const OUT_SUM = join(OUT, `${DMG}.sha256`)
+const OUT_RECORD = join(OUT, `${DMG}.json`)
 const HASH = 'a'.repeat(64)
 const SIZE = 141_000_017
 const EXECUTABLE = { sha256: 'e'.repeat(64), size: 91_024 }
@@ -62,7 +69,8 @@ describe('the names', () => {
     expect(volumeNameOf(VERSION)).toBe('Lucium 0.2.12')
   })
 
-  it('write the sum as "<hash>  <name>" and a newline, which is what shasum -a 256 -c reads', () => {
+  // Windows: `shasum` is a tool of macOS (the maker of the image runs on the maintainer's Mac) and there is none to read the sum with.
+  it.skipIf(onWindows)('write the sum as "<hash>  <name>" and a newline, which is what shasum -a 256 -c reads', () => {
     expect(sumLineOf(HASH, DMG)).toBe(`${HASH}  ${DMG}\n`)
     const dir = mkdtempSync(join(tmpdir(), 'make-dmg-sum-'))
     try {
@@ -120,8 +128,8 @@ describe('the input', () => {
   })
 
   it('resolves --app against the folder the command is run from, and keeps the image in dist-drm', () => {
-    expect(resolveDmgInput({ ...options, app: 'out/Lucium.app', dryRun: true }, env)).toMatchObject({ app: '/work/out/Lucium.app', outDir: '/repo/dist-drm', dryRun: true })
-    expect(resolveDmgInput({ ...options, app: '/abs/Lucium.app' }, env).app).toBe('/abs/Lucium.app')
+    expect(resolveDmgInput({ ...options, app: 'out/Lucium.app', dryRun: true }, env)).toMatchObject({ app: resolve('/work/out/Lucium.app'), outDir: OUT, dryRun: true })
+    expect(resolveDmgInput({ ...options, app: '/abs/Lucium.app' }, env).app).toBe(resolve('/abs/Lucium.app'))
   })
 })
 
@@ -170,40 +178,40 @@ describe('the commands', () => {
   const lines = (): string[] => Object.values(PLAN).filter((value): value is Command => typeof value === 'object').map(commandLine)
 
   it('copies the app with ditto and a link to /Applications into a staging folder of the work folder', () => {
-    expect(PLAN.stage).toBe(`${WORK}/stage`)
-    expect(PLAN.staged).toBe(`${WORK}/stage/Lucium.app`)
-    expect(PLAN.makeStage).toMatchObject({ program: '/bin/mkdir', args: [`${WORK}/stage`] })
-    expect(PLAN.copyApp).toMatchObject({ program: '/usr/bin/ditto', args: [APP, `${WORK}/stage/Lucium.app`] })
-    expect(PLAN.linkApplications).toMatchObject({ program: '/bin/ln', args: ['-s', '/Applications', `${WORK}/stage/Applications`] })
+    expect(PLAN.stage).toBe(STAGE)
+    expect(PLAN.staged).toBe(join(STAGE, 'Lucium.app'))
+    expect(PLAN.makeStage).toMatchObject({ program: '/bin/mkdir', args: [STAGE] })
+    expect(PLAN.copyApp).toMatchObject({ program: '/usr/bin/ditto', args: [APP, join(STAGE, 'Lucium.app')] })
+    expect(PLAN.linkApplications).toMatchObject({ program: '/bin/ln', args: ['-s', '/Applications', join(STAGE, 'Applications')] })
   })
 
   it('makes an HFS+ compressed image named after the version, from the staging folder, in the work folder', () => {
-    expect(PLAN.create).toMatchObject({ program: '/usr/bin/hdiutil', args: ['create', '-volname', 'Lucium 0.2.12', '-srcfolder', `${WORK}/stage`, '-fs', 'HFS+', '-format', 'UDZO', `${WORK}/${DMG}`] })
-    expect(commandLine(PLAN.create)).toBe(`/usr/bin/hdiutil create -volname 'Lucium 0.2.12' -srcfolder ${WORK}/stage -fs HFS+ -format UDZO ${WORK}/${DMG}`)
+    expect(PLAN.create).toMatchObject({ program: '/usr/bin/hdiutil', args: ['create', '-volname', 'Lucium 0.2.12', '-srcfolder', STAGE, '-fs', 'HFS+', '-format', 'UDZO', WORK_DMG] })
+    expect(commandLine(PLAN.create)).toBe(`/usr/bin/hdiutil create -volname 'Lucium 0.2.12' -srcfolder ${shellWord(STAGE)} -fs HFS+ -format UDZO ${shellWord(WORK_DMG)}`)
   })
 
   it('signs the image with the identity and a timestamp', () => {
-    expect(PLAN.sign).toMatchObject({ program: '/usr/bin/codesign', args: ['--sign', IDENTITY, '--timestamp', `${WORK}/${DMG}`] })
+    expect(PLAN.sign).toMatchObject({ program: '/usr/bin/codesign', args: ['--sign', IDENTITY, '--timestamp', WORK_DMG] })
   })
 
   it('has it notarized with the keychain profile, waits for the answer and asks for it as JSON', () => {
-    expect(PLAN.submit).toMatchObject({ program: 'xcrun', args: ['notarytool', 'submit', `${WORK}/${DMG}`, '--keychain-profile', 'lucium', '--wait', '--output-format', 'json'] })
+    expect(PLAN.submit).toMatchObject({ program: 'xcrun', args: ['notarytool', 'submit', WORK_DMG, '--keychain-profile', 'lucium', '--wait', '--output-format', 'json'] })
   })
 
   it('staples and validates the ticket, and asks Gatekeeper about the image as if it were opened', () => {
-    expect(PLAN.staple).toMatchObject({ program: 'xcrun', args: ['stapler', 'staple', `${WORK}/${DMG}`] })
-    expect(PLAN.validateDmg).toMatchObject({ program: 'xcrun', args: ['stapler', 'validate', `${WORK}/${DMG}`] })
-    expect(PLAN.assess).toMatchObject({ program: '/usr/sbin/spctl', args: ['-a', '-t', 'open', '--context', 'context:primary-signature', '-v', `${WORK}/${DMG}`] })
+    expect(PLAN.staple).toMatchObject({ program: 'xcrun', args: ['stapler', 'staple', WORK_DMG] })
+    expect(PLAN.validateDmg).toMatchObject({ program: 'xcrun', args: ['stapler', 'validate', WORK_DMG] })
+    expect(PLAN.assess).toMatchObject({ program: '/usr/sbin/spctl', args: ['-a', '-t', 'open', '--context', 'context:primary-signature', '-v', WORK_DMG] })
   })
 
   it('moves the finished image to dist-drm, and names its sum beside it', () => {
-    expect(PLAN.moveDmg).toMatchObject({ program: '/bin/mv', args: ['-f', `${WORK}/${DMG}`, `${OUT}/${DMG}`] })
-    expect(PLAN.finalDmg).toBe(`${OUT}/${DMG}`)
-    expect(PLAN.finalSum).toBe(`${OUT}/${DMG}.sha256`)
+    expect(PLAN.moveDmg).toMatchObject({ program: '/bin/mv', args: ['-f', WORK_DMG, OUT_DMG] })
+    expect(PLAN.finalDmg).toBe(OUT_DMG)
+    expect(PLAN.finalSum).toBe(OUT_SUM)
   })
 
   it('reads the version and the ticket of an app, as publish-update.mjs does', () => {
-    expect(plistCommand(APP)).toMatchObject({ program: '/usr/bin/plutil', args: ['-extract', 'CFBundleShortVersionString', 'raw', '-o', '-', `${APP}/Contents/Info.plist`] })
+    expect(plistCommand(APP)).toMatchObject({ program: '/usr/bin/plutil', args: ['-extract', 'CFBundleShortVersionString', 'raw', '-o', '-', join(APP, 'Contents', 'Info.plist')] })
     expect(stapleValidateCommand(APP)).toMatchObject({ program: 'xcrun', args: ['stapler', 'validate', APP] })
   })
 
@@ -217,7 +225,7 @@ describe('the commands', () => {
   it('prints commands that can be pasted', () => {
     expect(shellWord('Lucium 0.2.12')).toBe("'Lucium 0.2.12'")
     expect(shellWord('plain-1.2/x')).toBe('plain-1.2/x')
-    expect(lines().find((line) => line.includes('--sign'))).toBe(`/usr/bin/codesign --sign '${IDENTITY}' --timestamp ${WORK}/${DMG}`)
+    expect(lines().find((line) => line.includes('--sign'))).toBe(`/usr/bin/codesign --sign '${IDENTITY}' --timestamp ${shellWord(WORK_DMG)}`)
   })
 
   it('works only in the work folder until the very end: the image is in dist-drm after the move and not before', () => {
@@ -414,10 +422,10 @@ describe('the making of the image', () => {
   it('runs the steps in their order: check, copy, check the copy, make, sign, notarize, staple, ask Gatekeeper, and only then put it in dist-drm', async () => {
     const w = world()
     const result = await makeDmg(INPUT, w.deps)
-    expect(result).toEqual({ ok: true, dryRun: false, dmg: `${OUT}/${DMG}`, sum: `${OUT}/${DMG}.sha256`, made: { sha256: HASH, size: SIZE, stapler: 'The validate action worked!', gatekeeper: `${PLAN.finalDmg}: accepted\nsource=Notarized Developer ID` } })
+    expect(result).toEqual({ ok: true, dryRun: false, dmg: OUT_DMG, sum: OUT_SUM, made: { sha256: HASH, size: SIZE, stapler: 'The validate action worked!', gatekeeper: `${PLAN.finalDmg}: accepted\nsource=Notarized Developer ID` } })
     expect(w.kinds()).toEqual(FULL_RUN)
-    expect(w.madeDirs).toEqual([`${TMP}/lucium-dmg-${VERSION}-`])
-    expect(w.said.at(-2)).toBe(`\nThe disk image of Lucium ${VERSION} is ready: ${OUT}/${DMG}`)
+    expect(w.madeDirs).toEqual([join(TMP, `lucium-dmg-${VERSION}-`)])
+    expect(w.said.at(-2)).toBe(`\nThe disk image of Lucium ${VERSION} is ready: ${OUT_DMG}`)
   })
 
   it('runs exactly the commands of the plan', async () => {
@@ -431,28 +439,28 @@ describe('the making of the image', () => {
   it('writes the sum from the image that is in dist-drm, after the move, and removes an older sum first', async () => {
     const w = world()
     await makeDmg(INPUT, w.deps)
-    expect(w.weighed).toEqual([PLAN.stagedExecutable, `${OUT}/${DMG}`])
-    expect(w.written[`${OUT}/${DMG}.sha256`]).toBe(`${HASH}  ${DMG}\n`)
-    expect(w.removedFiles).toEqual([`${OUT}/${DMG}.sha256`, `${OUT}/${DMG}.json`])
+    expect(w.weighed).toEqual([PLAN.stagedExecutable, OUT_DMG])
+    expect(w.written[OUT_SUM]).toBe(`${HASH}  ${DMG}\n`)
+    expect(w.removedFiles).toEqual([OUT_SUM, OUT_RECORD])
     expect(w.kinds().at(-1)).toBe('move')
   })
 
   it('writes with the image the record of the app it holds: the executable of the copy that went into it, and removes an older record first', async () => {
     const w = world()
     await makeDmg(INPUT, w.deps)
-    expect(PLAN.stagedExecutable).toBe(`${PLAN.staged}/Contents/MacOS/Lucium`)
-    expect(Object.keys(w.written).sort()).toEqual([`${OUT}/${DMG}.json`, `${OUT}/${DMG}.sha256`])
+    expect(PLAN.stagedExecutable).toBe(join(PLAN.staged, 'Contents', 'MacOS', 'Lucium'))
+    expect(Object.keys(w.written).sort()).toEqual([OUT_RECORD, OUT_SUM])
     expect(imageRecordNameOf(VERSION)).toBe(`${DMG}.json`)
-    expect(JSON.parse(w.written[`${OUT}/${DMG}.json`] ?? '{}')).toEqual({ version: VERSION, image: { name: DMG, sha256: HASH, size: SIZE }, executable: EXECUTABLE })
+    expect(JSON.parse(w.written[OUT_RECORD] ?? '{}')).toEqual({ version: VERSION, image: { name: DMG, sha256: HASH, size: SIZE }, executable: EXECUTABLE })
     // The record of an earlier image never stays beside a new one.
-    expect(w.removedFiles).toContain(`${OUT}/${DMG}.json`)
+    expect(w.removedFiles).toContain(OUT_RECORD)
   })
 
   it('puts nothing in dist-drm when the executable of the copy cannot be weighed: no image there without its record', async () => {
     const w = world({ unreadableExecutable: true })
     const result = await makeDmg(INPUT, w.deps)
     expect(result).toMatchObject({ ok: false, step: 'Put the image and its sum in dist-drm', touchedOutput: false })
-    expect(result.ok ? '' : result.problem).toMatch(/cannot read .*stage\/Lucium\.app\/Contents\/MacOS\/Lucium: EACCES: permission denied/)
+    expect(result.ok ? '' : result.problem).toMatch(/cannot read .*stage[\\/]Lucium\.app[\\/]Contents[\\/]MacOS[\\/]Lucium: EACCES: permission denied/)
     expect(w.kinds()).not.toContain('move')
     expect(w.removedFiles).toEqual([])
     expect(w.written).toEqual({})
@@ -461,7 +469,7 @@ describe('the making of the image', () => {
   it('touches nothing of dist-drm before the move: the image is made, signed, notarized and checked in the work folder', async () => {
     const w = world()
     await makeDmg(INPUT, w.deps)
-    for (const command of w.ran.filter((one) => kindOf(one) !== 'move')) expect(command.args, commandLine(command)).not.toContain(`${OUT}/${DMG}`)
+    for (const command of w.ran.filter((one) => kindOf(one) !== 'move')) expect(command.args, commandLine(command)).not.toContain(OUT_DMG)
   })
 
   it('removes the work folder, the copy of the app in it included, when it is done', async () => {
@@ -496,7 +504,7 @@ describe('the making of the image', () => {
   describe('in a dry run', () => {
     it('makes only the checks that read, prints every other command and runs none, makes no folder and writes nothing', async () => {
       const w = world()
-      expect(await makeDmg({ ...INPUT, dryRun: true }, w.deps)).toEqual({ ok: true, dryRun: true, dmg: `${OUT}/${DMG}`, sum: `${OUT}/${DMG}.sha256`, made: null })
+      expect(await makeDmg({ ...INPUT, dryRun: true }, w.deps)).toEqual({ ok: true, dryRun: true, dmg: OUT_DMG, sum: OUT_SUM, made: null })
       expect(w.kinds()).toEqual(CHECKS)
       expect(w.ran.filter((command) => WRITES.has(kindOf(command)))).toEqual([])
       expect(w.madeDirs).toEqual([])
@@ -512,7 +520,7 @@ describe('the making of the image', () => {
       await makeDmg({ ...INPUT, dryRun: true }, w.deps)
       const printed = w.said.join('\n')
       // The work folder does not exist: its name is shown with the placeholder of mkdtemp.
-      const dry = dmgPlan({ app: APP, work: `${TMP}/lucium-dmg-${VERSION}-XXXXXX`, outDir: OUT, version: VERSION, identity: IDENTITY, profile: 'lucium' })
+      const dry = dmgPlan({ app: APP, work: join(TMP, `lucium-dmg-${VERSION}-XXXXXX`), outDir: OUT, version: VERSION, identity: IDENTITY, profile: 'lucium' })
       const commands = [dry.makeStage, dry.copyApp, dry.linkApplications, dry.verifyStaged, dry.signatureOfApp, dry.signatureOfStaged, dry.validateStaged, dry.create, dry.sign, dry.submit, dry.staple, dry.validateDmg, dry.assess, dry.moveDmg]
       const positions = commands.map((command) => printed.indexOf(`$ ${commandLine(command)}   (dry run: not run)`))
       expect(positions.every((position) => position >= 0), commands.map(commandLine).filter((_, at) => positions[at]! < 0).join('\n')).toBe(true)
@@ -621,7 +629,7 @@ describe('the making of the image', () => {
       const result = await makeDmg(INPUT, w.deps)
       expect(result).toMatchObject({ ok: false, step: 'Put the image and its sum in dist-drm', touchedOutput: true })
       expect(result.ok ? '' : result.problem).toMatch(/cannot move the image to .*mv: Permission denied/)
-      expect(w.removedFiles).toEqual([`${OUT}/${DMG}.sha256`, `${OUT}/${DMG}.json`])
+      expect(w.removedFiles).toEqual([OUT_SUM, OUT_RECORD])
       expect(w.written).toEqual({})
       expect(w.removedDirs).toEqual([WORK])
     })

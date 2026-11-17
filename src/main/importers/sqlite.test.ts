@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterAll, describe, expect, it, vi } from 'vitest'
+import { onWindows } from '../windows.test-support'
 import { toHistoryEntries } from './history'
 import { BOOKMARK_ROW_LIMIT, MAX_DB_BYTES, STALE_COPY_MS, STALE_SWEEP_DELAY_MS, distrustDatabase, readChromiumHistory, readFirefoxBookmarks, readFirefoxHistory, readSafariHistory, stopWrites, sweepStaleCopies, sweepStaleCopiesSoon } from './sqlite'
 
@@ -138,7 +139,8 @@ describe('history readers', () => {
     }
   })
 
-  it('does not wait for a pipe left where the log should be, and does not fail for a log that is gone (a browser that closes removes it)', () => {
+  // Windows: a named pipe is made with mkfifo, which Windows does not have.
+  it.skipIf(onWindows)('does not wait for a pipe left where the log should be, and does not fail for a log that is gone (a browser that closes removes it)', () => {
     const base = make('History-sides', `CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, title TEXT, visit_count INTEGER, typed_count INTEGER, last_visit_time INTEGER, hidden INTEGER);
       INSERT INTO urls VALUES (1, 'https://sides.example/', 'S', 1, 0, ${chromeMicros(WHEN)}, 0);`)
     execFileSync('/usr/bin/mkfifo', [`${base}-wal`])
@@ -177,7 +179,8 @@ describe('files that are not what they claim to be', () => {
     expect(() => readChromiumHistory(folder)).toThrow(/pas un fichier ordinaire/)
   })
 
-  it('refuses a pipe, which reports a size of zero and would never end', () => {
+  // Windows: a named pipe is made with mkfifo, which Windows does not have.
+  it.skipIf(onWindows)('refuses a pipe, which reports a size of zero and would never end', () => {
     const pipe = join(dir, 'History-pipe')
     execFileSync('/usr/bin/mkfifo', [pipe])
     expect(() => readChromiumHistory(pipe)).toThrow(/pas un fichier ordinaire/)

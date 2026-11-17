@@ -1,11 +1,12 @@
 // The file of the lock's phrase: a hash and never the phrase, readable by its owner only, bounded when read.
 
-import { chmodSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ScryptParams } from './export-crypto'
 import { LockStore } from './lock-store'
 import { tempDir } from './temp-dir'
+import { expectNoOtherAccess } from './windows.test-support'
 
 const CHEAP: ScryptParams = { N: 2 ** 14, r: 8, p: 1 }
 const PHRASE = 'la phrase du verrou'
@@ -39,7 +40,7 @@ describe('LockStore', () => {
     expect(text).not.toContain(PHRASE)
     expect(text).not.toContain('verrou')
     expect(JSON.parse(text)).toMatchObject({ version: 1, kdf: 'scrypt', N: 2 ** 14, r: 8, p: 1 })
-    expect(statSync(path).mode & 0o077).toBe(0)
+    expectNoOtherAccess(path)
     expect(store.exists()).toBe(true)
   })
 
@@ -47,7 +48,7 @@ describe('LockStore', () => {
     writeFileSync(`${path}.tmp`, 'left by a crash', { mode: 0o644 })
     chmodSync(`${path}.tmp`, 0o644)
     await new LockStore(path, CHEAP).setPhrase(PHRASE)
-    expect(statSync(path).mode & 0o077).toBe(0)
+    expectNoOtherAccess(path)
   })
 
   it('tells the right phrase from a wrong one, from another store reading the same file', async () => {

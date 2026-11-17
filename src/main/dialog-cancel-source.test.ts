@@ -4,11 +4,12 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { en } from '@shared/i18n-en'
 import { fr } from '@shared/i18n-fr'
 
-const SRC = new URL('../', import.meta.url).pathname
+const SRC = fileURLToPath(new URL('../', import.meta.url))
 
 /** Every source file of the application, tests left out, as a path from `src/`. */
 const sources = (readdirSync(SRC, { recursive: true }) as string[])

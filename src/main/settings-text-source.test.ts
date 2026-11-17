@@ -5,12 +5,13 @@
 
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { en } from '@shared/i18n-en'
 import { fr } from '@shared/i18n-fr'
 import { PENDING_PANE_FILES, isPaneFile, looksFrench, namesOtherBrowser, scanSource } from './settings-text-scan'
 
-const RENDERER = join(new URL('../', import.meta.url).pathname, 'renderer')
+const RENDERER = join(fileURLToPath(new URL('../', import.meta.url)), 'renderer')
 
 const paneFiles = readdirSync(RENDERER).filter(isPaneFile).sort()
 

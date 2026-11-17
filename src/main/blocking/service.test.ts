@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -7,6 +7,7 @@ import type { BlockingConfig, FilterListSpec } from '@shared/filter-lists'
 import { loadGhosteryBackend } from './ghostery-engine'
 import type { FetchLike } from './list-updater'
 import { BlockingService, type BlockedRequest, type BlockingSettings } from './service'
+import { expectMode } from '../windows.test-support'
 import { listText, startTestServer, type TestServer } from './test-server'
 
 const ghosteryBackend = await loadGhosteryBackend()
@@ -838,7 +839,7 @@ describe('the compiled engine file: when it is read, when it is written, what is
     const service = make()
     await start(service)
     expect(told(info)).toMatch(/no usable compiled ads engine on disk/)
-    expect(statSync(join(dir, 'engine-ads.bin')).mode & 0o777).toBe(0o600)
+    expectMode(join(dir, 'engine-ads.bin'), 0o600)
   })
 
   it('reads it the next time without a word: no compiling, nothing told', async () => {

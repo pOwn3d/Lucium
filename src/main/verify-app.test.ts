@@ -14,6 +14,7 @@ import { entitlementsFor, grantedEntitlements } from './mac-sign-order'
 import { FUSE_NAMES, FUSE_SENTINEL, fuseFileOf } from './publish-update'
 import { UPDATE_FEED_PUBLIC_KEYS } from './update-feed-keys'
 import { publicKeyProblems } from './update-feed-signature'
+import { onWindows, posix } from './windows.test-support'
 import {
   CUSTOM_ICON_NOTE,
   OFFICIAL_TEAM_ID,
@@ -217,7 +218,8 @@ function fakeApp(change: Fake = {}) {
     return plist ? grantedEntitlements(readFileSync(here(plist), 'utf8')) : []
   }
   const signedOf = (piece: string): Required<Signed> => {
-    const path = piece === app ? '' : piece.slice(app.length + 1)
+    // The overrides of a test name a piece by its path in the bundle, written with `/`.
+    const path = piece === app ? '' : posix(piece.slice(app.length + 1))
     const keychain = path.endsWith('LuciumKeychain.xpc')
     const translate = path.endsWith('LuciumTranslate.app')
     return {
@@ -476,7 +478,7 @@ describe('a package that is not the one to hand out fails the check that names i
   it('a package without app.asar fails on it, and its other checks are still made', async () => {
     const v = await verified({ asar: null })
     expect(v.names).toEqual(['app.asar'])
-    expect(v.detailOf('app.asar')).toMatch(/Contents\/Resources\/app\.asar is missing or is not an asar archive/)
+    expect(v.detailOf('app.asar')).toMatch(/Contents[\\/]Resources[\\/]app\.asar is missing or is not an asar archive/)
     expect(v.result.checks.map((check) => check.name)).toContain('notarization ticket')
     const garbage = await verified({ files: { 'Contents/Resources/app.asar': 'not an archive, but long enough to have a head' } })
     expect(garbage.names).toEqual(['app.asar'])
@@ -525,7 +527,8 @@ function iconPathInEnglish(): string {
   }
 }
 
-describe('a copy that carries the icon chosen in Settings', () => {
+// Windows: the custom icon of a macOS copy is a file named "Icon" followed by a carriage return, a name Windows forbids.
+describe.skipIf(onWindows)('a copy that carries the icon chosen in Settings', () => {
   const detritus = { status: 1, stdout: '', stderr: 'Lucium.app: resource fork, Finder information, or similar detritus not allowed\nfile with invalid attached data: Disallowed xattr com.apple.FinderInfo found on Lucium.app' }
 
   it('fails the strict check of the signature, and the line says that the build is not at fault', async () => {

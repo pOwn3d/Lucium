@@ -11,6 +11,7 @@ import { HistoryStore } from '../history'
 import { ImportService, MAX_LOCAL_STATE_BYTES, PREVIEW_VALID_MS, UNDO_WINDOW_MS, type ImportDeps } from './service'
 import { TEST_BROWSERS, fakeApplications } from './app-bundles.test-support'
 import { frenchSpaces } from '@shared/french-typography'
+import { onWindows } from '../windows.test-support'
 
 // The preview, the confirmation and the undo of an import, on a pretend home folder, with the real reducer and the real history store.
 
@@ -490,7 +491,8 @@ describe('another browser: the user picks the file and its name tells the format
     expect((await make().preview({ source: 'chrome', profile: 'Default', categories: ['bookmarks'], pick: true })).ok).toBe(false)
   })
 
-  it('does not wait for a pipe that was picked: it is not an ordinary file', async () => {
+  // Windows: a named pipe is made with mkfifo, which Windows does not have.
+  it.skipIf(onWindows)('does not wait for a pipe that was picked: it is not an ordinary file', async () => {
     put('Desktop/pipe/Bookmarks', (path) => execFileSync('/usr/bin/mkfifo', [path]))
     pick('Desktop/pipe/Bookmarks')
     const report = await make().preview({ source: 'other', categories: ['bookmarks'] })

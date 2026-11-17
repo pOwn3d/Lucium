@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs'
+import { join, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
@@ -74,10 +75,10 @@ describe('fuseTrial', () => {
 
   it('writes each copy in a folder of its own, apart from dist-drm/, and never in /Applications', () => {
     const outputs = TRIAL_NAMES.map((name) => fuseTrial(ROOT, name)!.output)
-    expect(outputs).toEqual(TRIAL_NAMES.map((name) => `${ROOT}/dist-drm-trial/${name}`))
-    expect(outputs).toContain(`${ROOT}/dist-drm-trial/castlabs-set`)
+    expect(outputs).toEqual(TRIAL_NAMES.map((name) => join(ROOT, 'dist-drm-trial', name)))
+    expect(outputs).toContain(join(ROOT, 'dist-drm-trial', 'castlabs-set'))
     for (const output of outputs) {
-      expect(output.startsWith(`${ROOT}/dist-drm/`)).toBe(false)
+      expect(output.startsWith(join(ROOT, 'dist-drm') + sep)).toBe(false)
       expect(output).not.toContain('/Applications')
     }
   })

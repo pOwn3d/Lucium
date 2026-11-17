@@ -2,6 +2,7 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSyn
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { onWindows, expectMode } from '../windows.test-support'
 import { ListStore } from './list-store'
 
 let dir: string
@@ -30,7 +31,8 @@ describe('the compiled engine on disk', () => {
     expect(warn).not.toHaveBeenCalled()
   })
 
-  it('is never written through a link left under its temporary name: what the link points at is not ours', () => {
+  // Windows: there is no O_NOFOLLOW there, so a link under the temporary name is followed (durable-write.ts).
+  it.skipIf(onWindows)('is never written through a link left under its temporary name: what the link points at is not ours', () => {
     const elsewhere = join(dir, 'elsewhere.txt')
     writeFileSync(elsewhere, 'not ours')
     symlinkSync(elsewhere, `${enginePath()}.tmp`)
@@ -41,14 +43,15 @@ describe('the compiled engine on disk', () => {
   it('is for its owner alone, and so is the folder it sits in', () => {
     const store = new ListStore(dir)
     store.writeEngine('ads', { key: 'k', bytes: bytes(100) })
-    expect(mode(enginePath())).toBe(0o600)
-    expect(mode(join(dir, 'lists'))).toBe(0o700)
+    expectMode(enginePath(), 0o600)
+    expectMode(join(dir, 'lists'), 0o700)
     store.install('easylist', '||a.example^\n', { checkedAt: 1, rules: 1 })
-    expect(mode(join(dir, 'index.json'))).toBe(0o600)
-    expect(mode(join(dir, 'lists', 'easylist.txt'))).toBe(0o600)
+    expectMode(join(dir, 'index.json'), 0o600)
+    expectMode(join(dir, 'lists', 'easylist.txt'), 0o600)
   })
 
-  it('narrows, at its first write and with a message, the folders and files an earlier version left open to everyone; until then it touches nothing', () => {
+  // Windows: it has no mode to read, so nothing is open to others there and nothing is narrowed (the next test, on a Windows system played anywhere).
+  it.skipIf(onWindows)('narrows, at its first write and with a message, the folders and files an earlier version left open to everyone; until then it touches nothing', () => {
     mkdirSync(join(dir, 'lists'))
     for (const file of ['index.json', 'engine-ads.bin', join('lists', 'easylist.txt')]) writeFileSync(join(dir, file), file === 'index.json' ? '{"version":1,"lists":{},"errors":{}}' : 'x')
     chmodSync(dir, 0o755)
@@ -120,13 +123,30 @@ describe('the compiled engine on disk', () => {
     }
   })
 
-  it('tells and tightens a file that other users could read', () => {
+  // Windows: the mode it reports says nothing of who can read the file, so nothing is told there.
+  it.skipIf(onWindows)('tells and tightens a file that other users could read', () => {
     const store = new ListStore(dir)
     store.writeEngine('ads', { key: 'k', bytes: bytes(100) })
     chmodSync(enginePath(), 0o644)
     expect(store.readEngine('ads')?.key).toBe('k')
     expect(mode(enginePath())).toBe(0o600)
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('now for its owner only'))
+  })
+
+  it('tells nothing and touches nothing on a system whose files have no mode to read: Windows reports 0666 for each, and it would be told at every launch for nothing', () => {
+    const files = ['index.json', 'engine-ads.bin', join('lists', 'easylist.txt')]
+    mkdirSync(join(dir, 'lists'))
+    for (const file of files) writeFileSync(join(dir, file), file === 'index.json' ? '{"version":1,"lists":{},"errors":{}}' : 'x')
+    chmodSync(dir, 0o755)
+    chmodSync(join(dir, 'lists'), 0o755)
+    for (const file of files) chmodSync(join(dir, file), 0o644)
+    new ListStore(dir, 'win32').writeEngine('ads', { key: 'k', bytes: bytes(10) })
+    expect(new ListStore(dir, 'win32').readEngine('ads')?.key).toBe('k')
+    expect(warn).not.toHaveBeenCalled()
+    expectMode(dir, 0o755)
+    expectMode(join(dir, 'lists'), 0o755)
+    expectMode(join(dir, 'index.json'), 0o644)
+    expectMode(join(dir, 'lists', 'easylist.txt'), 0o644)
   })
 
   it('tells why a file cannot be read, when it is something other than not being there', () => {

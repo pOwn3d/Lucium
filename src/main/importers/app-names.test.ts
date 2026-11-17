@@ -63,7 +63,8 @@ describe('installedAppNames', () => {
   })
 
   it('keeps a name on one line and of a bounded length: it comes from a file another program wrote', () => {
-    const apps = folderWith({ id: 'test.odd', name: `Nom\nsur deux lignes ${'y'.repeat(APP_NAME_MAX * 2)}` })
+    // The folder of the bundle has a plain name: a line break or a name this long is not allowed in a folder name on Windows, and only the name inside the file is at stake.
+    const apps = folderWith({ id: 'test.odd', name: `Nom\nsur deux lignes ${'y'.repeat(APP_NAME_MAX * 2)}`, file: 'odd' })
     const name = installedAppNames([apps], wanted('test.odd')).get('test.odd')!.display
     expect(name).not.toContain('\n')
     expect(name.length).toBeLessThanOrEqual(APP_NAME_MAX)

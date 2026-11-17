@@ -163,6 +163,14 @@ export function isOwnerOnlyMode(mode: number, platform: PlatformId = 'darwin'): 
   return !PLATFORM_FACTS[platform].posixFileModes || (mode & 0o777) === 0o600
 }
 
+/**
+ * Whether the mode of a file or a folder keeps the group and the others out (no bit of 0o077). On Windows the answer is always yes, for the same reason as
+ * `isOwnerOnlyMode`: the mode it reports (0666, 0777) says nothing of the access list, and acting on it would "tighten" every file at every launch.
+ */
+export function isClosedToOthers(mode: number, platform: PlatformId = 'darwin'): boolean {
+  return !PLATFORM_FACTS[platform].posixFileModes || (mode & 0o077) === 0
+}
+
 // ---- paths and command lines ----
 
 /** The entries of an environment variable holding a list of paths (`LUCIUM_EXTENSIONS`): Windows paths contain a colon, so they are separated by a semicolon. */

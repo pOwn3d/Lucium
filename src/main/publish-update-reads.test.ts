@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { parseSha256Line, readFeedCommand, withdrawPlan, type Channel, type Command } from './publish-update'
+import { onWindows } from './windows.test-support'
 
 // The scripts that read the folder of a channel on the server, run for real in a local shell. On the server that folder is readable by root only
 // (mode 0700): the account of the publication reads it through `sudo -n`, as it writes it. The tests of publish-update.test.ts and
@@ -95,7 +96,8 @@ const ARCHIVE = 'the bytes of an archive'
 const KEY = '/home/me/.ssh/id_ed25519'
 const plan = (): ReturnType<typeof withdrawPlan> => withdrawPlan({ version: VERSION, channel: place.channel, sshKey: KEY })
 
-describe.skipIf(asRoot)('the scripts that read the folder of a channel, run against a folder only root can read', () => {
+// Windows: the scripts are the server's (run by /bin/sh with a stand-in sudo) and the folder is closed with chmod 000, which Windows does not honour.
+describe.skipIf(asRoot || onWindows)('the scripts that read the folder of a channel, run against a folder only root can read', () => {
   it('has a folder the account cannot read: what the tests below stand on', () => {
     fillAndClose({ 'feed.json': FEED })
     expect(() => readdirSync(place.folder)).toThrow(/EACCES/)

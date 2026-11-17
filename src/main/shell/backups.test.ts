@@ -9,6 +9,7 @@ import { takePersistenceNotices } from '../persistence-notices'
 import { SessionBackups, type BackupDeps } from './backups'
 import { tempDir } from '../temp-dir'
 import { frenchSpaces } from '@shared/french-typography'
+import { onWindows } from '../windows.test-support'
 
 const MINUTE = 60_000
 const START = new Date(2026, 9, 24, 10, 0, 0).getTime()
@@ -264,7 +265,8 @@ describe('what is worth a copy', () => {
 })
 
 describe('a copy that cannot be written', () => {
-  it('is logged with its reason, reported once to the user however many times it fails, and retried at the next copy', () => {
+  // Windows: `chmod 500` does not make a folder refuse a new file there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(onWindows)('is logged with its reason, reported once to the user however many times it fails, and retried at the next copy', () => {
     const t = setup({ autoBackupMinutes: 5 })
     t.open('https://a.example/')
     t.service.start()
@@ -356,7 +358,8 @@ describe('restoring a copy', () => {
     expect(t.state().tabs.map((x) => x.url)).toEqual(['https://old.example/'])
   })
 
-  it('restores nothing when the copy of the current session cannot be made, and tells why: the data about to go would exist nowhere else', () => {
+  // Windows: `chmod 500` does not make a folder refuse a new file there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(onWindows)('restores nothing when the copy of the current session cannot be made, and tells why: the data about to go would exist nowhere else', () => {
     const t = twoStates()
     chmodSync(t.dir, 0o500)
     let result

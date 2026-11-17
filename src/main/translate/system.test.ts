@@ -20,6 +20,7 @@ import {
   type SystemHelperRequest,
   type SystemHelperRunner
 } from './system'
+import { onWindows, posix } from '../windows.test-support'
 
 // The system's own translation (macOS's) through its helper, simulated: the helper is Swift and needs the system's languages, so the tests give a
 // runner of their own (or a shell script standing for the helper). The text of a page is recognisable, so that a leak into a log or an argument is seen.
@@ -219,7 +220,8 @@ describe('the runner of the helper', () => {
     expect(killed).toEqual(['SIGKILL'])
   })
 
-  describe('with a real program', () => {
+  // Windows: the helper is a macOS program, and the stand-in is a script run by /bin/sh (`#!/bin/sh`), which Windows cannot start.
+  describe.skipIf(onWindows)('with a real program', () => {
     let dir = ''
     beforeEach(() => {
       dir = mkdtempSync(join(tmpdir(), 'lucium-system-translate-'))
@@ -267,8 +269,9 @@ describe('the runner of the helper', () => {
   })
 
   it('finds the helper in Contents/Helpers of the built application, in out-native from the sources', () => {
-    expect(systemTranslateHelperPath({ built: true, resourcesPath: '/Applications/Lucium.app/Contents/Resources', appPath: '/x' })).toBe(HELPER)
-    expect(systemTranslateHelperPath({ built: false, resourcesPath: '/r', appPath: '/src/lucium' })).toBe('/src/lucium/out-native/LuciumTranslate.app/Contents/MacOS/lucium-translate')
+    // The paths of the helper are written with `/` here; `join` writes `\` on Windows.
+    expect(posix(systemTranslateHelperPath({ built: true, resourcesPath: '/Applications/Lucium.app/Contents/Resources', appPath: '/x' }))).toBe(HELPER)
+    expect(posix(systemTranslateHelperPath({ built: false, resourcesPath: '/r', appPath: '/src/lucium' }))).toBe('/src/lucium/out-native/LuciumTranslate.app/Contents/MacOS/lucium-translate')
   })
 })
 

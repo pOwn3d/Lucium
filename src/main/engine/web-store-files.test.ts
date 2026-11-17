@@ -1,7 +1,8 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { expectMode } from '../windows.test-support'
 import { closeStoreDirectory, compareVersionFolders, extensionDirectory, ownerOnlyDirectory, profileDirectory, storedExtensions } from './web-store-files'
 
 const A = 'a'.repeat(32)
@@ -82,8 +83,6 @@ describe('the folders of the store extensions', () => {
 })
 
 describe('the folders of the store, closed to the other accounts of the Mac', () => {
-  const modeOf = (path: string): number => statSync(path).mode & 0o777
-
   it('makes a folder only its owner can enter, whatever the umask', async () => {
     const before = process.umask(0o022)
     try {
@@ -91,21 +90,21 @@ describe('the folders of the store, closed to the other accounts of the Mac', ()
     } finally {
       process.umask(before)
     }
-    expect(modeOf(join(root, 'store'))).toBe(0o700)
+    expectMode(join(root, 'store'), 0o700)
   })
 
   it('closes a folder an earlier version left readable by everyone', async () => {
     mkdirSync(join(root, 'store'))
     chmodSync(join(root, 'store'), 0o755)
     await ownerOnlyDirectory(join(root, 'store'))
-    expect(modeOf(join(root, 'store'))).toBe(0o700)
+    expectMode(join(root, 'store'), 0o700)
   })
 
   it('closes the folder of the installed extensions when there is one, and makes none otherwise', async () => {
     mkdirSync(join(root, 'store'))
     chmodSync(join(root, 'store'), 0o755)
     await closeStoreDirectory(join(root, 'store'))
-    expect(modeOf(join(root, 'store'))).toBe(0o700)
+    expectMode(join(root, 'store'), 0o700)
     await closeStoreDirectory(join(root, 'never-installed'))
     expect(existsSync(join(root, 'never-installed'))).toBe(false)
   })

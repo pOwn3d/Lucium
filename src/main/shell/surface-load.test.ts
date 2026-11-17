@@ -5,6 +5,7 @@
 
 import { EventEmitter } from 'node:events'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { isSurfaceLocked } from './surface-guard'
 import { loadSurface, type Surface } from './surface-load'
@@ -67,7 +68,8 @@ describe('a surface of the interface, as it is loaded', () => {
     expect(surface.navigate('will-attach-webview', '')).toBe(true)
     expect(surface.windowOpen('https://evil.example/')).toEqual({ action: 'deny' })
     // Its own pages stay reachable.
-    expect(surface.navigate('will-navigate', `file://${RENDERER}/settings.html`)).toBe(false)
+    // The address of a file is written from its path (a drive letter and no backslash on Windows), as the application writes it.
+    expect(surface.navigate('will-navigate', pathToFileURL(join(RENDERER, 'settings.html')).href)).toBe(false)
   })
 
   it('loads the built page of the application, with its hash and its query', () => {

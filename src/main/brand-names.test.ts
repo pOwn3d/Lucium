@@ -8,6 +8,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { posix } from './windows.test-support'
 import { en } from '@shared/i18n-en'
 import { fr } from '@shared/i18n-fr'
 
@@ -189,7 +190,8 @@ describe('the name of the engine', () => {
     const seen = new Set<InlineException>()
     const offending: string[] = []
     for (const path of applicationSources(join(root, 'src'))) {
-      const file = path.slice(root.length)
+      // The exceptions name their file with `/`: the path of a file is read the same way on Windows.
+      const file = posix(path.slice(root.length))
       readFileSync(path, 'utf8')
         .split('\n')
         .forEach((line, at) => {

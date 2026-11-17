@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -23,6 +23,7 @@ vi.mock('electron', () => ({
 import { errorLog } from '../error-log'
 import { problemReportEnv, problemReportOf, registerProblemReportIpc, saveProblemReport, type ProblemReportEnv, type ProblemReportSources } from './problem-report'
 import { frenchSpaces } from '@shared/french-typography'
+import { expectMode } from '../windows.test-support'
 
 let dir: string
 beforeEach(() => {
@@ -91,7 +92,7 @@ describe('« Enregistrer… »', () => {
     const window = {} as BrowserWindow
     expect(await saveProblemReport(window, report)).toEqual({ status: 'saved', file: 'mon-rapport.txt' })
     expect(readFileSync(chosen, 'utf8')).toBe(report.text)
-    expect(statSync(chosen).mode & 0o777).toBe(0o600)
+    expectMode(chosen, 0o600)
     expect(readdirSync(dir)).toEqual(['mon-rapport.txt'])
     const [owner, options] = electron.showSaveDialog.mock.calls[0]!
     expect(owner).toBe(window)

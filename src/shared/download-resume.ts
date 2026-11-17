@@ -118,10 +118,17 @@ export function hasStrongValidators(etag: unknown, lastModified: unknown, starte
   return Date.parse(lastModified) <= startedAtMs - STRONG_LAST_MODIFIED_MS
 }
 
-/** The shape of an absolute path as the record may hold it. Whether it leads into the right folder is decided against the disk. */
+/**
+ * The shape of an absolute path as the record may hold it, whichever system wrote it: `/Users/me/Downloads/a.zip` (macOS, Linux) or
+ * `C:\Users\me\Downloads\a.zip` (Windows; a share without a drive letter is not recorded, its download starts again instead of being resumed).
+ * It is not given the system on purpose: whether the path leads into the downloads folder of THIS system is decided by `lexicalPlace` (the
+ * path module of the system must write it back the same) and against the disk.
+ */
 export function isRecordablePath(value: unknown): value is string {
-  if (typeof value !== 'string' || value.length === 0 || value.length > RESUME_PATH_MAX || !value.startsWith('/') || CONTROL.test(value)) return false
-  const parts = value.slice(1).split('/')
+  if (typeof value !== 'string' || value.length === 0 || value.length > RESUME_PATH_MAX || CONTROL.test(value)) return false
+  const windows = /^[A-Za-z]:\\/.test(value)
+  if (!windows && !value.startsWith('/')) return false
+  const parts = value.slice(windows ? 3 : 1).split(windows ? '\\' : '/')
   return parts.every((part) => part !== '' && part !== '.' && part !== '..')
 }
 

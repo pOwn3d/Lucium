@@ -51,7 +51,7 @@ describe('the session of a profile', () => {
     const ours = ses.scripts.filter((script) => script.id === INTERNAL_PRELOAD_ID)
     expect(ours).toHaveLength(1)
     expect(ours[0]).toMatchObject({ type: 'frame', matches: ['lucium-ui://extensions/*'] })
-    expect(ours[0]?.filePath).toMatch(/preload\/internal-extensions\.js$/)
+    expect(ours[0]?.filePath).toMatch(/preload[\\/]internal-extensions\.js$/)
     // Never a script of ours without a limit: a document of any other address does not run it.
     expect(ses.scripts.filter((script) => script.filePath.endsWith('internal-extensions.js') && script.matches === undefined)).toEqual([])
   })

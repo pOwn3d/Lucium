@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, truncateSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, truncateSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { referencedImages, SPACE_IMAGE_FILE_MAX, SPACE_IMAGE_SIZE, SPACE_IMAGE_STORED_MAX, spaceImageUnreadable } from '@shared/space-image'
@@ -7,6 +7,7 @@ import type { SidebarState, TabItem } from '@shared/model'
 import { frenchSpaces } from '@shared/french-typography'
 import { SpaceImageError, SpaceImageStore, runSpaceImageRequest, type ImageCodec, type SpaceImageHost } from './space-images'
 import { tempDir } from '../temp-dir'
+import { expectNoOtherAccess } from '../windows.test-support'
 
 // Faults and counters on the file system: a rename that can be made to fail (the copy is written under another name first, so a failure
 // there must leave nothing behind), and a count of the files that are really read (a file past the weight limit must not be).
@@ -86,7 +87,7 @@ describe('SpaceImageStore.importFile', () => {
     expect(readdirSync(dir)).toEqual([name])
     expect(readFileSync(join(dir, name)).equals(png(SPACE_IMAGE_SIZE, SPACE_IMAGE_SIZE, 40))).toBe(true)
     expect(readFileSync(join(dir, name)).includes(Buffer.from(path))).toBe(false)
-    expect(statSync(join(dir, name)).mode & 0o077).toBe(0)
+    expectNoOtherAccess(join(dir, name))
     expect(readFileSync(path).equals(original)).toBe(true)
   })
 

@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -12,6 +12,7 @@ import { t, tp } from '@shared/i18n'
 import type { PowerEvent } from '../lock-service'
 import { PasswordService, type PasswordFiles, type PasswordTarget, type PasswordWindow } from './password-service'
 import { frenchSpaces } from '@shared/french-typography'
+import { expectMode } from '../windows.test-support'
 
 const PHRASE = 'une phrase maître assez longue'
 const PARAMS = { N: 2 ** 14, r: 8, p: 1 }
@@ -897,7 +898,7 @@ describe('files', () => {
     expect(existsSync(s.files.writeTo)).toBe(false)
     const reply = await ask(s, window, { kind: 'export', phrase: 'a phrase for the export' })
     expect(reply.ok).toBe(true)
-    expect(statSync(s.files.writeTo).mode & 0o777).toBe(0o600)
+    expectMode(s.files.writeTo, 0o600)
     const text = readFileSync(s.files.writeTo, 'utf8')
     expect(text).not.toContain(SECRET)
     expect(text).not.toContain(USER)

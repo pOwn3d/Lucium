@@ -62,13 +62,16 @@ afterEach(() => {
 })
 
 describe('the archive of the running code', () => {
+  // The paths are written by the path module of the system, as the running code's own path is (`\\app.asar\\` on Windows).
+  const RESOURCES = join('/Applications/Lucium.app/Contents', 'Resources')
+
   it('is found from a path inside app.asar or inside app.asar.unpacked', () => {
-    expect(archiveOf('/Applications/Lucium.app/Contents/Resources/app.asar/out/main')).toBe('/Applications/Lucium.app/Contents/Resources/app.asar')
-    expect(archiveOf('/Applications/Lucium.app/Contents/Resources/app.asar.unpacked/out/preload/page-guard.js')).toBe('/Applications/Lucium.app/Contents/Resources/app.asar')
+    expect(archiveOf(join(RESOURCES, 'app.asar', 'out', 'main'))).toBe(join(RESOURCES, 'app.asar'))
+    expect(archiveOf(join(RESOURCES, 'app.asar.unpacked', 'out', 'preload', 'page-guard.js'))).toBe(join(RESOURCES, 'app.asar'))
   })
 
   it('is none for a development build', () => {
-    expect(archiveOf('/Users/moi/lucium/out/main')).toBeNull()
+    expect(archiveOf(join('/Users/moi/lucium', 'out', 'main'))).toBeNull()
   })
 })
 
