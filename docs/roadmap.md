@@ -17,7 +17,7 @@ Ce que Lucium fait aujourd'hui, ce qui est prévu et ce qui est exclu. Le détai
 
 ## Prévu
 
-- **Autres plateformes** : les paquets Intel, Windows et Linux sont configurés mais n'ont jamais été construits ni essayés ([`plateformes.md`](plateformes.md)).
+- **Autres plateformes** : les paquets Intel, Windows et Linux sont configurés. Ceux de Linux (AppImage et deb, x64 et arm64) sont construits et lancés en intégration continue sur Ubuntu 24.04, sans qu'une personne les ait essayés sur un bureau ; Intel et Windows n'ont jamais été construits ni essayés ([`plateformes.md`](plateformes.md)).
 - **Finitions de l'interface** : quelques états restent à finir (dossier épinglé ouvert ou fermé, onglet épinglé actif ou survolé, menus de favori et de dossier, animations, lecteur multimédia, thème clair de la barre de commandes).
 - **Extensions** : couverture plus large des API `chrome.*` ([`extensions-compatibilite.md`](extensions-compatibilite.md) dit ce qui marche aujourd'hui).
 - **Clés d'accès dans le gestionnaire de mots de passe** : à l'étude ([`cles-d-acces.md`](cles-d-acces.md), section 4).
