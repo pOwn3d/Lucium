@@ -9,12 +9,14 @@ struct BottomBar: View {
 
     var body: some View {
         VStack(spacing: 4) {
+            DownloadStrip(downloads: model.downloads)
             addressPill
             HStack(spacing: 2) {
                 ForEach(model.spaces) { space in spaceButton(space) }
                 Spacer(minLength: 0)
                 barButton(.back, label: "bar.back", enabled: model.canGoBack, action: model.goBack)
                 barButton(.forward, label: "bar.forward", enabled: model.canGoForward, action: model.goForward)
+                PageActionsMenu(model: model)
                 barButton(.tabs, label: "bar.tabs.of \(model.activeSpace.name)", enabled: true) { model.tabsSheetShown = true }
             }
         }

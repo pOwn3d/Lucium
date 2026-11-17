@@ -53,7 +53,8 @@ targets:
         PRODUCT_NAME: Lucium
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
-        # Merged with the generated keys: the one setting a build setting cannot express (App Transport Security for web content).
+        # Merged with the generated keys: what a build setting cannot express (App Transport Security for web content; the folder of the downloads
+        # shows in the Files app).
         INFOPLIST_FILE: Lucium/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Lucium
         # The sentence the system shows when Face ID is first asked for. Its text is in InfoPlist.xcstrings (French and English); this is the fallback.

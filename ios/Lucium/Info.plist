@@ -6,6 +6,12 @@
 	<!-- A browser opens the pages the person asks for, and some of them are http: with HTTPS first, an http page is what a site that does not answer
 	     over HTTPS falls back to, and without this key WebKit refuses it on the device (App Transport Security). The key lifts the rule for web
 	     content only: nothing else in the application is allowed a plain connection, and it makes none of its own (docs/ios.md, "Vie privée"). -->
+	<!-- The folder of the downloads (Documents/Downloads) shows in the Files app, under "On My iPhone > Lucium": that is where a file goes (docs/ios.md,
+	     "Téléchargements"). Nothing else is kept in Documents. -->
+	<key>UIFileSharingEnabled</key>
+	<true/>
+	<key>LSSupportsOpeningDocumentsInPlace</key>
+	<true/>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>

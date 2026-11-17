@@ -35,6 +35,9 @@ struct BrowserScreen: View {
                 SpacesSheet(model: model)
             }
             .modifier(SiteDataFlow(model: model))
+            .sheet(isPresented: Binding(get: { model.downloads.sheetShown }, set: { model.downloads.sheetShown = $0 })) {
+                DownloadsSheet(downloads: model.downloads)
+            }
             .alert("state.notice.title", isPresented: $model.startupNoticeShown) {
                 Button("state.notice.ok") {}
             } message: {

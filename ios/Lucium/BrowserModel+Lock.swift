@@ -24,6 +24,7 @@ extension BrowserModel {
         if lock.appLocked {
             tabsSheetShown = false
             commandBarShown = false
+            downloads.sheetShown = false
         }
         if isReady, let tab = activeTab { syncFrom(wake(tab)) } else { syncFrom(nil) }
     }
