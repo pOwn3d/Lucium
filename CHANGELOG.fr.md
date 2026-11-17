@@ -10,6 +10,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Corrections
 
+- **Onglets en veille, Précédent et Suivant** : un onglet mis en veille pour libérer sa mémoire ne gardait que son adresse et se réveillait sans la liste des pages parcourues. La liste était lue une fois la page déjà fermée. Elle est maintenant lue juste avant la fermeture, et l’onglet se réveille avec ses pages Précédent et Suivant.
 - **Windows, liens sous un nom de fichier** : les fichiers que Lucium écrit (état, historique, coffre, téléchargements) et un téléchargement qui reprend ne sont plus ouverts à travers un lien laissé sous leur nom. Windows ne peut pas faire refuser un lien à `open` : le nom est maintenant regardé d’abord.
 - **Dictionnaires du correcteur, Windows et Linux** : Chromium ne télécharge plus, au premier lancement et correcteur éteint, le dictionnaire de la langue du système depuis son CDN. Une session démarre sans langue : rien n’est téléchargé avant que vous activiez l’orthographe dans le menu Édition.
 

@@ -180,6 +180,34 @@ export async function smokeSleep({ browser, store, win }: SmokeContext, check: C
     check('and sleeps once the delay is short (control)', controlSwept.includes(a), JSON.stringify({ swept: controlSwept, runtime: runtimeOf(a) }))
   })
 
+  await section('the Back / Forward list of a sleeping tab', async () => {
+    // A page let go for a sleep is closed before its list is read for the tab: the list must be read while the page is still there (ElectronPage.release).
+    const addresses = [`${base}/sl-h1`, `${base}/sl-h2`, `${base}/sl-h3`]
+    const first = await open(addresses[0]!)
+    for (const url of addresses.slice(1)) {
+      browser.pageFor(first)?.loadURL(url)
+      await waitFor(() => tabs().find((t) => t.id === first)?.url === url)
+    }
+    await open(`${base}/sl-z`)
+    const listOf = (id: string): { entries: string[]; index: number } | null => {
+      try {
+        const list = browser.pageFor(id)?.navigationEntries()
+        return list ? { entries: list.entries.map((e) => e.url), index: list.index } : null
+      } catch {
+        // A page that is gone has no list: the check below says what it saw.
+        return null
+      }
+    }
+    const before = listOf(first)
+    check('before the sleep, the tab has gone through its three pages and is on the last', before?.entries.join() === addresses.join() && before.index === 2, JSON.stringify(before))
+    const swept = await sweep()
+    check('the idle tab goes to sleep, its page let go', swept.includes(first) && !live(first), JSON.stringify({ swept, live: live(first) }))
+    select(first)
+    const restored = await waitFor(() => listOf(first)?.entries.length === addresses.length)
+    const after = listOf(first)
+    check('woken, the tab goes back through the same three pages, on the last one', restored && after?.entries.join() === addresses.join() && after.index === 2, JSON.stringify(after))
+  })
+
   await section('the mark on a tab, from its menu', async () => {
     const x = await open(`${base}/sl-x`)
     await open(`${base}/sl-z`)
