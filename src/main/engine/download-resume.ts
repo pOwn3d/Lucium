@@ -42,7 +42,7 @@ import { suggestedFileName } from '@shared/file-names'
 import type { PlatformId } from '@shared/platform'
 import { currentPlatform } from '../platform'
 import type { DownloadInfo } from '@shared/model'
-import { replaceFileDurably } from '../durable-write'
+import { refuseLinkSync, replaceFileDurably } from '../durable-write'
 import { isInside } from './download-names'
 import { t } from '@shared/i18n'
 
@@ -125,7 +125,11 @@ export const realResumeFs: ResumeFs = {
       if (!absent(error)) throw error
     }
   },
-  open: (path, write) => openSync(path, (write ? constants.O_RDWR : constants.O_RDONLY) | constants.O_NOFOLLOW),
+  // O_NOFOLLOW does not exist on Windows: the look for a link (refuseLinkSync) is what refuses one there.
+  open: (path, write) => {
+    refuseLinkSync(path)
+    return openSync(path, (write ? constants.O_RDWR : constants.O_RDONLY) | constants.O_NOFOLLOW)
+  },
   fstat: (fd) => facts(fstatSync(fd)),
   read: (fd, position, length) => {
     const buffer = Buffer.alloc(length)

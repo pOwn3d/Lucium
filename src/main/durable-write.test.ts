@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { replaceFileDurably, writeAllSync, writeDurableFile } from './durable-write'
-import { expectMode, onWindows } from './windows.test-support'
+import { expectMode } from './windows.test-support'
 import { LockStore } from './lock-store'
 import { PasswordVault, VaultError } from './password-vault'
 import { writeFileAtomic } from './persist'
@@ -77,8 +77,8 @@ describe('writeDurableFile', () => {
     expect(() => writeDurableFile(join(dir, 'a.json'), TEXT)).toThrow(/short write: 0 bytes on the disk/)
   })
 
-  // Windows: there is no O_NOFOLLOW there (it is undefined, so it adds no flag): the link is followed and the target written.
-  it.skipIf(onWindows)('does not follow a link left in the place of the temporary file', () => {
+  // Windows has no O_NOFOLLOW: the look for a link before the open (refuseLinkSync) refuses it there; durable-write-no-follow.test.ts plays that system anywhere.
+  it('does not follow a link left in the place of the temporary file', () => {
     const target = join(dir, 'target')
     writeFileSync(target, 'precious')
     const path = join(dir, 'a.json.tmp')
@@ -258,8 +258,8 @@ describe('replaceFileDurably, and the writers that go through it', () => {
     expect(existsSync(`${path}.tmp`)).toBe(false)
   })
 
-  // Windows: there is no O_NOFOLLOW there (it is undefined, so it adds no flag): the link is followed and the target written.
-  it.skipIf(onWindows)('does not write through a link left under the temporary name, and leaves the link as it found it', () => {
+  // Windows has no O_NOFOLLOW: the look for a link before the open (refuseLinkSync) refuses it there; durable-write-no-follow.test.ts plays that system anywhere.
+  it('does not write through a link left under the temporary name, and leaves the link as it found it', () => {
     const path = join(dir, 'index.json')
     const elsewhere = join(dir, 'elsewhere.txt')
     writeFileSync(elsewhere, 'not ours')

@@ -75,8 +75,8 @@ describe('writing a copy', () => {
     expectNoOtherAccess(join(dir, 'copie-1700000000000.json'))
   })
 
-  // Windows: there is no O_NOFOLLOW there (durable-write.ts), so a link under the name is followed.
-  it.skipIf(onWindows)('never writes through a link left under the name it is written to, and writes again once the link is gone', () => {
+  // Windows has no O_NOFOLLOW: the look for a link before the open (durable-write.ts) refuses it there.
+  it('never writes through a link left under the name it is written to, and writes again once the link is gone', () => {
     const dir = folder()
     const elsewhere = join(folder(), 'victim.txt')
     writeFileSync(elsewhere, 'untouched')
