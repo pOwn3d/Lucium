@@ -77,7 +77,9 @@ describe('the worker of an extension, woken by the engine', () => {
       }
     }
   }
-  const wake = (...profiles: Array<ReturnType<typeof profile>>) => engine['wakeExtension']!.call({ profiles: new Map(profiles.map((p, i) => [`p${i}`, p.value])) }, ID)
+  // The manifests are empty: nothing is known of the extension, so its worker is woken (an extension that declares none is not: worker-less-extension.test.ts).
+  const wake = (...profiles: Array<ReturnType<typeof profile>>) =>
+    engine['wakeExtension']!.call(Object.assign(Object.create(ElectronEngine.prototype) as object, { profiles: new Map(profiles.map((p, i) => [`p${i}`, p.value])), manifests: new Map() }), ID)
 
   afterEach(() => {
     vi.useRealTimers()

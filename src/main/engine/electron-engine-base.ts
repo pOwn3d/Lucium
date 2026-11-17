@@ -259,7 +259,7 @@ export abstract class ElectronEngineBase {
    * a call may do is read from the version of the profile it comes from, not from the one that was loaded last. It is the manifest the access rules
    * read: what the person granted the extension in that profile, on its request, is added to it (optional-grants.ts). `known` keeps the one of the files.
    */
-  protected readonly manifests = new Map<string, { permissions?: unknown; host_permissions?: unknown; omnibox?: unknown }>()
+  protected readonly manifests = new Map<string, { permissions?: unknown; host_permissions?: unknown; omnibox?: unknown; background?: unknown }>()
   /** The isolated world of the scripts each extension runs in a tab the user lent it. */
   protected readonly scriptWorlds = new ScriptWorlds()
   protected readonly downloads = new Map<string, ActiveDownload>()

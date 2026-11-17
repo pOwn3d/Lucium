@@ -4,6 +4,7 @@
 import { readFile, stat } from 'node:fs/promises'
 import { app, clipboard, ClipboardItem, WebContentsView, type Session, type WebContents, webContents as allWebContents, webFrameMain } from 'electron'
 import { isRelayedEvent, lifecycleEvents, relayScript, shimAllowed, shimEventAllowed } from '@shared/chrome-compat'
+import { declaresServiceWorker } from '@shared/extension-page'
 import { accessOf, canCaptureTab, canReadTab, hasHostAccess } from '@shared/extension-access'
 import { callOf, guardedScript, lentOrigin, lentTab, NO_PAGE_ACCESS, readInjection, refusedByDocument, SCRIPT_MAX_CHARS } from '@shared/active-tab-script'
 import { setBounded } from '@shared/bounded'
@@ -296,12 +297,23 @@ export abstract class ElectronEngineBridge extends ElectronEngineBase {
     }
   }
 
+  /**
+   * True when the manifest of this copy of the extension is known and declares no service worker: there is nothing to start and nothing to wait for.
+   * Electron refuses to start a worker that does not exist, and the callers read that refusal as a start under way, so they waited 10 s and logged a
+   * failure for every extension made of pages only. A manifest that is not known (not loaded yet) says nothing: the callers go on as before.
+   */
+  protected hasNoWorker(profileId: string, extensionId: string): boolean {
+    const manifest = this.manifests.get(`${profileId}:${extensionId}`)
+    return manifest !== undefined && !declaresServiceWorker(manifest)
+  }
+
   /** Starts the worker of an extension where it is loaded and waits until it runs. A stopped worker has no listener left, so a click sent
    *  to it would be dropped without a trace (electron-chrome-extensions sends events only to registered listeners). */
   async wakeExtension(extensionId: string): Promise<void> {
     const scope = `chrome-extension://${extensionId}/`
-    for (const profile of this.profiles.values()) {
+    for (const [profileId, profile] of this.profiles) {
       if (!profile.session.extensions?.getExtension(extensionId)) continue
+      if (this.hasNoWorker(profileId, extensionId)) continue
       const running = () => Object.values(profile.session.serviceWorkers.getAllRunning()).some((w) => w.scope === scope)
       if (running()) continue
       try {
@@ -318,6 +330,8 @@ export abstract class ElectronEngineBridge extends ElectronEngineBase {
   async deliverToWorker(extensionId: string, profileId: string, api: string, event: string, args: unknown[]): Promise<void> {
     const profile = this.profiles.get(profileId)
     if (!profile) return
+    // No worker to send to: the extension is made of pages, which `emitToExtensionPages` and `emitShimEvent` reach.
+    if (this.hasNoWorker(profileId, extensionId)) return
     const scope = `chrome-extension://${extensionId}/`
     const running = () => Object.values(profile.session.serviceWorkers.getAllRunning()).some((w) => w.scope === scope)
     if (!running()) {

@@ -13,6 +13,7 @@ import {
   dataAccessLine,
   describeLoadError,
   declaresRequestBlocking,
+  declaresServiceWorker,
   describeManifest,
   doneMessages,
   isLegacyManifest,
@@ -292,6 +293,16 @@ describe('what a manifest says', () => {
       setLanguage('en')
       expect(requestBlockingLine(blocker)).toBe('This extension asks to block or change requests from its code (“webRequestBlocking”), which only a Manifest V2 extension may do. Lucium tells it about the requests but does not apply what it answers: that filtering has no effect on the pages. Its declarative rules, if it has any, do apply.')
       setLanguage('fr')
+    })
+
+    it('tells an extension with a service worker from one made of pages only, and agrees with the facts of the page', () => {
+      expect(declaresServiceWorker({ manifest_version: 3, background: { service_worker: 'background.js' } })).toBe(true)
+      expect(describeManifest({ ...manifest, background: { service_worker: 'background.js' } }).hasWorker).toBe(true)
+      // A popup alone, a Manifest V2 background page or script: nothing a worker could be started from.
+      for (const raw of [null, 'text', 7, [], {}, { background: null }, { background: {} }, { background: { page: 'bg.html' } }, { background: { scripts: ['bg.js'] } }, { background: { service_worker: 7 } }]) {
+        expect(declaresServiceWorker(raw), JSON.stringify(raw)).toBe(false)
+        expect(describeManifest(raw).hasWorker, JSON.stringify(raw)).toBe(false)
+      }
     })
 
     it('warns of the old format on a Manifest V2 extension, in a sentence of its own, and of no other', () => {
