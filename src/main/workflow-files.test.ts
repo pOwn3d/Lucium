@@ -142,10 +142,15 @@ describe('.github/workflows/smoke-macos.yml', () => {
   it('leaves the suites of the limits of the runner out of the chain, lets the verdict decide, and only prints the comparison', () => {
     expect(workflow).toContain("          LUCIUM_SMOKE_SKIP=\"$(node -p \"Object.keys(require('./compat/runner-limits.json')).join(',')\")\"\n          export LUCIUM_SMOKE_SKIP\n          set +e\n")
     expect(workflow).toContain(
-      '      - name: Verdict of the chain\n        if: ${{ !cancelled() }}\n        env:\n          CHAIN_CODE: ${{ steps.chain.outputs.code }}\n        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-runner-verdict.mjs --chain-code "$CHAIN_CODE"\n'
+      '      - name: Verdict of the chain\n        if: ${{ !cancelled() }}\n        env:\n          CHAIN_CODE: ${{ steps.chain.outputs.code }}\n        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-runner-verdict.mjs --chain-code "$CHAIN_CODE" --again out-engine\n'
     )
-    // The verdict reads the code of the chain, between the chain and the comparison.
-    expect(workflow.indexOf('id: chain')).toBeLessThan(workflow.indexOf('name: Verdict of the chain'))
+    // Each failed suite that the list does not name is run again alone, with the same list left out, and its report is where the verdict reads it (again-<suite>.json).
+    expect(workflow).toContain(
+      '      - name: Failed suites, once more alone\n        if: ${{ !cancelled() }}\n        shell: bash\n        run: |\n          LUCIUM_SMOKE_SKIP="$(node -p \"Object.keys(require(\'./compat/runner-limits.json\')).join(\',\')\")"\n          export LUCIUM_SMOKE_SKIP\n          set +e\n          for suite in $(node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-runner-verdict.mjs --print-unexpected); do\n            echo "##### $suite, once more alone"\n            LUCIUM_SMOKE_ONLY="$suite" LUCIUM_SMOKE_REPORT="$PWD/out-engine/again-$suite.json" pnpm test:engine 2>&1 | tee "out-engine/again-$suite.log"\n          done\n'
+    )
+    // The verdict reads the code of the chain and the second runs, between the chain and the comparison.
+    expect(workflow.indexOf('id: chain')).toBeLessThan(workflow.indexOf('name: Failed suites, once more alone'))
+    expect(workflow.indexOf('name: Failed suites, once more alone')).toBeLessThan(workflow.indexOf('name: Verdict of the chain'))
     expect(workflow.indexOf('name: Verdict of the chain')).toBeLessThan(workflow.indexOf('pnpm compat:compare'))
     expect(workflow).toContain('pnpm compat:compare --limits compat/runner-limits.json --informational\n')
     // The Mac runs the same chain and the same comparison with no list, no skip and no leniency.

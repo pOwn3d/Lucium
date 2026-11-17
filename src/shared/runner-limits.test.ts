@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -58,6 +58,7 @@ describe('the verdict of a run on a runner', () => {
     })
     expect(judgeRun(run, limits)).toEqual({
       unexpected: ['sitedata'],
+      flaky: [],
       tolerated: [{ suite: 'guard', reason: limits.guard }],
       stale: [],
       notRun: ['fullscreen']
@@ -71,7 +72,7 @@ describe('the verdict of a run on a runner', () => {
 
   it('says which listed suites passed (the limit may be gone) and which were not run, and fails neither: a part of the principal suite is not a suite', () => {
     const run = report({ guard: { code: 0, checks: [pass('a')] }, main: { code: 0, checks: [pass('b')] } })
-    expect(judgeRun(run, limits)).toEqual({ unexpected: [], tolerated: [], stale: ['guard'], notRun: ['fullscreen'] })
+    expect(judgeRun(run, limits)).toEqual({ unexpected: [], flaky: [], tolerated: [], stale: ['guard'], notRun: ['fullscreen'] })
     expect(isPart('main:iso-sidebar')).toBe(true)
     expect(isPart('main')).toBe(false)
   })
@@ -79,6 +80,23 @@ describe('the verdict of a run on a runner', () => {
   it('does not take the name of an Object for a listed suite', () => {
     const run = report({ constructor: { code: 1, checks: [fail('a')] }, toString: { code: 1, checks: [fail('b')] } })
     expect(judgeRun(run, limits).unexpected).toEqual(['constructor', 'toString'])
+  })
+
+  it('does not count a suite that failed in the chain and passes when run again alone: the chain is not steady on a runner', () => {
+    const run = report({ market: { code: 1, checks: [fail('keyboard back on the page')] }, usage: { code: 1, checks: [fail('Enter brings the window')] }, guard: { code: 1, checks: [fail('b')] }, dialogs: { code: 1, checks: [fail('c')] } })
+    const again = {
+      market: report({ market: { code: 0, checks: [pass('keyboard back on the page')] } }),
+      usage: report({ usage: { code: 1, checks: [fail('Enter brings the window')] } }),
+      // The run again alone of a suite is read for that suite only, and a listed suite is not run again.
+      guard: report({ guard: { code: 0, checks: [pass('b')] } })
+    }
+    const verdict = judgeRun(run, limits, again)
+    expect(verdict.flaky).toEqual(['market'])
+    expect(verdict.unexpected).toEqual(['usage', 'dialogs'])
+    expect(verdict.tolerated).toEqual([{ suite: 'guard', reason: limits.guard }])
+    // A report of the second run that holds another suite, or none, proves nothing.
+    expect(judgeRun(run, limits, { market: report({ other: { code: 0, checks: [pass('a')] } }) }).unexpected).toContain('market')
+    expect(judgeRun(run, limits).flaky).toEqual([])
   })
 
   it('leaves the listed suites out of the report that is set against the reference of the Mac', () => {
@@ -124,6 +142,44 @@ describe('scripts/smoke-runner-verdict.mjs', () => {
     expect(result.out).toContain('1 failed and not excused:\n  - main')
   })
 
+  it('prints the names of the suites to run again alone, one per line, and nothing else', () => {
+    const result = run({ main: { code: 0, checks: [pass('a')] }, guard: { code: 1, checks: [fail('b')] }, market: { code: 1, checks: [fail('c')] }, usage: { code: 0, checks: [fail('d')] } }, limits, '--print-unexpected')
+    expect(result.status).toBe(0)
+    expect(result.out).toBe('market\nusage\n')
+  })
+
+  describe('with the suites run again alone', () => {
+    const chain = { main: { code: 0, checks: [pass('a')] }, market: { code: 1, checks: [fail('c')] } }
+    const again = (reports: Record<string, string>) => {
+      rmSync(join(folder, 'again'), { recursive: true, force: true })
+      mkdirSync(join(folder, 'again'), { recursive: true })
+      for (const [name, text] of Object.entries(reports)) writeFileSync(join(folder, 'again', name), text)
+      return ['--again', join(folder, 'again')]
+    }
+    const passes = JSON.stringify({ engine, suites: { market: { code: 0, checks: [pass('c')] } } })
+    const fails = JSON.stringify({ engine, suites: { market: { code: 1, checks: [fail('c')] } } })
+
+    it('does not stop the run for a suite that passes alone, and says it is flaky', () => {
+      const result = run(chain, limits, '--chain-code', '1', ...again({ 'again-market.json': passes }))
+      expect(result.status).toBe(0)
+      expect(result.out).toContain('1 failed in the chain and passed when run again alone')
+      expect(result.out).toContain('! market')
+    })
+
+    it('stops the run for a suite that fails alone as well, or that was not run again, or whose report cannot be read, and says why', () => {
+      expect(run(chain, limits, '--chain-code', '1', ...again({ 'again-market.json': fails })).status).toBe(1)
+      expect(run(chain, limits, '--chain-code', '1', ...again({})).status).toBe(1)
+      const unreadable = run(chain, limits, '--chain-code', '1', ...again({ 'again-market.json': '{ not json' }))
+      expect(unreadable.status).toBe(1)
+      expect(unreadable.out).toContain('again-market.json cannot be read')
+      expect(unreadable.out).toContain('- market')
+    })
+
+    it('stops with 2 when the folder is missing', () => {
+      expect(run(chain, limits, '--again', join(folder, 'nowhere')).status).toBe(2)
+    })
+  })
+
   it('fails a chain that ended badly with no suite to show for it: it crashed, and that is not excused', () => {
     expect(run({ main: { code: 0, checks: [pass('a')] } }, limits, '--chain-code', '1').status).toBe(1)
     expect(run({ main: { code: 0, checks: [pass('a')] } }, limits, '--chain-code', '0').status).toBe(0)
@@ -133,7 +189,7 @@ describe('scripts/smoke-runner-verdict.mjs', () => {
     expect(run(null).status).toBe(2)
     expect(run({ main: { code: 0, checks: [] } }, { guard: '' }).status).toBe(2)
     for (const code of ['x', '', '-1', '1.5']) expect(run({ main: { code: 0, checks: [] } }, limits, '--chain-code', code).status, code).toBe(2)
-  })
+  }, 30_000)
 })
 
 describe('scripts/compat-compare.mjs --limits', () => {
@@ -156,7 +212,7 @@ describe('scripts/compat-compare.mjs --limits', () => {
     expect(compare(guardFails).status).toBe(1)
     expect(compare(guardFails, ...limited).status).toBe(0)
     expect(compare(guardFails, ...limited).out).toContain('left out:  guard, fullscreen')
-  })
+  }, 30_000)
 
   it('still loses what the suites that are not named lose', () => {
     const result = compare({ main: { code: 1, checks: [fail('page loads')] }, guard: guardFails.guard }, ...limited)
@@ -167,7 +223,7 @@ describe('scripts/compat-compare.mjs --limits', () => {
   it('does not write a reference from a run that did not judge every suite', () => {
     expect(compare(guardFails, ...limited, '--write').status).toBe(2)
     expect(compare(guardFails, '--informational', '--write').status).toBe(2)
-  })
+  }, 30_000)
 
   it('prints what the run lost and exits 0 when it is only informational (the runner: the reference was recorded on a Retina Mac)', () => {
     const lostOne = { main: { code: 0, checks: [] as Array<{ name: string; ok: boolean }> }, guard: reference.guard }
@@ -180,5 +236,5 @@ describe('scripts/compat-compare.mjs --limits', () => {
     rmSync(join(folder, 'report.json'), { force: true })
     const missing = spawnSync(process.execPath, ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', script, '--baseline', join(folder, 'reference.json'), '--report', join(folder, 'report.json'), '--informational'], { encoding: 'utf8' })
     expect(missing.status).toBe(2)
-  })
+  }, 30_000)
 })

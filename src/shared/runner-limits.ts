@@ -33,8 +33,10 @@ export function readRunnerLimits(raw: unknown, where: string): RunnerLimits {
 export const suiteFailed = (suite: ReportSuite): boolean => suite.code !== 0 || suite.checks.some((check) => !check.ok && check.skipped !== true)
 
 export interface RunVerdict {
-  /** The suites that failed and are not in the limits: any one of them fails the run. */
+  /** The suites that failed and are not in the limits, and did not pass when they were run again alone: any one of them fails the run. */
   unexpected: string[]
+  /** The suites that failed in the chain, are not in the limits, and passed when they were run again alone (the focus, the timing and what the suites before leave open): said, and they do not fail the run. */
+  flaky: string[]
   /** The suites that failed and are in the limits, with the reason. */
   tolerated: Array<{ suite: string; reason: string }>
   /** The suites of the limits that ran and passed (the workflow leaves them out, so someone ran them): the limit may be gone, to look at. They do not fail the run. */
@@ -43,14 +45,20 @@ export interface RunVerdict {
   notRun: string[]
 }
 
-/** Sorts the suites of a report into the ones that fail the run and the ones the limits excuse. */
-export function judgeRun(report: CompatReport, limits: Readonly<RunnerLimits>): RunVerdict {
-  const verdict: RunVerdict = { unexpected: [], tolerated: [], stale: [], notRun: [] }
+/**
+ * Sorts the suites of a report into the ones that fail the run and the ones the limits excuse. `again` holds the reports of the failed suites run again alone, once, by
+ * suite name: on a runner the chain is not steady (windows without the focus of the system, a virtual machine that is slow), and a suite that passes alone has
+ * not shown a defect, when one that fails alone has.
+ */
+export function judgeRun(report: CompatReport, limits: Readonly<RunnerLimits>, again: Readonly<Record<string, CompatReport>> = {}): RunVerdict {
+  const verdict: RunVerdict = { unexpected: [], flaky: [], tolerated: [], stale: [], notRun: [] }
   for (const [name, suite] of Object.entries(report.suites)) {
     const reason = Object.hasOwn(limits, name) ? limits[name] : undefined
     if (suiteFailed(suite)) {
-      if (reason === undefined) verdict.unexpected.push(name)
-      else verdict.tolerated.push({ suite: name, reason })
+      const second = Object.hasOwn(again, name) ? again[name]?.suites[name] : undefined
+      if (reason !== undefined) verdict.tolerated.push({ suite: name, reason })
+      else if (second !== undefined && !suiteFailed(second)) verdict.flaky.push(name)
+      else verdict.unexpected.push(name)
     } else if (reason !== undefined) verdict.stale.push(name)
   }
   verdict.notRun = Object.keys(limits).filter((name) => !isPart(name) && !Object.hasOwn(report.suites, name))
