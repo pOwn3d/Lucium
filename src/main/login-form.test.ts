@@ -243,7 +243,8 @@ describe('what it never fills', () => {
   })
 
   it('a form that sends its fields to another origin, or to http, read from the attribute and not from what the page put on the form object', () => {
-    for (const action of ['https://evil.test/collect', 'http://example.com/login', '//evil.test/x', 'https://example.com.evil.test/']) {
+    // `data:` and `vbscript:` have no origin to compare: only `javascript:` (the page's own code) is let through besides the origin of the page.
+    for (const action of ['https://evil.test/collect', 'http://example.com/login', '//evil.test/x', 'https://example.com.evil.test/', 'data:text/html,<p>x</p>', 'vbscript:msgbox(1)']) {
       const { form, user, password } = signInForm()
       form.attrs['action'] = action
       expect(run({ inputs: [user, password] }), action).toEqual({ ok: false, reason: 'action' })
@@ -263,7 +264,7 @@ describe('what it never fills', () => {
 
   // Markup injected into a page that allows no script: a button whose `formaction` replaces the action of the form it submits.
   it('a form one of whose buttons sends its fields to another origin, the button inside the form or tied to it from elsewhere', () => {
-    for (const formaction of ['https://evil.test/collect', 'http://example.com/login', '//evil.test/x', ' https://evil.test/padded ']) {
+    for (const formaction of ['https://evil.test/collect', 'http://example.com/login', '//evil.test/x', ' https://evil.test/padded ', 'data:text/html,<p>x</p>', 'vbscript:msgbox(1)']) {
       const { form, user, password } = signInForm()
       form.attrs['action'] = '/session'
       expect(run({ inputs: [user, password], buttons: [new FakeButton(form, '/session'), new FakeButton(form, formaction)] }), formaction).toEqual({ ok: false, reason: 'action' })
