@@ -219,6 +219,9 @@ export async function smokeWebStore(ctx: SmokeContext, check: Check): Promise<vo
   const askedForReview = async (): Promise<boolean> => {
     const shown = await waitFor(() => browser.currentPanel() === 'extreview', 15_000)
     if (!shown) console.log(`[smoke-webstore] no sheet: notices=${JSON.stringify(notices.slice(-3))} warnings=${JSON.stringify(warnings.slice(-3))}`)
+    // The panel is chosen in the main process before its page draws the sheet: a read at once finds it empty on a slow machine (the runner of the Smoke workflow
+    // read `title: ""` here). The sheet is waited for; one that never comes is read as it is, and the checks say what they found.
+    else await waitFor(async () => (await sheetText()).title !== '', 5000)
     return shown
   }
   const infoOf = (profileId: string, id: string) => engine.listAllExtensions().find((e) => e.profileId === profileId && e.id === id)
