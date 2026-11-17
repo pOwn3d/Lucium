@@ -12,6 +12,7 @@ const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 
 /** The tests that run only under a condition: how many in each file, and what the condition is. */
 const CONDITIONAL: Readonly<Record<string, { count: number; waitsFor: string }>> = {
+  'scripts/notices/shipped-notices.test.ts': { count: 1, waitsFor: 'Windows excluded: the modes of a Linux package are POSIX modes, which Windows does not keep' },
   'scripts/site-captures/features.test.ts': { count: 1, waitsFor: 'the repository of the site next to this one: absent on a runner' },
   'src/main/backup-store.test.ts': { count: 4, waitsFor: 'Windows, where chmod refuses nothing (it only sets the read-only flag) and where a link under the temporary name is followed (no O_NOFOLLOW)' },
   'src/main/bench-script.test.ts': { count: 4, waitsFor: 'macOS (the browsers it compares are applications of macOS)' },
