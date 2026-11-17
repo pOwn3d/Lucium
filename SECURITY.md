@@ -2,7 +2,7 @@
 
 Lucium is a web browser: a vulnerability can expose the people who use it. Reports are taken seriously, and you are asked to make them **privately**.
 
-Français : pour signaler une faille, n'ouvrez pas d'issue publique. Écrivez à contact@lucium.app (commencez le sujet par `[security]`), ou utilisez le signalement privé de GitHub (onglet *Security* du dépôt public, *Report a vulnerability*). Vous pouvez écrire en français. Seule la dernière version publiée reçoit les correctifs : le tableau ci-dessous dit laquelle (les versions 0.2.x, 1.0.0, 1.0.1, 1.1.0 et 1.1.1 ne sont plus corrigées).
+Français : pour signaler une faille, n'ouvrez pas d'issue publique. Écrivez à contact@lucium.app (commencez le sujet par `[security]`), ou utilisez le signalement privé de GitHub (onglet *Security* du dépôt public, *Report a vulnerability*). Vous pouvez écrire en français. Seule la dernière version publiée reçoit les correctifs : le tableau ci-dessous dit laquelle (les versions 0.2.x, 1.0.0, 1.0.1, 1.1.0, 1.1.1 et 1.1.2 ne sont plus corrigées).
 
 ## Supported versions
 
@@ -10,8 +10,9 @@ Fixes are made on `main` and released in the next version; **older releases are 
 
 | Version | Supported |
 |---|---|
-| 1.1.2, the latest release | yes |
+| 1.1.3, the latest release | yes |
 | `main` | yes, fixes are written there before they are released |
+| 1.1.2 | no, update to the latest release |
 | 1.1.1 | no, update to the latest release |
 | 1.1.0 | no, update to the latest release |
 | 1.0.1 | no, update to the latest release: it has a flaw in the temporary access given to an extension by `activeTab`, fixed in 1.1.0 only ([CHANGELOG](CHANGELOG.md), version 1.1.0) |
