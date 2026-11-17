@@ -27,6 +27,7 @@ targets:
     platform: iOS
     sources:
       - path: Lucium
+        excludes: ["Info.plist"]
       # The embedded filter lists (scripts/ios-filter-lists.mjs writes them; not committed). Without them the application runs with its short
       # built-in list; a build that is handed out has them, and the archive step refuses one that does not (docs/ios.md).
       - path: Lucium/FilterLists
@@ -48,6 +49,8 @@ targets:
         PRODUCT_NAME: Lucium
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
+        # Merged with the generated keys: the one setting a build setting cannot express (App Transport Security for web content).
+        INFOPLIST_FILE: Lucium/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Lucium
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES

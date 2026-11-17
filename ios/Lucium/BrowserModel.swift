@@ -42,6 +42,11 @@ final class BrowserModel {
     /// Changes when a picture of a tab is stored, so that the list of tabs redraws.
     var thumbnailRevision = 0
 
+    /// What the privacy rules show and ask: a notice, a refused certificate, the settings sheet (`PrivacyNavigation.swift`).
+    var privacyPrompts = PrivacyPrompts()
+    /// The navigation delegate of every web view: the privacy rules of the Mac (docs/ios.md, "Vie privée").
+    @ObservationIgnored let navigationPolicy = PrivacyNavigation()
+
     /// The short built-in list, used when this copy carries no embedded list; `embeddedLists` gives the lists the application carries (docs/ios.md,
     /// "Compiler les listes du Mac"), and `store` is where WebKit keeps what it compiled (tests give their own folder).
     @ObservationIgnored let rules: @MainActor () throws -> String
@@ -81,6 +86,7 @@ final class BrowserModel {
         case .fresh, .loaded: startupNoticeShown = false
         }
         ensureActiveTab()
+        navigationPolicy.model = self
     }
 
     var spaces: [Space] { state.spaces }
@@ -125,8 +131,9 @@ final class BrowserModel {
     // MARK: Navigation
 
     func submitAddress() {
-        guard let request = Self.request(for: addressText) else { return }
-        webView?.load(request)
+        guard var request = Self.request(for: addressText), let view = webView else { return }
+        navigationPolicy.prepare(&request, for: view)
+        view.load(request)
     }
 
     /// The request an address field text stands for: an address, or a search (the same rules as the Mac, `AddressResolver`).
@@ -269,6 +276,22 @@ final class BrowserModel {
     func report(_ kind: StorageKind, _ message: String) {
         storageProblems[kind] = message
         print("[storage] \(message)")
+    }
+}
+
+extension BrowserModel {
+    /// The privacy settings of the state: the Mac's `settings`, read with the Mac's rules (`PrivacySettings`).
+    var privacySettings: PrivacySettings { state.privacy }
+
+    /// Changes the privacy settings. They are written into the state (kept like any other change), and the scripts of the awake web views are put
+    /// back at once; a page that is already open keeps what it was loaded with.
+    func updatePrivacy(_ change: (inout PrivacySettings) -> Void) {
+        var settings = state.privacy
+        change(&settings)
+        guard settings != state.privacy else { return }
+        state.privacy = settings
+        navigationPolicy.optionsChanged(on: Array(webViews.values))
+        scheduleSave()
     }
 }
 

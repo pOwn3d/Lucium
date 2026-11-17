@@ -171,6 +171,20 @@ Five things to know about privacy and security:
 - **A proxy does not cover WebRTC.** A page that uses it can learn the address of your connection. "Fingerprinting protection" hides the addresses of the machine's other interfaces from WebRTC, not the one of the default route, and no setting blocks it completely (a mode that did would stop calls).
 - **Fingerprinting protection covers the page, its frames and its workers, with three limits.** Shared workers (`SharedWorker`) are not covered, because nothing can act there before their script: they stay available and read the real values of the machine. Only strict mode removes them from protected pages; a site that needs them then goes in "Sites without fingerprint protection". While an extension debugs a page (`chrome.debugger`), the frames and the workers of that page are not protected; the page itself still is. The language and the time zone are changed nowhere. It hinders ordinary tracking; it does not stop a determined site from recognizing the machine ([docs/fonctions.md](docs/fonctions.md), "Limites").
 
+### Connections of the iOS version
+
+Lucium for iPhone and iPad is in preparation and not published ([ios/README.md](ios/README.md); the study is [docs/ios.md](docs/ios.md), in French). This table says what the code of `ios/` does today. Each connection that comes later adds its line here, in the same change as the function, off by default with its own switch (`AGENTS.md`, section 5). The application has no account, no telemetry, no crash report of its own and no library that measures anything.
+
+| Connection: what is sent, to whom | When | Switch: where (default) |
+|---|---|---|
+| **The pages you open**, and what they load: the address you type or follow goes to its site, and the page's own requests go to the hosts it names. With **HTTPS first**, an `http://` address is asked for as `https://` first; if that site refuses the connection or has not answered after 5 seconds, the same address is asked for over `http://` and a notice says so. An invalid certificate never falls back by itself: a message offers "Open over HTTP (not secure)", which acts only on your tap | when you navigate | HTTPS first: Tabs › Privacy (on) |
+| **The Global Privacy Control signal**: `Sec-GPC: 1` is added to the request of each page you open or follow, and the page can read it as `navigator.globalPrivacyControl`. The requests a page makes by itself (images, scripts, frames) carry no header: iOS gives the application no way to add one | with each page | Tabs › Privacy: "Ask sites not to track me" (on for a new profile) |
+| **Filter lists of the blocker**: none. They will be inside the application and will change only with it (the App Store or TestFlight) | never | none |
+| **Updates**: none. The App Store or TestFlight updates the application | never | none |
+| **Search suggestions, site icons, synchronization**: not in the iOS code yet. Each will come with its line here, its switch and its default | not yet | not yet |
+
+Two more things about privacy on iOS. The removal of **tracking parameters** works as on the Mac: `utm_*`, `fbclid`, `gclid`… come off the addresses you open (the same fixed list, held to the Mac's code by shared test vectors). And the application asks the system to let `http://` pages load in web content (`NSAllowsArbitraryLoadsInWebContent`): without it WebKit refuses the HTTP fall back of HTTPS first. It lifts the rule for web content only; the application makes no connection of its own.
+
 ## Using Lucium
 
 The interface is in **French** or in **English**: it follows the language of macOS, and *Settings › Start here › Language* chooses it ("Automatic (system language)" by default). The menu names below are the English ones.

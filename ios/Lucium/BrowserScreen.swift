@@ -15,6 +15,7 @@ struct BrowserScreen: View {
             }
             BottomBar(model: model)
         }
+        .privacyPrompts(model)
         .task { await model.prepare() }
         .onChange(of: scenePhase) { _, phase in
             switch phase {

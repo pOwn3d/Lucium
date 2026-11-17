@@ -171,6 +171,20 @@ Cinq précisions sur les options de vie privée et la sécurité :
 - **Un proxy ne couvre pas WebRTC.** Une page qui l'utilise peut apprendre l'adresse de votre connexion. « Protection contre l'empreinte numérique » cache à WebRTC les adresses des autres interfaces de la machine, pas celle de la route par défaut, et aucun réglage ne le bloque complètement (un mode qui le ferait empêcherait les appels).
 - **La protection contre l'empreinte numérique couvre la page, ses cadres et ses workers, avec trois limites.** Les workers partagés (`SharedWorker`) ne sont pas couverts, parce que rien ne peut y agir avant leur script : ils restent disponibles et lisent les valeurs réelles de la machine. Seul le mode strict les retire des pages protégées ; un site qui en a besoin se met alors dans « Sites sans protection contre l'empreinte ». Tant qu'une extension débogue une page (`chrome.debugger`), les cadres et les workers de cette page ne sont pas protégés ; la page elle-même le reste. La langue et le fuseau horaire ne sont modifiés nulle part. Elle gêne le pistage courant, elle n'empêche pas un site décidé de reconnaître la machine ([docs/fonctions.md](docs/fonctions.md), « Limites »).
 
+### Connexions de la version iOS
+
+Lucium pour iPhone et iPad est en préparation et n'est pas publié ([ios/README.md](ios/README.md) ; l'étude est dans [docs/ios.md](docs/ios.md)). Ce tableau dit ce que fait aujourd'hui le code de `ios/`. Chaque connexion qui viendra ensuite ajoute sa ligne ici, dans le même changement que la fonction, désactivée par défaut avec son propre interrupteur (`AGENTS.md`, section 5). L'application n'a ni compte, ni télémétrie, ni rapport de plantage à elle, ni bibliothèque qui mesure quoi que ce soit.
+
+| Connexion : ce qui part, vers qui | Quand | Interrupteur : où (défaut) |
+|---|---|---|
+| **Les pages que vous ouvrez**, et ce qu'elles chargent : l'adresse que vous saisissez ou suivez part vers son site, et les requêtes propres de la page vont vers les hôtes qu'elle nomme. Avec **HTTPS d'abord**, une adresse `http://` est d'abord demandée en `https://` ; si ce site refuse la connexion ou n'a pas répondu au bout de 5 secondes, la même adresse est demandée en `http://` et un avis le dit. Un certificat non valide ne repasse jamais en HTTP de lui-même : un message propose « Ouvrir en HTTP (non sécurisé) », qui n'agit que sur votre appui | quand vous naviguez | HTTPS d'abord : Onglets › Vie privée (activé) |
+| **Le signal Global Privacy Control** : `Sec-GPC: 1` est ajouté à la requête de chaque page que vous ouvrez ou suivez, et la page peut le lire par `navigator.globalPrivacyControl`. Les requêtes qu'une page fait d'elle-même (images, scripts, cadres) ne portent aucun en-tête : iOS ne donne à l'application aucun moyen d'en ajouter | avec chaque page | Onglets › Vie privée : « Demander aux sites de ne pas me suivre » (activé pour un profil neuf) |
+| **Listes de filtres du bloqueur** : aucune. Elles seront dans l'application et ne changeront qu'avec elle (l'App Store ou TestFlight) | jamais | aucun |
+| **Mises à jour** : aucune. L'App Store ou TestFlight met l'application à jour | jamais | aucun |
+| **Suggestions de recherche, icônes de sites, synchronisation** : pas encore dans le code iOS. Chacune viendra avec sa ligne ici, son interrupteur et son défaut | pas encore | pas encore |
+
+Deux autres choses sur la vie privée sous iOS. Le retrait des **paramètres de suivi** marche comme sur le Mac : `utm_*`, `fbclid`, `gclid`… quittent les adresses que vous ouvrez (la même liste fixe, tenue contre le code du Mac par des vecteurs de test communs). Et l'application demande au système de laisser charger les pages `http://` dans le contenu web (`NSAllowsArbitraryLoadsInWebContent`) : sans cela WebKit refuserait le repli en HTTP de HTTPS d'abord. La règle n'est levée que pour le contenu web ; l'application ne fait aucune connexion de son côté.
+
 ## Utiliser Lucium
 
 L'interface est en **français** ou en **anglais** : elle suit la langue de macOS, et *Réglages › Pour commencer › Langue* la choisit (« Automatique (langue du système) » par défaut).

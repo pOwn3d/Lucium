@@ -19,8 +19,10 @@ extension BrowserModel {
             configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: ProfileStore.identifier(for: space.profileId))
         }
         for list in blockers { ContentBlocker.install(list, on: configuration) }
+        navigationPolicy.configure(configuration)
         configuration.allowsInlineMediaPlayback = true
         let view = WKWebView(frame: .zero, configuration: configuration)
+        navigationPolicy.attach(to: view)
         view.allowsBackForwardNavigationGestures = true
         view.isInspectable = true
         webViews[tab.id] = view
@@ -36,7 +38,8 @@ extension BrowserModel {
         sideStore?.remove(.interaction, for: tab.id)
         if let saved { view.interactionState = saved }
         guard view.url == nil, !view.isLoading else { return }
-        if !tab.isBlank, let request = Self.request(for: tab.url) {
+        if !tab.isBlank, var request = Self.request(for: tab.url) {
+            navigationPolicy.prepare(&request, for: view)
             view.load(request)
         } else {
             view.loadHTMLString(StartPage.html(), baseURL: nil)
@@ -55,6 +58,7 @@ extension BrowserModel {
     /// Lets go of a view without keeping anything: a closed tab, or one that was just kept.
     func free(_ view: WKWebView, tabId: String) {
         observations[tabId] = nil
+        navigationPolicy.forget(tab: tabId)
         view.stopLoading()
         view.navigationDelegate = nil
         view.removeFromSuperview()
