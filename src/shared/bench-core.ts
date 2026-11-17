@@ -627,7 +627,8 @@ export function formatNumber(value: number | null | undefined, digits = 0): stri
   return `${negative ? '−' : ''}${grouped}${fraction ? `,${fraction}` : ''}`
 }
 
-const escapeCell = (text: string): string => text.replace(/\|/g, '\\|').replace(/\r?\n/g, ' ')
+/** A cell of a Markdown table: the bar that would end it, and the backslash that would escape the bar written for it (`a\|b` is `a\\\|b`, not `a\\|b`). */
+const escapeCell = (text: string): string => text.replace(/[\\|]/g, '\\$&').replace(/\r?\n/g, ' ')
 
 function table(header: readonly string[], rows: readonly (readonly string[])[]): string {
   const line = (cells: readonly string[]) => `| ${cells.map(escapeCell).join(' | ')} |`
