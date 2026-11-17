@@ -6,7 +6,8 @@ published** (`AGENTS.md`, section 7). The study and the decisions of the project
 
 ```
 project.yml      the Xcode project, described for XcodeGen (Lucium.xcodeproj is generated and not committed)
-Contracts/       vectors shared with the Mac: src/shared/ios-contract.test.ts runs them against the TypeScript, LuciumKit against the Swift
+Contracts/       files shared with the Mac. Address vectors: src/shared/ios-contract.test.ts runs them against the TypeScript, LuciumKit against the Swift.
+                 state-reference.json: a state file written by the Mac's own store (src/main/ios-state-contract.test.ts), which LuciumKit reads, writes back and compares
 LuciumKit/       Swift package: pure logic (state format, address rules). `swift test` runs it on the Mac, with no simulator
 Lucium/          the application (SwiftUI, WebKit, Localizable.xcstrings, blocker rules)
 LuciumTests/     XCTest bundle hosted by the application (runs on a simulator)
@@ -31,3 +32,4 @@ time, and run `xcrun simctl shutdown all` if it was interrupted. It signs nothin
 - No telemetry, no account, no network call of our own, no online service (`AGENTS.md`, section 5).
 - The code here is under GPL-3.0-or-later with the additional permission that lets the maintainer hand it out through the App Store and TestFlight ([ADDITIONAL-PERMISSION-APP-STORE.txt](../ADDITIONAL-PERMISSION-APP-STORE.txt)). Code that other people hold, such as a filter list, keeps its own license, which the application shows.
 - Pure logic goes in `LuciumKit`. What the Mac also does is tested by the shared vectors, not by a second opinion.
+- The state format is held by `Contracts/state-reference.json`. When the Mac's format changes on purpose, `pnpm test` refuses the file until it is rewritten (`pnpm exec vitest run src/main/ios-state-contract.test.ts -u`), then `swift test` in `LuciumKit/` says whether the iPhone still reads it: a field the Swift model does not type goes through `rest` and passes.

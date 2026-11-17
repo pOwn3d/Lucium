@@ -1,0 +1,613 @@
+{
+  "version": 1,
+  "revision": 2,
+  "spaces": [
+    {
+      "id": "id-1",
+      "name": "Perso",
+      "emoji": "🏠",
+      "theme": {
+        "baseColors": [
+          "#5139c6",
+          "#aec639"
+        ],
+        "harmony": "complementary",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "light",
+        "vibrant": true,
+        "appearance": "auto"
+      },
+      "profileId": "default"
+    },
+    {
+      "id": "id-2",
+      "name": "Travail",
+      "emoji": "💼",
+      "theme": {
+        "baseColors": [
+          "#3968c6",
+          "#c69739"
+        ],
+        "harmony": "complementary",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "light",
+        "vibrant": true,
+        "appearance": "auto"
+      },
+      "profileId": "work",
+      "iconKind": "letter",
+      "iconLetter": "TR",
+      "iconColor": "#3366cc",
+      "iconRound": true
+    }
+  ],
+  "tabs": [
+    {
+      "id": "id-5",
+      "spaceId": "id-1",
+      "url": "https://recettes.example/",
+      "title": "Recettes",
+      "pinned": true,
+      "createdAt": 1790000000000,
+      "lastActiveAt": 1790000000000,
+      "folderId": "id-4",
+      "anchorUrl": "https://recettes.example/"
+    },
+    {
+      "id": "id-3",
+      "spaceId": "id-1",
+      "url": "https://carnet.example/notes",
+      "title": "Carnet",
+      "pinned": true,
+      "createdAt": 1790000000000,
+      "lastActiveAt": 1790000000000,
+      "faviconUrl": "https://carnet.example/favicon.ico",
+      "anchorUrl": "https://carnet.example/notes",
+      "customTitle": "Mes notes",
+      "icon": "📓",
+      "keepAwake": true,
+      "autoReload": {
+        "seconds": 60
+      }
+    },
+    {
+      "id": "id-8",
+      "spaceId": "id-2",
+      "url": "https://projet.example/tableau",
+      "title": "Tableau de projet",
+      "pinned": false,
+      "createdAt": 1790000000000,
+      "lastActiveAt": 1790000000000
+    }
+  ],
+  "folders": [
+    {
+      "id": "id-4",
+      "spaceId": "id-1",
+      "name": "Lectures",
+      "collapsed": false
+    }
+  ],
+  "favorites": [],
+  "archive": [],
+  "readLater": [
+    {
+      "id": "id-7",
+      "url": "https://article.example/long",
+      "title": "Un long article",
+      "savedAt": 1790000000000
+    }
+  ],
+  "readLaterFolders": [],
+  "bookmarks": [],
+  "activeSpaceId": "id-2",
+  "activeTabBySpace": {
+    "id-1": "id-3",
+    "id-2": "id-8"
+  },
+  "sitePermissions": {},
+  "commandBarUsage": {},
+  "sidePanelBehavior": {},
+  "splits": [],
+  "boosts": [],
+  "sessions": [],
+  "workViews": [],
+  "settings": {
+    "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+    "siteSearches": [
+      {
+        "keyword": "g",
+        "name": "Google",
+        "url": "https://www.google.com/search?q=%s"
+      },
+      {
+        "keyword": "img",
+        "name": "Google Images",
+        "url": "https://www.google.com/search?tbm=isch&q=%s"
+      },
+      {
+        "keyword": "gm",
+        "name": "Google Maps",
+        "url": "https://www.google.com/maps/search/%s"
+      },
+      {
+        "keyword": "tr",
+        "name": "Google Traduction",
+        "url": "https://translate.google.com/?sl=auto&tl=fr&text=%s&op=translate"
+      },
+      {
+        "keyword": "gmeet",
+        "name": "Google Meet",
+        "url": "https://meet.google.com/%s"
+      },
+      {
+        "keyword": "gdocs",
+        "name": "Google Docs",
+        "url": "https://docs.google.com/document/create?usp=%s"
+      },
+      {
+        "keyword": "gsheets",
+        "name": "Google Sheets",
+        "url": "https://sheets.google.com/create?usp=%s"
+      },
+      {
+        "keyword": "gslides",
+        "name": "Google Slides",
+        "url": "https://docs.google.com/presentation/create?usp=%s"
+      },
+      {
+        "keyword": "gdrive",
+        "name": "Google Drive",
+        "url": "https://drive.google.com/drive/search?q=%s"
+      },
+      {
+        "keyword": "gmail",
+        "name": "Gmail",
+        "url": "https://mail.google.com/mail/u/0/?q=%s"
+      },
+      {
+        "keyword": "gcal",
+        "name": "Google Calendar",
+        "url": "https://calendar.google.com/?q=%s"
+      },
+      {
+        "keyword": "ddg",
+        "name": "DuckDuckGo",
+        "url": "https://duckduckgo.com/?q=%s"
+      },
+      {
+        "keyword": "b",
+        "name": "Bing",
+        "url": "https://www.bing.com/search?q=%s"
+      },
+      {
+        "keyword": "brave",
+        "name": "Brave Search",
+        "url": "https://search.brave.com/search?q=%s"
+      },
+      {
+        "keyword": "qw",
+        "name": "Qwant",
+        "url": "https://www.qwant.com/?q=%s"
+      },
+      {
+        "keyword": "eco",
+        "name": "Ecosia",
+        "url": "https://www.ecosia.org/search?q=%s"
+      },
+      {
+        "keyword": "yt",
+        "name": "YouTube",
+        "url": "https://www.youtube.com/results?search_query=%s"
+      },
+      {
+        "keyword": "tw",
+        "name": "Twitter/X",
+        "url": "https://twitter.com/search?q=%s"
+      },
+      {
+        "keyword": "fb",
+        "name": "Facebook",
+        "url": "https://www.facebook.com/search?q=%s"
+      },
+      {
+        "keyword": "ig",
+        "name": "Instagram",
+        "url": "https://www.instagram.com/explore/tags/%s"
+      },
+      {
+        "keyword": "li",
+        "name": "LinkedIn",
+        "url": "https://www.linkedin.com/search/results/all/?keywords=%s"
+      },
+      {
+        "keyword": "tiktok",
+        "name": "TikTok",
+        "url": "https://www.tiktok.com/search?q=%s"
+      },
+      {
+        "keyword": "gh",
+        "name": "GitHub",
+        "url": "https://github.com/search?q=%s"
+      },
+      {
+        "keyword": "so",
+        "name": "Stack Overflow",
+        "url": "https://stackoverflow.com/search?q=%s"
+      },
+      {
+        "keyword": "mdn",
+        "name": "MDN",
+        "url": "https://developer.mozilla.org/fr/search?q=%s"
+      },
+      {
+        "keyword": "npm",
+        "name": "npm",
+        "url": "https://www.npmjs.com/search?q=%s"
+      },
+      {
+        "keyword": "pypi",
+        "name": "PyPI",
+        "url": "https://pypi.org/search/?q=%s"
+      },
+      {
+        "keyword": "caniuse",
+        "name": "Can I use",
+        "url": "https://caniuse.com/?search=%s"
+      },
+      {
+        "keyword": "hn",
+        "name": "Hacker News",
+        "url": "https://hn.algolia.com/?q=%s"
+      },
+      {
+        "keyword": "w",
+        "name": "Wikipédia",
+        "url": "https://fr.wikipedia.org/w/index.php?search=%s"
+      },
+      {
+        "keyword": "wen",
+        "name": "Wikipedia (anglais)",
+        "url": "https://en.wikipedia.org/w/index.php?search=%s"
+      },
+      {
+        "keyword": "wikt",
+        "name": "Wiktionnaire",
+        "url": "https://fr.wiktionary.org/w/index.php?search=%s"
+      },
+      {
+        "keyword": "osm",
+        "name": "OpenStreetMap",
+        "url": "https://www.openstreetmap.org/search?query=%s"
+      },
+      {
+        "keyword": "imdb",
+        "name": "IMDb",
+        "url": "https://www.imdb.com/find/?q=%s"
+      },
+      {
+        "keyword": "rd",
+        "name": "Reddit",
+        "url": "https://www.reddit.com/search/?q=%s"
+      },
+      {
+        "keyword": "az",
+        "name": "Amazon.fr",
+        "url": "https://www.amazon.fr/s?k=%s"
+      },
+      {
+        "keyword": "amz",
+        "name": "Amazon.com",
+        "url": "https://www.amazon.com/s?k=%s"
+      },
+      {
+        "keyword": "ebay",
+        "name": "eBay",
+        "url": "https://www.ebay.com/sch/i.html?_nkw=%s"
+      },
+      {
+        "keyword": "aliexpress",
+        "name": "AliExpress",
+        "url": "https://www.aliexpress.com/wholesale?SearchText=%s"
+      },
+      {
+        "keyword": "discord",
+        "name": "Discord",
+        "url": "https://discordapp.com/channels/@me/search?q=%s"
+      },
+      {
+        "keyword": "zoom",
+        "name": "Zoom",
+        "url": "https://zoom.us/search?q=%s"
+      },
+      {
+        "keyword": "trello",
+        "name": "Trello",
+        "url": "https://trello.com/search?q=%s"
+      },
+      {
+        "keyword": "notion",
+        "name": "Notion",
+        "url": "https://www.notion.so/search?q=%s"
+      },
+      {
+        "keyword": "figma",
+        "name": "Figma",
+        "url": "https://www.figma.com/files/search/%s"
+      },
+      {
+        "keyword": "jira",
+        "name": "Jira Cloud",
+        "url": "https://jira.atlassian.net/issues/?jql=text%20~%20%22%s%22"
+      },
+      {
+        "keyword": "twitch",
+        "name": "Twitch",
+        "url": "https://www.twitch.tv/search?term=%s"
+      },
+      {
+        "keyword": "maps",
+        "name": "Google Maps",
+        "url": "https://maps.google.com/?q=%s"
+      }
+    ],
+    "linkRoutes": [],
+    "sidebarVisible": true,
+    "sidebarWidth": 323,
+    "sidePanelWidth": 400,
+    "searchSuggestions": true,
+    "keyBindings": {},
+    "allowThemeToSites": false,
+    "interfaceAppearance": "auto",
+    "websiteAppearance": "auto",
+    "warnBeforeQuitting": true,
+    "autoUpdate": true,
+    "updateChannel": "stable",
+    "chromeNativeHosts": false,
+    "littleArcShortcut": true,
+    "appIcon": "clair",
+    "showToolbar": true,
+    "sidebarRight": false,
+    "spaceImages": false,
+    "webPanels": false,
+    "hoverCards": true,
+    "allowScreenShare": true,
+    "showTabMemory": false,
+    "tabStateBadges": true,
+    "downloadStatusChip": true,
+    "favoriteNames": false,
+    "resourceGauge": true,
+    "suggestionsNoticeSeen": false,
+    "welcomeDone": false,
+    "firstLaunchDone": false,
+    "arcGuideSeen": false,
+    "whatsNewSheet": true,
+    "lastSeenVersion": "",
+    "forceHighContrast": false,
+    "forceReduceMotion": false,
+    "forceReduceTransparency": false,
+    "peekWithShift": true,
+    "littleArcArchiveHours": 12,
+    "fullUrlInToolbar": false,
+    "showReloadAllButton": false,
+    "reloadAllWakes": false,
+    "dragWindowFromToolbar": true,
+    "boostsEnabled": true,
+    "boostScriptImport": "ask",
+    "boostSharing": true,
+    "tidyPinnedTitles": false,
+    "tidyFoldersPosition": "top",
+    "tidyDownloads": false,
+    "blockAds": true,
+    "blockTrackers": true,
+    "blockCookieBanners": true,
+    "blockCosmetic": true,
+    "disabledFilterLists": [],
+    "filterUpdateDays": 4,
+    "blockExceptions": [],
+    "popupExceptions": [],
+    "blockMode": "standard",
+    "blockModeSites": {},
+    "blockScriptlets": false,
+    "reduceFingerprint": false,
+    "fingerprintStrict": false,
+    "fingerprintExceptions": [],
+    "profileNames": {},
+    "externalLinksInLittleArc": true,
+    "peekOnExternalLinks": false,
+    "autoPictureInPicture": true,
+    "mediaPlayer": true,
+    "autoArchiveHours": 12,
+    "profiles": {},
+    "sleepAfterMinutes": 30,
+    "sleepAwakeMax": 12,
+    "sleepFreezeAfterMinutes": 0,
+    "sleepMode": "discard",
+    "sleepExcludedHosts": [],
+    "sleepExcludedKeepAll": false,
+    "sleepSkipAudible": true,
+    "sleepSkipPinned": false,
+    "sleepNotify": false,
+    "loadAllTabsAtLaunch": false,
+    "extensionPaths": [],
+    "webStoreInstall": true,
+    "webStoreUpdates": "manual",
+    "siteDataTypes": [
+      "cache",
+      "cookies",
+      "localStorage",
+      "indexedDB",
+      "serviceWorkers",
+      "cacheStorage",
+      "sessionStorage"
+    ],
+    "siteDataSubdomains": false,
+    "siteDataReload": true,
+    "siteDataHttp": false,
+    "siteDataConfirm": false,
+    "siteDataAutoClose": true,
+    "siteDataNotify": true,
+    "siteDataAnimation": "spinner",
+    "siteDataRecents": [],
+    "developerHosts": [],
+    "restoreWindows": true,
+    "usedProfiles": [],
+    "retiredProfileIds": [],
+    "updateFeedUrl": "",
+    "updateNotices": {
+      "version": "",
+      "shown": 0
+    },
+    "httpsUpgrade": true,
+    "sendGpc": true,
+    "stripTrackingParams": true,
+    "stripCopiedLinks": true,
+    "protectionBaseline": "renforcee",
+    "historyOff": false,
+    "dohCustom": false,
+    "dohMode": "automatic",
+    "dohProvider": "system",
+    "dohCustomUrl": "",
+    "proxyEnabled": false,
+    "proxy": {
+      "mode": "system",
+      "address": "",
+      "bypass": ""
+    },
+    "cookieManager": true,
+    "cookieKeepHosts": [],
+    "privateTabs": true,
+    "tabContainers": false,
+    "containers": [],
+    "containerRules": [],
+    "independentWindows": false,
+    "resolveFavicons": true,
+    "siteZoom": {},
+    "autoplayPolicy": "block",
+    "spellCheck": "auto",
+    "siteAutoplay": {},
+    "autoplayPerSite": true,
+    "siteDataClearOnCloseEnabled": false,
+    "siteDataClearOnClose": [],
+    "siteDataClearOnQuit": false,
+    "customFilterListsEnabled": true,
+    "customFilterLists": [],
+    "autoBackup": true,
+    "autoBackupKeep": 5,
+    "autoBackupMinutes": 30,
+    "lockEnabled": false,
+    "lockApp": false,
+    "lockedSpaces": [],
+    "lockTouchId": true,
+    "reopenHistory": false,
+    "interfaceTranslated": true,
+    "language": "auto",
+    "translateLocal": true,
+    "translateSystemEngine": true,
+    "translateTarget": "auto",
+    "translateModelsDir": "",
+    "translateAlways": [],
+    "translateNeverSites": [],
+    "translateSystemNoticeSeen": false,
+    "extensionOverflow": true,
+    "unpinnedExtensions": [],
+    "extensionDataApis": true,
+    "extensionTabCapture": true,
+    "userScripts": false,
+    "vimKeys": false,
+    "vimKeysExcludedHosts": [],
+    "tabGroupFolders": false,
+    "omniboxKeywords": false,
+    "passwordManager": false,
+    "qrCode": false,
+    "autoScroll": false,
+    "scrollSync": false,
+    "workViewsEnabled": true,
+    "mouseGestures": false,
+    "mouseGestureExcludedHosts": [],
+    "pageWatch": false,
+    "pageWatches": [],
+    "readAloud": false,
+    "batterySaver": false,
+    "downloadPause": false,
+    "downloadResume": false,
+    "downloadAskWhere": false,
+    "openWithMemory": false,
+    "openWithApps": {},
+    "openUnsaved": false,
+    "pdfWithSource": false,
+    "useReadLaterFolders": false,
+    "readableMode": "original",
+    "siteReadableMode": {},
+    "readableToolbarButton": true,
+    "windowVibrancy": "none",
+    "sidebarOpacity": 100,
+    "windowBorder": 10,
+    "cardOutline": false,
+    "backClosesOpenedTab": true,
+    "tabCycleRecent": true,
+    "spaceSwipe": true,
+    "dragToSplit": true,
+    "warnBeforeClosingWindow": false,
+    "modifiedClickBackground": true,
+    "blankLinkBackground": false,
+    "showZoomIndicator": true,
+    "nameWindows": false,
+    "uiScale": 100,
+    "panelSizes": {},
+    "showAdvancedSettings": false,
+    "suggestHistory": true,
+    "suggestTabs": true,
+    "suggestArchive": true,
+    "suggestReadLater": true,
+    "goToOpenTab": false,
+    "searchBangs": true,
+    "searchDiscovery": false,
+    "searchDiscoverySeen": [],
+    "commandBarCalc": true,
+    "commandBarSize": "m",
+    "commandBarShape": "balanced",
+    "tabSearch": true,
+    "shortcutHelp": true,
+    "findRegex": false,
+    "compactMode": false,
+    "tabTree": false,
+    "littleArcModifier": false,
+    "littleArcNewTabLinks": true,
+    "littleDownloadBubble": false,
+    "guestProfile": false,
+    "webHardware": false,
+    "annotateCapture": false,
+    "annotateGlobalShortcut": false,
+    "annotateBar": {
+      "kind": "edge",
+      "edge": "left"
+    },
+    "annotateBarHintSeen": false,
+    "annotateAutoClear": false,
+    "annotateAutoClearSeconds": 5,
+    "annotateLetterKeys": true,
+    "urlAutomation": false,
+    "bookmarkManager": false,
+    "liveFolders": false,
+    "webAppWindows": false,
+    "documentPictureInPicture": false,
+    "notes": true,
+    "notesListButton": true,
+    "ollamaConfig": {
+      "enabled": false,
+      "url": "http://localhost:11434",
+      "model": "mistral",
+      "maxTokens": 2048,
+      "temperature": 0.7
+    },
+    "aiSummary": false
+  },
+  "writtenBy": "1.0.0"
+}
