@@ -18,6 +18,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Fixed
 
 - **Site icons**: a crafted icon file, a kilobyte of comments in a row, could freeze Lucium: the check that tells a vector icon from an error page took exponential time on it. It now reads the start of the file in linear time.
+- **Guest window, language**: a guest window now uses the language of the interface chosen in the main window, not the language of the system. On a Mac in English with the interface set to French, a guest window turned the menu bar and its own notices English as soon as it took the focus.
 
 ## [1.1.2] - 2026-11-17
 

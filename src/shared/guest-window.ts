@@ -26,13 +26,18 @@ export function guestTheme(): SpaceTheme {
 }
 
 /**
- * The settings a guest window takes from the main window and follows when they change: the look of the application, the shortcuts of the
+ * The settings a guest window takes from the main window and follows when they change: the look of the application (its language included), the shortcuts of the
  * menus, the search engine typed searches go to, and the protections. Nothing the owner built by hand (lists of sites, rules, folders) is
  * here, and a test (guest-window.test.ts) fails if a list or a record joins this list.
  */
 export const GUEST_INHERITED = [
   'searchUrlTemplate',
   'keyBindings',
+  // The language of the interface is part of the look too, and more than that: the menu bar is built in the language of the window in front
+  // (app-menu-wiring.ts). A guest window left on the default, the language of the system, changed the menu bar of an owner who chose French on a
+  // Mac in English (or the reverse) as soon as it took the focus, and its notices and its menu entry were worded in another language than its name.
+  'interfaceTranslated',
+  'language',
   'interfaceAppearance',
   'websiteAppearance',
   'uiScale',
