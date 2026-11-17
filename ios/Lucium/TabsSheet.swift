@@ -1,19 +1,19 @@
 import LuciumKit
 import SwiftUI
 
-/// The tabs of the active space (mockup C2, reduced to a list). Opening a tab loads its address in the space's web view.
+/// The tabs of the active space (mockup C2, reduced to a list): the picture a tab was left with, its title, its site. Opening one shows it
+/// (waking it if it slept); swiping closes it.
 struct TabsSheet: View {
     @Bindable var model: BrowserModel
 
     var body: some View {
         NavigationStack {
             List(model.activeTabs) { tab in
-                Button { model.openTab(tab) } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(tab.title)
-                        Text(AddressResolver.host(of: tab.url)).font(.footnote).foregroundStyle(.secondary)
+                Button { model.openTab(tab) } label: { row(tab) }
+                    .swipeActions(edge: .trailing) {
+                        Button("tabs.close", role: .destructive) { model.close(tab) }
                     }
-                }
+                    .accessibilityAddTraits(tab.id == model.activeTab?.id ? .isSelected : [])
             }
             .navigationTitle(model.activeSpace.name)
             .navigationBarTitleDisplayMode(.inline)
@@ -23,5 +23,31 @@ struct TabsSheet: View {
             }
         }
         .presentationDetents([.medium, .large])
+    }
+
+    private func row(_ tab: TabItem) -> some View {
+        HStack(spacing: 12) {
+            if let picture = model.thumbnail(of: tab) {
+                Image(uiImage: picture)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 44, height: 60, alignment: .top)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                title(of: tab).fontWeight(tab.id == model.activeTab?.id ? .semibold : .regular)
+                if !tab.isBlank { Text(AddressResolver.host(of: tab.url)).font(.footnote).foregroundStyle(.secondary) }
+            }
+        }
+    }
+
+    /// The title of a page is data, not a text of the interface: it is never looked up in the catalogue.
+    @ViewBuilder private func title(of tab: TabItem) -> some View {
+        if tab.isBlank {
+            Text("tabs.blank")
+        } else {
+            Text(verbatim: tab.title.isEmpty ? AddressResolver.host(of: tab.url) : tab.title)
+        }
     }
 }

@@ -193,6 +193,118 @@
         }
       }
     },
+    "state.notice.corrupt": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The saved file was damaged. It is kept aside, nothing was deleted, and Lucium started afresh."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier enregistré était abîmé. Il est gardé à part, rien n’a été supprimé, et Lucium repart de zéro."
+          }
+        }
+      }
+    },
+    "state.notice.future": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The saved file comes from a newer version of Lucium. It is kept untouched, and Lucium started afresh."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier enregistré vient d’une version plus récente de Lucium. Il est gardé intact, et Lucium repart de zéro."
+          }
+        }
+      }
+    },
+    "state.notice.held": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The saved file could not be read or moved. It is left as it is, and nothing will be written over it until it can be moved."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le fichier enregistré n’a pu être ni lu ni déplacé. Il reste tel quel, et rien ne sera écrit par-dessus tant qu’il ne peut pas être déplacé."
+          }
+        }
+      }
+    },
+    "state.notice.ok": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Got it"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compris"
+          }
+        }
+      }
+    },
+    "state.notice.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your tabs could not be read"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos onglets n’ont pas pu être lus"
+          }
+        }
+      }
+    },
+    "tabs.blank": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start page"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Page de démarrage"
+          }
+        }
+      }
+    },
+    "tabs.close": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermer"
+          }
+        }
+      }
+    },
     "tabs.done": {
       "localizations": {
         "en": {
