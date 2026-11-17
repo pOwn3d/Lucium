@@ -296,6 +296,10 @@ describe('tables', () => {
     expect(md('<table><tr><td>a|b</td><td>c<br>d</td></tr><tr><td>seul</td></tr></table>')).toBe('| a\\|b | c<br>d |\n| --- | --- |\n| seul |  |\n')
   })
 
+  it('escapes the backslash of a cell before the bar written for it, so that `a\\|b` stays a backslash then a bar inside one cell', () => {
+    expect(md('<table><tr><td>a\\|b</td></tr></table>')).toBe('| a\\\\\\|b |\n| --- |\n')
+  })
+
   it('keeps links, images and emphasis inside cells', () => {
     expect(md('<table><tr><td><b>x</b></td><td><a href="https://example.com/">l</a></td></tr></table>')).toBe('| **x** | [l](https://example.com/) |\n| --- | --- |\n')
   })
