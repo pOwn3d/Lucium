@@ -12,7 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
-- **License, App Store**: a second additional permission (GPL version 3, section 7) lets the maintainer hand out the iPhone and iPad application through Apple’s App Store and TestFlight, with its source complete under the GPL. Its text is in `ADDITIONAL-PERMISSION-APP-STORE.txt` and in `NOTICE`; contributions now come in with it, as with the Widevine one. The iOS application itself is not published yet (`docs/ios.md`).
+- **License, App Store**: a second additional permission (GPL version 3, section 7) lets the maintainer hand out the iPhone and iPad application through Apple’s App Store and TestFlight, its source staying whole under the GPL. Text: `ADDITIONAL-PERMISSION-APP-STORE.txt` and `NOTICE`. The application is not published yet.
 
 ### Fixed
 

@@ -6,7 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Ajouts
 
-- **Licence, App Store** : une seconde permission additionnelle (GPL version 3, article 7) permet au mainteneur de distribuer l’application iPhone et iPad par l’App Store d’Apple et TestFlight, avec ses sources complètes sous GPL. Son texte est dans `ADDITIONAL-PERMISSION-APP-STORE.txt` et dans `NOTICE` ; les contributions entrent désormais avec elle, comme avec celle de Widevine. L’application iOS elle-même n’est pas encore publiée (`docs/ios.md`).
+- **Licence, App Store** : une seconde permission additionnelle (GPL version 3, article 7) permet au mainteneur de distribuer l’application iPhone et iPad par l’App Store d’Apple et TestFlight, ses sources restant complètes sous GPL. Texte : `ADDITIONAL-PERMISSION-APP-STORE.txt` et `NOTICE`. L’application n’est pas encore publiée.
 
 ### Corrections
 
