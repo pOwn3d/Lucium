@@ -2,6 +2,7 @@ import { Fragment, useId, useMemo, useRef, useState, type KeyboardEvent, type Re
 import { t } from '@shared/i18n'
 import { shortcutSheet, type HelpContext } from '@shared/shortcut-help'
 import { isLeaveKey } from '@shared/panel-keys'
+import { platformOf } from '@shared/platform'
 import { api, useSnapshot } from './api'
 import { SearchGlyph, activeSpaceHue, hueProps, useFocusScope } from './templates'
 import './shortcut-help.css'
@@ -46,9 +47,10 @@ export function ShortcutHelp() {
   const titleId = useId()
   useFocusScope(root, { trap: true })
   const settings = snapshot?.state.settings
+  const platform = platformOf(snapshot?.platform)
   const sheet = useMemo(
-    () => (settings ? shortcutSheet(settings.keyBindings, { tabSearch: settings.tabSearch, shortcutHelp: settings.shortcutHelp, tabCycleRecent: settings.tabCycleRecent, notes: settings.notes }, query) : null),
-    [settings, query]
+    () => (settings ? shortcutSheet(settings.keyBindings, { tabSearch: settings.tabSearch, shortcutHelp: settings.shortcutHelp, tabCycleRecent: settings.tabCycleRecent, notes: settings.notes }, platform, query) : null),
+    [settings, platform, query]
   )
   if (!snapshot || !sheet) return null
   const { className: hueClass, style } = hueProps(activeSpaceHue(snapshot.state.spaces, snapshot.state.activeSpaceId))

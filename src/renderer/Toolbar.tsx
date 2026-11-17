@@ -6,7 +6,7 @@ import { toolbarAddress } from '@shared/toolbar'
 import { sameToolbar } from '@shared/row-equality'
 import { addressLabel, saysNotSecure } from '@shared/url'
 import { displayAddress } from '@shared/internal-page'
-import { toolbarKeys, type ToolbarKeys } from '@shared/keybindings'
+import type { ToolbarKeys } from '@shared/keybindings'
 import { NOTES_LIST_REQUEST } from '@shared/notes'
 import { READABLE_LABELS, READABLE_NEXT, type ReadableMode } from '@shared/readable-mode'
 import { translateSentence, type TranslateOffer } from '@shared/translate-quick'
@@ -233,7 +233,7 @@ interface ToolbarProps {
    * the keys of the shortcut of File › Notes for the tooltip (empty without one). Absent: no button.
    */
   notesList?: readonly string[]
-  /** The keys the tooltips show, as the shortcuts are set now (Réglages › Raccourcis). Absent: the default shortcuts. */
+  /** The keys the tooltips show, as the shortcuts are set now (Réglages › Raccourcis). Absent: tooltips without keys. */
   keys?: ToolbarKeys | undefined
   /**
    * The button « Contraste de la page »: the mode the page on screen has (see `readableButtonMode`: a web page that is not a PDF, the setting on, not a private tab or
@@ -247,8 +247,8 @@ interface ToolbarProps {
   translate?: TranslateOffer
 }
 
-/** The keys of the default shortcuts, for a bar that is not told the shortcuts in force. */
-const DEFAULT_KEYS = toolbarKeys(undefined)
+/** A bar that is not told the shortcuts in force draws its tooltips without keys: no system is assumed, so no glyph of another one is shown. */
+const DEFAULT_KEYS: ToolbarKeys = { toggleSidebar: [], back: [], forward: [], reload: [], copyUrl: [], siteInfo: [], closeSplitPane: [], addSplit: [], zoomReset: [], annotate: [] }
 
 /** How long a press on back or forward lasts before the page history opens (the button then does not navigate). */
 const LONG_PRESS_MS = 500

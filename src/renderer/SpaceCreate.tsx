@@ -10,6 +10,9 @@ import { cleanIconLetter, initialsOf, type SpaceIconChoice } from '@shared/space
 import { NAMED_COLORS, namedColorOf } from '@shared/theme-colors'
 import type { SidebarState } from '@shared/model'
 import { api, useSnapshot } from './api'
+import { commandHeld } from '@shared/keybindings'
+import { commandPress } from '@shared/platform'
+import { usePlatform } from './use-platform'
 import { IconPicker } from './IconPicker'
 import { SidebarThumb, thumbStyle } from './SidebarThumb'
 import { SpaceMark } from './SpaceMark'
@@ -36,6 +39,7 @@ const HINTS: Record<CreateBlock, () => string> = {
 
 function SpaceSheet({ state }: { state: SidebarState }) {
   const systemDark = useSystemDark()
+  const platform = usePlatform()
   const [draft, setDraft] = useState<SpaceDraft>(() => newDraft(state.spaces.length))
   // The icon follows the name until a person has chosen one.
   const [chosen, setChosen] = useState(false)
@@ -88,19 +92,19 @@ function SpaceSheet({ state }: { state: SidebarState }) {
     else act.closeOverlay()
   }
 
-  // ⌘↩ creates from anywhere in the sheet. The listener follows `view` only: `create` is read through a ref, so that the listener is not
+  // ⌘↩ (Ctrl+Enter away from macOS) creates from anywhere in the sheet. The listener follows `view` only: `create` is read through a ref, so that the listener is not
   // removed and added again at each keystroke of the form.
   const createLatest = useRef(create)
   createLatest.current = create
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key !== 'Enter' || !event.metaKey || view !== 'form') return
+      if (event.key !== 'Enter' || !commandHeld(event, platform) || view !== 'form') return
       event.preventDefault()
       void createLatest.current()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [view])
+  }, [view, platform])
 
   // Going to the picker, and coming back, puts the cursor where the work is.
   useEffect(() => {
@@ -157,7 +161,7 @@ function SpaceSheet({ state }: { state: SidebarState }) {
         <span className="sc-hint" role="status" aria-live="polite">
           {block === null ? (
             <>
-              <kbd className="tk-kbd">⌘↩</kbd> {t('space-create.hint-creer')} <kbd className="tk-kbd">{t('space-create.touche-echap')}</kbd> {t('space-create.hint-fermer')}
+              <kbd className="tk-kbd">{commandPress('↩', platform)}</kbd> {t('space-create.hint-creer')} <kbd className="tk-kbd">{t('space-create.touche-echap')}</kbd> {t('space-create.hint-fermer')}
             </>
           ) : (
             HINTS[block]()

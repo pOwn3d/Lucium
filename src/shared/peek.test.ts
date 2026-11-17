@@ -76,12 +76,12 @@ describe('isPeekOpenKey', () => {
   const key = (patch: object) => ({ key: 'Enter', meta: true, shift: false, alt: false, control: false, ...patch })
 
   it('is ⌘↩ and nothing else', () => {
-    expect(isPeekOpenKey(key({}))).toBe(true)
-    expect(isPeekOpenKey(key({ meta: false }))).toBe(false)
-    expect(isPeekOpenKey(key({ key: 'Escape' }))).toBe(false)
-    expect(isPeekOpenKey(key({ shift: true }))).toBe(false)
-    expect(isPeekOpenKey(key({ alt: true }))).toBe(false)
-    expect(isPeekOpenKey(key({ control: true }))).toBe(false)
+    expect(isPeekOpenKey(key({}), 'darwin')).toBe(true)
+    expect(isPeekOpenKey(key({ meta: false }), 'darwin')).toBe(false)
+    expect(isPeekOpenKey(key({ key: 'Escape' }), 'darwin')).toBe(false)
+    expect(isPeekOpenKey(key({ shift: true }), 'darwin')).toBe(false)
+    expect(isPeekOpenKey(key({ alt: true }), 'darwin')).toBe(false)
+    expect(isPeekOpenKey(key({ control: true }), 'darwin')).toBe(false)
   })
 })
 

@@ -3,6 +3,8 @@ import type { LuciumApi, UiSnapshot } from '@shared/ipc'
 import { applyAccessibility } from '@shared/accessibility'
 import { applyScrollBars } from '@shared/scroll-bars'
 import { followLanguage } from './document-language'
+import { setKeyPlatform } from '@shared/i18n'
+import { platformOf } from '@shared/platform'
 
 declare global {
   interface Window {
@@ -110,6 +112,8 @@ export function useSnapshot(): UiSnapshot | null {
   // every view that draws a snapshot sets the same one, so it is idempotent; a change reaches every view because a snapshot re-renders them all.
   if (snapshot) {
     followLanguage(document.documentElement, snapshot.state.settings, navigator.language)
+    // The keys named inside the sentences are those of the system the window runs on (shared/key-words.ts), set with the language for the same reason.
+    setKeyPlatform(platformOf(snapshot.platform))
     // The preferences the user forces (Réglages › Apparence › Accessibilité) are attributes of the root, on every surface that draws a snapshot.
     applyAccessibility(document.documentElement, snapshot.state.settings)
     // « Toujours afficher les barres de défilement » (macOS): the lists that hide their bar draw it (the stylesheets read `:root[data-scrollbars]`).

@@ -19,6 +19,7 @@ import {
 } from './keybindings'
 import { getLanguage, quoted, t, type Language } from './i18n'
 import { foldMarks } from './fold'
+import type { PlatformId } from './platform'
 
 /** The shortcuts worth knowing first, in the order they are shown. */
 export const BASIC_SHORTCUTS: readonly string[] = ['newTab', 'openLocation', 'closeTab', 'pin', 'toggleSidebar', 'find', 'reload']
@@ -196,19 +197,19 @@ export function conflictNote(id: string, bindings: KeyBindings | undefined): str
 }
 
 /** Said when a shortcut has just been assigned to a command that already had it elsewhere: both commands are named. Undefined when it clashes with nothing. */
-export function conflictAnnouncement(id: string, bindings: KeyBindings | undefined): string | undefined {
+export function conflictAnnouncement(id: string, bindings: KeyBindings | undefined, platform: PlatformId): string | undefined {
   const partners = conflictPartners(id, bindings)
   if (partners.length === 0) return undefined
   // A command that clashes has the accelerator it clashes on.
-  const accelerator = effectiveAccelerator(id, bindings)!
-  return t('settings-shortcuts.conflit-signale', { shortcut: formatAccelerator(accelerator), commands: quotedNames([id, ...partners].map(commandLabel), getLanguage()) })
+  const accelerator = effectiveAccelerator(id, bindings, platform)!
+  return t('settings-shortcuts.conflit-signale', { shortcut: formatAccelerator(accelerator, platform), commands: quotedNames([id, ...partners].map(commandLabel), getLanguage()) })
 }
 
 /** Said when the conflicts have been removed: for each shortcut, the command that keeps it and the ones it was taken from. */
-export function resolutionAnnouncement(resolution: ConflictResolution): string {
+export function resolutionAnnouncement(resolution: ConflictResolution, platform: PlatformId): string {
   const language = getLanguage()
   return resolution.settled
-    .map((s) => t('settings-shortcuts.conflit-resolu', { shortcut: formatAccelerator(s.accelerator), kept: quotedNames([commandLabel(s.kept)], language), removed: quotedNames(s.removed.map(commandLabel), language) }))
+    .map((s) => t('settings-shortcuts.conflit-resolu', { shortcut: formatAccelerator(s.accelerator, platform), kept: quotedNames([commandLabel(s.kept)], language), removed: quotedNames(s.removed.map(commandLabel), language) }))
     .join(' ')
 }
 
@@ -216,10 +217,10 @@ export function resolutionAnnouncement(resolution: ConflictResolution): string {
  * What "Retirer les raccourcis en conflit" does: the bindings with the clashes settled (see `resolveConflicts`), the sentence that says what was kept and
  * removed, and what to give back to undo it. Undefined when nothing clashes (nothing to remove, nothing to say).
  */
-export function settleConflicts(bindings: KeyBindings, recent: readonly string[] = []): { bindings: KeyBindings; text: string; removed: RemovedShortcut[] } | undefined {
+export function settleConflicts(bindings: KeyBindings, platform: PlatformId, recent: readonly string[] = []): { bindings: KeyBindings; text: string; removed: RemovedShortcut[] } | undefined {
   const resolution = resolveConflicts(bindings, recent)
   if (resolution.removed.length === 0) return undefined
-  return { bindings: resolution.bindings, text: resolutionAnnouncement(resolution), removed: resolution.removed }
+  return { bindings: resolution.bindings, text: resolutionAnnouncement(resolution, platform), removed: resolution.removed }
 }
 
 /** What a key press does to a row that is recording its shortcut. */
@@ -236,17 +237,17 @@ export type RecordingStep =
  * Reads a press for the row that records. Backspace and Delete turn the shortcut off only when pressed alone (Shift apart): with ⌘, ⌃ or ⌥
  * they are a shortcut like another (⌘⌫), which could not be given otherwise.
  */
-export function recordingStep(e: KeyEventLike & { key: string }, layout?: KeyLayout): RecordingStep {
+export function recordingStep(e: KeyEventLike & { key: string }, platform: PlatformId, layout?: KeyLayout): RecordingStep {
   if (e.key === 'Escape') return { kind: 'cancel' }
   if ((e.key === 'Backspace' || e.key === 'Delete') && !e.metaKey && !e.ctrlKey && !e.altKey) return { kind: 'clear' }
-  const accelerator = acceleratorFromKeyEvent(e, undefined, layout)
+  const accelerator = acceleratorFromKeyEvent(e, platform, layout)
   return accelerator ? { kind: 'record', accelerator } : { kind: 'wait' }
 }
 
 /** Said when a shortcut is refused because an entry that cannot let go of it has it (a fixed entry of the menus, a shortcut of an extension). */
-export function refusalAnnouncement(id: string, accelerator: string, owner: TakenShortcut): string {
+export function refusalAnnouncement(id: string, accelerator: string, owner: TakenShortcut, platform: PlatformId): string {
   const language = getLanguage()
-  return t('settings-shortcuts.raccourci-reserve', { shortcut: formatAccelerator(accelerator), owner: quoted(owner.label, language), command: quoted(commandLabel(id), language) })
+  return t('settings-shortcuts.raccourci-reserve', { shortcut: formatAccelerator(accelerator, platform), owner: quoted(owner.label, language), command: quoted(commandLabel(id), language) })
 }
 
 /**
@@ -273,12 +274,12 @@ export type Assignment =
  * Gives `id` the shortcut just typed, unless something that is not a command holds it (`taken`). The command goes last in the saved
  * bindings even when it had a saved shortcut already: of two commands on one shortcut, the one saved last keeps it (see `keeperOf`).
  */
-export function assignShortcut(id: string, accelerator: string, bindings: KeyBindings, taken: readonly TakenShortcut[]): Assignment {
+export function assignShortcut(id: string, accelerator: string, bindings: KeyBindings, taken: readonly TakenShortcut[], platform: PlatformId): Assignment {
   const owner = takenBy(accelerator, taken)
-  if (owner) return { kind: 'refused', text: refusalAnnouncement(id, accelerator, owner) }
+  if (owner) return { kind: 'refused', text: refusalAnnouncement(id, accelerator, owner, platform) }
   const others = Object.fromEntries(Object.entries(bindings).filter(([other]) => other !== id))
   const next = { ...others, [id]: accelerator }
-  return { kind: 'saved', bindings: next, clash: conflictAnnouncement(id, next) }
+  return { kind: 'saved', bindings: next, clash: conflictAnnouncement(id, next, platform) }
 }
 
 /** What the Settings know besides the bindings, to say what a shortcut runs into. */
@@ -300,17 +301,18 @@ const USE_NOTE = {
  * every application, or the keyboard in use does not give its key alone. Nothing for a command without a shortcut. These are not clashes
  * (nothing is broken in the application): they say why a press may do something else than expected, or nothing.
  */
-export function otherUseNotes(id: string, bindings: KeyBindings | undefined, surroundings: ShortcutSurroundings = {}): string[] {
-  const accelerator = effectiveAccelerator(id, bindings)
+export function otherUseNotes(id: string, bindings: KeyBindings | undefined, platform: PlatformId, surroundings: ShortcutSurroundings = {}): string[] {
+  const accelerator = effectiveAccelerator(id, bindings, platform)
   if (!accelerator) return []
   const notes: string[] = []
   const use = otherUseOf(accelerator)
-  if (use) notes.push(t(USE_NOTE[use]))
+  // The notes about macOS (its own use of the press, Mission Control) are for macOS: elsewhere only the pages of sites can answer the same press.
+  if (use && (platform === 'darwin' || use === 'page')) notes.push(t(USE_NOTE[use]))
   if (id === 'newLittleArc' && surroundings.littleEverywhere) notes.push(t('settings-shortcuts.note-toutes-les-apps', { setting: quoted(t('settings.raccourci-de-la-mini-fenetre-dans-toutes-les-applications'), getLanguage()) }))
   const key = keyOffLayout(accelerator, surroundings.characters)
   if (key) notes.push(t('settings-shortcuts.note-disposition', { key: quoted(key, getLanguage()) }))
   // The second press of the command, which this row does not move: said here, where the first may be the one that cannot be typed.
-  const second = secondAccelerator(id, bindings)
-  if (second) notes.push(t('settings-shortcuts.note-second-raccourci', { keys: formatAccelerator(second) }))
+  const second = secondAccelerator(id, bindings, platform)
+  if (second) notes.push(t('settings-shortcuts.note-second-raccourci', { keys: formatAccelerator(second, platform) }))
   return notes
 }

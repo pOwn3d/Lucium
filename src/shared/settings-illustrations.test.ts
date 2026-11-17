@@ -53,14 +53,14 @@ describe('the animated cards', () => {
   it('name in their tip the shortcut the user has now, and no tip at all rather than a key that does nothing', () => {
     const archive = illustrationOf('autoArchiveHours')!
     setLanguage('fr')
-    expect(illustrationTip(archive, {})).toBe(frenchSpaces('Afficher l’archive : ⌥⌘A.'))
-    expect(illustrationTip(archive, { archive: 'CmdOrCtrl+Shift+Y' })).toBe(frenchSpaces('Afficher l’archive : ⇧⌘Y.'))
-    expect(illustrationTip(archive, { archive: '' })).toBeNull()
-    expect(illustrationTip(illustrationOf('sleepAfterMinutes')!, {})).toBe('Un clic sur l’onglet le recharge.')
-    expect(illustrationTip(illustrationOf('blockAds')!, {})).toBeNull()
+    expect(illustrationTip(archive, {}, 'darwin')).toBe(frenchSpaces('Afficher l’archive : ⌥⌘A.'))
+    expect(illustrationTip(archive, { archive: 'CmdOrCtrl+Shift+Y' }, 'darwin')).toBe(frenchSpaces('Afficher l’archive : ⇧⌘Y.'))
+    expect(illustrationTip(archive, { archive: '' }, 'darwin')).toBeNull()
+    expect(illustrationTip(illustrationOf('sleepAfterMinutes')!, {}, 'darwin')).toBe('Un clic sur l’onglet le recharge.')
+    expect(illustrationTip(illustrationOf('blockAds')!, {}, 'darwin')).toBeNull()
     setLanguage('en')
     try {
-      expect(illustrationTip(archive, {})).toBe('Show the archive: ⌥⌘A.')
+      expect(illustrationTip(archive, {}, 'darwin')).toBe('Show the archive: ⌥⌘A.')
     } finally {
       setLanguage('fr')
     }

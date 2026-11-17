@@ -539,7 +539,7 @@ describe('"Effacer les données du site"', () => {
 
 describe('"Effacer les données du site maintenant"', () => {
   const state = world().state
-  const now = (query: string) => rankCandidates(query, state).filter((c) => c.kind === 'action' && c.action === 'clear-site-now')
+  const now = (query: string) => rankCandidates(query, state, [], [], [], { platform: 'darwin' }).filter((c) => c.kind === 'action' && c.action === 'clear-site-now')
 
   it('shows up when the text asks to erase the data of a site, and only then', () => {
     expect(now('effacer')).toHaveLength(1)

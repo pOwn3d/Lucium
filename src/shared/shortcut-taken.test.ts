@@ -50,7 +50,7 @@ describe('the fixed shortcuts of the menus', () => {
 describe('giving a shortcut to a command', () => {
   it('refuses the shortcut of a fixed entry of the menus, saves nothing and says whose it is', () => {
     for (const [accelerator, owner] of [['CmdOrCtrl+Q', 'Quitter Lucium'], ['CmdOrCtrl+C', 'Copier'], ['CmdOrCtrl+Alt+M', 'Annoter cette page'], ['CmdOrCtrl+Z', 'Annuler'], ['CmdOrCtrl+Alt+P', 'Dessin ou passage, pendant une annotation']] as const) {
-      const assignment = assignShortcut('newWindow', accelerator, {}, FIXED_SHORTCUTS)
+      const assignment = assignShortcut('newWindow', accelerator, {}, FIXED_SHORTCUTS, 'darwin')
       expect(assignment.kind, accelerator).toBe('refused')
       if (assignment.kind === 'refused') {
         expect(assignment.text).toContain(frenchSpaces(`« ${owner} »`))
@@ -62,25 +62,25 @@ describe('giving a shortcut to a command', () => {
 
   it('says it in English too', () => {
     setLanguage('en')
-    const assignment = assignShortcut('newWindow', 'CmdOrCtrl+Q', {}, FIXED_SHORTCUTS)
+    const assignment = assignShortcut('newWindow', 'CmdOrCtrl+Q', {}, FIXED_SHORTCUTS, 'darwin')
     expect(assignment).toEqual({ kind: 'refused', text: `⌘Q is already the shortcut of “Quit Lucium”, which cannot be changed here. It was not given to “${commandLabel('newWindow')}”.` })
   })
 
   it('refuses the shortcut the menu gives a command of an extension, written as the extension has it', () => {
     const taken = extensionMenuCommands({ id: 'ext', name: 'Lecteur', commands: [{ name: 'save', description: 'Enregistrer l’article', accelerator: 'Shift+Cmd+Y' }] })
-    const assignment = assignShortcut('newWindow', 'CmdOrCtrl+Shift+Y', {}, taken)
+    const assignment = assignShortcut('newWindow', 'CmdOrCtrl+Shift+Y', {}, taken, 'darwin')
     expect(assignment.kind).toBe('refused')
     if (assignment.kind === 'refused') expect(assignment.text).toContain(frenchSpaces('« Enregistrer l’article (Lecteur) »'))
   })
 
   it('saves a free shortcut, last in the list even when the command had a saved one', () => {
-    const assignment = assignShortcut('newWindow', 'CmdOrCtrl+Alt+K', { newWindow: 'CmdOrCtrl+Alt+J', print: 'CmdOrCtrl+Alt+L' }, FIXED_SHORTCUTS)
+    const assignment = assignShortcut('newWindow', 'CmdOrCtrl+Alt+K', { newWindow: 'CmdOrCtrl+Alt+J', print: 'CmdOrCtrl+Alt+L' }, FIXED_SHORTCUTS, 'darwin')
     expect(assignment).toEqual({ kind: 'saved', bindings: { print: 'CmdOrCtrl+Alt+L', newWindow: 'CmdOrCtrl+Alt+K' }, clash: undefined })
     if (assignment.kind === 'saved') expect(Object.keys(assignment.bindings)).toEqual(['print', 'newWindow'])
   })
 
   it('saves a shortcut another command has, and names the two', () => {
-    const assignment = assignShortcut('newWindow', 'CmdOrCtrl+T', {}, FIXED_SHORTCUTS)
+    const assignment = assignShortcut('newWindow', 'CmdOrCtrl+T', {}, FIXED_SHORTCUTS, 'darwin')
     expect(assignment.kind).toBe('saved')
     if (assignment.kind === 'saved') expect(assignment.clash).toContain('⌘T est utilisé par plusieurs commandes')
   })
@@ -112,21 +112,21 @@ describe('a saved shortcut that something else than a command holds', () => {
 
 describe('a key press while a row records its shortcut', () => {
   it('cancels on Escape and turns the shortcut off on Backspace or Delete alone', () => {
-    expect(recordingStep(press('Escape', 'Escape'))).toEqual({ kind: 'cancel' })
-    expect(recordingStep(press('Backspace', 'Backspace'))).toEqual({ kind: 'clear' })
-    expect(recordingStep(press('Delete', 'Delete'))).toEqual({ kind: 'clear' })
-    expect(recordingStep(press('Backspace', 'Backspace', { shiftKey: true }))).toEqual({ kind: 'clear' })
+    expect(recordingStep(press('Escape', 'Escape'), 'darwin')).toEqual({ kind: 'cancel' })
+    expect(recordingStep(press('Backspace', 'Backspace'), 'darwin')).toEqual({ kind: 'clear' })
+    expect(recordingStep(press('Delete', 'Delete'), 'darwin')).toEqual({ kind: 'clear' })
+    expect(recordingStep(press('Backspace', 'Backspace', { shiftKey: true }), 'darwin')).toEqual({ kind: 'clear' })
   })
 
   it('records Backspace and Delete held with ⌘, ⌃ or ⌥: they are shortcuts like another', () => {
-    expect(recordingStep(press('Backspace', 'Backspace', { metaKey: true }))).toEqual({ kind: 'record', accelerator: 'CmdOrCtrl+Backspace' })
-    expect(recordingStep(press('Delete', 'Delete', { ctrlKey: true }))).toEqual({ kind: 'record', accelerator: 'Ctrl+Delete' })
-    expect(recordingStep(press('Backspace', 'Backspace', { altKey: true, shiftKey: true }))).toEqual({ kind: 'record', accelerator: 'Alt+Shift+Backspace' })
+    expect(recordingStep(press('Backspace', 'Backspace', { metaKey: true }), 'darwin')).toEqual({ kind: 'record', accelerator: 'CmdOrCtrl+Backspace' })
+    expect(recordingStep(press('Delete', 'Delete', { ctrlKey: true }), 'darwin')).toEqual({ kind: 'record', accelerator: 'Ctrl+Delete' })
+    expect(recordingStep(press('Backspace', 'Backspace', { altKey: true, shiftKey: true }), 'darwin')).toEqual({ kind: 'record', accelerator: 'Alt+Shift+Backspace' })
   })
 
   it('keeps listening on a lone modifier, and records a shortcut with the layout it is given', () => {
-    expect(recordingStep(press('MetaLeft', 'Meta', { metaKey: true }))).toEqual({ kind: 'wait' })
-    expect(recordingStep(press('KeyQ', 'æ', { metaKey: true, altKey: true }), (code) => (code === 'KeyQ' ? 'a' : undefined))).toEqual({ kind: 'record', accelerator: 'CmdOrCtrl+Alt+A' })
+    expect(recordingStep(press('MetaLeft', 'Meta', { metaKey: true }), 'darwin')).toEqual({ kind: 'wait' })
+    expect(recordingStep(press('KeyQ', 'æ', { metaKey: true, altKey: true }), 'darwin', (code) => (code === 'KeyQ' ? 'a' : undefined))).toEqual({ kind: 'record', accelerator: 'CmdOrCtrl+Alt+A' })
   })
 })
 
@@ -152,7 +152,7 @@ describe('who else uses a press', () => {
   it('writes one note per reason, in both languages', () => {
     for (const language of ['fr', 'en'] as const) {
       setLanguage(language)
-      const notes = COMMANDS.flatMap((command) => otherUseNotes(command.id, {}, { littleEverywhere: true, characters: { KeyA: 'q' } }))
+      const notes = COMMANDS.flatMap((command) => otherUseNotes(command.id, {}, 'darwin', { littleEverywhere: true, characters: { KeyA: 'q' } }))
       expect(notes.length).toBeGreaterThan(25)
       for (const note of notes) expect(note).not.toMatch(/settings-shortcuts\.|\{[a-z]+\}/)
     }

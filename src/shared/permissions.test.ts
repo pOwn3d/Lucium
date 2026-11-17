@@ -320,8 +320,8 @@ describe('the prompt', () => {
 
   it('says the least when a request about files names none, never the raw name of the permission', () => {
     for (const details of [undefined, null, {}, { filePath: '' }, { filePath: 42 }, 'chemin']) expect(fileSystemDetail(details)).toBe('')
-    expect(permissionPhrase('fileSystem')).toBe('accéder à un fichier ou à un dossier de ce Mac')
-    expect(permissionPhrase('fileSystem', '')).toBe('accéder à un fichier ou à un dossier de ce Mac')
+    expect(permissionPhrase('fileSystem')).toBe('accéder à un fichier ou à un dossier de cet ordinateur')
+    expect(permissionPhrase('fileSystem', '')).toBe('accéder à un fichier ou à un dossier de cet ordinateur')
   })
 
   it('prints a path without what hides or reorders it, and keeps the two ends of a long one', () => {
@@ -340,7 +340,7 @@ describe('the prompt', () => {
 
   it('asks in words for what the engine names in its own way, in both languages', () => {
     expect(permissionPhrase('storage-access')).toBe('utiliser ses cookies et ses données dans la page qui l’intègre')
-    expect(permissionPhrase('local-fonts')).toBe('lire la liste des polices installées sur ce Mac')
+    expect(permissionPhrase('local-fonts')).toBe('lire la liste des polices installées sur cet ordinateur')
     expect(permissionPhrase('local-network-access')).toBe(permissionPhrase('local-network'))
     expect(permissionPhrase('deprecated-sync-clipboard-read')).toBe(permissionPhrase('clipboard-read'))
     expect(permissionPhrase('midiSysex')).not.toBe(permissionPhrase('midi'))

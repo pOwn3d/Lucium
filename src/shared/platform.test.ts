@@ -235,8 +235,8 @@ describe('shortcuts', () => {
   })
 
   it('writes a shortcut with the symbols of macOS, and with words elsewhere', () => {
-    expect(formatAccelerator('CmdOrCtrl+Shift+J')).toBe('⇧⌘J')
-    expect(formatAccelerator('Ctrl+Alt+Left')).toBe('⌃⌥←')
+    expect(formatAccelerator('CmdOrCtrl+Shift+J', 'darwin')).toBe('⇧⌘J')
+    expect(formatAccelerator('Ctrl+Alt+Left', 'darwin')).toBe('⌃⌥←')
     expect(formatAcceleratorFor('CmdOrCtrl+Shift+J', 'win32')).toBe('Ctrl+Maj+J')
     expect(formatAccelerator('CmdOrCtrl+Alt+Left', 'linux')).toBe('Ctrl+Alt+←')
     expect(formatAccelerator('F11', 'win32')).toBe('F11')

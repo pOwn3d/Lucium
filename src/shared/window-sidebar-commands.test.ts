@@ -58,7 +58,7 @@ describe('the entries of the sidebar of this window', () => {
 
   it('show the keys of ⌃⌘S', () => {
     for (const action of ['toggle-dock', 'sidebar-left', 'sidebar-right', 'sidebar-follow'] as const) expect(actionToDispatch(action, state())).toBeNull()
-    expect(actionShortcut('toggle-dock', state())).toBe('⌃⌘S')
-    expect(actionShortcut('toggle-dock', state({ keyBindings: { dockSidebar: '' } }))).toBeNull()
+    expect(actionShortcut('toggle-dock', state(), 'darwin')).toBe('⌃⌘S')
+    expect(actionShortcut('toggle-dock', state({ keyBindings: { dockSidebar: '' } }), 'darwin')).toBeNull()
   })
 })

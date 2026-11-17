@@ -4,6 +4,7 @@
 import { randomUUID } from 'node:crypto'
 import { clipboard } from 'electron'
 import type { PeekAction } from '@shared/ipc'
+import { platformOf } from '@shared/platform'
 import { isPeekOpenKey, peekCardRect } from '@shared/peek'
 import { WEB_PANEL_REFUSALS, webPanelHeading, webPanelRefusal, webPanelTitle, webPanelsOff, type WebPanelRequest } from '@shared/web-panels'
 import { tabName } from '@shared/model'
@@ -81,7 +82,7 @@ export abstract class BrowserPanels extends BrowserTranslate {
         escape: () => this.closeOverlay(),
         // ⌘↩ in the previewed page does what the header's "Ouvrir dans un onglet" says: the key is the page's, until the preview has it.
         shortcut: (input) => {
-          if (this.peek?.page !== page || !isPeekOpenKey(input)) return false
+          if (this.peek?.page !== page || !isPeekOpenKey(input, platformOf(process.platform))) return false
           this.peekAction('open-in-tab')
           return true
         },

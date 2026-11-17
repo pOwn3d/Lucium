@@ -558,7 +558,7 @@ export function keyOffLayout(accelerator: string | undefined, characters: Readon
 }
 
 /** "CmdOrCtrl+Shift+J" → "⇧⌘J" (macOS order: control, option, shift, command); "Ctrl+Maj+J" on the other systems. */
-export function formatAccelerator(accelerator: string, platform: PlatformId = 'darwin'): string {
+export function formatAccelerator(accelerator: string, platform: PlatformId): string {
   return formatAcceleratorFor(accelerator, platform)
 }
 
@@ -570,12 +570,20 @@ const TIP_KEY_LENGTH_MAX = 3
  * The keys of a shortcut, one capsule each, as a tooltip draws them: "CmdOrCtrl+Alt+E" → ⌥ ⌘ E. Empty without a shortcut, or when one of its keys has
  * a name too long for a capsule (the tooltip then says its text alone rather than nothing).
  */
-export function acceleratorKeys(accelerator: string | undefined, platform: PlatformId = 'darwin'): string[] {
+export function acceleratorKeys(accelerator: string | undefined, platform: PlatformId): string[] {
   if (!accelerator) return []
   const shown = formatAccelerator(accelerator, platform)
   const modifiers = /^[⌃⌥⇧⌘]*/.exec(shown)![0]
   const keys = (modifiers.length > 0 ? [...modifiers, shown.slice(modifiers.length)] : shown.split('+')).filter((key) => key !== '')
   return keys.length <= TIP_KEYS_MAX && keys.every((key) => key.length <= TIP_KEY_LENGTH_MAX) ? keys : []
+}
+
+/**
+ * Whether the main modifier of the system is held: Command on macOS, Ctrl elsewhere (the Windows or Super key belongs to the system there). The keys
+ * of the sheets that a hint writes « ⌘↵ » or « Ctrl+Entrée » read it, so that the key shown is the key that works.
+ */
+export function commandHeld(e: { metaKey: boolean; ctrlKey: boolean }, platform: PlatformId): boolean {
+  return platform === 'darwin' ? e.metaKey : e.ctrlKey
 }
 
 /** The commands whose shortcut a tooltip of the toolbar shows. */
@@ -588,7 +596,7 @@ export const TOOLBAR_COMMANDS = ['toggleSidebar', 'back', 'forward', 'reload', '
 export type ToolbarKeys = Readonly<Record<(typeof TOOLBAR_COMMANDS)[number] | 'annotate', readonly string[]>>
 
 /** The keys the tooltips of the toolbar show, as the shortcuts are set now: a shortcut changed in the Settings changes its tooltip. */
-export function toolbarKeys(bindings: KeyBindings | undefined, platform: PlatformId = 'darwin'): ToolbarKeys {
+export function toolbarKeys(bindings: KeyBindings | undefined, platform: PlatformId): ToolbarKeys {
   const keys = (id: (typeof TOOLBAR_COMMANDS)[number]): string[] => acceleratorKeys(effectiveAccelerator(id, bindings, platform), platform)
   return {
     toggleSidebar: keys('toggleSidebar'),
@@ -608,12 +616,12 @@ export function toolbarKeys(bindings: KeyBindings | undefined, platform: Platfor
  * The shortcut of a command as a text carries it after a name, « (⌘R) » with the space before it; empty for a command the user left without
  * one. A text that names a key takes it from here (`{shortcut}` in the catalogues), so that it follows a shortcut changed in the Settings.
  */
-export function shortcutSuffix(id: string, bindings: KeyBindings | undefined, platform: PlatformId = 'darwin'): string {
+export function shortcutSuffix(id: string, bindings: KeyBindings | undefined, platform: PlatformId): string {
   const accelerator = effectiveAccelerator(id, bindings, platform)
   return accelerator ? ` (${formatAccelerator(accelerator, platform)})` : ''
 }
 
 /** A name followed by the shortcut of its command as it is set now: « Recharger (⌘R) », or the name alone. */
-export function labelWithShortcut(label: string, id: string, bindings: KeyBindings | undefined, platform: PlatformId = 'darwin'): string {
+export function labelWithShortcut(label: string, id: string, bindings: KeyBindings | undefined, platform: PlatformId): string {
   return `${label}${shortcutSuffix(id, bindings, platform)}`
 }

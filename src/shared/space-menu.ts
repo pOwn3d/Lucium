@@ -6,6 +6,7 @@ import type { Action } from './sidebar'
 import type { OverlayRequest } from './ipc'
 import { effectiveAccelerator, formatAccelerator, type KeyBindings } from './keybindings'
 import { t } from './i18n'
+import type { PlatformId } from './platform'
 
 export type SpaceMenuEntryId = 'rename' | 'customize' | 'folder' | 'clear' | 'header' | 'manage'
 
@@ -59,10 +60,10 @@ export function spaceMenuRefusal(id: SpaceMenuEntryId, context: SpaceMenuContext
 }
 
 /** The shortcut beside a row, as the user has bound it ("⇧⌘K"), or '' when the row has none or the user removed it. */
-export function spaceMenuShortcut(entry: SpaceMenuEntry, bindings: KeyBindings | undefined): string {
+export function spaceMenuShortcut(entry: SpaceMenuEntry, bindings: KeyBindings | undefined, platform: PlatformId): string {
   if (!entry.command) return ''
-  const accelerator = effectiveAccelerator(entry.command, bindings)
-  return accelerator ? formatAccelerator(accelerator) : ''
+  const accelerator = effectiveAccelerator(entry.command, bindings, platform)
+  return accelerator ? formatAccelerator(accelerator, platform) : ''
 }
 
 /** What choosing a row does: ask for a panel (the menu is replaced by it), or run an action of the store and close the menu. */

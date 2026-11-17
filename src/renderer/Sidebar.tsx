@@ -651,11 +651,11 @@ function SidebarBody({ snapshot, space, right }: { snapshot: UiSnapshot; space: 
   const showPinZone = draggingTabs || (foreign !== null && foreignOver)
 
   // Today has a line of its own, "Aujourd’hui · 5" with "Tout archiver" always in view (it was the broom that showed at the pointer on the line between the pinned tabs and Today).
-  const newTabKeys = effectiveAccelerator('newTab', state.settings.keyBindings)
-  const archiveKeys = effectiveAccelerator('archive', state.settings.keyBindings)
-  const readLaterKeys = effectiveAccelerator('readLaterList', state.settings.keyBindings)
-  const key = (command: string): string | undefined => effectiveAccelerator(command, state.settings.keyBindings)
-  const hint = (accelerator: string | undefined): string => (accelerator ? formatAccelerator(accelerator) : '')
+  const key = (command: string): string | undefined => effectiveAccelerator(command, state.settings.keyBindings, platform)
+  const newTabKeys = key('newTab')
+  const archiveKeys = key('archive')
+  const readLaterKeys = key('readLaterList')
+  const hint = (accelerator: string | undefined): string => (accelerator ? formatAccelerator(accelerator, platform) : '')
   const tip = (label: string, accelerator: string | undefined): string => (accelerator ? `${label} · ${hint(accelerator)}` : label)
   // The footer's spaces are tabs of one list: the arrows move between them, the focus follows the one that is current.
   const spaceIndex = Math.max(0, state.spaces.findIndex((s) => s.id === space.id))
@@ -980,7 +980,7 @@ function SidebarBody({ snapshot, space, right }: { snapshot: UiSnapshot; space: 
                 key={s.id}
                 className={`space ${s.id === space.id ? 'current' : ''} ${markClass(mark, `space:${s.id}`)}`}
                 // A native `title`, not the CSS bubble of the other buttons: the row of spaces scrolls, and a bubble inside it would be cut.
-                title={tip(t('sidebar.space-options', { name: s.name }), n < 9 ? effectiveAccelerator(`space${n + 1}`, state.settings.keyBindings) : undefined)}
+                title={tip(t('sidebar.space-options', { name: s.name }), n < 9 ? key(`space${n + 1}`) : undefined)}
                 role="tab"
                 // The button shows the space's emoji: the name read aloud is the space's, not the emoji's.
                 aria-label={s.name}

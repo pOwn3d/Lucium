@@ -128,7 +128,7 @@ describe('the notes panel', () => {
   it('says what it is for when there is no note, with the way to write one', () => {
     const markup = view({ notes: [] })
     expect(markup).toContain('Aucune note')
-    expect(markup).toContain('Une note reste sur ce Mac')
+    expect(markup).toContain('Une note reste sur cet ordinateur')
     expect(view({ notes: null })).toContain('aria-busy="true"')
   })
 

@@ -1,5 +1,6 @@
 // Geometry of Glance, the link preview.
 
+import type { PlatformId } from './platform'
 import { toolbarAddress } from './toolbar'
 
 export interface Rect {
@@ -54,9 +55,10 @@ export function peekOnAccent(hue: number, dark: boolean): string {
   return dark || (h >= 60 && h <= 170) ? '#0c0f1a' : '#ffffff'
 }
 
-/** ⌘↩, the key of "Ouvrir dans un onglet" (the header writes it on the button): Command and Return alone, in the preview or in its header. */
-export function isPeekOpenKey(input: { key: string; meta: boolean; shift: boolean; alt: boolean; control: boolean }): boolean {
-  return input.key === 'Enter' && input.meta && !input.shift && !input.alt && !input.control
+/** ⌘↩ (Ctrl+Enter away from macOS), the key of "Ouvrir dans un onglet" (the header writes it on the button): the main modifier and Return alone, in the preview or in its header. */
+export function isPeekOpenKey(input: { key: string; meta: boolean; shift: boolean; alt: boolean; control: boolean }, platform: PlatformId): boolean {
+  const modifiers = platform === 'darwin' ? input.meta && !input.control : input.control && !input.meta
+  return input.key === 'Enter' && modifiers && !input.shift && !input.alt
 }
 
 /**

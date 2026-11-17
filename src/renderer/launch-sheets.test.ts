@@ -10,6 +10,9 @@ import { createInitialState } from '@shared/sidebar'
 import type { ImportSourceInfo } from '@shared/import-sources'
 
 vi.mock('./api', () => ({ api: () => ({}), useSnapshot: () => null }))
+// The system the keys of a sheet are drawn for (a markup drawn alone has no snapshot to say it).
+const system = vi.hoisted(() => ({ platform: 'darwin' as 'darwin' | 'win32' | 'linux' }))
+vi.mock('./use-platform', () => ({ usePlatform: () => system.platform }))
 
 import { LeaveSheet } from './LeaveSheet'
 import { CategoryContent } from './SettingsCategories'
@@ -30,7 +33,7 @@ describe('the welcome of the first launch', () => {
 
   it('names the browsers it found among the four people come from, offers light, dark or the Mac, and the default browser', () => {
     const markup = view()
-    expect(markup).toContain(frenchSpaces('Trouvés sur ce Mac : Arc, Safari.'))
+    expect(markup).toContain(frenchSpaces('Trouvés sur cet ordinateur : Arc, Safari.'))
     expect(markup).not.toContain('Brave')
     expect(markup.match(/name="welcome-look"/g)).toHaveLength(3)
     expect(markup).toMatch(/<input[^>]*checked=""[^>]*value="auto"|<input[^>]*value="auto"[^>]*checked=""/)
@@ -40,7 +43,7 @@ describe('the welcome of the first launch', () => {
   })
 
   it('says so when no browser is found, and no longer offers the default browser once it is', () => {
-    expect(view({ sources: [] })).toContain('Aucun autre navigateur trouvé sur ce Mac')
+    expect(view({ sources: [] })).toContain('Aucun autre navigateur trouvé sur cet ordinateur')
     const markup = view({ isDefault: true })
     expect(markup).toContain('Lucium est votre navigateur par défaut.')
     expect(markup).not.toContain('Définir comme navigateur par défaut')
@@ -76,6 +79,17 @@ describe('"Quitter ce site ?"', () => {
     expect(markup).toMatch(/class="button primary"[^>]*>Rester<kbd>↩<\/kbd>/)
     expect(markup).toMatch(/class="button"[^>]*>Quitter<kbd>⌘↩<\/kbd>/)
     expect(markup).not.toContain('ne seront peut-être pas')
+  })
+
+  it('offers « Quitter » with Ctrl+Entrée where there is no Command key', () => {
+    system.platform = 'linux'
+    try {
+      const markup = renderToStaticMarkup(createElement(LeaveSheet, { request: { id: 'leave-1', site: 'exemple.fr' } }))
+      expect(markup).toMatch(/class="button"[^>]*>Quitter<kbd>Ctrl\+Entrée<\/kbd>/)
+      expect(markup).not.toContain('⌘')
+    } finally {
+      system.platform = 'darwin'
+    }
   })
 })
 

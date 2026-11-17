@@ -147,15 +147,40 @@ describe('Glance: its header and its controls', () => {
     expect(p.own['peek']).toMatchObject({ loading: false, faviconUrl: 'https://news.test/icon.png', title: 'Les nouvelles' })
   })
 
+  /** Runs `body` as a process of the given system: the key of the preview is the one of the system the main process runs on. */
+  const onSystem = (system: NodeJS.Platform, body: () => void): void => {
+    const was = Object.getOwnPropertyDescriptor(process, 'platform')!
+    Object.defineProperty(process, 'platform', { value: system })
+    try {
+      body()
+    } finally {
+      Object.defineProperty(process, 'platform', was)
+    }
+  }
+
   it('opens the page in a tab with ⌘↩, in the header and in the previewed page', () => {
-    const p = previewing()
-    const key = { key: 'Enter', meta: true, shift: false, alt: false, control: false }
-    expect(p.events().shortcut!(key as never)).toBe(true)
-    expect(p.fake.calls.filter((call) => call.name === 'peekAction').map((call) => call.args)).toEqual([['open-in-tab']])
-    expect(p.events().shortcut!({ ...key, shift: true } as never)).toBe(false)
-    // Another preview took its place: the key is not this one's any more.
-    p.own['peek'] = { page: {} }
-    expect(p.events().shortcut!(key as never)).toBe(false)
+    onSystem('darwin', () => {
+      const p = previewing()
+      const key = { key: 'Enter', meta: true, shift: false, alt: false, control: false }
+      expect(p.events().shortcut!(key as never)).toBe(true)
+      expect(p.fake.calls.filter((call) => call.name === 'peekAction').map((call) => call.args)).toEqual([['open-in-tab']])
+      expect(p.events().shortcut!({ ...key, shift: true } as never)).toBe(false)
+      // Control is not the key of macOS.
+      expect(p.events().shortcut!({ ...key, meta: false, control: true } as never)).toBe(false)
+      // Another preview took its place: the key is not this one's any more.
+      p.own['peek'] = { page: {} }
+      expect(p.events().shortcut!(key as never)).toBe(false)
+    })
+  })
+
+  it('opens it with Ctrl+Enter where there is no Command key, and not with the Windows or Super key', () => {
+    onSystem('linux', () => {
+      const p = previewing()
+      const key = { key: 'Enter', meta: false, shift: false, alt: false, control: true }
+      expect(p.events().shortcut!(key as never)).toBe(true)
+      expect(p.fake.calls.filter((call) => call.name === 'peekAction').map((call) => call.args)).toEqual([['open-in-tab']])
+      expect(p.events().shortcut!({ ...key, control: false, meta: true } as never)).toBe(false)
+    })
   })
 })
 

@@ -28,7 +28,7 @@ describe('the command bar and the quick notes', () => {
   it('offers "Ouvrir les notes" when typed, while the function is on, with its shortcut', () => {
     const found = offered(rankCandidates('notes', state()))
     expect(found).toEqual([{ kind: 'action', id: 'action:notes', label: 'Ouvrir les notes', detail: 'Action', action: 'notes' }])
-    expect(actionShortcut('notes', state())).toBe('⇧⌘E')
+    expect(actionShortcut('notes', state(), 'darwin')).toBe('⇧⌘E')
     // It opens a panel: nothing is dispatched to the sidebar.
     expect(actionToDispatch('notes', state())).toBeNull()
   })
@@ -42,8 +42,8 @@ describe('the command bar and the quick notes', () => {
 describe('the command bar and a new note', () => {
   it('offers "Nouvelle note" when typed, while the function is on, with its shortcut, and dispatches nothing (the main process opens the panel)', () => {
     expect(offered(rankCandidates('nouvelle note', state()), 'new-note')).toEqual([{ kind: 'action', id: 'action:new-note', label: 'Nouvelle note', detail: 'Action', action: 'new-note' }])
-    expect(actionShortcut('new-note', state())).toBe('⌥⌘E')
-    expect(actionShortcut('new-note', state({ keyBindings: { newNote: '' } }))).toBeNull()
+    expect(actionShortcut('new-note', state(), 'darwin')).toBe('⌥⌘E')
+    expect(actionShortcut('new-note', state({ keyBindings: { newNote: '' } }), 'darwin')).toBeNull()
     expect(actionToDispatch('new-note', state())).toBeNull()
   })
 
@@ -97,8 +97,8 @@ describe('the shortcut of a new note', () => {
   it('is ⌥⌘E: the letter of the notes, one modifier apart from ⇧⌘E, which keeps opening the panel', () => {
     expect(COMMANDS.filter((c) => c.id === 'newNote')).toHaveLength(1)
     expect(COMMANDS.find((c) => c.id === 'newNote')).toMatchObject({ label: 'Nouvelle note', group: 'Fichier' })
-    expect(formatAccelerator(effectiveAccelerator('newNote', {})!)).toBe('⌥⌘E')
-    expect(formatAccelerator(effectiveAccelerator('notes', {})!)).toBe('⇧⌘E')
+    expect(formatAccelerator(effectiveAccelerator('newNote', {})!, 'darwin')).toBe('⌥⌘E')
+    expect(formatAccelerator(effectiveAccelerator('notes', {})!, 'darwin')).toBe('⇧⌘E')
   })
 
   it('takes a key that is free: no other command, no key the application holds outside the list, however the modifiers are written', () => {
@@ -108,7 +108,7 @@ describe('the shortcut of a new note', () => {
     // The annotation (⌥⌘M, ⌥⌘P, held system-wide when asked), the window share (⌥⌘P), the developer tools (F12) and Undo (⌘Z, fixed in the menu).
     for (const held of [PAGE_TOGGLE_SHORTCUT, PAGE_SHORTCUT, PASS_SHORTCUT, DEVTOOLS_EXTRA_ACCELERATOR, 'CmdOrCtrl+Z']) expect(sameAccelerator(held, 'CmdOrCtrl+Alt+E'), held).toBe(false)
     // Every ⌘N is a window: none was free for it.
-    expect(['newWindow', 'privateWindow', 'newLittleArc', 'blankWindow'].map((id) => formatAccelerator(effectiveAccelerator(id, {})!))).toEqual(['⌘N', '⇧⌘N', '⌥⌘N', '⌃⌘N'])
+    expect(['newWindow', 'privateWindow', 'newLittleArc', 'blankWindow'].map((id) => formatAccelerator(effectiveAccelerator(id, {})!, 'darwin'))).toEqual(['⌘N', '⇧⌘N', '⌥⌘N', '⌃⌘N'])
   })
 
   it('can be changed or taken away in Réglages › Raccourcis, and clashes with a command given the same key', () => {
@@ -128,7 +128,7 @@ describe('the shortcut of the notes', () => {
   it('is ⇧⌘E, given to no other command, and can be changed or taken away', () => {
     expect(COMMANDS.filter((c) => c.id === 'notes')).toHaveLength(1)
     expect(effectiveAccelerator('notes', {})).toBe('CmdOrCtrl+Shift+E')
-    expect(formatAccelerator('CmdOrCtrl+Shift+E')).toBe('⇧⌘E')
+    expect(formatAccelerator('CmdOrCtrl+Shift+E', 'darwin')).toBe('⇧⌘E')
     expect(COMMANDS.filter((c) => c.accelerator === 'CmdOrCtrl+Shift+E').map((c) => c.id)).toEqual(['notes'])
     expect(findConflicts({})).toEqual({})
     expect(effectiveAccelerator('notes', { notes: '' })).toBeUndefined()

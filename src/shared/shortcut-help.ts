@@ -4,6 +4,7 @@
 
 import { COMMANDS, canonicalAccelerator, effectiveAccelerator, formatAccelerator, secondAccelerator, type KeyBindings } from './keybindings'
 import { matchesShortcut } from './shortcut-view'
+import { commandPress, defaultAcceleratorFor, type PlatformId } from './platform'
 import type { Settings } from './model'
 import { t } from './i18n'
 import { foldMarks } from './fold'
@@ -36,7 +37,7 @@ type Spec =
   | { kind: 'command'; id: string }
   | { kind: 'range'; first: string; last: string; label: () => string }
   | { kind: 'pair'; ids: readonly [string, string]; label: () => string }
-  | { kind: 'typed'; keys: string; label: () => string; hint: () => string }
+  | { kind: 'typed'; keys: string | ((platform: PlatformId) => string); label: () => string; hint: () => string }
 
 const command = (id: string): Spec => ({ kind: 'command', id })
 
@@ -81,7 +82,7 @@ const SHEET: Readonly<Record<HelpContext, readonly Spec[]>> = {
     command('openLocation'),
     { kind: 'typed', keys: '>', label: () => t('shortcut-help.commandes-seulement'), hint: () => t('shortcut-help.prefixe-tape-dans-le-champ') },
     { kind: 'typed', keys: '@', label: () => t('shortcut-help.onglets-seulement'), hint: () => t('shortcut-help.prefixe-tape-dans-le-champ') },
-    { kind: 'typed', keys: '⌘↵', label: () => t('shortcut-help.ouvrir-dans-un-nouvel-onglet'), hint: () => t('shortcut-help.sur-la-ligne-choisie') },
+    { kind: 'typed', keys: (platform) => commandPress('↵', platform), label: () => t('shortcut-help.ouvrir-dans-un-nouvel-onglet'), hint: () => t('shortcut-help.sur-la-ligne-choisie') },
     command('history'),
     command('downloads'),
     command('settings'),
@@ -133,23 +134,23 @@ const fold = foldMarks
 /** The settings the sheet reads: the functions behind some of its keys. */
 export type HelpSettings = Pick<Settings, 'tabSearch' | 'shortcutHelp' | 'tabCycleRecent' | 'notes'>
 
-function rowOf(spec: Spec, bindings: KeyBindings | undefined, settings: HelpSettings): { row: HelpRow; accelerators: string[] } | null {
+function rowOf(spec: Spec, bindings: KeyBindings | undefined, settings: HelpSettings, platform: PlatformId): { row: HelpRow; accelerators: string[] } | null {
   const drawn = (id: string): string | null => {
-    const accelerator = effectiveAccelerator(id, bindings)
-    return accelerator ? formatAccelerator(accelerator) : null
+    const accelerator = effectiveAccelerator(id, bindings, platform)
+    return accelerator ? formatAccelerator(accelerator, platform) : null
   }
   const customOf = (id: string): { custom: boolean; was: string | null } => {
     const own = bindings?.[id]
-    const standard = COMMANDS.find((c) => c.id === id)?.accelerator ?? ''
+    const standard = defaultAcceleratorFor(platform, id, COMMANDS.find((c) => c.id === id)?.accelerator ?? '')
     // A binding equal to the default (spelled in another order of modifiers) is no change.
     const custom = own !== undefined && own !== '' && canonicalAccelerator(own) !== canonicalAccelerator(standard)
-    return { custom, was: custom && standard ? formatAccelerator(standard) : null }
+    return { custom, was: custom && standard ? formatAccelerator(standard, platform) : null }
   }
   const labelOf = (id: string): string => COMMANDS.find((c) => c.id === id)?.label ?? id
   /** The second presses of the commands of a row, drawn, when every one of them has one in force (a family shows both of its ends or none). */
   const alsoOf = (...ids: string[]): { also: string[]; seconds: string[] } => {
-    const seconds = ids.flatMap((id) => secondAccelerator(id, bindings) ?? [])
-    return seconds.length === ids.length ? { also: seconds.map((second) => formatAccelerator(second)), seconds } : { also: [], seconds: [] }
+    const seconds = ids.flatMap((id) => secondAccelerator(id, bindings, platform) ?? [])
+    return seconds.length === ids.length ? { also: seconds.map((second) => formatAccelerator(second, platform)), seconds } : { also: [], seconds: [] }
   }
   switch (spec.kind) {
     case 'command': {
@@ -157,7 +158,7 @@ function rowOf(spec: Spec, bindings: KeyBindings | undefined, settings: HelpSett
       if (!keys) return null
       const gate = DEPENDS_ON[spec.id]
       const off = gate !== undefined && settings[gate as keyof typeof settings] === false
-      const accelerator = effectiveAccelerator(spec.id, bindings)!
+      const accelerator = effectiveAccelerator(spec.id, bindings, platform)!
       const { also, seconds } = alsoOf(spec.id)
       return { row: { id: spec.id, label: labelOf(spec.id), keys: [keys], also, ...customOf(spec.id), note: off ? t('shortcut-help.fonction-coupee') : null }, accelerators: [accelerator, ...seconds] }
     }
@@ -166,17 +167,19 @@ function rowOf(spec: Spec, bindings: KeyBindings | undefined, settings: HelpSett
       const last = drawn(spec.last)
       if (!first || !last) return null
       const { also, seconds } = alsoOf(spec.first, spec.last)
-      return { row: { id: spec.first, label: spec.label(), keys: [first, '…', last], also: also.length > 0 ? [also[0]!, '…', also[1]!] : [], ...customOf(spec.first), note: null }, accelerators: [effectiveAccelerator(spec.first, bindings)!, effectiveAccelerator(spec.last, bindings)!, ...seconds] }
+      return { row: { id: spec.first, label: spec.label(), keys: [first, '…', last], also: also.length > 0 ? [also[0]!, '…', also[1]!] : [], ...customOf(spec.first), note: null }, accelerators: [effectiveAccelerator(spec.first, bindings, platform)!, effectiveAccelerator(spec.last, bindings, platform)!, ...seconds] }
     }
     case 'pair': {
       const [a, b] = spec.ids
       const keys = [drawn(a), drawn(b)]
       if (keys.some((k) => !k)) return null
       const { also, seconds } = alsoOf(a, b)
-      return { row: { id: a, label: spec.label(), keys: keys as string[], also, ...customOf(a), note: null }, accelerators: [effectiveAccelerator(a, bindings)!, effectiveAccelerator(b, bindings)!, ...seconds] }
+      return { row: { id: a, label: spec.label(), keys: keys as string[], also, ...customOf(a), note: null }, accelerators: [effectiveAccelerator(a, bindings, platform)!, effectiveAccelerator(b, bindings, platform)!, ...seconds] }
     }
-    case 'typed':
-      return { row: { id: `typed:${spec.keys}`, label: spec.label(), keys: [spec.keys], also: [], custom: false, was: null, note: spec.hint() }, accelerators: [] }
+    case 'typed': {
+      const keys = typeof spec.keys === 'function' ? spec.keys(platform) : spec.keys
+      return { row: { id: `typed:${keys}`, label: spec.label(), keys: [keys], also: [], custom: false, was: null, note: spec.hint() }, accelerators: [] }
+    }
   }
 }
 
@@ -191,12 +194,12 @@ function answers(row: HelpRow, accelerators: readonly string[], context: HelpCon
  * The sheet for the bindings in force. `bindings` are the user's changes (`settings.keyBindings`); `settings` tells which functions behind a key are
  * off. A context with no row left by the search is not returned.
  */
-export function shortcutSheet(bindings: KeyBindings | undefined, settings: HelpSettings, query = ''): ShortcutHelp {
+export function shortcutSheet(bindings: KeyBindings | undefined, settings: HelpSettings, platform: PlatformId, query = ''): ShortcutHelp {
   const groups: HelpGroup[] = []
   let shown = 0
   for (const context of HELP_CONTEXTS) {
     const rows = SHEET[context].flatMap((spec) => {
-      const made = rowOf(spec, bindings, settings)
+      const made = rowOf(spec, bindings, settings, platform)
       return made && answers(made.row, made.accelerators, context, query) ? [made.row] : []
     })
     if (rows.length === 0) continue

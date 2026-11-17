@@ -288,12 +288,12 @@ describe('what the pane says about a clash', () => {
   })
 
   it('announces, when a shortcut is assigned, the shortcut and every command that now has it', () => {
-    expect(conflictAnnouncement('newWindow', bindings)).toBe(frenchSpaces(`⌘T est utilisé par plusieurs commandes : « ${commandLabel('newWindow')} », « ${commandLabel('newTab')} ».`))
-    expect(conflictAnnouncement('closeTab', bindings)).toBeUndefined()
+    expect(conflictAnnouncement('newWindow', bindings, 'darwin')).toBe(frenchSpaces(`⌘T est utilisé par plusieurs commandes : « ${commandLabel('newWindow')} », « ${commandLabel('newTab')} ».`))
+    expect(conflictAnnouncement('closeTab', bindings, 'darwin')).toBeUndefined()
     // Nothing to announce for a shortcut that was turned off.
-    expect(conflictAnnouncement('newTab', { newWindow: 'CmdOrCtrl+T', newTab: '' })).toBeUndefined()
+    expect(conflictAnnouncement('newTab', { newWindow: 'CmdOrCtrl+T', newTab: '' }, 'darwin')).toBeUndefined()
     setLanguage('en')
-    expect(conflictAnnouncement('newWindow', bindings)).toBe(`⌘T is used by several commands: “${commandLabel('newWindow')}”, “${commandLabel('newTab')}”.`)
+    expect(conflictAnnouncement('newWindow', bindings, 'darwin')).toBe(`⌘T is used by several commands: “${commandLabel('newWindow')}”, “${commandLabel('newTab')}”.`)
   })
 })
 
@@ -302,7 +302,7 @@ describe('settleConflicts', () => {
 
   it('says what the command just assigned keeps and what was removed, and hands back what is needed to undo it', () => {
     const bindings = { newWindow: 'CmdOrCtrl+T' }
-    const settled = settleConflicts(bindings, ['newWindow'])!
+    const settled = settleConflicts(bindings, 'darwin', ['newWindow'])!
     expect(settled.bindings).toEqual({ newWindow: 'CmdOrCtrl+T', newTab: '' })
     expect(settled.text).toBe(frenchSpaces(`⌘T reste à « ${commandLabel('newWindow')} ». Raccourci retiré de « ${commandLabel('newTab')} ».`))
     expect(restoreRemoved(settled.bindings, settled.removed)).toEqual(bindings)
@@ -310,14 +310,14 @@ describe('settleConflicts', () => {
 
   it('says it in English, and one sentence for each shortcut settled', () => {
     setLanguage('en')
-    const settled = settleConflicts({ newWindow: 'CmdOrCtrl+T', find: 'CmdOrCtrl+W' }, ['newWindow', 'find'])!
+    const settled = settleConflicts({ newWindow: 'CmdOrCtrl+T', find: 'CmdOrCtrl+W' }, 'darwin', ['newWindow', 'find'])!
     expect(settled.text).toBe(
       `⌘T stays with “${commandLabel('newWindow')}”. Shortcut removed from “${commandLabel('newTab')}”. ⌘W stays with “${commandLabel('find')}”. Shortcut removed from “${commandLabel('closeTab')}”.`
     )
   })
 
   it('has nothing to do, and nothing to say, when no shortcut is shared', () => {
-    expect(settleConflicts({})).toBeUndefined()
-    expect(settleConflicts({ newWindow: 'CmdOrCtrl+Alt+Shift+9' })).toBeUndefined()
+    expect(settleConflicts({}, 'darwin')).toBeUndefined()
+    expect(settleConflicts({ newWindow: 'CmdOrCtrl+Alt+Shift+9' }, 'darwin')).toBeUndefined()
   })
 })

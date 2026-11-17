@@ -2,6 +2,7 @@ import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } fr
 import { isListedTab } from '@shared/model'
 import { SPACE_MENU_ENTRIES, spaceMenuEnabled, spaceMenuGroups, spaceMenuPlacement, spaceMenuRefusal, spaceMenuRun, spaceMenuShortcut, stepSpaceMenu, type SpaceMenuEntryId } from '@shared/space-menu'
 import type { PlusAnchor } from '@shared/plus-menu'
+import { platformOf } from '@shared/platform'
 import { themeHue } from '@shared/theme'
 import { t } from '@shared/i18n'
 import { api, useSnapshot } from './api'
@@ -69,7 +70,7 @@ export function SpaceMenu({ spaceId, anchor }: { spaceId: string; anchor: PlusAn
           {g > 0 && <div className="sm-separator" role="separator" />}
           {group.map((entry) => {
             const i = ++index
-            const shortcut = spaceMenuShortcut(entry, state.settings.keyBindings)
+            const shortcut = spaceMenuShortcut(entry, state.settings.keyBindings, platformOf(snapshot?.platform))
             // A row the lock greys out says why under the pointer.
             const refusal = spaceMenuRefusal(entry.id, context)
             return (

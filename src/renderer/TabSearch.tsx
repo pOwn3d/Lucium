@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { cardSurface, pageColorBehind } from '@shared/command-bar'
-import { effectiveAccelerator, formatAccelerator } from '@shared/keybindings'
+import { commandHeld, effectiveAccelerator, formatAccelerator } from '@shared/keybindings'
+import { commandPress, platformOf } from '@shared/platform'
 import { activeTab } from '@shared/sidebar'
 import { t, tp } from '@shared/i18n'
 import { hostOf } from '@shared/url'
@@ -74,9 +75,10 @@ export function TabSearch() {
   }, [current, rows.length])
   if (!snapshot || !result) return null
   const { state } = snapshot
+  const platform = platformOf(snapshot.platform)
   const act = api()
   const space = (id: string) => state.spaces.find((s) => s.id === id)
-  const helpKey = effectiveAccelerator('shortcutHelp', state.settings.keyBindings)
+  const helpKey = effectiveAccelerator('shortcutHelp', state.settings.keyBindings, platform)
   const plan = result.duplicates
   const duplicates = plan.closeIds.length
   // The same dark glass as the command bar, over the page behind (command-bar.css reads it with the dark values of the tokens).
@@ -88,7 +90,7 @@ export function TabSearch() {
     act.closeOverlay()
   }
 
-  // ⌫ on an empty field (⌘⌫ with a text): the tab goes to the archive; "Annuler" brings it back like the duplicates.
+  // ⌫ on an empty field (⌘⌫, Ctrl+⌫ away from macOS, with a text): the tab goes to the archive; "Annuler" brings it back like the duplicates.
   const archive = (row: TabSearchRow) => {
     if (!canArchiveRow(row, state)) return
     void act.dispatch({ type: 'tab/archive', id: row.id })
@@ -129,8 +131,8 @@ export function TabSearch() {
     } else if (e.key === 'ArrowDown') setSelected(Math.min(current + 1, rows.length - 1))
     else if (e.key === 'ArrowUp') setSelected(Math.max(current - 1, 0))
     else if (e.key === 'Enter') {
-      if (row) choose(row, e.metaKey ? 'beside' : 'go')
-    } else if (isArchiveKey(e.nativeEvent, query)) {
+      if (row) choose(row, commandHeld(e, platform) ? 'beside' : 'go')
+    } else if (isArchiveKey(e.nativeEvent, query, platform)) {
       if (row) archive(row)
     } else return
     e.preventDefault()
@@ -182,7 +184,7 @@ export function TabSearch() {
         {state.settings.shortcutHelp && (
           <button type="button" className="palette-info" aria-label={t('cmd.aide-de-la-barre-de-commandes')} title={t('cmd.aide-de-la-barre-de-commandes')} onMouseDown={(e) => e.preventDefault()} onClick={() => act.openOverlay({ panel: 'shortcuts' })}>
             {t('cmd.raccourcis')}
-            {helpKey && <kbd aria-hidden="true">{formatAccelerator(helpKey)}</kbd>}
+            {helpKey && <kbd aria-hidden="true">{formatAccelerator(helpKey, platform)}</kbd>}
           </button>
         )}
       </div>
@@ -322,7 +324,7 @@ export function TabSearch() {
       <div className="cb-foot">
         <span><kbd>↑↓</kbd> {t('cmd.pied-parcourir')}</span>
         <span><kbd>↵</kbd> {t('tabsearch.pied-aller-a-l-onglet')}</span>
-        <span><kbd>⌘↵</kbd> {t('tabsearch.pied-ouvrir-a-cote')}</span>
+        <span><kbd>{commandPress('↵', platform)}</kbd> {t('tabsearch.pied-ouvrir-a-cote')}</span>
         <span><kbd>⌫</kbd> {t('tabsearch.pied-archiver')}</span>
         <span className="cb-foot-spacer" />
         <span><kbd>{t('cmd.echap')}</kbd> {t('cmd.pied-fermer')}</span>

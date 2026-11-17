@@ -4,6 +4,7 @@
 
 import { act, createElement } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { getKeyPlatform, setKeyPlatform, tIn } from '@shared/i18n'
 import type { UiSnapshot } from '@shared/ipc'
 import { createInitialState } from '@shared/sidebar'
 import { installBridge, mount, settle, type Mounted } from './dom.test-support'
@@ -70,6 +71,18 @@ afterEach(async () => {
 })
 
 describe('the snapshot of a document', () => {
+  // The keys named inside the sentences are those of the system the snapshot says (shared/key-words.ts): a window on Linux reads « Ctrl+Q », not « ⌘Q ».
+  it('tells the texts which system the window runs on, as it tells them the language', () => {
+    const main = bridge()
+    mounted = mount(several())
+    act(() => main.push(snapshot('linux')))
+    expect(getKeyPlatform()).toBe('linux')
+    expect(tIn('fr', 'features.demande-une-confirmation-avant-q')).toBe('Demande une confirmation avant Ctrl+Q.')
+    act(() => main.push(snapshot('darwin')))
+    expect(tIn('fr', 'features.demande-une-confirmation-avant-q')).toBe('Demande une confirmation avant ⌘Q.')
+    setKeyPlatform(undefined)
+  })
+
   it('is read once and listened to once for all the views that draw it', async () => {
     const main = bridge()
     mounted = mount(several())

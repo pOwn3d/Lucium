@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { archiveBuckets } from '@shared/archive'
 import { FIND_PANEL, PEEK_HEADER_HEIGHT } from '@shared/ipc'
+import { commandPress, platformOf } from '@shared/platform'
 import { isPeekOpenKey, peekAccent, peekAddress, peekAddressParts, peekOnAccent } from '@shared/peek'
 import { REGEX_ERROR_DETAILS, findCounterText } from '@shared/regex-find'
 import { pageColorBehind, popoverSurface } from '@shared/command-bar'
@@ -566,22 +567,23 @@ function PeekIcon({ path, size = 14 }: { path: string; size?: number }) {
 export function PeekHeader({ rect, stage }: { rect: Rect; stage?: Rect }) {
   const snapshot = useSnapshot()
   const peek = snapshot?.peek
+  const platform = platformOf(snapshot?.platform)
   const [copied, showCopied] = useTransient(false, COPIED_MS)
   const systemDark = useSystemDark()
   const act = api()
 
-  // Escape closes the preview wherever the focus is in this layer; ⌘↩ opens the page in a tab, as the header says.
+  // Escape closes the preview wherever the focus is in this layer; ⌘↩ (Ctrl+Enter away from macOS) opens the page in a tab, as the header says.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') api().peekAction('close')
-      else if (isPeekOpenKey({ key: e.key, meta: e.metaKey, shift: e.shiftKey, alt: e.altKey, control: e.ctrlKey })) {
+      else if (isPeekOpenKey({ key: e.key, meta: e.metaKey, shift: e.shiftKey, alt: e.altKey, control: e.ctrlKey }, platform)) {
         e.preventDefault()
         api().peekAction('open-in-tab')
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [platform])
 
   const address = peek ? peekAddress(peek.url) : ''
   // The site first, drawn so that its registrable domain is never cut, and plain http written out: the header is where one reads whose page this is.
@@ -646,7 +648,7 @@ export function PeekHeader({ rect, stage }: { rect: Rect; stage?: Rect }) {
           </div>
           <button className="pk-btn primary" onClick={() => act.peekAction('open-in-tab')}>
             {t('littlearc.ouvrir-dans-un-onglet')}
-            <kbd>⌘↩</kbd>
+            <kbd>{commandPress('↩', platform)}</kbd>
           </button>
           <button className="pk-btn split" title={t('ctx.ouvrir-en-vue-scindee')} aria-label={t('ctx.ouvrir-en-vue-scindee')} onClick={() => act.peekAction('open-in-split')}>
             <PeekIcon path={PEEK_ICON.split} />

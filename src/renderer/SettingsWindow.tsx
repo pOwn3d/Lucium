@@ -17,7 +17,7 @@ import { platformOf } from '@shared/platform'
 import { api, useSnapshot } from './api'
 import { CategoryContent, type CategoryProps } from './SettingsCategories'
 import { CategoryGlyph } from './settings-icons'
-import { FeatureFilterContext, FoldPassContext, IllustrationContext, MirrorsContext, PaneContext, ResetContext, SearchingContext, SettingsStateContext, SubpageContext, type FeatureFilter, type JumpTarget } from './settings-context'
+import { FeatureFilterContext, PlatformContext, FoldPassContext, IllustrationContext, MirrorsContext, PaneContext, ResetContext, SearchingContext, SettingsStateContext, SubpageContext, type FeatureFilter, type JumpTarget } from './settings-context'
 import { useActionNotice } from './notice-hold'
 import { subpageAt, subpageById, subpageOfKey } from '@shared/settings-subpages'
 import { CHEVRON_LEFT } from './settings-parts'
@@ -491,6 +491,7 @@ export function SettingsView({ snapshot, initialQuery = '', initialOpen = null, 
 
   return (
     <SettingsStateContext.Provider value={settings}>
+      <PlatformContext.Provider value={platformOf(snapshot.platform)}>
       <SubpageContext.Provider value={subpageNavigation}>
       <ResetContext.Provider value={resetOne}>
       <IllustrationContext.Provider value={illustration}>
@@ -646,6 +647,7 @@ export function SettingsView({ snapshot, initialQuery = '', initialOpen = null, 
       </IllustrationContext.Provider>
       </ResetContext.Provider>
       </SubpageContext.Provider>
+      </PlatformContext.Provider>
     </SettingsStateContext.Provider>
   )
 }

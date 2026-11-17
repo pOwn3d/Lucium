@@ -47,22 +47,22 @@ describe('the sentence at the head of the section', () => {
   })
 
   // Guard: with another computer in the address, the sentence no longer says that nothing leaves the machine.
-  it('names the computer of the local network and says that the page leaves this Mac', () => {
+  it('names the computer of the local network and says that the page leaves this computer', () => {
     const said = summaryDataText(props({ ollama: { enabled: true, url: NETWORK } }))
     expect(said).toBe(t('ollama-settings.donnees-reseau', { host: '10.0.0.5:11434' }))
-    expect(said).toMatch(/10\.0\.0\.5:11434.*quittent ce Mac/)
+    expect(said).toMatch(/10\.0\.0\.5:11434.*quittent cet ordinateur/)
     expect(markup(props({ ollama: { enabled: true, url: NETWORK } }))).not.toContain(t('ollama-settings.donnees-local'))
   })
 })
 
 describe('the address of a computer of the local network', () => {
   // Guard: the sentence is there as soon as the address is typed, whether or not anything answers at it.
-  it('is said to take the page text out of this Mac, in clear over http, in both languages', () => {
+  it('is said to take the page text out of this computer, in clear over http, in both languages', () => {
     const html = markup(props({ ollama: { enabled: true, url: NETWORK } }))
-    expect(html).toContain('le texte de la page et son adresse quittent ce Mac, en clair sur le réseau local')
+    expect(html).toContain('le texte de la page et son adresse quittent cet ordinateur, en clair sur le réseau local')
     expect(html).not.toContain(t('ollama-settings.adresse-refusee'))
     setLanguage('en')
-    expect(markup(props({ ollama: { enabled: true, url: NETWORK } }))).toContain('the page text and its address leave this Mac, unencrypted on the local network')
+    expect(markup(props({ ollama: { enabled: true, url: NETWORK } }))).toContain('the page text and its address leave this computer, unencrypted on the local network')
   })
 
   it('is not said to be in clear over https, and nothing is said for an address of this Mac', () => {

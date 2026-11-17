@@ -23,7 +23,7 @@ afterEach(() => {
 
 function pane(bindings: Record<string, string>) {
   const update = vi.fn<(patch: Partial<Settings>) => void>()
-  const element = (next: Record<string, string>, extensions: ExtensionShortcuts[] = []) => createElement(ShortcutsPane, { bindings: next, keyboard: {}, extensions, update })
+  const element = (next: Record<string, string>, extensions: ExtensionShortcuts[] = []) => createElement(ShortcutsPane, { bindings: next, platform: 'darwin', keyboard: {}, extensions, update })
   mounted = mount(element(bindings))
   return { container: mounted.container, update, redraw: (next: Record<string, string>, extensions?: ExtensionShortcuts[]) => mounted!.rerender(element(next, extensions)) }
 }
@@ -145,7 +145,7 @@ describe('the name a screen reader gets for the buttons of a row', () => {
       expect(parts[0]?.textContent).not.toBe('')
       expect(parts[1]).toBe(key)
     }
-    const row = keys.find((key) => key.textContent === formatAccelerator(CHOSEN.newWindow))!.closest('.shortcut-row')!
+    const row = keys.find((key) => key.textContent === formatAccelerator(CHOSEN.newWindow, 'darwin'))!.closest('.shortcut-row')!
     const named = row.querySelector(`[id="${row.querySelector('button.shortcut-key')!.getAttribute('aria-labelledby')!.split(' ')[0]}"]`)!
     expect(named.textContent).toBe(commandLabel('newWindow'))
     expect(row.querySelector('button.shortcut-reset')!.getAttribute('aria-label')).toBe(actionName(t('settings-shortcuts.reinitialiser'), commandLabel('newWindow')))

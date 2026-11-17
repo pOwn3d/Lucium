@@ -8,6 +8,7 @@
 
 import { effectiveAccelerator, formatAccelerator, type KeyBindings } from './keybindings'
 import { t, type MessageKey } from './i18n'
+import type { PlatformId } from './platform'
 import type { SettingKey } from './settings-catalog'
 
 export interface Illustration {
@@ -51,12 +52,14 @@ export const illustrationOf = (key: string | undefined): Illustration | undefine
 
 /**
  * The tip of a scene: its sentence, with the shortcut the user has now (their own if they changed it). Null when the scene has no tip, or when the
- * command it names has no shortcut: a tip never names a key that does nothing.
+ * command it names has no shortcut (or the system the keys are drawn for is not known): a tip never names a key that does nothing.
  */
-export function illustrationTip(illustration: Illustration, bindings: KeyBindings): string | null {
+export function illustrationTip(illustration: Illustration, bindings: KeyBindings, platform: PlatformId | undefined): string | null {
   const tip = illustration.tip
   if (!tip) return null
   if (tip.command === undefined) return t(tip.text)
-  const accelerator = effectiveAccelerator(tip.command, bindings)
-  return accelerator ? t(tip.text, { shortcut: formatAccelerator(accelerator) }) : null
+  // Without a system no key can be drawn: the tip says nothing rather than the keys of another one.
+  if (!platform) return null
+  const accelerator = effectiveAccelerator(tip.command, bindings, platform)
+  return accelerator ? t(tip.text, { shortcut: formatAccelerator(accelerator, platform) }) : null
 }

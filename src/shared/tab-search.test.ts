@@ -349,13 +349,13 @@ describe('what a line does', () => {
   })
 
   it('reads ⌫ as "archive" on an empty field, ⌘⌫ with a text, and never from a key held down', () => {
-    const key = (over: Partial<{ key: string; metaKey: boolean; repeat: boolean }> = {}) => ({ key: 'Backspace', metaKey: false, repeat: false, ...over })
-    expect(isArchiveKey(key(), '')).toBe(true)
-    expect(isArchiveKey(key(), 'doc')).toBe(false)
-    expect(isArchiveKey(key({ metaKey: true }), 'doc')).toBe(true)
+    const key = (over: Partial<{ key: string; metaKey: boolean; ctrlKey: boolean; repeat: boolean }> = {}) => ({ key: 'Backspace', metaKey: false, ctrlKey: false, repeat: false, ...over })
+    expect(isArchiveKey(key(), '', 'darwin')).toBe(true)
+    expect(isArchiveKey(key(), 'doc', 'darwin')).toBe(false)
+    expect(isArchiveKey(key({ metaKey: true }), 'doc', 'darwin')).toBe(true)
     // Holding ⌫ to clear a long text must stop at the empty field.
-    expect(isArchiveKey(key({ repeat: true }), '')).toBe(false)
-    expect(isArchiveKey(key({ repeat: true, metaKey: true }), 'doc')).toBe(false)
-    expect(isArchiveKey(key({ key: 'Delete' }), '')).toBe(false)
+    expect(isArchiveKey(key({ repeat: true }), '', 'darwin')).toBe(false)
+    expect(isArchiveKey(key({ repeat: true, metaKey: true }), 'doc', 'darwin')).toBe(false)
+    expect(isArchiveKey(key({ key: 'Delete' }), '', 'darwin')).toBe(false)
   })
 })

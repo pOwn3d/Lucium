@@ -15,6 +15,7 @@ import {
   type ExtensionShortcuts,
   type KeyLayout
 } from '@shared/keybindings'
+import type { PlatformId } from '@shared/platform'
 import { readKeyboardCharacters } from './keyboard-layout'
 import {
   SEARCH_EXAMPLES,
@@ -38,6 +39,8 @@ import { useActionNotice, type NoticeHoldProps } from './notice-hold'
 
 interface Props {
   bindings: Record<string, string>
+  /** The system the shortcuts are drawn, read and recorded for. */
+  platform: PlatformId
   /** The extensions that are on: the shortcuts the Extensions menu gives their commands are not free. */
   extensions?: readonly ExtensionShortcuts[]
   /** « Raccourci de la mini-fenêtre dans toutes les apps » is on. */
@@ -110,7 +113,7 @@ export function ShortcutNotice({ notice, onRemove, onUndo, hold }: { notice: Sho
   )
 }
 
-export function ShortcutsPane({ bindings, extensions = [], littleEverywhere = false, keyboard, update, open }: Props) {
+export function ShortcutsPane({ bindings, platform, extensions = [], littleEverywhere = false, keyboard, update, open }: Props) {
   const [filter, setFilter] = useState('')
   const [basicsOnly, setBasicsOnly] = useState(false)
   // The same command can show twice (customised, then in the list): only the row that was clicked listens for the new keys.
@@ -140,7 +143,7 @@ export function ShortcutsPane({ bindings, extensions = [], littleEverywhere = fa
   const conflicts = findConflicts(bindings)
   // The shortcuts that are not the Settings' to give: the fixed entries of the menus, and the commands of the extensions.
   const taken = [...FIXED_SHORTCUTS, ...extensions.flatMap(extensionMenuCommands)]
-  const accelerators = Object.fromEntries(COMMANDS.map((c) => [c.id, effectiveAccelerator(c.id, bindings)]))
+  const accelerators = Object.fromEntries(COMMANDS.map((c) => [c.id, effectiveAccelerator(c.id, bindings, platform)]))
   const customized = Object.keys(bindings).length
 
   useEffect(() => {
@@ -167,7 +170,7 @@ export function ShortcutsPane({ bindings, extensions = [], littleEverywhere = fa
    * nothing changes. If another command has it, both are named in the status line, with the way to remove the clash.
    */
   const record = (id: string, accelerator: string) => {
-    const assignment = assignShortcut(id, accelerator, bindings, taken)
+    const assignment = assignShortcut(id, accelerator, bindings, taken, platform)
     if (assignment.kind === 'refused') return setNotice({ kind: 'refused', text: assignment.text })
     update({ keyBindings: assignment.bindings })
     // Appended each time: the rule reads the list from its end, and ignores a command that has no saved shortcut any more.
@@ -176,7 +179,7 @@ export function ShortcutsPane({ bindings, extensions = [], littleEverywhere = fa
   }
   /** The command typed last keeps its shortcut, the others lose theirs; the status line says which, and can give them back. */
   const removeConflicts = () => {
-    const settled = settleConflicts(bindings, assigned.current)
+    const settled = settleConflicts(bindings, platform, assigned.current)
     if (settled) update({ keyBindings: settled.bindings })
     setNotice(settled ? { kind: 'removed', text: settled.text, removed: settled.removed } : null)
   }
@@ -225,7 +228,7 @@ export function ShortcutsPane({ bindings, extensions = [], littleEverywhere = fa
 
   const row = (c: CommandDef, section: string) => {
     const key = `${section}:${c.id}`
-    const accelerator = effectiveAccelerator(c.id, bindings)
+    const accelerator = effectiveAccelerator(c.id, bindings, platform)
     const clash = accelerator ? conflicts[canonicalAccelerator(accelerator)] : undefined
     const isChanged = bindings[c.id] !== undefined
     // The conflict is written out (a colour alone says nothing to a screen reader, or to someone who does not see it): with which command, under the name.
@@ -235,7 +238,7 @@ export function ShortcutsPane({ bindings, extensions = [], littleEverywhere = fa
     const held = takenNote(c.id, bindings, taken)
     const heldId = `shortcut-held-${key.replace(':', '-')}`
     // What sites, macOS or the keyboard in use do with the same press: said, without the colour of a clash (nothing is broken).
-    const uses = otherUseNotes(c.id, bindings, { characters, littleEverywhere })
+    const uses = otherUseNotes(c.id, bindings, platform, { characters, littleEverywhere })
     const usesId = `shortcut-use-${key.replace(':', '-')}`
     const described = [note ? noteId : '', held ? heldId : '', uses.length > 0 ? usesId : ''].filter(Boolean).join(' ')
     // The key is named by its command, then by what it shows (the shortcut, « --- » or « Appuyez… »): alone, « ⌘T » says nothing of what it does.
@@ -277,14 +280,14 @@ export function ShortcutsPane({ bindings, extensions = [], littleEverywhere = fa
             if (recording !== key) return
             e.preventDefault()
             e.stopPropagation()
-            const step = recordingStep(e.nativeEvent, layout.current)
+            const step = recordingStep(e.nativeEvent, platform, layout.current)
             if (step.kind === 'wait') return
             if (step.kind === 'clear') save({ ...bindings, [c.id]: '' })
             if (step.kind === 'record') record(c.id, step.accelerator)
             setRecording(null)
           }}
         >
-          {recording === key ? t('settings-shortcuts.appuyez') : accelerator ? formatAccelerator(accelerator) : '---'}
+          {recording === key ? t('settings-shortcuts.appuyez') : accelerator ? formatAccelerator(accelerator, platform) : '---'}
         </button>
         {/* On a line of its own under the row, outside the name of the command: the name stays the whole text of its label. */}
         {uses.length > 0 && (
@@ -404,11 +407,15 @@ export function ShortcutsPane({ bindings, extensions = [], littleEverywhere = fa
           </div>
         </div>
       </div>
-      {/* The default shortcuts that take a key macOS gives to another command, said where the shortcuts are (and under ⌃Tab, on the page). */}
-      <p className="pref-note">{t('settings-shortcuts.quelques-raccourcis-prennent-une-touche-que')}</p>
-      <div className="pref-note pref-note-more">
-        <MoreText more={t('settings-shortcuts.raccourcis-du-systeme-repris', { settingsPath: settingsPath('shortcuts') })} />
-      </div>
+      {/* The default shortcuts that take a key macOS gives to another command, said where the shortcuts are (and under ⌃Tab, on the page). It says nothing elsewhere: the keys of that sentence are the ones of macOS. */}
+      {platform === 'darwin' && (
+        <>
+          <p className="pref-note">{t('settings-shortcuts.quelques-raccourcis-prennent-une-touche-que')}</p>
+          <div className="pref-note pref-note-more">
+            <MoreText more={t('settings-shortcuts.raccourcis-du-systeme-repris', { settingsPath: settingsPath('shortcuts') })} />
+          </div>
+        </>
+      )}
     </>
   )
 }

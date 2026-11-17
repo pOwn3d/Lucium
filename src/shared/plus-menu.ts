@@ -6,6 +6,7 @@
 
 import { effectiveAccelerator, formatAccelerator, type KeyBindings } from './keybindings'
 import { hostnameOf } from './url'
+import type { PlatformId } from './platform'
 import { t } from './i18n'
 
 export type PlusEntryId = 'space' | 'folder' | 'boost' | 'split' | 'workview'
@@ -76,10 +77,11 @@ export function plusEntryRefusal(id: PlusEntryId, context: PlusContext): string 
 }
 
 /** The shortcut to show beside a row, its keys spaced ("⌃ ⇧ ="), or '' when the row has none or the user removed it. */
-export function plusShortcut(entry: PlusEntry, bindings: KeyBindings | undefined): string {
+export function plusShortcut(entry: PlusEntry, bindings: KeyBindings | undefined, platform: PlatformId): string {
   if (!entry.command) return ''
-  const accelerator = effectiveAccelerator(entry.command, bindings)
-  return accelerator ? [...formatAccelerator(accelerator)].join(' ') : ''
+  const accelerator = effectiveAccelerator(entry.command, bindings, platform)
+  // On macOS each symbol is a key of its own ("⌃ ⇧ ="); elsewhere the shortcut is words joined by "+", which a gap would break.
+  return accelerator ? (platform === 'darwin' ? [...formatAccelerator(accelerator, platform)].join(' ') : formatAccelerator(accelerator, platform)) : ''
 }
 
 /**

@@ -75,18 +75,18 @@ describe('the tooltips of the sidebar', () => {
 
 describe('a name followed by the shortcut of its command', () => {
   it('carries the shortcut in force, between brackets, and nothing for a command without one', () => {
-    expect(labelWithShortcut('Recharger', 'reload', {})).toBe('Recharger (⌘R)')
-    expect(labelWithShortcut('Recharger', 'reload', { reload: 'F5' })).toBe('Recharger (F5)')
-    expect(labelWithShortcut('Recharger', 'reload', { reload: '' })).toBe('Recharger')
-    expect(shortcutSuffix('developerMode', {})).toBe(' (⌃D)')
-    expect(shortcutSuffix('developerMode', { developerMode: '' })).toBe('')
+    expect(labelWithShortcut('Recharger', 'reload', {}, 'darwin')).toBe('Recharger (⌘R)')
+    expect(labelWithShortcut('Recharger', 'reload', { reload: 'F5' }, 'darwin')).toBe('Recharger (F5)')
+    expect(labelWithShortcut('Recharger', 'reload', { reload: '' }, 'darwin')).toBe('Recharger')
+    expect(shortcutSuffix('developerMode', {}, 'darwin')).toBe(' (⌃D)')
+    expect(shortcutSuffix('developerMode', { developerMode: '' }, 'darwin')).toBe('')
     expect(shortcutSuffix('reload', {}, 'win32')).toBe(' (Ctrl+R)')
   })
 
   it('fills the texts that name a key, which read well with and without it', () => {
-    expect(t('site-panel.mode-developpeur-pour-ce-site-d', { shortcut: shortcutSuffix('developerMode', { developerMode: 'Ctrl+Alt+D' }) })).toMatch(/^Mode développeur pour ce site \(⌃⌥D\) : /)
+    expect(t('site-panel.mode-developpeur-pour-ce-site-d', { shortcut: shortcutSuffix('developerMode', { developerMode: 'Ctrl+Alt+D' }, 'darwin') })).toMatch(/^Mode développeur pour ce site \(⌃⌥D\) : /)
     expect(t('site-panel.mode-developpeur-pour-ce-site-d', { shortcut: '' })).toMatch(/^Mode développeur pour ce site : /)
-    expect(t('notes.bouton-toutes-les-notes-hint', { shortcut: shortcutSuffix('notes', {}) })).toContain('Fichier › Notes (⇧⌘E) l’ouvre sur celles de la page')
+    expect(t('notes.bouton-toutes-les-notes-hint', { shortcut: shortcutSuffix('notes', {}, 'darwin') })).toContain('Fichier › Notes (⇧⌘E) l’ouvre sur celles de la page')
     expect(t('notes.bouton-toutes-les-notes-hint', { shortcut: '' })).toContain('Fichier › Notes l’ouvre sur celles de la page')
     expect(t('app.t-pour-ouvrir-un-onglet', { keys: '⌥⌘T' })).toBe('⌥⌘T pour ouvrir un onglet')
   })

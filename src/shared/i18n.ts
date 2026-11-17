@@ -12,10 +12,14 @@
 //  - The language is a process-wide state: one per renderer window, one for the main process. The settings decide it (`interfaceTranslated`,
 //    `language`), the system's language decides "automatic". Off, the interface is French whatever the system says.
 //  - Text the user or a page wrote (tab titles, names of spaces) is never looked up: only the words of the interface itself.
+//  - A shortcut inside a sentence is spelled the way macOS does (« ⇧⌘T », « ⌘-clic »). A process that does not run on macOS says so (`setKeyPlatform`), and the
+//    text is read with the keys of its system (« Ctrl+Maj+T », « Ctrl-clic »; key-words.ts) before the variables are put in. Not told, a text is read as typed.
 
 import { fr } from './i18n-fr'
 import { en } from './i18n-en'
 import { frenchSpaces, NBSP } from './french-typography'
+import { hasMacKeys, macKeysFor, type KeyWords } from './key-words'
+import type { PlatformId } from './platform'
 
 export const LANGUAGES = ['fr', 'en'] as const
 export type Language = (typeof LANGUAGES)[number]
@@ -89,6 +93,34 @@ export type PluralBase = OneFormBase<MessageKey>
 
 const reportToConsole: Report = (message) => console.warn(message)
 
+// ---------- the system whose keys the sentences name ----------
+
+/** The system this process runs on, for the keys written inside a sentence; undefined until a process says it, and then the text is read as typed. */
+let keyPlatform: PlatformId | undefined
+
+/**
+ * Says which system the keys named in the sentences are those of (the renderer reads it in the snapshot, the main process in `process.platform`). The
+ * catalogues spell the keys of macOS; elsewhere they are read as Ctrl, Alt and the words of the system. Undefined: no reading, the text as it is typed.
+ */
+export function setKeyPlatform(platform: PlatformId | undefined): void {
+  keyPlatform = platform
+}
+
+export function getKeyPlatform(): PlatformId | undefined {
+  return keyPlatform
+}
+
+/** The words of the keys in a language: the `platform.*` texts of its catalogue, French where it has none. */
+function keyWordsOf(own: Catalogue | undefined, source: Catalogue | undefined): KeyWords {
+  const word = (key: string): string => own?.[key] ?? source?.[key] ?? key
+  return { shift: word('platform.maj'), enter: word('platform.entree'), backspace: word('platform.retour-arriere'), delete: word('platform.suppr'), space: word('platform.espace') }
+}
+
+/** A text with its keys read for the system of this process; the same text when no system was told, or when it is macOS. */
+function withKeys(text: string, words: KeyWords): string {
+  return keyPlatform === undefined || keyPlatform === 'darwin' || !hasMacKeys(text) ? text : macKeysFor(text, keyPlatform, words)
+}
+
 /**
  * A translator for a language over some catalogues (the real ones, or ones a test hands in). A key the language does not have is read in French
  * and reported once per key and translator; a key nobody has is shown as itself, which can only be a bug the report names.
@@ -107,15 +139,16 @@ export function createTranslator(language: Language, catalogues: Catalogues = CA
     }
     return done
   }
+  const words = keyWordsOf(catalogues[language], catalogues[SOURCE_LANGUAGE])
   const lookup = (key: string): string => {
     const found = own[key]
-    if (found !== undefined) return language === 'fr' ? french(key, found) : found
+    if (found !== undefined) return withKeys(language === 'fr' ? french(key, found) : found, words)
     if (language !== SOURCE_LANGUAGE && !reported.has(key)) {
       reported.add(key)
       report(`[i18n] no "${language}" text for "${key}": the French one is shown`)
     }
     const fallback = source[key]
-    if (fallback !== undefined) return french(key, fallback)
+    if (fallback !== undefined) return withKeys(french(key, fallback), words)
     if (!reported.has(`!${key}`)) {
       reported.add(`!${key}`)
       report(`[i18n] unknown key "${key}"`)

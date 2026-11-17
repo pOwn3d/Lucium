@@ -18,6 +18,8 @@ import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { t } from '@shared/i18n'
 import { listPanelKey, nextRowIndex } from '@shared/panel-keys'
 import { useNoticeHold } from '../notice-hold'
+import { getKeyPlatform } from '@shared/i18n'
+import { commandPress } from '@shared/platform'
 import { radioGroupKeys } from '../radio-keys'
 import { SearchGlyph } from './glyphs'
 import { hueProps } from './hue'
@@ -73,11 +75,19 @@ export interface ListPanelProps {
 /** The notice of the last deletion: its time is kept by whoever made the deletion, and waits while the pointer or the focus is on it. */
 function UndoNotice({ undo }: { undo: { message: string; onUndo: () => void; onHold?: (held: boolean) => void } }) {
   const hold = useNoticeHold(undo.onHold)
+  // The key of the notice is drawn for the system the window runs on (told to the texts with the snapshot); not told, no key is drawn.
+  const platform = getKeyPlatform()
   return (
     <div className="lp-undo" role="status" {...hold}>
       <span>{undo.message}</span>
       <button type="button" className="tk-btn" onClick={undo.onUndo}>
-        {t('templates.annuler')} <kbd className="tk-kbd">⌘Z</kbd>
+        {t('templates.annuler')}
+        {platform && (
+          <>
+            {' '}
+            <kbd className="tk-kbd">{commandPress('Z', platform)}</kbd>
+          </>
+        )}
       </button>
     </div>
   )

@@ -4,6 +4,7 @@
 import { createElement, type ReactNode } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { setKeyPlatform } from '@shared/i18n'
 import { PassphrasePrompt } from '../PassphrasePrompt'
 import { QrPanel } from '../QrPanel'
 import { ArchiveGlyph, Invite, ListEmpty, ListGroup, ListPanel, ListRow, Sheet, SheetField, activeSpaceHue, hueProps, type ListPanelProps } from '.'
@@ -24,7 +25,10 @@ function unnamedButtons(markup: string): string[] {
     .map(([whole]) => whole.slice(0, 80))
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  setKeyPlatform(undefined)
+})
 
 /**
  * The selectors of the rules of a sheet that give a `svg` of a panel a line (`stroke`, `stroke-width`, `stroke-linecap`, `stroke-linejoin`). Only the form
@@ -81,10 +85,20 @@ describe('ListPanel', () => {
   })
 
   it('shows the notice of a deletion that can be taken back, with ⌘Z, and only then', () => {
+    setKeyPlatform('darwin')
     const markup = list({ undo: { message: 'Page oubliée', onUndo: noop } })
     expect(markup).toContain('<div class="lp-undo" role="status"><span>Page oubliée</span>')
     expect(markup).toContain('Annuler <kbd class="tk-kbd">⌘Z</kbd>')
     expect(list({ undo: null })).not.toContain('lp-undo')
+  })
+
+  it('names the key of the notice for the system it runs on: Ctrl+Z where there is no Command key, and no key when no system was told', () => {
+    setKeyPlatform('linux')
+    const markup = list({ undo: { message: 'Page oubliée', onUndo: noop } })
+    expect(markup).toContain('Annuler <kbd class="tk-kbd">Ctrl+Z</kbd>')
+    expect(markup).not.toContain('⌘')
+    setKeyPlatform(undefined)
+    expect(list({ undo: { message: 'Page oubliée', onUndo: noop } })).not.toContain('<kbd')
   })
 
   it('says it is loading, with a still skeleton and no rows, and flags itself busy', () => {

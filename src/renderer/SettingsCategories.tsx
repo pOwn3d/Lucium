@@ -8,6 +8,7 @@ import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
 import type { SettingsPage } from '@shared/ipc'
 import { ALL_SITES, decisionOfChoice, permissionName, sitesWithAnswers } from '@shared/permissions'
+import { platformOf } from '@shared/platform'
 import { activeProfileId } from '@shared/profiles'
 import { api } from './api'
 import { AboutSettings } from './AboutSettings'
@@ -172,7 +173,7 @@ function KeyboardCategory({ snapshot, update, goTo }: CategoryProps) {
       {/* The editor of the shortcuts, a tool of 140 commands, is on its subpage, which the row « Raccourcis clavier » opens. */}
       <Subpage id="shortcuts">
         <div id="shortcuts" className="shortcuts-area">
-          <ShortcutsPane bindings={settings.keyBindings} extensions={snapshot.extensions.filter((extension) => extension.enabled)} littleEverywhere={settings.littleArcShortcut} update={update} open={() => goTo('keyboard/shortcuts')} />
+          <ShortcutsPane bindings={settings.keyBindings} platform={platformOf(snapshot.platform)} extensions={snapshot.extensions.filter((extension) => extension.enabled)} littleEverywhere={settings.littleArcShortcut} update={update} open={() => goTo('keyboard/shortcuts')} />
         </div>
       </Subpage>
     </>

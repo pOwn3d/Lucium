@@ -76,11 +76,11 @@ describe('the tooltips of the toolbar', () => {
 
   it('say the fixed shortcut of « Annoter », which is not one of the Settings', () => {
     expect([...tipsOfWindow()].find(([, keys]) => keys?.join('') === '⌥⌘M')).toBeDefined()
-    expect(toolbarKeys({ annotate: 'CmdOrCtrl+K' }).annotate).toEqual(['⌥', '⌘', 'M'])
+    expect(toolbarKeys({ annotate: 'CmdOrCtrl+K' }, 'darwin').annotate).toEqual(['⌥', '⌘', 'M'])
   })
 
   it('follow the shortcuts in the strip of a split view and on the mark of the zoom', () => {
-    const keys = toolbarKeys({ closeSplitPane: 'Ctrl+Alt+W', zoomReset: 'CmdOrCtrl+Alt+0' })
+    const keys = toolbarKeys({ closeSplitPane: 'Ctrl+Alt+W', zoomReset: 'CmdOrCtrl+Alt+0' }, 'darwin')
     renderToStaticMarkup(createElement(Toolbar, { space, current: tab('a'), runtime, sidebarVisible: true, fullUrl: false, draggable: false, canSplit: false, zoomMark: '125 %', keys, pane: { style: {}, focused: true, onSelect: () => undefined, onClose: () => undefined } }))
     const tips = new Map(holder.tips)
     expect(tips.get('Fermer ce volet')).toEqual(['⌃', '⌥', 'W'])
@@ -96,7 +96,7 @@ describe('the tooltips of the toolbar', () => {
 describe('the bar and a change of shortcut', () => {
   it('is drawn again when the keys of a tooltip change, and not when they are the same', () => {
     const inputs: ToolbarInputs = { space: { profileId: 'default' }, current: undefined, runtime, sidebarVisible: true, fullUrl: false, draggable: false, canSplit: true }
-    expect(sameToolbar({ ...inputs, keys: toolbarKeys({}) }, { ...inputs, keys: toolbarKeys({}) })).toBe(true)
-    expect(sameToolbar({ ...inputs, keys: toolbarKeys({}) }, { ...inputs, keys: toolbarKeys({ back: 'CmdOrCtrl+Alt+Left' }) })).toBe(false)
+    expect(sameToolbar({ ...inputs, keys: toolbarKeys({}, 'darwin') }, { ...inputs, keys: toolbarKeys({}, 'darwin') })).toBe(true)
+    expect(sameToolbar({ ...inputs, keys: toolbarKeys({}, 'darwin') }, { ...inputs, keys: toolbarKeys({ back: 'CmdOrCtrl+Alt+Left' }, 'darwin') })).toBe(false)
   })
 })

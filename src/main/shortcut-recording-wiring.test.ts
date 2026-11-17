@@ -14,12 +14,12 @@ describe('the recording of a shortcut in the Settings', () => {
     expect(pane).not.toContain('acceleratorFromKeyEvent')
     const calls = pane.match(/recordingStep\([^)]*\)/g) ?? []
     expect(calls.length).toBeGreaterThan(0)
-    for (const call of calls) expect(call).toBe('recordingStep(e.nativeEvent, layout.current)')
+    for (const call of calls) expect(call).toBe('recordingStep(e.nativeEvent, platform, layout.current)')
   })
 
   it('gives a shortcut through the rule that refuses the fixed entries of the menus and the shortcuts of the extensions', () => {
     expect(pane).toContain('const taken = [...FIXED_SHORTCUTS, ...extensions.flatMap(extensionMenuCommands)]')
-    expect(pane).toContain('assignShortcut(id, accelerator, bindings, taken)')
+    expect(pane).toContain('assignShortcut(id, accelerator, bindings, taken, platform)')
     // No other way to a saved accelerator: the only binding the pane writes itself is the empty one (the shortcut turned off).
     expect(pane.match(/\.\.\.bindings, \[[a-z.]+\]: (?!'')/g) ?? []).toEqual([])
     const categories = readFileSync(new URL('../renderer/SettingsCategories.tsx', import.meta.url), 'utf8')

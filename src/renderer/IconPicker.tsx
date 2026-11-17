@@ -6,11 +6,12 @@
 // category to the next, shared/grid-nav.ts), Return or Space chooses; Home and End go to the ends.
 
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { getLanguage, t, tp } from '@shared/i18n'
+import { getKeyPlatform, getLanguage, t, tp } from '@shared/i18n'
 import { gridMove, isGridKey } from '@shared/grid-nav'
 import { emojiCategories, isSpaceEmoji, isSpaceMark, searchEmojis, type EmojiEntry } from '@shared/space-emoji'
 import { LETTER_COLORS, cleanIconLetter, pickerModeOfKey, readRecentEmojis, rememberEmoji, type SpaceIconChoice } from '@shared/space-icon'
 import type { SpaceIconKind } from '@shared/model'
+import { commandPress } from '@shared/platform'
 import { SpaceMark } from './SpaceMark'
 import { SearchGlyph } from './templates'
 import './templates/primitives.css'
@@ -96,6 +97,8 @@ interface Group {
 const titleOf = (entry: EmojiEntry): string => (getLanguage() === 'en' ? entry.en : entry.fr).slice(0, 3).join(' · ')
 
 export function IconPicker({ choice, onChange, picture = NO_PICTURE, emojiOnly = false, preview, className }: IconPickerProps) {
+  // The keys of the types are drawn for the system the window runs on (told to the texts with the snapshot); not told, no key is drawn.
+  const platform = getKeyPlatform()
   const [mode, setMode] = useState<SpaceIconKind>(emojiOnly ? 'emoji' : choice.kind)
   const [query, setQuery] = useState('')
   const accepts = emojiOnly ? isSpaceEmoji : isSpaceMark
@@ -393,9 +396,9 @@ export function IconPicker({ choice, onChange, picture = NO_PICTURE, emojiOnly =
           </div>
         )}
 
-        {!emojiOnly && (
+        {!emojiOnly && platform && (
           <p className="ip-keys" aria-hidden="true">
-            <kbd className="tk-kbd">⌘1</kbd> {t('icon-picker.emoji')} <kbd className="tk-kbd">⌘2</kbd> {t('icon-picker.lettre')} <kbd className="tk-kbd">⌘3</kbd> {t('space-image-picker.image')}
+            <kbd className="tk-kbd">{commandPress('1', platform)}</kbd> {t('icon-picker.emoji')} <kbd className="tk-kbd">{commandPress('2', platform)}</kbd> {t('icon-picker.lettre')} <kbd className="tk-kbd">{commandPress('3', platform)}</kbd> {t('space-image-picker.image')}
           </p>
         )}
       </div>

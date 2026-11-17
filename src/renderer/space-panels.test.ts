@@ -5,7 +5,7 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setLanguage } from '@shared/i18n'
+import { setKeyPlatform, setLanguage } from '@shared/i18n'
 import type { SidebarState } from '@shared/model'
 import { createInitialState, reduce, type Action } from '@shared/sidebar'
 import { ALL_EMOJIS, emojiCategories } from '@shared/space-emoji'
@@ -321,7 +321,17 @@ describe('the icon picker', () => {
     for (const label of ['Émoji', 'Lettre', 'Image']) expect(markup).toContain(`>${label}</button>`)
     expect(markup).toContain('type="search"')
     expect((markup.match(/class="ip-grid"[\s\S]*?<\/div>/g) ?? []).join('').match(/tabindex="0"/g)).toHaveLength(1)
-    expect(markup).toContain('⌘1')
+    // The keys of the types are the ones of the system the window runs on, told to the texts with the snapshot: none is drawn before.
+    expect(markup).not.toContain('ip-keys')
+    setKeyPlatform('darwin')
+    try {
+      expect(picker()).toContain('⌘1')
+      setKeyPlatform('linux')
+      expect(picker()).toContain('Ctrl+1')
+      expect(picker()).not.toContain('⌘')
+    } finally {
+      setKeyPlatform(undefined)
+    }
   })
 
   it('shows the emoji of the space as chosen', () => {

@@ -18,8 +18,9 @@ import { relativeAgo } from '@shared/relative-time'
 import { activeTab } from '@shared/sidebar'
 import { spaceGlyph } from '@shared/space-icon'
 import { hostOf } from '@shared/url'
-import { t } from '@shared/i18n'
+import { getKeyPlatform, t } from '@shared/i18n'
 import { api, useSnapshot } from './api'
+import { commandPress } from '@shared/platform'
 import { NoteTextEditor } from './NoteTextEditor'
 import { useActionNotice } from './notice-hold'
 import { TAKES_FILES_ATTRIBUTE } from './surface'
@@ -230,6 +231,8 @@ interface EditorProps {
 }
 
 function NoteEditor({ draft, own, context, spaces, busy, onChange, onCancel, onSave, onOpenLink, files }: EditorProps) {
+  // The key of « Enregistrer » is drawn for the system the window runs on (told to the texts with the snapshot); not told, no key is drawn.
+  const platform = getKeyPlatform()
   // The raw Markdown (« M↓ », « Voir le Markdown »), for this note only.
   const [raw, setRaw] = useState(false)
   const labelId = useId()
@@ -308,7 +311,13 @@ function NoteEditor({ draft, own, context, spaces, busy, onChange, onCancel, onS
           {t('notes.annuler')}
         </button>
         <button type="submit" className="tk-btn primary" disabled={busy || draft.text.trim() === ''} aria-busy={busy ? true : undefined}>
-          {t('notes.enregistrer')} <kbd className="tk-kbd">⌘↩</kbd>
+          {t('notes.enregistrer')}
+          {platform && (
+            <>
+              {' '}
+              <kbd className="tk-kbd">{commandPress('↩', platform)}</kbd>
+            </>
+          )}
         </button>
       </div>
     </form>
