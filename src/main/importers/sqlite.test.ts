@@ -345,6 +345,23 @@ describe('the copies an import cut short left behind', () => {
     }
   })
 
+  it('removes the stale copy of the folder it is given and keeps a recent one, whatever the system and its temporary folder', () => {
+    const scratch = mkdtempSync(join(tmpdir(), 'lucium-sqlite-direct-'))
+    try {
+      const old = (Date.now() - STALE_COPY_MS - 60_000) / 1000
+      const stale = join(scratch, 'lucium-import-Stale2')
+      mkdirSync(stale)
+      writeFileSync(join(stale, 'History'), 'quelques octets')
+      utimesSync(join(stale, 'History'), old, old)
+      utimesSync(stale, old, old)
+      mkdirSync(join(scratch, 'lucium-import-Recent2'))
+      expect(sweepStaleCopies(scratch)).toBe(1)
+      expect(readdirSync(scratch).sort()).toEqual(['lucium-import-Recent2'])
+    } finally {
+      rmSync(scratch, { recursive: true, force: true })
+    }
+  })
+
   it('never throws, for a folder that cannot be listed', () => {
     expect(sweepStaleCopies(join(dir, 'nowhere'))).toBe(0)
   })

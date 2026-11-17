@@ -1,5 +1,6 @@
 // Starts the application built by `electron-vite build`, with a data folder of its own that is removed after the test.
 
+import { spawnSync, type ChildProcess } from 'node:child_process'
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { delimiter, join, resolve } from 'node:path'
@@ -46,6 +47,22 @@ async function interfacePage(app: ElectronApplication): Promise<Page> {
     }
     if (Date.now() > deadline) throw new Error(`the window of the interface did not come in time; pages seen: ${app.windows().map((page) => page.url()).join(', ') || 'none'}`)
     await new Promise((resolve) => setTimeout(resolve, 50))
+  }
+}
+
+/**
+ * Kills the application and what it started. On Windows `kill` ends the main process only: Chromium's helper processes (the network service of a download
+ * in progress) outlive it and hold files of the data folder, which then cannot be removed (EPERM). `taskkill /T` takes the whole tree.
+ */
+function killProcessTree(child: ChildProcess): void {
+  if (process.platform !== 'win32' || child.pid === undefined) {
+    child.kill('SIGKILL')
+    return
+  }
+  const result = spawnSync('taskkill', ['/pid', String(child.pid), '/T', '/F'], { encoding: 'utf8' })
+  if (result.status !== 0) {
+    console.warn(`[e2e] taskkill of the application tree failed (${result.status}): ${result.stderr || result.error?.message || 'no message'}`)
+    child.kill('SIGKILL')
   }
 }
 
@@ -102,7 +119,7 @@ export async function launchLucium(options: string[] | LaunchOptions = {}): Prom
       // An application that already quit (a test may quit it) has nothing to close: that is said, and the steps below see the process gone.
       const quit = app.close().catch((error: unknown) => console.warn('[e2e] the application did not close cleanly:', (error as Error).message))
       const timedOut = await Promise.race([quit.then(() => false), new Promise<boolean>((done) => setTimeout(() => done(true), CLOSE_LIMIT_MS))])
-      if (timedOut && child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
+      if (timedOut && child.exitCode === null && child.signalCode === null) killProcessTree(child)
       // The folder is removed once the process is gone: a process still writing into it makes the removal fail (ENOTEMPTY).
       if (child.exitCode === null && child.signalCode === null) await new Promise<void>((done) => { child.once('exit', () => done()); setTimeout(done, CLOSE_LIMIT_MS) })
       // On Windows a folder cannot be removed while a process that was just killed still holds a file of it (Chromium's helper processes outlive the main one for a

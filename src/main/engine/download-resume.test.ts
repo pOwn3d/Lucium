@@ -432,7 +432,8 @@ describe('the partial file of a record', () => {
 
   it('is refused when the file opened is not the file that was judged', () => {
     const { rec } = partial('a.zip')
-    const swapped: ResumeFs = { ...realResumeFs, fstat: (fd) => ({ ...realResumeFs.fstat(fd), ino: realResumeFs.fstat(fd).ino + 1 }) }
+    // 2 ** 20, not 1: on Windows the file index is a 64-bit number that a JS number cannot hold exactly, and "+ 1" can fall back on the same value.
+    const swapped: ResumeFs = { ...realResumeFs, fstat: (fd) => ({ ...realResumeFs.fstat(fd), ino: realResumeFs.fstat(fd).ino + 2 ** 20 }) }
     expect(inspectPartial(rec, folder, swapped)).toEqual({ place: 'unsafe' })
   })
 
