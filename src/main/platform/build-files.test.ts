@@ -99,10 +99,64 @@ describe('electron-builder.yml', () => {
     expect(config).toMatch(/- target: deb/)
   })
 
+  it('gives the Windows build its own icon, an .ico with every size Windows asks for', () => {
+    expect(config).toMatch(/^win:\n(?: {2}.*\n)*? {2}icon: build\/icon\.ico$/m)
+    const ico = readFileSync(fileURLToPath(new URL('../../../build/icon.ico', import.meta.url)))
+    // ICONDIR: reserved 0, type 1 (icon), number of images; then 16 bytes per image whose first byte is the width (0 stands for 256).
+    expect([ico.readUInt16LE(0), ico.readUInt16LE(2)]).toEqual([0, 1])
+    const sizes = Array.from({ length: ico.readUInt16LE(4) }, (_, i) => ico[6 + i * 16] || 256).sort((a, b) => a - b)
+    expect(sizes).toEqual([16, 24, 32, 48, 64, 128, 256])
+  })
+
   it('makes the two macOS archives per processor and nothing universal', () => {
     expect(config).toMatch(/- target: zip\n {6}arch: \[x64, arm64\]/)
     expect(config).toMatch(/- target: dmg\n {6}arch: \[x64, arm64\]/)
     expect(config).not.toMatch(/universal/)
+  })
+})
+
+describe('build/installer.nsh', () => {
+  const raw = read('build/installer.nsh')
+  const script = raw.split('\n').filter((line) => !line.trimStart().startsWith(';')).join('\n')
+  const macro = (name: string): string => new RegExp(`!macro ${name}\\n([\\s\\S]*?)!macroend`).exec(script)?.[1] ?? ''
+
+  it('exists where electron-builder looks for it, and defines the two macros it calls', () => {
+    expect(macro('customInstall')).not.toBe('')
+    expect(macro('customUnInstall')).not.toBe('')
+  })
+
+  it('lists Lucium as a web browser Windows can offer for http and https, with the command that starts it', () => {
+    const install = macro('customInstall')
+    expect(install).toMatch(/Capabilities\\URLAssociations" "http" "\$\{LUCIUM_URL_PROGID\}"/)
+    expect(install).toMatch(/Capabilities\\URLAssociations" "https" "\$\{LUCIUM_URL_PROGID\}"/)
+    expect(install).toMatch(/Software\\RegisteredApplications" "\$\{PRODUCT_NAME\}" "\$\{LUCIUM_CLIENT_KEY\}\\Capabilities"/)
+    // The address goes after "--" and in quotes: an address that begins with a dash is never read as a switch.
+    expect(install).toContain(`'"$INSTDIR\\\${APP_EXECUTABLE_FILENAME}" -- "%1"'`.replace('\\\$', '\\$'))
+  })
+
+  it('writes under the root of the install (SHELL_CONTEXT), never straight into HKLM or HKCU, and never under HKCR', () => {
+    expect(script).not.toMatch(/\b(HKLM|HKCU|HKCR|HKEY_[A-Z_]+)\b/)
+    const writes = script.split('\n').filter((line) => /^\s*(WriteReg|DeleteReg)/.test(line))
+    expect(writes.length).toBeGreaterThan(10)
+    // The client key is a define that starts with "Software\\" (the first lines of the file).
+    expect(script).toContain('!define LUCIUM_CLIENT_KEY "Software\\')
+    for (const line of writes) expect(line).toMatch(/SHELL_CONTEXT "(?:Software\\|\$\{LUCIUM_CLIENT_KEY\})/)
+  })
+
+  it('removes everything it wrote when the application is uninstalled or updated', () => {
+    const keysOf = (text: string, command: string): string[] => [...text.matchAll(new RegExp(`${command} SHELL_CONTEXT "([^"]+)"`, 'g'))].map((match) => match[1]!)
+    const written = keysOf(macro('customInstall'), 'WriteRegStr')
+    const removed = macro('customUnInstall')
+    const deleted = keysOf(removed, 'DeleteRegKey')
+    expect(written.length).toBeGreaterThan(10)
+    // Every key written is the deleted key or lies under one; the one value in a key that is not ours (RegisteredApplications) is deleted by name.
+    for (const key of written.filter((key) => key !== 'Software\\RegisteredApplications')) expect(deleted.some((gone) => key === gone || key.startsWith(`${gone}\\`)), key).toBe(true)
+    expect(removed).toContain('DeleteRegValue SHELL_CONTEXT "Software\\RegisteredApplications" "${PRODUCT_NAME}"')
+  })
+
+  it('runs no program, opens no window and reads no secret', () => {
+    expect(script).not.toMatch(/\b(Exec|ExecWait|ExecShell|ExecShellWait|nsExec|MessageBox|InetC|NSISdl|inetc)\b/i)
+    expect(script).not.toMatch(/password|token|secret|certificate/i)
   })
 })
 

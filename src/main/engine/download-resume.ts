@@ -39,6 +39,8 @@ import {
   type ResumeRecord
 } from '@shared/download-resume'
 import { suggestedFileName } from '@shared/file-names'
+import type { PlatformId } from '@shared/platform'
+import { currentPlatform } from '../platform'
 import type { DownloadInfo } from '@shared/model'
 import { replaceFileDurably } from '../durable-write'
 import { isInside } from './download-names'
@@ -149,13 +151,13 @@ const digest = (data: Buffer): string => createHash('sha256').update(data).diges
  * Whether `path` is a place this application could have written a download to: below the folder (never the folder itself), written in its
  * plain form (no `..`, no `.`, no doubled slash), and made of names that `suggestedFileName` would leave as they are. No disk access.
  */
-export function lexicalPlace(path: string, folder: string): boolean {
+export function lexicalPlace(path: string, folder: string, platform: PlatformId = currentPlatform().id): boolean {
   if (!isRecordablePath(path)) return false
   const root = resolve(folder)
   if (resolve(path) !== path || path === root || !isInside(root, path)) return false
   return relative(root, path)
     .split(sep)
-    .every((part) => part === suggestedFileName(part))
+    .every((part) => part === suggestedFileName(part, { platform }))
 }
 
 type Place = 'ok' | 'place' | 'unsafe' | 'missing'

@@ -179,8 +179,8 @@ mac:
 # ---- Windows and Linux: PREPARED, NEVER RUN (docs/plateformes.md). Built by .github/workflows/build.yml; nothing is signed, nothing is published. ----
 
 win:
-  # No build/icon.ico yet: electron-builder converts the macOS icon. build/icons/ cannot be used for this (it holds no 16x16.png ... 256x256.png).
-  icon: build/icon.icns
+  # build/icon.ico: the layers 16, 24, 32, 48, 64, 128 and 256 of the same icon as build/icon.icns (taken from its pieces with iconutil, joined with ImageMagick: docs/plateformes.md).
+  icon: build/icon.ico
   target:
     - target: nsis
       arch: [x64]
@@ -191,7 +191,7 @@ nsis:
   perMachine: false
   allowToChangeInstallationDirectory: true
   deleteAppDataOnUninstall: false
-  # Not done: the registry entries that make Lucium selectable as default browser (an installer script, build/installer.nsh).
+  # build/installer.nsh is included by electron-builder by itself (its default `include`): the registry entries that make Lucium selectable as default browser.
 
 linux:
   # No build/icons/NxN.png yet: electron-builder converts the macOS icon (Linux falls back to it by itself, written down here to say so).

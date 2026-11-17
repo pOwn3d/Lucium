@@ -9,7 +9,8 @@ import { frenchSpaces } from '@shared/french-typography'
 const electron = vi.hoisted(() => ({ ipc: new (require('node:events').EventEmitter)(), clipboard: { writeText: vi.fn(async () => undefined) } }))
 vi.mock('electron', () => ({ ipcMain: electron.ipc, clipboard: electron.clipboard }))
 
-const { WebAppWindows } = await import('./web-apps')
+const { WebAppWindows, webAppWindowFrame } = await import('./web-apps')
+const { createPlatform } = await import('../platform')
 const { setLockService } = await import('../lock-service')
 
 interface FakeWindow {
@@ -325,5 +326,15 @@ describe('the windows of the sites opened as applications', () => {
     expect(electron.ipc.listenerCount(Channel.littleAction)).toBe(0)
     expect(t.apps.open(request())).toBeNull()
     expect(t.apps.count()).toBe(0)
+  })
+})
+
+describe('the title bar of an application window', () => {
+  it('keeps the three lights centred on the header on macOS', () => {
+    expect(webAppWindowFrame(createPlatform('darwin'))).toEqual({ titleBarStyle: 'hidden', trafficLightPosition: { x: 12, y: Math.round((WEB_APP_HEADER_HEIGHT - 14) / 2) } })
+  })
+
+  it('leaves the system title bar on Windows and Linux: a hidden bar there would leave the window with no button to close it', () => {
+    for (const id of ['win32', 'linux'] as const) expect(webAppWindowFrame(createPlatform(id))).toEqual({})
   })
 })

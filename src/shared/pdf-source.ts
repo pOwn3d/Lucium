@@ -2,7 +2,7 @@
 // the page's and the template is HTML that Chromium lays out, so what goes into it is escaped; the address shown never carries a
 // password (the part before "@") nor the fragment.
 
-import { suggestedFileName } from './file-names'
+import { suggestedFileName, type FileNameOptions } from './file-names'
 import { escapeHtml } from './html-escape'
 import { getLanguage } from './i18n'
 
@@ -49,9 +49,9 @@ export function pdfPrintOptions(url: unknown, date: Date): { displayHeaderFooter
   return { displayHeaderFooter: true, headerTemplate: PDF_HEADER_TEMPLATE, footerTemplate, printBackground: true, margins: { top: 0.4, bottom: 0.7, left: 0.4, right: 0.4 } }
 }
 
-/** The name proposed for the file: the title of the page, cleaned, with ".pdf" (the title is the page's, so it is cleaned like a download's name). */
-export function pdfFileName(title: unknown): string {
+/** The name proposed for the file: the title of the page, cleaned, with ".pdf" (the title is the page's, so it is cleaned like a download's name, with the rules of `options.platform`). */
+export function pdfFileName(title: unknown, options: FileNameOptions = {}): string {
   // A title is not a path: "AC/DC" must not lose "AC", and macOS shows a ":" of a file name as "/" in the Finder. Both become a dash.
-  const name = suggestedFileName(typeof title === 'string' && title.trim() !== '' ? title.replace(/[/:]/g, '-') : 'page')
+  const name = suggestedFileName(typeof title === 'string' && title.trim() !== '' ? title.replace(/[/:]/g, '-') : 'page', options)
   return /\.pdf$/i.test(name) ? name : `${name}.pdf`
 }

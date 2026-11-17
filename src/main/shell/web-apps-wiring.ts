@@ -2,14 +2,14 @@
 // (after the gates exist, before the automatic update): what it installs comes in the same order as before.
 
 import { BrowserWindow, screen, type WebContents, type WebPreferences } from 'electron'
-import { WEB_APP_HEADER_HEIGHT } from '@shared/ipc'
 import { littleWindowBounds } from '@shared/little-window'
 import type { ElectronEngine } from '../engine/electron-engine'
 import type { WindowView } from '../store'
 import { Browser } from './browser'
 import type { FeatureGates } from './feature-gate'
 import type { Surface } from './surface-load'
-import { WebAppWindows } from './web-apps'
+import { WebAppWindows, webAppWindowFrame } from './web-apps'
+import { currentPlatform } from '../platform'
 
 export interface WebAppsDeps {
   gates: FeatureGates
@@ -51,9 +51,8 @@ export function installWebApps({ gates, engine, store, browser, windows, trusted
             show: false,
             title: request.name,
             backgroundColor: '#17171c',
-            titleBarStyle: 'hidden',
-            // The lights are centred on the header (WEB_APP_HEADER_HEIGHT).
-            trafficLightPosition: { x: 12, y: Math.round((WEB_APP_HEADER_HEIGHT - 14) / 2) },
+            // The lights are centred on the header (WEB_APP_HEADER_HEIGHT); elsewhere the system's title bar stays (the platform layer).
+            ...webAppWindowFrame(currentPlatform()),
             webPreferences
           })
           load(aw.webContents, { page: 'littlearc', query: { id, app: '1' } })

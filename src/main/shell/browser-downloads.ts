@@ -19,6 +19,7 @@ import { addBounded } from '@shared/bounded'
 import { t } from '@shared/i18n'
 import { MAX_DOWNLOADS_KEPT, MEMORY_MAX } from './browser-base'
 import { BrowserPanels } from './browser-panels'
+import { currentPlatform } from '../platform'
 import type { TranslatePage } from '../translate/controller'
 
 export abstract class BrowserDownloads extends BrowserPanels {
@@ -202,7 +203,8 @@ export abstract class BrowserDownloads extends BrowserPanels {
     if (!tab || !page) return
     const options = pdfPrintOptions(tab.url, new Date())
     if (options === null) return this.showToast(t('browser.seules-les-pages-web-peuvent-etre-enregistrees'))
-    const chosen = await downloadUi().chooseSave(this.win, { filename: pdfFileName(tab.title), folder: profileDownloadDir(this.store.get().settings, activeProfileId(this.store.get())) ?? app.getPath('downloads'), url: tab.url })
+    const folder = profileDownloadDir(this.store.get().settings, activeProfileId(this.store.get())) ?? app.getPath('downloads')
+    const chosen = await downloadUi().chooseSave(this.win, { filename: pdfFileName(tab.title, { platform: currentPlatform().id, folder }), folder, url: tab.url })
     if (chosen === null) return
     try {
       await writeFile(chosen, await page.printToPdf(options))
