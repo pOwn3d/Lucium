@@ -27,6 +27,17 @@ const https = (url: unknown): url is string => typeof url === 'string' && /^http
 export const SQUIRREL_VERSION = /^\d+(?:\.\d+){0,3}$/
 
 /**
+ * The version Squirrel.Mac really downloaded, read from the `releaseName` of its `update-downloaded` event: the `name` of the release file,
+ * "Lucium X.Y.Z" (update-feed-file.ts). Read strictly: that exact shape with a version of `SQUIRREL_VERSION` after the name, so that no other text
+ * (a missing name, a blank, a "v", a suffix) is taken for a version. Null when it is not one; the caller says why it falls back.
+ */
+export function downloadedVersion(releaseName: unknown): string | null {
+  if (typeof releaseName !== 'string') return null
+  const version = /^Lucium (\S+)$/.exec(releaseName)?.[1]
+  return version !== undefined && SQUIRREL_VERSION.test(version) ? version : null
+}
+
+/**
  * Squirrel.Mac's release file: `{ currentRelease, releases: [{ version, updateTo: { url, notes, name, pub_date, sha256, size } }] }`. Squirrel
  * reads only the entry whose `version` is exactly `currentRelease`, and downloads its `updateTo.url`; `page` is Lucium's own key (Squirrel
  * ignores it), the page that "Télécharger manuellement" opens. `en: { page, notes }` is Lucium's own as well: what an interface in English

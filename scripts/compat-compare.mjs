@@ -8,6 +8,12 @@
 //   pnpm compat:compare --explained <file>      the checks of the reference that were removed or renamed on purpose, each with its reason
 //                                               ({ "<name of the check>": "<reason>" }): one the run no longer makes is listed with its reason
 //                                               instead of being lost. A check that fails or is skipped is never explained away.
+//   pnpm compat:compare --limits <file>         the suites a GitHub runner cannot pass (compat/runner-limits.json, src/shared/runner-limits.ts) are left out of
+//                                               the reference and of the run before they are compared: only the Smoke (macOS) workflow passes it, the Mac never does.
+//                                               Not with --write: a reference is written from a run that judged every suite
+//   pnpm compat:compare --informational        prints the comparison and exits 0 whatever it lost: the Smoke (macOS) workflow reads it that way on a runner, where
+//                                               the reference of the Mac does not hold (the names of some checks carry the scale of the screen, 2 there and 1 on
+//                                               the runner; the voice of the system is missing) and the verdict of the chain decides. Not with --write
 //   pnpm compat:baseline                        writes compat/baseline-electron-<version of the run>.json from the report: the new reference,
 //                                               to commit once the differences have been read and accepted. It holds what the run made and
 //                                               nothing else: a check of the reference before that the run did not make is not kept.
@@ -24,6 +30,7 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseArgs } from 'node:util'
 import { baselineName, compareReports, latestBaseline, readExplanations, readReport } from '../src/shared/compat-report.ts'
+import { readRunnerLimits, withoutLimitedSuites } from '../src/shared/runner-limits.ts'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -36,10 +43,10 @@ const stop = (message) => {
 let args
 try {
   args = parseArgs({
-    options: { report: { type: 'string' }, baseline: { type: 'string' }, compat: { type: 'string' }, explained: { type: 'string' }, write: { type: 'boolean', default: false } }
+    options: { report: { type: 'string' }, baseline: { type: 'string' }, compat: { type: 'string' }, explained: { type: 'string' }, limits: { type: 'string' }, informational: { type: 'boolean', default: false }, write: { type: 'boolean', default: false } }
   }).values
 } catch (error) {
-  stop(`${error.message}. Options: --report <file>, --baseline <file>, --compat <folder>, --explained <file>, --write`)
+  stop(`${error.message}. Options: --report <file>, --baseline <file>, --compat <folder>, --explained <file>, --limits <file>, --informational, --write`)
 }
 
 const compatDir = resolve(args.compat ?? join(root, 'compat'))
@@ -55,7 +62,10 @@ const readJson = (file, what, read) => {
 }
 const load = (file, what) => readJson(file, what, readReport)
 
-const run = load(reportFile, 'the report')
+if ((args.limits !== undefined || args.informational) && args.write) stop('--limits and --informational cannot go with --write: a reference is written from a run that judged every suite')
+const limitsFile = args.limits === undefined ? null : resolve(args.limits)
+const limits = limitsFile === null ? {} : readJson(limitsFile, 'the limits', readRunnerLimits)
+const run = withoutLimitedSuites(load(reportFile, 'the report'), limits)
 const explanationsFile = args.explained === undefined ? null : resolve(args.explained)
 const explanations = explanationsFile === null ? null : readJson(explanationsFile, 'the explanations', readExplanations)
 const describe = (report) => `Electron ${report.engine.version} (Chromium ${report.engine.chromium}), ${Object.keys(report.suites).length} suite(s), ${Object.values(report.suites).reduce((total, suite) => total + suite.checks.length, 0)} checks`
@@ -67,12 +77,13 @@ const compare = () => {
     if (latest === null) stop(`no reference in ${compatDir} (baseline-electron-<version>.json): pnpm compat:baseline writes one from the report`)
     return join(compatDir, latest)
   })()
-  const reference = load(baselineFile, 'the reference')
+  const reference = withoutLimitedSuites(load(baselineFile, 'the reference'), limits)
 
   console.log(`compat-compare`)
   console.log(`  reference: ${baselineFile}\n             ${describe(reference)}`)
   console.log(`  run:       ${reportFile}\n             ${describe(run)}`)
   if (explanationsFile !== null) console.log(`  explained: ${explanationsFile}, ${Object.keys(explanations).length} check(s)`)
+  if (limitsFile !== null) console.log(`  left out:  ${Object.keys(limits).join(', ') || 'no suite'} (the limits of the runner, ${limitsFile}): they are not compared`)
   if (reference.engine.version !== run.engine.version) {
     console.log(`  The reference is of another version of Electron: the comparison says what changed between the two. Once the differences are accepted, pnpm compat:baseline writes the reference of ${run.engine.version}.`)
   }
@@ -105,4 +116,6 @@ if (args.write) {
   process.exit(0)
 }
 
-process.exit(compare() > 0 ? 1 : 0)
+const lost = compare()
+if (lost > 0 && args.informational) console.log('\nNot an error: this comparison is informational (--informational).')
+process.exit(lost > 0 && !args.informational ? 1 : 0)

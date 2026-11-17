@@ -12,6 +12,7 @@ import {
   PINNED_SETTINGS,
   pollUntil,
   quitCallerOf,
+  readSkips,
   recorderOf,
   reportFact,
   requireProbes,
@@ -648,5 +649,25 @@ describe('a pattern written with ordinary spaces', () => {
     expect(anySpace(/a\ b[ x]c/).source).toBe('a\\ b[ x]c')
     expect(anySpace(/a b/).test('a b')).toBe(true)
     expect(anySpace(/a b/).test('ab')).toBe(false)
+  })
+})
+
+describe('LUCIUM_SMOKE_SKIP, the suites and the parts a run leaves out', () => {
+  const names = ['main', 'sitedata', 'fullscreen', 'guard']
+
+  it('leaves nothing out when it is not set, or empty: the Mac runs the whole chain', () => {
+    for (const value of [undefined, '', '  ', ',,']) expect(readSkips(value, names), String(value)).toEqual({ suites: new Set(), parts: new Set(), unknown: [] })
+  })
+
+  it('reads suites, and parts of the principal suite as main:<part>, with the spaces and the empty entries ignored', () => {
+    const choice = readSkips(' sitedata, main:iso-sidebar ,,fullscreen,main:iso-media', names)
+    expect([...choice.suites]).toEqual(['sitedata', 'fullscreen'])
+    expect([...choice.parts]).toEqual(['iso-sidebar', 'iso-media'])
+    expect(choice.unknown).toEqual([])
+  })
+
+  it('refuses a name that is no suite, and a part with no name: a typing mistake must not run what it was meant to leave out', () => {
+    expect(readSkips('sitedatta,guard,main:,other:iso-sidebar', names).unknown).toEqual(['sitedatta', 'main:', 'other:iso-sidebar'])
+    expect([...readSkips('sitedatta,guard', names).suites]).toEqual(['guard'])
   })
 })

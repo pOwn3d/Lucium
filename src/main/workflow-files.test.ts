@@ -129,17 +129,45 @@ describe('.github/workflows/smoke-macos.yml', () => {
     expect(workflow).toMatch(/pnpm test:engine 2>&1 \| tee out-engine\/engine\.log\n/)
   })
 
-  it('keeps the log of the chain without hiding its exit code behind the pipe', () => {
-    expect(workflow).toMatch(/shell: bash\n {8}run: \|\n {10}set -o pipefail\n {10}mkdir -p out-engine\n {10}pnpm test:engine 2>&1 \| tee out-engine\/engine\.log\n/)
+  it('keeps the log of the chain without hiding its exit code behind the pipe, and writes the code down for the verdict', () => {
+    expect(workflow).toMatch(
+      /- name: Engine checks\n {8}id: chain\n {8}if: \$\{\{ !cancelled\(\) \}\}\n {8}shell: bash\n {8}run: \|\n {10}mkdir -p out-engine\n(?: {10}.*\n)*? {10}set \+e\n {10}pnpm test:engine 2>&1 \| tee out-engine\/engine\.log\n {10}echo "code=\$\{PIPESTATUS\[0\]\}" >> "\$GITHUB_OUTPUT"\n/
+    )
     expect(workflow).toMatch(/uses: actions\/upload-artifact@[0-9a-f]{40} # v[\d.]+\n {8}with:\n {10}name: engine-run\n {10}path: out-engine\/\n/)
   })
 
-  it('runs the suites that need an application of their own, the comparison with the reference and the package, each even when the one before failed', () => {
-    for (const command of ['pnpm compat:compare', 'pnpm test:engine:webstore', 'pnpm test:engine:extwindows', 'pnpm package']) {
-      expect(workflow, command).toContain(`        if: \${{ !cancelled() }}\n        run: ${command}\n`)
-    }
-    // No step may turn a failure into a pass.
-    expect(workflow).not.toMatch(/continue-on-error|\|\| true\n {8}run/)
+  // The suites of compat/runner-limits.json cannot pass on a runner (a window about 675 points tall): the workflow does not run them (LUCIUM_SMOKE_SKIP), they are judged
+  // on the Mac, which reads no list. Any other suite that fails stops this run, and so does a chain that ended badly with no suite to show for it. The comparison with
+  // the reference of a Retina Mac is printed and does not decide on a runner.
+  it('leaves the suites of the limits of the runner out of the chain, lets the verdict decide, and only prints the comparison', () => {
+    expect(workflow).toContain("          LUCIUM_SMOKE_SKIP=\"$(node -p \"Object.keys(require('./compat/runner-limits.json')).join(',')\")\"\n          export LUCIUM_SMOKE_SKIP\n          set +e\n")
+    expect(workflow).toContain(
+      '      - name: Verdict of the chain\n        if: ${{ !cancelled() }}\n        env:\n          CHAIN_CODE: ${{ steps.chain.outputs.code }}\n        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-runner-verdict.mjs --chain-code "$CHAIN_CODE"\n'
+    )
+    // The verdict reads the code of the chain, between the chain and the comparison.
+    expect(workflow.indexOf('id: chain')).toBeLessThan(workflow.indexOf('name: Verdict of the chain'))
+    expect(workflow.indexOf('name: Verdict of the chain')).toBeLessThan(workflow.indexOf('pnpm compat:compare'))
+    expect(workflow).toContain('pnpm compat:compare --limits compat/runner-limits.json --informational\n')
+    // The Mac runs the same chain and the same comparison with no list, no skip and no leniency.
+    const scripts = JSON.parse(read('package.json')).scripts as Record<string, string>
+    for (const name of ['compat:compare', 'compat:baseline', 'test:engine', 'test:engine:release', 'test:engine:all']) expect(scripts[name] ?? '', name).not.toMatch(/limits|informational|SMOKE_SKIP/)
+    expect(read('scripts/engine-release-run.mjs')).not.toMatch(/limits|informational|SMOKE_SKIP/)
+  })
+
+  it('puts the animations back on before the chain: the image of the runner has Reduce motion and Reduce transparency on, a Mac in use does not', () => {
+    const step = /- name: Animations on, as on a Mac in use\n {8}run: \|\n(?<body>(?: {10}.*\n)+)/.exec(workflow)?.groups?.['body'] ?? ''
+    expect(step).toBe(
+      [
+        'pnpm exec electron scripts/runner-facts.cjs',
+        'defaults write com.apple.universalaccess reduceMotion -bool false',
+        'defaults write com.apple.universalaccess reduceTransparency -bool false',
+        'killall cfprefsd || true',
+        'pnpm exec electron scripts/runner-facts.cjs'
+      ]
+        .map((line) => `          ${line}\n`)
+        .join('')
+    )
+    expect(workflow.indexOf('name: Animations on')).toBeLessThan(workflow.indexOf('id: chain'))
   })
 
   it('is the only workflow that runs the chain: ci.yml has no timer and starts nothing that opens a window', () => {
