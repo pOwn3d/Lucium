@@ -167,6 +167,13 @@ Le mode de blocage (Standard ou Strict, réglé dans Réglages › Vie privée e
 | `little-new-tab-links` | Ouvrir en mini-fenêtre les liens qui ouvrent un nouvel onglet | activée | `none` : rien ne tourne pour elle ; au moment où la page demande une fenêtre, le shell lit la disposition (`foreground-tab`) et la liste des options de `window.open` déjà transmises par le moteur | **Nul coupée.** Un clic sur un lien vers un autre site (domaine enregistrable) qui ouvrirait un nouvel onglet l'ouvre dans une mini-fenêtre (`linkWindowDestination`, `shared/little-modifier.ts`). Ne changent pas : ⌘ + clic (onglet en arrière-plan), un lien du même site, une fenêtre de connexion (`window.open` avec une taille, une position ou `popup` reste une popup), une page qui n'est pas web (pages de Lucium), un onglet privé, les fenêtres privées et invitées ; « Coup d'œil pour les liens vers d'autres sites », s'il est activé, garde la main. ⇧⌘-clic donne la même disposition qu'un clic simple et ouvre donc aussi une mini-fenêtre. Coupée : un nouvel onglet ; ⌥⌘-clic (`little-modifier`) reste le moyen d'ouvrir une mini-fenêtre. |
 | `little-download-bubble` | Bulle d'actions après un téléchargement dans une mini-fenêtre | désactivée | `timer` : un `setTimeout` de 12 s par bulle affichée | **Converti** (portail dans `LittleArc`) : coupée, les bulles en cours et leurs minuteries sont retirées, et aucun téléchargement n'en lève plus. |
 
+#### Où s'ouvre la mini-fenêtre
+
+- **Position** : la mini-fenêtre s'ouvre au centre de la zone de travail de l'écran d'où vient le lien. C'est l'écran de la fenêtre qui envoie le lien (clic dans une page, barre de commandes, menu). Pour un lien venu d'une autre application, c'est l'écran où se trouve le pointeur.
+- **Taille** : 55 % × 75 % de la zone de travail, entre 480 × 360 et 900 × 650 px. « Nouvelle mini-fenêtre » (menu Fichier) n'ouvre d'abord que la barre de commandes, elle aussi au centre ; la fenêtre grandit autour de son centre quand une page est choisie.
+- **Au-dessus des autres fenêtres** : elle reste au premier plan, au-dessus des fenêtres normales de toutes les applications (niveau `floating`). Elle reste sous la barre des menus, le Dock et les alertes du système.
+- **Limite** : elle ne passe pas au-dessus d'une application en plein écran, et elle n'apparaît pas sur un autre bureau (espace de travail macOS). Le comportement réel sur ces cas n'a pas encore été mesuré.
+
 ### Données et sauvegardes
 
 | id | Libellé | Défaut | Coût actif | Coupée aujourd'hui |
