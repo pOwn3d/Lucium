@@ -337,8 +337,8 @@ test('site panel: the row of the extensions goes to the line with six of them, e
   for (const scheme of ['light', 'dark'] as const) {
     const { card, row } = await panelWithExtensions(scheme, folders)
     const boxes = await expectTilesApart(card, row)
-    // Six extensions, « + » and the folder: two lines.
-    expect(boxes).toHaveLength(8)
+    // Six extensions, « + », the folder and the button of the Extensions page: nine tiles on two lines.
+    expect(boxes).toHaveLength(9)
     expect(new Set(boxes.map((box) => Math.round(box.y))).size).toBe(2)
     await row.screenshot({ path: test.info().outputPath(`extensions-row-6-${scheme}.png`) })
     await running!.close()

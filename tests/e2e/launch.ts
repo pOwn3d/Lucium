@@ -95,7 +95,11 @@ export async function launchLucium(options: string[] | LaunchOptions = {}): Prom
   const userData = dataDir ?? mkdtempSync(join(tmpdir(), 'lucium-e2e-'))
   // LUCIUM_E2E=1: the blocker downloads no list (src/main/blocking/index.ts); the lists of a test are given as text.
   const env = { ...process.env, LUCIUM_E2E: '1', ...(extensions.length > 0 ? { LUCIUM_EXTENSIONS: extensions.join(delimiter) } : {}) }
-  const app = await electron.launch({ args: ['.', `--user-data-dir=${userData}`, HOST_RULES, ...args], cwd: ROOT, env, ...(colorScheme !== undefined ? { colorScheme } : {}) })
+  // The sandbox of Chromium stays on, as it is for a user. On Linux Playwright adds `--no-sandbox` to every launch of Electron unless asked not to, and Electron's
+  // renderers without the sandbox run no preload script in a service worker (only its sandboxed renderer client does): no extension worker then got the shims
+  // or the APIs of the library, and the extension tests that need a worker failed on Linux alone. The runner of the CI lets the Electron binary create the
+  // sandbox's user namespace with an AppArmor profile (scripts/linux-ci.sh sandbox-profile). A run on macOS is the same either way.
+  const app = await electron.launch({ args: ['.', `--user-data-dir=${userData}`, HOST_RULES, ...args], cwd: ROOT, env, chromiumSandbox: true, ...(colorScheme !== undefined ? { colorScheme } : {}) })
   // Main-process output (the extension library's debug lines with DEBUG set) goes to the test log.
   app.process().stdout?.on('data', (chunk: Buffer) => process.stdout.write(`[app] ${chunk}`))
   app.process().stderr?.on('data', (chunk: Buffer) => process.stderr.write(`[app] ${chunk}`))

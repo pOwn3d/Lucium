@@ -38,3 +38,10 @@ test('the application under test resolves the names of the tests, and no name of
 test('the application under test knows it runs under the end-to-end tests', async () => {
   expect(await running.app.evaluate(() => process.env['LUCIUM_E2E'])).toBe('1')
 })
+
+// The sandbox of Chromium is on under the tests, as for a user. Playwright adds `--no-sandbox` to a launch of Electron on Linux unless `chromiumSandbox` is set
+// (launch.ts); without the sandbox no renderer runs a preload script in a service worker, so no extension worker has the shims and the tests of extensions
+// fail there. Read from the command line of the application itself.
+test('the application under test runs with the sandbox of Chromium', async () => {
+  expect(await running.app.evaluate(({ app }) => app.commandLine.hasSwitch('no-sandbox'))).toBe(false)
+})
