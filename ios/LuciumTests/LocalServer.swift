@@ -4,12 +4,18 @@ import Network
 /// A tiny HTTP server on the loopback interface, for tests that need a real page and real sub-resources: it answers fixed routes and
 /// remembers which paths were asked for, so a test can prove that a blocked request never reached it.
 final class LocalServer: @unchecked Sendable {
-    struct Route { let contentType: String; let body: String }
+    struct Route {
+        let contentType: String
+        let body: String
+        /// A route that takes the request and never answers: a page that is loading for as long as the test needs.
+        static let hang = Route(contentType: "hang", body: "")
+    }
 
     private let listener: NWListener
     private let routes: [String: Route]
     private let lock = NSLock()
     private var asked: [String] = []
+    private var hung: [NWConnection] = []
     private let queue = DispatchQueue(label: "app.lucium.tests.local-server")
 
     init(routes: [String: Route]) throws {
@@ -39,7 +45,10 @@ final class LocalServer: @unchecked Sendable {
         }
     }
 
-    func stop() { listener.cancel() }
+    func stop() {
+        listener.cancel()
+        lock.withLock { hung.forEach { $0.cancel() } }
+    }
 
     private func serve(_ connection: NWConnection) {
         connection.start(queue: queue)
@@ -49,6 +58,10 @@ final class LocalServer: @unchecked Sendable {
             let path = text.split(separator: " ", maxSplits: 2).dropFirst().first.map(String.init) ?? ""
             self.lock.withLock { self.asked.append(path) }
             let route = self.routes[path]
+            if route?.contentType == "hang" {
+                self.lock.withLock { self.hung.append(connection) }
+                return
+            }
             let body = route?.body ?? "not found"
             let head = "HTTP/1.1 \(route == nil ? "404 Not Found" : "200 OK")\r\nContent-Type: \(route?.contentType ?? "text/plain")\r\n"
                 + "Content-Length: \(body.utf8.count)\r\nConnection: close\r\n\r\n"

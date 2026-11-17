@@ -19,7 +19,7 @@
 | Cible minimale | **iOS 26.0**, décidé le 17 novembre 2026 (§2.3). |
 | Identifiant, icônes, fiche | `app.lucium.browser.ios` ; icônes du projet, pas de symboles du système ; fiche de l'App Store en anglais, avec une localisation française (§15). |
 | GPL-3.0 et App Store | **Permission additionnelle accordée** le 17 novembre 2026 (`ADDITIONAL-PERMISSION-APP-STORE.txt`, §9.3). Restent à valider, sans bloquer : la relecture d'un juriste et les licences des listes (§6.5). |
-| Ce qui est prouvé par la maquette | Un projet Xcode se génère, se compile et se teste sur simulateur **sans aucune fenêtre** ; 10 tests XCTest et 7 tests Swift passent ; un blocage réel est prouvé de bout en bout ; la logique du Mac (saisie d'adresse) est tenue par des vecteurs communs (§11). |
+| Ce qui est prouvé par la maquette | Un projet Xcode se génère, se compile et se teste sur simulateur **sans aucune fenêtre** ; 25 tests XCTest et 51 tests Swift passent ; un blocage réel est prouvé de bout en bout ; la logique du Mac (saisie d'adresse) est tenue par des vecteurs communs (§11). |
 
 ## 2. Architecture
 
@@ -41,7 +41,7 @@ Un dépôt séparé ne se justifierait que si l'iPhone avait d'autres contribute
 ios/
   project.yml            description du projet Xcode (XcodeGen) ; Lucium.xcodeproj est généré, non versionné
   Contracts/             fichiers communs au Mac (TypeScript) et à l'iPhone (Swift) : vecteurs d'adresses, état de référence
-  LuciumKit/             paquet Swift : la logique pure (état, adresses, plus tard la synchro) ; testé sur le Mac sans simulateur
+  LuciumKit/             paquet Swift : la logique pure (état et fichier d'état, opérations d'onglets, règle du sommeil, adresses, plus tard la synchro) ; testé sur le Mac sans simulateur
   Lucium/                l'application : SwiftUI, WebKit, textes (Localizable.xcstrings), règles du bloqueur
   LuciumTests/           tests XCTest hébergés dans l'application (simulateur)
 scripts/ios-check.sh     paquet + projet + tests sur simulateur sans fenêtre (+ captures sur demande)
@@ -50,7 +50,7 @@ src/main/ios-state-contract.test.ts   écrit ios/Contracts/state-reference.json 
 ```
 
 - **`LuciumKit`** (Swift Package, sans UIKit ni WebKit) est l'équivalent de `src/shared/` : la logique pure, qui se teste avec `swift test` **sur le Mac lui-même**, en une seconde, sans simulateur. Le format d'état, les règles d'adresse et, plus tard, le protocole et la fusion de la synchronisation y vivent. Règle d'architecture : tout ce qui peut s'écrire sans UIKit ni WebKit va dans `LuciumKit`.
-- **`Lucium`** (cible d'application) : l'interface et ce qui touche WebKit. Un `WKWebView` par espace dans la maquette ; le but final est un `WKWebView` par onglet éveillé (les autres dorment, sans vue).
+- **`Lucium`** (cible d'application) : l'interface et ce qui touche WebKit. Une `WKWebView` **par onglet éveillé** ; les autres dorment, sans vue (§5.1). `BrowserModel` tient l'état et les vues, `TabSleep.swift` le réveil, le sommeil et les vignettes.
 - **XcodeGen** (MIT, déjà installé sur le Mac du mainteneur : `brew install xcodegen`) décrit le projet en 60 lignes (`project.yml`) ; le fichier `.xcodeproj`, qui se fusionne très mal, n'est jamais versionné. C'est un outil de développement : il n'est pas livré avec l'application. L'alternative (un `.xcodeproj` écrit à la main et versionné) a été écartée à cause des conflits de fusion ; un projet Swift Package seul ne sait pas produire une application iOS publiable.
 
 ### 2.3 Cible minimale : iOS 26.0
@@ -70,9 +70,9 @@ L'artefact « Lucium iPhone » a été lu en entier (13 artboards, accessible). 
 | Artboard | Écran de l'application | Dans la maquette de fondation |
 |---|---|---|
 | `C1 · Navigation` | page + barre du bas | **fait** (`BottomBar.swift`) ; manque le rechargement à l'intérieur de la pastille comme sur le dessin (il y est), la barre translucide, le geste « tirer la barre » |
-| `C2 · Onglets de l'espace` | feuille des onglets : espaces, profil, recherche, favoris, épinglés, dossiers, « Aujourd'hui », « Tout archiver » | liste simple des onglets de l'espace (`TabsSheet.swift`) |
+| `C2 · Onglets de l'espace` | feuille des onglets : espaces, profil, recherche, favoris, épinglés, dossiers, « Aujourd'hui », « Tout archiver » | liste des onglets de l'espace avec la vignette où ils ont été laissés, fermeture par balayage (`TabsSheet.swift`, §5.1) ; reste la feuille complète (espaces, recherche, favoris, épinglés, dossiers, « Aujourd'hui », « Tout archiver ») |
 | `Barre de commandes` | recherche : onglets ouverts, « Sur le Mac », favoris, recherche web | **non fait** (carte) ; la saisie d'adresse suit déjà les règles du Mac |
-| `Espaces et profils` | feuille « Espaces » : un profil garde cookies, historique et favoris ; onglet privé ; nouvel espace / profil | profils isolés par `WKWebsiteDataStore(forIdentifier:)` (prouvé) ; pas l'écran |
+| `Espaces et profils` | feuille « Espaces » : un profil garde cookies, historique et favoris ; onglet privé ; nouvel espace / profil | profils isolés par `WKWebsiteDataStore(forIdentifier:)`, identifiant dérivé de l'id du profil (§5.1, prouvé) ; pas l'écran |
 | `Synchronisation` (réglage et état), `Conflit` (conflit réglé), `Reprise` (« Reprendre un onglet du Mac ») | phase 2 | non fait |
 | `iPad · paysage` | barre latérale permanente | non fait |
 | `A1/A2` (tiroir), `B1–B3` (pages et feuille) | approches non retenues | — |
@@ -92,7 +92,7 @@ Légende : **reprise** = même comportement ; **adaptée** = même but, autre mo
 | Espaces (couleur, emoji, thème) | **reprise** (pastilles, `C1`) | cœur du produit ; le thème complet (dégradés) est repris en deux couleurs au départ |
 | Profils (cookies et stockage séparés) | **reprise** | `WKWebsiteDataStore(forIdentifier:)` (iOS 17, prouvé : deux profils, deux magasins) |
 | Onglets, épinglés, dossiers, « Aujourd'hui », archivage automatique | **reprise** (feuille `C2`) | `auto-archive` repris ; dormir = détruire la vue et garder une vignette |
-| Onglets endormis (`sleep`) | **adaptée** | iOS suspend les pages de lui-même ; Lucium détruit la vue d'un onglet inactif et garde une image (`takeSnapshot`) |
+| Onglets endormis (`sleep`) | **adaptée, faite** (§5.1) | iOS suspend les pages de lui-même ; Lucium détruit la vue d'un onglet inactif et garde sa vignette (`takeSnapshot`) et l'état de sa page (`interactionState`) ; règle de `sleep.ts` réduite à ce qui vaut sur un téléphone |
 | Favoris, signets, « À lire plus tard » | **reprise** | données simples, déjà dans l'état |
 | Barre de commandes | **adaptée** (`Commandes`) | écran plein ; mêmes sources (onglets, favoris, historique), pas de mots-clés « ! » en v1 |
 | Vue scindée, vues de travail (`work-views`) | **absente** en v1 | écran trop petit sur iPhone ; **iPad** : vue scindée à étudier plus tard (`Split View` du système existe déjà) |
@@ -154,6 +154,31 @@ Le Mac écrit un état JSON (`src/shared/model.ts`, `SidebarState` : `version` 1
 **Vecteurs de contrat.** Ce qui est écrit deux fois (Mac en TypeScript, iPhone en Swift) est tenu par un **fichier commun** : `ios/Contracts/address-vectors.json` (saisie d'adresse : `resolveInput` et `hostOf`). `src/shared/ios-contract.test.ts` le joue contre le code du Mac, `AddressContractTests` contre le Swift. **Le contrat a déjà servi** : le premier essai du Swift a échoué sur un vecteur (un port dans l'hôte : `example.com:8443`), le Swift a été corrigé. **État de référence** (même principe, fait) : `ios/Contracts/state-reference.json` est un `state.json` **produit par le code du Mac** : `src/main/ios-state-contract.test.ts` fait travailler le vrai `StateStore` (le code qui écrit le fichier) sur un scénario fixe (deux espaces dont un à icône en lettres, onglets épinglés ou non, un onglet à tous ses champs facultatifs, un dossier, une page à lire plus tard) avec des identifiants et une horloge constants. C'est un *snapshot de fichier* de Vitest : écrit quand il manque, **refusé quand il diffère (toujours en CI)**, réécrit par `pnpm exec vitest run src/main/ios-state-contract.test.ts -u`. Un changement du format du Mac apparaît donc **dans la même PR**, comme un changement de ce fichier. Côté Swift, `StateContractTests` (`swift test`, sans simulateur) **lit ce fichier, le réécrit et compare** : (1) chaque champ que le Swift type est celui que le Mac a écrit ; (2) tout le reste (réglages, thèmes, dossiers, champs facultatifs, champ du rédacteur `writtenBy`) est dans `rest` ; (3) la réécriture est identique à l'original, valeur JSON par valeur JSON ; (4) un changement fait sur l'iPhone ne change que son champ. Conséquence voulue : **un champ ajouté côté Mac sans toucher au Swift passe** (il traverse par `rest`), **un champ que le Swift lit et que le Mac renomme, retype ou retire échoue** (le décodeur nomme le champ : `Key 'profileId' not found … spaces[0]`). Écart à surveiller : `URL(string:)` de Swift suit la RFC 3986, `URL.canParse` de JavaScript suit WHATWG (adresses internationales, ports) ; les vecteurs sont le seul arbitre.
 
 Ce que l'iPhone ne garde pas dans l'état : les fenêtres, les panneaux, les Retouches (conservées dans `rest`, jamais exécutées), les fonds vidéo (le champ reste, l'image non) ; ils traversent sans être lus.
+
+### 5.1 Où vit l'état sur l'iPhone, onglets éveillés et endormis
+
+Écrit pour la carte « noyau navigateur ». Ce qui est dit « prouvé » l'est par `swift test` (le paquet, sur le Mac) ou par XCTest (l'application, sur simulateur) ; §11 dit comment, §14 ce qui reste à voir sur un appareil.
+
+**Les fichiers.** Dans `Application Support/Lucium/` du conteneur de l'application : `state.json` (le format du Mac, §5), à côté de lui `state.json.corrupt-<ms>` et `state.json.future-<ms>` quand il a fallu le mettre de côté, et le dossier `tabs/` : un fichier par onglet et par sorte, `<empreinte>.state` (l'état de la page : historique et défilement, tel que WebKit le donne : `WKWebView.interactionState`) et `<empreinte>.jpg` (la vignette). **Le nom est une empreinte SHA-256 de l'identifiant de l'onglet**, jamais l'identifiant : un état venu d'un autre appareil nomme les onglets comme il veut, et un `../` ne doit pas sortir du dossier (prouvé). Ce que le Mac ne connaît pas (ces deux fichiers) n'entre pas dans `state.json`.
+
+**L'écriture (`StateFile`, `LuciumKit`).** Les règles du Mac (`persist.ts`, `store.ts`) :
+
+- une écriture va dans `state.json.tmp`, atteint le disque (`synchronize()`), puis remplace le fichier : un plantage laisse l'ancien ou le nouveau, jamais la moitié d'un (prouvé) ; le fichier temporaire d'une écriture ratée est retiré (prouvé) ;
+- **un fichier illisible n'est jamais supprimé** : abîmé, trop gros (plus de 64 Mio, comme sur le Mac, jamais lu en mémoire) ou sans aucun espace, il devient `.corrupt-<ms>` ; d'une **version supérieure** (`version` > 1), `.future-<ms>` : il n'est pas abîmé, seulement illisible ici, et n'est pas réécrit. Les trois plus récents de chaque sorte sont gardés. L'application repart d'un état neuf et **le dit à la personne** (alerte au lancement, en français et en anglais) ;
+- si le déplacement échoue aussi, le fichier est **retenu** : rien n'est écrit par-dessus tant qu'il ne peut pas être déplacé (prouvé avec un dossier en lecture seule) ;
+- repris du Mac en moins : la copie `version-change` (le fichier de l'iPhone n'est écrit que par l'iPhone jusqu'à la phase 2) et la réparation complète de `normalize`. Ici seuls les **pointeurs** d'un état lu sont remis d'aplomb (l'espace à l'écran existe ; un espace montre un de ses onglets ou aucun) et **rien n'est supprimé** : un onglet d'un espace que cette version ne montre pas est réécrit tel quel.
+
+**Quand.** À chaque changement d'adresse ou de titre d'une page, une demi-seconde après le dernier ; immédiatement à l'entrée en arrière-plan. Un échec d'écriture (état ou fichiers d'onglet) est journalisé avec son contexte et gardé par sorte (`BrowserModel.problem`) : la personne continue de naviguer, et un succès de la même sorte l'efface.
+
+**Les onglets.** Un onglet est une ligne de l'état ; éveillé, il a en plus une `WKWebView` (au plus `SleepPlanner.defaultCap` = 4 à la fois, valeur de départ **à mesurer sur un appareil**). `createdAt` et `lastActiveAt` sont écrits comme le Mac les écrit (millisecondes, entiers) : le Mac range un onglet « Aujourd'hui » d'après `lastActiveAt`. Un onglet sans page est à `about:blank` (l'onglet vierge du Mac) et montre la page de démarrage ; **un espace montre toujours un onglet** (il en reçoit un vierge s'il n'en a pas). Fermer l'onglet à l'écran montre le plus récemment utilisé de l'espace (la règle du Mac pour un onglet vierge fermé).
+
+**Une vue par onglet éveillé.** Chaque vue a le magasin de données du profil de son espace et le bloqueur. **L'identifiant du magasin est dérivé de l'identifiant du profil** (`ProfileStore` : SHA-256, UUID version 8) : rien à garder, le même profil retrouve ses cookies après un redémarrage, une restauration de l'état ou un état venu du Mac, et deux profils n'en partagent jamais un (prouvé). **Aucune vue n'est faite avant que le bloqueur soit prêt** : la maquette de fondation faisait la première vue pendant que le bloqueur se compilait, donc la première page se chargeait sans règles ; corrigé, et prouvé par une page de sonde (la requête bloquée n'atteint pas le serveur dans le premier onglet).
+
+**Le sommeil.** La règle (`SleepPlanner`, pure) : au-delà du plafond, la vue du **moins récemment montré** d'abord ; **jamais** celui qui est à l'écran ; ni un onglet qui charge, qui joue un son ou une vidéo, qui tient la caméra ou le micro, ou marqué « ne jamais mettre en veille » (`keepAwake`) : le plafond peut alors être dépassé plutôt que de couper un appel. À une **alerte mémoire d'iOS**, seul l'onglet à l'écran garde sa vue : une page libérée se recharge, une application tuée non. À l'endormissement, l'état de la page est gardé ; **la vignette est prise quand l'onglet quitte l'écran** (la vue y est encore). Un onglet vierge ne garde rien (sa page est la page de démarrage).
+
+**Le réveil.** La vue est refaite et l'état de la page rendu à WebKit **une seule fois** : le fichier est retiré à la lecture, sinon il vieillirait et, après un plantage, ramènerait une page plus ancienne que l'adresse de l'état. Sans état gardé (ou si WebKit le refuse), c'est l'adresse de l'état qui se charge. **À l'arrière-plan** iOS peut finir l'application sans prévenir : l'état de la page de chaque onglet éveillé, l'état de l'application et la vignette de l'onglet à l'écran sont alors écrits ; au retour, les états gardés pour l'arrière-plan sont retirés. **Au redémarrage** l'espace à l'écran revient, avec l'onglet qu'il montrait ; seul cet onglet est éveillé, les autres dorment (sans vignette tant qu'ils n'ont pas été à l'écran).
+
+**Pas dans cette carte.** Les onglets privés (carte « Espaces et profils »), les épinglés, dossiers, « Aujourd'hui » et l'archivage (carte « barre complète »), le tri des onglets, le gestionnaire de mots de passe. Aucune API « à raison requise » d'Apple n'est appelée (le code lit la taille et le type d'un fichier, pas ses dates) : `PrivacyInfo.xcprivacy` n'a rien à déclarer de plus.
 
 ## 6. Bloqueur de publicités
 
@@ -317,8 +342,8 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 
 | Couche | Outil | Où ça tourne | Fenêtre ? |
 |---|---|---|---|
-| Logique pure (`LuciumKit` : adresses, état) | Swift Testing, `swift test` | le Mac, sans simulateur | non |
-| Application (modèle, WebKit réel, bloqueur, textes) | XCTest hébergé, `xcodebuild test` | simulateur iOS | **non** (démarré par `simctl`, jamais `Simulator.app`) |
+| Logique pure (`LuciumKit` : adresses, état, fichier d'état, onglets, règle du sommeil) | Swift Testing, `swift test` | le Mac, sans simulateur | non |
+| Application (modèle, une vue par onglet, sommeil et réveil, restauration, WebKit réel, bloqueur, textes) | XCTest hébergé, `xcodebuild test` | simulateur iOS | **non** (démarré par `simctl`, jamais `Simulator.app`) |
 | Contrat avec le Mac (vecteurs, état de référence) | Vitest (`ios-contract.test.ts`, `ios-state-contract.test.ts`) puis `swift test` | le Mac, avec `pnpm test` | non |
 | Appareil réel (gestes, PiP, FairPlay, mémoire, énergie) | à la main | iPhone/iPad | — |
 
@@ -336,10 +361,48 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 | L'état de référence suit le Mac | un réglage ajouté à `defaultSettings()` sans réécrire le fichier | `ios-state-contract.test.ts` : « state-reference.json is the state the Mac writes » (diff : `+ "futureSetting"`) ; réécrit avec `-u`, `swift test` **passe** sans toucher au Swift |
 | Le Swift lit les champs que le Mac écrit | `profileId` renommé `profile` dans `createInitialState` (fichier réécrit) | `StateContractTests` : `Key 'profileId' not found … spaces[0]` (6 des 7 tests de l'état) |
 | Le Swift réécrit tout | `BrowserState.encode` n'écrit plus `rest` | `writesTheReferenceBackUnchanged`, `aChangeMadeOnTheIPhoneChangesOnlyItsOwnField` (et `writesBackEverythingItDidNotUnderstand`, déjà là) |
+| *Noyau — paquet (`swift test`, 13 mutations)* | | |
+| Une écriture ne casse pas le fichier | écriture directe dans `state.json`, sans fichier temporaire | `aWriteThatFailsLeavesTheFileAsItWas` |
+| Le fichier temporaire d'une écriture ratée est retiré | `removeTemporary` supprimé | `aFailedWriteRemovesItsTemporaryFile` |
+| Une version supérieure est gardée sous son nom | lue comme `.corrupt` | `aStateOfANewerFormatIsKeptUnderItsOwnNameAndNeverRewritten` |
+| Rien n'est écrit sur un fichier retenu | l'échec du déplacement est ignoré avant d'écrire | `whenTheUnreadableFileCannotBeMovedNothingIsWrittenOverItUntilItCan` |
+| Trois fichiers mis de côté gardés par sorte | plus de nettoyage | `onlyTheThreeMostRecentFilesOfEachSortAreKept` |
+| Un fichier trop gros n'est pas lu | limite de 64 Mio retirée | `aFileLargerThanTheLimitIsNotReadIntoMemory` |
+| Le sommeil épargne l'onglet à l'écran | `isSelected` n'écarte plus | `theLeastRecentlyShownGoFirstAndTheSelectedTabNever` et deux autres |
+| Un onglet qui charge, joue, capture ou `keepAwake` reste | filtre retiré | `aTabThatLoadsPlaysCapturesOrIsKeptAwakeIsSparedEvenOverTheCap` |
+| Fermer l'onglet montré montre le plus récent | `min` au lieu de `max` | `closingTheShownTabShowsTheMostRecentlyUsedOneOfTheSameSpace` |
+| Les pointeurs d'un état lu sont remis d'aplomb | réparation retirée | `consistentPutsRightPointersThatPointAtNothingAndKeepsEveryTab` (une première version du test ne le voyait pas : renforcé) |
+| Un onglet ouvert est daté comme le Mac | `lastActiveAt` non écrit | `openingATabShowsItAndStampsItLikeTheMac` |
+| Un identifiant d'onglet hostile ne sort pas du dossier | nom de fichier = l'identifiant | `aHostileTabIdCannotLeaveTheFolder` |
+| Deux profils n'ont jamais le même magasin | l'identifiant du profil est ignoré | `theSameProfileAlwaysGetsTheSameStoreAndTwoProfilesNeverShareOne` |
+| *Noyau — application (XCTest sur simulateur, 14 mutations)* | | |
+| Aucune vue avant que le bloqueur soit prêt | garde `isReady` retirée | `testNoPageIsMadeBeforeTheBlockerIsReadyAndTheFirstTabHasIt` |
+| L'état de la page est rendu à WebKit | `view.interactionState = saved` retiré | `testASleepingTabWakesWhereItLeftOffWithItsHistory` |
+| L'état gardé ne sert qu'une fois | le fichier n'est plus retiré à la lecture | `testASleepingTabWakesWhereItLeftOffWithItsHistory` |
+| Un verdict de sommeil n'est pas pris avant un `await` | `await` ajouté entre le verdict et l'action (c'était le défaut de la première version : le test l'avait trouvé, un onglet montré entre-temps était libéré) | `testASleepingTabWakesWhereItLeftOffWithItsHistory` |
+| Un onglet vierge ne garde pas d'état de page | garde retirée | `testABlankTabShowsTheStartPageAndKeepsNoPageStateWhenItSleeps` |
+| Fermer un onglet retire ses fichiers | `remove(for:)` retiré | `testClosingATabFreesItsViewAndItsFilesAndShowsAnotherOfTheSpace` |
+| L'alerte mémoire ne laisse que l'onglet à l'écran | `underPressure` ignoré | `testUnderMemoryPressureOnlyTheTabOnScreenKeepsItsView` |
+| Un changement de page est écrit | `scheduleSave` retiré de `pageChanged` | `testAPageUpdatesTheLineOfItsTabAndTheStateFileFollows` |
+| Un état mis de côté est dit à la personne | `startupNoticeShown` jamais levé | `testAStateOfANewerVersionIsKeptUntouchedAndTheApplicationStartsAfresh` |
+| Un échec d'écriture de l'état est gardé | `report` retiré | `testAStateThatCannotBeWrittenIsReportedAndBrowsingGoesOn` |
+| Un échec de garde de l'état d'une page est gardé | `try?` à la place du `catch` | `testAPageStateThatCannotBeKeptIsReportedAndTheTabStillWakesFromItsAddress` |
+| La vignette est prise à la sortie de l'écran | appel retiré de `leaveActiveTab` | `testAPictureOfThePageIsKeptWhenATabLeavesTheScreen` (la vignette est lue : le milieu est rouge, comme la page) |
+| Chaque profil a son magasin | identifiant constant | `testEveryAwakeTabHasItsOwnViewAndEachProfileItsOwnDataStore` |
+| Le plafond de vues est tenu | plafond ignoré | `testTabsBeyondTheCapSleepTheLeastRecentlyShownFirst` |
 
 Le test du bloqueur contient son propre **témoin** : la même page, sans les règles, charge bien les deux scripts (un test qui passe avec et sans la règle ne protège rien).
 
-**Ce que les tests ne prouvent pas** : le comportement sur un vrai iPhone ou iPad (gestes, clavier, mémoire, énergie), iOS 27.0 (installé, non essayé), la lecture protégée, le rendu de l'iPad en paysage (non écrit).
+**Ce que les tests ne prouvent pas** : le comportement sur un vrai iPhone ou iPad (gestes, clavier, mémoire, énergie) ; en particulier, pour le noyau navigateur : le plafond de 4 vues (§5.1) est une valeur de départ, la restauration après une **vraie** fin de l'application par iOS (le test relance un modèle sur les mêmes fichiers, il ne tue pas le processus), l'alerte mémoire réelle (le test appelle la règle, il ne reçoit pas la notification), l'écriture à l'entrée en arrière-plan sous le délai court qu'iOS accorde, et la durée d'une restauration avec beaucoup d'onglets ; iOS 27.0 (installé, non essayé), la lecture protégée, le rendu de l'iPad en paysage (non écrit).
+
+**Essai sur appareil du noyau navigateur : non fait.** Il demande une build signée sur un iPhone ou un iPad, ce qui est une action du mainteneur (§10) ; l'assistant qui a écrit cette carte n'a ni signé ni installé quoi que ce soit. La liste à suivre le jour de l'essai :
+
+1. Ouvrir six onglets sur de vrais sites, puis revenir au premier : il reprend sa page, son défilement et son historique (le bouton retour marche) ; dans la feuille des onglets, la vignette est celle de la page.
+2. Lancer une vidéo dans un onglet, passer à un autre : le son et la vidéo ne sont pas coupés ; avec cinq onglets, c'est un autre, le moins récent, qui dort.
+3. Mettre l'application en arrière-plan, ouvrir d'autres applications lourdes, revenir : l'espace et l'onglet montrés sont les bons, aucune page n'est blanche ; si iOS a fini l'application, les onglets reviennent.
+4. Dans Xcode, simuler une alerte mémoire (Debug › Simulate Memory Warning) : un seul onglet garde sa vue.
+5. Avec quatre vues éveillées sur des sites lourds, lire la mémoire dans Xcode : ajuster `SleepPlanner.defaultCap` (aujourd'hui 4, une valeur de départ).
+6. Passer d'un espace à l'autre : chacun garde ses cookies (deux comptes d'un même site, un par profil).
 
 ## 12. Intégration continue
 
@@ -420,7 +483,7 @@ Un module `src/main/sync/` (écoute TLS, appairage, fusion), une page de Réglag
 
 ## 14. Vérifié, supposé, à valider
 
-**Vérifié** (essayé dans ce dépôt, simulateur iOS 26.5) : un projet XcodeGen + paquet local se génère et se compile pour le simulateur sans signature ; 10 tests XCTest passent ; un `WKWebView` charge une page d'un serveur local en http (**sans exception d'`App Transport Security`** : l'adresse `127.0.0.1` passe) ; une règle de contenu bloque une requête réelle avant qu'elle n'atteigne le serveur ; deux profils ont deux magasins de données ; les textes français et anglais sont dans la build ; la limite de 150 000 règles par liste ; le simulateur se démarre sans `Simulator.app` ; les 29 vecteurs d'adresses donnent le même résultat côté Mac et côté Swift.
+**Vérifié** (essayé dans ce dépôt, simulateur iOS 26.5) : un projet XcodeGen + paquet local se génère et se compile pour le simulateur sans signature ; 25 tests XCTest passent ; un `WKWebView` charge une page d'un serveur local en http (**sans exception d'`App Transport Security`** : l'adresse `127.0.0.1` passe) ; une règle de contenu bloque une requête réelle avant qu'elle n'atteigne le serveur ; deux profils ont deux magasins de données ; les textes français et anglais sont dans la build ; la limite de 150 000 règles par liste ; le simulateur se démarre sans `Simulator.app` ; les 29 vecteurs d'adresses donnent le même résultat côté Mac et côté Swift ; **(noyau navigateur)** un onglet endormi reprend sa page **avec son historique** (`interactionState` rendu à WebKit), un redémarrage ramène les espaces, les onglets et l'historique de l'onglet montré, la vignette d'un onglet qui quitte l'écran est celle de sa page (pas une image vide), un état de version supérieure ou abîmé est mis de côté sans être supprimé ni réécrit, et une écriture qui échoue est dite et n'arrête pas la navigation.
 
 **Lu dans la documentation d'Apple** : les directives de l'App Store citées au §9 (sauf 5.1.1, 5.1.2, 5.2 : résumé) ; les pages `WKContentRuleList`, `WKContentRuleListStore`, `WKWebExtension`, l'entitlement `com.apple.developer.web-browser`, `NSLocalNetworkUsageDescription`, `NSBonjourServices`, l'entitlement multicast, l'aide d'App Store Connect (TestFlight, fiche, rôles, confidentialité).
 
