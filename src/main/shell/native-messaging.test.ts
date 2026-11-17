@@ -75,6 +75,9 @@ beforeEach(() => {
   mkdirSync(chromeDir)
   binary = join(root, 'host-binary')
   writeFileSync(binary, '#!/bin/sh\n')
+  // The application starts the real path of the file (fs.promises.realpath); on Windows the temporary folder may be written with an 8.3 short name
+  // (RUNNER~1) that only the native call expands.
+  binary = realpathSync.native(binary)
   children = []
   spawned = []
   environments = []

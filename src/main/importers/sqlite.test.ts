@@ -242,8 +242,10 @@ describe('files that are not what they claim to be', () => {
 
   it('leaves no copy behind, whether the file is refused after the copy or fails to open', () => {
     const scratch = mkdtempSync(join(tmpdir(), 'lucium-sqlite-scratch-'))
-    const previous = process.env['TMPDIR']
-    process.env['TMPDIR'] = scratch
+    // The folder of temporary files is TMPDIR where there is one, TEMP then TMP on Windows (os.tmpdir()).
+    const names = ['TMPDIR', 'TEMP', 'TMP']
+    const previous = names.map((name) => process.env[name])
+    for (const name of names) process.env[name] = scratch
     try {
       const wrongTables = make('History-nocopy', 'CREATE TABLE notes (id INTEGER);')
       const notDatabase = join(dir, 'History-text')
@@ -252,8 +254,10 @@ describe('files that are not what they claim to be', () => {
       expect(() => readChromiumHistory(notDatabase)).toThrow()
       expect(readdirSync(scratch)).toEqual([])
     } finally {
-      if (previous === undefined) delete process.env['TMPDIR']
-      else process.env['TMPDIR'] = previous
+      names.forEach((name, i) => {
+        if (previous[i] === undefined) delete process.env[name]
+        else process.env[name] = previous[i]
+      })
       rmSync(scratch, { recursive: true, force: true })
     }
   })
