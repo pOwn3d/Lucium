@@ -6,7 +6,8 @@ name: Pull request conventions
 #              (`git commit -s`): the Developer Certificate of Origin 1.1 (https://developercertificate.org), which is how a
 #              contribution enters the project (CONTRIBUTING.md). Merge commits are skipped.
 #   PR title   the title follows Conventional Commits with the types of CONTRIBUTING.md. Pull requests are squash-merged: the title
-#              is the line that lands in the history of main.
+#              is the line that lands in the history of main. One exception, for the pull requests Dependabot opens: it may write
+#              "Bump" with a capital (below).
 #
 # Security: `pull_request`, never `pull_request_target`. The DCO job checks the pull request out to READ its commits (`git rev-list`,
 # `git show`); it installs nothing and runs nothing that comes from the pull request. The title job has no checkout and no permission
@@ -91,11 +92,18 @@ jobs:
       - name: The title follows Conventional Commits
         env:
           TITLE: ${{ github.event.pull_request.title }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
         run: |
           set -euo pipefail
           # The types of CONTRIBUTING.md. An optional scope, `!` for a breaking change, then what changed: lower case first, no final period.
           types='feat|fix|perf|refactor|docs|test|build|ci|chore|revert'
-          pattern="^($types)(\([a-z0-9][a-z0-9._/-]*\))?!?: [^[:space:][:upper:]].*[^[:space:].]\$"
+          first='[^[:space:][:upper:]]'
+          # Dependabot writes "Bump" or "bump" after the prefix of dependabot.yml by the style of the commits it finds in the history (dependabot-core,
+          # pr_name_prefixer.rb: the style of its own last commit, else of the recent ones), and no setting of dependabot.yml fixes it: the first commit of
+          # this repository starts with a capital, and a squashed pull request of Dependabot keeps its title. So a capital is accepted from the bot, the one
+          # place this rule is relaxed; its author is the one GitHub gives (`user.login`), which nobody else can have. All the rest of the form is checked.
+          if [ "${AUTHOR:-}" = 'dependabot[bot]' ]; then first='[^[:space:]]'; fi
+          pattern="^($types)(\([a-z0-9][a-z0-9._/-]*\))?!?: ${first}.*[^[:space:].]\$"
           if [[ "$TITLE" =~ $pattern ]]; then
             echo "The title follows Conventional Commits."
             exit 0

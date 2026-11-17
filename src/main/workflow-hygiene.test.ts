@@ -241,7 +241,7 @@ describe.skipIf(process.platform === 'win32')('the scripts of the workflows, run
   })
 
   describe('pr-conventions.yml, the title', () => {
-    const title = (value: string) => bash(script('pr-conventions.yml', 'title', 'The title follows Conventional Commits'), folder(), { TITLE: value })
+    const title = (value: string, author = 'ada') => bash(script('pr-conventions.yml', 'title', 'The title follows Conventional Commits'), folder(), { TITLE: value, AUTHOR: author })
 
     it('accepts the titles of CONTRIBUTING.md and those Dependabot writes', () => {
       for (const value of [
@@ -277,6 +277,24 @@ describe.skipIf(process.platform === 'win32')('the scripts of the workflows, run
         expect(result.status, value).toBe(1)
         expect(result.out, value).toContain('::error title=PR title::')
         expect(result.out, value).toContain('Types: feat, fix, perf, refactor, docs, test, build, ci, chore, revert.')
+      }
+    })
+
+    it('accepts a capital after the colon from Dependabot only: it styles its titles after the history, and the first commit here has one', () => {
+      // "Bump" with a capital is what Dependabot wrote on its first pull request here (chore(deps-dev): Bump electron from 45.2.1 to 45.2.3).
+      for (const value of ['chore(deps-dev): Bump electron from 45.2.1 to 45.2.3', 'chore(deps): Bump the build-tools group with 3 updates']) {
+        expect(title(value, 'dependabot[bot]').status, value).toBe(0)
+        expect(title(value, 'ada').status, `${value} (a person)`).toBe(1)
+        // The name is compared whole: nobody else is the bot, and a look-alike is not.
+        for (const other of ['dependabot', 'dependabot[bot', 'not-dependabot[bot]', 'Dependabot[bot]', '']) expect(title(value, other).status, `${value} (${other})`).toBe(1)
+      }
+    })
+
+    it('keeps every other rule for Dependabot: the type, the scope, the colon, the space and the final period', () => {
+      for (const value of ['Bump electron from 45.2.1 to 45.2.3', 'chore(deps): Bump electron.', 'chore(deps):Bump electron', 'chore(Deps): Bump electron', 'bump(deps): Bump electron', 'chore(deps):  Bump electron', 'chore(deps): ', '']) {
+        const result = title(value, 'dependabot[bot]')
+        expect(result.status, value).toBe(1)
+        expect(result.out, value).toContain('::error title=PR title::')
       }
     })
 

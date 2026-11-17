@@ -76,6 +76,7 @@ Pull requests from Dependabot are grouped (Electron, tooling, React, GitHub Acti
   4. Put the new version where the old one is named (`extension-patch.test.ts`, the two messages of `ece-router.ts`), then `pnpm install` and `npx vitest run src/main/shell/extension-patch.test.ts`.
   5. Run the engine test (see above): the extensions are what this package carries.
 - **GitHub Actions bump**: pins are commit hashes with the version in a comment; check that the comment and the hash agree.
+- **Title of a Dependabot pull request**: Dependabot styles it after the history (the style of its own last commit, else of the recent ones), and nothing in `dependabot.yml` sets the case of the first word: "Bump" with a capital is possible, and the `PR title` check accepts it from the bot only (`pr-conventions.yml`). The squash commit keeps the title as it is; edit it before merging if you want the lower case.
 
 ## Repository settings to apply once (GitHub)
 
