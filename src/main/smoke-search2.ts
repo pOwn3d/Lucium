@@ -215,7 +215,8 @@ export async function smokeSearch2(ctx: SmokeContext, check: Check): Promise<voi
     check('bangs: typing "!smk " makes the pill of the site, and the row is the search of "hello" in it', (await pill()) === 'Smoke' && list[0]?.label === 'hello' && list[0]?.detail === '— Smoke' && list[0]?.search === true, `${await pill()} ${JSON.stringify(list.slice(0, 2))}`)
     const tabsBefore = state().tabs.length
     await key('Return')
-    check('bangs: Enter opens it in a new tab', (await waitFor(() => state().tabs.length === tabsBefore + 1 && state().tabs.at(-1)?.url === `${base}/q?term=hello`)) && hitsOf('/q') >= 1, `${state().tabs.at(-1)?.url} hits ${hitsOf('/q')}`)
+    // The tab is in the state as soon as it is opened; the server is asked a moment later, and a slow machine (a GitHub runner) is asked later still: wait for the request too.
+    check('bangs: Enter opens it in a new tab', (await waitFor(() => state().tabs.length === tabsBefore + 1 && state().tabs.at(-1)?.url === `${base}/q?term=hello`)) && (await waitFor(() => hitsOf('/q') >= 1)), `${state().tabs.at(-1)?.url} hits ${hitsOf('/q')}`)
     mine.push(state().tabs.at(-1)!.id)
     // The whole text at once (a paste, or a bar opened with a text): no pill, and the search of the site takes the place of the web search.
     await openBar('!smk hello', true)

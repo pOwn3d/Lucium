@@ -90,15 +90,33 @@ export async function smokeSleep({ browser, store, win }: SmokeContext, check: C
     await waitFor(() => tabs().find((t) => t.id === tab.id)?.title.startsWith('sl ') === true)
     return tab.id
   }
-  /** Lets the delay pass (it is a few milliseconds here), then sweeps. */
+  /**
+   * The two answers that are the state of a slow machine and not a rule that keeps the tab awake: its page is still loading ("loading", a page that was just
+   * made when its tab woke), or has not yet answered the question the sweep puts to it ("unchecked"). The product is right to wait in both cases; a check that
+   * asks 150 ms after the wake is not. Measured on a GitHub runner: the blocker was "loading" with `runtime.loading` true, and "unchecked" with the machine busy.
+   */
+  const SETTLING = new Set<string | null>(['loading', 'unchecked'])
+  const SETTLE_WITHIN_MS = 20_000
+  /** The blocker of a tab, asked again while it is only that: until the page is loaded and answers, or after `SETTLE_WITHIN_MS` (the check then says what it saw). */
+  const blockerOf = async (id: string) => {
+    const deadline = Date.now() + SETTLE_WITHIN_MS
+    let blocker = await browser.sleepBlockerOf(id)
+    while (SETTLING.has(blocker) && Date.now() < deadline) {
+      await sleep(250)
+      blocker = await browser.sleepBlockerOf(id)
+    }
+    return blocker
+  }
+  /** Lets the delay pass (it is a few milliseconds here), waits for the pages of the checks to be loaded and to answer, then sweeps. */
   const sweep = async (): Promise<string[]> => {
     await sleep(200)
+    for (const id of mine) if (live(id)) await blockerOf(id)
     return browser.sleepSweep()
   }
   /** Why the delay would leave the tab awake once its idle time has passed, or null when it would put it to sleep. */
   const why = async (id: string) => {
     await sleep(150)
-    return browser.sleepBlockerOf(id)
+    return blockerOf(id)
   }
   const menu = (id: string) => menuItems({ kind: 'tab', id }, browser, store, win, { headers: true })
   const entry = (id: string, label: string) => menu(id).find((i) => i.label === label)
@@ -155,9 +173,12 @@ export async function smokeSleep({ browser, store, win }: SmokeContext, check: C
     // No wait: the setting and the selection are in the state as soon as they are dispatched, and the questions below are asked of it.
     check('with the delay set to "never", nothing sleeps', (await why(a)) === 'disabled' && (await browser.sleepSweep()).length === 0 && live(a))
     browser.dispatch({ type: 'settings/update', patch: { sleepAfterMinutes: 30 } })
-    check('with a long delay, a tab left a moment ago stays awake', (await why(a)) === 'recent' && (await browser.sleepSweep()).length === 0 && live(a))
+    const longWhy = await why(a)
+    const longSwept = await browser.sleepSweep()
+    check('with a long delay, a tab left a moment ago stays awake', longWhy === 'recent' && longSwept.length === 0 && live(a), JSON.stringify({ why: longWhy, swept: longSwept, live: live(a), runtime: runtimeOf(a) }))
     browser.dispatch({ type: 'settings/update', patch: { sleepAfterMinutes: 0.001 } })
-    check('and sleeps once the delay is short (control)', (await sweep()).includes(a))
+    const controlSwept = await sweep()
+    check('and sleeps once the delay is short (control)', controlSwept.includes(a), JSON.stringify({ swept: controlSwept, runtime: runtimeOf(a) }))
   })
 
   await section('the mark on a tab, from its menu', async () => {
