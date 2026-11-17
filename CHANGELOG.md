@@ -8,6 +8,12 @@ How to keep it: every pull request that a user would notice adds a line to the t
 
 The “Nouveautés” sheet of the application shows the section of its version, from [CHANGELOG.fr.md](CHANGELOG.fr.md) when the interface is in French: every line added here is added there too, in French, with the same bold title then a colon.
 
+## [Unreleased]
+
+### Added
+
+- **Links dropped on a window**: a link dragged from another application (a mail, a document, a terminal) onto a Lucium window opens in a new tab, in the Space on show. Only http and https addresses with no user name or password open, ten at most; a notice says how many were left out.
+
 ## [1.1.2] - 2026-11-17
 
 The sign-in on accounts.google.com and accounts.youtube.com no longer stays on a blank page after a redirect, as it could in 1.1.1.

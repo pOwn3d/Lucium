@@ -85,6 +85,8 @@ export interface LuciumApi {
   pathOfDroppedFile(file: File): string
   /** Opens files of the disk (the paths of a drop) in tabs of the main window. The main process checks every path again, and tells what it left out. */
   openLocalFiles(paths: string[]): void
+  /** The text of a link another application dropped on the window (`text/uri-list` or `text/plain`), sent as it came. The main process reads it again and opens the web addresses in it in new tabs, whatever the window sent. */
+  openDroppedLinks(text: string): void
   /** Uninstalls an extension of the Web Store from one profile, after the main process has asked the user to confirm. */
   extensionUninstall(profileId: string, extensionId: string): void
   /**

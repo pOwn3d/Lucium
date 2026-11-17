@@ -2,6 +2,12 @@
 
 Les changements visibles de Lucium, en français. C'est ce texte que la feuille « Nouveautés » de l'application montre quand l'interface est en français ; la référence est [CHANGELOG.md](CHANGELOG.md), en anglais, publié avec chaque version. Chaque ligne ajoutée là-bas est ajoutée ici, avec le même titre en gras suivi de deux-points.
 
+## [Unreleased]
+
+### Ajouts
+
+- **Liens déposés sur une fenêtre** : un lien glissé d’une autre application (un message, un document, un terminal) sur une fenêtre de Lucium s’ouvre dans un nouvel onglet, dans l’espace affiché. Seules les adresses http et https sans nom ni mot de passe s’ouvrent, dix au plus ; une notification dit combien ont été laissées de côté.
+
 ## [1.1.2] - 2026-11-17
 
 La connexion sur accounts.google.com et accounts.youtube.com ne reste plus sur une page blanche après une redirection, comme elle le pouvait dans la 1.1.1.
