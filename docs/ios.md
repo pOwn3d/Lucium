@@ -40,12 +40,13 @@ Un dépôt séparé ne se justifierait que si l'iPhone avait d'autres contribute
 ```
 ios/
   project.yml            description du projet Xcode (XcodeGen) ; Lucium.xcodeproj est généré, non versionné
-  Contracts/             vecteurs communs au Mac (TypeScript) et à l'iPhone (Swift)
+  Contracts/             fichiers communs au Mac (TypeScript) et à l'iPhone (Swift) : vecteurs d'adresses, état de référence
   LuciumKit/             paquet Swift : la logique pure (état, adresses, plus tard la synchro) ; testé sur le Mac sans simulateur
   Lucium/                l'application : SwiftUI, WebKit, textes (Localizable.xcstrings), règles du bloqueur
   LuciumTests/           tests XCTest hébergés dans l'application (simulateur)
 scripts/ios-check.sh     paquet + projet + tests sur simulateur sans fenêtre (+ captures sur demande)
 src/shared/ios-contract.test.ts   vecteurs d'adresses face au code du Mac ; catalogue de textes ; pas de couleur écrite
+src/main/ios-state-contract.test.ts   écrit ios/Contracts/state-reference.json depuis le code du Mac (le `StateStore` qui écrit state.json)
 ```
 
 - **`LuciumKit`** (Swift Package, sans UIKit ni WebKit) est l'équivalent de `src/shared/` : la logique pure, qui se teste avec `swift test` **sur le Mac lui-même**, en une seconde, sans simulateur. Le format d'état, les règles d'adresse et, plus tard, le protocole et la fusion de la synchronisation y vivent. Règle d'architecture : tout ce qui peut s'écrire sans UIKit ni WebKit va dans `LuciumKit`.
@@ -150,7 +151,7 @@ Le Mac écrit un état JSON (`src/shared/model.ts`, `SidebarState` : `version` 1
 2. **Rien de ce que l'on ne comprend pas n'est perdu.** Chaque structure garde le reste dans `rest` (un dictionnaire de valeurs JSON) et le réécrit tel quel : un thème, un réglage, un champ qu'une révision plus récente du Mac ajoute. C'est la règle des « champs étrangers » du Mac (`store.ts`). Testé : un état est lu, réécrit, et comparé champ à champ à l'original.
 3. **Version inconnue : on n'écrit pas.** Un fichier de `version` supérieure à `BrowserState.supportedVersion` est refusé (`StateError.newerVersion`), jamais réécrit : c'est la règle `.future-<heure>` de `persist.ts`. `revision` (`STATE_REVISION`) ne change pas la lecture : un champ ajouté n'exige que sa valeur par défaut.
 
-**Vecteurs de contrat.** Ce qui est écrit deux fois (Mac en TypeScript, iPhone en Swift) est tenu par un **fichier commun** : `ios/Contracts/address-vectors.json` (saisie d'adresse : `resolveInput` et `hostOf`). `src/shared/ios-contract.test.ts` le joue contre le code du Mac, `AddressContractTests` contre le Swift. **Le contrat a déjà servi** : le premier essai du Swift a échoué sur un vecteur (un port dans l'hôte : `example.com:8443`), le Swift a été corrigé. À étendre au même principe : un **état de référence produit par le code du Mac** (`defaultState` sérialisé par un test Vitest dans `ios/Contracts/`), que les tests Swift lisent et réécrivent. Écart à surveiller : `URL(string:)` de Swift suit la RFC 3986, `URL.canParse` de JavaScript suit WHATWG (adresses internationales, ports) ; les vecteurs sont le seul arbitre.
+**Vecteurs de contrat.** Ce qui est écrit deux fois (Mac en TypeScript, iPhone en Swift) est tenu par un **fichier commun** : `ios/Contracts/address-vectors.json` (saisie d'adresse : `resolveInput` et `hostOf`). `src/shared/ios-contract.test.ts` le joue contre le code du Mac, `AddressContractTests` contre le Swift. **Le contrat a déjà servi** : le premier essai du Swift a échoué sur un vecteur (un port dans l'hôte : `example.com:8443`), le Swift a été corrigé. **État de référence** (même principe, fait) : `ios/Contracts/state-reference.json` est un `state.json` **produit par le code du Mac** : `src/main/ios-state-contract.test.ts` fait travailler le vrai `StateStore` (le code qui écrit le fichier) sur un scénario fixe (deux espaces dont un à icône en lettres, onglets épinglés ou non, un onglet à tous ses champs facultatifs, un dossier, une page à lire plus tard) avec des identifiants et une horloge constants. C'est un *snapshot de fichier* de Vitest : écrit quand il manque, **refusé quand il diffère (toujours en CI)**, réécrit par `pnpm exec vitest run src/main/ios-state-contract.test.ts -u`. Un changement du format du Mac apparaît donc **dans la même PR**, comme un changement de ce fichier. Côté Swift, `StateContractTests` (`swift test`, sans simulateur) **lit ce fichier, le réécrit et compare** : (1) chaque champ que le Swift type est celui que le Mac a écrit ; (2) tout le reste (réglages, thèmes, dossiers, champs facultatifs, champ du rédacteur `writtenBy`) est dans `rest` ; (3) la réécriture est identique à l'original, valeur JSON par valeur JSON ; (4) un changement fait sur l'iPhone ne change que son champ. Conséquence voulue : **un champ ajouté côté Mac sans toucher au Swift passe** (il traverse par `rest`), **un champ que le Swift lit et que le Mac renomme, retype ou retire échoue** (le décodeur nomme le champ : `Key 'profileId' not found … spaces[0]`). Écart à surveiller : `URL(string:)` de Swift suit la RFC 3986, `URL.canParse` de JavaScript suit WHATWG (adresses internationales, ports) ; les vecteurs sont le seul arbitre.
 
 Ce que l'iPhone ne garde pas dans l'état : les fenêtres, les panneaux, les Retouches (conservées dans `rest`, jamais exécutées), les fonds vidéo (le champ reste, l'image non) ; ils traversent sans être lus.
 
@@ -318,7 +319,7 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 |---|---|---|---|
 | Logique pure (`LuciumKit` : adresses, état) | Swift Testing, `swift test` | le Mac, sans simulateur | non |
 | Application (modèle, WebKit réel, bloqueur, textes) | XCTest hébergé, `xcodebuild test` | simulateur iOS | **non** (démarré par `simctl`, jamais `Simulator.app`) |
-| Contrat avec le Mac | Vitest (`ios-contract.test.ts`) | le Mac, avec `pnpm test` | non |
+| Contrat avec le Mac (vecteurs, état de référence) | Vitest (`ios-contract.test.ts`, `ios-state-contract.test.ts`) puis `swift test` | le Mac, avec `pnpm test` | non |
 | Appareil réel (gestes, PiP, FairPlay, mémoire, énergie) | à la main | iPhone/iPad | — |
 
 **Commande** : `scripts/ios-check.sh [dossier de captures]` : lance les tests du paquet, génère le projet, **crée un simulateur dédié (`Lucium-iOS-Check`), le démarre en tâche de fond (`xcrun simctl boot`, `bootstatus -b`), lance `xcodebuild test`**, prend au besoin la capture (`xcrun simctl io <id> screenshot`) et **éteint puis supprime le simulateur**. C'est **lourd** (plusieurs minutes, une grande part du processeur, environ 250 processus de simulateur) : à dire avant de le lancer sur une machine utilisée, à lancer avec `nice -n 15`, **un seul à la fois**, à éteindre aussitôt (`xcrun simctl shutdown all`). Il ne démarre jamais `Simulator.app`, ne signe rien, n'envoie rien. Les simulateurs déjà présents sur le Mac du mainteneur ne sont pas touchés.
@@ -332,6 +333,9 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 | Le port d'un hôte (contrat) | `host(of:)` sans le port (état du premier essai) | `hostMatchesTheVectors` : `example.com` au lieu de `example.com:8443` |
 | Le catalogue en français | le texte français de `bar.back` remplacé par l'anglais | `ios-contract.test.ts` : « bar.back has a translated text… » |
 | Un vecteur d'adresse | `example.com:8443` → `example.com` côté Mac | `hostOf(https://example.com:8443/x)` |
+| L'état de référence suit le Mac | un réglage ajouté à `defaultSettings()` sans réécrire le fichier | `ios-state-contract.test.ts` : « state-reference.json is the state the Mac writes » (diff : `+ "futureSetting"`) ; réécrit avec `-u`, `swift test` **passe** sans toucher au Swift |
+| Le Swift lit les champs que le Mac écrit | `profileId` renommé `profile` dans `createInitialState` (fichier réécrit) | `StateContractTests` : `Key 'profileId' not found … spaces[0]` (6 des 7 tests de l'état) |
+| Le Swift réécrit tout | `BrowserState.encode` n'écrit plus `rest` | `writesTheReferenceBackUnchanged`, `aChangeMadeOnTheIPhoneChangesOnlyItsOwnField` (et `writesBackEverythingItDidNotUnderstand`, déjà là) |
 
 Le test du bloqueur contient son propre **témoin** : la même page, sans les règles, charge bien les deux scripts (un test qui passe avec et sans la règle ne protège rien).
 
