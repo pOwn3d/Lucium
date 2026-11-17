@@ -120,6 +120,7 @@ extension BrowserModel {
     /// Back on screen, the pages that are awake are the truth again: the state kept for the background would restore an older page after a crash.
     func didBecomeActive() {
         for id in webViews.keys { sideStore?.remove(.interaction, for: id) }
+        sweepIdleTabs()
     }
 
     // MARK: Pictures

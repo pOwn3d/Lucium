@@ -29,3 +29,23 @@ final class LocalizationTests: XCTestCase {
         XCTAssertTrue(page.contains("Lucium pour iPhone"))
     }
 }
+
+/// A count is one key with a text for each plural form: the system picks the one a language needs (French reads 0 as one, English as many).
+final class PluralLocalizationTests: XCTestCase {
+    private func bundle(_ language: String) throws -> Bundle {
+        let path = try XCTUnwrap(Bundle.main.path(forResource: language, ofType: "lproj"), "\(language).lproj is missing from the application")
+        return try XCTUnwrap(Bundle(path: path))
+    }
+
+    func testACountIsReadInTheFormTheLanguageNeeds() throws {
+        let english = try bundle("en")
+        let french = try bundle("fr")
+        // The rule of the plural is the one of the locale given, not the one of the device the test runs on.
+        let en = Locale(identifier: "en"), fr = Locale(identifier: "fr")
+        func tabs(_ count: Int, _ bundle: Bundle, _ locale: Locale) -> String { String(localized: "folder.tabs \(count)", bundle: bundle, locale: locale) }
+        XCTAssertEqual([0, 1, 2].map { tabs($0, english, en) }, ["0 tabs", "1 tab", "2 tabs"])
+        XCTAssertEqual([0, 1, 2].map { tabs($0, french, fr) }, ["0 onglet", "1 onglet", "2 onglets"])
+        XCTAssertEqual(String(localized: "tabs.search.results \(1)", bundle: french, locale: fr), "1 résultat")
+        XCTAssertEqual(String(localized: "archive.count \(3)", bundle: english, locale: en), "3 tabs")
+    }
+}

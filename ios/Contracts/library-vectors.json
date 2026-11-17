@@ -1,0 +1,1809 @@
+{
+ "comment": "Scenarios shared by the Mac (src/shared/ios-library-contract.test.ts, against the reducer) and the iPhone (LuciumKit, LibraryVectorTests). Each is a minimal state, an action of the Mac's reducer and what must hold after it; only the keys an expectation names are compared. Written by scripts of the tests, never by hand: change a rule on one side and the other side fails.",
+ "scenarios": [
+  {
+   "name": "pin: a Today tab goes to the end of the pinned list of its space and keeps its address as its anchor",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true
+     },
+     {
+      "id": "p2",
+      "spaceId": "s1",
+      "pinned": true
+     },
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "t2",
+      "spaceId": "s1"
+     },
+     {
+      "id": "t3",
+      "spaceId": "s1"
+     },
+     {
+      "id": "o1",
+      "spaceId": "s2"
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/pin",
+    "id": "t2"
+   },
+   "expect": {
+    "pinned": {
+     "s1": [
+      "p1",
+      "p2",
+      "t2"
+     ],
+     "s2": []
+    },
+    "today": {
+     "s1": [
+      "t1",
+      "t3"
+     ],
+     "s2": [
+      "o1"
+     ]
+    },
+    "anchorOf": {
+     "t2": "https://t2.example/"
+    }
+   }
+  },
+  {
+   "name": "pin: the first pinned tab of a space",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "t2",
+      "spaceId": "s1"
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/pin",
+    "id": "t1"
+   },
+   "expect": {
+    "pinned": {
+     "s1": [
+      "t1"
+     ]
+    },
+    "today": {
+     "s1": [
+      "t2"
+     ]
+    }
+   }
+  },
+  {
+   "name": "pin: a tab that is pinned already stays where it is, with the anchor it had",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true,
+      "url": "https://moved.example/"
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/pin",
+    "id": "p1"
+   },
+   "expect": {
+    "pinned": {
+     "s1": [
+      "p1"
+     ]
+    }
+   }
+  },
+  {
+   "name": "unpin: the tab becomes the first Today tab and loses its anchor and its folder",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true,
+      "folderId": "f1"
+     },
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "t2",
+      "spaceId": "s1"
+     }
+    ],
+    "folders": [
+     {
+      "id": "f1",
+      "spaceId": "s1"
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/unpin",
+    "id": "p1"
+   },
+   "expect": {
+    "pinned": {
+     "s1": []
+    },
+    "today": {
+     "s1": [
+      "p1",
+      "t1",
+      "t2"
+     ]
+    },
+    "folderOf": {
+     "p1": null
+    },
+    "anchorOf": {
+     "p1": null
+    }
+   }
+  },
+  {
+   "name": "move: a Today tab dropped in a folder is pinned there, at the end of the pinned list",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true
+     },
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "t2",
+      "spaceId": "s1"
+     }
+    ],
+    "folders": [
+     {
+      "id": "f1",
+      "spaceId": "s1"
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/move",
+    "id": "t1",
+    "toIndex": 999999,
+    "pinned": true,
+    "folderId": "f1"
+   },
+   "expect": {
+    "pinned": {
+     "s1": [
+      "p1",
+      "t1"
+     ]
+    },
+    "today": {
+     "s1": [
+      "t2"
+     ]
+    },
+    "folderOf": {
+     "t1": "f1",
+     "p1": null
+    },
+    "anchorOf": {
+     "t1": "https://t1.example/"
+    }
+   }
+  },
+  {
+   "name": "move: a folder of another space puts the tab at the root of the pinned list",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     }
+    ],
+    "folders": [
+     {
+      "id": "other",
+      "spaceId": "s2"
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/move",
+    "id": "t1",
+    "toIndex": 999999,
+    "pinned": true,
+    "folderId": "other"
+   },
+   "expect": {
+    "pinned": {
+     "s1": [
+      "t1"
+     ]
+    },
+    "folderOf": {
+     "t1": null
+    }
+   }
+  },
+  {
+   "name": "move: out of a folder to the root of the pinned list",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true,
+      "folderId": "f1"
+     }
+    ],
+    "folders": [
+     {
+      "id": "f1",
+      "spaceId": "s1"
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/move",
+    "id": "p1",
+    "toIndex": 999999,
+    "pinned": true
+   },
+   "expect": {
+    "pinned": {
+     "s1": [
+      "p1"
+     ]
+    },
+    "folderOf": {
+     "p1": null
+    }
+   }
+  },
+  {
+   "name": "folder/delete: what was inside moves up to the parent folder",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true,
+      "folderId": "f1"
+     },
+     {
+      "id": "p2",
+      "spaceId": "s1",
+      "pinned": true,
+      "folderId": "f0"
+     }
+    ],
+    "folders": [
+     {
+      "id": "f0",
+      "spaceId": "s1"
+     },
+     {
+      "id": "f1",
+      "spaceId": "s1",
+      "parentId": "f0"
+     },
+     {
+      "id": "f2",
+      "spaceId": "s1",
+      "parentId": "f1"
+     }
+    ]
+   },
+   "action": {
+    "type": "folder/delete",
+    "id": "f1"
+   },
+   "expect": {
+    "folders": [
+     {
+      "id": "f0",
+      "parentId": null
+     },
+     {
+      "id": "f2",
+      "parentId": "f0"
+     }
+    ],
+    "folderOf": {
+     "p1": "f0",
+     "p2": "f0"
+    }
+   }
+  },
+  {
+   "name": "folder/delete: what was inside a root folder goes to the root of the pinned list",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true,
+      "folderId": "f1"
+     }
+    ],
+    "folders": [
+     {
+      "id": "f1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "f2",
+      "spaceId": "s1",
+      "parentId": "f1"
+     }
+    ]
+   },
+   "action": {
+    "type": "folder/delete",
+    "id": "f1"
+   },
+   "expect": {
+    "folders": [
+     {
+      "id": "f2",
+      "parentId": null
+     }
+    ],
+    "folderOf": {
+     "p1": null
+    }
+   }
+  },
+  {
+   "name": "folder/create: a folder at the root of a space",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": []
+   },
+   "action": {
+    "type": "folder/create",
+    "name": "Reading",
+    "spaceId": "s2"
+   },
+   "expect": {
+    "folders": [
+     {
+      "id": "new-1",
+      "parentId": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "folder/create: a folder inside another while a level is left",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [],
+    "folders": [
+     {
+      "id": "f1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "f2",
+      "spaceId": "s1",
+      "parentId": "f1"
+     },
+     {
+      "id": "f3",
+      "spaceId": "s1",
+      "parentId": "f2"
+     }
+    ]
+   },
+   "action": {
+    "type": "folder/create",
+    "name": "Deeper",
+    "parentId": "f3"
+   },
+   "expect": {
+    "folders": [
+     {
+      "id": "f1",
+      "parentId": null
+     },
+     {
+      "id": "f2",
+      "parentId": "f1"
+     },
+     {
+      "id": "f3",
+      "parentId": "f2"
+     },
+     {
+      "id": "new-1",
+      "parentId": "f3"
+     }
+    ]
+   }
+  },
+  {
+   "name": "folder/create: a fifth level is refused",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [],
+    "folders": [
+     {
+      "id": "f1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "f2",
+      "spaceId": "s1",
+      "parentId": "f1"
+     },
+     {
+      "id": "f3",
+      "spaceId": "s1",
+      "parentId": "f2"
+     },
+     {
+      "id": "f4",
+      "spaceId": "s1",
+      "parentId": "f3"
+     }
+    ]
+   },
+   "action": {
+    "type": "folder/create",
+    "name": "Too deep",
+    "parentId": "f4"
+   },
+   "expect": {
+    "folders": [
+     {
+      "id": "f1",
+      "parentId": null
+     },
+     {
+      "id": "f2",
+      "parentId": "f1"
+     },
+     {
+      "id": "f3",
+      "parentId": "f2"
+     },
+     {
+      "id": "f4",
+      "parentId": "f3"
+     }
+    ]
+   }
+  },
+  {
+   "name": "folder/rename: a blank name keeps the old one",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [],
+    "folders": [
+     {
+      "id": "f1",
+      "spaceId": "s1"
+     }
+    ]
+   },
+   "action": {
+    "type": "folder/rename",
+    "id": "f1",
+    "name": "   "
+   },
+   "expect": {
+    "folders": [
+     {
+      "id": "f1",
+      "parentId": null
+     }
+    ]
+   }
+  },
+  {
+   "name": "today/clear: the Today tabs go to the archive, last first; the tab on screen and the pinned ones stay",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": "t2",
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true
+     },
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "t2",
+      "spaceId": "s1"
+     },
+     {
+      "id": "t3",
+      "spaceId": "s1"
+     }
+    ]
+   },
+   "action": {
+    "type": "today/clear"
+   },
+   "expect": {
+    "pinned": {
+     "s1": [
+      "p1"
+     ]
+    },
+    "today": {
+     "s1": [
+      "t2"
+     ]
+    },
+    "archive": [
+     "t3",
+     "t1"
+    ],
+    "shown": {
+     "s1": "t2"
+    }
+   }
+  },
+  {
+   "name": "today/clear: the other space is not touched",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": "t1",
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "o1",
+      "spaceId": "s2"
+     }
+    ]
+   },
+   "action": {
+    "type": "today/clear",
+    "spaceId": "s2"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "t1"
+     ],
+     "s2": []
+    },
+    "archive": [
+     "o1"
+    ]
+   }
+  },
+  {
+   "name": "tab/archive: a Today tab goes to the newest place of the archive, above what was there",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "t2",
+      "spaceId": "s1"
+     }
+    ],
+    "archive": [
+     {
+      "id": "a0",
+      "spaceId": "s1",
+      "url": "https://a0.example/",
+      "title": "A0",
+      "archivedAt": 1789982000000
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/archive",
+    "id": "t1"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "t2"
+     ]
+    },
+    "archive": [
+     "t1",
+     "a0"
+    ]
+   }
+  },
+  {
+   "name": "tab/remove-pinned: a pinned tab is archived and the entry remembers its folder",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true,
+      "folderId": "f1"
+     }
+    ],
+    "folders": [
+     {
+      "id": "f1",
+      "spaceId": "s1"
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/remove-pinned",
+    "id": "p1"
+   },
+   "expect": {
+    "pinned": {
+     "s1": []
+    },
+    "archive": [
+     "p1"
+    ]
+   }
+  },
+  {
+   "name": "tab/archive: an id already in the archive is replaced, not repeated",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     }
+    ],
+    "archive": [
+     {
+      "id": "t1",
+      "spaceId": "s1",
+      "url": "https://old.example/",
+      "title": "Old",
+      "archivedAt": 1789967600000
+     },
+     {
+      "id": "a9",
+      "spaceId": "s1",
+      "url": "https://a9.example/",
+      "title": "A9",
+      "archivedAt": 1789964000000
+     }
+    ]
+   },
+   "action": {
+    "type": "tab/archive",
+    "id": "t1"
+   },
+   "expect": {
+    "archive": [
+     "t1",
+     "a9"
+    ]
+   }
+  },
+  {
+   "name": "archive/sweep: each profile has its own delay, and what is pinned or the page of a favourite is never swept",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "idle-work",
+      "spaceId": "s1",
+      "lastActiveAt": 1789992800000
+     },
+     {
+      "id": "fresh-work",
+      "spaceId": "s1",
+      "lastActiveAt": 1789998200000
+     },
+     {
+      "id": "idle-home-2h",
+      "spaceId": "s2",
+      "lastActiveAt": 1789992800000
+     },
+     {
+      "id": "idle-home-20h",
+      "spaceId": "s2",
+      "lastActiveAt": 1789928000000
+     },
+     {
+      "id": "pinned-idle",
+      "spaceId": "s1",
+      "pinned": true,
+      "lastActiveAt": 1789640000000
+     },
+     {
+      "id": "fav-page-idle",
+      "spaceId": "s1",
+      "lastActiveAt": 1789640000000,
+      "favoriteId": "fav1"
+     }
+    ],
+    "favorites": [
+     {
+      "id": "fav1",
+      "url": "https://fav.example/",
+      "title": "Fav",
+      "profileId": "work"
+     }
+    ],
+    "settings": {
+     "autoArchiveHours": 12,
+     "profiles": {
+      "work": {
+       "autoArchiveHours": 1
+      }
+     }
+    }
+   },
+   "action": {
+    "type": "archive/sweep"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "fresh-work"
+     ],
+     "s2": [
+      "idle-home-2h"
+     ]
+    },
+    "pinned": {
+     "s1": [
+      "pinned-idle"
+     ]
+    },
+    "archive": [
+     "idle-home-20h",
+     "idle-work"
+    ],
+    "favoriteOf": {
+     "fav-page-idle": "fav1"
+    }
+   }
+  },
+  {
+   "name": "archive/sweep: the tab each space shows is not idle, whatever its date says",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": "shown",
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "shown",
+      "spaceId": "s1",
+      "lastActiveAt": 1789640000000
+     },
+     {
+      "id": "other",
+      "spaceId": "s1",
+      "lastActiveAt": 1789640000000
+     }
+    ]
+   },
+   "action": {
+    "type": "archive/sweep"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "shown"
+     ]
+    },
+    "archive": [
+     "other"
+    ]
+   }
+  },
+  {
+   "name": "archive/sweep: a delay of 0 turns the archive off for the profile",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "idle",
+      "spaceId": "s1",
+      "lastActiveAt": 1786400000000
+     }
+    ],
+    "settings": {
+     "autoArchiveHours": 12,
+     "profiles": {
+      "work": {
+       "autoArchiveHours": 0
+      }
+     }
+    }
+   },
+   "action": {
+    "type": "archive/sweep"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "idle"
+     ]
+    },
+    "archive": []
+   }
+  },
+  {
+   "name": "archive/sweep: without settings of its own the Mac's 12 hours apply",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "idle-13h",
+      "spaceId": "s1",
+      "lastActiveAt": 1789953200000
+     },
+     {
+      "id": "idle-11h",
+      "spaceId": "s1",
+      "lastActiveAt": 1789960400000
+     }
+    ]
+   },
+   "action": {
+    "type": "archive/sweep"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "idle-11h"
+     ]
+    },
+    "archive": [
+     "idle-13h"
+    ]
+   }
+  },
+  {
+   "name": "archive/restore: a Today tab comes back as a new tab, shown, with the title it had",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     }
+    ],
+    "archive": [
+     {
+      "id": "a1",
+      "spaceId": "s1",
+      "url": "https://back.example/",
+      "title": "Back again",
+      "archivedAt": 1789996400000
+     }
+    ]
+   },
+   "action": {
+    "type": "archive/restore",
+    "id": "a1"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "t1",
+      "new-1"
+     ]
+    },
+    "archive": [],
+    "titleOf": {
+     "new-1": "Back again"
+    },
+    "shown": {
+     "s1": "new-1"
+    }
+   }
+  },
+  {
+   "name": "archive/restore: a pinned tab comes back pinned, at its anchor, in its folder",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "p1",
+      "spaceId": "s1",
+      "pinned": true
+     }
+    ],
+    "folders": [
+     {
+      "id": "f1",
+      "spaceId": "s1"
+     }
+    ],
+    "archive": [
+     {
+      "id": "a1",
+      "spaceId": "s1",
+      "url": "https://page.example/deep",
+      "title": "Deep",
+      "archivedAt": 1789996400000,
+      "pinned": true,
+      "anchorUrl": "https://page.example/",
+      "folderId": "f1"
+     }
+    ]
+   },
+   "action": {
+    "type": "archive/restore",
+    "id": "a1"
+   },
+   "expect": {
+    "pinned": {
+     "s1": [
+      "p1",
+      "new-1"
+     ]
+    },
+    "archive": [],
+    "folderOf": {
+     "new-1": "f1"
+    },
+    "anchorOf": {
+     "new-1": "https://page.example/"
+    }
+   }
+  },
+  {
+   "name": "archive/restore: a folder that is gone puts the pinned tab at the root of the pinned list",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [],
+    "archive": [
+     {
+      "id": "a1",
+      "spaceId": "s1",
+      "url": "https://page.example/",
+      "title": "P",
+      "archivedAt": 1789996400000,
+      "pinned": true,
+      "folderId": "gone"
+     }
+    ]
+   },
+   "action": {
+    "type": "archive/restore",
+    "id": "a1"
+   },
+   "expect": {
+    "pinned": {
+     "s1": [
+      "new-1"
+     ]
+    },
+    "folderOf": {
+     "new-1": null
+    }
+   }
+  },
+  {
+   "name": "archive/restore: a space that is gone opens the tab in the one on screen",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [],
+    "archive": [
+     {
+      "id": "a1",
+      "spaceId": "gone",
+      "url": "https://page.example/",
+      "title": "P",
+      "archivedAt": 1789996400000
+     }
+    ]
+   },
+   "action": {
+    "type": "archive/restore",
+    "id": "a1"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "new-1"
+     ],
+     "s2": []
+    },
+    "archive": []
+   }
+  },
+  {
+   "name": "archive/restore: an address that cannot be loaded stays in the archive",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [],
+    "archive": [
+     {
+      "id": "a1",
+      "spaceId": "s1",
+      "url": "javascript:alert(1)",
+      "title": "Bad",
+      "archivedAt": 1789996400000
+     }
+    ]
+   },
+   "action": {
+    "type": "archive/restore",
+    "id": "a1"
+   },
+   "expect": {
+    "archive": [
+     "a1"
+    ],
+    "today": {
+     "s1": []
+    }
+   }
+  },
+  {
+   "name": "favorite/add: kept for the profile of the space, in its order",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [],
+    "favorites": [
+     {
+      "id": "x",
+      "url": "https://one.example/",
+      "title": "One",
+      "profileId": "work"
+     }
+    ]
+   },
+   "action": {
+    "type": "favorite/add",
+    "url": "https://two.example/",
+    "title": "Two",
+    "spaceId": "s1"
+   },
+   "expect": {
+    "favorites": [
+     "https://one.example/@work",
+     "https://two.example/@work"
+    ]
+   }
+  },
+  {
+   "name": "favorite/add: the same address twice in a profile is refused, in another profile it is its own favourite",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [],
+    "favorites": [
+     {
+      "id": "x",
+      "url": "https://one.example/",
+      "title": "One",
+      "profileId": "work"
+     }
+    ]
+   },
+   "action": {
+    "type": "favorite/add",
+    "url": "https://one.example/",
+    "title": "One",
+    "spaceId": "s2"
+   },
+   "expect": {
+    "favorites": [
+     "https://one.example/@work",
+     "https://one.example/@home"
+    ]
+   }
+  },
+  {
+   "name": "favorite/add: an address that cannot be loaded is no favourite",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": []
+   },
+   "action": {
+    "type": "favorite/add",
+    "url": "javascript:alert(1)",
+    "title": "Bad",
+    "spaceId": "s1"
+   },
+   "expect": {
+    "favorites": []
+   }
+  },
+  {
+   "name": "favorite/open: its page opens as a tab that no list shows, marked as the favourite's",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     }
+    ],
+    "favorites": [
+     {
+      "id": "fav1",
+      "url": "https://fav.example/",
+      "title": "Fav",
+      "profileId": "work"
+     }
+    ]
+   },
+   "action": {
+    "type": "favorite/open",
+    "id": "fav1",
+    "spaceId": "s1"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "t1"
+     ]
+    },
+    "favoriteOf": {
+     "new-1": "fav1"
+    },
+    "shown": {
+     "s1": "new-1"
+    }
+   }
+  },
+  {
+   "name": "favorite/open: the page that is open is shown again, not opened twice",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     },
+     {
+      "id": "fp",
+      "spaceId": "s1",
+      "favoriteId": "fav1"
+     }
+    ],
+    "favorites": [
+     {
+      "id": "fav1",
+      "url": "https://fav.example/",
+      "title": "Fav",
+      "profileId": "work"
+     }
+    ]
+   },
+   "action": {
+    "type": "favorite/open",
+    "id": "fav1",
+    "spaceId": "s1"
+   },
+   "expect": {
+    "shown": {
+     "s1": "fp"
+    },
+    "favoriteOf": {
+     "fp": "fav1"
+    }
+   }
+  },
+  {
+   "name": "favorite/open: a favourite of another profile is not opened here",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "t1",
+      "spaceId": "s1"
+     }
+    ],
+    "favorites": [
+     {
+      "id": "fav1",
+      "url": "https://fav.example/",
+      "title": "Fav",
+      "profileId": "home"
+     }
+    ]
+   },
+   "action": {
+    "type": "favorite/open",
+    "id": "fav1",
+    "spaceId": "s1"
+   },
+   "expect": {
+    "today": {
+     "s1": [
+      "t1"
+     ]
+    },
+    "favoriteOf": {
+     "t1": null
+    }
+   }
+  },
+  {
+   "name": "favorite/remove: the tab that was its page becomes an ordinary Today tab",
+   "now": 1790000000000,
+   "state": {
+    "spaces": [
+     {
+      "id": "s1",
+      "profileId": "work"
+     },
+     {
+      "id": "s2",
+      "profileId": "home"
+     }
+    ],
+    "activeSpaceId": "s1",
+    "activeTabBySpace": {
+     "s1": null,
+     "s2": null
+    },
+    "tabs": [
+     {
+      "id": "fp",
+      "spaceId": "s1",
+      "favoriteId": "fav1"
+     }
+    ],
+    "favorites": [
+     {
+      "id": "fav1",
+      "url": "https://fav.example/",
+      "title": "Fav",
+      "profileId": "work"
+     }
+    ]
+   },
+   "action": {
+    "type": "favorite/remove",
+    "id": "fav1"
+   },
+   "expect": {
+    "favorites": [],
+    "today": {
+     "s1": [
+      "fp"
+     ]
+    },
+    "favoriteOf": {
+     "fp": null
+    }
+   }
+  }
+ ]
+}

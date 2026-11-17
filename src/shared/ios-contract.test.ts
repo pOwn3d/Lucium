@@ -82,30 +82,51 @@ describe('iOS contract: the pages the YouTube rules apply to', () => {
 })
 
 // The string catalogue of the iOS application: the same rules as src/shared/i18n.test.ts, for a file Xcode reads.
+interface StringUnit {
+  state: string
+  value: string
+}
+interface Localization {
+  stringUnit?: StringUnit
+  /** A count: one text per plural form (`one`, `other`), the way Xcode keeps them. */
+  variations?: { plural?: Record<string, { stringUnit?: StringUnit }> }
+}
 interface Catalogue {
   sourceLanguage: string
-  strings: Record<string, { localizations?: Record<string, { stringUnit?: { state: string; value: string } }> }>
+  strings: Record<string, { localizations?: Record<string, Localization> }>
 }
 
 const IOS_SOURCES = join(__dirname, '../../ios/Lucium')
 const catalogue = JSON.parse(readFileSync(join(IOS_SOURCES, 'Localizable.xcstrings'), 'utf8')) as Catalogue
-// Dotted words of the Swift sources that are not text: SF Symbol names and the identifier of the rule list.
-const NOT_TEXT = new Set(['arrow.clockwise', 'chevron.backward', 'chevron.forward', 'square.on.square', 'app.lucium.builtin'])
+// Dotted words of the Swift sources that are not text: the identifier of the rule list.
+const NOT_TEXT = new Set(['app.lucium.builtin'])
 const placeholders = (text: string): string[] => (text.match(/%(\d+\$)?(@|d|lld|f|s)/g) ?? []).sort()
+/** A text of a localization: the one text, or the texts of the plural forms by form (a number is `%lld` in the catalogue and `\(n)` in the code). */
+const textsOf = (localization: Localization | undefined): Record<string, StringUnit | undefined> =>
+  localization?.stringUnit
+    ? { text: localization.stringUnit }
+    : Object.fromEntries(Object.entries(localization?.variations?.plural ?? {}).map(([form, variation]) => [form, variation.stringUnit]))
 
 describe('iOS contract: string catalogue', () => {
   const keys = Object.keys(catalogue.strings)
 
   it.each(keys)('%s has a translated text in French and in English, with the same placeholders', (key) => {
-    const en = catalogue.strings[key]?.localizations?.en?.stringUnit
-    const fr = catalogue.strings[key]?.localizations?.fr?.stringUnit
-    expect(en?.state, `${key}: English`).toBe('translated')
-    expect(fr?.state, `${key}: French`).toBe('translated')
-    expect(en?.value.trim(), `${key}: English is empty`).toBeTruthy()
-    expect(fr?.value.trim(), `${key}: French is empty`).toBeTruthy()
-    expect(placeholders(fr!.value), `${key}: placeholders differ`).toEqual(placeholders(en!.value))
-    // French is not English left in place.
-    expect(fr!.value, `${key}: the French text is the English one`).not.toBe(en!.value)
+    const en = textsOf(catalogue.strings[key]?.localizations?.en)
+    const fr = textsOf(catalogue.strings[key]?.localizations?.fr)
+    const forms = Object.keys(en)
+    expect(forms.length, `${key}: English has no text`).toBeGreaterThan(0)
+    // Both languages say the same forms. A count has at least `one` and `other`: the system picks the one a language needs (French reads 0 as one).
+    expect(Object.keys(fr).sort(), `${key}: the forms differ`).toEqual([...forms].sort())
+    if (forms.some((form) => form !== 'text')) expect(forms, `${key}: a count needs one and other`).toEqual(expect.arrayContaining(['one', 'other']))
+    for (const form of forms) {
+      expect(en[form]?.state, `${key}.${form}: English`).toBe('translated')
+      expect(fr[form]?.state, `${key}.${form}: French`).toBe('translated')
+      expect(en[form]?.value.trim(), `${key}.${form}: English is empty`).toBeTruthy()
+      expect(fr[form]?.value.trim(), `${key}.${form}: French is empty`).toBeTruthy()
+      expect(placeholders(fr[form]!.value), `${key}.${form}: placeholders differ`).toEqual(placeholders(en[form]!.value))
+    }
+    // French is not English left in place (one form of a count may be the same word: "%lld" alone would be; the whole key is what is compared).
+    expect(forms.some((form) => fr[form]!.value !== en[form]!.value), `${key}: the French text is the English one`).toBe(true)
   })
 
   it('has no key the code does not read, and the code reads no key that is missing', () => {
@@ -117,8 +138,10 @@ describe('iOS contract: string catalogue', () => {
     const used = new Set(
       [...swift.matchAll(/"([a-z]+(?:\.[a-z-]+)+(?: \\\([^)]*\))*)"/g)].map((m) => m[1]!.replace(/\\\([^)]*\)/g, '%@')).filter((key) => !NOT_TEXT.has(key))
     )
-    expect([...used].filter((key) => !keys.includes(key)).sort()).toEqual([])
-    expect(keys.filter((key) => !used.has(key)).sort()).toEqual([])
+    // The code writes a number as `\(n)`, which the catalogue keeps as `%lld`: both are one placeholder here.
+    const known = new Set(keys.map((key) => key.replace(/%lld/g, '%@')))
+    expect([...used].filter((key) => !known.has(key)).sort()).toEqual([])
+    expect([...known].filter((key) => !used.has(key)).sort()).toEqual([])
   })
 
   it('writes no colour of its own in the Swift sources: system colours and the asset catalogue only', () => {
@@ -152,3 +175,34 @@ describe('iOS contract: lock', () => {
     expect(readFileSync(join(IOS_SOURCES, '../project.yml'), 'utf8')).toMatch(/INFOPLIST_KEY_NSFaceIDUsageDescription: "[^"]{10,}"/)
   })
 })
+
+describe('iOS contract: icons of the project', () => {
+  const read = (name: string) => readFileSync(join(IOS_SOURCES, name), 'utf8')
+  const sources = readdirSync(IOS_SOURCES).filter((name) => name.endsWith('.swift'))
+  const icons = join(IOS_SOURCES, 'Assets.xcassets/Icons')
+  const drawn = readdirSync(icons).filter((name) => name.endsWith('.imageset'))
+
+  it('uses no symbol of the system: the icons are the project\'s (decision of 17 November 2026)', () => {
+    for (const name of sources) expect(read(name), name).not.toMatch(/systemName\s*:|Image\(systemImage|Label\([^)]*systemImage/)
+  })
+
+  it('has every icon the code names, drawn on a grid of 20 px as a template image', () => {
+    const swift = sources.map(read).join('\n')
+    // Two ways of naming a drawing, one folder: `icon-back` (the bar, the sheets) and `IconPlus` (the screens of the spaces, `ProjectIcon`).
+    const named = [...swift.matchAll(/"(icon-[a-z-]+|Icon[A-Z][A-Za-z]+)"/g)].map((match) => match[1]!)
+    expect(named.length).toBeGreaterThan(15)
+    expect(new Set(named.filter((name) => !drawn.includes(`${name}.imageset`))), 'icons named and not drawn').toEqual(new Set())
+    expect(drawn.map((name) => name.replace('.imageset', '')).filter((name) => !named.includes(name)), 'icons drawn and never used').toEqual([])
+    for (const set of drawn) {
+      const name = set.replace('.imageset', '')
+      const svg = readFileSync(join(icons, set, `${name}.svg`), 'utf8')
+      expect(svg, name).toContain('viewBox="0 0 20 20"')
+      expect(svg, name).toMatch(/stroke-width="(1\.5|2)"/)
+      const contents = JSON.parse(readFileSync(join(icons, set, 'Contents.json'), 'utf8')) as { properties?: Record<string, unknown> }
+      // A template image takes the colour of the text around it: no colour is written in a drawing.
+      expect(contents.properties?.['template-rendering-intent'], name).toBe('template')
+      expect(contents.properties?.['preserves-vector-representation'], name).toBe(true)
+    }
+  })
+})
+

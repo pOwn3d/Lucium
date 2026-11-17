@@ -18,6 +18,8 @@ final class BrowserModel {
     var spacesSheetShown = false
     /// The site "Clear this site's data" was asked for, until the person answers (`SiteDataFlow`).
     var siteDataAsked: String?
+    /// The full-screen command bar (mockup `Commandes`): opened by the address pill.
+    var commandBarShown = false
     var addressText = ""
     private(set) var host = ""
     private(set) var canGoBack = false
@@ -33,6 +35,10 @@ final class BrowserModel {
     /// How the state file was read at launch. A file that was set aside or held is told to the person once (`startupNoticeShown`).
     let startup: StateLoad
     var startupNoticeShown: Bool
+
+    /// How many entries of the folders, the favourites and the archive of the saved state do not read, by list: they are left out of the screen and
+    /// lost when that list is next written (the Mac's own repair drops the same ones). Empty when every entry reads; logged when the model is made.
+    let unreadableLibraryEntries: [String: Int]
 
     /// What could not be written, by sort: the state file, the state of a page, the picture of a tab. A sort is cleared by its next success.
     enum StorageKind: Hashable { case state, pageState, picture }
@@ -81,7 +87,9 @@ final class BrowserModel {
          embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
          pageGuard makePageGuard: @escaping @MainActor (ScriptletTable) throws -> PageGuard? = { table in try PageGuard.load(table: table) },
          store: WKContentRuleListStore = .default()) {
-        self.state = state.consistent() ?? Self.defaultState()
+        let initial = state.consistent() ?? Self.defaultState()
+        self.state = initial
+        unreadableLibraryEntries = initial.unreadableLibraryEntries
         self.stateFile = stateFile
         self.sideStore = sideStore
         self.startup = startup
@@ -94,6 +102,9 @@ final class BrowserModel {
         switch startup {
         case .setAside, .held: startupNoticeShown = true
         case .fresh, .loaded: startupNoticeShown = false
+        }
+        if !unreadableLibraryEntries.isEmpty {
+            print("[state] entries that do not read, left out and lost when their list is next written: \(unreadableLibraryEntries.sorted { $0.key < $1.key })")
         }
         ensureActiveTab()
         navigationPolicy.model = self
@@ -145,6 +156,8 @@ final class BrowserModel {
         sideStore?.prune(keeping: state.tabs.map(\.id))
         isReady = true
         if let tab = activeTab { syncFrom(wake(tab)) }
+        // A tab left idle for longer than the delay of its profile is archived when the application starts, and again each time it comes back.
+        sweepIdleTabs()
     }
 
     /// The page guard and its rules, made before the first web view like the blocker is: a page that starts before it would run without it.
@@ -167,8 +180,8 @@ final class BrowserModel {
     }
 
     /// The request an address field text stands for: an address, or a search (the same rules as the Mac, `AddressResolver`).
-    static func request(for text: String) -> URLRequest? {
-        guard let resolved = AddressResolver.resolve(text) else { return nil }
+    static func request(for text: String, searchTemplate: String = AddressResolver.defaultSearchTemplate) -> URLRequest? {
+        guard let resolved = AddressResolver.resolve(text, searchTemplate: searchTemplate) else { return nil }
         switch resolved {
         case .url(let address), .search(let address): return URL(string: address).map { URLRequest(url: $0) }
         }

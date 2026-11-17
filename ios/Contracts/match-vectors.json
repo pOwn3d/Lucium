@@ -1,0 +1,150 @@
+{
+ "comment": "matchScore of the Mac (src/shared/command-bar-match.ts) and Match.score of the iPhone (LuciumKit): 100 prefix, 70 word start, 50 inside, 20 letters in order, 0 none.",
+ "score": [
+  {
+   "text": "Météo de la semaine",
+   "query": "sem",
+   "expect": 70
+  },
+  {
+   "text": "Calendrier des semis",
+   "query": "sem",
+   "expect": 70
+  },
+  {
+   "text": "semaine",
+   "query": "sem",
+   "expect": 100
+  },
+  {
+   "text": "Agenda",
+   "query": "gen",
+   "expect": 50
+  },
+  {
+   "text": "Hello World",
+   "query": "hello",
+   "expect": 100
+  },
+  {
+   "text": "Hello World",
+   "query": "world",
+   "expect": 70
+  },
+  {
+   "text": "Hello World",
+   "query": "ello",
+   "expect": 50
+  },
+  {
+   "text": "Hello World",
+   "query": "hw",
+   "expect": 20
+  },
+  {
+   "text": "Hello World",
+   "query": "xyz",
+   "expect": 0
+  },
+  {
+   "text": "Hello",
+   "query": "",
+   "expect": 0
+  },
+  {
+   "text": "Hello",
+   "query": "   ",
+   "expect": 0
+  },
+  {
+   "text": "L’Été",
+   "query": "l'ete",
+   "expect": 100
+  },
+  {
+   "text": "L'Été",
+   "query": "l’été",
+   "expect": 100
+  },
+  {
+   "text": "Été",
+   "query": "ete",
+   "expect": 100
+  },
+  {
+   "text": "ÉTÉ indien",
+   "query": "indien",
+   "expect": 70
+  },
+  {
+   "text": "recettes.example",
+   "query": "example",
+   "expect": 70
+  },
+  {
+   "text": "a/b/c",
+   "query": "b",
+   "expect": 70
+  },
+  {
+   "text": "a-b",
+   "query": "b",
+   "expect": 70
+  },
+  {
+   "text": "Mosaïque — Tableau",
+   "query": "tableau",
+   "expect": 70
+  },
+  {
+   "text": "Mosaïque — Tableau",
+   "query": "mosaique",
+   "expect": 100
+  },
+  {
+   "text": "Page suivante",
+   "query": "page suivante",
+   "expect": 100
+  },
+  {
+   "text": "Page suivante",
+   "query": "suivante",
+   "expect": 70
+  },
+  {
+   "text": "Straße",
+   "query": "strasse",
+   "expect": 0
+  },
+  {
+   "text": "Ünï",
+   "query": "uni",
+   "expect": 100
+  },
+  {
+   "text": "meteo.example",
+   "query": "meteo.ex",
+   "expect": 100
+  },
+  {
+   "text": "x y z",
+   "query": "yz",
+   "expect": 20
+  },
+  {
+   "text": "abc",
+   "query": "cba",
+   "expect": 0
+  },
+  {
+   "text": "abc",
+   "query": "ac",
+   "expect": 20
+  },
+  {
+   "text": "  spaced",
+   "query": "spaced",
+   "expect": 70
+  }
+ ]
+}

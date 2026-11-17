@@ -10,8 +10,9 @@ Contracts/       files shared with the Mac. Address vectors: src/shared/ios-cont
                  state-reference.json: a state file written by the Mac's own store (src/main/ios-state-contract.test.ts), which LuciumKit reads, writes back and compares.
                  theme-vectors.json: the theme a hue makes, the id a profile name makes, which ids are valid (src/shared/ios-contract.test.ts against the Mac, LuciumKit against the Swift)
                  privacy-vectors.json: tracking parameters, HTTPS first and the one rewrite of a navigation (src/shared/ios-privacy-contract.test.ts runs it against src/shared/privacy.ts)
-LuciumKit/       Swift package: pure logic (state format and file, tab operations, sleep rule, address rules, spaces and profiles, private tabs, the data of a site, the privacy rules and their settings, the lock). `swift test` runs it on the Mac, with no simulator
-Lucium/          the application (SwiftUI, WebKit, Localizable.xcstrings, blocker rules): one web view per awake tab, sleeping tabs, saved state, spaces and profiles, private tabs, the privacy rules on every navigation
+                 library-vectors.json (pinning, folders, Today, the archive, favourites: scenarios played against the Mac's reducer and against LuciumKit) and match-vectors.json (the score of the command bar)
+LuciumKit/       Swift package: pure logic (state format and file, tab operations, sleep rule, address rules, spaces and profiles, private tabs, the data of a site, the privacy rules and their settings, the lock, the lists of a space, the command bar's search). `swift test` runs it on the Mac, with no simulator
+Lucium/          the application (SwiftUI, WebKit, Localizable.xcstrings, blocker rules, the icons of the project): one web view per awake tab, sleeping tabs, saved state, spaces and profiles, private tabs, the bar, the tabs sheet, the command bar, the archive, the privacy rules on every navigation
                  (PrivacyNavigation.swift) and their settings sheet (PrivacyScreen.swift); Info.plist holds the one key a build setting cannot (App Transport Security for web content)
 Lucium/FilterLists/   the filter lists converted for WebKit, and their registry: generated, not committed (see below)
 Lucium/Guard/    the page guard's runtime and rules: generated from the Mac's sources and committed (see below)
@@ -48,7 +49,7 @@ On GitHub the same script runs in [`.github/workflows/ios.yml`](../.github/workf
 
 - Every visible text is a key of `Lucium/Localizable.xcstrings`, in French and in English (`AGENTS.md`, section 3).
 - No colour is written in the Swift sources: system colours and the asset catalogue (`AGENTS.md`, section 4). The colour of a space is read from the theme in the state.
-- No icon of the system (SF Symbols) in a screen: the project's icons are vectors of the asset catalogue (`Icon*`, drawn by `ProjectIcon`). The bottom bar of the first mockup still has a few, to be replaced.
+- No icon of the system (SF Symbols) in a screen: the project's icons are vectors of the asset catalogue (`Icon*`, drawn by `ProjectIcon`). A new one is an SVG with its `Contents.json` in `Assets.xcassets/Icons`; `src/shared/ios-contract.test.ts` refuses a symbol of the system, an icon named and not drawn, and a drawing never used.
 - No telemetry, no account, no network call of our own, no online service (`AGENTS.md`, section 5).
 - The code here is under GPL-3.0-or-later with the additional permission that lets the maintainer hand it out through the App Store and TestFlight ([ADDITIONAL-PERMISSION-APP-STORE.txt](../ADDITIONAL-PERMISSION-APP-STORE.txt)). Code that other people hold, such as a filter list, keeps its own license, which the application shows.
 - `Lucium/PrivacyInfo.xcprivacy` says what the code does: no tracking, no data collected, and a reason for every API of Apple's "required reason" list that the code calls. `src/shared/ios-privacy-manifest.test.ts` reads the Swift sources and the manifest together, so a call to such an API without its declaration (or a declaration nothing calls) fails `pnpm test`.
