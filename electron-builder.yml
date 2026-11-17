@@ -161,6 +161,16 @@ mac:
       - CFBundleTypeName: HTML document
         CFBundleTypeRole: Viewer
         LSItemContentTypes: [public.html, public.xhtml]
+      # What a tab shows (src/shared/local-documents.ts), so that « Ouvrir avec » lists Lucium for them. The rank is Alternate: Lucium is offered, and never
+      # becomes the application that opens a PDF or a picture by default.
+      - CFBundleTypeName: PDF document
+        CFBundleTypeRole: Viewer
+        LSHandlerRank: Alternate
+        LSItemContentTypes: [com.adobe.pdf]
+      - CFBundleTypeName: Image
+        CFBundleTypeRole: Viewer
+        LSHandlerRank: Alternate
+        LSItemContentTypes: [public.png, public.jpeg, com.compuserve.gif, org.webmproject.webp, public.svg-image]
     # The update installer (Squirrel.Mac, src/main/shell/app-update.ts) refuses a bundle whose CFBundleShortVersionString is lower than the running
     # one: a feed someone else controls could otherwise install an older build signed by the same team (fuses open, flaws fixed since). Read from
     # the Info.plist of the running application, which the signature seals.

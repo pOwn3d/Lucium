@@ -397,6 +397,33 @@ describe('the update installer (electron-builder.yml)', () => {
   })
 })
 
+// « Open With » lists the applications whose Info.plist declares the type of the file. Lucium shows PDF and pictures in a tab (shared/local-documents.ts), so it
+// declares them, at the Alternate rank: it is offered, and macOS never makes it the application that opens a PDF or a picture when the user double-clicks one.
+describe('the document types of the application (electron-builder.yml)', () => {
+  const config = code(read('electron-builder.yml'), '#')
+  const block = /^ {4}CFBundleDocumentTypes:\n((?: {6}.*\n|\s*\n)+)/m.exec(config)?.[1] ?? ''
+  const types = block
+    .split(/^ {6}- /m)
+    .slice(1)
+    .map((item) => ({
+      name: /CFBundleTypeName: (.+)/.exec(item)?.[1],
+      role: /CFBundleTypeRole: (\w+)/.exec(item)?.[1],
+      rank: /LSHandlerRank: (\w+)/.exec(item)?.[1],
+      contentTypes: /LSItemContentTypes: \[(.*)\]/.exec(item)?.[1]?.split(/,\s*/) ?? []
+    }))
+
+  it('declares the web pages, the PDF documents and the pictures a tab shows', () => {
+    expect(types.map((type) => type.name)).toEqual(['HTML document', 'PDF document', 'Image'])
+    expect(types.find((type) => type.name === 'PDF document')?.contentTypes).toEqual(['com.adobe.pdf'])
+    expect(types.find((type) => type.name === 'Image')?.contentTypes).toEqual(['public.png', 'public.jpeg', 'com.compuserve.gif', 'org.webmproject.webp', 'public.svg-image'])
+    for (const type of types) expect(type.role, type.name).toBe('Viewer')
+  })
+
+  it('never makes Lucium the default application for a PDF or a picture: only the web pages, which a browser is for, are not at the Alternate rank', () => {
+    for (const type of types.filter((one) => one.name !== 'HTML document')) expect(type.rank, type.name).toBe('Alternate')
+  })
+})
+
 describe('the normal application (electron-builder.yml, package.json)', () => {
   const config = code(read('electron-builder.yml'), '#')
   const scripts = (JSON.parse(read('package.json')) as { scripts: Record<string, string> }).scripts

@@ -13,6 +13,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Added
 
 - **Links dropped on a window**: a link dragged from another application (a mail, a document, a terminal) onto a Lucium window opens in a new tab, in the Space on show. Only http and https addresses with no user name or password open, ten at most; a notice says how many were left out.
+- **Open with**: “Open With” in the Finder lists Lucium for PDF documents and pictures (PNG, JPEG, GIF, WebP, SVG), never as the default application for them.
 
 ## [1.1.2] - 2026-11-17
 
