@@ -1,0 +1,43 @@
+! Title: Lucium proof list
+! Version: 1
+! Converted by scripts/ios-filter-lists.mjs --fixture into ios/LuciumTests/Fixtures/, and played against real pages by
+! ios/LuciumTests/FilterListProofTests.swift: every filter below has a probe there. The test server answers on 127.0.0.1 and on
+! localhost and *.localhost (the same server seen from another host, so a request between them is third-party).
+
+! A path, whatever the type.
+/probe/path-rule.js
+! A host and a path: the page is on 127.0.0.1, so this names only the requests that go to localhost.
+||localhost^*/probe/anchored-
+! Third-party requests only.
+/probe/tp-$third-party
+! One type of request only.
+/probe/image-only-$image
+/probe/xhr-only-$xmlhttprequest
+! Only on the pages of a domain, or on every page but one.
+/probe/for-this-domain-$domain=127.0.0.1
+/probe/for-other-domain-$domain=example.org
+/probe/not-this-domain-$domain=~127.0.0.1
+! An exception wins over a block; an important block wins over an exception.
+/probe/exc-
+@@/probe/exc-allowed.js
+/probe/imp-$important
+@@/probe/imp-
+! A wildcard, and the separator.
+/probe/wild*end.js
+/probe/sep^marker.js
+! A sub-frame is blocked, the page itself is not.
+/probe/frame-blocked
+! The page itself, when the filter names it.
+/probe/top-blocked$document
+! Pages where the filtering stops: a.localhost altogether, b.localhost the element hiding only, c.localhost the generic hiding only.
+@@||a.localhost^$document
+@@||b.localhost^$elemhide
+@@||c.localhost^$generichide
+
+! Element hiding: everywhere, everywhere but one site, one site only, and a site that is not the test's.
+##.lucium-ad
+##.lucium-excepted
+127.0.0.1#@#.lucium-excepted
+127.0.0.1##.lucium-site-ad
+example.org##.lucium-other-site-ad
+c.localhost##.lucium-c-ad

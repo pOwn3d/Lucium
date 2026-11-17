@@ -5,6 +5,7 @@ import SwiftUI
 /// (waking it if it slept); swiping closes it.
 struct TabsSheet: View {
     @Bindable var model: BrowserModel
+    @State private var licensesShown = false
 
     var body: some View {
         NavigationStack {
@@ -19,10 +20,12 @@ struct TabsSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("tabs.done") { model.tabsSheetShown = false } }
+                ToolbarItem(placement: .cancellationAction) { Button("tabs.licenses") { licensesShown = true } }
                 ToolbarItem(placement: .bottomBar) { Button("tabs.new") { model.newTab() } }
             }
         }
         .presentationDetents([.medium, .large])
+        .sheet(isPresented: $licensesShown) { LicensesSheet() }
     }
 
     private func row(_ tab: TabItem) -> some View {

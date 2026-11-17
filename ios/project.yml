@@ -27,6 +27,18 @@ targets:
     platform: iOS
     sources:
       - path: Lucium
+      # The embedded filter lists (scripts/ios-filter-lists.mjs writes them; not committed). Without them the application runs with its short
+      # built-in list; a build that is handed out has them, and the archive step refuses one that does not (docs/ios.md).
+      - path: Lucium/FilterLists
+        optional: true
+        buildPhase: resources
+      # The texts of the project's own licence, shown whole on the licences screen: copies of the files at the root of the repository.
+      - path: ../LICENSE
+        buildPhase: resources
+      - path: ../NOTICE
+        buildPhase: resources
+      - path: ../ADDITIONAL-PERMISSION-APP-STORE.txt
+        buildPhase: resources
     dependencies:
       - package: LuciumKit
     settings:

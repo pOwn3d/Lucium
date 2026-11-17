@@ -42,7 +42,7 @@ class BrowserCoreTestCase: XCTestCase {
 
     /// A model like the application's, on the folder of this test, ready to browse. `cap` is the number of awake tabs.
     func makeModel(cap: Int = SleepPlanner.defaultCap, in folder: URL? = nil) async -> BrowserModel {
-        let model = BrowserModel.launch(directory: folder ?? directory, awakeCap: cap)
+        let model = BrowserModel.launch(directory: folder ?? directory, awakeCap: cap, embeddedLists: { nil })
         await model.prepare()
         return model
     }
@@ -96,7 +96,7 @@ final class BrowserModelTests: BrowserCoreTestCase {
 
     /// No web view is made before the blocker is ready: the first page of the first tab must not load unfiltered.
     func testNoPageIsMadeBeforeTheBlockerIsReadyAndTheFirstTabHasIt() async throws {
-        let model = BrowserModel.launch(directory: directory)
+        let model = BrowserModel.launch(directory: directory, embeddedLists: { nil })
         XCTAssertNil(model.webView, "a view made now would load pages without the blocker")
         await model.prepare()
         XCTAssertNotNil(model.webView)
@@ -112,12 +112,12 @@ final class BrowserModelTests: BrowserCoreTestCase {
     /// A blocker that cannot be built must not stop browsing, and must not pass unnoticed.
     func testABlockerThatFailsToBuildIsReportedAndBrowsingGoesOn() async throws {
         struct NoRules: Error {}
-        let broken = BrowserModel.launch(directory: directory, rules: { throw NoRules() })
+        let broken = BrowserModel.launch(directory: directory, rules: { throw NoRules() }, embeddedLists: { nil })
         await broken.prepare()
         XCTAssertTrue(broken.blockerFailure is NoRules)
         XCTAssertNotNil(broken.webView, "the view is still there, unfiltered")
 
-        let healthy = BrowserModel.launch(directory: directory.appending(path: "healthy"))
+        let healthy = BrowserModel.launch(directory: directory.appending(path: "healthy"), embeddedLists: { nil })
         await healthy.prepare()
         XCTAssertNil(healthy.blockerFailure)
     }

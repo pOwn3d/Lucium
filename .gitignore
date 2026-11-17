@@ -92,3 +92,8 @@ ios/LuciumKit/.swiftpm/
 ios/.build/
 ios/DerivedData/
 *.xcresult
+
+# The filter lists of the iOS application, converted by scripts/ios-filter-lists.mjs when a build is prepared (docs/ios.md, section 6): other people's
+# work, a few tens of megabytes, regenerated from their public addresses and never committed. The proof list in ios/LuciumTests/Fixtures/ is ours and is.
+/ios/Lucium/FilterLists/
+/ios/Lucium/FilterLists.tmp-*/

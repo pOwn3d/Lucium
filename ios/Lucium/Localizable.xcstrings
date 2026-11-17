@@ -113,6 +113,278 @@
         }
       }
     },
+    "licenses.app.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The application"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’application"
+          }
+        }
+      }
+    },
+    "licenses.app.summary": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium is free software under the GNU GPL, version 3 or later, with an additional permission that lets it be handed out through the App Store and TestFlight."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium est un logiciel libre sous GNU GPL, version 3 ou ultérieure, avec une permission additionnelle qui permet de le distribuer par l’App Store et TestFlight."
+          }
+        }
+      }
+    },
+    "licenses.list.author %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "By %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Par %@"
+          }
+        }
+      }
+    },
+    "licenses.list.copy %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copy of %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copie du %@"
+          }
+        }
+      }
+    },
+    "licenses.list.license %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "License: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licence : %@"
+          }
+        }
+      }
+    },
+    "licenses.list.rules %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rules kept: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Règles retenues : %@"
+          }
+        }
+      }
+    },
+    "licenses.list.source": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source of the list"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source de la liste"
+          }
+        }
+      }
+    },
+    "licenses.list.terms": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "License terms"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Conditions de la licence"
+          }
+        }
+      }
+    },
+    "licenses.lists.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "These lists are built into the application and are never downloaded: they are updated with the application only. Each list keeps its own license."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ces listes sont intégrées à l’application et ne sont jamais téléchargées : elles ne sont mises à jour qu’avec l’application. Chaque liste garde sa licence."
+          }
+        }
+      }
+    },
+    "licenses.lists.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Filter lists"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Listes de filtres"
+          }
+        }
+      }
+    },
+    "licenses.lists.none": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No filter list is built into this copy of the application."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune liste de filtres n’est intégrée à cette copie de l’application."
+          }
+        }
+      }
+    },
+    "licenses.lists.unreadable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The credits of the filter lists cannot be read in this copy of the application."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les crédits des listes de filtres sont illisibles dans cette copie de l’application."
+          }
+        }
+      }
+    },
+    "licenses.text.license": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GNU General Public License"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licence publique générale GNU"
+          }
+        }
+      }
+    },
+    "licenses.text.missing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This text is missing from this copy of the application."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce texte est absent de cette copie de l’application."
+          }
+        }
+      }
+    },
+    "licenses.text.notice": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notice"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avis"
+          }
+        }
+      }
+    },
+    "licenses.text.permission": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Additional permission (App Store)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permission additionnelle (App Store)"
+          }
+        }
+      }
+    },
+    "licenses.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenses and credits"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licences et crédits"
+          }
+        }
+      }
+    },
     "space.home": {
       "localizations": {
         "en": {
@@ -317,6 +589,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Terminé"
+          }
+        }
+      }
+    },
+    "tabs.licenses": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licenses"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Licences"
           }
         }
       }
