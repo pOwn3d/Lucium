@@ -95,7 +95,8 @@ describe('the folder the file chooser opens in', () => {
     expect(importFolderOf('chrome', '/home/u', 'linux', {})).toBe('/home/u/.config/google-chrome')
     expect(importFolderOf('chrome', 'C:\\Users\\u', 'win32', { localAppData: 'C:\\Users\\u\\AppData\\Local' })).toBe('C:\\Users\\u\\AppData\\Local\\Google\\Chrome\\User Data')
     expect(importFolderOf('arc', '/home/u', 'linux')).toBe('/home/u')
-    expect(importFolderOf('safari', '/Users/u')).toBe('/Users/u/Library/Safari')
+    // Safari and the saved pages are looked for with the path module of the machine (Safari is offered on a Mac only, where it is the same).
+    expect(importFolderOf('safari', '/Users/u')).toBe(join('/Users/u', 'Library', 'Safari'))
     expect(importFolderOf('html', '/home/u', 'linux')).toBe(join('/home/u', 'Downloads'))
   })
 })

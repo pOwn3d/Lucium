@@ -17,6 +17,8 @@ const { ElectronEngine } = await import('./electron-engine')
 const { ReservedPaths } = await import('./download-paths')
 const methods = ElectronEngine.prototype as unknown as Record<string, (this: unknown, ...args: unknown[]) => unknown>
 
+// The folder the stand-in of `app.getPath('downloads')` gives, as the path module of the system writes it back (`\tmp\…` on Windows).
+const systemFolder = join('/tmp', 'lucium-test-downloads')
 const made: string[] = []
 afterEach(() => {
   for (const folder of made.splice(0)) rmSync(folder, { recursive: true, force: true })
@@ -67,9 +69,9 @@ describe('the folder of a download started in a private context or a container',
 
   it('is the folder of the system when no page started the download, when the page is of another context, and when the shell names none', () => {
     const resolver = vi.fn((_context: string, pageId?: string) => (pageId === undefined ? undefined : '/nowhere/that/exists'))
-    expect(dirname(downloadIn(resolver, undefined)!)).toBe('/tmp/lucium-test-downloads')
-    expect(dirname(downloadIn(resolver, 'tab-of-a-profile')!)).toBe('/tmp/lucium-test-downloads')
+    expect(dirname(downloadIn(resolver, undefined)!)).toBe(systemFolder)
+    expect(dirname(downloadIn(resolver, 'tab-of-a-profile')!)).toBe(systemFolder)
     expect(resolver.mock.calls.map((call) => call[1])).toEqual([undefined, undefined])
-    expect(dirname(downloadIn(null, 'ephemeral:1/tab-9')!)).toBe('/tmp/lucium-test-downloads')
+    expect(dirname(downloadIn(null, 'ephemeral:1/tab-9')!)).toBe(systemFolder)
   })
 })

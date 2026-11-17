@@ -1,10 +1,11 @@
-import { chmodSync, closeSync, ftruncateSync, mkdirSync, openSync, readdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import { chmodSync, closeSync, ftruncateSync, mkdirSync, openSync, readdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ASKED_COPIES_KEPT, COPY_BYTES_MAX, backupId, copyDataOf, serializeCopy, type SessionCopy } from '@shared/session-backups'
 import { createInitialState, reduce } from '@shared/sidebar'
 import { BackupFiles } from './backup-store'
 import { tempDir } from './temp-dir'
+import { expectMode, expectNoOtherAccess, onWindows } from './windows.test-support'
 
 // A rename that can be made to fail: the copy is written under another name first, so a failure there must leave no copy and no half of one.
 const renaming = vi.hoisted(() => ({ fail: false, reads: 0 }))
@@ -52,8 +53,8 @@ describe('writing a copy', () => {
   it('keeps the copy private to the user: the file and the folder are not readable by others', () => {
     const dir = join(folder(), 'copies')
     new BackupFiles(dir).write(copy(['https://a.example/'], 1_700_000_000_000), 5)
-    expect(statSync(dir).mode & 0o077).toBe(0)
-    expect(statSync(join(dir, 'copie-1700000000000.json')).mode & 0o077).toBe(0)
+    expectNoOtherAccess(dir)
+    expectNoOtherAccess(join(dir, 'copie-1700000000000.json'))
   })
 
   it('closes the folder an earlier version made readable by others (with the umask) when it writes the next copy', () => {
@@ -61,7 +62,7 @@ describe('writing a copy', () => {
     mkdirSync(dir, { mode: 0o755 })
     chmodSync(dir, 0o755)
     new BackupFiles(dir).write(copy(['https://a.example/'], 1_700_000_000_000), 5)
-    expect(statSync(dir).mode & 0o777).toBe(0o700)
+    expectMode(dir, 0o700)
   })
 
   it('keeps the copy private even when a crash left a file readable by others under the name it is written to', () => {
@@ -71,10 +72,11 @@ describe('writing a copy', () => {
     writeFileSync(partial, 'left by a crash', { mode: 0o644 })
     chmodSync(partial, 0o644)
     new BackupFiles(dir).write(copy(['https://a.example/'], 1_700_000_000_000), 5)
-    expect(statSync(join(dir, 'copie-1700000000000.json')).mode & 0o077).toBe(0)
+    expectNoOtherAccess(join(dir, 'copie-1700000000000.json'))
   })
 
-  it('never writes through a link left under the name it is written to, and writes again once the link is gone', () => {
+  // Windows: there is no O_NOFOLLOW there (durable-write.ts), so a link under the name is followed.
+  it.skipIf(onWindows)('never writes through a link left under the name it is written to, and writes again once the link is gone', () => {
     const dir = folder()
     const elsewhere = join(folder(), 'victim.txt')
     writeFileSync(elsewhere, 'untouched')
@@ -143,7 +145,8 @@ describe('writing a copy', () => {
     expect(files.ids()).toEqual([11, 10, 9, 2, 1, 0].map((n) => backupId(1_700_000_000_000 + n * 1000)))
   })
 
-  it('rotates with the automatic ones a copy whose file cannot be opened, and says why in the journal', () => {
+  // Windows: `chmod 000` does not make a file unreadable there (it only sets the read-only flag).
+  it.skipIf(onWindows)('rotates with the automatic ones a copy whose file cannot be opened, and says why in the journal', () => {
     const dir = folder()
     const files = new BackupFiles(dir)
     const closed = files.write({ ...copy(['https://a.example/'], 1_700_000_000_000), reason: 'manual' }, 1)
@@ -213,7 +216,8 @@ describe('writing a copy', () => {
     expect(names(dir)).toEqual(['copie-1700000001000.json', 'other.tmp'])
   })
 
-  it('throws when the copy cannot be written, leaves the copies already there alone, and leaves nothing half-written', () => {
+  // Windows: `chmod 500` does not make a folder refuse a new file there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(onWindows)('throws when the copy cannot be written, leaves the copies already there alone, and leaves nothing half-written', () => {
     const dir = folder()
     const files = new BackupFiles(dir)
     files.write(copy(['https://a.example/'], 1_700_000_000_000), 1)
@@ -305,7 +309,8 @@ describe('reading the copies', () => {
     expect(new BackupFiles(join(folder(), 'nope')).list()).toEqual({ entries: [], unreadable: 0 })
   })
 
-  it('does not choke on a folder it cannot list: no copy, and the log says which folder', () => {
+  // Windows: `chmod 000` does not make a folder unlistable there (it only sets the read-only flag).
+  it.skipIf(onWindows)('does not choke on a folder it cannot list: no copy, and the log says which folder', () => {
     const dir = folder()
     const files = new BackupFiles(dir)
     files.write(copy(['https://a.example/'], 1), 5)

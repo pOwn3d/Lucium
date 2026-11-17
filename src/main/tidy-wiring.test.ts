@@ -3,6 +3,7 @@
 // markup in src/renderer/tidy-panel.test.ts.
 
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it, vi } from 'vitest'
 import { t } from '@shared/i18n'
 import { createInitialState, reduce, type Action } from '@shared/sidebar'
@@ -15,7 +16,7 @@ vi.mock('electron', () => new Proxy({}, { get: () => ({}) }))
 const { Browser } = await import('./shell/browser')
 const shell = methodsOf(Browser.prototype)
 
-const read = (path: string): string => readFileSync(new URL(path, import.meta.url).pathname, 'utf8')
+const read = (path: string): string => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
 
 describe('the notice that follows "Ranger les onglets…"', () => {
   it('is shown once, from the states before and after, and its "Annuler" dispatches the undo the outcome carries', () => {

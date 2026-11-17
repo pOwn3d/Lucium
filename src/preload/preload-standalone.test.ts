@@ -5,6 +5,7 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { posix } from '../main/windows.test-support'
 
 const root = join(__dirname, '../..')
 const read = (path: string): string => readFileSync(join(root, path), 'utf8')
@@ -47,7 +48,7 @@ function closure(entry: string): string[] {
     for (const next of runtimeImports(file)) walk(next)
   }
   walk(entry)
-  return [...seen].map((file) => relative(join(root, 'src'), file)).sort()
+  return [...seen].map((file) => posix(relative(join(root, 'src'), file))).sort()
 }
 
 /** The preloads the build makes, read from its configuration: a preload added there is checked here without a line to write. */
@@ -118,7 +119,7 @@ describe('the preload scripts', () => {
     // extension-data.ts translates its refusals: it reaches the catalogues, through a relative import.
     expect(reachesTexts(closure(join(root, 'src/shared/extension-data.ts')))).not.toEqual([])
     // The preload reaches its tables through `@shared`, and the file of the tables imports nothing.
-    expect(runtimeImports(join(root, 'src/preload/extension-shims.ts')).map((file) => relative(root, file))).toContain('src/shared/extension-data-api.ts')
+    expect(runtimeImports(join(root, 'src/preload/extension-shims.ts')).map((file) => posix(relative(root, file)))).toContain('src/shared/extension-data-api.ts')
     expect(runtimeImports(join(root, 'src/shared/extension-data-api.ts'))).toEqual([])
   })
 })

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { COPY_PREFIX } from '../importers/sqlite'
 import { batch, logFile, tableFile } from './leveldb-fixture'
 import { QUOTA_DB_MAX, hostOfIndexedDbFolder, hostOfStorageKey, listStorageHosts } from './storage-hosts'
+import { onWindows } from '../windows.test-support'
 
 let profile: string
 beforeEach(() => {
@@ -130,7 +131,8 @@ describe('listStorageHosts', () => {
     expect(await listStorageHosts(profile)).toEqual({ hosts: [], unread: ['QuotaManager'] })
   })
 
-  it('says the IndexedDB folder is unread when it cannot be listed', async () => {
+  // Windows: `chmod 000` does not make a folder unlistable there (it only sets the read-only flag).
+  it.skipIf(onWindows)('says the IndexedDB folder is unread when it cannot be listed', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const dir = join(profile, 'IndexedDB')
     mkdirSync(dir)

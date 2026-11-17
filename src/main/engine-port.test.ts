@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
+import { posix } from './windows.test-support'
 
 // The port of the engine kept watertight. `docs/architecture.md` promises that everything that depends on Electron is behind
 // `src/main/engine/types.ts` (`Engine`, `Page`), so that a second engine could be written without touching the rest. `src/shared` is the
@@ -181,7 +182,7 @@ function sourcesOf(dir: string, root: string): Record<string, string> {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = join(dir, entry.name)
     if (entry.isDirectory()) Object.assign(out, sourcesOf(path, root))
-    else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) out[relative(root, path)] = readFileSync(path, 'utf8')
+    else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) out[posix(relative(root, path))] = readFileSync(path, 'utf8')
   }
   return out
 }

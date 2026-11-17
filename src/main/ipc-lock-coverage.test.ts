@@ -11,6 +11,7 @@ import { join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { parseAst } from 'vite'
+import { posix } from './windows.test-support'
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const MAIN = join(ROOT, 'src/main')
@@ -139,7 +140,7 @@ function shippedMainSources(): Array<{ path: string; text: string }> {
     for (const entry of readdirSync(folder, { withFileTypes: true })) {
       const full = join(folder, entry.name)
       if (entry.isDirectory()) visit(full)
-      else if (/\.ts$/.test(entry.name) && !/\.test\.ts$/.test(entry.name) && !entry.name.includes('test-support') && !/^smoke/.test(entry.name)) found.push({ path: relative(ROOT, full), text: readFileSync(full, 'utf8') })
+      else if (/\.ts$/.test(entry.name) && !/\.test\.ts$/.test(entry.name) && !entry.name.includes('test-support') && !/^smoke/.test(entry.name)) found.push({ path: posix(relative(ROOT, full)), text: readFileSync(full, 'utf8') })
     }
   }
   visit(MAIN)

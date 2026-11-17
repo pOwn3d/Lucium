@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { FEATURES } from '@shared/features'
 import { budgetGaps, budgetIncoherences, MEASURE_IDS, parseBudget, SCENARIO_IDS, SCENARIOS } from '@shared/perf-core'
@@ -82,7 +82,8 @@ describe('the script', () => {
   })
 
   it('loads the module of src/shared as plain Node does (type stripping): nothing imported at run time, nothing that cannot be erased', () => {
-    const script = `import * as core from ${JSON.stringify(here('src/shared/perf-core.ts'))}; process.stdout.write(JSON.stringify([core.parseCpuTime('1:02.50'), core.SCENARIO_IDS.length]))`
+    // A file URL: Node refuses an absolute path as the specifier of an import on Windows ("D:\…").
+    const script = `import * as core from ${JSON.stringify(pathToFileURL(here('src/shared/perf-core.ts')).href)}; process.stdout.write(JSON.stringify([core.parseCpuTime('1:02.50'), core.SCENARIO_IDS.length]))`
     const out = execFileSync(process.execPath, ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', '--input-type=module', '-e', script], { encoding: 'utf8' })
     expect(JSON.parse(out)).toEqual([62.5, SCENARIOS.length])
   })

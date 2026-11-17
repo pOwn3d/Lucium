@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
+import { onWindows } from './windows.test-support'
 
 // scripts/prune-app-backups.sh: the copies of the application scripts/build-drm-release.sh sets aside at each installation. The script is run
 // here for real, on a folder of the test: it only ever looks inside the folder it is given.
@@ -34,7 +35,8 @@ const left = (root: string): string[] => readdirSync(root).sort()
 
 const DATES = ['20261101-090000', '20261103-101500', '20261105-235959', '20261109-000001', '20261111-083000']
 
-describe('scripts/prune-app-backups.sh', () => {
+// Windows: this runs a bash script of the maintainer's release tooling, which prunes the copies of the macOS application kept on the maintainer's Mac (docs/community/release-process.md).
+describe.skipIf(onWindows)('scripts/prune-app-backups.sh', () => {
   it('keeps the three newest copies and removes the older ones, saying which', () => {
     const root = copies(DATES)
     expect(prune(root)).toEqual({ status: 0, out: 'removed 20261101-090000\nremoved 20261103-101500\n', err: '' })

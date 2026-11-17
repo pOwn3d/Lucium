@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { tempDir } from '../../src/main/temp-dir'
+import { onWindows } from '../../src/main/windows.test-support'
 
 // The licence texts a built application must carry, checked on folders made for the test: no build is run, nothing is downloaded. What the real
 // build proves, and this cannot: that the castLabs archive of the pinned Electron has the two files (the archives of 44.9.3 and 45.0.0-alpha.14 do).
@@ -149,7 +150,8 @@ describe('scripts/after-pack.cjs', () => {
   })
 
   // The Electron archive of a Linux build carries 0666 and 0777 files, and the first .deb made from it had 68 files writable by every user, the executable among them.
-  it('puts the files of a Linux package back to the modes of a package: nothing writable by group or others, 0755 for folders and executables, 0644 for the rest', async () => {
+  // Windows: the modes of a Linux package are POSIX modes (chmod 0777, a setuid bit): Windows keeps none, and a Linux package is not made there.
+  it.skipIf(onWindows)('puts the files of a Linux package back to the modes of a package: nothing writable by group or others, 0755 for folders and executables, 0644 for the rest', async () => {
     const appOutDir = tempDir('lucium-notices-linux-modes-')
     mkdirSync(join(appOutDir, 'resources', 'sub'), { recursive: true })
     for (const { shipped, minBytes } of notices.PROJECT_NOTICES) writeFileSync(join(appOutDir, 'resources', shipped), 'x'.repeat(minBytes))

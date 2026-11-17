@@ -1,8 +1,9 @@
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { QUIT_CLEAR_MARKER, finishQuitClear, markQuitClear, replayQuitClear } from './quit-clear'
+import { expectMode, onWindows } from '../windows.test-support'
 
 let dir: string
 let marker: string
@@ -22,7 +23,7 @@ describe('the marker of an erasure at quit', () => {
   it('is written for its owner alone, and removed when the erasure was whole', () => {
     expect(markQuitClear(marker, 1234)).toBe(true)
     expect(JSON.parse(readFileSync(marker, 'utf8'))).toEqual({ at: 1234 })
-    expect(statSync(marker).mode & 0o777).toBe(0o600)
+    expectMode(marker, 0o600)
     finishQuitClear(marker)
     expect(existsSync(marker)).toBe(false)
     // Nothing to remove is not an error.
@@ -30,7 +31,8 @@ describe('the marker of an erasure at quit', () => {
     expect(logged).not.toHaveBeenCalled()
   })
 
-  it('says so, and returns false, when it cannot be written', () => {
+  // Windows: `chmod 500` does not make a folder refuse a new file there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(onWindows)('says so, and returns false, when it cannot be written', () => {
     chmodSync(dir, 0o500)
     expect(markQuitClear(marker)).toBe(false)
     expect(logged).toHaveBeenCalledWith(expect.stringContaining('will not be resumed'), expect.anything())

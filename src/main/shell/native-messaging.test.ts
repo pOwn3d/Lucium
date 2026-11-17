@@ -5,9 +5,16 @@ import { join } from 'node:path'
 import { PassThrough, Writable } from 'node:stream'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { encodeFrame, FrameDecoder, hostEnvironment, MAX_HOST_MESSAGE_BYTES, NATIVE_ERRORS } from '@shared/native-messaging'
+import type { PlatformId } from '@shared/platform'
+import { onWindows } from '../windows.test-support'
 import { NativeHosts, type PortEvent } from './native-messaging'
 
 const EXT = 'abcdefghijklmnopabcdefghijklmnop'
+/**
+ * The system whose rules read the manifests here: the manifest names the program by a path the machine of the run writes (`C:\…` on Windows), and a
+ * path of the other form is refused as not absolute. The application hands its own system in (`currentPlatform().id`), as the tests do.
+ */
+const SYSTEM: PlatformId = onWindows ? 'win32' : 'darwin'
 
 /** A host that never reads its input once started: what is written to it stays in the pipe's buffer. */
 let deafHosts = false
@@ -68,6 +75,9 @@ beforeEach(() => {
   mkdirSync(chromeDir)
   binary = join(root, 'host-binary')
   writeFileSync(binary, '#!/bin/sh\n')
+  // The application starts the real path of the file (fs.promises.realpath); on Windows the temporary folder may be written with an 8.3 short name
+  // (RUNNER~1) that only the native call expands.
+  binary = realpathSync.native(binary)
   children = []
   spawned = []
   environments = []
@@ -82,7 +92,8 @@ beforeEach(() => {
   hosts = new NativeHosts({
     dirs: () => [dir],
     spawn,
-    deliver: (_ext, portId, event) => events.push({ portId, event })
+    deliver: (_ext, portId, event) => events.push({ portId, event }),
+    platform: SYSTEM
   })
 })
 
@@ -130,6 +141,9 @@ describe('NativeHosts.connect', () => {
   })
 
   it('starts the host with the few variables it needs, not with the whole environment of the browser', async () => {
+    // What the system's own list lets through (Windows names do not depend on the case) and what no host is owed, on each system.
+    const owed: Record<string, string> = onWindows ? { Path: 'C:\\Windows\\System32', USERPROFILE: 'C:\\Users\\me' } : { PATH: '/usr/bin:/bin', HOME: '/Users/me', LC_ALL: 'fr_FR.UTF-8' }
+    const refused: Record<string, string> = { GITHUB_TOKEN: 'ghp_secret', NODE_OPTIONS: '--require /tmp/x.js', DYLD_INSERT_LIBRARIES: '/tmp/x.dylib', ELECTRON_RUN_AS_NODE: '1', AWS_SECRET_ACCESS_KEY: 'k' }
     const withEnv = new NativeHosts({
       dirs: () => [dir],
       spawn: ((_path: string, _args: string[], options?: { env?: Record<string, string> }) => {
@@ -137,13 +151,13 @@ describe('NativeHosts.connect', () => {
         return new FakeChild()
       }) as never,
       deliver: () => {},
-      platform: 'darwin',
-      env: () => ({ PATH: '/usr/bin:/bin', HOME: '/Users/me', LC_ALL: 'fr_FR.UTF-8', GITHUB_TOKEN: 'ghp_secret', NODE_OPTIONS: '--require /tmp/x.js', DYLD_INSERT_LIBRARIES: '/tmp/x.dylib', ELECTRON_RUN_AS_NODE: '1', AWS_SECRET_ACCESS_KEY: 'k' })
+      platform: SYSTEM,
+      env: () => ({ ...owed, ...refused })
     })
     writeFileSync(join(dir, 'com.example.host.json'), manifest('com.example.host'))
     withEnv.connect(EXT, 'com.example.host', 'p1')
     await settle()
-    expect(environments).toEqual([{ PATH: '/usr/bin:/bin', HOME: '/Users/me', LC_ALL: 'fr_FR.UTF-8' }])
+    expect(environments).toEqual([owed])
     withEnv.closeAll()
   })
 
@@ -154,7 +168,7 @@ describe('NativeHosts.connect', () => {
       hosts.connect(EXT, 'com.example.host', 'p1')
       await settle()
       expect(environments).toHaveLength(1)
-      expect(environments[0]).toEqual(hostEnvironment(process.env, 'darwin'))
+      expect(environments[0]).toEqual(hostEnvironment(process.env, SYSTEM))
       expect(environments[0]).not.toHaveProperty('LUCIUM_TEST_SECRET')
     } finally {
       delete process.env['LUCIUM_TEST_SECRET']

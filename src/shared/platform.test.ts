@@ -7,7 +7,9 @@ import {
   defaultAcceleratorFor,
   formatAcceleratorFor,
   isAbsolutePath,
+  isClosedToOthers,
   LINUX_DEFAULTS,
+  isOwnerOnlyMode,
   linksFromArgv,
   NON_MAC_DEFAULTS,
   PLATFORM_FACTS,
@@ -66,6 +68,35 @@ describe('words', () => {
     expect(settingsLink('translation-languages', 'darwin')).toBe('x-apple.systempreferences:com.apple.Localization-Settings.extension')
     expect(settingsLink('translation-languages', 'win32')).toBeNull()
     expect(settingsLink('translation-languages', 'linux')).toBeNull()
+  })
+})
+
+describe('file modes', () => {
+  it('asks for 0600 on macOS and Linux, and refuses a file others can read', () => {
+    for (const id of ['darwin', 'linux'] as const) {
+      expect(isOwnerOnlyMode(0o100600, id)).toBe(true)
+      expect(isOwnerOnlyMode(0o100644, id)).toBe(false)
+      expect(isOwnerOnlyMode(0o100666, id)).toBe(false)
+    }
+    // Without a platform it is macOS.
+    expect(isOwnerOnlyMode(0o100666)).toBe(false)
+  })
+
+  it('accepts every mode on Windows, which reports 0666 for each file and has no bits to read: refusing it would leave the vault unwritable', () => {
+    expect(isOwnerOnlyMode(0o100666, 'win32')).toBe(true)
+    expect(isOwnerOnlyMode(0o100444, 'win32')).toBe(true)
+  })
+
+  it('tells a file or a folder open to the group or the others on macOS and Linux only: Windows has no bits to read', () => {
+    for (const id of ['darwin', 'linux'] as const) {
+      expect(isClosedToOthers(0o100600, id)).toBe(true)
+      expect(isClosedToOthers(0o040700, id)).toBe(true)
+      expect(isClosedToOthers(0o100640, id)).toBe(false)
+      expect(isClosedToOthers(0o040755, id)).toBe(false)
+    }
+    expect(isClosedToOthers(0o100644)).toBe(false)
+    expect(isClosedToOthers(0o100666, 'win32')).toBe(true)
+    expect(isClosedToOthers(0o040777, 'win32')).toBe(true)
   })
 })
 

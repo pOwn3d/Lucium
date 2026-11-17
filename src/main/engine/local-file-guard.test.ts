@@ -4,9 +4,13 @@
 import { describe, expect, it, vi } from 'vitest'
 import { answerLocalFile, isWideFolder, localFileVerdict, localPageRead, localPathSegments, PendingReads, REFUSED_READ, sharedWithLocalPage, stillInside } from './local-file-guard'
 
+// The rule is judged as macOS writes the paths whatever the machine of the run (a Windows runner included): the Windows cases name 'win32'.
 const HOME = '/Users/me'
 const PAGE = 'file:///Users/me/Sites/demo/index.html'
-const verdict = (url: string, resourceType: string, topUrl: string | null = PAGE) => localFileVerdict({ url, resourceType, topUrl }, HOME)
+const verdict = (url: string, resourceType: string, topUrl: string | null = PAGE) => localFileVerdict({ url, resourceType, topUrl }, HOME, 'darwin')
+const WINDOWS_HOME = 'C:\\Users\\me'
+const WINDOWS_PAGE = 'file:///C:/Users/me/Sites/demo/index.html'
+const onWindowsDisk = (url: string, resourceType: string, topUrl: string | null = WINDOWS_PAGE) => localFileVerdict({ url, resourceType, topUrl }, WINDOWS_HOME, 'win32')
 
 describe('the requests a local page makes for files of the disk', () => {
   it('refuses a fetch or an XMLHttpRequest for any other file, the private files of the user first', () => {
@@ -68,6 +72,26 @@ describe('the requests a local page makes for files of the disk', () => {
     expect(verdict('file:///Users/me/Sites/demo/logo.png', 'image', 'about:blank')).toEqual({ allow: false })
     expect(verdict('file:///Users/me/Sites/demo/logo.png', 'image', null)).toEqual({ allow: false })
   })
+
+  it('writes the path of a file of Windows with its drive and its backslashes, the one the links are followed from', () => {
+    expect(onWindowsDisk('file:///C:/Users/me/Sites/demo/img/Photo%201.JPG', 'image')).toEqual({ allow: true, confine: { file: 'C:\\Users\\me\\Sites\\demo\\img\\Photo 1.JPG', root: 'C:\\Users\\me\\Sites\\demo' } })
+    expect(onWindowsDisk('file:///C:/Users/me/Sites/demo/data.json', 'xhr')).toEqual({ allow: false })
+    expect(onWindowsDisk('file:///C:/Users/me/Sites/other/me.jpg', 'image')).toEqual({ allow: false })
+  })
+
+  it('judges a page lying in a wide folder of Windows as it does on the Mac: only the folder its browser saved beside it', () => {
+    const saved = 'file:///C:/Users/me/Downloads/Ma%20page.html'
+    expect(onWindowsDisk('file:///C:/Users/me/Downloads/Ma%20page_files/logo.png', 'image', saved)).toEqual({
+      allow: true,
+      confine: { file: 'C:\\Users\\me\\Downloads\\Ma page_files\\logo.png', root: 'C:\\Users\\me\\Downloads\\Ma page_files' }
+    })
+    expect(onWindowsDisk('file:///C:/Users/me/Downloads/scan-passeport.jpg', 'image', saved)).toEqual({ allow: false })
+    expect(onWindowsDisk('file:///C:/logo.png', 'image', 'file:///C:/page.html')).toEqual({ allow: false })
+  })
+
+  it('refuses an address of Windows that names no drive: the path it would give is relative to the current drive', () => {
+    expect(onWindowsDisk('file:///Users/me/Sites/demo/logo.png', 'image', 'file:///Users/me/Sites/demo/index.html')).toEqual({ allow: false })
+  })
 })
 
 describe('the folders and paths the rule reads', () => {
@@ -100,25 +124,35 @@ describe('the links of the folder', () => {
       return found
     }
     const root = '/Users/me/Sites/demo'
-    expect(await stillInside({ file: '/Users/me/Sites/demo/logo.png', root }, resolve)).toBe(true)
-    expect(await stillInside({ file: '/Users/me/Sites/demo/link.png', root }, resolve)).toBe(false)
-    expect(await stillInside({ file: '/Users/me/Sites/demo/hidden.png', root }, resolve)).toBe(false)
-    expect(await stillInside({ file: '/Users/me/Sites/demo/missing.png', root }, resolve)).toBe(false)
+    expect(await stillInside({ file: '/Users/me/Sites/demo/logo.png', root }, resolve, 'darwin')).toBe(true)
+    expect(await stillInside({ file: '/Users/me/Sites/demo/link.png', root }, resolve, 'darwin')).toBe(false)
+    expect(await stillInside({ file: '/Users/me/Sites/demo/hidden.png', root }, resolve, 'darwin')).toBe(false)
+    expect(await stillInside({ file: '/Users/me/Sites/demo/missing.png', root }, resolve, 'darwin')).toBe(false)
+  })
+
+  it('follows the links of a Windows disk the same way: the real path is still inside the folder, written with backslashes', async () => {
+    const root = 'C:\\Users\\me\\Sites\\demo'
+    const real: Record<string, string> = { [root]: root, [`${root}\\logo.png`]: `${root}\\logo.png`, [`${root}\\link.png`]: 'C:\\Users\\me\\Pictures\\me.png', [`${root}\\hidden.png`]: `${root}\\.cache\\x.png` }
+    const resolve = async (path: string) => real[path] ?? Promise.reject(new Error('ENOENT'))
+    expect(await stillInside({ file: `${root}\\logo.png`, root }, resolve, 'win32')).toBe(true)
+    expect(await stillInside({ file: `${root}\\link.png`, root }, resolve, 'win32')).toBe(false)
+    expect(await stillInside({ file: `${root}\\hidden.png`, root }, resolve, 'win32')).toBe(false)
+    expect(await stillInside({ file: `${root}\\missing.png`, root }, resolve, 'win32')).toBe(false)
   })
 
   it('answers the hook exactly once: refused at once, let through, or once the link is followed', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const refused = vi.fn()
-    answerLocalFile({ url: 'file:///Users/me/.ssh/id_ed25519', resourceType: 'xhr', topUrl: PAGE }, HOME, refused)
+    answerLocalFile({ url: 'file:///Users/me/.ssh/id_ed25519', resourceType: 'xhr', topUrl: PAGE }, HOME, refused, undefined, 'darwin')
     expect(refused).toHaveBeenCalledExactlyOnceWith({ cancel: true })
     expect(warn).toHaveBeenCalledWith('[engine] refused a xhr request of a page for a local file')
 
     const opened = vi.fn()
-    answerLocalFile({ url: PAGE, resourceType: 'mainFrame', topUrl: null }, HOME, opened)
+    answerLocalFile({ url: PAGE, resourceType: 'mainFrame', topUrl: null }, HOME, opened, undefined, 'darwin')
     expect(opened).toHaveBeenCalledExactlyOnceWith({ cancel: false })
 
     const linked = vi.fn()
-    answerLocalFile({ url: 'file:///Users/me/Sites/demo/link.png', resourceType: 'image', topUrl: PAGE }, HOME, linked, async (path) => (path.endsWith('link.png') ? '/Users/me/Pictures/me.png' : path))
+    answerLocalFile({ url: 'file:///Users/me/Sites/demo/link.png', resourceType: 'image', topUrl: PAGE }, HOME, linked, async (path) => (path.endsWith('link.png') ? '/Users/me/Pictures/me.png' : path), 'darwin')
     await vi.waitFor(() => expect(linked).toHaveBeenCalledExactlyOnceWith({ cancel: true }))
     warn.mockRestore()
   })

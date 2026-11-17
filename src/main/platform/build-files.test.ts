@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { REPOSITORY_URL } from '@shared/about'
+import { posix } from '../windows.test-support'
 
 // The files that build Lucium for the other systems are drafts that nobody has run. What they must never do is checked here as text, because the
 // two things that would hurt (publishing something, signing with something that is not the project's) happen silently once a workflow runs.
@@ -159,7 +160,7 @@ describe('electron-builder.yml', () => {
     // The exclusions of `files`, each as the expression of the file names it takes out of out/main.
     const excluded = [...config.matchAll(/^ {2}- '!out\/main\/([^'/]+)'$/gm)].map((match) => new RegExp(`^${match[1]!.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')}$`))
     const mainDir = fileURLToPath(new URL('..', import.meta.url))
-    const sources = (readdirSync(mainDir, { recursive: true, encoding: 'utf8' }) as string[]).filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
+    const sources = (readdirSync(mainDir, { recursive: true, encoding: 'utf8' }) as string[]).map((file) => posix(file)).filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts'))
     // A suite, or a helper of the tests: the bundler names a piece after the module it is made for (`smoke-run-PcDh0X2Q.js`).
     const testOnly = sources.filter((file) => /(^|\/)smoke[^/]*\.ts$/.test(file) || /test-support\.ts$/.test(file))
     expect(testOnly.length).toBeGreaterThan(60)

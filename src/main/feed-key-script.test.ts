@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it } from 'vitest'
 import { UPDATE_FEED_PUBLIC_KEYS } from './update-feed-keys'
 import { FEED_KEY_FILE, NEXT_FEED_KEY_FILE, publicKeyOfPrivate, signFeedText, verifyFeed } from './update-feed-signature'
+import { expectMode } from './windows.test-support'
 
 const SCRIPT = fileURLToPath(new URL('../../scripts/feed-key.mjs', import.meta.url))
 const folders: string[] = []
@@ -30,7 +31,6 @@ function home(): { dir: string; run: (...args: string[]) => { status: number | n
 }
 /** The lines of a private key that are the key itself. */
 const secretLines = (pem: string): string[] => pem.split('\n').filter((line) => line !== '' && !line.startsWith('-----'))
-const modeOf = (path: string): number => statSync(path).mode & 0o777
 
 describe('scripts/feed-key.mjs', () => {
   it('makes the pair once: the private key for its owner only, the public key printed with where it goes', () => {
@@ -38,8 +38,8 @@ describe('scripts/feed-key.mjs', () => {
     const made = run()
     expect(made.status, made.all).toBe(0)
     const pem = readFileSync(join(dir, FEED_KEY_FILE), 'utf8')
-    expect(modeOf(join(dir, FEED_KEY_FILE))).toBe(0o600)
-    expect(modeOf(dir)).toBe(0o700)
+    expectMode(join(dir, FEED_KEY_FILE), 0o600)
+    expectMode(dir, 0o700)
     expect(made.stdout).toContain(`'${publicKeyOfPrivate(pem)}'`)
     expect(made.stdout).toContain('UPDATE_FEED_PUBLIC_KEYS of src/main/update-feed-keys.ts')
     // The key it made signs a feed that its public half checks.
@@ -92,7 +92,7 @@ describe('scripts/feed-key.mjs', () => {
     const next = run('--next')
     expect(next.status, next.all).toBe(0)
     expect(readFileSync(join(dir, FEED_KEY_FILE), 'utf8')).toBe(first)
-    expect(modeOf(join(dir, NEXT_FEED_KEY_FILE))).toBe(0o600)
+    expectMode(join(dir, NEXT_FEED_KEY_FILE), 0o600)
     expect(publicKeyOfPrivate(readFileSync(join(dir, NEXT_FEED_KEY_FILE), 'utf8'))).not.toBe(publicKeyOfPrivate(first))
     expect(run('--next').status).toBe(1)
   })

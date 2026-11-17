@@ -15,6 +15,7 @@ import {
   type SpawnHelper,
   type SystemHelperRequest
 } from './system'
+import { onWindows } from '../windows.test-support'
 
 // The helper that serves a page in one run (protocol 2, main.swift): one line of JSON for each request with its id, one for each answer. The helper
 // is simulated (a child process of the test's own, or a shell script standing for it): the Swift one needs the languages of the system.
@@ -383,7 +384,8 @@ describe('the protocol a helper speaks', () => {
   })
 })
 
-describe('with a real program standing for the helper (protocol 2)', () => {
+// Windows: the stand-in of the helper is a script run by /bin/sh (`#!/bin/sh`), which Windows cannot start; the helper itself is a macOS program.
+describe.skipIf(onWindows)('with a real program standing for the helper (protocol 2)', () => {
   let dir = ''
   beforeEach(() => {
     dir = mkdtempSync(join(tmpdir(), 'lucium-system-stream-'))

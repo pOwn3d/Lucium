@@ -3,6 +3,7 @@ import { chmodSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync }
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { onWindows } from '../windows.test-support'
 
 // `stat` can be made to lie for one path (the size a file had before it grew); everything else is the real thing.
 const lies = vi.hoisted(() => ({ path: '' as string, size: 0, opened: 0, closed: 0, requested: 0 }))
@@ -105,17 +106,21 @@ describe('reading a file that may be hostile', () => {
     expect(lies.requested).toBe(101)
   })
 
-  it('does not wait for a pipe or read a device for ever, nor open a folder', async () => {
+  // Windows: there is no named pipe made with `mkfifo` and no /dev/zero or /dev/null there.
+  it.skipIf(onWindows)('does not wait for a pipe or read a device for ever', async () => {
     const pipe = join(dir, 'pipe')
     execFileSync('mkfifo', [pipe])
-    const folder = join(dir, 'folder')
-    mkdirSync(folder)
     const started = Date.now()
     expect(await readBoundedText(pipe, 100)).toEqual({ ok: false, reason: 'not-a-file' })
     expect(await readBoundedText('/dev/zero', 100)).toEqual({ ok: false, reason: 'not-a-file' })
     expect(await readBoundedText('/dev/null', 100)).toEqual({ ok: false, reason: 'not-a-file' })
-    expect(await readBoundedText(folder, 100)).toEqual({ ok: false, reason: 'not-a-file' })
     expect(Date.now() - started).toBeLessThan(2000)
+  })
+
+  it('does not open a folder', async () => {
+    const folder = join(dir, 'folder')
+    mkdirSync(folder)
+    expect(await readBoundedText(folder, 100)).toEqual({ ok: false, reason: 'not-a-file' })
   })
 
   it('says a file is gone, in both ways a path can be', async () => {
@@ -128,7 +133,8 @@ describe('reading a file that may be hostile', () => {
     expect(await readBoundedText(file('latin1.json', Buffer.from('caf\xe9', 'latin1')), 100)).toEqual({ ok: false, reason: 'not-text' })
   })
 
-  it.skipIf(process.getuid?.() === 0)('reports a file it may not read, with the code, and logs it', async () => {
+  // Windows: `chmod 000` does not make a file unreadable there (it only sets the read-only flag).
+  it.skipIf(process.getuid?.() === 0 || onWindows)('reports a file it may not read, with the code, and logs it', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => {})
     const path = file('locked.json', '{}')
     chmodSync(path, 0o000)

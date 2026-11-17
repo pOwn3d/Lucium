@@ -21,7 +21,9 @@
 // (a shared worker) does not leave at all, as for the files of the disk.
 
 import { realpath } from 'node:fs/promises'
-import { sep } from 'node:path'
+import { posix, win32 } from 'node:path'
+import type { PlatformId } from '@shared/platform'
+import { currentPlatform } from '../platform'
 
 /** The URL pattern the hook adds to its filter so that it sees the requests for local files. */
 export const LOCAL_FILE_PATTERN = 'file:///*'
@@ -96,10 +98,21 @@ export function isWideFolder(folder: readonly string[], home: readonly string[])
   return inHome && folder.length <= home.length + 1
 }
 
-const toPath = (segments: readonly string[]): string => `/${segments.join('/')}`
+/** The path rules of a system, not of the machine running the code: a test plays any of them (as main/platform/paths.ts does). */
+const pathOf = (platform: PlatformId): typeof posix => (platform === 'win32' ? win32 : posix)
 
-/** Whether a request of a page session for a local file may go (see the head of this file). `home` is the home folder of the user. */
-export function localFileVerdict(request: LocalFileRequest, home: string): LocalFileVerdict {
+/**
+ * The path of the disk a list of segments of a file address stands for. Windows writes the drive first (`file:///C:/Users/me` gives `C:`, `Users`,
+ * `me`) and separates with `\`; a path with no drive is none there (it would be relative to the current drive), so null.
+ */
+function toPath(segments: readonly string[], platform: PlatformId): string | null {
+  if (platform !== 'win32') return `/${segments.join('/')}`
+  const [drive, ...rest] = segments
+  return drive !== undefined && /^[A-Za-z]:$/.test(drive) ? `${drive}\\${rest.join('\\')}` : null
+}
+
+/** Whether a request of a page session for a local file may go (see the head of this file). `home` is the home folder of the user, written as `platform` writes it. */
+export function localFileVerdict(request: LocalFileRequest, home: string, platform: PlatformId = currentPlatform().id): LocalFileVerdict {
   // The navigation of a tab: what opens a local file in a tab is judged before (the address bar, a link of a local page, a dropped file).
   if (request.resourceType === 'mainFrame') return { allow: true }
   const wanted = localPathSegments(request.url)
@@ -116,17 +129,19 @@ export function localFileVerdict(request: LocalFileRequest, home: string): Local
   // Hidden files and folders (.ssh, .config, .env…) are never part of what a page shows.
   if (below.some((segment) => segment.startsWith('.'))) return REFUSED
   let root = folder
-  if (isWideFolder(folder, home.split(sep).filter((segment) => segment !== ''))) {
+  if (isWideFolder(folder, home.split(pathOf(platform).sep).filter((segment) => segment !== ''))) {
     // Only the folder a browser saves beside a page ("Page web, complète"): `page.html` and `page_files/`.
     const companion = `${stemOf(top[top.length - 1] ?? '')}_files`
     if (below.length < 2 || below[0] !== companion) return REFUSED
     root = [...folder, companion]
   }
-  return { allow: true, confine: { file: toPath(wanted), root: toPath(root) } }
+  const confine = { file: toPath(wanted, platform), root: toPath(root, platform) }
+  return confine.file === null || confine.root === null ? REFUSED : { allow: true, confine: { file: confine.file, root: confine.root } }
 }
 
 /** The real path of each, links followed: the file must still be inside the folder, so that a link saved beside a page cannot point elsewhere. */
-export async function stillInside(confine: { file: string; root: string }, resolve: (path: string) => Promise<string> = realpath): Promise<boolean> {
+export async function stillInside(confine: { file: string; root: string }, resolve: (path: string) => Promise<string> = realpath, platform: PlatformId = currentPlatform().id): Promise<boolean> {
+  const { sep } = pathOf(platform)
   try {
     const [file, root] = await Promise.all([resolve(confine.file), resolve(confine.root)])
     if (!file.startsWith(`${root}${sep}`)) return false
@@ -138,10 +153,16 @@ export async function stillInside(confine: { file: string; root: string }, resol
 }
 
 /** The answer of the hook for a local file, always given once: refused on any failure. */
-export function answerLocalFile(request: LocalFileRequest, home: string, callback: (response: { cancel: boolean }) => void, resolve?: (path: string) => Promise<string>): void {
+export function answerLocalFile(
+  request: LocalFileRequest,
+  home: string,
+  callback: (response: { cancel: boolean }) => void,
+  resolve?: (path: string) => Promise<string>,
+  platform: PlatformId = currentPlatform().id
+): void {
   let verdict: LocalFileVerdict
   try {
-    verdict = localFileVerdict(request, home)
+    verdict = localFileVerdict(request, home, platform)
   } catch (error) {
     console.error('[engine] the local file guard failed, so the request is refused:', error instanceof Error ? error.message : error)
     verdict = REFUSED
@@ -151,7 +172,7 @@ export function answerLocalFile(request: LocalFileRequest, home: string, callbac
     return callback({ cancel: true })
   }
   if (!verdict.confine) return callback({ cancel: false })
-  void stillInside(verdict.confine, resolve).then((inside) => {
+  void stillInside(verdict.confine, resolve, platform).then((inside) => {
     if (!inside) console.warn('[engine] refused a local file outside the folder of the page that asked for it')
     callback({ cancel: !inside })
   })

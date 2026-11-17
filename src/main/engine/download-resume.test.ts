@@ -35,6 +35,7 @@ import {
   type Tracker
 } from './download-resume'
 import { frenchSpaces } from '@shared/french-typography'
+import { expectMode } from '../windows.test-support'
 
 const MIB = 1024 * 1024
 let base = ''
@@ -177,9 +178,9 @@ describe('the file of the records', () => {
     const { store: s } = store()
     s.ensure()
     expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({ version: 1, records: [] })
-    expect(statSync(file).mode & 0o777).toBe(0o600)
+    expectMode(file, 0o600)
     s.put(record(), new Set())
-    expect(statSync(file).mode & 0o777).toBe(0o600)
+    expectMode(file, 0o600)
     expect(existsSync(`${file}.tmp`)).toBe(false)
     expect(recordsOnDisk()).toEqual([record()])
   })
@@ -189,7 +190,7 @@ describe('the file of the records', () => {
     chmodSync(`${file}.tmp`, 0o666)
     const { store: s } = store()
     s.put(record(), new Set())
-    expect(statSync(file).mode & 0o777).toBe(0o600)
+    expectMode(file, 0o600)
   })
 
   it('reads back what it wrote, and keeps ensure() from touching a file that exists', () => {
@@ -431,7 +432,8 @@ describe('the partial file of a record', () => {
 
   it('is refused when the file opened is not the file that was judged', () => {
     const { rec } = partial('a.zip')
-    const swapped: ResumeFs = { ...realResumeFs, fstat: (fd) => ({ ...realResumeFs.fstat(fd), ino: realResumeFs.fstat(fd).ino + 1 }) }
+    // 2 ** 20, not 1: on Windows the file index is a 64-bit number that a JS number cannot hold exactly, and "+ 1" can fall back on the same value.
+    const swapped: ResumeFs = { ...realResumeFs, fstat: (fd) => ({ ...realResumeFs.fstat(fd), ino: realResumeFs.fstat(fd).ino + 2 ** 20 }) }
     expect(inspectPartial(rec, folder, swapped)).toEqual({ place: 'unsafe' })
   })
 
@@ -478,7 +480,7 @@ describe('recording a download in progress', () => {
     expect(written!.head).toBe(sha(l.content.subarray(0, FINGERPRINT_BYTES)))
     expect(written!.tail).toBe(sha(l.content.subarray(3 * MIB - FINGERPRINT_BYTES, 3 * MIB)))
     expect(tracker.recorded()).toBe(true)
-    expect(statSync(file).mode & 0o777).toBe(0o600)
+    expectMode(file, 0o600)
   })
 
   it('writes at most once every few seconds for one download, and at once when it is interrupted', () => {
@@ -684,7 +686,7 @@ describe('turning the service on', () => {
     const r = rig()
     r.service.start(false)
     expect(existsSync(file)).toBe(true)
-    expect(statSync(file).mode & 0o777).toBe(0o600)
+    expectMode(file, 0o600)
   })
 
   it('stays off, and says why, when the file cannot be made', () => {

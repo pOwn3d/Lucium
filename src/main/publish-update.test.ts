@@ -2,7 +2,7 @@ import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { getLanguage, setLanguage } from '@shared/i18n'
@@ -63,10 +63,18 @@ import {
 import { dmgNameOf as makerDmgNameOf, imageRecordNameOf as makerImageRecordNameOf, imageRecordOf, sumNameOf as makerSumNameOf } from './make-dmg'
 import * as gate from './release-gate'
 import { TEST_FEED_KEYS, signedFeed, writtenFeed } from './update-feed-keys.test-support'
+import { posix } from './windows.test-support'
 
 // The publication of an update in one command (scripts/publish-update.mjs). Nothing here touches a network or a server: the commands are planned
 // and checked as text, and the order of the steps is run against fake effects that record what would have been run.
 const VERSION = '1.0.2'
+
+// The code under test spells its paths with `join` and `resolve`: `\` on Windows, and `resolve` gives the current drive to a path that has none. The
+// expectations below are written with `/` and go through the same two functions, so that they hold on every system.
+/** A path as `join` writes it. */
+const asJoined = (path: string): string => join(path)
+/** A path as `resolve` writes it (an absolute one, on the current drive). */
+const asResolved = (path: string): string => resolve(path)
 
 /** The way to the icon in Settings, as the English interface writes it: what a message for the maintainer, written in English, must say. */
 function iconPathInEnglish(): string {
@@ -130,6 +138,9 @@ const DMG_SIZE = 141_000_017
 const SUM_TEXT = `${DMG_HASH}  ${DMG}\n`
 // The record the maker of the image writes with it: the image, and the executable of the app it holds.
 const IMAGE_RECORD_FILE = `${DMG_FILE}.json`
+// What `publish` plans to send, with the paths as `join` writes them (the keys of the fake files in `world` keep the `/`).
+const PLANNED_FEED = asJoined(FEED_FILE)
+const PLANNED_DISK = { dmg: asJoined(DMG_FILE), sum: asJoined(SUM_FILE) }
 const DMG_URL = `https://test.lucium.app/updates/darwin-arm64/${DMG}`
 const SUM_URL = `${DMG_URL}.sha256`
 const feedText = (change: Record<string, unknown> = {}, top: Record<string, unknown> = {}): string =>
@@ -274,13 +285,13 @@ describe('the channels', () => {
 describe('the file of the servers', () => {
   it('is, by default, in lucium-secrets under the home folder; --config comes first, then the environment variable', () => {
     const env = { cwd: '/work', home: '/home/me', fromEnv: undefined as string | undefined }
-    expect(configPathOf({ config: null }, env)).toBe('/home/me/Library/Application Support/lucium-secrets/publish-channels.json')
-    expect(configPathOf({ config: null }, { ...env, fromEnv: '/etc/channels.json' })).toBe('/etc/channels.json')
-    expect(configPathOf({ config: '/cli.json' }, { ...env, fromEnv: '/etc/channels.json' })).toBe('/cli.json')
+    expect(configPathOf({ config: null }, env)).toBe(asJoined('/home/me/Library/Application Support/lucium-secrets/publish-channels.json'))
+    expect(configPathOf({ config: null }, { ...env, fromEnv: '/etc/channels.json' })).toBe(asResolved('/etc/channels.json'))
+    expect(configPathOf({ config: '/cli.json' }, { ...env, fromEnv: '/etc/channels.json' })).toBe(asResolved('/cli.json'))
     // Relative paths are those of the folder the command is run from; an empty variable is no variable.
-    expect(configPathOf({ config: 'cfg/c.json' }, env)).toBe('/work/cfg/c.json')
-    expect(configPathOf({ config: null }, { ...env, fromEnv: 'c.json' })).toBe('/work/c.json')
-    expect(configPathOf({ config: null }, { ...env, fromEnv: '' })).toBe('/home/me/Library/Application Support/lucium-secrets/publish-channels.json')
+    expect(configPathOf({ config: 'cfg/c.json' }, env)).toBe(asResolved('/work/cfg/c.json'))
+    expect(configPathOf({ config: null }, { ...env, fromEnv: 'c.json' })).toBe(asResolved('/work/c.json'))
+    expect(configPathOf({ config: null }, { ...env, fromEnv: '' })).toBe(asJoined('/home/me/Library/Application Support/lucium-secrets/publish-channels.json'))
   })
 
   it('is read through the reader it is given, from that path only', () => {
@@ -336,8 +347,20 @@ describe('the arguments', () => {
   it('resolve the defaults: the archive of package.json in dist-drm, the app beside it, the key in the home folder', () => {
     const parsed = parsePublishArgs([])
     if (!parsed.ok) throw new Error('unreachable')
-    const resolved = resolveInput(parsed.options, { cwd: '/work', root: '/repo', home: '/home/me', version: VERSION, servers: SERVERS })
-    expect(resolved).toEqual({ ok: true, input: { ...INPUT, archive: `/repo/dist-drm/${ZIP}`, sshKey: '/home/me/.ssh/id_ed25519', journal: '/home/me/Library/Application Support/lucium-secrets/publish-journal.jsonl' } })
+    // The archive and the files beside it are joined to the root, the key and the journal are resolved from the folder of the command.
+    expect(resolveInput(parsed.options, { cwd: '/work', root: '/repo', home: '/home/me', version: VERSION, servers: SERVERS })).toEqual({
+      ok: true,
+      input: {
+        ...INPUT,
+        archive: asJoined(INPUT.archive),
+        app: asJoined(INPUT.app),
+        buildRecord: asJoined(INPUT.buildRecord),
+        engineRun: asJoined(INPUT.engineRun),
+        attestation: asJoined(INPUT.attestation),
+        sshKey: asResolved('/home/me/.ssh/id_ed25519'),
+        journal: asResolved('/home/me/Library/Application Support/lucium-secrets/publish-journal.jsonl')
+      }
+    })
   })
 
   it('publish the disk image unless --no-dmg says not to', () => {
@@ -359,11 +382,11 @@ describe('the arguments', () => {
       const resolved = resolveInput(parsed.options, { ...env, sshKeyFromEnv })
       return resolved.ok ? resolved.input.sshKey : null
     }
-    expect(keyOf([])).toBe('/home/me/.ssh/id_ed25519')
-    expect(keyOf([], '/keys/site')).toBe('/keys/site')
-    expect(keyOf([], ' keys/site\n')).toBe('/work/keys/site')
-    expect(keyOf([], '  ')).toBe('/home/me/.ssh/id_ed25519')
-    expect(keyOf(['--ssh-key', '/cli/key'], '/keys/site')).toBe('/cli/key')
+    expect(keyOf([])).toBe(asResolved('/home/me/.ssh/id_ed25519'))
+    expect(keyOf([], '/keys/site')).toBe(asResolved('/keys/site'))
+    expect(keyOf([], ' keys/site\n')).toBe(asResolved('/work/keys/site'))
+    expect(keyOf([], '  ')).toBe(asResolved('/home/me/.ssh/id_ed25519'))
+    expect(keyOf(['--ssh-key', '/cli/key'], '/keys/site')).toBe(asResolved('/cli/key'))
   })
 
   it('resolve relative paths against the folder the command is run from, and the channel from the file of the servers', () => {
@@ -371,7 +394,7 @@ describe('the arguments', () => {
     if (!parsed.ok) throw new Error('unreachable')
     const env = { cwd: '/work', root: '/repo', home: '/home/me', version: VERSION, servers: SERVERS }
     const resolved = resolveInput(parsed.options, env)
-    expect(resolved.ok && resolved.input).toMatchObject({ archive: `/work/out/${ZIP}`, app: '/work/out/mac-arm64/Lucium.app', sshKey: '/work/k/key', dryRun: true, channelName: 'test', channel: CHANNEL })
+    expect(resolved.ok && resolved.input).toMatchObject({ archive: asResolved(`/work/out/${ZIP}`), app: asResolved('/work/out/mac-arm64/Lucium.app'), sshKey: asResolved('/work/k/key'), dryRun: true, channelName: 'test', channel: CHANNEL })
     const stable = resolveInput({ ...parsed.options, channel: 'stable' }, env)
     expect(stable.ok && stable.input).toMatchObject({ channelName: 'stable', channel: STABLE })
   })
@@ -433,7 +456,7 @@ describe('the commands of the manual publication', () => {
   })
 
   it('writes the feed with the script that exists, on the https folder of the channel', () => {
-    expect(makeFeedCommand('/repo', INPUT.archive, CHANNEL.baseUrl)).toEqual({ program: 'node', args: ['/repo/scripts/make-update-feed.mjs', INPUT.archive, 'https://test.lucium.app/updates/darwin-arm64/'], timeoutMs: 120_000 })
+    expect(makeFeedCommand('/repo', INPUT.archive, CHANNEL.baseUrl)).toEqual({ program: 'node', args: [asJoined('/repo/scripts/make-update-feed.mjs'), INPUT.archive, 'https://test.lucium.app/updates/darwin-arm64/'], timeoutMs: 120_000 })
     expect(makeFeedCommand('/repo', INPUT.archive, STABLE.baseUrl).args[2]).toBe('https://lucium.app/updates/darwin-arm64/')
   })
 
@@ -662,7 +685,7 @@ describe('the Electron fuses', () => {
   })
 
   it('are looked for in the framework of the app', () => {
-    expect(fuseFileOf('/Applications/Lucium.app')).toBe('/Applications/Lucium.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework')
+    expect(posix(fuseFileOf('/Applications/Lucium.app'))).toBe('/Applications/Lucium.app/Contents/Frameworks/Electron Framework.framework/Versions/A/Electron Framework')
   })
 
   it('prints a wire one fuse a line, by name, the position without a name and a state it does not know included', () => {
@@ -829,11 +852,14 @@ function world(change: World = {}) {
   }
   const deps: PublishDeps = {
     say: (line) => said.push(line),
-    exists: (path) => {
+    // The files are named with `/` in this test; the code names them with `join`, which writes `\` on Windows. Every path is brought back to `/` here.
+    exists: (file) => {
+      const path = posix(file)
       asked.push(path)
       return !missing.has(path)
     },
-    readText: (path) => {
+    readText: (file) => {
+      const path = posix(file)
       read.push(path)
       if (path === SUM_FILE) {
         if (change.unreadableSum) throw new Error('EACCES: permission denied')
@@ -846,13 +872,13 @@ function world(change: World = {}) {
     },
     appendText: (path, text) => {
       if (change.journalFails) throw new Error('EACCES: permission denied')
-      appended.push({ path, text })
+      appended.push({ path: posix(path), text })
     },
     now: () => change.now ?? NOW,
     gate,
     feedKeys: change.feedKeys ?? TEST_FEED_KEYS,
     writeText: (path, text) => {
-      written[path] = text
+      written[posix(path)] = text
     },
     run: (command) => {
       ran.push(command)
@@ -870,7 +896,8 @@ function world(change: World = {}) {
       if (kindOf(command) === 'unzip-exe') return { status: 0, ...EXE, stderr: '', ...change.zipped }
       return { status: 0, sha256: HASH, size: SIZE, stderr: '', ...change.download }
     },
-    sha256File: async (path) => {
+    sha256File: async (file) => {
+      const path = posix(file)
       if (path === EXE_FILE) return EXE
       if (path === DMG_FILE) {
         if (change.unreadableDmg) throw new Error('EACCES: permission denied')
@@ -907,7 +934,7 @@ describe('the publication', () => {
     expect(w.ran.filter((command) => NETWORK.has(command.program))).toEqual([])
     expect(w.written).toEqual({})
     const printed = w.said.join('\n')
-    for (const command of [remotePlan({ archive: INPUT.archive, feed: FEED_FILE, channel: CHANNEL, sshKey: INPUT.sshKey })].flatMap((plan) => [plan.upload, plan.remoteHash, plan.installArchive, plan.downloadArchive, plan.installFeed, plan.fetchFeed, plan.cleanup])) {
+    for (const command of [remotePlan({ archive: INPUT.archive, feed: PLANNED_FEED, channel: CHANNEL, sshKey: INPUT.sshKey })].flatMap((plan) => [plan.upload, plan.remoteHash, plan.installArchive, plan.downloadArchive, plan.installFeed, plan.fetchFeed, plan.cleanup])) {
       expect(printed).toContain(`$ ${commandLine(command)}   (dry run: not run)`)
     }
     expect(printed).toMatch(/Dry run done: nothing was sent to the server and nothing was written/)
@@ -940,7 +967,7 @@ describe('the publication', () => {
       ['the build log is missing', { missing: ['/repo/build.log'] }, { buildLog: '/repo/build.log' }, /build\.log does not exist/],
       ['the new app has no fuse wire', { wires: { [INPUT.app]: null } }, {}, /no Electron fuse wire in .*Lucium\.app/],
       ['the installed app is missing', { missing: [INPUT.installedApp] }, {}, /\/Applications\/Lucium\.app does not exist/],
-      ['the installed app has no fuse wire', { wires: { [INPUT.installedApp]: null } }, {}, /no Electron fuse wire in \/Applications/],
+      ['the installed app has no fuse wire', { wires: { [INPUT.installedApp]: null } }, {}, /no Electron fuse wire in [\\/]Applications/],
       ['a fuse differs from the installed app’s', { wires: { [INPUT.app]: { ...WIRE, bytes: WIRE.bytes.map((byte, at) => (at === 1 ? 0x30 : byte)) } } }, {}, /EnableCookieEncryption is off in the new build and on in the installed app/],
       ['the ssh key is missing', { missing: [INPUT.sshKey] }, {}, /ssh key .* does not exist/],
       ['scripts/make-update-feed.mjs refuses', { results: { 'make-feed': done('', 1, '❌ the app in the archive is 1.0.1') } }, {}, /make-update-feed\.mjs refused:\s+❌ the app in the archive is 1\.0\.1/],
@@ -1008,7 +1035,7 @@ describe('the publication', () => {
       const w = stableWorld()
       expect(await publish(stableInput, w.deps)).toEqual({ ok: true, dryRun: false })
       expect(w.kinds()).toEqual(FULL_RUN)
-      expect(w.ran.find((command) => command.program === 'node')?.args).toEqual(['/repo/scripts/make-update-feed.mjs', INPUT.archive, 'https://lucium.app/updates/darwin-arm64/'])
+      expect(w.ran.find((command) => command.program === 'node')?.args).toEqual([asJoined('/repo/scripts/make-update-feed.mjs'), INPUT.archive, 'https://lucium.app/updates/darwin-arm64/'])
       expect(w.ran.find((command) => command.program === 'curl' && command.args.at(-1)?.endsWith('.zip'))?.args.at(-1)).toBe(STABLE_ARCHIVE_URL)
       expect(w.written).toEqual({ [FEED_FILE]: signedFeed(stableFeed) })
       expect(w.said.at(-1)).toMatch(/Lucium 1\.0\.2 is published on the channel "stable"/)
@@ -1018,7 +1045,7 @@ describe('the publication', () => {
       const w = stableWorld()
       await publish(stableInput, w.deps)
       const archive = w.ran.filter((command) => kindOf(command) === 'install-archive')
-      expect(archive.map(commandLine)).toEqual([commandLine(remotePlan({ archive: INPUT.archive, feed: FEED_FILE, channel: STABLE, sshKey: INPUT.sshKey, staging: STAGING }).installArchive)])
+      expect(archive.map(commandLine)).toEqual([commandLine(remotePlan({ archive: INPUT.archive, feed: PLANNED_FEED, channel: STABLE, sshKey: INPUT.sshKey, staging: STAGING }).installArchive)])
       expect(archive[0]?.args.at(-1)).toMatch(/^D=\/srv\/updates\/stable; sudo -n install -d -o root -g root -m 755 \$D && sudo -n install -o root -g root -m 644 /)
       expect(w.ran.filter((command) => kindOf(command) === 'install-feed').map((command) => command.args.at(-1))).toEqual([expect.not.stringContaining('install -d')])
     })
@@ -1037,16 +1064,16 @@ describe('the publication', () => {
       const w = stableWorld()
       expect(await publish({ ...stableInput, dryRun: true }, w.deps)).toEqual({ ok: true, dryRun: true })
       expect(w.ran.filter((command) => NETWORK.has(command.program))).toEqual([])
-      const plan = remotePlan({ archive: INPUT.archive, feed: FEED_FILE, channel: STABLE, sshKey: INPUT.sshKey })
+      const plan = remotePlan({ archive: INPUT.archive, feed: PLANNED_FEED, channel: STABLE, sshKey: INPUT.sshKey })
       expect(w.said.join('\n')).toContain(`$ ${commandLine(plan.installArchive)}   (dry run: not run)`)
       expect(w.said.join('\n')).toContain('D=/srv/updates/stable; sudo -n install -d -o root -g root -m 755 $D && ')
     })
   })
 
   describe('with the disk image that scripts/make-dmg.mjs left beside the archive', () => {
-    const diskPlan = remotePlan({ archive: INPUT.archive, feed: FEED_FILE, channel: CHANNEL, sshKey: INPUT.sshKey, disk: { dmg: DMG_FILE, sum: SUM_FILE }, staging: STAGING })
+    const diskPlan = remotePlan({ archive: INPUT.archive, feed: PLANNED_FEED, channel: CHANNEL, sshKey: INPUT.sshKey, disk: PLANNED_DISK, staging: STAGING })
     // What a dry run prints: the folder mktemp would make is not known, the template stands for it.
-    const diskDryPlan = remotePlan({ archive: INPUT.archive, feed: FEED_FILE, channel: CHANNEL, sshKey: INPUT.sshKey, disk: { dmg: DMG_FILE, sum: SUM_FILE } })
+    const diskDryPlan = remotePlan({ archive: INPUT.archive, feed: PLANNED_FEED, channel: CHANNEL, sshKey: INPUT.sshKey, disk: PLANNED_DISK })
     const NOT_SENT = 'nothing'
 
     it('publishes the image and its sum after the archive has been checked online, and before the feed', async () => {
@@ -1936,17 +1963,17 @@ describe('the options of the conditions', () => {
 
   it('default to the files a release leaves: the two records and the attestation by their names, the journal outside the repository, a day of wait', () => {
     expect(inputOf([])).toMatchObject({
-      buildRecord: `/repo/dist-drm/Lucium-${VERSION}-arm64.build.json`,
-      attestation: `/repo/dist-drm/Lucium-${VERSION}-arm64.attestation.json`,
-      engineRun: '/repo/out-engine/release-run.json',
-      journal: '/home/me/Library/Application Support/lucium-secrets/publish-journal.jsonl',
+      buildRecord: asJoined(`/repo/dist-drm/Lucium-${VERSION}-arm64.build.json`),
+      attestation: asJoined(`/repo/dist-drm/Lucium-${VERSION}-arm64.attestation.json`),
+      engineRun: asJoined('/repo/out-engine/release-run.json'),
+      journal: asResolved('/home/me/Library/Application Support/lucium-secrets/publish-journal.jsonl'),
       noEngineRun: null,
       securityFix: null,
       minTestHours: 24
     })
     expect(DEFAULT_MIN_TEST_HOURS).toBe(24)
     // The record and the attestation follow the archive, wherever it is.
-    expect(inputOf([`out/${ZIP}`])).toMatchObject({ buildRecord: `/work/out/Lucium-${VERSION}-arm64.build.json`, attestation: `/work/out/Lucium-${VERSION}-arm64.attestation.json` })
+    expect(inputOf([`out/${ZIP}`])).toMatchObject({ buildRecord: asResolved(`/work/out/Lucium-${VERSION}-arm64.build.json`), attestation: asResolved(`/work/out/Lucium-${VERSION}-arm64.attestation.json`) })
   })
 
   it('name the files as the conditions and the scripts that write them do', () => {
@@ -1957,16 +1984,16 @@ describe('the options of the conditions', () => {
   })
 
   it('take the journal of --journal, else of LUCIUM_PUBLISH_JOURNAL, else the default one', () => {
-    expect(inputOf([], { journalFromEnv: ' /var/j.jsonl\n' }).journal).toBe('/var/j.jsonl')
-    expect(inputOf(['--journal', 'j.jsonl'], { journalFromEnv: '/var/j.jsonl' }).journal).toBe('/work/j.jsonl')
-    expect(inputOf([], { journalFromEnv: '  ' }).journal).toBe('/home/me/Library/Application Support/lucium-secrets/publish-journal.jsonl')
+    expect(inputOf([], { journalFromEnv: ' /var/j.jsonl\n' }).journal).toBe(asResolved('/var/j.jsonl'))
+    expect(inputOf(['--journal', 'j.jsonl'], { journalFromEnv: '/var/j.jsonl' }).journal).toBe(asResolved('/work/j.jsonl'))
+    expect(inputOf([], { journalFromEnv: '  ' }).journal).toBe(asResolved('/home/me/Library/Application Support/lucium-secrets/publish-journal.jsonl'))
   })
 
   it('read the other files and the wait from their options', () => {
     expect(inputOf(['--channel', 'stable', '--build-record', 'b.json', '--engine-run', '/e.json', '--attestation=a.json', '--min-test-hours', '48'])).toMatchObject({
-      buildRecord: '/work/b.json',
-      engineRun: '/e.json',
-      attestation: '/work/a.json',
+      buildRecord: asResolved('/work/b.json'),
+      engineRun: asResolved('/e.json'),
+      attestation: asResolved('/work/a.json'),
       minTestHours: 48
     })
     expect(inputOf(['--no-engine-run', `  ${REASON}  `]).noEngineRun).toBe(REASON)

@@ -5,18 +5,20 @@
 
 import { readFileSync, readdirSync } from 'node:fs'
 import { join, relative } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import { PauseGlyph, PlayGlyph } from './media-glyphs'
+import { posix } from '../main/windows.test-support'
 
-const SRC = join(new URL('../', import.meta.url).pathname)
+const SRC = fileURLToPath(new URL('../', import.meta.url))
 const GLYPHS = 'renderer/media-glyphs.tsx'
 /** Every file of the application that can draw something: components, pages built as text, stylesheets. Tests and their fixtures are not drawn. */
 const sources = (): Array<{ file: string; text: string }> =>
   (readdirSync(SRC, { recursive: true }) as string[])
     .filter((file) => /\.(tsx|ts|css|html)$/.test(file) && !/\.test(-support)?\.|lint-witness/.test(file))
-    .map((file) => ({ file: relative(SRC, join(SRC, file)), text: readFileSync(join(SRC, file), 'utf8') }))
+    .map((file) => ({ file: posix(relative(SRC, join(SRC, file))), text: readFileSync(join(SRC, file), 'utf8') }))
 
 type Point = [number, number]
 const close = (a: number, b: number): boolean => Math.abs(a - b) < 0.01

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ENTITLEMENTS_DRM, ENTITLEMENTS_HELPER, entitlementsFor, grantedEntitlements, isMachO, signingOrder } from './mac-sign-order'
 import { tempDir } from './temp-dir'
+import { posix } from './windows.test-support'
 
 // The order of the Developer ID signature of scripts/package-drm.mjs, on a throw-away bundle shaped like Lucium's: Mach-O files are recognised by their first bytes.
 const THIN_64 = Buffer.from([0xcf, 0xfa, 0xed, 0xfe, 0x0c, 0x00, 0x00, 0x01])
@@ -50,7 +51,8 @@ describe('isMachO', () => {
 describe('signingOrder', () => {
   it('signs every piece of code, each bundle after what it holds, and the application last', () => {
     const app = fakeApp()
-    const order = signingOrder(app).map((path) => relative(app, path) || '.')
+    // The pieces are named below the way a bundle writes them, with `/`.
+    const order = signingOrder(app).map((path) => posix(relative(app, path)) || '.')
     expect(order.at(-1)).toBe('.')
     expect(new Set(order)).toEqual(
       new Set([
@@ -151,7 +153,7 @@ describe('entitlementsFor', () => {
 
   it('gives no entitlement to the frameworks, the libraries, the native modules, the crash handler and the updater', () => {
     for (const path of signingOrder(app)) {
-      const rel = relative(app, path)
+      const rel = posix(relative(app, path))
       if (rel === '' || rel.startsWith('Contents/MacOS/') || /Helper( \((GPU|Renderer|Plugin)\))?\.app/.test(rel)) continue
       expect(entitlementsFor(app, path), rel).toBeNull()
     }
@@ -176,7 +178,7 @@ describe('entitlementsFor', () => {
     for (const path of signingOrder(app)) {
       const plist = entitlementsFor(app, path)
       const keys = plist ? plistKeys(plist) : []
-      const rel = relative(app, path) || '.'
+      const rel = posix(relative(app, path)) || '.'
       if (drm.has(rel)) {
         seen++
         expect([...keys].sort(), rel).toEqual(DRM_KEYS)

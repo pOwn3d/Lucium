@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { APP_ICONS, DEFAULT_APP_ICON } from '@shared/icons'
 import { BUNDLE_ICON_FILE, BUNDLE_ICON_SCRIPT } from './bundle-icon'
 import { tempDir } from '../temp-dir'
+import { onWindows, posix } from '../windows.test-support'
 
 const repo = join(__dirname, '../../..')
 
@@ -38,6 +39,9 @@ const scriptStandIn = async (_program: string, args: string[]) => {
   return { stdout: 'true\n', stderr: '' }
 }
 const osascript = (bundle: string, picture: string) => ['/usr/bin/osascript', ['-l', 'JavaScript', '-e', BUNDLE_ICON_SCRIPT, bundle, picture], { timeout: 5000, encoding: 'utf8' }]
+
+// Windows: the stand-in of the script puts a file named "Icon" followed by a carriage return in the bundle, as the real one does on macOS, and Windows forbids that name.
+const itOnTheBundle = it.skipIf(onWindows)
 
 const { appIconsFolder, applyAppIcon, appIconIssue, followAppIcon, runningBundle, takeAppIconOffForUpdate } = await import('./app-icon')
 
@@ -95,7 +99,7 @@ describe('the application icon files', () => {
 // it once Lucium is closed: only that bundle, found from process.execPath, on macOS, in the built application (bundle-icon.test.ts has the rest).
 describe('the application icon in the Dock and on the bundle', () => {
   /** Every file under a folder, as relative paths. */
-  const tree = (root: string): string[] => readdirSync(root, { recursive: true, encoding: 'utf8' }).sort()
+  const tree = (root: string): string[] => readdirSync(root, { recursive: true, encoding: 'utf8' }).map(posix).sort()
   const picture = (id: string): string => join(repo, `resources/app-icons/${id}.png`)
 
   beforeEach(() => {
@@ -108,14 +112,14 @@ describe('the application icon in the Dock and on the bundle', () => {
   })
   afterEach(() => vi.restoreAllMocks())
 
-  it('shows the chosen icon in the Dock, with its own picture', async () => {
+  itOnTheBundle('shows the chosen icon in the Dock, with its own picture', async () => {
     expect(await applyAppIcon('cyber')).toBeNull()
     expect(dock.setIcon).toHaveBeenCalledTimes(1)
     expect((dock.setIcon.mock.calls[0]![0] as { path: string }).path).toBe(picture('cyber'))
     expect(await appIconIssue()).toBeNull()
   })
 
-  it('puts it on the bundle of the running application, by osascript without a shell and with the script as a constant, and records it in the data folder', async () => {
+  itOnTheBundle('puts it on the bundle of the running application, by osascript without a shell and with the script as a constant, and records it in the data folder', async () => {
     expect(runningBundle()).toBe(place.bundle)
     expect(await applyAppIcon('sepia-or')).toBeNull()
     expect(calls.async.mock.calls).toEqual([osascript(place.bundle, picture('sepia-or'))])
@@ -128,7 +132,7 @@ describe('the application icon in the Dock and on the bundle', () => {
     expect(calls.async).toHaveBeenCalledTimes(1)
   })
 
-  it('takes it off the bundle when the default icon is chosen, and leaves a bundle without one as it is', async () => {
+  itOnTheBundle('takes it off the bundle when the default icon is chosen, and leaves a bundle without one as it is', async () => {
     await applyAppIcon('cyber')
     expect(await applyAppIcon(DEFAULT_APP_ICON)).toBeNull()
     expect(calls.async).toHaveBeenLastCalledWith(...osascript(place.bundle, ''))
@@ -157,8 +161,8 @@ describe('the application icon in the Dock and on the bundle', () => {
     expect(dock.setIcon).toHaveBeenCalledTimes(3)
   })
 
-  // As root, every folder can be written: the case cannot be made.
-  it.skipIf(process.getuid?.() === 0)('says, and writes to the log, that the bundle cannot be written, while the Dock shows the icon', async () => {
+  // As root, every folder can be written: the case cannot be made. Windows: chmod changes no bit there, and the stand-in cannot write its file anyway.
+  it.skipIf(process.getuid?.() === 0 || onWindows)('says, and writes to the log, that the bundle cannot be written, while the Dock shows the icon', async () => {
     chmodSync(place.bundle, 0o555)
     expect(await applyAppIcon('solaire')).toEqual({ reason: 'bundle-not-writable' })
     expect(await appIconIssue()).toEqual({ reason: 'bundle-not-writable' })
@@ -175,12 +179,12 @@ describe('the application icon in the Dock and on the bundle', () => {
     expect((dock.setIcon.mock.calls[0]![0] as { path: string }).path).toBe(picture(DEFAULT_APP_ICON))
   })
 
-  it('still shows Boréal for the id `lucium` a profile saved before the fan logo', async () => {
+  itOnTheBundle('still shows Boréal for the id `lucium` a profile saved before the fan logo', async () => {
     expect(await applyAppIcon('boreal')).toBeNull()
     expect((dock.setIcon.mock.calls[0]![0] as { path: string }).path).toBe(picture('boreal'))
   })
 
-  it('says so, and leaves the Dock and the bundle as they are, when the picture of the icon is missing from the application', async () => {
+  itOnTheBundle('says so, and leaves the Dock and the bundle as they are, when the picture of the icon is missing from the application', async () => {
     setResources(tempDir('lucium-no-icons-'))
     expect(await applyAppIcon('cyber')).toEqual({ reason: 'missing-picture' })
     expect(await appIconIssue()).toEqual({ reason: 'missing-picture' })
@@ -251,7 +255,7 @@ describe('the application icon, as the main process follows the setting', () => 
     expect(settings.listeners.size).toBe(0)
   })
 
-  it('shows the icon through the Dock and the bundle by default', async () => {
+  itOnTheBundle('shows the icon through the Dock and the bundle by default', async () => {
     dock.setIcon.mockClear()
     runFrom('lucium-icon-follow-')
     calls.async.mockReset()
@@ -265,7 +269,7 @@ describe('the application icon, as the main process follows the setting', () => 
 
 // Last: once the icon came off for an update, nothing is put on the bundle again in this run (the module keeps one keeper per run).
 describe('the application icon, before an update is installed', () => {
-  it('comes off the bundle of the running application, and is not put back in this run', async () => {
+  itOnTheBundle('comes off the bundle of the running application, and is not put back in this run', async () => {
     runFrom('lucium-icon-update-')
     calls.async.mockReset()
     calls.async.mockImplementation(scriptStandIn)

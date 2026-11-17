@@ -1,10 +1,11 @@
 import { createPrivateKey, createPublicKey, createHash } from 'node:crypto'
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, symlinkSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync, existsSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { PACK_MAX_FILES, PackError, filesToPack, packExtensionFolder } from './crx-pack'
 import { scanCrx } from './crx-scan'
+import { expectMode } from '../windows.test-support'
 
 let work: string
 beforeEach(() => {
@@ -42,7 +43,7 @@ describe('packing a folder', () => {
   it('keeps the key private: the owner alone can read it, and it is not in the package', async () => {
     const folder = extension({ 'old.pem': 'PRIVATE', 'earlier.crx': 'PACKAGE', '.git/config': 'x', '.DS_Store': 'x' })
     const made = await packExtensionFolder(folder, join(work, 'a.crx'))
-    expect(statSync(made.key).mode & 0o777).toBe(0o600)
+    expectMode(made.key, 0o600)
     const inside = readFileSync(made.crx).toString('latin1')
     for (const secret of ['PRIVATE', 'PACKAGE', 'BEGIN PRIVATE KEY']) expect(inside.includes(secret), secret).toBe(false)
     expect(scanCrx(readFileSync(made.crx)).entries).toBe(3)

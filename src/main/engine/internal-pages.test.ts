@@ -4,6 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { CAPTURE_HELPER_DOCUMENT, CAPTURE_HELPER_URL } from '@shared/capture-helper-page'
 import { INTERNAL_LOAD_HEADER } from '@shared/internal-serve'
+import { posix } from '../windows.test-support'
 import { INTERNAL_PRELOAD_ID, InternalPageServer, captureHelperLoadHeader, headersGiven, installInternalPages, internalLoadHeaders, internalPreloadPath, newInternalSecrets, setInternalPagesHome, watchInternalRequests, type InternalPagesHome, type InternalPagesIo, type InternalPagesSession, type InternalRequestRecord } from './internal-pages'
 
 const PAGE = 'lucium-ui://extensions/'
@@ -195,7 +196,7 @@ describe('a session of the application', () => {
     expect([...handlers.keys()]).toEqual(['lucium-ui'])
     expect((await handlers.get('lucium-ui')!(ask(PAGE, { ...navigation, ...loadOf(ses) }))).status).toBe(200)
     expect(scripts).toEqual([{ id: INTERNAL_PRELOAD_ID, type: 'frame', filePath: internalPreloadPath(), matches: ['lucium-ui://extensions/*'] }])
-    expect(scripts[0]?.filePath).toMatch(/preload\/internal-extensions\.js$/)
+    expect(scripts[0]?.filePath).toMatch(/preload[\\/]internal-extensions\.js$/)
   })
 
   it('does not serve the page nor carry the preload in a private context or a container: every request is refused', async () => {
@@ -238,8 +239,8 @@ describe('a session of the application', () => {
   })
 
   it('reads the preload from where Chromium can read it in a packaged application', () => {
-    expect(internalPreloadPath('/Applications/Lucium.app/Contents/Resources/app.asar/out/main')).toBe('/Applications/Lucium.app/Contents/Resources/app.asar.unpacked/out/preload/internal-extensions.js')
-    expect(internalPreloadPath('/Users/jane/lucium/out/main')).toBe('/Users/jane/lucium/out/preload/internal-extensions.js')
+    expect(posix(internalPreloadPath('/Applications/Lucium.app/Contents/Resources/app.asar/out/main'))).toBe('/Applications/Lucium.app/Contents/Resources/app.asar.unpacked/out/preload/internal-extensions.js')
+    expect(posix(internalPreloadPath('/Users/jane/lucium/out/main'))).toBe('/Users/jane/lucium/out/preload/internal-extensions.js')
   })
 })
 

@@ -8,6 +8,7 @@ import { createInitialState, reduce, type Action } from '@shared/sidebar'
 import { BackupFiles } from '../backup-store'
 import { tempDir } from '../temp-dir'
 import { imagesNamedByCopies, sweepStoredImages } from './space-image-sweep'
+import { onWindows } from '../windows.test-support'
 import { SpaceImageStore } from './space-images'
 
 const IN_STATE = 'aaaaaaaaaaaaaaaaaaaaaaaa.png'
@@ -60,7 +61,8 @@ describe('the sweep of the pictures of spaces and tabs', () => {
     expect(asked).not.toHaveBeenCalled()
   })
 
-  it('deletes no picture when a copy made before a restoration cannot be read, and says so', () => {
+  // Windows: `chmod 000` does not make a file unreadable there (it only sets the read-only flag).
+  it.skipIf(onWindows)('deletes no picture when a copy made before a restoration cannot be read, and says so', () => {
     const copy = join(root, 'state.json.avant-restauration-2026-11-03T10-00-00')
     writeFileSync(copy, '{}')
     chmodSync(copy, 0o000)

@@ -9,6 +9,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Channel } from '@shared/ipc'
 import { LAUNCH_SHEET_DELAY_MS } from './shell/launch-sheets'
 import { runMain, type MainRun } from './main-run.test-support'
+import { posix } from './windows.test-support'
 
 vi.mock('electron', async () => (await import('./main-run.test-support')).mainElectron())
 vi.mock('electron-chrome-extensions', async () => ({ ElectronChromeExtensions: (await import('./profile-made.test-support')).realLibrary() }))
@@ -89,10 +90,11 @@ describe('the interface', () => {
     expect(loaded.length).toBeGreaterThanOrEqual(2)
     for (const load of loaded) {
       expect(load.how, load.target).toBe('loadFile')
-      expect(load.target).toMatch(/\/src\/renderer\/[a-z-]+\.html$/)
+      // `loadFile` is given a path of the system (`join`): read it with `/` whatever the system.
+      expect(posix(load.target)).toMatch(/\/src\/renderer\/[a-z-]+\.html$/)
       expect(load.locked, load.target).toBe(true)
     }
-    expect(loaded.map((load) => load.target.split('/').pop())).toEqual(expect.arrayContaining(['index.html', 'overlay.html']))
+    expect(loaded.map((load) => posix(load.target).split('/').pop())).toEqual(expect.arrayContaining(['index.html', 'overlay.html']))
   })
 })
 

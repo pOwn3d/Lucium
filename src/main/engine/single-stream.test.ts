@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { RESUME_FILE } from '@shared/download-resume'
 import { PARALLEL_DOWNLOADS, applySingleStream, singleStreamActive, type CommandLineSwitches } from './single-stream'
@@ -25,7 +26,7 @@ describe('applySingleStream', () => {
     const looked: string[] = []
     const commandLine = switches()
     expect(applySingleStream({ userDataDir: '/data', exists: (path) => (looked.push(path), false), commandLine })).toBe(false)
-    expect(looked).toEqual([`/data/${RESUME_FILE}`])
+    expect(looked).toEqual([join('/data', RESUME_FILE)])
     expect(commandLine.appended).toBe(0)
     expect(singleStreamActive()).toBe(false)
   })

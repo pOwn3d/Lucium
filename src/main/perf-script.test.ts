@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { parseBudget, parseReport, type Budget } from '@shared/perf-core'
+import { onWindows } from './windows.test-support'
 
 // scripts/perf.mjs, run for real against a stand-in for Electron (--electron-path): a small program that prints the lines the application prints
 // (src/main/smoke-perf.ts) and starts a few processes of its own with the --type= flags of Chromium's children. They sleep: only the test that reads
@@ -189,6 +190,10 @@ describe('scripts/perf.mjs: the command line', { timeout: 30_000 }, () => {
     const notReport = join(dir, 'not-a-report.json')
     writeFileSync(notReport, '{"version":3}')
     expect(perf(['--compare', notReport])).toMatchObject({ status: 2, stderr: expect.stringContaining('n’est pas un rapport de perf') })
+  })
+
+  // Windows: the script refuses to measure there (it reads the `ps` of macOS) before it looks at the path it is given.
+  it.skipIf(onWindows)('exits 2 for a program to measure that does not exist', () => {
     expect(perf(['--electron-path', join(dir, 'nowhere')])).toMatchObject({ status: 2, stderr: expect.stringContaining('n’existe pas') })
   })
 

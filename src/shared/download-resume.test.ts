@@ -93,12 +93,25 @@ describe('isRecordablePath', () => {
       expect(isRecordablePath(value), value.slice(0, 30)).toBe(false)
     }
   })
+
+  it('accepts the plain absolute path of Windows, with a drive letter and backslashes, and refuses what is not one', () => {
+    expect(isRecordablePath('C:\\Users\\moi\\Downloads\\a.zip')).toBe(true)
+    expect(isRecordablePath('d:\\a.zip')).toBe(true)
+    for (const value of ['C:', 'C:\\', 'C:a.zip', 'C:Users\\a.zip', 'Users\\moi\\a.zip', '\\\\server\\share\\a.zip', 'C:\\Users\\..\\a.zip', 'C:\\Users\\.\\a.zip', 'C:\\Users\\\\a.zip', 'C:\\Users\\moi\\', 'C:\\Users\\moi\\a\n.zip']) {
+      expect(isRecordablePath(value), value).toBe(false)
+    }
+  })
 })
 
 describe('cleanRecord', () => {
   it('gives back a valid record unchanged', () => {
     expect(cleanRecord(record(), NOW)).toEqual(record())
     expect(cleanRecord(record({ mimeType: 'application/zip' }), NOW)).toEqual(record({ mimeType: 'application/zip' }))
+  })
+
+  it('gives back a record written on Windows: its path is not a path to refuse', () => {
+    const onWindows = record({ path: 'C:\\Users\\moi\\Downloads\\archive.zip' })
+    expect(cleanRecord(onWindows, NOW)).toEqual(onWindows)
   })
 
   it('drops the fields it does not know, whatever they hold', () => {

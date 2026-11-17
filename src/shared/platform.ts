@@ -56,6 +56,11 @@ export interface PlatformFacts {
   pathDelimiter: ':' | ';'
   /** The spell checker is the system's own. Elsewhere Chromium downloads its dictionaries from its CDN (Google's) the first time it checks. */
   systemSpellChecker: boolean
+  /**
+   * Files have POSIX permission bits (0600 for the owner alone). Windows reports 0666 for every file whatever its access list: what keeps a file private
+   * there is the access list of the user's profile folder, which Node cannot read, so a check of the mode cannot be made (and must not refuse the file).
+   */
+  posixFileModes: boolean
 }
 
 export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
@@ -77,7 +82,8 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     commandKey: 'meta',
     nativeHosts: 'folders',
     pathDelimiter: ':',
-    systemSpellChecker: true
+    systemSpellChecker: true,
+    posixFileModes: true
   },
   win32: {
     trafficLights: false,
@@ -98,7 +104,8 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     commandKey: 'control',
     nativeHosts: 'registry',
     pathDelimiter: ';',
-    systemSpellChecker: false
+    systemSpellChecker: false,
+    posixFileModes: false
   },
   linux: {
     trafficLights: false,
@@ -118,7 +125,8 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     commandKey: 'control',
     nativeHosts: 'folders',
     pathDelimiter: ':',
-    systemSpellChecker: false
+    systemSpellChecker: false,
+    posixFileModes: true
   }
 }
 
@@ -143,6 +151,24 @@ export function settingsLink(pane: SettingsPane, platform: PlatformId = 'darwin'
   if (!PLATFORM_FACTS[platform].settingsLinks) return null
   if (pane === 'translation-languages') return TRANSLATION_LANGUAGES_SETTINGS_URL
   return DISK_ACCESS_SETTINGS_URL
+}
+
+// ---- files ----
+
+/**
+ * Whether the mode of a file shows it private to its owner (0600), as the vault requires of its file. On Windows the answer is always yes: there is no mode
+ * to read (PlatformFacts.posixFileModes), and refusing the file would make the vault impossible to write there.
+ */
+export function isOwnerOnlyMode(mode: number, platform: PlatformId = 'darwin'): boolean {
+  return !PLATFORM_FACTS[platform].posixFileModes || (mode & 0o777) === 0o600
+}
+
+/**
+ * Whether the mode of a file or a folder keeps the group and the others out (no bit of 0o077). On Windows the answer is always yes, for the same reason as
+ * `isOwnerOnlyMode`: the mode it reports (0666, 0777) says nothing of the access list, and acting on it would "tighten" every file at every launch.
+ */
+export function isClosedToOthers(mode: number, platform: PlatformId = 'darwin'): boolean {
+  return !PLATFORM_FACTS[platform].posixFileModes || (mode & 0o077) === 0
 }
 
 // ---- paths and command lines ----

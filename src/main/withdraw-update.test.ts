@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { updateOutcome } from '@shared/update-check'
@@ -42,6 +42,8 @@ const KEY = '/home/me/.ssh/id_ed25519'
 const BAD = '1.0.2'
 const JOURNAL = '/home/me/Library/Application Support/lucium-secrets/publish-journal.jsonl'
 const NOW = '2026-11-21T08:00:00.000Z'
+/** A path as `resolve` writes it: the code resolves the key and the journal from the folder of the command, and Windows gives a path without a drive the current one. */
+const asResolved = (path: string): string => resolve(path)
 const INPUT: WithdrawInput = { version: BAD, to: null, channelName: 'stable', channel: CHANNEL, sshKey: KEY, dryRun: false, journal: JOURNAL }
 const hashOf = (version: string): string => version.replace(/\D/g, '').padEnd(64, 'a')
 const sizeOf = (version: string): number => 100_000_000 + Number(version.replace(/\D/g, ''))
@@ -183,16 +185,16 @@ describe('the arguments of a withdrawal', () => {
       if (!resolved.ok) throw new Error(resolved.message)
       return resolved.input
     }
-    expect(inputOf([]).journal).toBe(JOURNAL)
-    expect(inputOf([], ' /env/journal.jsonl ').journal).toBe('/env/journal.jsonl')
-    expect(inputOf(['--journal', 'j.jsonl'], '/env/journal.jsonl').journal).toBe('/work/j.jsonl')
+    expect(inputOf([]).journal).toBe(asResolved(JOURNAL))
+    expect(inputOf([], ' /env/journal.jsonl ').journal).toBe(asResolved('/env/journal.jsonl'))
+    expect(inputOf(['--journal', 'j.jsonl'], '/env/journal.jsonl').journal).toBe(asResolved('/work/j.jsonl'))
   })
 
   it('resolve the channel from the file of the servers and the key as the publication does', () => {
     const parsed = parsePublishArgs(['--withdraw', BAD, '--channel', 'stable'])
     if (!parsed.ok) throw new Error(parsed.message)
-    expect(resolveWithdrawal(parsed.options, { cwd: '/work', home: '/home/me', servers: SERVERS })).toEqual({ ok: true, input: INPUT })
-    expect(resolveWithdrawal(parsed.options, { cwd: '/work', home: '/home/me', servers: SERVERS, sshKeyFromEnv: '/keys/k' })).toMatchObject({ ok: true, input: { sshKey: '/keys/k' } })
+    expect(resolveWithdrawal(parsed.options, { cwd: '/work', home: '/home/me', servers: SERVERS })).toEqual({ ok: true, input: { ...INPUT, sshKey: asResolved(KEY), journal: asResolved(JOURNAL) } })
+    expect(resolveWithdrawal(parsed.options, { cwd: '/work', home: '/home/me', servers: SERVERS, sshKeyFromEnv: '/keys/k' })).toMatchObject({ ok: true, input: { sshKey: asResolved('/keys/k') } })
     // The default channel is "test", which this file of the servers does not hold: nothing is guessed.
     const onTest = parsePublishArgs(['--withdraw', BAD])
     if (!onTest.ok) throw new Error(onTest.message)

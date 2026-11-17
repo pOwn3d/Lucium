@@ -25,8 +25,9 @@ const UNSAFE_CHARS = /[\u0000-\u001f\u007f-\u009f\u2028\u2029\u200e\u200f\u202a-
 
 // What Windows refuses in a name (the slashes are already taken as separators). Each becomes an underscore: the name stays readable.
 const WINDOWS_FORBIDDEN_CHARS = /[<>:"|?*]/g
-// The names Windows reads as a device, whatever follows the first dot ("nul.tar.gz" is the device too), in any case. COM0 and LPT0 are listed by Microsoft
-// since 2023; the superscript digits stand for COM1 to COM3 and LPT1 to LPT3 there.
+// The names Windows reads as a device, whatever follows the first dot ("nul.tar.gz" is the device too), in any case (Microsoft, "Naming Files, Paths, and
+// Namespaces": CON, PRN, AUX, NUL, COM1-9, LPT1-9 and the superscript digits ¹ ² ³ as well). COM0 and LPT0 are NOT in that list: they are guarded anyway, a wrong guess
+// costing one underscore.
 const WINDOWS_DEVICE_NAME = /^(?:con|prn|aux|nul|com[0-9\u00b9\u00b2\u00b3]|lpt[0-9\u00b9\u00b2\u00b3])$/i
 
 const encoder = new TextEncoder()

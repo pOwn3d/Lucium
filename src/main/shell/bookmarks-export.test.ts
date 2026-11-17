@@ -11,6 +11,7 @@ vi.mock('electron', () => ({ dialog: dialogs }))
 
 import { exportBookmarks, lockedExportMessage, nothingToExportMessage, privateExportMessage } from './bookmarks-export'
 import { frenchSpaces } from '@shared/french-typography'
+import { onWindows } from '../windows.test-support'
 
 let dir: string
 const win = {} as BrowserWindow
@@ -97,11 +98,14 @@ describe('exportBookmarks', () => {
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining(chosen), expect.anything())
   })
 
-  it('tells the person what to do about a folder that is gone or protected, not the system’s English with the path in it', async () => {
+  it('tells the person what to do about a folder that is gone, not the system’s English with the path in it', async () => {
     dialogs.showSaveDialog.mockResolvedValue({ canceled: false, filePath: join(dir, 'absent', 'signets.html') })
     const gone = await exportBookmarks({ win, state: withPins(), isPrivate: false }, { includeToday: false })
     expect(gone.message).toBe(frenchSpaces('Enregistrement impossible dans signets.html : le dossier choisi n’existe plus. Choisissez un autre emplacement.'))
+  })
 
+  // Windows: `chmod 555` does not make a folder refuse a new file there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(onWindows)('tells the person what to do about a folder that is protected, not the system’s English with the path in it', async () => {
     const locked = join(dir, 'protege')
     mkdirSync(locked)
     chmodSync(locked, 0o555)

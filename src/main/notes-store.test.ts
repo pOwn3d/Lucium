@@ -8,6 +8,7 @@ import { NOTES_FILE_MAX_BYTES, NOTES_MAX, notesFileText, type Note } from '@shar
 import { takePersistenceNotices } from './persistence-notices'
 import { NotesFile, configureNotes, notesFile, notesForExport } from './notes-store'
 import { tempDir } from './temp-dir'
+import { expectMode } from './windows.test-support'
 import { frenchSpaces } from '@shared/french-typography'
 
 let ids = 0
@@ -84,7 +85,7 @@ describe('writing notes', () => {
   it('keeps the file for its owner only, like the other files of the application', () => {
     const file = make()
     file.create('privé', null)
-    expect(statSync(file.path).mode & 0o777).toBe(0o600)
+    expectMode(file.path, 0o600)
   })
 
   // Through a temporary file renamed into place (persist.ts): a write that cannot be made leaves the file in place whole, and says so.

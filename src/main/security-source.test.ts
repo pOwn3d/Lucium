@@ -16,6 +16,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { parseAst } from 'vite'
 import { pageDialogPreferences } from '@shared/page-dialog'
+import { posix } from './windows.test-support'
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const SOURCE = join(ROOT, 'src')
@@ -28,7 +29,7 @@ function shippedSources(): Array<{ path: string; text: string }> {
       const full = join(folder, entry.name)
       if (entry.isDirectory()) walk(full)
       else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name) && !entry.name.includes('test-support') && !/^smoke/.test(entry.name)) {
-        found.push({ path: relative(ROOT, full), text: readFileSync(full, 'utf8') })
+        found.push({ path: posix(relative(ROOT, full)), text: readFileSync(full, 'utf8') })
       }
     }
   }

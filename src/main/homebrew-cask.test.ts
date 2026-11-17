@@ -31,6 +31,7 @@ import * as dmg from './make-dmg'
 import * as publication from './publish-update'
 import { buildRecordNameOf as gateBuildRecordNameOf, buildRecordOf, readBuildRecord } from './release-gate'
 import { releaseFile } from './update-feed-file'
+import { onWindows } from './windows.test-support'
 
 const ROOT = fileURLToPath(new URL('../..', import.meta.url))
 const SHA = 'ab'.repeat(32)
@@ -390,7 +391,8 @@ function demo(): { dist: string; tap: string; run: (...args: string[]) => { stat
 }
 
 describe('scripts/make-cask.mjs', () => {
-  it('writes the cask of the image into the tap, and says where its SHA-256 comes from', () => {
+  // Windows: the script writes the cask of a macOS disk image from the maintainer's Mac (docs/community/homebrew.md), and reads the path of the image with `/` only.
+  it.skipIf(onWindows)('writes the cask of the image into the tap, and says where its SHA-256 comes from', () => {
     const { dist, tap, run } = demo()
     const done = run('--tap', tap, join(dist, 'Lucium-0.0.0-arm64.dmg'))
     expect(done.status, done.out).toBe(0)
@@ -398,7 +400,8 @@ describe('scripts/make-cask.mjs', () => {
     expect(done.out).toContain('read from Lucium-0.0.0-arm64.dmg.sha256; the image hashed here (21 bytes) has the same')
   })
 
-  it('writes nothing and ends with 1 when a file is wrong, saying which', () => {
+  // Windows: same as above, the path of the image is read with `/` only.
+  it.skipIf(onWindows)('writes nothing and ends with 1 when a file is wrong, saying which', () => {
     const { dist, tap, run } = demo()
     writeFileSync(join(dist, 'Lucium-0.0.0-arm64.dmg.sha256'), dmg.sumLineOf(SHA, 'Lucium-0.0.0-arm64.dmg'))
     const done = run('--tap', tap, join(dist, 'Lucium-0.0.0-arm64.dmg'))

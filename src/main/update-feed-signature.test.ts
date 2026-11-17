@@ -20,6 +20,7 @@ import {
   unsignedFeedText,
   verifyFeed
 } from './update-feed-signature'
+import { onWindows } from './windows.test-support'
 
 const bytes = (text: string): Buffer => Buffer.from(text, 'utf8')
 const FEED = `${JSON.stringify({ currentRelease: '0.3.1', releases: [{ version: '0.3.1', updateTo: { version: '0.3.1', url: 'https://lucium.app/updates/darwin-arm64/Lucium-0.3.1-arm64.zip', notes: 'Été « sûr ».' } }], withdrawn: ['0.3.0'] }, null, 2)}\n`
@@ -208,10 +209,21 @@ describe('the keys of a publication, in their folder', () => {
     expect(next).toEqual({ ok: false, problem: expect.stringMatching(/feed-key-next\.pem .* is not in src\/main\/update-feed-keys\.ts/) })
   })
 
-  it('refuse a private key other accounts can read, or one that is a link', () => {
+  // Windows: chmod changes no bit there, and the mode the system reports (666) is not read; the check of the next test is what Windows runs.
+  it.skipIf(onWindows)('refuse a private key other accounts can read', () => {
     const open = folderWith({ [FEED_KEY_FILE]: pair.privatePem })
     chmodSync(join(open, FEED_KEY_FILE), 0o644)
     expect(feedKeysIn(open, [pair.publicKey]).sign(FEED)).toEqual({ ok: false, problem: expect.stringMatching(/can be read by other accounts \(mode 644\)/) })
+  })
+
+  it('reads the mode of a private key only where files have one: a mode that others can read is refused when it is read, and not when it is not (Windows reports 666 for every file)', () => {
+    const open = folderWith({ [FEED_KEY_FILE]: pair.privatePem })
+    chmodSync(join(open, FEED_KEY_FILE), 0o644)
+    expect(feedKeysIn(open, [pair.publicKey], true).sign(FEED)).toEqual({ ok: false, problem: expect.stringMatching(/can be read by other accounts/) })
+    expect(feedKeysIn(open, [pair.publicKey], false).sign(FEED)).toMatchObject({ ok: true, keys: 1 })
+  })
+
+  it('refuse a private key that is a link', () => {
     const linked = folderWith({ 'elsewhere.pem': pair.privatePem })
     symlinkSync(join(linked, 'elsewhere.pem'), join(linked, FEED_KEY_FILE))
     expect(feedKeysIn(linked, [pair.publicKey]).sign(FEED)).toEqual({ ok: false, problem: expect.stringMatching(/is not a plain file/) })

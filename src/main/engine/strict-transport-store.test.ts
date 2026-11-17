@@ -1,12 +1,13 @@
 // The hosts held to strict transport security outlive the run (strict-transport-store.ts): written to the folder of the session, read back at
 // the next launch, erased with the data of the session. Against real files, in a throw-away folder.
 
-import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { StrictTransportHosts } from './strict-transport'
 import { STRICT_TRANSPORT_FILE, StrictTransportStore } from './strict-transport-store'
+import { expectMode, onWindows } from '../windows.test-support'
 
 let folder: string
 const DAY = 24 * 60 * 60 * 1000
@@ -110,7 +111,8 @@ describe('the hosts held to strict transport security, from one run to the next'
     }
   })
 
-  it('says in the journal, at the quit, the session whose file cannot be written, and still writes the others', () => {
+  // Windows: `chmod 500` does not make a folder refuse a file there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(onWindows)('says in the journal, at the quit, the session whose file cannot be written, and still writes the others', () => {
     vi.useFakeTimers()
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const hosts = new StrictTransportHosts()
@@ -140,7 +142,7 @@ describe('the hosts held to strict transport security, from one run to the next'
     expect(text).not.toContain('banque')
     expect(text).not.toContain('exemple')
     expect((JSON.parse(text) as { hosts: Array<{ host: string }> }).hosts[0]!.host).toMatch(/^[0-9a-f]{64}$/)
-    expect(statSync(file()).mode & 0o777).toBe(0o600)
+    expectMode(file(), 0o600)
     expect(readdirSync(folder)).toEqual([STRICT_TRANSPORT_FILE])
   })
 
@@ -175,7 +177,8 @@ describe('the hosts held to strict transport security, from one run to the next'
     expect(existsSync(file())).toBe(false)
   })
 
-  it('throws when the file cannot be removed, so that the erasure is not said done', () => {
+  // Windows: `chmod 500` does not make a folder refuse a file there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(onWindows)('throws when the file cannot be removed, so that the erasure is not said done', () => {
     const { hosts, store, session } = run()
     hosts.note(session, 'https://banque.exemple.fr/', 'max-age=600')
     store.flush(session)
@@ -205,7 +208,8 @@ describe('a file of strict hosts that cannot be used', () => {
     expect(error).toHaveBeenCalledExactlyOnceWith(expect.stringContaining(`cannot read the hosts held to strict transport security (${file()})`), expect.stringContaining('EISDIR'))
   })
 
-  it('says in the journal that the file cannot be written, with its path, leaves no half-written copy, and writes at the next change', () => {
+  // Windows: `chmod 500` does not make a folder refuse a file there (it only sets the read-only flag, which a folder's contents ignore).
+  it.skipIf(onWindows)('says in the journal that the file cannot be written, with its path, leaves no half-written copy, and writes at the next change', () => {
     const error = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { hosts, store, session } = run()
     hosts.note(session, 'https://banque.exemple.fr/', 'max-age=600')

@@ -11,6 +11,7 @@ import { MAX_IMPORTED_LINKS, defaultCategories } from '@shared/import-sources'
 import { ImportService, MAX_IMPORT_FILE_BYTES, plutilToXml, type ImportDeps } from './service'
 import { TEST_BROWSERS, fakeApplications } from './app-bundles.test-support'
 import { frenchSpaces } from '@shared/french-typography'
+import { onWindows } from '../windows.test-support'
 
 // A pretend home folder with the files of the browsers, shaped as they are on disk.
 const root = mkdtempSync(join(tmpdir(), 'lucium-import-home-'))
@@ -189,7 +190,8 @@ describe('run', () => {
     expect((actions[0] as Extract<Action, { type: 'import/merge' }>).spaces[0]?.name).toBe('Firefox')
   })
 
-  it('tells the user how to give access when macOS refuses to open the data, instead of saying there is nothing', async () => {
+  // Windows: `chmod 000` does not make a file unreadable there (it only sets the read-only flag), so the refusal macOS gives cannot be provoked.
+  it.skipIf(onWindows)('tells the user how to give access when macOS refuses to open the data, instead of saying there is nothing', async () => {
     chmodSync(join(root, 'Library/Safari/Bookmarks.plist'), 0o000)
     chmodSync(join(root, 'Library/Safari/History.db'), 0o000)
     const report = await service().run({ source: 'safari', categories: ['bookmarks', 'history'] })
@@ -200,7 +202,8 @@ describe('run', () => {
     expect(actions).toEqual([])
   })
 
-  it('imports what it can and says so when only one category is protected', async () => {
+  // Windows: `chmod 000` does not make a file unreadable there (it only sets the read-only flag), so the refusal macOS gives cannot be provoked.
+  it.skipIf(onWindows)('imports what it can and says so when only one category is protected', async () => {
     chmodSync(join(root, 'Library/Safari/History.db'), 0o000)
     const report = await service().run({ source: 'safari', categories: ['bookmarks', 'history'] })
     chmodSync(join(root, 'Library/Safari/History.db'), 0o644)
@@ -548,7 +551,8 @@ describe('importing from Arc', () => {
     expect(box.dispatched).toEqual([])
   })
 
-  it('explains full disk access when macOS refuses the sidebar, and writes nothing', async () => {
+  // Windows: `chmod 000` does not make a file unreadable there (it only sets the read-only flag), so the refusal macOS gives cannot be provoked.
+  it.skipIf(onWindows)('explains full disk access when macOS refuses the sidebar, and writes nothing', async () => {
     chmodSync(at(`${ARC}/StorableSidebar.json`), 0o000)
     try {
       const { svc, box } = live()

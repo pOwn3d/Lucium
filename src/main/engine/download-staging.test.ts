@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { DownloadStaging, UnsavedRequests, stagedOutcome, stagingRootFor, type StagingFs } from './download-staging'
 
@@ -15,7 +15,7 @@ describe('stagingRootFor', () => {
     const a = stagingRootFor('/data/a', '/tmp')
     const b = stagingRootFor('/data/b', '/tmp')
     expect(a).not.toBe(b)
-    expect(a.startsWith('/tmp/lucium-')).toBe(true)
+    expect(a.startsWith(join('/tmp', 'lucium-'))).toBe(true)
     expect(stagingRootFor('/data/a', '/tmp')).toBe(a)
   })
 })
@@ -96,17 +96,18 @@ describe('DownloadStaging.sweep', () => {
       readdir: () => entries,
       isRealFolder: () => true,
       remove: (path) => {
-        if (path.endsWith('/b')) throw new Error('busy')
+        if (basename(path) === 'b') throw new Error('busy')
         gone.push(path)
       },
       rename: () => undefined,
       copy: () => undefined,
       unlink: () => undefined
     }
-    const result = new DownloadStaging('/tmp/root', fs).sweep()
+    const root = join('/tmp', 'root')
+    const result = new DownloadStaging(root, fs).sweep()
     expect(result.removed).toBe(2)
-    expect(result.failures).toEqual([{ path: '/tmp/root/b', error: 'busy' }])
-    expect(gone).toEqual(['/tmp/root/a', '/tmp/root/c'])
+    expect(result.failures).toEqual([{ path: join(root, 'b'), error: 'busy' }])
+    expect(gone).toEqual([join(root, 'a'), join(root, 'c')])
   })
 })
 

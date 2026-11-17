@@ -1,6 +1,6 @@
 // The media files of the space backgrounds: only the names the storage makes are read or deleted, and a written file is
 // readable by its owner only.
-import { chmodSync, mkdirSync, statSync, existsSync, readdirSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, existsSync, readdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
@@ -28,6 +28,7 @@ afterEach(() => {
 
 import { MediaStorage } from './media-storage'
 import { tempDir } from './temp-dir'
+import { expectMode } from './windows.test-support'
 import { frenchSpaces } from '@shared/french-typography'
 
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47]), Buffer.alloc(64)])
@@ -47,7 +48,7 @@ describe('the media files', () => {
     const storage = new MediaStorage(tempDir('media-'))
     const name = await storage.uploadMedia(PNG, 'image/png')
     expect(name).toMatch(/^\d+-[0-9a-f]{8}\.png$/)
-    expect(statSync(join(storage['mediaDir'], name)).mode & 0o777).toBe(0o600)
+    expectMode(join(storage['mediaDir'], name), 0o600)
     expect((await storage.readMedia(name)).length).toBe(PNG.length)
     await storage.deleteMedia(name)
     expect(existsSync(join(storage['mediaDir'], name))).toBe(false)
@@ -56,12 +57,12 @@ describe('the media files', () => {
   it('keeps the media folder its owner’s only (0700), also when an earlier version made it with the umask', async () => {
     const fresh = new MediaStorage(tempDir('media-'))
     await fresh.uploadMedia(PNG, 'image/png')
-    expect(statSync(fresh['mediaDir']).mode & 0o777).toBe(0o700)
+    expectMode(fresh['mediaDir'], 0o700)
     const older = new MediaStorage(tempDir('media-'))
     mkdirSync(older['mediaDir'], { mode: 0o755 })
     chmodSync(older['mediaDir'], 0o755)
     await older.uploadMedia(PNG, 'image/png')
-    expect(statSync(older['mediaDir']).mode & 0o777).toBe(0o700)
+    expectMode(older['mediaDir'], 0o700)
   })
 
   it('accepts a video of 50 MB and refuses one byte more', () => {

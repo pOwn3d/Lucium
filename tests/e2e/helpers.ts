@@ -56,9 +56,11 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 /**
  * Chooses the entry of the application menu that has this accelerator (written as in src/shared/keybindings.ts, for example `CmdOrCtrl+T`), as
  * a click of the user does. The keys themselves are not sent: a synthesized key does not reach the menu of the system on macOS.
+ * An entry that is found but disabled is looked at again for three seconds: the menu is rebuilt after the state that enables it (an archived tab for ⇧⌘T)
+ * has changed, which a slower machine (a Windows runner) shows between the two.
  */
 export async function chooseMenuEntry(app: ElectronApplication, accelerator: string): Promise<void> {
-  const outcome = await app.evaluate(({ Menu }, wanted: string) => {
+  const attempt = () => app.evaluate(({ Menu }, wanted: string) => {
     const norm = (text: string) => text.replace(/cmdorctrl|commandorcontrol|command|cmd/gi, 'mod').replace(/option/gi, 'alt').replace(/control/gi, 'ctrl').replace(/\s+/g, '').toLowerCase()
     type Entry = { accelerator?: string; enabled: boolean; click: () => void; submenu?: { items: Entry[] } }
     // The same accelerator can be written on several entries (one of them only a copy kept for a context menu): the first enabled one is chosen.
@@ -71,6 +73,11 @@ export async function chooseMenuEntry(app: ElectronApplication, accelerator: str
     entry.click()
     return 'ok'
   }, accelerator)
+  let outcome = await attempt()
+  for (const deadline = Date.now() + 3000; outcome === 'disabled' && Date.now() < deadline; ) {
+    await sleep(100)
+    outcome = await attempt()
+  }
   expect(outcome, `application menu entry ${accelerator}`).toBe('ok')
 }
 

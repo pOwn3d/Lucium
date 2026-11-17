@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterAll, describe, expect, it, vi } from 'vitest'
+import { onWindows } from '../windows.test-support'
 import { toHistoryEntries } from './history'
 import { BOOKMARK_ROW_LIMIT, MAX_DB_BYTES, STALE_COPY_MS, STALE_SWEEP_DELAY_MS, distrustDatabase, readChromiumHistory, readFirefoxBookmarks, readFirefoxHistory, readSafariHistory, stopWrites, sweepStaleCopies, sweepStaleCopiesSoon } from './sqlite'
 
@@ -138,7 +139,8 @@ describe('history readers', () => {
     }
   })
 
-  it('does not wait for a pipe left where the log should be, and does not fail for a log that is gone (a browser that closes removes it)', () => {
+  // Windows: a named pipe is made with mkfifo, which Windows does not have.
+  it.skipIf(onWindows)('does not wait for a pipe left where the log should be, and does not fail for a log that is gone (a browser that closes removes it)', () => {
     const base = make('History-sides', `CREATE TABLE urls (id INTEGER PRIMARY KEY, url TEXT, title TEXT, visit_count INTEGER, typed_count INTEGER, last_visit_time INTEGER, hidden INTEGER);
       INSERT INTO urls VALUES (1, 'https://sides.example/', 'S', 1, 0, ${chromeMicros(WHEN)}, 0);`)
     execFileSync('/usr/bin/mkfifo', [`${base}-wal`])
@@ -177,7 +179,8 @@ describe('files that are not what they claim to be', () => {
     expect(() => readChromiumHistory(folder)).toThrow(/pas un fichier ordinaire/)
   })
 
-  it('refuses a pipe, which reports a size of zero and would never end', () => {
+  // Windows: a named pipe is made with mkfifo, which Windows does not have.
+  it.skipIf(onWindows)('refuses a pipe, which reports a size of zero and would never end', () => {
     const pipe = join(dir, 'History-pipe')
     execFileSync('/usr/bin/mkfifo', [pipe])
     expect(() => readChromiumHistory(pipe)).toThrow(/pas un fichier ordinaire/)
@@ -239,8 +242,10 @@ describe('files that are not what they claim to be', () => {
 
   it('leaves no copy behind, whether the file is refused after the copy or fails to open', () => {
     const scratch = mkdtempSync(join(tmpdir(), 'lucium-sqlite-scratch-'))
-    const previous = process.env['TMPDIR']
-    process.env['TMPDIR'] = scratch
+    // The folder of temporary files is TMPDIR where there is one, TEMP then TMP on Windows (os.tmpdir()).
+    const names = ['TMPDIR', 'TEMP', 'TMP']
+    const previous = names.map((name) => process.env[name])
+    for (const name of names) process.env[name] = scratch
     try {
       const wrongTables = make('History-nocopy', 'CREATE TABLE notes (id INTEGER);')
       const notDatabase = join(dir, 'History-text')
@@ -249,8 +254,10 @@ describe('files that are not what they claim to be', () => {
       expect(() => readChromiumHistory(notDatabase)).toThrow()
       expect(readdirSync(scratch)).toEqual([])
     } finally {
-      if (previous === undefined) delete process.env['TMPDIR']
-      else process.env['TMPDIR'] = previous
+      names.forEach((name, i) => {
+        if (previous[i] === undefined) delete process.env[name]
+        else process.env[name] = previous[i]
+      })
       rmSync(scratch, { recursive: true, force: true })
     }
   })
@@ -310,8 +317,10 @@ describe('a database somebody else wrote', () => {
 describe('the copies an import cut short left behind', () => {
   it('removes them at the next import, and only them: a recent copy (an import running beside this one), a link and other folders stay', () => {
     const scratch = mkdtempSync(join(tmpdir(), 'lucium-sqlite-stale-'))
-    const previous = process.env['TMPDIR']
-    process.env['TMPDIR'] = scratch
+    // The folder of temporary files is TMPDIR where there is one, TEMP then TMP on Windows (os.tmpdir()).
+    const names = ['TMPDIR', 'TEMP', 'TMP']
+    const previous = names.map((name) => process.env[name])
+    for (const name of names) process.env[name] = scratch
     try {
       const old = (Date.now() - STALE_COPY_MS - 60_000) / 1000
       const stale = join(scratch, 'lucium-import-Stale1')
@@ -332,8 +341,27 @@ describe('the copies an import cut short left behind', () => {
       expect(readChromiumHistory(path)).toHaveLength(1)
       expect(readdirSync(scratch).sort()).toEqual(['cible', 'lucium-import-Link', 'lucium-import-Recent', 'lucium-sqlite-autre'])
     } finally {
-      if (previous === undefined) delete process.env['TMPDIR']
-      else process.env['TMPDIR'] = previous
+      names.forEach((name, i) => {
+        if (previous[i] === undefined) delete process.env[name]
+        else process.env[name] = previous[i]
+      })
+      rmSync(scratch, { recursive: true, force: true })
+    }
+  })
+
+  it('removes the stale copy of the folder it is given and keeps a recent one, whatever the system and its temporary folder', () => {
+    const scratch = mkdtempSync(join(tmpdir(), 'lucium-sqlite-direct-'))
+    try {
+      const old = (Date.now() - STALE_COPY_MS - 60_000) / 1000
+      const stale = join(scratch, 'lucium-import-Stale2')
+      mkdirSync(stale)
+      writeFileSync(join(stale, 'History'), 'quelques octets')
+      utimesSync(join(stale, 'History'), old, old)
+      utimesSync(stale, old, old)
+      mkdirSync(join(scratch, 'lucium-import-Recent2'))
+      expect(sweepStaleCopies(scratch)).toBe(1)
+      expect(readdirSync(scratch).sort()).toEqual(['lucium-import-Recent2'])
+    } finally {
       rmSync(scratch, { recursive: true, force: true })
     }
   })
