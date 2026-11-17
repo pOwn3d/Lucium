@@ -137,6 +137,10 @@ jobs:
             grep -q " \./$path$" "$RUNNER_TEMP/deb-contents.txt" || { echo "::error::the .deb lacks $path"; exit 1; }
           done
           grep -E ' \./opt/Lucium/(lucium|chrome-sandbox)$' "$RUNNER_TEMP/deb-contents.txt"
+          # Nothing is writable by group or others (scripts/linux-modes.cjs): the Electron archive carries 0666 and 0777 files, and the first .deb made from it
+          # had 68 of them, the executable among them. Column 1 of `dpkg-deb --contents` is the mode, as `ls -l` writes it.
+          writable="$(awk 'substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { print $1, $6 }' "$RUNNER_TEMP/deb-contents.txt")"
+          if [ -n "$writable" ]; then echo "$writable" | head -n 20; echo "::error::the .deb carries files writable by group or others"; exit 1; fi
           # The test files stay out of the package (electron-builder.yml, `files`).
           if grep -q 'out/main/smoke' "$RUNNER_TEMP/deb-contents.txt"; then echo "::error::the package carries an engine test"; exit 1; fi
           file dist/*-UNSIGNED-check-build.AppImage

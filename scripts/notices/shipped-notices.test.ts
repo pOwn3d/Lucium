@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { chmodSync, existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -146,6 +146,49 @@ describe('scripts/after-pack.cjs', () => {
     // A package that has none is left alone (the stock Electron: electron-builder already takes it out).
     const plain = packaged()
     await expect(afterPack(context(plain.appOutDir, engine()))).resolves.toBeUndefined()
+  })
+
+  // The Electron archive of a Linux build carries 0666 and 0777 files, and the first .deb made from it had 68 files writable by every user, the executable among them.
+  it('puts the files of a Linux package back to the modes of a package: nothing writable by group or others, 0755 for folders and executables, 0644 for the rest', async () => {
+    const appOutDir = tempDir('lucium-notices-linux-modes-')
+    mkdirSync(join(appOutDir, 'resources', 'sub'), { recursive: true })
+    for (const { shipped, minBytes } of notices.PROJECT_NOTICES) writeFileSync(join(appOutDir, 'resources', shipped), 'x'.repeat(minBytes))
+    const files: Record<string, number> = { lucium: 0o777, 'chrome-sandbox': 0o4777, 'libffmpeg.so': 0o666, 'icudtl.dat': 0o666, 'resources/app.asar': 0o666, 'resources/sub/data.bin': 0o640, 'resources/sub/run.sh': 0o700 }
+    for (const [name, mode] of Object.entries(files)) {
+      writeFileSync(join(appOutDir, name), 'x')
+      chmodSync(join(appOutDir, name), mode)
+    }
+    chmodSync(join(appOutDir, 'resources', 'sub'), 0o777)
+    symlinkSync('lucium', join(appOutDir, 'launcher'))
+    await afterPack(context(appOutDir, engine(), 'linux'))
+    const mode = (name: string): number => statSync(join(appOutDir, name)).mode & 0o7777
+    expect(mode('lucium')).toBe(0o755)
+    expect(mode('chrome-sandbox'), 'no setuid bit: the post-install script of the .deb sets it where it is needed').toBe(0o755)
+    expect(mode('resources/sub/run.sh')).toBe(0o755)
+    for (const name of ['libffmpeg.so', 'icudtl.dat', 'resources/app.asar', 'resources/sub/data.bin', 'resources/LICENSE']) expect(mode(name), name).toBe(0o644)
+    for (const name of ['.', 'resources', 'resources/sub']) expect(mode(name), name).toBe(0o755)
+    // The link is left alone: it still points at `lucium`.
+    expect(lstatSync(join(appOutDir, 'launcher')).isSymbolicLink()).toBe(true)
+    // Nothing in the tree is writable by group or others any more.
+    const writable: string[] = []
+    const walk = (folder: string): void => {
+      for (const name of readdirSync(folder)) {
+        const path = join(folder, name)
+        if (lstatSync(path).isSymbolicLink()) continue
+        if (statSync(path).mode & 0o022) writable.push(path)
+        if (statSync(path).isDirectory()) walk(path)
+      }
+    }
+    walk(appOutDir)
+    expect(writable).toEqual([])
+  })
+
+  it('does not touch the modes of the other systems: a macOS bundle is signed after this, and its modes are the ones the signature seals', async () => {
+    const { appOutDir, resources } = packaged()
+    writeFileSync(join(resources, 'asset.bin'), 'x')
+    chmodSync(join(resources, 'asset.bin'), 0o666)
+    await afterPack(context(appOutDir, engine()))
+    expect(statSync(join(resources, 'asset.bin')).mode & 0o7777).toBe(0o666)
   })
 
   it('never takes the notices of the stock Electron for a custom engine that has none: the build stops', async () => {

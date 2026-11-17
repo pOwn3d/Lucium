@@ -316,14 +316,16 @@ test('site panel: the last button of the row opens the Extensions page in a tab 
   await expect(page).toBeFocused()
 
   // It opens the page of the extensions (chrome://extensions, served as lucium-ui://extensions/) in a tab of the window, no window of its own, and the panel closes.
-  const windowUrls = (): string[] => running!.app.windows().map((one) => one.url())
-  const windowsBefore = windowUrls()
+  // The windows of the application, not the pages Playwright lists: a tab is a page too, and whether the new tab is already listed when it is counted is a
+  // matter of timing (it was on a Linux runner, and the count of pages then differs from the one before).
+  const browserWindows = (): Promise<number> => running!.app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().length)
+  const windowsBefore = await browserWindows()
   await overlay.keyboard.press('Enter')
   await expect
     .poll(() => running!.app.evaluate(({ webContents }) => webContents.getAllWebContents().map((contents) => contents.getURL())), { message: 'the Extensions page in a tab' })
     .toContain('lucium-ui://extensions/')
   expect(running!.app.windows().some((one) => one.url().includes('extensions.html'))).toBe(false)
-  expect(windowUrls(), 'no window of its own: the pages of the application are the same as before').toEqual(windowsBefore)
+  expect(await browserWindows(), 'no window of its own').toBe(windowsBefore)
   await expect.poll(() => overlayShown(running!.app), { message: 'the panel closed' }).toBe(false)
 })
 

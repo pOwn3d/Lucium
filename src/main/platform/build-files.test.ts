@@ -110,6 +110,11 @@ describe('.github/workflows/linux.yml', () => {
     expect(workflow).toMatch(/name: lucium-linux-\$\{\{ matrix\.arch \}\}-UNSIGNED-check-build\n {10}path: dist\/\*-UNSIGNED-check-build\.\*\n {10}if-no-files-found: error\n {10}retention-days: 7\n/)
   })
 
+  it('fails when the deb carries a file writable by group or others', () => {
+    expect(workflow).toContain(`writable="$(awk 'substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { print $1, $6 }' "$RUNNER_TEMP/deb-contents.txt")"`)
+    expect(workflow).toMatch(/if \[ -n "\$writable" \]; then [^\n]*exit 1; fi/)
+  })
+
   it('starts the packages themselves: the deb installed with apt, the AppImage as the machine has it and once user namespaces are allowed', () => {
     expect(workflow).toContain('apt-get install -y ./dist/*-UNSIGNED-check-build.deb')
     expect(workflow).toMatch(/smoke "deb-\$\{\{ matrix\.arch \}\}" start \/usr\/bin\/lucium/)

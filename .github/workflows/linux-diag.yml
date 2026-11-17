@@ -43,11 +43,43 @@ jobs:
         run: pnpm build
       - name: Sandbox
         run: bash scripts/linux-ci.sh sandbox-profile "$(node -p "require('electron')")"
-      - name: Playwright, the failing tests
+      # Asks the extension worker what it has: the shim script that gives it chrome.omnibox, and the preloads the session holds.
+      - name: Diagnosis spec
         env:
-          DEBUG: electron-chrome-extensions*
           ELECTRON_ENABLE_LOGGING: '1'
-        run: xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' pnpm exec playwright test tests/e2e/extensions.spec.ts tests/e2e/command-bar.spec.ts tests/e2e/tabs-effects.spec.ts tests/e2e/site-panel.spec.ts --grep 'omnibox-keywords|extension-data-apis|little-modifier|last button of the row|row of the extensions goes'
+        run: |
+          cat > tests/e2e/zz-diag.spec.ts <<'SPEC'
+          import { resolve } from 'node:path'
+          import { test } from '@playwright/test'
+          import { launchLucium } from './launch'
+
+          test('diag: the worker of the keyext probe', async () => {
+            const running = await launchLucium([resolve(__dirname, '../../compat/keyext-probe')])
+            await new Promise((done) => setTimeout(done, 10_000))
+            const info = await running.app.evaluate(async ({ session }) => {
+              const ses = session.fromPartition('persist:profile-default') as any
+              return {
+                preloads: (ses.getPreloadScripts?.() ?? []).map((p: any) => ({ id: p.id, type: p.type, filePath: p.filePath })),
+                extensions: (ses.extensions?.getAllExtensions?.() ?? ses.getAllExtensions?.() ?? []).map((e: any) => ({ id: e.id, name: e.name })),
+                running: ses.serviceWorkers?.getAllRunning?.() ?? null
+              }
+            })
+            console.log('DIAG session', JSON.stringify(info))
+            const workers = running.app.context().serviceWorkers()
+            console.log('DIAG workers listed by playwright', workers.length)
+            for (const worker of workers) {
+              const state = await worker
+                .evaluate(() => {
+                  const g = globalThis as any
+                  return JSON.stringify({ shim: typeof g.__luciumShim, chromeKeys: Object.keys(g.chrome ?? {}), omnibox: typeof g.chrome?.omnibox, id: g.chrome?.runtime?.id, manifestOmnibox: g.chrome?.runtime?.getManifest?.()?.omnibox, frozen: Object.isFrozen(g.chrome) })
+                })
+                .catch((error: unknown) => `evaluate failed: ${String(error)}`)
+              console.log('DIAG worker', worker.url(), state)
+            }
+            await running.close()
+          })
+          SPEC
+          xvfb-run --auto-servernum --server-args='-screen 0 1920x1080x24' pnpm exec playwright test tests/e2e/zz-diag.spec.ts
       - name: Keep the results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
