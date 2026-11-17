@@ -61,11 +61,12 @@ export interface AppIconIssue {
 /**
  * What to do with the custom icon of the application bundle so that it follows the choice `wanted`: `set` puts the chosen picture on the bundle,
  * `clear` takes the custom icon off, `none` leaves the bundle as it is. `found.custom` says whether the bundle carries a custom icon now (its `Icon\r`),
- * `found.posed` which icon Lucium last put on this very bundle (null when it does not know). The default icon is the one of the bundle itself: it is
- * never put on it, and choosing it takes off what is there, since a custom icon fails `codesign --verify --strict` (docs/drm.md). An id that is not
- * one of the list counts as the default one.
+ * `found.posed` which icon THIS profile last put on this very bundle (null when it never did, or does not know). The default icon is the one of the
+ * bundle itself: it is never put on it, and choosing it takes off the icon this profile put, since a custom icon fails `codesign --verify --strict`
+ * (docs/drm.md). The bundle is shared by every profile and the icon is the choice of one: a profile that put none (a blank profile for a test, a
+ * capture, a measure; a record that cannot be read) leaves the one it finds. An id that is not one of the list counts as the default one.
  */
 export function bundleIconStep(wanted: string, found: { custom: boolean; posed: string | null }): 'set' | 'clear' | 'none' {
-  if (!isAppIconId(wanted) || wanted === DEFAULT_APP_ICON) return found.custom ? 'clear' : 'none'
+  if (!isAppIconId(wanted) || wanted === DEFAULT_APP_ICON) return found.custom && found.posed !== null ? 'clear' : 'none'
   return found.custom && found.posed === wanted ? 'none' : 'set'
 }
