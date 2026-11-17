@@ -18,7 +18,7 @@
 // the quit, lists it as withdrawn: then Lucium drops it (`dropWithdrawn`, squirrel-staging.ts) and says so.
 
 import { BrowserWindow, autoUpdater, dialog, shell, type MessageBoxOptions } from 'electron'
-import type { UpdateOffer } from '@shared/update-check'
+import { downloadedVersion, type UpdateOffer } from '@shared/update-check'
 import { UPDATE_NOTICE_MS, droppedUpdateText, updateNoticeText, type DropOutcome, type DroppedNotice, type UpdateNotice } from '@shared/auto-update'
 import { installFailureReason, type InstallError } from '@shared/update-install'
 import { formatSize } from '@shared/translate-local'
@@ -76,7 +76,7 @@ export class UpdateInstaller {
   private pending: Promise<DownloadOutcome> | null = null
   private settle: ((outcome: DownloadOutcome) => void) | null = null
   private ready = false
-  /** The version the download under way was asked for, then the one that waits once downloaded ('' when the caller named none). */
+  /** The version the download under way was asked for, then the one that waits once downloaded: the one Squirrel names (`releaseName`), else the one asked ('' when neither). */
   private asked = ''
   private readyAs = ''
   /** « Installer et relancer » was chosen: the quit that follows is the install's, and nothing may hold it. */
@@ -197,9 +197,15 @@ export class UpdateInstaller {
       if (this.pending) this.finish({ kind: 'failed', reason })
       else this.deps.report(reason)
     })
-    updater.on('update-downloaded', () => {
+    updater.on('update-downloaded', (_event: unknown, _notes: unknown, releaseName: unknown) => {
       this.ready = true
-      this.readyAs = this.asked
+      // Squirrel reads the feed again at the click: what it downloaded may be newer than the offer read earlier (`asked`).
+      const downloaded = downloadedVersion(releaseName)
+      if (downloaded === null) {
+        const named = typeof releaseName === 'string' ? JSON.stringify(releaseName.slice(0, 60)) : 'none'
+        this.deps.log?.(`[update] the downloaded update names no readable version (release name: ${named}): the version the user was offered (${this.asked || 'none'}) stands for it`)
+      }
+      this.readyAs = downloaded ?? this.asked
       this.finish({ kind: 'downloaded' })
     })
     updater.on('update-not-available', () => this.finish({ kind: 'not-available' }))
