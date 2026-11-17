@@ -9,5 +9,15 @@ patchedDependencies:
   electron-chrome-extensions@4.10.0: patches/electron-chrome-extensions@4.10.0.patch
 
 # adm-zip 0.5.18 has a known vulnerability: the store's dependency is forced to the fixed release.
+#
+# minimatch 7.0.0 to 11.0.0 is open to a denial of service through the amplification of globparts (GHSA-g3hv-75wg-m249, fixed in 11.0.1), and
+# 11.0.0 to 11.0.6 to a quadratic compile time (GHSA-cf2h-pxjq-68xw, fixed in 11.0.7). electron-builder (development only: it packages, it is not
+# shipped) asks for both ranges: app-builder-lib for ^10.2.5 (its 26.18.1 and its 27 alpha too) and @electron/universal for ^9.0.3 (its 3 no longer
+# has the dependency, but app-builder-lib 26 keeps the 2). No release of the parents takes a fixed one, so these two requests, and only these, are
+# sent to 11.0.8: the latest release that has been out long enough for the release-age rule of pnpm (11.0.7 is the first with both fixes). The
+# others are not in the range and stay as they are: minimatch 3 (glob 7, @electron/asar, another API) and 5 (jake) are before 7.0.0. Take the
+# overrides out once electron-builder asks for ^11.
 overrides:
   adm-zip: 0.6.1
+  minimatch@^10.2.5: 11.0.8
+  minimatch@^9.0.3: 11.0.8
