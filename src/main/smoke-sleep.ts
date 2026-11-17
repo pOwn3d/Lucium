@@ -99,12 +99,8 @@ export async function smokeSleep({ browser, store, win }: SmokeContext, check: C
   const SETTLE_WITHIN_MS = 20_000
   /** The blocker of a tab, asked again while it is only that: until the page is loaded and answers, or after `SETTLE_WITHIN_MS` (the check then says what it saw). */
   const blockerOf = async (id: string) => {
-    const deadline = Date.now() + SETTLE_WITHIN_MS
     let blocker = await browser.sleepBlockerOf(id)
-    while (SETTLING.has(blocker) && Date.now() < deadline) {
-      await sleep(250)
-      blocker = await browser.sleepBlockerOf(id)
-    }
+    if (SETTLING.has(blocker)) await waitFor(async () => !SETTLING.has((blocker = await browser.sleepBlockerOf(id))), SETTLE_WITHIN_MS)
     return blocker
   }
   /** Lets the delay pass (it is a few milliseconds here), waits for the pages of the checks to be loaded and to answer, then sweeps. */
