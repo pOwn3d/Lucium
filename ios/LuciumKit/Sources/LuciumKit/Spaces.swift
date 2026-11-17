@@ -96,9 +96,16 @@ extension BrowserState {
 
     public func isProfileInUse(_ profileId: String) -> Bool { spaces.contains { $0.profileId == profileId } }
 
-    /// Gives a profile a name, or takes it back (`nil`). Written where the Mac reads it, and nothing else of the settings is touched.
+    /// Gives a profile a name, or takes it back (`nil`). Written where the Mac reads it, and nothing else of the settings is touched, with one
+    /// exception: a state with no `settings` at all is a new profile for the privacy rules (`PrivacySettings`), and a `settings` that only names
+    /// a profile would make it an earlier one (HTTPS first, the signal and the tracking parameters all read as off), so the five keys a new
+    /// profile of the Mac starts with are written first.
     public mutating func setProfileName(_ name: String?, for profileId: String) {
         guard Self.isProfileId(profileId) else { return }
+        if rest["settings"] == nil {
+            guard name != nil else { return }  // nothing to take back from settings that do not exist
+            PrivacySettings.newProfile.write(into: &self)
+        }
         var settings: [String: JSONValue] = [:]
         if case .object(let current)? = rest["settings"] { settings = current }
         var names: [String: JSONValue] = [:]

@@ -139,6 +139,23 @@ struct SpacesTests {
         #expect(!state.profileIds.contains(id) && state.profileNames[id] == nil)
     }
 
+    /// A state with no `settings` is a new profile for the privacy rules; one whose `settings` only names a profile would read as an earlier profile
+    /// (the signal and the tracking parameters off). Found by the privacy tests of the application, which failed on a state made by `defaultState()`.
+    @Test func namingAProfileOnAStateWithNoSettingsKeepsItANewProfileForPrivacy() throws {
+        var state = twoSpaces()
+        state.rest["settings"] = nil
+        #expect(state.privacy == .newProfile)
+        state.setProfileName("Travail", for: "work")
+        #expect(state.profileNames == ["work": "Travail"])
+        #expect(state.privacy == .newProfile, "naming a profile must not switch the privacy rules off")
+        guard case .object(let settings)? = state.rest["settings"] else { Issue.record("no settings"); return }
+        #expect(settings["protectionBaseline"] == .string("renforcee"), "the five keys a new profile of the Mac starts with")
+        var none = twoSpaces()
+        none.rest["settings"] = nil
+        none.setProfileName(nil, for: "work")
+        #expect(none.rest["settings"] == nil, "taking back a name that was never there writes nothing")
+    }
+
     @Test func theNameOfAProfileIsWrittenWhereTheMacReadsItAndTheRestOfTheSettingsStays() throws {
         var state = twoSpaces()
         state.rest["settings"] = .object(["blockAds": .bool(true), "profileNames": .object(["work": .string("Travail")])])
