@@ -204,6 +204,8 @@ export async function smokeSleep({ browser, store, win }: SmokeContext, check: C
     check('the idle tab goes to sleep, its page let go', swept.includes(first) && !live(first), JSON.stringify({ swept, live: live(first) }))
     select(first)
     const restored = await waitFor(() => listOf(first)?.entries.length === addresses.length)
+    // The replay loads the last page: the tab is closed below only once it has, or the close would abort that load and log it as a failed restore.
+    await waitFor(() => runtimeOf(first)?.loading === false)
     const after = listOf(first)
     check('woken, the tab goes back through the same three pages, on the last one', restored && after?.entries.join() === addresses.join() && after.index === 2, JSON.stringify(after))
   })
