@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { checkHostManifest, encodeFrame, FrameDecoder, hostEnvironment, isValidHostName, MAX_HOST_MESSAGE_BYTES, NATIVE_ERRORS, nativeHostDirs } from './native-messaging'
+import { checkHostManifest, encodeFrame, FrameDecoder, hostEnvironment, isValidHostName, isRegistryManifestPath, MAX_HOST_MESSAGE_BYTES, NATIVE_ERRORS, nativeHostDirs, nativeHostRegistryKeys, parseRegistryExport } from './native-messaging'
 
 const bytes = (text: string) => new TextEncoder().encode(text)
 const frameOf = (json: string) => {
@@ -151,6 +151,80 @@ describe('nativeHostDirs', () => {
       '/Users/me/Library/Application Support/Google/Chrome/NativeMessagingHosts',
       '/Library/Google/Chrome/NativeMessagingHosts'
     ])
+  })
+})
+
+describe('nativeHostRegistryKeys', () => {
+  const KEY = 'Software\\Google\\Chrome\\NativeMessagingHosts\\com.example.host'
+
+  it('names the keys of Chrome in its order: the 32-bit view before the 64-bit one, the user before the machine', () => {
+    expect(nativeHostRegistryKeys('com.example.host', true, 'win32')).toEqual([
+      { hive: 'HKCU', view: 32, key: KEY },
+      { hive: 'HKCU', view: 64, key: KEY },
+      { hive: 'HKLM', view: 32, key: KEY },
+      { hive: 'HKLM', view: 64, key: KEY }
+    ])
+  })
+
+  it('names none unless the user allowed the hosts of Chrome: they are Chrome\'s, as its folders are', () => {
+    expect(nativeHostRegistryKeys('com.example.host', false, 'win32')).toEqual([])
+  })
+
+  it('names none off Windows, where the manifests are in folders', () => {
+    expect(nativeHostRegistryKeys('com.example.host', true, 'darwin')).toEqual([])
+    expect(nativeHostRegistryKeys('com.example.host', true, 'linux')).toEqual([])
+  })
+
+  it('names none for a name that is not a host name, so that nothing odd reaches a command line', () => {
+    for (const name of ['', 'a b', 'a\\b', 'a"b', 'COM.Example', 'a&b', '..', 'a/b']) expect(nativeHostRegistryKeys(name, true, 'win32')).toEqual([])
+  })
+})
+
+describe('parseRegistryExport', () => {
+  const reg = (body: string) => `Windows Registry Editor Version 5.00\r\n\r\n${body}`
+
+  it('reads the default value of the key, with its backslashes unescaped', () => {
+    expect(parseRegistryExport(reg('[HKEY_CURRENT_USER\\Software\\Google\\Chrome\\NativeMessagingHosts\\com.example.host]\r\n@="C:\\\\Program Files\\\\Host\\\\com.example.host.json"\r\n\r\n'))).toBe('C:\\Program Files\\Host\\com.example.host.json')
+  })
+
+  it('keeps an accented path as it is written, and unescapes a quote', () => {
+    expect(parseRegistryExport(reg('[HKEY_CURRENT_USER\\Software\\X]\r\n@="C:\\\\Users\\\\Léa \\"Dupont\\"\\\\m.json"\r\n'))).toBe('C:\\Users\\Léa "Dupont"\\m.json')
+  })
+
+  it('reads a file with Unix line ends too', () => {
+    expect(parseRegistryExport(reg('[HKEY_CURRENT_USER\\Software\\X]\n@="C:\\\\m.json"\n'))).toBe('C:\\m.json')
+  })
+
+  it('does not take another value of the key for its default one', () => {
+    expect(parseRegistryExport(reg('[HKEY_CURRENT_USER\\Software\\X]\r\n"path"="C:\\\\other.json"\r\n@="C:\\\\m.json"\r\n'))).toBe('C:\\m.json')
+    expect(parseRegistryExport(reg('[HKEY_CURRENT_USER\\Software\\X]\r\n"path"="C:\\\\other.json"\r\n'))).toBeNull()
+  })
+
+  it('does not take the default value of a sub-key for the one of the key (an export goes down the tree)', () => {
+    expect(parseRegistryExport(reg('[HKEY_CURRENT_USER\\Software\\X]\r\n"a"="b"\r\n\r\n[HKEY_CURRENT_USER\\Software\\X\\Sub]\r\n@="C:\\\\sub.json"\r\n'))).toBeNull()
+  })
+
+  it('has no value for a key without a default value, for a value that is not a plain string, and for a file that is not an export', () => {
+    expect(parseRegistryExport(reg('[HKEY_CURRENT_USER\\Software\\X]\r\n\r\n'))).toBeNull()
+    expect(parseRegistryExport(reg('[HKEY_CURRENT_USER\\Software\\X]\r\n@=hex(2):43,00,3a,00,00,00\r\n'))).toBeNull()
+    expect(parseRegistryExport(reg('[HKEY_CURRENT_USER\\Software\\X]\r\n@=dword:00000001\r\n'))).toBeNull()
+    expect(parseRegistryExport('@="C:\\\\m.json"\r\n')).toBeNull()
+    expect(parseRegistryExport('')).toBeNull()
+  })
+})
+
+describe('isRegistryManifestPath', () => {
+  it('accepts a path on a drive', () => {
+    expect(isRegistryManifestPath('C:\\Program Files\\Host\\m.json')).toBe(true)
+    expect(isRegistryManifestPath('d:/hosts/m.json')).toBe(true)
+  })
+
+  it('refuses a network path and a device path, which an installer has no reason to write and which make the machine reach out', () => {
+    for (const path of ['\\\\server\\share\\m.json', '\\\\?\\C:\\m.json', '\\\\.\\pipe\\x', '//server/share/m.json']) expect(isRegistryManifestPath(path)).toBe(false)
+  })
+
+  it('refuses a path that is not absolute, a bare drive, an environment variable that nobody expanded, and an empty value', () => {
+    for (const path of ['m.json', '..\\m.json', 'C:', 'C:m.json', '%ProgramFiles%\\Host\\m.json', '', '(value not set)']) expect(isRegistryManifestPath(path)).toBe(false)
   })
 })
 

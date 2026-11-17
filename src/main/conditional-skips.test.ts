@@ -40,6 +40,7 @@ const CONDITIONAL: Readonly<Record<string, { count: number; waitsFor: string }>>
   'src/main/shell/bounded-file.test.ts': { count: 2, waitsFor: 'a user who is not root, and not Windows (no mkfifo, no /dev/zero, chmod 000 refuses nothing)' },
   'src/main/shell/bundle-icon.test.ts': { count: 1, waitsFor: 'macOS, its osascript and its codesign (the real script on a throw-away bundle)' },
   'src/main/shell/extension-patch.test.ts': { count: 4, waitsFor: 'the patched library: a test of the same file fails when it is not installed, so these four are never skipped unseen' },
+  'src/main/shell/native-messaging-registry.test.ts': { count: 1, waitsFor: 'Windows only: the real reg.exe of the system and a key under the user\'s root (the registry exists nowhere else)' },
   'src/main/shell/quit-clear.test.ts': { count: 1, waitsFor: 'Windows: chmod 500 does not make a folder refuse a new file there' },
   'src/main/shell/space-image-sweep.test.ts': { count: 1, waitsFor: 'Windows: chmod 000 does not make a file unreadable there' },
   'src/main/translate/system-stream.test.ts': { count: 1, waitsFor: 'Windows: the stand-in of the macOS helper is a script run by /bin/sh, which Windows cannot start' },
