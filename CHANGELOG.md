@@ -8,7 +8,9 @@ How to keep it: every pull request that a user would notice adds a line to the t
 
 The “Nouveautés” sheet of the application shows the section of its version, from [CHANGELOG.fr.md](CHANGELOG.fr.md) when the interface is in French: every line added here is added there too, in French, with the same bold title then a colon.
 
-## [Unreleased]
+## [1.1.3] - 2026-11-17
+
+A link dragged from another application opens in a new tab, “Open With” lists Lucium for PDF documents and pictures, a folder can wear an emoji, and the mini window opens centered and on top. A crafted site icon can no longer freeze Lucium, and the update box names the version that was really downloaded.
 
 ### Added
 

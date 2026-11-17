@@ -2,7 +2,9 @@
 
 Les changements visibles de Lucium, en français. C'est ce texte que la feuille « Nouveautés » de l'application montre quand l'interface est en français ; la référence est [CHANGELOG.md](CHANGELOG.md), en anglais, publié avec chaque version. Chaque ligne ajoutée là-bas est ajoutée ici, avec le même titre en gras suivi de deux-points.
 
-## [Unreleased]
+## [1.1.3] - 2026-11-17
+
+Un lien glissé d’une autre application s’ouvre dans un nouvel onglet, « Ouvrir avec » propose Lucium pour les PDF et les images, un dossier peut porter un emoji, et la mini-fenêtre s’ouvre au centre et au premier plan. Une icône de site piégée ne peut plus figer Lucium, et la boîte de mise à jour nomme la version réellement téléchargée.
 
 ### Ajouts
 
