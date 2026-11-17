@@ -3,7 +3,7 @@ import { gotoTabCommand } from '@shared/little-picker'
 import { actionToDispatch, BAR_WIDTH, barBox, barLayout, candidateDispatches, candidateHint, candidatePreview, cardSurface, completedRow, groupCandidates, groupStarts, groupTitle, inScope, littleCandidates, littleGroupStarts, newTabOf, pageColorBehind, typedStaysPrivate, inlineCompletion, rankCandidates, resultAtEdge, scopeSiteFor, SCOPE_PREFIX, splitScope, suggestionQuery, usageKey, windowSidebarChangeOf, type BarScope, type Candidate, type CommandAction } from '@shared/command-bar'
 import type { CommandBarMode } from '@shared/ipc'
 import { commandHeld, effectiveAccelerator, formatAccelerator } from '@shared/keybindings'
-import { commandPress, platformOf } from '@shared/platform'
+import { ariaKeyShortcut, commandPress, platformOf } from '@shared/platform'
 import type { HistoryEntry, SiteSearch } from '@shared/model'
 import { copyableUrl } from '@shared/copy-url'
 import { activeTab } from '@shared/sidebar'
@@ -790,7 +790,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
           <b>{t('cmd.page-oubliee')}</b>
           <span className="ts-undo-spacer" />
           <kbd aria-hidden="true">{commandPress('Z', platform)}</kbd>
-          <button type="button" aria-keyshortcuts={platform === 'darwin' ? 'Meta+Z' : 'Control+Z'} onMouseDown={(e) => e.preventDefault()} onClick={undoForget}>
+          <button type="button" aria-keyshortcuts={ariaKeyShortcut('Z', platform)} onMouseDown={(e) => e.preventDefault()} onClick={undoForget}>
             {t('cmd.annuler')}
           </button>
         </div>

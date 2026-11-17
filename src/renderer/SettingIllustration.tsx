@@ -5,7 +5,7 @@
 import { useContext, useState, type CSSProperties, type ReactNode } from 'react'
 import { t } from '@shared/i18n'
 import { illustrationTip, type Illustration } from '@shared/settings-illustrations'
-import type { PlatformId } from '@shared/platform'
+import { modifierCaps } from '@shared/platform'
 import { PlatformContext, SettingsStateContext } from './settings-context'
 import { PauseGlyph, PlayGlyph } from './media-glyphs'
 import './settings-illustrations.css'
@@ -110,15 +110,10 @@ const Cap = ({ cls = 'key', style, children }: { cls?: string; style?: CSSProper
   </span>
 )
 
-/**
- * The keys of the scenes that show a press. macOS draws the symbols of its modifiers (⌃ ⌥ ⌘ ⇥); the other systems have no Command key, their main modifier is
- * Ctrl, and their caps are words (wider: the scene that places its caps by hand moves the second one along).
- */
-const capsOf = (platform: PlatformId | null) => (platform === 'darwin' ? { ctrl: '⌃', alt: '⌥', cmd: '⌘', tab: '⇥', mac: true } : { ctrl: 'Ctrl', alt: 'Alt', cmd: 'Ctrl', tab: 'Tab', mac: false })
-
 function Scene({ id }: { id: string }) {
   const w = words()
-  const caps = capsOf(useContext(PlatformContext))
+  // The keys of the scenes that show a press: the symbols of macOS, the words elsewhere (wider: the scene that places its caps by hand moves the second one along).
+  const caps = modifierCaps(useContext(PlatformContext))
   switch (id) {
     case 'sleepAfterMinutes':
       return (

@@ -271,6 +271,19 @@ export function commandPress(key: string, platform: PlatformId): string {
   return `Ctrl+${key === '↵' || key === '↩' ? t('platform.entree') : key}`
 }
 
+/** The `aria-keyshortcuts` of a press of the main modifier and one key: « Meta+Z » on macOS, « Control+Z » elsewhere. */
+export function ariaKeyShortcut(key: string, platform: PlatformId): string {
+  return `${platform === 'darwin' ? 'Meta' : 'Control'}+${key}`
+}
+
+/**
+ * The key caps a drawing shows for the modifiers: the symbols of macOS, the words of the other systems (where the Command key does not exist and Ctrl takes
+ * its place). `mac` says which of the two, for a drawing that places its caps by hand (a word is wider than a symbol).
+ */
+export function modifierCaps(platform: PlatformId | null): { ctrl: string; alt: string; cmd: string; tab: string; mac: boolean } {
+  return platform === 'darwin' ? { ctrl: '⌃', alt: '⌥', cmd: '⌘', tab: '⇥', mac: true } : { ctrl: 'Ctrl', alt: 'Alt', cmd: 'Ctrl', tab: 'Tab', mac: false }
+}
+
 /** Whether an accelerator holds Ctrl and Alt together: where that is AltGr, it fires while a character is being typed. */
 export function usesCtrlAlt(accelerator: string, platform: PlatformId): boolean {
   if (!PLATFORM_FACTS[platform].ctrlAltIsAltGr) return false

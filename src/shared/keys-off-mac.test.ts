@@ -4,7 +4,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { CATALOGUES, setLanguage } from './i18n'
 import { COMMANDS, acceleratorKeys, commandHeld, formatAccelerator, labelWithShortcut, shortcutSuffix, toolbarKeys } from './keybindings'
-import { commandPress } from './platform'
+import { ariaKeyShortcut, commandPress, modifierCaps } from './platform'
 import { isPeekOpenKey } from './peek'
 import { PLUS_GROUPS, plusShortcut } from './plus-menu'
 import { illustrationOf, illustrationTip } from './settings-illustrations'
@@ -174,5 +174,16 @@ describe('the sentences that speak of « ce Mac »', () => {
   it('name the computer in both languages for what is not a Mac’s', () => {
     expect(CATALOGUES['fr']!['welcome.trouves-sur-ce-mac-names']).toBe('Trouvés sur cet ordinateur : {names}.')
     expect(CATALOGUES['en']!['welcome.trouves-sur-ce-mac-names']).toBe('Found on this computer: {names}.')
+  })
+})
+
+describe('ariaKeyShortcut and modifierCaps', () => {
+  it('name the main modifier as the system does: Meta and symbols on macOS, Control and words elsewhere', () => {
+    expect(ariaKeyShortcut('Z', 'darwin')).toBe('Meta+Z')
+    expect(ariaKeyShortcut('Z', 'linux')).toBe('Control+Z')
+    expect(modifierCaps('darwin')).toEqual({ ctrl: '⌃', alt: '⌥', cmd: '⌘', tab: '⇥', mac: true })
+    expect(modifierCaps('win32')).toMatchObject({ ctrl: 'Ctrl', alt: 'Alt', cmd: 'Ctrl', tab: 'Tab', mac: false })
+    // No system told: no symbol of macOS either.
+    expect(modifierCaps(null).cmd).toBe('Ctrl')
   })
 })

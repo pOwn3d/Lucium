@@ -24,7 +24,6 @@ const KEPT: ReadonlyArray<readonly [file: string, text: string | RegExp, why: st
   ['EngineStatus.tsx', /^(Lucium|Electron|Chromium|Widevine)$/, 'names of the application, of the engine and of its parts'],
   ['LockScreen.tsx', 'Touch ID', 'the name of the function, the same in every language'],
   ['ExtensionsPage.tsx', 'Meta+F', 'a key'],
-  ['CommandBar.tsx', 'Meta+Z', 'the key of « Annuler », as `aria-keyshortcuts` names it'],
   ['FloatingVideoBar.tsx', /^(Meta\+W|Space|ArrowUp ArrowDown|ArrowLeft|ArrowRight)$/, 'the keys of the bar, as `aria-keyshortcuts` names them'],
   ['HoverCard.tsx', 'zz', 'the mark of a sleeping tab'],
   ['SidebarRows.tsx', 'zz', 'the mark of a sleeping tab'],
