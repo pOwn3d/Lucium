@@ -10,11 +10,23 @@ description: pnpm, Node from .nvmrc, the pnpm store cache and `pnpm install --fr
 # third-party action; Dependabot (github-actions, dependabot.yml, which names this folder) keeps the pin up to date. The pnpm version is the
 # "packageManager" of package.json (pnpm@12.16.1, the one that wrote pnpm-lock.yaml).
 
+# The pnpm store is cached for the quick checks of ci.yml only (`cache: 'true'`); the rare jobs (build, e2e, smoke) install without it. It is
+# SAVED from a push to main only: a pull request restores the store of main and writes nothing, so there is one copy per lockfile and per
+# system, not one per pull request (a cache is private to the ref that wrote it, so each pull request used to keep its own). Nothing here
+# can cost anything on a public repository, and nothing may on a private copy.
+
+inputs:
+  cache:
+    description: "'true' to restore the pnpm store (and save it, on a push to main). Left 'false' by the jobs that run rarely."
+    required: false
+    default: 'false'
+
 runs:
   using: composite
   steps:
     - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
       with:
         version: 12.16.1
-        cache: true
+        cache: ${{ inputs.cache }}
+        save-cache: ${{ inputs.cache == 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
         require-lockfile: true

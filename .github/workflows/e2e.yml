@@ -78,4 +78,4 @@ jobs:
             test-results/
             tests/e2e/settings.spec.ts-snapshots/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
