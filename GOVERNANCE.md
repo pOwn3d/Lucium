@@ -48,7 +48,7 @@ A maintainer who is inactive for a long period (about a year) and does not answe
 
 ## Copyright, license and name
 
-**Copyright © 2026 ConsilioWeb and contributors.** Lucium is distributed under **GPL-3.0-or-later** ([LICENSE](LICENSE)). ConsilioWeb holds the copyright of the code it wrote; each contributor keeps the copyright of what they contribute. Contributions come in under the same license and with its additional permission for the Widevine module ([ADDITIONAL-PERMISSION.txt](ADDITIONAL-PERMISSION.txt)), with a Developer Certificate of Origin sign-off and **no assignment**: there is no contributor license agreement. [NOTICE](NOTICE) says who holds what and which components are under another license.
+**Copyright © 2026 ConsilioWeb and contributors.** Lucium is distributed under **GPL-3.0-or-later** ([LICENSE](LICENSE)). ConsilioWeb holds the copyright of the code it wrote; each contributor keeps the copyright of what they contribute. Contributions come in under the same license and with its additional permissions, for the Widevine module ([ADDITIONAL-PERMISSION.txt](ADDITIONAL-PERMISSION.txt)) and for the iPhone and iPad application handed out through the App Store ([ADDITIONAL-PERMISSION-APP-STORE.txt](ADDITIONAL-PERMISSION-APP-STORE.txt)), with a Developer Certificate of Origin sign-off and **no assignment**: there is no contributor license agreement. [NOTICE](NOTICE) says who holds what and which components are under another license.
 
 The license covers the code. It gives no right to the name "Lucium" or to the logo as the signs of this project: [TRADEMARKS.md](TRADEMARKS.md) says what a modified version has to change.
 

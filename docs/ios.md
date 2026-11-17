@@ -1,6 +1,6 @@
 # Version iOS (iPhone et iPad)
 
-Étude et fondations de la version iOS. **Rien ici n'est publié, signé ni envoyé à Apple.** Ce document dit ce qui est *vérifié* (lu dans la documentation d'Apple, ou essayé dans ce dépôt sur un simulateur iOS), ce qui est *supposé*, et ce qu'il reste à décider. Une phrase « mesuré » renvoie à un essai fait pour cette étude ; une phrase « supposé » n'a été ni lue ni essayée.
+Étude et fondations de la version iOS. **Rien ici n'est publié, signé ni envoyé à Apple.** Ce document dit ce qui est *vérifié* (lu dans la documentation d'Apple, ou essayé dans ce dépôt sur un simulateur iOS), ce qui est *supposé*, et ce qui a été *décidé* par le chef de projet le 17 novembre 2026 (§15). Une phrase « mesuré » renvoie à un essai fait pour cette étude ; une phrase « supposé » n'a été ni lue ni essayée.
 
 ![La maquette de fondation sur un simulateur iPhone : une page, l'adresse, les trois espaces, précédent, suivant, onglets](images/ios-fondation-fr.png)
 
@@ -13,11 +13,12 @@
 | Quelle technique ? | Application **native Swift / SwiftUI sur WebKit** (`WKWebView`). Les navigateurs de l'App Store doivent utiliser WebKit (règle 2.5.6, §9) : pas d'Electron, pas de Chromium, donc **ni extensions Chromium ni Widevine**. |
 | Où vit le code ? | Dans **ce dépôt**, dossier `ios/` (§2). |
 | Navigation | **C** : barre du bas compacte, espaces en pastilles ; barre latérale sur iPad en paysage (§3). |
-| Bloqueur | Règles de contenu de WebKit (`WKContentRuleList`) **embarquées**, aucun téléchargement. Limite mesurée : 150 000 règles par liste (§6). |
+| Bloqueur | Règles de contenu de WebKit (`WKContentRuleList`) **embarquées**, aucun téléchargement ; les listes du Mac (EasyList, EasyPrivacy, uBlock filters), licences affichées dans l'application (§6.5). Limite mesurée : 150 000 règles par liste (§6). |
 | YouTube | Fonctionne ; blocage des publicités **partiel**, accepté (§6.4). |
 | Synchronisation | **Première version : aucune.** Phase 2 : synchronisation directe Mac ↔ iPhone **sur le réseau local**, appairage explicite, chiffrée, sans serveur (§13). iCloud est exclu par `GOVERNANCE.md` (principe 5) et `AGENTS.md` §5. |
-| Cible minimale | **iOS 26.0** (§2.3). |
-| Bloquant juridique à trancher avant toute build publique | La GPL-3.0 et les conditions de l'App Store (§9.3), et les licences des listes embarquées (§6.5). |
+| Cible minimale | **iOS 26.0**, décidé le 17 novembre 2026 (§2.3). |
+| Identifiant, icônes, fiche | `app.lucium.browser.ios` ; icônes du projet, pas de symboles du système ; fiche de l'App Store en anglais, avec une localisation française (§15). |
+| GPL-3.0 et App Store | **Permission additionnelle accordée** le 17 novembre 2026 (`ADDITIONAL-PERMISSION-APP-STORE.txt`, §9.3). Restent à valider, sans bloquer : la relecture d'un juriste et les licences des listes (§6.5). |
 | Ce qui est prouvé par la maquette | Un projet Xcode se génère, se compile et se teste sur simulateur **sans aucune fenêtre** ; 10 tests XCTest et 7 tests Swift passent ; un blocage réel est prouvé de bout en bout ; la logique du Mac (saisie d'adresse) est tenue par des vecteurs communs (§11). |
 
 ## 2. Architecture
@@ -53,7 +54,7 @@ src/shared/ios-contract.test.ts   vecteurs d'adresses face au code du Mac ; cata
 
 ### 2.3 Cible minimale : iOS 26.0
 
-La cible est **iOS 26.0**. Les deux simulateurs installés sont iOS 26.5 et 27.0 : on ne peut tester que ce que l'on peut lancer. Descendre à iOS 18 est possible (les API utilisées par la maquette, dont `WKWebsiteDataStore(forIdentifier:)`, sont plus anciennes) mais demande d'installer ce simulateur et de tester deux versions de plus ; ce serait une carte à part, si des utilisateurs le demandent. iPhone et iPad : `TARGETED_DEVICE_FAMILY = 1,2`, une seule application.
+La cible est **iOS 26.0**, **décidée par le chef de projet le 17 novembre 2026** (`deploymentTarget` de `ios/project.yml`). Les deux simulateurs installés sont iOS 26.5 et 27.0 : on ne peut tester que ce que l'on peut lancer. Descendre à iOS 18 est possible (les API utilisées par la maquette, dont `WKWebsiteDataStore(forIdentifier:)`, sont plus anciennes) mais demande d'installer ce simulateur et de tester deux versions de plus ; ce serait une carte à part, si des utilisateurs le demandent. iPhone et iPad : `TARGETED_DEVICE_FAMILY = 1,2`, une seule application.
 
 L'API des extensions Safari (`WKWebExtension`, `WKWebExtensionController`) existe depuis **iOS 18.4** (documentation d'Apple lue). **Non documenté** dans ce qui a été lu : si une application tierce peut s'en servir pour charger des extensions sans passer par Safari. Hors périmètre de la première version, à étudier plus tard : ce serait la seule voie vers des extensions sur iPhone (§4, ligne « Extensions »).
 
@@ -75,9 +76,9 @@ L'artefact « Lucium iPhone » a été lu en entier (13 artboards, accessible). 
 | `iPad · paysage` | barre latérale permanente | non fait |
 | `A1/A2` (tiroir), `B1–B3` (pages et feuille) | approches non retenues | — |
 
-**Correction à faire sur la maquette `Synchronisation` avant de l'implémenter** : elle propose « Passer par : Réseau local / **Votre iCloud** ». iCloud est un service d'une entreprise : la règle (`GOVERNANCE.md` principe 5, `AGENTS.md` §5) l'interdit. Seul « Réseau local » est retenu ; la ligne « Mots de passe » du même écran n'est pas reprise (§13.3).
+**Maquette `Synchronisation` : corrigée ici, à redessiner dans l'artefact avant de l'implémenter.** L'artefact propose « Passer par : Réseau local / **Votre iCloud** » : cette option **n'existe pas** dans Lucium (pas d'iCloud). iCloud est un service d'une entreprise, et la règle (`GOVERNANCE.md` principe 5, `AGENTS.md` §5) interdit toute synchronisation qui passe par un tel service. Le réglage a **une seule voie, « Réseau local »** (donc pas de sélecteur « Passer par »), et la ligne « Mots de passe » du même écran n'est pas reprise (§13.3). Décision du 17 novembre 2026 (§15, point 7).
 
-Les icônes des maquettes sont dessinées par le projet (traits sur grille de 20 px). La maquette de fondation utilise des **symboles du système** (SF Symbols) : ils sont dessinés par iOS, pas livrés avec l'application. **Supposé, non vérifié ici** : que leur licence autorise cet usage dans une application GPL (elle le permet pour les applications des plateformes d'Apple, à relire). Alternative sans question : importer les icônes du projet comme images vectorielles du catalogue d'images. À trancher (§15).
+Les icônes des maquettes sont dessinées par le projet (traits sur grille de 20 px). La maquette de fondation utilise des **symboles du système** (SF Symbols) : ils sont dessinés par iOS, pas livrés avec l'application. **Décision du 17 novembre 2026 : les icônes du projet** (§15, point 6) : elles sont importées comme images vectorielles du catalogue d'images, les symboles du système ne sont pas utilisés ; la question de leur licence est donc sans objet. La maquette de fondation en utilise encore (`BottomBar.swift`) : à remplacer (carte).
 
 ## 4. Correspondance fonction par fonction
 
@@ -188,9 +189,19 @@ Les listes de `src/shared/filter-lists.ts` (EasyList, EasyPrivacy, uBlock filter
 
 Les règles du Mac (`src/shared/youtube-rules.ts`, `prune-response` dans le préchargement) retirent `adPlacements`, `playerAds`, `adSlots` des réponses JSON du lecteur, dans la page, au chargement. Sur iOS, un `WKUserScript` injecté dans la page (`atDocumentStart`, cadre principal, monde de la page) peut faire le même travail : ces scripts sont des **textes embarqués dans l'application**, jamais téléchargés. **À vérifier dans la carte** : que `src/preload/guard-world.ts` est bien du code de monde de la page, réutilisable tel quel. Limite acceptée par le chef de projet (« Fait au mieux ») : les vidéos de publicité viennent de `googlevideo.com`, qui sert aussi la vidéo, et les publicités insérées côté serveur ne se distinguent pas ; le blocage reste **partiel** et YouTube peut le casser sans prévenir.
 
-### 6.5 Licences des listes embarquées : risque à lever avant toute build
+### 6.5 Licences des listes embarquées : décision et risque restant
 
-Sur le Mac, **aucune liste n'est livrée** : elles sont téléchargées (`README.md`, tableau des connexions). Sur iOS, la décision « listes embarquées, aucun téléchargement » **fait distribuer** ces listes dans l'application : EasyList / EasyPrivacy sont en GPL-3.0-or-later **ou** CC BY-SA 3.0, uBlock filters en GPL-3.0 (`docs/licences-tierces.md`). Obligations : attribution dans l'application et source des listes ; et la question du §9.3 (conditions de l'App Store et GPL) s'applique **à des auteurs qui ne sont pas nous**. Options, à décider avec le mainteneur : (a) n'embarquer que des listes écrites pour Lucium (les règles YouTube le sont déjà, aucune ligne de liste reprise) ; (b) n'embarquer que des listes sous licence permissive après lecture ; (c) télécharger les listes, avec bascule désactivée par défaut et ligne au README (le chef de projet a retenu l'embarqué : cette option demande sa réponse). **Rien ne doit partir en TestFlight externe avant cette décision.**
+Sur le Mac, **aucune liste n'est livrée** : elles sont téléchargées (`README.md`, tableau des connexions). Sur iOS, « listes embarquées, aucun téléchargement » **fait distribuer** ces listes dans l'application : EasyList / EasyPrivacy sont en GPL-3.0-or-later **ou** CC BY-SA 3.0, uBlock filters en GPL-3.0 (`docs/licences-tierces.md`). Obligations : attribution dans l'application et source des listes ; et la question du §9.3 (conditions de l'App Store et GPL) s'applique **à des auteurs qui ne sont pas nous**.
+
+**Décision du chef de projet, 17 novembre 2026 : les listes du bloqueur sont celles du Mac** (EasyList, EasyPrivacy, uBlock filters, `src/shared/filter-lists.ts`), **les licences s'affichent dans l'application**. Les options (a) « écrire les nôtres », (b) « n'embarquer que du permissif » et (c) « télécharger » sont écartées. *Hypothèse retenue* (le texte de la décision ne dit pas « embarquées ») : les listes restent **embarquées à la construction, sans téléchargement**, comme décidé le même jour pour le bloqueur (§1) ; si le chef de projet voulait l'option (c), il le dit, et le tableau des connexions du §7 gagne une ligne.
+
+Ce que la décision demande à l'application (cartes « Bloqueur » et « Licences ») :
+
+- un **écran des licences**, dans la page « À propos » des réglages de l'application : le texte de `LICENSE`, `NOTICE` et de `ADDITIONAL-PERMISSION-APP-STORE.txt`, puis, **pour chaque liste embarquée**, son titre, son auteur, sa licence, l'adresse de sa source et la date de la copie ; les mentions viennent du même registre que celui du Mac (`FILTER_LISTS` : `license`, `licenseUrl`, `author`, `homepage`) ;
+- le script `scripts/ios-filter-lists.mjs` (§6.3) écrit ce registre à côté des règles compilées, pour que l'écran n'ait pas de copie écrite à la main ; un test refuse une liste embarquée sans licence ni source ;
+- les licences et l'attribution sont aussi dans `docs/licences-tierces.md` (déjà le cas pour les trois listes).
+
+**Reste à valider (non bloquant, décision du chef de projet)** : la permission additionnelle de Lucium (§9.3) ne couvre **que le code dont les titulaires l'ont accordée** ; les auteurs des listes ne l'ont pas accordée, et les licences des listes (GPL-3.0 ; CC BY-SA 3.0 au choix pour EasyList) n'ont pas été analysées face aux conditions de l'App Store. Ce n'est pas un avis juridique : une relecture par un juriste couvrirait ce point avec celui de la permission.
 
 ## 7. Vie privée
 
@@ -207,7 +218,7 @@ Mêmes principes que le Mac (`GOVERNANCE.md` 3 et 4) : aucun compte, aucune tél
 | **Les pages que vous ouvrez**, et leurs ressources | quand vous naviguez | — |
 | **Suggestions de recherche** : ce que vous tapez (pas une adresse) vers le moteur de votre profil (DuckDuckGo par défaut) ; sans cookie | pendant la saisie, ≥ 2 caractères ; jamais en onglet privé | Réglages › Navigation (**activé**, comme sur le Mac) |
 | **Icônes de sites** | à l'affichage d'une rangée | Réglages (**activé**) |
-| **Listes du bloqueur** | **aucune** : elles sont dans l'application (sinon, ligne à ajouter, §6.5) | — |
+| **Listes du bloqueur** | **aucune** : elles sont dans l'application (décision du 17 novembre 2026 ; une ligne serait à ajouter si le chef de projet choisissait de les télécharger, §6.5) | — |
 | **Mises à jour** | **aucune** : l'App Store / TestFlight s'en charge | — |
 | **Synchronisation** (phase 2) : un échange chiffré avec **votre** Mac ou iPhone, sur le réseau local ; rien ne passe par un serveur | seulement quand vous l'avez activée, les deux appareils ouverts | une page « Synchronisation » des Réglages, à créer (**désactivée**) |
 
@@ -219,7 +230,7 @@ Même règle que le Mac (`AGENTS.md` §3) avec l'outil d'Apple : un **catalogue 
 
 Gardes (`src/shared/ios-contract.test.ts`, 46 tests) : chaque clé a un texte **traduit** en français **et** en anglais, non vide, avec les mêmes `%@` ; le français n'est pas l'anglais laissé tel quel ; aucune clé inutilisée par le code, aucune clé lue et absente ; **aucune couleur écrite** dans les sources Swift (le § 4 d'`AGENTS.md` : des couleurs du système et du catalogue d'images). Côté application, `LocalizationTests` vérifie que la build porte `fr.lproj` et `en.lproj` et que la même clé se lit différemment dans chaque langue. **Un texte français ou anglais hors catalogue** (le titre de l'application, les messages d'autorisation de l'`Info.plist` comme `NSLocalNetworkUsageDescription`) passera par `InfoPlist.xcstrings` : à ajouter avec la première clé de ce genre.
 
-Langue source : `en`, comme le README. La langue principale de la fiche de l'App Store reste à choisir (§15).
+Langue source : `en`, comme le README. **La fiche de l'App Store est en anglais, avec une localisation française** (décision du 17 novembre 2026, §15, point 3).
 
 ## 9. Règles de l'App Store
 
@@ -244,14 +255,18 @@ Source : <https://developer.apple.com/app-store/review/guidelines/>, **page d'Ap
 
 La page d'Apple lue **ne parle pas** des « content blockers » ni du « navigateur par défaut » ; elle ne mentionne pas non plus l'open source ni la GPL.
 
-### 9.3 La GPL et l'App Store : à trancher **avant** toute build publique
+### 9.3 La GPL et l'App Store : permission additionnelle accordée
 
-Lucium est publié sous **GPL-3.0-or-later**. Les conditions d'utilisation de l'App Store imposent des restrictions aux utilisateurs (par exemple le nombre d'appareils, la protection d'Apple sur le binaire) que la GPL-3.0 n'autorise pas (« no further restrictions », article 10) : c'est un conflit **connu et publiquement discuté** (l'affaire VLC en 2011, la position de la Free Software Foundation). **Non vérifié ici** dans les documents d'Apple lus (les directives ne le disent pas) : c'est une inférence de droit, pas un avis juridique. Voie usuelle : **le titulaire du droit d'auteur** peut distribuer **son propre code** par l'App Store ; il le dit par une **permission additionnelle** (GPL-3.0 article 7), comme `ADDITIONAL-PERMISSION.txt` le fait pour Widevine. Pour `ios/` :
+Lucium est publié sous **GPL-3.0-or-later**. Les conditions d'utilisation de l'App Store imposent des restrictions aux utilisateurs (par exemple le nombre d'appareils, la protection d'Apple sur le binaire) que la GPL-3.0 n'autorise pas (« no further restrictions », article 10) ; un iPhone n'exécute que du code signé par Apple, ce que l'article 6 (« Installation Information » pour un *User Product*) ne tolère pas non plus : c'est un conflit **connu et publiquement discuté** (l'affaire VLC en 2011, la position de la Free Software Foundation). **Non vérifié ici** dans les documents d'Apple lus (les directives ne le disent pas) : c'est une inférence de droit, pas un avis juridique. Voie usuelle : **le titulaire du droit d'auteur** peut distribuer **son propre code** par l'App Store ; il le dit par une **permission additionnelle** (GPL-3.0 article 7), comme `ADDITIONAL-PERMISSION.txt` le fait pour Widevine.
 
-- le code Swift d'`ios/` est écrit pour ce projet, sans code d'un tiers ; ConsilioWeb et chaque contributeur en gardent le droit (`GOVERNANCE.md`, « no assignment », pas de CLA) ;
-- il faudrait donc **ajouter la permission additionnelle à `ADDITIONAL-PERMISSION.txt` et à `NOTICE`** (« distribuer par l'App Store de l'iPhone ») et que **chaque contributeur d'`ios/`** l'accorde (la formule du fichier : « granted by every holder of a copyright in Lucium » ; le DCO du dépôt couvre déjà « la permission additionnelle ») ;
-- **ce qui entre dans l'application ne doit contenir que du code dont chacun a donné cette permission**, ou d'une licence sans cette difficulté (MIT, Apache-2.0 : à lire pour chaque composant) ; **les listes de filtres** (§6.5) et XcodeGen (non distribué) sont les cas à regarder ;
-- c'est une **modification significative** au sens de `GOVERNANCE.md` (ouverte à commentaire 7 jours dans une *issue*) ; **le mainteneur doit dire** si elle touche le principe 1 (« Free software, for good… no relicensing to a proprietary license »), qui demande 30 jours et l'accord de tous les mainteneurs. Lecture proposée : non (une permission additionnelle n'est pas une licence propriétaire, le code reste GPL pour tous), mais c'est sa décision.
+**Décision du chef de projet, 17 novembre 2026 : la permission est accordée.** Ce qui a été fait (cette pull request) :
+
+- **`ADDITIONAL-PERMISSION-APP-STORE.txt`** (nouveau fichier, sur le modèle de celui de Widevine, en anglais) : elle autorise à distribuer l'application iOS (le code d'`ios/` et les parties de Lucium qu'elle contient) par l'App Store et TestFlight, aux conditions qu'Apple applique, malgré l'article 10, et sans l'« Installation Information » de l'article 6 ; le code source complet reste sous GPL pour tous ; elle ne s'applique à une partie que si ses titulaires l'ont accordée (les listes de filtres et les autres composants tiers gardent leur licence) ;
+- elle est **reprise en entier dans `NOTICE`** (un test, `about-files.test.ts`, refuse une copie qui diverge) et citée dans `README`, `CONTRIBUTING`, `GOVERNANCE` (en deux langues), le modèle de pull request et les `CHANGELOG` : **chaque contribution entre désormais avec cette permission**, comme avec celle de Widevine (DCO, « accordée par chaque titulaire d'un droit d'auteur sur le code qu'elle couvre ») ;
+- **qui la donne** : le fichier de Widevine nomme « ConsilioWeb and contributors » (aucun nom de personne) et parle du mainteneur ; celui-ci fait de même. Au 17 novembre 2026, tous les commits du dépôt sont du mainteneur (compte `pOwn3d`) et le code d'`ios/` est écrit pour ce projet, sans code d'un tiers : ConsilioWeb est le seul titulaire, et la permission est donc complète pour tout le code d'aujourd'hui. Une contribution future la donne avec sa signature DCO ;
+- **ce qui entre dans l'application ne doit contenir que du code dont chacun a donné cette permission**, ou d'une licence sans cette difficulté (MIT, Apache-2.0 : à lire pour chaque composant) ; **les listes de filtres** (§6.5) sont le cas à regarder, XcodeGen n'est pas distribué.
+
+**Lecture retenue pour `GOVERNANCE.md`** (*hypothèse, à confirmer par le chef de projet : le texte de la décision ne la dit pas*) : la permission **ne touche pas le principe 1** (« Free software, for good… no relicensing to a proprietary license »), qui demande 30 jours et l'accord de tous les mainteneurs : le code reste sous GPL pour tous, la permission ne retire aucun droit à personne, et la règle de l'article 7 permet de la retirer d'une copie. **Non faite** : l'*issue* publique de 7 jours de commentaire que `GOVERNANCE.md` demande pour une modification significative (§15, point 8).
 
 ### 9.4 Navigateur par défaut
 
@@ -272,17 +287,17 @@ Pour être proposé dans l'app Réglages d'iOS, à la rubrique « Navigateur par
 ### 10.1 Équipe et identifiant
 
 - Équipe Apple Developer existante : **ConsilioWEB, identifiant d'équipe `9A9AUX9UHT`** (donné par la carte ; l'identifiant d'équipe n'est pas un secret, il figure dans toute signature).
-- **Identifiant de bundle proposé : `app.lucium.browser.ios`** (celui du Mac est `app.lucium.browser`, `electron-builder.yml`). **Il ne change plus après le premier envoi d'une build.** Les extensions futures prendraient `app.lucium.browser.ios.<nom>`. Provisoire dans `project.yml`.
+- **Identifiant de bundle : `app.lucium.browser.ios`**, **confirmé par le chef de projet le 17 novembre 2026** (celui du Mac est `app.lucium.browser`, `electron-builder.yml` ; `PRODUCT_BUNDLE_IDENTIFIER` de `ios/project.yml`). **Il ne change plus après le premier envoi d'une build.** Les extensions futures prendraient `app.lucium.browser.ios.<nom>`.
 
 ### 10.2 Ce que le chef de projet crée dans App Store Connect / sur developer.apple.com
 
 Rôles lus dans l'aide d'Apple : Account Holder ou Admin pour créer l'App ID explicite ; Account Holder, Admin ou App Manager pour créer la fiche ; l'Account Holder doit avoir signé le dernier contrat (section « Business »).
 
 1. *Certificates, Identifiers & Profiles › Identifiers › + › App IDs › Explicit App ID* : `app.lucium.browser.ios` (le même que dans Xcode). Capacités : aucune pour l'instant (*Associated Domains* et le réseau local n'en demandent pas ; l'entitlement navigateur par défaut vient du formulaire de §9.4).
-2. *App Store Connect › Apps › Nouvelle app* : plateforme iOS, nom (« Lucium » : **à vérifier qu'il est libre**), langue principale, identifiant de bundle, **SKU** (libre : `lucium-ios`), accès complet.
-3. **Politique de confidentialité** (adresse publique sur lucium.app, obligatoire), adresse d'assistance, **fiche de confidentialité** (« Data Not Collected »), questionnaire d'âge, statut de trader, catégorie *Utilitaires*.
+2. *App Store Connect › Apps › Nouvelle app* : plateforme iOS, nom (« Lucium » : **à vérifier qu'il est libre**), langue principale **anglais** (§15, point 3), identifiant de bundle, **SKU** (libre : `lucium-ios`), accès complet.
+3. **Politique de confidentialité** (adresse publique sur lucium.app, obligatoire ; en anglais et en français comme la fiche), adresse d'assistance, **fiche de confidentialité** (« Data Not Collected »), questionnaire d'âge, statut de trader, catégorie *Utilitaires*. **Textes de la fiche** (nom, sous-titre, description, mots-clés, notes pour la revue du §9.1) : **en anglais**, avec une localisation française.
 4. **Demande de l'entitlement de navigateur par défaut** (§9.4).
-5. Créer un testeur : le titulaire se suffit pour le **test interne** (jusqu'à 100 testeurs, rôles Account Holder, Admin, App Manager, Developer ou Marketing). Pour des testeurs externes (jusqu'à 10 000), la **première build passe une revue d'Apple** (« TestFlight App Review ») : **ne pas l'ouvrir avant la décision du §9.3 et du §6.5**.
+5. Créer un testeur : le titulaire se suffit pour le **test interne** (jusqu'à 100 testeurs, rôles Account Holder, Admin, App Manager, Developer ou Marketing). Pour des testeurs externes (jusqu'à 10 000), la **première build passe une revue d'Apple** (« TestFlight App Review ») : les décisions du §9.3 (permission accordée) et du §6.5 (listes du Mac, licences affichées) sont prises ; **restent à valider avant de l'ouvrir** : la relecture d'un juriste (non bloquante : au chef de projet de dire) et l'écran des licences dans l'application.
 6. (Pour l'envoi en ligne de commande) une **clé d'API App Store Connect** : réservée à l'Account Holder pour la demande d'accès, **à garder dans le gestionnaire de mots de passe du mainteneur** (jamais dans le dépôt, jamais dans une conversation).
 
 ### 10.3 Ce que le mainteneur lance, de son Mac
@@ -332,7 +347,7 @@ Le chef de projet veut une synchronisation **bidirectionnelle** (une modificatio
 
 ### 13.1 Ce qu'elle apporte et ce qu'elle coûte
 
-| | Réseau local (proposé) | iCloud |
+| | Réseau local (proposé) | iCloud (exclu) |
 |---|---|---|
 | Règle du projet | respectée (aucun tiers) | **interdit** |
 | Fonctionne hors de chez soi | **non** : les deux appareils doivent se voir (même Wi-Fi, ou un VPN que l'utilisateur gère) | oui |
@@ -387,16 +402,25 @@ Un module `src/main/sync/` (écoute TLS, appairage, fusion), une page de Réglag
 
 **Lu dans la documentation d'Apple** : les directives de l'App Store citées au §9 (sauf 5.1.1, 5.1.2, 5.2 : résumé) ; les pages `WKContentRuleList`, `WKContentRuleListStore`, `WKWebExtension`, l'entitlement `com.apple.developer.web-browser`, `NSLocalNetworkUsageDescription`, `NSBonjourServices`, l'entitlement multicast, l'aide d'App Store Connect (TestFlight, fiche, rôles, confidentialité).
 
-**Supposé ou non lu** : la GPL et l'App Store (§9.3) ; la licence des symboles du système ; le comportement de `upgradeKnownHostsToHTTPS` ; FairPlay / EME dans un `WKWebView` tiers ; l'AutoFill des mots de passe dans un `WKWebView` tiers ; la clé `CFBundleURLTypes` ; `-allowProvisioningUpdates` ; `ITSAppUsesNonExemptEncryption` et la liste des API « à raison requise » (pages d'Apple illisibles) ; la version d'Xcode des runners GitHub ; la mémoire de plusieurs listes pleines ; iOS 27.0 (installé, non essayé) ; tout ce qui se joue sur un appareil réel.
+**Supposé ou non lu** : la GPL et l'App Store (§9.3 : permission accordée, texte non relu par un juriste) ; les licences des listes embarquées face aux conditions de l'App Store (§6.5) ; le comportement de `upgradeKnownHostsToHTTPS` ; FairPlay / EME dans un `WKWebView` tiers ; l'AutoFill des mots de passe dans un `WKWebView` tiers ; la clé `CFBundleURLTypes` ; `-allowProvisioningUpdates` ; `ITSAppUsesNonExemptEncryption` et la liste des API « à raison requise » (pages d'Apple illisibles) ; la version d'Xcode des runners GitHub ; la mémoire de plusieurs listes pleines ; iOS 27.0 (installé, non essayé) ; tout ce qui se joue sur un appareil réel.
 
-## 15. Décisions à prendre (pour le chef de projet / le mainteneur)
+## 15. Décisions du chef de projet (17 novembre 2026)
 
-1. **Permission additionnelle pour l'App Store** (§9.3) : oui ou non, et si elle touche le principe 1. *Bloquant* pour toute build publique.
-2. **Listes du bloqueur** (§6.5) : écrire les nôtres, n'embarquer que du permissif, ou télécharger avec bascule désactivée.
-3. **iOS minimal** : 26.0 (retenu ici) ou 18.0 (simulateur et tests à ajouter).
-4. **Identifiant de bundle** `app.lucium.browser.ios` : à confirmer avant la création de l'App ID.
-5. **Icônes** : symboles du système, ou icônes du projet importées.
-6. **Langue principale de la fiche** : anglais ou français.
-7. **Maquette `Synchronisation`** : retirer « Votre iCloud » et la ligne « Mots de passe ».
-8. **Ouvrir une *issue* publique** (modification significative, `GOVERNANCE.md` : 7 jours de commentaire) avant d'accepter l'architecture ; le chef de projet relit ce document.
-9. **Compte** : créer l'App ID et la fiche, remplir le formulaire de l'entitlement de navigateur par défaut, héberger la politique de confidentialité (§10.2).
+Les sept questions de décision de l'étude ont reçu leur réponse le 17 novembre 2026 (carte « iOS 1 : décisions ») ; les deux points suivants (8 et 9) restent à faire. **Ces décisions valent accord sur l'étude** : la pull request qui porte ce document est fusionnée avec elles. Une *hypothèse* est une lecture que le texte de la décision ne dit pas : elle est écrite pour être corrigée.
+
+| # | Question | Décision | Ce qui en découle |
+|---|---|---|---|
+| 1 | **Permission additionnelle pour l'App Store** (§9.3) | **Accordée.** | `ADDITIONAL-PERMISSION-APP-STORE.txt`, reprise dans `NOTICE`, citée dans `README`, `CONTRIBUTING`, `GOVERNANCE`, le modèle de pull request et les `CHANGELOG`. *Hypothèse :* le principe 1 de `GOVERNANCE.md` n'est pas touché (§9.3). Le texte attend la relecture d'un juriste, ce qu'il dit lui-même. |
+| 2 | **Listes du bloqueur** (§6.5) | **Comme sur le Mac** : EasyList, EasyPrivacy, uBlock filters ; **licences affichées dans l'application**. | Écran des licences et registre des listes (§6.5). *Hypothèse :* embarquées, sans téléchargement (§1). **Reste à valider, sans bloquer :** la permission ne couvre pas les listes d'autres auteurs. |
+| 3 | **Langue de la fiche de l'App Store** | **Anglais**, avec une **localisation française**. | Textes de la fiche, notes pour la revue et politique de confidentialité en anglais, puis en français (§10.2). |
+| 4 | **iOS minimal** | **iOS 26.0.** | Déjà dans `ios/project.yml` ; pas de simulateur iOS 18 à ajouter (§2.3). |
+| 5 | **Identifiant de bundle** | **`app.lucium.browser.ios`.** | Déjà dans `ios/project.yml` ; l'App ID explicite peut être créé (§10.2) ; il ne change plus après le premier envoi. |
+| 6 | **Icônes** | **Celles du projet**, pas les symboles du système. | *Hypothèse :* cela vaut pour l'icône de l'application (le logo : `resources/app-icons/` et `scripts/logo/fan-logo.ts`, tous droits réservés, `NOTICE`, à placer en 1024 × 1024 dans `AppIcon.appiconset`) et pour les icônes de l'interface (celles des maquettes, code du projet sous GPL, importées comme images vectorielles). Les symboles du système de `BottomBar.swift` sont à remplacer (carte). |
+| 7 | **Maquette `Synchronisation`** | **Pas d'iCloud, pas de « Mots de passe ».** | Une seule voie, « Réseau local » (§3, §13). L'artefact est à redessiner avant d'implémenter la phase 2. |
+
+**Pas encore fait, et ce n'est pas une décision à prendre ici :**
+
+8. **L'*issue* publique** (modification significative, `GOVERNANCE.md` : 7 jours de commentaire) n'est **pas ouverte**. Le chef de projet est le seul mainteneur et décide seul (`GOVERNANCE.md`, « Today there is one maintainer »), mais la fenêtre publique de commentaire n'a pas eu lieu : à ouvrir, ou à écarter par une décision écrite.
+9. **Compte** : créer l'App ID et la fiche, remplir le formulaire de l'entitlement de navigateur par défaut, héberger la politique de confidentialité, vérifier que le nom « Lucium » est libre (§10.2). C'est le chef de projet, avec son compte Apple Developer.
+
+**Cartes à écrire à la suite** (non créées par cette modification) : écran des licences et registre des listes (§6.5) ; remplacement des symboles du système par les icônes du projet et import de l'icône de l'application ; textes de la fiche en anglais et en français ; création de l'App ID.

@@ -10,11 +10,14 @@ Lucium is distributed in the hope that it will be useful, but WITHOUT ANY
 WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
 A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 
-The text of the licence is in the file LICENSE. One additional permission
-under section 7 of version 3 of that licence goes with it, for the Widevine
-module and the engine that loads it: it is in the file
+The text of the licence is in the file LICENSE. Two additional permissions
+under section 7 of version 3 of that licence go with it. The first is for the
+Widevine module and the engine that loads it: it is in the file
 ADDITIONAL-PERMISSION.txt and reproduced below ("The DRM variant and the
-Widevine module").
+Widevine module"). The second is for the application for iPhone and iPad,
+handed out through the App Store: it is in the file
+ADDITIONAL-PERMISSION-APP-STORE.txt and reproduced below ("The iOS
+application and the App Store").
 
 SPDX-License-Identifier: GPL-3.0-or-later
 
@@ -137,3 +140,55 @@ The permission was written by the maintainer on 11 November 2026. A lawyer
 has not reviewed it yet, and the facts above are not a legal opinion.
 
 Details: docs/drm.md and docs/licences-tierces.md.
+
+
+The iOS application and the App Store
+-------------------------------------
+
+The application of Lucium for iPhone and iPad is native Swift code on WebKit
+(the folder ios/, described in docs/ios.md, in French). Apple's terms for the
+App Store and TestFlight put on the people who download an application
+restrictions that the GPL does not allow, and an iPhone runs only software
+that Apple has signed. So that nobody has to wonder whether the GPL allows
+the maintainer to hand the application out that way, the holders of the
+copyright of Lucium grant this additional permission, under section 7 of
+version 3 of the GNU General Public License (the same text as in
+ADDITIONAL-PERMISSION-APP-STORE.txt):
+
+    The application of Lucium for iPhone and iPad ("the iOS App") is made of
+    the code in the folder ios/ of the repository of Lucium and of the other
+    parts of Lucium that a build of that application contains.
+
+    If you convey the iOS App to the public through the App Store of Apple,
+    or through TestFlight, the licensors of Lucium grant you additional
+    permission to do so under the terms that Apple applies there to the
+    people who download it, even where those terms put on the recipient a
+    restriction that section 10 of the License does not allow, such as a
+    limit on the number of devices the iOS App may be used on.
+
+    Because an iPhone or an iPad runs only software that Apple has signed,
+    the licensors also grant you additional permission to convey the iOS App
+    without the Installation Information that section 6 of the License asks
+    for in a User Product, and with the protection that Apple applies to the
+    binary it hands out.
+
+    The Corresponding Source of the iOS App is not reduced by this: it stays
+    complete, under the License, in the repository of Lucium, and anyone may
+    build, change and convey a version of it under the License.
+
+    This permission covers the conveying of the iOS App through the App
+    Store and TestFlight, and nothing else. It applies to a part of the iOS
+    App only if the licensors of that part have granted it; a part that
+    other people hold under another license, such as a filter list, stays
+    under that license, which this permission does not change. It leaves the
+    License unchanged for every other part of the work and for every other
+    way of conveying it.
+
+You may remove this permission from a copy you convey, as section 7 says.
+
+The permission is granted by the holders of the copyright of the code it
+covers. It does not reach the parts that other authors hold, such as the
+filter lists the application embeds, which keep their own licences (listed
+in docs/licences-tierces.md; the application shows them). It was written for
+the maintainer on 17 November 2026, who granted it. A lawyer has not
+reviewed it yet, and this is not a legal opinion.

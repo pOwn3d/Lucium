@@ -48,7 +48,7 @@ Un mainteneur inactif longtemps (environ un an) qui ne répond pas passe au stat
 
 ## Droit d'auteur, licence et nom
 
-**Copyright © 2026 ConsilioWeb and contributors.** Lucium est distribué sous **GPL-3.0-or-later** ([LICENSE](LICENSE)). ConsilioWeb détient le droit d'auteur du code qu'il a écrit ; chaque contributeur garde le droit d'auteur de ce qu'il apporte. Les contributions entrent sous la même licence et avec sa permission additionnelle pour le module Widevine ([ADDITIONAL-PERMISSION.txt](ADDITIONAL-PERMISSION.txt), en anglais), avec la signature du Developer Certificate of Origin et **sans cession** : il n'y a pas d'accord de licence de contributeur. [NOTICE](NOTICE) (en anglais) dit qui détient quoi et quels composants sont sous une autre licence.
+**Copyright © 2026 ConsilioWeb and contributors.** Lucium est distribué sous **GPL-3.0-or-later** ([LICENSE](LICENSE)). ConsilioWeb détient le droit d'auteur du code qu'il a écrit ; chaque contributeur garde le droit d'auteur de ce qu'il apporte. Les contributions entrent sous la même licence et avec ses permissions additionnelles, pour le module Widevine ([ADDITIONAL-PERMISSION.txt](ADDITIONAL-PERMISSION.txt), en anglais) et pour l'application iPhone et iPad distribuée par l'App Store ([ADDITIONAL-PERMISSION-APP-STORE.txt](ADDITIONAL-PERMISSION-APP-STORE.txt), en anglais), avec la signature du Developer Certificate of Origin et **sans cession** : il n'y a pas d'accord de licence de contributeur. [NOTICE](NOTICE) (en anglais) dit qui détient quoi et quels composants sont sous une autre licence.
 
 La licence couvre le code. Elle ne donne aucun droit sur le nom « Lucium » ni sur le logo comme signes de ce projet : [TRADEMARKS.fr.md](TRADEMARKS.fr.md) dit ce qu'une version modifiée doit changer.
 
