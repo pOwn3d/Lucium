@@ -1,0 +1,19 @@
+name: Lucium CodeQL configuration
+
+# What CodeQL does not read: the test harnesses, and only them. Each of these is a file the application never carries:
+#
+#   *.test.*           Vitest tests. Nothing imports them; they are not in out/ (electron-vite builds from src/main/index.ts and the entries of the
+#                      preloads and the renderer).
+#   src/main/smoke*.ts the engine test (`pnpm test:engine`). main/index.ts loads smoke-run by a lazy import() only when --smoke is passed, which
+#                      the built application refuses (src/main/runtime.ts), and electron-builder.yml leaves out/main/smoke*.js out of app.asar.
+#   *test-support*.ts  the helpers of those tests (electron-builder.yml leaves out/main/*test-support*.js out of app.asar too).
+#
+# They are the bulk of the code scanning alerts (a local HTTP server that answers a test with the request it got, a script written with
+# JSON.stringify into a page, a 1024-bit key to build an old extension), about code that runs on the maintainer's Mac, against pages of its own.
+# The test src/main/workflow-hygiene.test.ts keeps this list as it is, and checks that no file the application carries imports one of them.
+#
+# Everything else stays read: the application, the preloads, the renderer, scripts/ (the release tooling), tests/e2e/, compat/ and the native pieces.
+paths-ignore:
+  - '**/*.test.*'
+  - 'src/main/smoke*.ts'
+  - '**/*test-support*.ts'

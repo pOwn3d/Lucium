@@ -78,6 +78,17 @@ Pull requests from Dependabot are grouped (Electron, tooling, React, GitHub Acti
 - **GitHub Actions bump**: pins are commit hashes with the version in a comment; check that the comment and the hash agree.
 - **Title of a Dependabot pull request**: Dependabot styles it after the history (the style of its own last commit, else of the recent ones), and nothing in `dependabot.yml` sets the case of the first word: "Bump" with a capital is possible, and the `PR title` check accepts it from the bot only (`pr-conventions.yml`). The squash commit keeps the title as it is; edit it before merging if you want the lower case.
 
+## Code scanning alerts (CodeQL)
+
+The alerts are in Security › Code scanning. CodeQL reads everything but the test harnesses (Vitest tests, the engine test `src/main/smoke*.ts`, their `*test-support*.ts` helpers): none of them is in the application, and `.github/codeql/codeql-config.yml` says why for each, which `src/main/workflow-hygiene.test.ts` keeps true. `scripts/` (the release tooling), `tests/e2e/` and `compat/` stay read.
+
+- **A real flaw** is fixed with a test that fails without the fix ([AGENTS.md](../../AGENTS.md), section 2). Example: the pattern of `sniffImage` that a crafted icon could make take exponential time.
+- **A false positive** is dismissed on GitHub with a reason (`false positive`, `used in tests` or `won't fix`) and a comment in English that says which input no third party controls, or why the escaping is right. Never leave one open, never dismiss one without the comment.
+- **Met several times, and why they are false here**:
+  - `js/bad-code-sanitization` on a script built with `JSON.stringify(value)` (`media-scripts.ts`, `boost.ts`, `site-data.ts`…): the rule fears `</script>`, `<!--` and U+2028 inside code written into an HTML document. These scripts go to `executeJavaScript` or `page.evaluate`, as a string literal that cannot be closed from inside, and U+2028 is valid in one since ES2019. If such a script is ever written into a document, escape `<`, `>`, U+2028 and U+2029 first.
+  - `js/insufficient-password-hash` on an HMAC keyed with the output of scrypt (`export-crypto.ts`), or on a hash of the path of the vault (`vault-keychain.ts`): the passphrase never goes through SHA-256 alone, and a path is not a password.
+  - `js/incomplete-multi-character-sanitization` in the release tooling (`verify-app.ts`, `mac-sign-order.ts`): XML comments are removed from the property lists of the build the maintainer has just made, to read them; nothing is rendered, and no third party writes them.
+
 ## Repository settings to apply once (GitHub)
 
 These are the settings of the public repository, to apply when it is created. They are the rules that [GOVERNANCE.md](../../GOVERNANCE.md#the-rules-of-main) and [CONTRIBUTING.md](../../CONTRIBUTING.md) state: check each against what those documents say.

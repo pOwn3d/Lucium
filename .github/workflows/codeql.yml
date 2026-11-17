@@ -8,6 +8,9 @@ name: CodeQL
 #                           the job builds it with its own script, on macOS.
 #   swift                   native/vault-keychain/ and native/system-translate/, built the same way.
 #
+# The test harnesses (Vitest tests, the engine test, their helpers) are left out of the analysis: none of them is in the application
+# (.github/codeql/codeql-config.yml). Every other file is read, scripts/ included.
+#
 # The two native jobs run the build scripts of native/ and nothing else: no `pnpm install`, no dependency, no secret. They sign ad hoc,
 # as on any machine without an identity.
 #
@@ -70,6 +73,8 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: ${{ matrix.build-mode }}
+          # The test harnesses are not read (the list and the reason are in the file).
+          config-file: ./.github/codeql/codeql-config.yml
       - name: Build the native pieces (watched by CodeQL)
         if: ${{ matrix.build-mode == 'manual' }}
         env:
