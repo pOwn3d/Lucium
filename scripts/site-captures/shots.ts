@@ -12,7 +12,7 @@ export const THEMES: readonly Theme[] = ['light', 'dark']
  * The window a shot captures: the main window, the Settings window, a mini window (mini-fenêtre), the window of the extensions, and for the captures
  * of the features page (features.ts) the task manager and a private window.
  */
-export type WindowKind = 'main' | 'settings' | 'little' | 'extensions' | 'taskmanager' | 'private'
+export type WindowKind = 'main' | 'settings' | 'little' | 'taskmanager' | 'private'
 
 /**
  * Where a shot is taken. `demo`: a profile filled with the demonstration state (spaces, tabs, folders, favourites). `fresh`: a profile with no
@@ -31,11 +31,6 @@ export const MAIN_SIZE: Size = { width: 1440, height: 900 }
 export const SETTINGS_SIZE: Size = { width: 780, height: 760 }
 /** The largest a mini window opens at (LITTLE_SIZE_MAX of src/shared/little-window.ts). */
 export const LITTLE_SIZE: Size = { width: 900, height: 650 }
-/**
- * The window of the extensions, widened from the 820 × 640 it opens at (extensionsWindowOptions of src/main/shell/extensions-window.ts; it can be
- * resized) to 16:10, the shape of the tiles of the film's mosaic: the tile shows it whole.
- */
-export const EXTENSIONS_SIZE: Size = { width: 1024, height: 640 }
 /** The size the task manager opens at (the TaskManager of src/main/index.ts). */
 export const TASK_MANAGER_SIZE: Size = { width: 720, height: 480 }
 
@@ -102,8 +97,22 @@ export interface Scene {
   spaceTheme?: true
   /** The password vault, unlocked, with the logins of the demonstration (demo.ts `VAULT_LOGINS`), over the page of `tab`. */
   vault?: true
-  /** The window of the extensions, once the extension of the demonstration is loaded the way a person does it (« Charger une extension non empaquetée »). */
+  /**
+   * The Extensions page, in a tab of the window (chrome://extensions, `lucium-ui://extensions/`), once the extension of the demonstration (« Surligneur », with
+   * its icon) is loaded the way a person does it (« Charger une extension non empaquetée »). It is no longer a window of its own.
+   */
   extension?: true
+  /**
+   * The panel of the site (« Infos et réglages du site »), its section of the extensions unfolded, once the same extension is loaded: its row ends with the
+   * puzzle-piece button that opens the Extensions page. The section is folded again afterwards.
+   */
+  siteExtensions?: true
+  /**
+   * « Personnaliser l'espace » of the space on screen, a video wider than the sidebar put in it (demo.ts `FRAMING_VIDEO`, through the panel's file field as a
+   * person adds theirs), its frame moved to the right with the arrow keys `moves` times (`POSITION_STEP` of src/shared/space-media.ts, 5 % each): the frame
+   * the shape of the sidebar over the whole video, and « Recentrer la vidéo », which only an off-centre frame offers. The space gets its own background back.
+   */
+  framing?: { moves: number }
   /** A mini window on this page (a key of the demonstration pages). */
   little?: string
   /**
@@ -355,6 +364,17 @@ export const SHOTS: readonly Shot[] = [
     scene: { space: 'work', tab: 'notes', vault: true }
   },
   {
+    id: 'extensions',
+    description:
+      'La page Extensions, ouverte dans un onglet de la fenêtre (chrome://extensions) : l’extension de démonstration « Surligneur », non empaquetée, sans permission ni marque, en mode développeur.',
+    session: 'demo',
+    window: 'main',
+    size: MAIN_SIZE,
+    ...all,
+    scene: { space: 'work', tab: 'notes', extension: true },
+    developmentOnly: FILE_CHOOSER
+  },
+  {
     id: 'community',
     description: 'Le site lucium.app ouvert dans Lucium, page Communauté : les idées les plus votées et leurs boutons de vote (copie locale du site, fausses idées, fausse API).',
     session: 'demo',
@@ -413,16 +433,6 @@ export const SHOTS: readonly Shot[] = [
     size: LITTLE_SIZE,
     ...all,
     scene: { space: 'work', tab: 'notes', little: 'museum' }
-  },
-  {
-    id: 'extensions',
-    description: 'La fenêtre des extensions installées : l’extension de démonstration « Surligneur », non empaquetée, sans permission ni marque, en mode développeur.',
-    session: 'demo',
-    window: 'extensions',
-    size: EXTENSIONS_SIZE,
-    ...all,
-    scene: { space: 'work', tab: 'notes', extension: true },
-    developmentOnly: FILE_CHOOSER
   },
   {
     id: 'settings-privacy-off',

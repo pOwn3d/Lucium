@@ -394,13 +394,11 @@ const isWindowPage = (kind, url) =>
     ? url.endsWith('/index.html')
     : kind === 'settings'
       ? url.includes('/settings.html')
-      : kind === 'extensions'
-        ? url.includes('/extensions.html')
-        : kind === 'taskmanager'
-          ? url.includes('/taskmanager.html')
-          : kind === 'private'
-            ? url.includes('/index.html?')
-            : url.includes('/littlearc.html') && !/[?&](picker|tray|bar)=1/.test(url)
+      : kind === 'taskmanager'
+        ? url.includes('/taskmanager.html')
+        : kind === 'private'
+          ? url.includes('/index.html?')
+          : url.includes('/littlearc.html') && !/[?&](picker|tray|bar)=1/.test(url)
 
 async function launchDevelopment({ profile, home, lang, port, log }) {
   const { _electron } = await import('@playwright/test')
@@ -421,13 +419,11 @@ async function launchDevelopment({ profile, home, lang, port, log }) {
           ? url.endsWith('/index.html')
           : kind === 'settings'
             ? url.includes('/settings.html')
-            : kind === 'extensions'
-              ? url.includes('/extensions.html')
-              : kind === 'taskmanager'
-                ? url.includes('/taskmanager.html')
-                : kind === 'private'
-                  ? url.includes('/index.html?')
-                  : url.includes('/littlearc.html') && !/[?&](picker|tray|bar)=1/.test(url)
+            : kind === 'taskmanager'
+              ? url.includes('/taskmanager.html')
+              : kind === 'private'
+                ? url.includes('/index.html?')
+                : url.includes('/littlearc.html') && !/[?&](picker|tray|bar)=1/.test(url)
       }) ?? null
   })
   // No native box may open during a run (nobody answers it, and it would hold the main process): the error boxes of the application are kept
@@ -771,9 +767,13 @@ async function previewBookmarks(run, ctx) {
  * what the application lists of it.
  */
 async function loadDemoExtension(run, ctx, kind, cleanups) {
-  const { shell, session } = ctx
-  const name = demo.DEMO_EXTENSIONS[kind].name[session.lang]
-  await run.answerFileChooser(ctx.demoExtensions[kind])
+  return loadExtensionFolder(run, ctx, demo.DEMO_EXTENSIONS[kind].name[ctx.session.lang], ctx.demoExtensions[kind], cleanups)
+}
+
+/** The extension in `folder`, which the application lists under `name`: loaded the way a person does it, and switched off again by the cleanups. */
+async function loadExtensionFolder(run, ctx, name, folder, cleanups) {
+  const { shell } = ctx
+  await run.answerFileChooser(folder)
   await bridge(shell, 'loadExtension')
   await failOnErrorBoxes(run, `extension « ${name} »`)
   if (!(await run.mainProcessNews()).asked) throw new Error(`le sélecteur de dossier de l’extension « ${name} » n’a pas été ouvert`)
@@ -1113,7 +1113,8 @@ async function setScene(run, ctx, shot, cleanups) {
   }
 
   if (scene.notes) {
-    await bridge(shell, 'openOverlay', { panel: 'notes' })
+    // On « Toutes »: the panel opens on « Cette page » when the page has notes, which lists two of the four.
+    await bridge(shell, 'openOverlay', { ...demo.NOTES_PANEL_REQUEST })
     const overlay = await overlayPage(run)
     await overlay.locator('.lp.notes-panel:not([aria-busy="true"])').waitFor({ timeout: 15_000 })
     await until(async () => (await overlay.locator('.notes-panel li.lp-row').count()) >= demo.demoNotes(lang, 0).notes.length, 'les notes de démonstration')
@@ -1153,22 +1154,69 @@ async function setScene(run, ctx, shot, cleanups) {
   }
 
   if (scene.extension) {
-    // Loaded the way a person does it, the file chooser answered with the folder of the run.
-    await run.answerFileChooser(ctx.extensions[lang])
-    await bridge(shell, 'loadExtension')
-    await failOnErrorBoxes(run, 'extension')
-    if (!(await run.mainProcessNews()).asked) throw new Error('le sélecteur de dossier de l’extension n’a pas été ouvert')
-    await bridge(shell, 'openOverlay', { panel: 'extensions' })
-    const page = await waitPage(run, (url) => isWindowPage('extensions', url), 'la fenêtre des extensions')
-    await page.waitForLoadState('load')
+    // « Surligneur », which has an icon, loaded the way a person does it; then the Extensions page, which the application opens in a tab of the window
+    // (chrome://extensions), the tab shown. It goes after the shot.
     const name = demo.extensionManifest(lang).name
+    await loadExtensionFolder(run, ctx, name, ctx.extensions[lang], cleanups)
+    const opened = new Set(run.pages())
+    await bridge(shell, 'openOverlay', { panel: 'extensions' })
+    const page = await waitPage(run, (url) => url === labels.EXTENSIONS_PAGE, 'la page Extensions dans un onglet', { before: opened })
+    await page.waitForLoadState('load')
     await until(async () => (await page.locator('.xp-card').filter({ hasText: name }).count()) > 0, `l’extension « ${name} » dans la liste`, 15_000)
     await page.evaluate(() => document.fonts?.ready.then(() => true))
     await page.mouse.move(1, 1)
     cleanups.push(async () => {
-      if (!page.isClosed()) await page.evaluate(() => window.close())
+      for (const tab of (await snapshotOf(shell)).state.tabs.filter((t) => t.url.startsWith(labels.EXTENSIONS_PAGE))) await dispatch(shell, { type: 'tab/close', id: tab.id })
     })
-    return { page }
+  }
+
+  if (scene.siteExtensions) {
+    // The same extension, then the panel of the site with its section of the extensions unfolded (folded again after the shot: the choice is kept by the panel).
+    const name = demo.extensionManifest(lang).name
+    await loadExtensionFolder(run, ctx, name, ctx.extensions[lang], cleanups)
+    await bridge(shell, 'openOverlay', { panel: 'site' })
+    const overlay = await overlayPage(run)
+    await overlay.locator('.scc').waitFor({ timeout: 15_000 })
+    const section = overlay.locator('.scc-section').filter({ has: overlay.locator('.scc-section-title', { hasText: new RegExp(`^${labels.EXTENSIONS_SECTION[lang]}$`) }) })
+    const head = section.locator('.scc-section-head')
+    const unfolded = (await head.getAttribute('aria-expanded')) !== 'true'
+    if (unfolded) await head.click()
+    const row = section.locator('.scc-extensions')
+    await row.locator('.scc-ext').first().waitFor({ timeout: 15_000 })
+    // A tile draws the icon of the extension, or its initial when the picture fails to load: either way, no picture is still on its way.
+    await until(() => row.locator('.scc-ext .scc-tile').evaluateAll((tiles) => tiles.length > 0 && tiles.every((tile) => { const icon = tile.querySelector('img.scc-ext-icon'); return icon === null || (icon.complete && icon.naturalWidth > 0) })), 'l’icône de l’extension dans la rangée')
+    await row.scrollIntoViewIfNeeded()
+    await overlay.locator('.scc').evaluate((card) => Promise.allSettled(card.getAnimations({ subtree: true }).map((animation) => animation.finished)))
+    await overlay.evaluate(() => document.fonts?.ready.then(() => true))
+    await overlay.mouse.move(1, 1)
+    cleanups.push(() => bridge(shell, 'closeOverlay'))
+    // Run before the panel closes (the cleanups run backwards).
+    if (unfolded) cleanups.push(() => head.click())
+  }
+
+  if (scene.framing) {
+    // « Personnaliser l'espace » of the space on screen, a video wider than the sidebar added in it, and its frame moved with the arrow keys.
+    const id = demo.spaceId(scene.space)
+    const own = (await snapshotOf(shell)).state.spaces.find((space) => space.id === id)?.background ?? null
+    const backgroundOf = async () => (await snapshotOf(shell)).state.spaces.find((space) => space.id === id)?.background
+    await bridge(shell, 'openOverlay', { panel: 'space', spaceId: id })
+    const overlay = await overlayPage(run)
+    // The panel's own file field (hidden behind « Ajouter un média »), given the video of the demonstration as a person gives one of theirs.
+    const field = overlay.locator('.space-media-panel input[type="file"]')
+    await field.waitFor({ state: 'attached', timeout: 15_000 })
+    cleanups.push(() => bridge(shell, 'closeOverlay'))
+    // The space gets its own background back; run before the panel closes (the cleanups run backwards).
+    cleanups.push(() => dispatch(shell, { type: 'space/update', id, patch: { background: own } }))
+    await field.setInputFiles(join(root, 'scripts/site-captures', demo.FRAMING_VIDEO.file))
+    // The video is stored, read back and measured: the frame is drawn once its size is known.
+    const frame = overlay.locator('.media-framing .media-framing-frame')
+    await frame.waitFor({ timeout: 30_000 })
+    await frame.focus()
+    for (let moved = 0; moved < scene.framing.moves; moved++) await overlay.keyboard.press('ArrowRight')
+    await until(async () => ((await backgroundOf())?.position?.x ?? 50) > 50, 'le cadre de la vidéo déplacé')
+    await overlay.locator('.media-framing .media-button').waitFor({ timeout: 10_000 })
+    await overlay.evaluate(() => document.fonts?.ready.then(() => true))
+    await overlay.mouse.move(1, 1)
   }
 
   if (scene.little) {
@@ -1465,7 +1513,7 @@ function makeWebp(made, failures) {
 // ---------- the images of the features page (--features) ----------
 
 /** The size each window of a feature scenario is put at. */
-const FEATURE_WINDOW_SIZES = { main: shots.MAIN_SIZE, private: shots.MAIN_SIZE, settings: shots.SETTINGS_SIZE, taskmanager: shots.TASK_MANAGER_SIZE, little: shots.LITTLE_SIZE, extensions: shots.EXTENSIONS_SIZE }
+const FEATURE_WINDOW_SIZES = { main: shots.MAIN_SIZE, private: shots.MAIN_SIZE, settings: shots.SETTINGS_SIZE, taskmanager: shots.TASK_MANAGER_SIZE, little: shots.LITTLE_SIZE }
 
 /** A scenario of features.ts as a shot of setScene: the main window, a window it opens, or Settings, in the demonstration profile. */
 const featureShot = (scenario) => ({

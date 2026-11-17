@@ -33,5 +33,11 @@ export const NEWS_SHEET = {
 /** The item of the menu Affichage that opens the reader mode (`menu.mode-lecture`), in both languages: the menu is in the language of the run. */
 export const READER_MENU: readonly string[] = ['Mode lecture', 'Reader Mode']
 
+/** The title of the section of the extensions in the panel of the site (`settings.extensions`, which `sectionTitle` of src/shared/site-sections.ts reads). */
+export const EXTENSIONS_SECTION: Localized<string> = { fr: 'Extensions', en: 'Extensions' }
+
+/** The address the Extensions page has in its tab (INTERNAL_ORIGIN of src/shared/internal-page.ts, and a slash). */
+export const EXTENSIONS_PAGE = 'lucium-ui://extensions/'
+
 /** The page of the PDF viewer of the engine, embedded in a tab that shows a PDF (src/main/engine/electron-page-navigation.ts). */
 export const PDF_VIEWER = 'chrome-extension://mhjfbmdgcfjbbpaeojofohoefgiehjai/'

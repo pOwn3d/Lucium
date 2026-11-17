@@ -509,6 +509,10 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
     'La barre de commandes d’un nouvel onglet (⌘T) : le calcul 12*(3+4) et son résultat en première ligne',
     'The command bar of a new tab (⌘T): the calculation 12*(3+4) and its result on the first row'
   )),
+  direct('fn-background-framing', undefined, t('Cadrage du fond vidéo d’un espace', 'Background video framing'), t(
+    'Le cadre d’une vidéo de fond dans « Personnaliser l’espace » : la vidéo entière et le cadre de la forme de la barre latérale',
+    'The frame of a background video in “Customize Space”: the whole video and the frame the shape of the sidebar'
+  ), { space: 'projects', tab: 'maps', framing: { moves: 4 } }, { ...overlayCrop('.media-framing', 520), pad: 10 }),
   shot('fn-themes', undefined, t('Thèmes d’espace', 'Space themes'), 'space-themes', t(
     'Le panneau des thèmes de l’espace Projets : les thèmes prêts, la couleur de départ, la teinte, l’intensité et la texture',
     'The theme panel of the Projects Space: the ready-made themes, the starting color, hue, intensity and texture'
@@ -592,9 +596,14 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
 
   // ---- Application ----
   shot('fn-extensions', undefined, t('Extensions', 'Extensions'), 'extensions', t(
-    'La fenêtre des extensions, avec l’extension Surligneur chargée depuis un dossier',
-    'The extensions window, with the Highlighter extension loaded from a folder'
+    'La page Extensions, ouverte dans un onglet, avec l’extension Surligneur chargée depuis un dossier',
+    'The Extensions page, open in a tab, with the Highlighter extension loaded from a folder'
   )),
+  // The panel is cropped whole: its section of the extensions is the one unfolded, with the puzzle-piece button at the end of the row.
+  direct('fn-extensions-page', undefined, t('Page Extensions depuis le panneau du site', 'Extensions page from the site panel'), t(
+    'Le panneau « Infos et réglages du site » : la rangée des extensions et son bouton en pièce de puzzle qui ouvre la page Extensions',
+    'The “Site Info and Settings” panel: the extensions row and its puzzle-piece button that opens the Extensions page'
+  ), { space: 'work', tab: 'notes', siteExtensions: true }, overlayCrop('.scc')),
   direct('fn-gestionnaire-taches', undefined, t('Gestionnaire de tâches', 'Task manager'), t(
     'Le gestionnaire de tâches de Lucium : chaque onglet et chaque processus, avec sa mémoire et son processeur',
     'The Lucium task manager: each tab and each process, with its memory and CPU'
@@ -656,7 +665,7 @@ export const windowOf = (scenario: FeatureScenario): WindowKind => scenario.wind
  * The order of a session: the main window first, while it has the focus; then the windows that take it (a private window, the task manager);
  * then the Settings window, which keeps it once open. Within a kind, the order of the page.
  */
-const WINDOW_ORDER: Readonly<Record<WindowKind, number>> = { main: 0, little: 1, extensions: 1, private: 2, taskmanager: 3, settings: 4 }
+const WINDOW_ORDER: Readonly<Record<WindowKind, number>> = { main: 0, little: 1, private: 2, taskmanager: 3, settings: 4 }
 
 export interface FeaturePlanOptions {
   langs: readonly Lang[]

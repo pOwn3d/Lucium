@@ -1,7 +1,11 @@
+import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { convertNetscapeBookmarks } from '../../src/main/importers/netscape'
 import { setLanguage } from '../../src/shared/i18n'
-import { notesContext, notesSections, parseNotesFile } from '../../src/shared/notes'
+import { notesContext, notesInScope, notesSections, openingNotesScope, parseNotesFile } from '../../src/shared/notes'
+import { SIDEBAR_WIDTH_DEFAULT } from '../../src/shared/model'
+import { coverShare } from '../../src/shared/space-media'
 import { savedStateOf } from '../../src/shared/sidebar-state'
 import { PROTECTION_OF_NEW_PROFILES } from '../../src/shared/model-defaults'
 import { PRESETS, presetOf } from '../../src/shared/settings-presets'
@@ -14,8 +18,10 @@ import {
   DEMO_EXTENSIONS,
   DEMO_KEYWORD,
   FAVORITES,
+  FRAMING_VIDEO,
   GROUPS_WORKER,
   NOTES_PAGE,
+  NOTES_PANEL_REQUEST,
   PAGES,
   SITE_TABS,
   SPACES,
@@ -199,6 +205,40 @@ describe('the quick notes', () => {
       const sections = notesSections(notes, notesContext(spaceId('home'), { url: pageUrl(NOTES_PAGE, lang) }))
       expect([sections.page.length, sections.space.length, sections.others.length]).toEqual([2, 1, 1])
     }
+  })
+})
+
+describe('the panel of the quick notes', () => {
+  it('opens on « Toutes », so the four notes are listed in their sections (a plain request keeps to the page and lists two)', () => {
+    for (const lang of LANGS) {
+      const { notes } = parseNotesFile(JSON.stringify(demoNotes(lang, NOW)))
+      const context = notesContext(spaceId('home'), { url: pageUrl(NOTES_PAGE, lang) })
+      // Why the request names a scope: the page of the shot has notes, so the panel would open on « Cette page » alone.
+      expect(openingNotesScope(notes, context)).toBe('page')
+      expect(notesInScope(notes, context, 'page')).toBeLessThan(notes.length)
+      const scope = openingNotesScope(notes, context, NOTES_PANEL_REQUEST.scope)
+      expect(scope).toBe('all')
+      expect(notesInScope(notes, context, scope)).toBe(notes.length)
+    }
+  })
+})
+
+describe('the video of the framing card', () => {
+  const bytes = readFileSync(fileURLToPath(new URL(`./${FRAMING_VIDEO.file}`, import.meta.url)))
+
+  it('is a WebM the application stores (the EBML header media-storage.ts checks, far under its 50 MB) and holds the size the table says', () => {
+    expect([...bytes.subarray(0, 4)]).toEqual([0x1a, 0x45, 0xdf, 0xa3])
+    expect(bytes.length).toBeLessThan(1_000_000)
+    // The track's PixelWidth (0xB0) and PixelHeight (0xBA), each a two-byte number.
+    const sized = Buffer.from([0xb0, 0x82, FRAMING_VIDEO.width >> 8, FRAMING_VIDEO.width & 0xff, 0xba, 0x82, FRAMING_VIDEO.height >> 8, FRAMING_VIDEO.height & 0xff])
+    expect(bytes.includes(sized)).toBe(true)
+  })
+
+  it('is wider than the sidebar, so the frame has a part of it to choose, and landscape: the stage of the panel stops at 260 px high, and a tall video would not line up with its frame', () => {
+    const share = coverShare(FRAMING_VIDEO, { width: SIDEBAR_WIDTH_DEFAULT, height: 720 })
+    expect(share.x).toBeLessThan(1)
+    expect(share.y).toBe(1)
+    expect(FRAMING_VIDEO.width).toBeGreaterThan(FRAMING_VIDEO.height)
   })
 })
 

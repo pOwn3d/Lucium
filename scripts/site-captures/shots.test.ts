@@ -14,7 +14,6 @@ import { SETTINGS_WINDOW_OPTIONS } from '../../src/main/shell/settings-window'
 import { NOTES_PAGE, SITE_TABS, VAULT_PAGE, demoSite, demoState, pageDef, pageUrl, spaceId, spaceOfPage, tabId } from './demo'
 import { respond } from './pages'
 import {
-  EXTENSIONS_SIZE,
   GUIDE_STEPS_MAX,
   LANGS,
   LITTLE_SIZE,
@@ -60,17 +59,16 @@ describe('the list of shots', () => {
       expect(shot.langs).toEqual(LANGS)
       expect(shot.themes).toEqual(THEMES)
       expect(shot.description.length).toBeGreaterThan(10)
-      const size = { main: MAIN_SIZE, settings: SETTINGS_SIZE, little: LITTLE_SIZE, extensions: EXTENSIONS_SIZE, taskmanager: TASK_MANAGER_SIZE, private: MAIN_SIZE }[shot.window]
+      const size = { main: MAIN_SIZE, settings: SETTINGS_SIZE, little: LITTLE_SIZE, taskmanager: TASK_MANAGER_SIZE, private: MAIN_SIZE }[shot.window]
       expect(shot.size, shot.id).toEqual(size)
     }
     expect(MAIN_SIZE).toEqual({ width: 1440, height: 900 })
     // The script cannot load the application's modules (Node's type stripping): the sizes it copies are checked against them here.
     expect(LITTLE_SIZE).toEqual(LITTLE_SIZE_MAX)
     expect(SETTINGS_SIZE).toEqual({ width: SETTINGS_WINDOW_OPTIONS.width, height: SETTINGS_WINDOW_OPTIONS.height })
-    // The window of the extensions is resizable from 560 × 420: it is widened to the 16:10 of the tiles of the film.
-    expect(EXTENSIONS_SIZE.width / EXTENSIONS_SIZE.height).toBe(1.6)
-    expect(EXTENSIONS_SIZE.width).toBeGreaterThanOrEqual(560)
-    expect(EXTENSIONS_SIZE.height).toBeGreaterThanOrEqual(420)
+    // The Extensions page is a tab of the main window now: its shot is the 16:10 of the tiles of the film.
+    expect(SHOTS.find((s) => s.id === 'extensions')).toMatchObject({ window: 'main', size: MAIN_SIZE })
+    expect(MAIN_SIZE.width / MAIN_SIZE.height).toBe(1.6)
   })
 
   it('names, in a demonstration session, a space and one of its tabs, and splits a view with tabs of that space, four panes at most', () => {
@@ -173,15 +171,13 @@ describe('the list of shots', () => {
     expect(SHOTS.filter((s) => s.noBrowserNames).map((s) => s.id).sort()).toEqual(['first-launch', 'import', 'import-done'])
   })
 
-  it('keeps the shots of the main window first, then the mini window, the window of the extensions, then the Settings window, which take the focus', () => {
+  it('keeps the shots of the main window first, then the mini window, then the Settings window, which take the focus', () => {
     const order = SHOTS.filter((s) => s.session === 'demo').map((s) => s.window)
     const lastMain = order.lastIndexOf('main')
     const firstLittle = order.indexOf('little')
-    const firstExtensions = order.indexOf('extensions')
     const firstSettings = order.indexOf('settings')
     expect(lastMain).toBeLessThan(firstLittle)
-    expect(firstLittle).toBeLessThan(firstExtensions)
-    expect(firstExtensions).toBeLessThan(firstSettings)
+    expect(firstLittle).toBeLessThan(firstSettings)
     expect(order.slice(firstSettings).every((kind) => kind === 'settings')).toBe(true)
   })
 
