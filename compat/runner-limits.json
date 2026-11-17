@@ -1,10 +1,3 @@
 {
-  "main:iso-sidebar": "Needs a window taller than the 675 points or so that the 1024 x 768 screen of the runner leaves (work area measured at 674 to 678): five rows of the list end at 718 points, below it, and the part stops at its first check (2026-11-17).",
-  "sitedata": "From the click on « Effacer » on, 11 checks fail when the suite runs alone on the runner (2026-11-17). The click is a real mouse event at the centre of the button, which probably lies below the 675 points or so that the window has there. Cause not isolated.",
-  "privacy2": "5 checks fail when the suite runs alone on the runner (2026-11-17): the autoplay cases B and C, which need a click of the user sent as real input, and the row of the site panel. Cause not isolated.",
-  "markdown": "2 checks fail when the suite runs alone on the runner (2026-11-17): the page given as Markdown lacks its headings, its bold and its link, and the blocks clicked away are still there. Cause not isolated.",
-  "search2": "1 check fails when the suite runs alone on the runner (2026-11-17): « bangs: Enter opens it in a new tab », the tab is never opened. Cause not isolated.",
-  "main:sleep": "Two checks of the part failed in one of the two chains run on the runner (2026-11-17): \"with a long delay, a tab left a moment ago stays awake\" and its control, which read the state of the tabs at once after a selection; the other chain passed them. Timing, not isolated.",
-  "sec1-late": "The check « the browser of the private window can be collected once it is closed » failed in both chains run on the runner and passed alone there (2026-11-17): it waits for a garbage collection, which the chain's memory on the runner does not give in time. Not isolated further.",
-  "fullscreen": "The second exit from full screen of the suite never settles on the runner (document.exitFullscreen() never answers): the suite ends at its time limit after 12 checks that passed (2026-11-17), with « Object has been destroyed ». Cause not isolated."
+  "sec1-late": "The check « the browser of the private window can be collected once it is closed » failed in both chains run on the runner and passed alone there (2026-11-17): it waits for a garbage collection, which the chain's memory on the runner does not give in time. Not isolated further."
 }

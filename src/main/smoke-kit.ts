@@ -20,6 +20,25 @@ export function waiterOf(defaultTimeoutMs: number, stepMs: number): (condition: 
 }
 
 /**
+ * What a question put to a page came back with, or `{ answered: false }` when nothing came within `timeoutMs`. A page that never answers (a full screen
+ * that never ends, on a runner whose window does not leave it) must not hold the suite until its own time limit, and the checks after the question must
+ * still be made. A rejection of the question is not an absence of answer: it goes on to the caller.
+ */
+export async function answerWithin<T>(pending: Promise<T>, timeoutMs: number): Promise<{ answered: true; value: T } | { answered: false }> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      pending.then((value) => ({ answered: true as const, value })),
+      new Promise<{ answered: false }>((resolve) => {
+        timer = setTimeout(() => resolve({ answered: false }), timeoutMs)
+      })
+    ])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
  * A script for a page of the interface that unfolds every folded section of the site panel (the site control center keeps its sections folded until a
  * person opens one, and the rows the checks look for are inside them). Answers how many sections the panel has.
  */

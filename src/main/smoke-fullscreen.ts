@@ -10,11 +10,16 @@ import type { WebContents } from 'electron'
 import { FULLSCREEN_NOTICE_MS } from '@shared/fullscreen-notice'
 import { t } from '@shared/i18n'
 import type { SmokeContext } from './smoke'
-import { noteCheck, recorderOf, waiterOf } from './smoke-kit'
+import { answerWithin, noteCheck, recorderOf, waiterOf } from './smoke-kit'
 
 type Check = (name: string, ok: boolean, detail?: string) => void
 
 const waitFor = waiterOf(10_000, 80)
+
+/** The longest the page is given to leave full screen: `exitFullscreen()` settles in well under a second where the window follows. */
+const LEAVE_WITHIN_MS = 8000
+/** What `leave` answers when the page did not settle in time (the checks that follow say what was seen). */
+const NO_ANSWER = 'exitFullscreen() did not settle in time'
 
 const PAGE = `<!doctype html><title>fullscreen</title><body style="margin:0;background:#123"><div id="stage" style="width:100%;height:100vh">stage</div></body>`
 
@@ -32,7 +37,12 @@ export async function smokeFullscreen({ browser, store, win }: SmokeContext, che
 
   const pageInFullScreen = async (wc: WebContents): Promise<boolean> => (await wc.executeJavaScript('document.fullscreenElement !== null')) === true
   const enter = async (wc: WebContents): Promise<unknown> => wc.executeJavaScript(`document.documentElement.requestFullscreen().then(() => true, (error) => String(error))`, true)
-  const leave = async (wc: WebContents): Promise<unknown> => wc.executeJavaScript(`document.fullscreenElement ? document.exitFullscreen().then(() => true, (error) => String(error)) : true`)
+  // The wait has a limit: on a window that does not leave full screen, the promise of exitFullscreen() is never settled, and a suite that waits for it
+  // holds the run until its own time limit (ten minutes on a GitHub runner) with the checks after it never made.
+  const leave = async (wc: WebContents): Promise<unknown> => {
+    const answer = await answerWithin(wc.executeJavaScript(`document.fullscreenElement ? document.exitFullscreen().then(() => true, (error) => String(error)) : true`), LEAVE_WITHIN_MS)
+    return answer.answered ? answer.value : NO_ANSWER
+  }
   const noticeText = async (): Promise<string> => {
     const view = browser.fullscreenNoticeForTest()
     return view ? String(await view.webContents.executeJavaScript('document.body.innerText')) : ''
@@ -91,13 +101,23 @@ export async function smokeFullscreen({ browser, store, win }: SmokeContext, che
     const again = await enter(wc)
     check('fullscreen: a page that takes the window again is announced again', again === true && (await waitFor(() => browser.fullscreenNoticeForTest() !== null, 5000)), String(again))
     const secondPage = browser.fullscreenNoticeForTest()?.webContents
-    await leave(wc)
-    check('fullscreen: the notice goes at once with the full screen, before its time', await waitFor(() => browser.fullscreenNoticeForTest() === null && (secondPage === undefined || secondPage.isDestroyed()), 3000))
+    // The window is still moving into full screen (macOS animates it for about a second, longer on a slow machine). A page that asks to leave in the middle of that
+    // gets no answer from exitFullscreen(): measured on a runner, 437 ms after the page took the window, the window came into full screen a second later and left
+    // again, and the promise never settled. A person looks at the page first: leave once the window is there.
+    const there = await waitFor(() => win.isFullScreen(), 5000)
+    const noticeStill = browser.fullscreenNoticeForTest() !== null
+    const leaving = await leave(wc)
+    check('fullscreen: the notice goes at once with the full screen, before its time', await waitFor(() => browser.fullscreenNoticeForTest() === null && (secondPage === undefined || secondPage.isDestroyed()), 3000), `window in full screen: ${there}, notice still there when leaving: ${noticeStill}, leaving: ${String(leaving)}`)
   } finally {
     // The next suites start from a window that is not in full screen.
     const wc = tabId !== null ? wcOf(tabId) : undefined
     if (wc && !wc.isDestroyed()) await leave(wc).catch((error: unknown) => console.warn('[smoke fullscreen] the page could not be asked to leave full screen:', error))
-    await waitFor(() => !win.isFullScreen(), 5000)
+    if (!(await waitFor(() => !win.isFullScreen(), 5000))) {
+      // The page did not bring the window back (see `leave`): the window is put back by hand, so that the suites after this one find it as they expect.
+      console.warn('[smoke fullscreen] the window is still in full screen: leaving it by hand')
+      win.setFullScreen(false)
+      await waitFor(() => !win.isFullScreen(), 5000)
+    }
     if (tabId !== null) browser.dispatch({ type: 'tab/close', id: tabId })
     server.close()
     server.closeAllConnections()

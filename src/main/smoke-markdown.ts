@@ -442,7 +442,8 @@ export async function smokeMarkdown(ctx: SmokeContext, check: Check): Promise<vo
     await waitFor(() => picking(privateTab), 5000)
     await sleep(120)
     await pressBarButton(privateTab, BLOCKS.save)
-    await privateRun
+    // Like every export started directly: one that never ends (the keys did not reach the picker of the new window) must not hold the suite to its own time limit.
+    await withinLimit(privateRun)
     check('markdown: a private window can save, and its images go with its own session, not the cookies of the profile', existsSync(privateZip) && imageRequests.some((r) => r.path === '/img/cat.png' && !r.cookie.includes('sid=')), JSON.stringify(imageRequests.find((r) => r.path === '/img/cat.png')))
     opened.win.close()
     await waitFor(() => manager.privateWindows().length === 0, 8000)

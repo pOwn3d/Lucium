@@ -41,6 +41,7 @@ const READINGS: readonly Reading[] = [
   { file: 'src/main/index.ts', code: 'profileRecordsHistory(sharedStore.get().settings, profileId), !smoke)', doc: "l'historique est écrit d'un bloc" },
   { file: 'src/main/index.ts', code: 'const restoreWindows = !smoke && ', doc: 'la restauration des fenêtres au lancement' },
   { file: 'src/main/index.ts', code: 'touchId: smoke ? NO_TOUCH_ID :', doc: 'Touch ID (pour le verrou' },
+  { file: 'src/main/index.ts', code: '...smokeWindowOptions(smoke),', doc: "la fenêtre principale qui peut dépasser l'écran" },
   { file: 'src/main/index.ts', code: 'installPasswordVault({ sharedStore, gates, engine, lock, win, platform, smoke })', plumbing: 'hands the switch to password-wiring.ts, listed below' },
   { file: 'src/main/index.ts', code: 'if (!smoke || measuring) gateWindowMemory(', doc: 'seuil mémoire des fenêtres' },
   { file: 'src/main/index.ts', code: 'if (!smoke || measuring) {\n    gateBackups(gates, backups)', doc: 'copies de la session (et la copie à la fermeture)' },

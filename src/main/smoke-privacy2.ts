@@ -161,12 +161,21 @@ export async function smokePrivacy2(ctx: SmokeContext, check: Check): Promise<vo
     const report = await awaitReport(id, `${n}.1`, state)
     return { id, result: report?.play ?? `no answer (${titleOf(id, state)})`, report }
   }
-  /** A real click in the middle of a page's top-left area: what a user does to follow a link or to give the page a gesture. */
-  const clickPage = async (id: string): Promise<void> => {
+  /**
+   * A real click in the middle of a page's top-left area: what a user does to follow a link or to give the page a gesture. `took` says whether the page saw it
+   * (the link was followed, the page has a user activation). A click sent before the page can take it lands on nothing; measured on a runner, in four runs of
+   * seven, the page followed no link and had no activation, whichever of the three clicks of the cases A, B and C it was. It is sent again, up to four times,
+   * for as long as the page did not take it: a person clicks again too. The wait before the second click is long enough for a slow navigation to show.
+   */
+  const clickPage = async (id: string, took: () => boolean | Promise<boolean>): Promise<void> => {
     const wc = wcOf(id)
-    for (const type of ['mouseMove', 'mouseDown', 'mouseUp'] as const) wc?.sendInputEvent({ type, x: 100, y: 100, button: 'left', clickCount: 1 })
+    for (let attempt = 0; attempt < 4; attempt++) {
+      for (const type of ['mouseMove', 'mouseDown', 'mouseUp'] as const) wc?.sendInputEvent({ type, x: 100, y: 100, button: 'left', clickCount: 1 })
+      if (await waitFor(took, 2000)) break
+    }
     await sleep(200)
   }
+  const hasActivation = (id: string) => async (): Promise<boolean> => (await wcOf(id)?.executeJavaScript('navigator.userActivation.hasBeenActive').catch(() => false)) === true
   const reset = (): void => {
     browser.dispatch({
       type: 'settings/update',
@@ -223,16 +232,16 @@ export async function smokePrivacy2(ctx: SmokeContext, check: Check): Promise<vo
     const linkN = nonce()
     const sameLink = open(urlOf(A, `/hub?n=${linkN}&to=${encodeURIComponent(`/auto?n=${linkN}`)}`))
     await waitFor(() => titleOf(sameLink) === `hub:${linkN}`, 10_000)
-    await clickPage(sameLink)
+    await clickPage(sameLink, () => titleOf(sameLink) !== `hub:${linkN}`)
     const caseA = await awaitReport(sameLink, `${linkN}.1`)
     check('autoplay: case A, a page reached by a click on a link of the same origin plays by itself (the click is carried over), its audio context runs', caseA?.play === 'played' && caseA.ctx === 'running' && caseA.active === 'true', JSON.stringify(caseA))
     const otherN = nonce()
     const crossLink = open(urlOf(A, `/hub?n=${otherN}&to=${encodeURIComponent(urlOf(B, `/auto?n=${otherN}`))}`))
     await waitFor(() => titleOf(crossLink) === `hub:${otherN}`, 10_000)
-    await clickPage(crossLink)
+    await clickPage(crossLink, () => titleOf(crossLink) !== `hub:${otherN}`)
     const caseB = await awaitReport(crossLink, `${otherN}.1`)
     check('autoplay: case B, a page reached from another origin has no gesture: the sound is refused, the audio context stays suspended', caseB?.play === 'NotAllowedError' && caseB.ctx === 'suspended' && caseB.active === 'false' && caseB.muted === 'muted-playing', JSON.stringify(caseB))
-    await clickPage(crossLink)
+    await clickPage(crossLink, hasActivation(crossLink))
     const caseC = await wcOf(crossLink)?.executeJavaScript(PLAY)
     check('autoplay: case C, after a click in that page the sound plays', caseC === 'played', String(caseC))
     browser.dispatch({ type: 'tab/select', id: crossLink })

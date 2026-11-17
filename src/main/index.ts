@@ -67,7 +67,7 @@ import { installQuitFlow, prepareQuitForUpdate } from './shell/quit-flow'
 import { createUpdateInstaller, setUpdateInstaller, updateInstaller } from './shell/app-update'
 import { installPrepareBeforeQuit, installUpdateQuitCheck } from './shell/update-quit-check'
 import { currentUpdateSources } from './shell/update-source'
-import { dropDevelopmentEnv, isBuiltApp, isSmokeRun, readDevelopmentEnv, refusalMessage, refusedSwitches } from './runtime'
+import { dropDevelopmentEnv, isBuiltApp, isSmokeRun, readDevelopmentEnv, refusalMessage, refusedSwitches, smokeWindowOptions } from './runtime'
 import { formatMarker } from '@shared/perf-core'
 import { readState, StateStore, WindowView } from './store'
 import { sitesToClearOnQuit } from '@shared/site-clear'
@@ -243,6 +243,7 @@ async function main(): Promise<void> {
     minHeight: 480,
     show: false,
     backgroundColor: '#17171c',
+    ...smokeWindowOptions(smoke),
     ...platform.windowFrame(TRAFFIC_LIGHTS),
     webPreferences
   })

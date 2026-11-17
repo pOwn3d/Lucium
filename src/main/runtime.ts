@@ -21,6 +21,16 @@ export function isSmokeRun(argv: readonly string[], built: boolean = isBuiltApp(
 }
 
 /**
+ * What only the main window of the engine test takes: it may be larger than the screen. macOS keeps a window inside the screen, and the virtual screen of a
+ * GitHub runner is 1024 x 768 points, a window 678 tall: the window (1360 x 860, made for a Retina screen) is cut down to it, and a check that clicks in the
+ * lower part of a panel, or reads a list of rows, finds nothing there. Measured on a runner, the same suites alone, 11 / 3 / 2 / 7 checks failed (sitedata,
+ * privacy2, markdown, the part iso-sidebar) with the window kept inside the screen, and none with this option. The window of a person keeps the rule of macOS.
+ */
+export function smokeWindowOptions(smoke: boolean): { enableLargerThanScreen?: true } {
+  return smoke ? { enableLargerThanScreen: true } : {}
+}
+
+/**
  * The switches the built application refuses to start with. Each one hands the profile, or what the pages exchange, to whoever wrote the command
  * line, and the fuses of the package do not cover them (they close Node's own: RunAsNode, NODE_OPTIONS, --inspect):
  * - `smoke`: the engine test (see `isSmokeRun`);

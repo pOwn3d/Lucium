@@ -25,9 +25,11 @@ name: Smoke (macOS)
 # What a run leaves to read: each check is written to the log as it is made, each suite has a time limit after which it is counted as failed and
 # named (LUCIUM_SMOKE_SUITE_TIMEOUT_MS changes it), and the chain ends with one line per suite. The log and the report are kept as an artifact.
 #
-# THE RUNNER IS NOT THE MAC THE CHECKS WERE WRITTEN ON. It is a virtual machine with one screen of 1024 x 768 points at scale 1, which leaves a window about 675 points
-# tall (the checks were written and run on a Retina screen), and its image has "Reduce motion" and "Reduce transparency" on. The animations are put back on by a step
-# below; the screen cannot be changed, and the suites that cannot pass on it are named, each with its reason, in compat/runner-limits.json. In this workflow only, those
+# THE RUNNER IS NOT THE MAC THE CHECKS WERE WRITTEN ON. It is a virtual machine with one screen of 1024 x 768 points at scale 1 (the checks were written and run on a
+# Retina screen), and its image has "Reduce motion" and "Reduce transparency" on. The animations are put back on by a step below. macOS keeps a window inside the screen,
+# which cut the window of the checks (1360 x 860) to about 678 points tall: so the main window of an engine run may be larger than the screen (smokeWindowOptions,
+# src/main/runtime.ts), and the suites that clicked in the lower part of a panel or read a list of rows (sitedata, privacy2, markdown, main:iso-sidebar) pass. The screen
+# itself cannot be changed: the suites that still cannot pass are named, each with its reason, in compat/runner-limits.json. In this workflow only, those
 # suites are not run (LUCIUM_SMOKE_SKIP): a suite that fails there leaves open what the suites after it are sensitive to, and the first run on a tag showed that
 # (suites that pass alone failed in the chain). Any other suite that fails stops the run, unless it passes when run again alone (a step below; scripts/smoke-runner-verdict.mjs), and the comparison with the reference,
 # whose names carry the scale of a Retina screen, is printed and does not decide. `pnpm test:engine` and `pnpm compat:compare` on the Mac read no list, run every suite and

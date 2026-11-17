@@ -1,7 +1,10 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { resolveLanguage } from '@shared/i18n'
 import { defaultSettings } from '@shared/model'
 import {
+  answerWithin,
   beginLedger,
   checkExtensionFolder,
   chooseSuite,
@@ -75,6 +78,39 @@ describe('the waits of the engine checks', () => {
     setTimeout(() => (late = true), 100)
     await vi.advanceTimersByTimeAsync(100)
     expect(await lastLook).toBe(true)
+  })
+
+  it('answerWithin gives the answer of a question that comes in time, and leaves no timer behind', async () => {
+    const answer = answerWithin(new Promise<string>((resolve) => setTimeout(() => resolve('done'), 50)), 1000)
+    await vi.advanceTimersByTimeAsync(50)
+    expect(await answer).toEqual({ answered: true, value: 'done' })
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('answerWithin says that nothing came when the question is never answered, once the time is up and not before', async () => {
+    let settled = false
+    const never = answerWithin(new Promise<string>(() => undefined), 8000)
+    void never.then(() => (settled = true))
+    await vi.advanceTimersByTimeAsync(7999)
+    expect(settled).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(await never).toEqual({ answered: false })
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('answerWithin hands a rejected question on: it is an error, not a missing answer', async () => {
+    const failed = answerWithin(Promise.reject(new Error('Object has been destroyed')), 1000)
+    await expect(failed).rejects.toThrow('Object has been destroyed')
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('the full screen suite asks the page to leave only through answerWithin: a window that never leaves must not hold the run', () => {
+    const source = readFileSync(join(__dirname, 'smoke-fullscreen.ts'), 'utf8')
+    const calls = source.split('document.exitFullscreen()').length - 1
+    expect(calls).toBe(1)
+    const leave = /const leave = [\s\S]*?\n  }\n/.exec(source)?.[0] ?? ''
+    expect(leave).toContain('answerWithin(')
+    expect(leave).toContain('document.exitFullscreen()')
   })
 
   it('waiterOf keeps the default time and the step of a suite, and takes another time when one is given', async () => {
