@@ -4,7 +4,7 @@
 
 [English](README.md) · Français
 
-> **État : version 1.0, la première annoncée comme stable.** Lucium sert tous les jours, et il ne fait pas encore tout : voir [Limites connues](#limites-connues). Il se télécharge sur [lucium.app/telecharger](https://lucium.app/telecharger/) : une image disque signée et notarisée, pour les Mac à puce Apple.
+> **État : stable.** Lucium sert tous les jours, et il ne fait pas encore tout : voir [Limites connues](#limites-connues). La version courante et ce qui a changé à chaque version sont dans le [journal des changements](CHANGELOG.fr.md). Il se télécharge sur [lucium.app/telecharger](https://lucium.app/telecharger/) : une image disque signée et notarisée, pour les Mac à puce Apple.
 
 ![La fenêtre de Lucium : la barre latérale avec deux espaces, des onglets épinglés et une page](docs/images/sidebar-two-spaces-fr.png)
 ![La barre de commandes ouverte sur une page](docs/images/command-bar-fr.png)
