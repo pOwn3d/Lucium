@@ -335,8 +335,29 @@ export function sniffImage(bytes: Uint8Array): SniffedFormat | null {
   if (startsWith(bytes, [0x42, 0x4d])) return 'bmp'
   // A vector picture: its root element is <svg> (after an optional byte-order mark, XML prolog, comments and doctype).
   const head = String.fromCharCode(...bytes.subarray(0, 1024))
-  if (/^(?:\s|<\?xml[^>]*\?>|<!--[\s\S]*?-->|<!doctype[^>]*>)*<svg[\s>]/i.test(head.replace(/^\u00ef\u00bb\u00bf/, ''))) return 'svg'
+  if (opensWithSvgRoot(head.replace(/^\u00ef\u00bb\u00bf/, ''))) return 'svg'
   return null
+}
+
+/** One piece of what an XML document may carry before its root: white space, the prolog, a comment, a doctype. */
+const SVG_PROLOG_PIECE = /\s+|<\?xml[^>]*\?>|<!--[\s\S]*?-->|<!doctype[^>]*>/iy
+const SVG_ROOT = /<svg[\s>]/iy
+
+/**
+ * Whether `head` opens with an <svg> root, after any number of those pieces. The pieces are taken one at a time, never as one repeated group:
+ * `(?:\u2026|<!--[\s\S]*?-->|\u2026)*` let a run of `--><!--` split in 2^n ways, and the bytes come from the site, so a kilobyte of it froze the main
+ * process for good. Here every piece is matched once, from where the last one ended, and the work stays linear.
+ */
+function opensWithSvgRoot(head: string): boolean {
+  let at = 0
+  for (;;) {
+    SVG_PROLOG_PIECE.lastIndex = at
+    const piece = SVG_PROLOG_PIECE.exec(head)
+    if (!piece) break
+    at += piece[0].length
+  }
+  SVG_ROOT.lastIndex = at
+  return SVG_ROOT.test(head)
 }
 
 /**
