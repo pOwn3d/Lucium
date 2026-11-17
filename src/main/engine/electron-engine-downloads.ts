@@ -17,6 +17,7 @@ import { DownloadResume, defaultRandom, describeError, realResumeFs, type ProbeR
 import { singleStreamActive } from './single-stream'
 import { RESUME_FILE, type ItemView, type ProbeAnswer } from '@shared/download-resume'
 import { suggestedFileName } from '@shared/file-names'
+import { currentPlatform } from '../platform'
 import { isExecutableDownload } from '@shared/open-with'
 import type { DownloadPolicy, DownloadResumeOptions, SaveRequest } from './types'
 import { t } from '@shared/i18n'
@@ -310,7 +311,7 @@ export abstract class ElectronEngineDownloads extends ElectronEnginePermissions 
       // Asked once, at the start: the file downloads into the temporary folder meanwhile, and moves when the user has answered and the file is complete.
       const answered: Promise<void> = ask
         ? Promise.resolve()
-            .then(() => ask({ filename: suggestedFileName(proposed), folder, url: item.getURL() } satisfies SaveRequest))
+            .then(() => ask({ filename: suggestedFileName(proposed, { platform: currentPlatform().id, folder }), folder, url: item.getURL() } satisfies SaveRequest))
             .then((answer) => {
               if (answer === null) {
                 placeRefused = true

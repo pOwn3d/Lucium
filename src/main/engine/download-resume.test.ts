@@ -322,6 +322,13 @@ describe('where a recorded path leads', () => {
     expect(lexicalPlace(join(folder, 'trailing. '), folder)).toBe(false)
   })
 
+  it('refuses, on Windows only, a name Windows would not have kept (a colon, a device name)', () => {
+    for (const name of ['a:b.txt', 'CON.txt', 'what?.pdf']) {
+      expect(lexicalPlace(join(folder, name), folder, 'win32')).toBe(false)
+      expect(lexicalPlace(join(folder, name), folder, 'darwin')).toBe(true)
+    }
+  })
+
   it('finds an ordinary file in place', () => {
     const { path } = partial('a.zip')
     expect(checkPlace(path, folder, realResumeFs).place).toBe('ok')

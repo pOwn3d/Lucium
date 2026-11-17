@@ -7,6 +7,8 @@ import { copyFileSync, lstatSync, mkdirSync, readdirSync, renameSync, rmSync, un
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { isRequestedDownload } from '@shared/chrome-compat'
 import { suggestedFileName } from '@shared/file-names'
+import type { PlatformId } from '@shared/platform'
+import { currentPlatform } from '../platform'
 import { isInside } from './download-names'
 
 /** The folder of this installation: named after its data folder, so that two copies of the application (or a test) never sweep each other's files. */
@@ -51,15 +53,18 @@ export class DownloadStaging {
     return path !== this.root && isInside(this.root, path)
   }
 
-  /** A path in a folder of its own for the download `id`, named from the page's file name (cleaned); the folder exists, the file does not. */
-  allocate(id: string, filename: string): string {
+  /**
+   * A path in a folder of its own for the download `id`, named from the page's file name (cleaned, with the rules of `platform`: Windows refuses
+   * some characters and device names); the folder exists, the file does not.
+   */
+  allocate(id: string, filename: string, platform: PlatformId = currentPlatform().id): string {
     if (!ID.test(id)) throw new Error('Invalid download id')
     this.fs.mkdir(this.root)
     if (!this.fs.isRealFolder(this.root)) throw new Error(`${this.root} is not a plain folder`)
     const folder = join(this.root, id)
     if (!this.contains(folder)) throw new Error('The folder of a download must be inside the temporary folder')
     this.fs.mkdir(folder)
-    const path = join(folder, suggestedFileName(filename))
+    const path = join(folder, suggestedFileName(filename, { platform }))
     if (!this.contains(path)) throw new Error('The file of a download must be inside the temporary folder')
     return path
   }

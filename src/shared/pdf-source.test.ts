@@ -75,6 +75,17 @@ describe('pdfPrintOptions', () => {
   })
 })
 
+describe('pdfFileName on Windows', () => {
+  it('holds the rules of Windows when asked: no forbidden character, no device name, a name that fits the folder', () => {
+    expect(pdfFileName('Quoi ? "Rien" <ici>', { platform: 'win32' })).toBe('Quoi _ _Rien_ _ici_.pdf')
+    expect(pdfFileName('CON', { platform: 'win32' })).toBe('_CON.pdf')
+    // The folder is 203 units: 259 - 203 - 1 - 8 leaves 47 for the name, and ".pdf" is added after.
+    expect(pdfFileName('a'.repeat(300), { platform: 'win32', folder: `C:\\${'d'.repeat(200)}` })).toBe(`${'a'.repeat(47)}.pdf`)
+    // Without a platform nothing changes (macOS).
+    expect(pdfFileName('Quoi ? <ici>')).toBe('Quoi ? <ici>.pdf')
+  })
+})
+
 describe('pdfFileName', () => {
   it('is the title, cleaned, with .pdf once', () => {
     expect(pdfFileName('Rapport 2026')).toBe('Rapport 2026.pdf')

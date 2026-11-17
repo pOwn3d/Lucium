@@ -28,6 +28,13 @@ describe('DownloadStaging.allocate', () => {
     expect(existsSync(join(base, 'root', 'dl-1'))).toBe(true)
   })
 
+  it('applies the rules of the system the file is written on: Windows refuses a colon and a device name, macOS keeps them', () => {
+    const staging = new DownloadStaging(join(base, 'root'))
+    expect(staging.allocate('dl-win-1', 'rapport: v2?.pdf', 'win32')).toBe(join(base, 'root', 'dl-win-1', 'rapport_ v2_.pdf'))
+    expect(staging.allocate('dl-win-2', 'CON.txt', 'win32')).toBe(join(base, 'root', 'dl-win-2', '_CON.txt'))
+    expect(staging.allocate('dl-mac-1', 'rapport: v2.pdf', 'darwin')).toBe(join(base, 'root', 'dl-mac-1', 'rapport: v2.pdf'))
+  })
+
   it('refuses an id that could name another place', () => {
     const staging = new DownloadStaging(join(base, 'root'))
     for (const id of ['', '..', '../x', 'a/b', 'a'.repeat(100)]) expect(() => staging.allocate(id, 'a.pdf')).toThrow(/Invalid download id/)
