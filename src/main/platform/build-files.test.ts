@@ -2,6 +2,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { REPOSITORY_URL } from '@shared/about'
+import { WINDOWS_DEFAULT_APPS_URL, WINDOWS_URL_PROGID } from '@shared/default-browser'
 import { posix } from '../windows.test-support'
 
 // The files that build Lucium for the other systems are drafts that nobody has run. What they must never do is checked here as text, because the
@@ -300,6 +301,15 @@ describe('build/installer.nsh', () => {
     expect(install).toMatch(/Software\\RegisteredApplications" "\$\{PRODUCT_NAME\}" "\$\{LUCIUM_CLIENT_KEY\}\\Capabilities"/)
     // The address goes after "--" and in quotes: an address that begins with a dash is never read as a switch.
     expect(install).toContain(`'"$INSTDIR\\\${APP_EXECUTABLE_FILENAME}" -- "%1"'`.replace('\\\$', '\\$'))
+  })
+
+  // The application reads the user's choice by this ProgID and opens Settings on this name (shared/default-browser.ts): if the installer wrote another
+  // one, Lucium would never see itself chosen, and the button would open Settings on no entry.
+  it('registers the ProgID and the name the application looks for in the default apps of Windows', () => {
+    expect(script).toContain(`!define LUCIUM_URL_PROGID "${WINDOWS_URL_PROGID}"`)
+    const productName = (JSON.parse(read('package.json')) as { productName: string }).productName
+    expect(WINDOWS_DEFAULT_APPS_URL.endsWith(`registeredAppUser=${productName}`)).toBe(true)
+    expect(macro('customInstall')).toContain('Software\\RegisteredApplications" "${PRODUCT_NAME}"')
   })
 
   it('writes under the root of the install (SHELL_CONTEXT), never straight into HKLM or HKCU, and never under HKCR', () => {

@@ -18,6 +18,8 @@ import { PORTRAIT_CANVAS } from '@shared/portrait'
 import { usableSession } from '@shared/window-session'
 import { getImportService, ImportService, setImportService } from './importers/service'
 import { checkForUpdates, isRecordingTrace, recordTrace, restoreData } from './shell/menu-actions'
+import { isDefaultBrowserNow } from './shell/default-browser'
+import { systemDefaultBrowserPorts } from './shell/default-browser-ports'
 import { recoverMissingProfiles } from './shell/recover-profiles'
 import { getWindowManager } from './shell/windows'
 import type { SmokeContext } from './smoke'
@@ -264,7 +266,7 @@ export async function smokeIsoMenus({ browser, store, engine, history, win, over
     browser.dispatch({ type: 'tab/pin', id: activeId() })
     check('…Unpin when the tab is pinned', await waitFor(() => itemByPath('Onglets', 'Désépingler l’onglet') !== undefined))
     browser.dispatch({ type: 'tab/unpin', id: activeId() })
-    const wasDefault = ['http', 'https'].every((scheme) => app.isDefaultProtocolClient(scheme))
+    const wasDefault = isDefaultBrowserNow(systemDefaultBrowserPorts())
     check('"Définir comme navigateur par défaut" is greyed out when Lucium already is the default', enabled('Lucium', 'Définir comme navigateur par défaut') === !wasDefault)
 
     // ======================= Share =======================

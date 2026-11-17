@@ -106,15 +106,20 @@ export function WelcomeSheet() {
         if (live) setSources([])
       }
     )
-    act.defaultBrowser().then(
-      (value) => live && setIsDefault(value),
-      (error: unknown) => {
-        console.warn('[welcome] cannot tell whether Lucium is the default browser:', error)
-        if (live) setIsDefault(false)
-      }
-    )
+    const ask = (): void =>
+      void act.defaultBrowser().then(
+        (value) => live && setIsDefault(value),
+        (error: unknown) => {
+          console.warn('[welcome] cannot tell whether Lucium is the default browser:', error)
+          if (live) setIsDefault(false)
+        }
+      )
+    ask()
+    // Windows leaves the choice to its own Settings: ask again when the user comes back from there.
+    window.addEventListener('focus', ask)
     return () => {
       live = false
+      window.removeEventListener('focus', ask)
     }
   }, [act])
 

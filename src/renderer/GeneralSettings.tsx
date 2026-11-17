@@ -26,13 +26,18 @@ export function DefaultBrowserRow() {
   const [defaultNote, setDefaultNote] = useState('')
   useEffect(() => {
     let live = true
-    void api()
-      .defaultBrowser()
-      .then((value) => live && setIsDefault(value))
-      // The answer stays unknown and the button is not drawn: the log says why.
-      .catch((error: unknown) => console.warn('[settings] whether Lucium is the default browser could not be read:', error))
+    const ask = (): void =>
+      void api()
+        .defaultBrowser()
+        .then((value) => live && setIsDefault(value))
+        // The answer stays unknown and the button is not drawn: the log says why.
+        .catch((error: unknown) => console.warn('[settings] whether Lucium is the default browser could not be read:', error))
+    ask()
+    // Windows leaves the choice to its own Settings: ask again when the user comes back from there.
+    window.addEventListener('focus', ask)
     return () => {
       live = false
+      window.removeEventListener('focus', ask)
     }
   }, [])
 
@@ -40,8 +45,9 @@ export function DefaultBrowserRow() {
     setDefaultNote('')
     void api()
       .setDefaultBrowser()
-      .then((done) => {
-        if (!done) setDefaultNote(t('general-settings.navigateur-par-defaut-echec'))
+      .then((outcome) => {
+        if (outcome === 'failed') setDefaultNote(t('general-settings.navigateur-par-defaut-echec'))
+        else if (outcome === 'system-settings') setDefaultNote(t('general-settings.navigateur-par-defaut-parametres'))
         return api().defaultBrowser().then(setIsDefault)
       })
       .catch((error: unknown) => {
@@ -52,18 +58,21 @@ export function DefaultBrowserRow() {
 
   const hint = isDefault === null ? undefined : isDefault ? t('settings.home-lucium-est-par-defaut') : t('settings.lucium-n-est-pas-votre-navigateur-par')
   return (
-    <Row label={t('settings.home-navigateur-par-defaut')} hint={hint} searchKey="defaultBrowser">
-      {isDefault === false && (
-        <button className="button" onClick={makeDefault}>
-          {t('settings.definir-lucium-par-defaut')}
-        </button>
-      )}
-      {defaultNote !== '' && (
-        <span className="pref-hint" role="status" data-role="default-browser-note">
+    <>
+      <Row label={t('settings.home-navigateur-par-defaut')} hint={hint} searchKey="defaultBrowser">
+        {isDefault === false && (
+          <button className="button" onClick={makeDefault}>
+            {t('settings.definir-lucium-par-defaut')}
+          </button>
+        )}
+      </Row>
+      {/* A row of its own under the button: a sentence in the control column would squeeze the label (seen on Windows). It goes once Lucium is the default. */}
+      {defaultNote !== '' && isDefault !== true && (
+        <div className="pref-row pref-message" role="status" data-role="default-browser-note">
           {defaultNote}
-        </span>
+        </div>
       )}
-    </Row>
+    </>
   )
 }
 

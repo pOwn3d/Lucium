@@ -45,7 +45,7 @@ describe('« Définir comme navigateur par défaut »', () => {
   })
 
   it('says so when the system answers that nothing was changed', async () => {
-    asked.setDefaultBrowser = async () => false
+    asked.setDefaultBrowser = async () => 'failed'
     const container = await pane()
     await click(button(container, t('settings.definir-lucium-par-defaut')))
     expect(note(container)).toBe(t('general-settings.navigateur-par-defaut-echec'))
@@ -54,12 +54,63 @@ describe('« Définir comme navigateur par défaut »', () => {
   it('says nothing and takes the invitation away once Lucium is the default browser', async () => {
     asked.setDefaultBrowser = async () => {
       asked.defaultBrowser = async () => true
-      return true
+      return 'done'
     }
     const container = await pane()
     await click(button(container, t('settings.definir-lucium-par-defaut')))
     expect(note(container)).toBeNull()
     expect(container.textContent).not.toContain(t('settings.lucium-n-est-pas-votre-navigateur-par'))
+  })
+})
+
+describe('« Définir comme navigateur par défaut » on Windows, where the choice is made in the system Settings', () => {
+  it('says that Settings is open, and keeps the invitation while Windows keeps another browser', async () => {
+    asked.setDefaultBrowser = async () => 'system-settings'
+    const container = await pane()
+    await click(button(container, t('settings.definir-lucium-par-defaut')))
+    expect(note(container)).toBe(t('general-settings.navigateur-par-defaut-parametres'))
+    expect(note(container)).not.toBe(t('general-settings.navigateur-par-defaut-echec'))
+    expect(container.textContent).toContain(t('settings.lucium-n-est-pas-votre-navigateur-par'))
+    expect(container.textContent).toContain(t('settings.definir-lucium-par-defaut'))
+  })
+
+  it('shows what Windows holds when the user comes back to the window, without a click, and drops the note about Settings', async () => {
+    let chosen = false
+    asked.defaultBrowser = async () => chosen
+    asked.setDefaultBrowser = async () => 'system-settings'
+    const container = await pane()
+    expect(container.textContent).toContain(t('settings.lucium-n-est-pas-votre-navigateur-par'))
+    await click(button(container, t('settings.definir-lucium-par-defaut')))
+    expect(note(container)).toBe(t('general-settings.navigateur-par-defaut-parametres'))
+    chosen = true
+    window.dispatchEvent(new Event('focus'))
+    await settle()
+    expect(container.textContent).toContain(t('settings.home-lucium-est-par-defaut'))
+    expect(container.textContent).not.toContain(t('settings.definir-lucium-par-defaut'))
+    expect(note(container)).toBeNull()
+  })
+
+  // Seen in the Windows VM: the sentence inside the control column squeezed the label of the row to a few letters per line.
+  it('puts the note in a row of its own, under the row, never in the control column that holds the button', async () => {
+    asked.setDefaultBrowser = async () => 'system-settings'
+    const container = await pane()
+    await click(button(container, t('settings.definir-lucium-par-defaut')))
+    const message = container.querySelector('[data-role="default-browser-note"]')!
+    expect(message.classList.contains('pref-message')).toBe(true)
+    expect(message.closest('.pref-control')).toBeNull()
+    expect(container.querySelector('.pref-control [data-role="default-browser-note"]')).toBeNull()
+  })
+
+  it('stops listening to the window once the row is gone', async () => {
+    let asks = 0
+    asked.defaultBrowser = async () => (asks++, false)
+    await pane()
+    mounted?.unmount()
+    mounted = null
+    const before = asks
+    window.dispatchEvent(new Event('focus'))
+    await settle()
+    expect(asks).toBe(before)
   })
 })
 

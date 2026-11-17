@@ -38,7 +38,7 @@ Méthode : recherche textuelle dans les fichiers de production (`src/` et `scrip
 | Chemins `~/Library/…` | 5 | `importers/service.ts` (sources `arc` et `safari`), `menu-actions.ts`, `import-sources.ts`, `native-messaging.ts` | dossiers des navigateurs basés sur Chromium et sur Gecko par système dans `platform/paths.ts` (supposés, §3) |
 | Liens `x-apple.systempreferences:` | 1 | `translate-ipc.ts`, `import-sources.ts` | `null` hors macOS : le bouton n'est pas proposé |
 | Événement `open-url` | 1 | `index.ts` | hors macOS les liens sont dans la ligne de commande : le premier lancement les lit |
-| Navigateur par défaut (`setAsDefaultProtocolClient`) | 4 | `index.ts`, `ipc.ts` | non branché ; sous Windows 10+ l'API n'enregistre qu'une association, l'utilisateur choisit dans les Paramètres (§9) ; `build/installer.nsh` écrit les entrées « Programmes par défaut » qui font apparaître Lucium dans la liste (§5, non exécuté) |
+| Navigateur par défaut (`setAsDefaultProtocolClient`) | 4 | `index.ts`, `ipc.ts` | `shell/default-browser.ts` : sous Windows 10+ l'API d'Electron n'écrit qu'une association que Windows ignore et répondait « oui » à tort (vu dans la VM, carte 431) ; l'état est lu dans `UserChoiceLatest\ProgId` puis `UserChoice` (`reg query` ; Windows 11 build 26300 n'écrit plus que le premier, vu dans la VM ; ProgID `LuciumURL` de `build/installer.nsh`) et le bouton ouvre `ms-settings:defaultapps?registeredAppUser=Lucium` (le choix reste à l'utilisateur) ; l'entrée du menu n'y est jamais grisée (lecture asynchrone) |
 | Panneau « À propos » du système | 3 | `about.ts`, `index.ts` | `role: 'about'` : boîte personnalisée sous Windows, panneau GTK sous Linux (à constater) |
 
 ### 2.2 Défauts réels trouvés (pas seulement des appels à garder)
@@ -126,7 +126,7 @@ Côté interface surtout ; les fonctions pures existent et sont testées.
 | Libellé « Afficher dans le Finder » des deux boutons | `Panels.tsx:212`, `littlearc.tsx:257` | `revealLabel(platform)` |
 | Masquer « Ouvrir avec… » hors macOS | `context-menus.ts` | `platform.facts.openWithBundle` |
 | Lecture des raccourcis de `browser.ts` (⌃Tab) et de `index.ts` (Mini-fenêtre) avec la plateforme | `browser.ts`, `index.ts` | `platform.accelerator(id, bindings)` |
-| Texte « macOS peut demander une confirmation » du navigateur par défaut | `index.ts` | — |
+| Texte « macOS peut demander une confirmation » du navigateur par défaut | `shell/default-browser.ts` (`defaultBrowserNotice`) | texte propre à Windows : Paramètres ouverts |
 | Dictionnaires du correcteur (réseau) | `page-commands.ts` | désactivé par défaut hors macOS |
 | Barre de titre dessinée par la page (Windows/Linux) | `index.ts`, `shared/frame-layout.ts`, CSS | décrite au §10, **pas écrite** : `windowFrame(lights, overlay)` accepte déjà un `titleBarOverlay` ; il reste la mise en page |
 | ~~Lecture d'une clé de registre pour les hôtes de messagerie native (Windows)~~ **faite** | `shared/native-messaging.ts`, `main/shell/native-messaging-registry.ts` | lecture seule par `reg.exe export` (outil de Windows, aucune dépendance native), sous le réglage `chromeNativeHosts` ; voir la ligne « Hôtes de messagerie native » du §3. Reste : une valeur `REG_EXPAND_SZ` (variables d'environnement) et un `path` relatif dans le manifeste ne sont pas lus (Chrome lit un `path` relatif au dossier du manifeste sous Windows) |

@@ -10,8 +10,8 @@ import { applyLanguage, t, tp } from '@shared/i18n'
 import { menuKey } from '@shared/menu-state'
 import { dockWorkViews } from '@shared/work-views'
 import { clearHistoryPrompt } from '@shared/history-scope'
-import { schemesToRegister } from '@shared/default-browser'
-import { isBuiltApp } from '../runtime'
+import { defaultBrowserNotice, isDefaultBrowserNow, makeDefaultBrowser } from './default-browser'
+import { systemDefaultBrowserPorts } from './default-browser-ports'
 import { loadExtensionFromDialog } from './ipc'
 import { buildMenu } from './menu'
 import { applyAboutPanel } from './about'
@@ -107,7 +107,7 @@ export function installAppMenus(deps: AppMenuDeps): { refreshMenu: () => void } 
         recordTrace: () => void menuDialogs.recordTrace(target, () => installMenu()),
         isRecordingTrace: menuDialogs.isRecordingTrace,
         openDocumentation: (what) => void menuDialogs.openDocumentation(what),
-        isDefaultBrowser: () => ['http', 'https'].every((scheme) => app.isDefaultProtocolClient(scheme)),
+        isDefaultBrowser: () => isDefaultBrowserNow(systemDefaultBrowserPorts()),
         windows: () => windowManager.entries(),
         focusWindow: (id) => void windowManager.focusWindow(id),
         setWindowName: (id, name) => void windowManager.setName(id, name),
@@ -129,17 +129,8 @@ export function installAppMenus(deps: AppMenuDeps): { refreshMenu: () => void } 
           if (front) front.close()
           else if (!windowManager.isMainAway()) windowManager.focused().win.close()
         },
-        setDefaultBrowser: () => {
-          const schemes = schemesToRegister(isBuiltApp())
-          const ok = schemes.length > 0 && schemes.map((scheme) => app.setAsDefaultProtocolClient(scheme)).every(Boolean)
-          dialog.showMessageBoxSync(target.win, {
-            type: ok ? 'info' : 'warning',
-            message: ok ? t('app.lucium-est-propose-comme-navigateur-par') : t('app.impossible-de-s-enregistrer-comme-navigateur'),
-            detail: ok
-              ? t('app.macos-peut-demander-une-confirmation')
-              : t('app.ouvrez-l-application-installee-puis-reessayez')
-          })
-        },
+        setDefaultBrowser: () =>
+          void makeDefaultBrowser(systemDefaultBrowserPorts()).then((outcome) => dialog.showMessageBoxSync(target.win, defaultBrowserNotice(outcome))),
         clearHistory: () => {
           // The history of the profile of the space shown in the window the menu acts on: the other profiles keep theirs.
           const { profileId, pages } = target.browser.historyScope()
