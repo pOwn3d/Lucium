@@ -8,6 +8,9 @@ import { posix } from '../windows.test-support'
 // two things that would hurt (publishing something, signing with something that is not the project's) happen silently once a workflow runs.
 const read = (relative: string): string => readFileSync(fileURLToPath(new URL(`../../../${relative}`, import.meta.url)), 'utf8')
 
+/** The names of the seven checks the rules of `main` require (ci.yml and pr-conventions.yml): no other workflow may give one of its jobs such a name. */
+const REQUIRED_CHECKS = ['Type check', 'Lint', 'Unit tests (Linux)', 'Unit tests (macOS)', 'Build (macOS, unsigned)', 'DCO', 'PR title']
+
 /** The lines of a YAML file that are not comments, so that a comment saying "no secret" cannot be mistaken for a use. */
 const code = (text: string): string => text.split('\n').filter((line) => !line.trimStart().startsWith('#')).join('\n')
 
@@ -63,7 +66,6 @@ describe('.github/workflows/build.yml', () => {
 describe('.github/workflows/linux.yml', () => {
   const workflow = code(read('.github/workflows/linux.yml'))
   const script = code(read('scripts/linux-ci.sh'))
-  const REQUIRED_CHECKS = ['Type check', 'Lint', 'Unit tests (Linux)', 'Unit tests (macOS)', 'Build (macOS, unsigned)', 'DCO', 'PR title']
 
   it('never switches the sandbox of Chromium off: no switch, no variable, in the workflow, its script and the launcher of the E2E tests', () => {
     const off = /--no-sandbox|--disable-setuid-sandbox|--disable-gpu-sandbox|--disable-seccomp-filter-sandbox|ELECTRON_DISABLE_SANDBOX|\bno-sandbox\b/
@@ -139,6 +141,81 @@ describe('.github/workflows/linux.yml', () => {
 
   it('refuses to run its script anywhere but on Linux', () => {
     expect(script).toMatch(/if \[ "\$\(uname -s\)" != Linux \]; then\n\s+echo "linux-ci\.sh: Linux only[^\n]*\n\s+exit 2\n/)
+  })
+})
+
+// The iOS check (ios.yml): `scripts/ios-check.sh` on a macOS runner, for a change of ios/ only. What it must never do is checked as text: run when nothing of ios/
+// changed, cost anything on a private repository, sign or send something to Apple, hold a secret or a cache, use a tool that nobody pinned, open a window,
+// or take the name of a required check.
+describe('.github/workflows/ios.yml', () => {
+  const workflow = code(read('.github/workflows/ios.yml'))
+  const script = code(read('scripts/ios-check.sh'))
+
+  it('runs on a pull request that touches ios/, the script or the workflow, and by hand: never on a timer, a push or a fork with more rights', () => {
+    expect(workflow).toMatch(/^on:\n {2}pull_request:\n {4}paths:\n {6}- 'ios\/\*\*'\n {6}- 'scripts\/ios-check\.sh'\n {6}- '\.github\/workflows\/ios\.yml'\n {2}workflow_dispatch:\n\n/m)
+    expect(workflow).not.toMatch(/^ {2}(push|schedule):|pull_request_target|workflow_run|paths-ignore|branches:/m)
+  })
+
+  it('has a read-only token, no secret, no signature, nothing sent to Apple and nothing kept', () => {
+    expect(workflow).toMatch(/^permissions: \{\}$/m)
+    expect(workflow.match(/^ {4}permissions:\n {6}contents: read$/gm)).toHaveLength(1)
+    expect(workflow).not.toMatch(/secrets\.|GITHUB_TOKEN|GH_TOKEN|CSC_|APPLE_|write/)
+    expect(workflow).not.toMatch(/xcodebuild archive|-exportArchive|altool|notarytool|testflight|allowProvisioningUpdates|DEVELOPMENT_TEAM|\.p12|\.p8|\.mobileprovision/i)
+    // The project is built without a signature, by the script, and nothing of the run is uploaded or cached (workflow-hygiene.test.ts: no pnpm cache outside ci.yml).
+    expect(script).toMatch(/CODE_SIGNING_ALLOWED=NO/)
+    expect(script).not.toMatch(/\barchive\b|-exportArchive|altool|notarytool|DEVELOPMENT_TEAM/)
+    expect(workflow).not.toMatch(/upload-artifact|actions\/cache|\bcache:|\.\/\.github\/actions\/setup/)
+  })
+
+  it('is skipped while the repository is private, on a runner that is pinned: macOS minutes are free on a public repository only', () => {
+    expect(workflow).toContain("    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}\n")
+    expect(workflow.match(/^\s+if:.*$/gm)).toHaveLength(1)
+    expect(workflow.match(/^ {4}runs-on: .*$/gm)).toEqual(['    runs-on: macos-26'])
+    expect(workflow).not.toMatch(/macos-latest|continue-on-error|\|\| true|\|\| :|set \+e/)
+    expect(workflow).toMatch(/^ {4}timeout-minutes: \d+$/m)
+  })
+
+  it('pins the Xcode it tests with, and checks the SHA-256 of XcodeGen before it runs it (no `brew install`, no version that moves)', () => {
+    expect(workflow).toMatch(/^ {6}DEVELOPER_DIR: \/Applications\/Xcode_\d+\.\d+\.app\/Contents\/Developer$/m)
+    expect(workflow).toMatch(/^ {6}XCODEGEN_VERSION: '\d+\.\d+\.\d+'$/m)
+    expect(workflow).toMatch(/^ {6}XCODEGEN_SHA256: [0-9a-f]{64}$/m)
+    expect(workflow).toContain('"https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"')
+    expect(workflow).toContain('echo "${XCODEGEN_SHA256}  $dir/xcodegen.zip" | shasum -a 256 -c -')
+    // The check comes before the archive is unpacked or its binary put on the PATH, and `set -e` makes a wrong sum stop the step.
+    const step = workflow.slice(workflow.indexOf('- name: XcodeGen'))
+    expect(step.indexOf('shasum -a 256 -c')).toBeGreaterThan(step.indexOf('curl '))
+    expect(step.indexOf('shasum -a 256 -c')).toBeLessThan(step.indexOf('unzip '))
+    expect(step.indexOf('unzip ')).toBeLessThan(step.indexOf('>> "$GITHUB_PATH"'))
+    expect(step).toContain('set -euo pipefail')
+    expect(workflow).not.toMatch(/brew (install|upgrade|update)|npx |latest/)
+  })
+
+  it('runs the script a maintainer runs on a Mac, and the simulator it boots is the one the workflow looks for', () => {
+    expect(workflow).toMatch(/\n {6}- name: Tests \(LuciumKit, then the application on a simulator\)\n {8}run: bash scripts\/ios-check\.sh\n$/)
+    // The defaults of the script and what the "Simulator" step looks for are the same runtime and device: one cannot change without the other.
+    for (const fact of ['com.apple.CoreSimulator.SimRuntime.iOS-26-5']) {
+      expect(script, fact).toContain(fact)
+      expect(workflow, fact).toContain(fact)
+    }
+    expect(script).toContain('com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro')
+    expect(workflow).toContain("xcrun simctl list devicetypes | grep -F 'iPhone 17 Pro'")
+    expect(workflow).toMatch(/if ! xcrun simctl list runtimes \| grep -F 'com\.apple\.CoreSimulator\.SimRuntime\.iOS-26-5' \| grep -vq unavailable; then\n[^\n]*::error[^\n]*\n\s+exit 1\n\s+fi\n/)
+  })
+
+  it('opens no window: the simulator is booted by simctl, never through Simulator.app or `open`, and is shut down and deleted when the script ends', () => {
+    expect(workflow).not.toMatch(/Simulator\.app|\bopen -|osascript|screencapture/)
+    expect(script).not.toMatch(/Simulator\.app|\bopen -|osascript/)
+    expect(script).toMatch(/xcrun simctl boot "\$udid"/)
+    expect(script).toMatch(/trap cleanup EXIT/)
+    expect(script).toMatch(/xcrun simctl shutdown "\$udid"/)
+    expect(script).toMatch(/xcrun simctl delete "\$udid"/)
+  })
+
+  it('names its job so that none is mistaken for a required check of main, and none is one; the maintainers guide describes it', () => {
+    const names = [...workflow.matchAll(/^ {4}name: (.+)$/gm)].map((match) => match[1]!)
+    expect(names).toEqual(['iOS (build and tests, simulator)'])
+    for (const name of names) expect(REQUIRED_CHECKS).not.toContain(name)
+    expect(read('docs/community/maintainers.md')).toContain('`ios.yml`')
   })
 })
 

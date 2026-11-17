@@ -47,7 +47,7 @@ const jobsOf = (text: string): { id: string; text: string }[] => {
 
 describe('every workflow of .github/workflows', () => {
   it('is read, and its jobs are found (one `runs-on` per job)', () => {
-    for (const expected of ['audit.yml', 'build.yml', 'ci.yml', 'codeql.yml', 'dependency-review.yml', 'e2e.yml', 'pr-conventions.yml', 'release.yml', 'sbom.yml', 'scorecard.yml', 'secret-scanning.yml', 'smoke-macos.yml']) {
+    for (const expected of ['audit.yml', 'build.yml', 'ci.yml', 'codeql.yml', 'dependency-review.yml', 'e2e.yml', 'ios.yml', 'pr-conventions.yml', 'release.yml', 'sbom.yml', 'scorecard.yml', 'secret-scanning.yml', 'smoke-macos.yml']) {
       expect(FILES).toContain(expected)
     }
     for (const { file, text } of workflows) {

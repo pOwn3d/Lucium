@@ -1,0 +1,88 @@
+name: iOS
+
+# The iOS application of ios/ (docs/ios.md), built and tested on a GitHub macOS runner: `scripts/ios-check.sh`, the same script a maintainer runs on a Mac.
+# It runs the tests of LuciumKit (`swift test`), generates the Xcode project (XcodeGen), boots an iOS simulator IN THE BACKGROUND (`xcrun simctl boot`: a
+# runner has no screen, and nothing ever starts Simulator.app) and runs `xcodebuild test` on it. Nothing is signed, nothing is sent to Apple, nothing is kept.
+#
+# When it runs: ONLY on a pull request that changes `ios/**`, the script, or this file (a change that touches none of them cannot break the application), and
+# by hand. Never on a timer, never on a push: a macOS run is the slowest and the dearest of the project, and the cost rule of ci.yml holds here too: the job is
+# skipped while the repository is private (macOS runners are free on a public repository only), unless somebody starts it by hand.
+# It is NOT a required check of `main` (the seven of ci.yml and pr-conventions.yml are untouched; docs/community/maintainers.md holds the table): a red run is
+# read, not blocking, until it has run often enough to be trusted.
+#
+# What the runner is (actions/runner-images, the README of the image `macos-26-arm64` of 2 November 2026; not read again at each run, the "Machine" step prints it):
+#   - the label `macos-26` is Apple silicon, and is pinned: `macos-latest` moves to another macOS, and with it Xcode and the simulators the script expects;
+#   - Xcode 26.6 is the default of the image and carries the SDK of iOS 26.5; the simulator runtime iOS 26.5 is installed, with an iPhone 17 Pro: these are the
+#     defaults of scripts/ios-check.sh (LUCIUM_IOS_RUNTIME, LUCIUM_IOS_DEVICE). Xcode is chosen by DEVELOPER_DIR below, so that a new default of the image does not
+#     change what is tested; the step "Simulator" fails with the list of what is installed when that runtime goes away.
+#   - XcodeGen is NOT on the image. It is a development tool (MIT), never shipped: the release the project tried (2.46.0) is downloaded and checked against its
+#     SHA-256 before it is used, the way a dependency is pinned by its lock file. Like the Linux packaging tools of linux.yml, it comes from outside pnpm-lock.yaml.
+#
+# The pnpm setup, Node and the pnpm store are not used: no `./.github/actions/setup`, and no cache of any kind (a cache is written once per branch and the
+# project must never cost its maintainer anything: workflow-hygiene.test.ts). The simulator is deleted by the script when it ends.
+#
+# Security: `pull_request` (never `pull_request_target`), a read-only token, no secret, nothing written back to the repository, no signing step anywhere
+# (AGENTS.md, section 7): the build runs with CODE_SIGNING_ALLOWED=NO, set by the script, and no certificate or profile exists in the repository.
+
+on:
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'scripts/ios-check.sh'
+      - '.github/workflows/ios.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ios-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  check:
+    name: iOS (build and tests, simulator)
+    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
+    runs-on: macos-26
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      XCODEGEN_VERSION: '2.46.0'
+      XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Machine
+        run: |
+          uname -m
+          sw_vers
+          xcodebuild -version
+          swift --version
+          # The application is tested on Apple silicon: refuse an Intel runner rather than test on another architecture.
+          [ "$(uname -m)" = "arm64" ]
+      # The simulator the script boots: iOS 26.5 on an iPhone 17 Pro. When the image no longer has it, say what it has instead of failing inside `simctl create`.
+      - name: Simulator
+        run: |
+          xcrun simctl list runtimes
+          xcrun simctl list devicetypes | grep -F 'iPhone 17 Pro'
+          if ! xcrun simctl list runtimes | grep -F 'com.apple.CoreSimulator.SimRuntime.iOS-26-5' | grep -vq unavailable; then
+            echo "::error title=iOS simulator::The runtime iOS 26.5 is not installed on this image: change LUCIUM_IOS_RUNTIME in scripts/ios-check.sh and this file."
+            exit 1
+          fi
+      # XcodeGen, from the release of the project's repository, to a folder of the runner (the binary finds its presets in ../share/xcodegen).
+      - name: XcodeGen (pinned release, checked)
+        run: |
+          set -euo pipefail
+          dir="$RUNNER_TEMP/xcodegen-download"
+          mkdir -p "$dir"
+          curl --fail --silent --show-error --location --output "$dir/xcodegen.zip" \
+            "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
+          echo "${XCODEGEN_SHA256}  $dir/xcodegen.zip" | shasum -a 256 -c -
+          unzip -q "$dir/xcodegen.zip" -d "$RUNNER_TEMP/xcodegen-tool"
+          echo "$RUNNER_TEMP/xcodegen-tool/xcodegen/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/xcodegen-tool/xcodegen/bin/xcodegen" --version
+      # The same script as on a Mac: package tests, project, simulator in the background, `xcodebuild test`, simulator deleted.
+      - name: Tests (LuciumKit, then the application on a simulator)
+        run: bash scripts/ios-check.sh

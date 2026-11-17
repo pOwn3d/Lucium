@@ -25,6 +25,8 @@ never `Simulator.app`), runs `xcodebuild test`, optionally takes a screenshot in
 deletes it. It is heavy (several minutes, a good part of the CPU): say so before running it on a machine somebody is using, run one at a
 time, and run `xcrun simctl shutdown all` if it was interrupted. It signs nothing and sends nothing.
 
+On GitHub the same script runs in [`.github/workflows/ios.yml`](../.github/workflows/ios.yml), on a macOS runner, for a pull request that changes `ios/` or the script (and on demand). It is not a required check of `main`.
+
 ## Rules that apply here
 
 - Every visible text is a key of `Lucium/Localizable.xcstrings`, in French and in English (`AGENTS.md`, section 3).
