@@ -4,7 +4,7 @@
 
 English · [Français](README.fr.md)
 
-> **Status: version 1.0, the first one announced as stable.** It is used every day, and it does not do everything yet: see [Known limitations](#known-limitations). Download it at [lucium.app/en/download](https://lucium.app/en/download/): a signed and notarized disk image, for Macs with Apple silicon.
+> **Status: stable.** Lucium is used every day, and it does not do everything yet: see [Known limitations](#known-limitations). The current version and what changed in each release are in the [changelog](CHANGELOG.md). Download it at [lucium.app/en/download](https://lucium.app/en/download/): a signed and notarized disk image, for Macs with Apple silicon.
 
 ![The Lucium window: the sidebar with two spaces, pinned tabs and a page](docs/images/sidebar-two-spaces.png)
 ![The command bar open over a page](docs/images/command-bar.png)
