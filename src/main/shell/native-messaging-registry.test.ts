@@ -145,11 +145,12 @@ describe.skipIf(!onWindows)('the registry of Windows, read with the reg.exe of t
     expect(await collect(registeredManifests(name, true, 'win32'))).toEqual([manifest])
   })
 
-  it('reads the root of the machine and both views without failing, whatever they hold', async () => {
+  it('reads the root of the machine, in both views of the registry', async () => {
+    // A key every Windows has, small and without sub-keys (an export goes down the tree: a key of Software\Microsoft holds far more than the bound).
     for (const view of [32, 64] as const) {
-      const text = await exportRegistryKey({ hive: 'HKLM', view, key: 'Software\\Microsoft\\Windows\\CurrentVersion' })
+      const text = await exportRegistryKey({ hive: 'HKLM', view, key: 'SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage' })
       expect(text).toContain('Windows Registry Editor Version 5.00')
-      expect(text).toContain('HKEY_LOCAL_MACHINE')
+      expect(text).toContain('[HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Nls\\CodePage]')
     }
   })
 
