@@ -2,7 +2,7 @@
 // selection, Developer Mode, case and style of the selected text, Cast, spell checking. Each acts on the browser it is given (the
 // window that has the focus).
 
-import { app, BrowserWindow, ShareMenu, webContents as allWebContents } from 'electron'
+import { app, BrowserWindow, ShareMenu, webContents as allWebContents, type Session } from 'electron'
 import { currentPlatform } from '../platform'
 import { developerModeLabel, isDeveloperUrl } from '@shared/developer-mode'
 import { readableToggle, takesReadableMode, type ReadableMode } from '@shared/readable-mode'
@@ -110,14 +110,40 @@ export async function formatSelection(browser: Browser, command: FormatCommand):
 
 // ---- Edit › Spelling and Grammar › Check Spelling While Typing ----
 
-// On macOS the checker is the system's. Elsewhere Chromium would fetch its dictionaries from its CDN as soon as a field is used: off until the user asks.
+// On macOS the checker is the system's. Elsewhere it is Chromium's own, and Chromium fetches the dictionary of every language a session checks from its CDN
+// (redirector.gvt1.com) as soon as it makes the session, while that file is missing, whatever the checker is switched to: with the checker "off" (below) a
+// first launch still downloaded fr-FR-3-0.bdic one second after the start, before any text field. So, away from macOS, a session comes into the world with
+// no language at all (nothing to fetch) and gets its own back when the checker is switched on: nothing is downloaded before the user asks.
 // The user's choice is kept in the settings (`spellCheck`, see shared/spell-check.ts): `followSpellChecking` applies it at launch, `setSpellChecking` records it.
 let spellChecking: boolean | null = null
 let rememberChoice: (choice: SpellCheckChoice) => void = () => {}
+/** The languages Electron gave a session (those of the system), while the session has none because the checker is off. */
+const keptLanguages = new WeakMap<Session, string[]>()
 
-/** Applies the choice to every session the application has, and to those created later. */
+/**
+ * What one session is told: the checker on or off and, away from macOS (the system's checker fetches nothing and these calls are no-ops there), the
+ * languages it may fetch dictionaries for: none while the checker is off, the session's own again once it is on. The languages come first: Electron
+ * switches the checker on with a language list that is not empty and off with an empty one, and the choice has the last word.
+ */
+function applyToSession(ses: Session, enabled: boolean): void {
+  if (!currentPlatform().facts.systemSpellChecker) {
+    if (enabled) {
+      const languages = keptLanguages.get(ses)
+      if (languages) {
+        ses.setSpellCheckerLanguages(languages)
+        keptLanguages.delete(ses)
+      }
+    } else {
+      if (!keptLanguages.has(ses)) keptLanguages.set(ses, ses.getSpellCheckerLanguages())
+      ses.setSpellCheckerLanguages([])
+    }
+  }
+  ses.setSpellCheckerEnabled(enabled)
+}
+
+/** Applies the choice to every session the application has (those of its web contents), and to those created later. */
 function applySpellChecking(enabled: boolean): void {
-  for (const contents of allWebContents.getAllWebContents()) contents.session.setSpellCheckerEnabled(enabled)
+  for (const contents of allWebContents.getAllWebContents()) applyToSession(contents.session, enabled)
 }
 
 export const isSpellChecking = (): boolean => (spellChecking ??= currentPlatform().facts.systemSpellChecker)
@@ -130,11 +156,24 @@ export function setSpellChecking(enabled: boolean): void {
 }
 
 /**
+ * Call before the application is ready: every session made from then on (the default one, a partition of a profile or of a container, a private window's) is
+ * told the checker's state the moment it exists, before a page can make Chromium fetch a dictionary for it. Until the choice of the settings is known
+ * (`followSpellChecking`) that state is the system's default: off. Nothing happens on macOS.
+ */
+export function holdSpellDictionaries(): void {
+  // macOS keeps what it did: its checker is the system's and it fetches nothing.
+  if (currentPlatform().facts.systemSpellChecker) return
+  app.on('session-created', (ses) => applyToSession(ses, isSpellChecking()))
+}
+
+/**
  * Starts from the choice the settings hold (the system's own default while there is none) and keeps a window opened later in line with it.
  * `remember` writes a new choice to the settings. Call once at startup, before the menu is built.
  */
 export function followSpellChecking(choice: SpellCheckChoice, remember: (choice: SpellCheckChoice) => void): void {
   spellChecking = spellCheckEnabled(choice, currentPlatform().facts.systemSpellChecker)
   rememberChoice = remember
-  app.on('web-contents-created', (_event, contents) => contents.session.setSpellCheckerEnabled(isSpellChecking()))
+  // The sessions made before the choice was known were told the system's default: the saved choice reaches them now, and those of the windows opened later.
+  applySpellChecking(isSpellChecking())
+  app.on('web-contents-created', (_event, contents) => applyToSession(contents.session, isSpellChecking()))
 }

@@ -42,7 +42,7 @@ import { createWindowManager, followDockClicks, openExtensionWindows } from './s
 import { installExternalLinks } from './shell/external-links-wiring'
 import { t } from '@shared/i18n'
 import { WaitingLinks } from '@shared/waiting-links'
-import { followSpellChecking } from './shell/page-commands'
+import { followSpellChecking, holdSpellDictionaries } from './shell/page-commands'
 import { MAIN_WINDOW_ID } from './shell/windows'
 import { OnDemandView } from './shell/on-demand-view'
 import { loadSurface, type Surface } from './shell/surface-load'
@@ -161,6 +161,11 @@ if (!primaryInstance) {
 // certificates.ts). The engine, which knows the page of a web contents, exists once the application is ready: before, nothing can ask.
 let certificateRefused: CertificateTell | null = null
 refuseClientCertificates(app, (contents, site) => certificateRefused?.(contents, site) ?? false)
+
+// Away from macOS Chromium's own spell checker fetches the dictionary of a session's language from its CDN as soon as the session exists. Every session
+// (the default one, the partitions of the profiles and containers, the private windows') is made without a language until the user switches the checker on
+// in Edit › Spelling and Grammar, so nothing leaves the machine before that (shell/page-commands.ts). It has to be heard before the application is ready.
+holdSpellDictionaries()
 
 // The stand-in resources of the blocker's extended rules are served under a scheme of their own (a redirect to `data:` is aborted by Chromium).
 // The name has to be declared before the application is ready, and `secure` so that a page on https may load it (no mixed content). This only
