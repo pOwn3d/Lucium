@@ -149,6 +149,20 @@ export function backgroundObjectPosition(background: Pick<SpaceBackground, 'type
   return background.type === 'video' && background.position ? `${background.position.x}% ${background.position.y}%` : undefined
 }
 
+/** The tallest the still picture of a video may be in the « Cadrage » panel, in pixels (the panel is a column of a settings window, not a screen). */
+export const FRAMING_STAGE_MAX_HEIGHT = 260
+
+/**
+ * The widest the still picture of a video may be so that it is not taller than `maxHeight`, in pixels, or undefined while its size is not known. The
+ * height is capped through the width, never on its own: the picture keeps the shape of the video, so the frame drawn over it in percents lands on the
+ * video itself. A cap on the height alone would stretch the box wider than the video and put the frame outside of it (a tall video, 9:16).
+ */
+export function framingStageMaxWidth(video: { width: number; height: number }, maxHeight: number = FRAMING_STAGE_MAX_HEIGHT): number | undefined {
+  if (!(video.width > 0 && video.height > 0 && maxHeight > 0)) return undefined
+  // Rounded down: a pixel more would make the box a little taller than the cap.
+  return Math.floor((maxHeight * video.width) / video.height)
+}
+
 /**
  * The share of a video's width (`x`) and height (`y`) that a box shows when the video covers it (`object-fit: cover`): 1 on the axis that is not cropped, less
  * on the other one. It is the size of the frame over the whole video, and what is left (1 - share) is the room the frame can move in. A size that is

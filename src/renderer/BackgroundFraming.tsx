@@ -6,7 +6,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { t } from '@shared/i18n'
 import { SIDEBAR_WIDTH_DEFAULT } from '@shared/model'
-import { CENTERED_POSITION, coverShare, draggedPosition, steppedPosition, type BackgroundPosition } from '@shared/space-media'
+import { CENTERED_POSITION, coverShare, draggedPosition, framingStageMaxWidth, steppedPosition, type BackgroundPosition } from '@shared/space-media'
 
 /**
  * The shape of the box the video covers in the sidebar. The window is not known here (the panel opens in another document), so the width is the
@@ -37,6 +37,9 @@ export function BackgroundFraming({ src, position, onChange, disabled = false }:
   }, [draft, stored.x, stored.y])
 
   const share = size ? coverShare(size, SIDEBAR_SHAPE) : null
+  // The box has the shape of the video, and its height is capped through its width (see framingStageMaxWidth): the frame is in percents of this box.
+  // A number is pixels for React.
+  const stageStyle = size ? { aspectRatio: `${size.width} / ${size.height}`, maxWidth: framingStageMaxWidth(size) } : undefined
   // A video of the sidebar's own shape fills it on both axes: there is no part to choose.
   if (share && share.x >= 1 && share.y >= 1) return null
 
@@ -81,7 +84,7 @@ export function BackgroundFraming({ src, position, onChange, disabled = false }:
   return (
     <div className="media-framing" role="group" aria-label={t('space-media.cadrage')}>
       <span className="media-framing-title">{t('space-media.cadrage')}</span>
-      <div className="media-framing-stage" ref={stage} style={size ? { aspectRatio: `${size.width} / ${size.height}` } : undefined}>
+      <div className="media-framing-stage" ref={stage} style={stageStyle}>
         {/* Still, on its first frame: the frame is what the user looks at; the video that plays is the preview above. */}
         <video src={src} muted playsInline preload="auto" aria-hidden="true" tabIndex={-1} onLoadedMetadata={(e) => setSize({ width: e.currentTarget.videoWidth, height: e.currentTarget.videoHeight })} />
         {share && (
