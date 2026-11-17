@@ -70,13 +70,20 @@ export function insidePath(value: unknown): string | undefined {
   return path
 }
 
+/**
+ * Whether a manifest declares a service worker (`background.service_worker`). An extension that does not (a popup and its page only, a Manifest V2
+ * background page) has no worker to start or to wait for: Electron refuses to start one for it, and that refusal looks like a start under way.
+ */
+export function declaresServiceWorker(manifest: unknown): boolean {
+  return isRecord(manifest) && isRecord(manifest['background']) && typeof manifest['background']['service_worker'] === 'string'
+}
+
 export function describeManifest(manifest: unknown, catalogue?: unknown): ExtensionFacts {
   const m = isRecord(manifest) ? manifest : {}
   const access = describeAccess(m)
   const homepage = typeof m['homepage_url'] === 'string' && /^https?:\/\//i.test(m['homepage_url']) && URL.canParse(m['homepage_url']) ? cleanText(m['homepage_url'], 300) : undefined
   const optionsUi = isRecord(m['options_ui']) ? m['options_ui']['page'] : undefined
   const optionsPage = insidePath(optionsUi ?? m['options_page'])
-  const background = isRecord(m['background']) ? m['background'] : {}
   const sidePanel = isRecord(m['side_panel']) && insidePath(m['side_panel']['default_path']) !== undefined
   const asked = new Set(Array.isArray(m['permissions']) ? m['permissions'].filter((p): p is string => typeof p === 'string') : [])
   return {
@@ -89,7 +96,7 @@ export function describeManifest(manifest: unknown, catalogue?: unknown): Extens
     broad: access.broad,
     warning: access.warning,
     ...(optionsPage ? { optionsPage } : {}),
-    hasWorker: typeof background['service_worker'] === 'string',
+    hasWorker: declaresServiceWorker(m),
     sidePanel,
     dataApis: DATA_APIS.filter((api) => asked.has(api)),
     requestBlocking: declaresRequestBlocking(m) && !mayBlockRequests(m)

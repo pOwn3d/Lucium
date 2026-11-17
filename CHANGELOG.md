@@ -18,6 +18,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 - **Windows, links under a file name**: the files Lucium writes (state, history, vault, download records) and a download that resumes are no longer opened through a link left under their name. Windows cannot make `open` refuse one, so the name is now looked at first.
 - **Spelling dictionaries, Windows and Linux**: Chromium no longer downloads the dictionary of the system language from its CDN at the first launch, with the checker off. A session starts without a language: nothing is fetched until you switch Spelling on in the Edit menu.
+- **Extensions without a service worker**: a click on the icon of an extension made of pages only (a popup, no background worker) opens its popup at once instead of after 10 seconds, and Lucium no longer logs a failed start for it. It reads the manifest, which says there is no worker to wait for.
 
 ## [1.1.3] - 2026-11-17
 

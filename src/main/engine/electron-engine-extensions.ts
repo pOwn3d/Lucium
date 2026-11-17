@@ -216,7 +216,7 @@ export abstract class ElectronEngineExtensions extends ElectronEngineNetwork {
     }
     const running = [...this.extensionWorkers].find((w) => !w.isDestroyed() && w.scope === scope && this.workerProfile.get(w) === profileId)
     if (running) start(running)
-    else if (profile) {
+    else if (profile && !this.hasNoWorker(profileId, extensionId)) {
       profile.session.serviceWorkers.startWorkerForScope(scope).then(start, (error: unknown) => console.warn(`[engine] cannot hold the worker of ${extensionId}:`, error))
     }
     return () => {
@@ -307,7 +307,7 @@ export abstract class ElectronEngineExtensions extends ElectronEngineNetwork {
     const sidePanelPath = (extension.manifest as { side_panel?: { default_path?: string } }).side_panel?.default_path
     const commands = readCommands(extension.manifest)
     // The manifest the access rules read: with what the person granted this extension in this profile, on its request.
-    this.manifests.set(key, this.optionalGrants.effective(profileId, extension.id, extension.manifest as { permissions?: unknown; host_permissions?: unknown; omnibox?: unknown }))
+    this.manifests.set(key, this.optionalGrants.effective(profileId, extension.id, extension.manifest as { permissions?: unknown; host_permissions?: unknown; omnibox?: unknown; background?: unknown }))
     const source = extension.path.startsWith(`${join(app.getPath('userData'), STORE_DIR)}${sep}`) ? 'store' : 'unpacked'
     // A folder is whatever its files say today: one that comes back asking for other things, or under another identifier, is not the extension the person chose (the updates of the
     // Web Store have a review of their own).
