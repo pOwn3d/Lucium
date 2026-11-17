@@ -284,7 +284,7 @@ export abstract class BrowserCapture extends BrowserReload {
   }
 
   /** How to open the first state of a mini window (the command bar alone, in a window of its own). */
-  setLittleBarOpener(opener: () => void): void {
+  setLittleBarOpener(opener: (from?: Bounds) => void): void {
     this.littleBarOpener = opener
   }
 }

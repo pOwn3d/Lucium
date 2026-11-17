@@ -374,7 +374,11 @@ export abstract class BrowserBase {
     () => this.store.get().settings.annotateCapture,
     () => this.overlayRequest
   )
-  protected littleBarOpener: (() => void) | null = null
+  protected littleBarOpener: ((from?: Bounds) => void) | null = null
+  /** Where this window sits on the desktop, for a mini window to open on the same screen; none once the window is gone. */
+  protected windowBounds(): Bounds | undefined {
+    return this.win.isDestroyed() ? undefined : this.win.getBounds()
+  }
   /** The page the user is erasing elements from (Tweak editor, Eraser mode), while the mode lasts. */
   protected zapping: { page: Page; stop: string } | null = null
   /** The sites whose script a draft of the Tweak editor switched off: their pages are reloaded when the editor closes (browser-site.ts, `boostsChanged`). */

@@ -15,6 +15,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **Links dropped on a window**: a link dragged from another application (a mail, a document, a terminal) onto a Lucium window opens in a new tab, in the Space on show. Only http and https addresses with no user name or password open, ten at most; a notice says how many were left out.
 - **Open with**: “Open With” in the Finder lists Lucium for PDF documents and pictures (PNG, JPEG, GIF, WebP, SVG), never as the default application for them.
 
+### Changed
+
+- **Mini window, centered and on top**: a mini window opens in the middle of the screen the link comes from (the pointer’s screen for a link from another application) and stays above the other windows. The command bar of “New Mini Window” opens there too. It does not yet go over an application in full screen.
+
 ### Fixed
 
 - **Site icons**: a crafted icon file, a kilobyte of comments in a row, could freeze Lucium: the check that tells a vector icon from an error page took exponential time on it. It now reads the start of the file in linear time.

@@ -7,7 +7,6 @@ import { t } from '@shared/i18n'
 import { PRIVATE_BACKGROUND } from '@shared/private-window'
 import { guestLabel } from '@shared/guest-window'
 import { GUEST_QUERY, PRIVATE_QUERY, TRAFFIC_LIGHTS } from '@shared/ipc'
-import { isNavigableUrl } from '@shared/url'
 import type { ElectronEngine } from '../engine/electron-engine'
 import type { HistoryBook } from '../history'
 import type { currentPlatform } from '../platform'
@@ -67,9 +66,7 @@ export function createWindowManager({ engine, sharedStore, views, history, windo
       return { win: extra, overlay: extraOverlay, floating: extraFloating }
     },
     openSettings: (pane, anchor) => settings.open(pane, anchor),
-    openLittle: (url, origin) => {
-      if (isNavigableUrl(url)) little.open(url, undefined, origin?.spaceId)
-    },
+    openLittle: (url, origin) => little.openLink(url, origin),
     systemDark: () => nativeTheme.shouldUseDarkColors
   })
 }

@@ -6,6 +6,7 @@ import { LITTLE_BUBBLE } from '@shared/little-bubble'
 import { t as tr } from '@shared/i18n'
 import { Channel } from '@shared/ipc'
 import { ipcMain } from 'electron'
+import type { Rect } from '@shared/peek'
 
 // The window class imports Electron for its real windows and clipboard only: a test gives its own windows and drives the rest for real.
 const showMessageBox = vi.hoisted(() => vi.fn(async () => ({ response: 0 })))
@@ -45,6 +46,15 @@ class FakeWindow extends EventEmitter {
   contentView = { addChildView: vi.fn(), removeChildView: vi.fn() }
   setWindowButtonVisibility = vi.fn()
   show = vi.fn()
+  setAlwaysOnTop = vi.fn()
+  setResizable = vi.fn()
+  setMinimumSize = vi.fn()
+  /** Where the window was asked to open (the bounds `createWindow` got), then where it was moved. */
+  bounds: Rect = { x: 0, y: 0, width: 0, height: 0 }
+  getBounds = () => this.bounds
+  setBounds = (bounds: Rect) => {
+    this.bounds = bounds
+  }
   getContentBounds = () => ({ x: 0, y: 0, width: 900, height: 650 })
   isDestroyed(): boolean {
     return this.destroyed
@@ -58,6 +68,10 @@ class FakeWindow extends EventEmitter {
 const fakeView = () => ({ webContents: { id: ++webContentsIds, send: vi.fn(), isDestroyed: () => false, on: vi.fn(), once: vi.fn(), close: vi.fn() }, setBounds: vi.fn() })
 
 const fakePage = () => ({ loadURL: vi.fn(), show: vi.fn(), destroy: vi.fn(), focus: vi.fn(), goBack: vi.fn(), goForward: vi.fn(), reload: vi.fn(), showsError: vi.fn(() => false) })
+
+/** Two screens side by side: the work area of the first (menu bar on top), the second one further right. */
+const FIRST_SCREEN: Rect = { x: 0, y: 25, width: 1680, height: 960 }
+const SECOND_SCREEN: Rect = { x: 1680, y: 0, width: 1920, height: 1080 }
 
 const download = (over: Partial<DownloadInfo> = {}): DownloadInfo => ({ id: 'd1', filename: 'rapport.pdf', url: 'https://x.example/rapport.pdf', path: '/tmp/rapport.pdf', state: 'completed', receivedBytes: 10, totalBytes: 10, startedAt: 1, ...over })
 
@@ -93,6 +107,7 @@ function setup(settings: Partial<Settings> = {}) {
     }
   }
   const browser = { dispatch: (action: Action) => dispatched.push(action), hideAdsOn: vi.fn(), forgetBlockerCss: vi.fn(), openOverlay: (request: unknown) => opened.push(request) }
+  const workArea = vi.fn((near?: Rect) => (near && near.x >= SECOND_SCREEN.x ? SECOND_SCREEN : FIRST_SCREEN))
   const little = new LittleArc({
     engine: engine as never,
     store: store as never,
@@ -100,8 +115,11 @@ function setup(settings: Partial<Settings> = {}) {
     history: history as never,
     windows: windows as never,
     trusted,
-    createWindow: () => {
+    // The screen of the window the link comes from, else the first one (where the pointer is).
+    workArea: workArea as never,
+    createWindow: (_id: string, _bar: boolean, bounds: Rect) => {
       const win = new FakeWindow()
+      win.bounds = bounds
       created.push(win)
       return win as never
     },
@@ -115,7 +133,7 @@ function setup(settings: Partial<Settings> = {}) {
   })
   const download_ = (id: string, d: DownloadInfo) => onDownload(d, id)
   const engineCalls = () => engine.createPage.mock.calls.map((call) => call[0] as { profileId: string })
-  return { store, little, dispatched, trays, created, trusted, download: download_, pages, events, opened, focusMain, browser, engineCalls, visits }
+  return { store, little, dispatched, trays, created, trusted, download: download_, pages, events, opened, focusMain, browser, engineCalls, visits, workArea }
 }
 
 beforeEach(() => {
@@ -661,5 +679,75 @@ describe('the icon of the page of a mini window', () => {
     expect(iconOf(t, id)).toBe('https://a.example/favicon.ico')
     tell(t, { url: 'https://b.example/', faviconUrl: '' })
     expect(iconOf(t, id)).toBeUndefined()
+  })
+})
+
+const inside = (inner: Rect, outer: Rect) => inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.width <= outer.x + outer.width && inner.y + inner.height <= outer.y + outer.height
+const centreOf = (r: Rect) => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 })
+
+describe('where a new window opens', () => {
+  it('puts a window of a page in the middle of the screen of the pointer when the link comes from no window of ours', () => {
+    const t = setup()
+    t.little.open('https://link.example/')
+    expect(t.workArea).toHaveBeenLastCalledWith(undefined)
+    // 55 % x 75 % of 1680 x 960 is cut to 900 x 650; the free space is split evenly around it (the menu bar is outside the work area).
+    expect(t.created[0]!.bounds).toEqual({ x: 390, y: 180, width: 900, height: 650 })
+    expect(inside(t.created[0]!.bounds, FIRST_SCREEN)).toBe(true)
+  })
+
+  it('opens on the screen of the window the link comes from, in the middle of its work area', () => {
+    const t = setup()
+    const from = { x: 2000, y: 100, width: 800, height: 600 }
+    t.little.open('https://link.example/', undefined, undefined, from)
+    expect(t.workArea).toHaveBeenLastCalledWith(from)
+    expect(t.created[0]!.bounds).toEqual({ x: 2190, y: 215, width: 900, height: 650 })
+    expect(inside(t.created[0]!.bounds, SECOND_SCREEN)).toBe(true)
+  })
+
+  it('opens a link of a window of the browser on its screen, and only a web address', () => {
+    const t = setup()
+    const from = { x: 2000, y: 100, width: 800, height: 600 }
+    t.little.openLink('https://link.example/', { from })
+    expect(t.workArea).toHaveBeenLastCalledWith(from)
+    expect(t.created).toHaveLength(1)
+    expect(t.created[0]!.bounds).toEqual({ x: 2190, y: 215, width: 900, height: 650 })
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    t.little.openLink('javascript:alert(1)', { from })
+    expect(t.created).toHaveLength(1)
+  })
+
+  it('puts the command bar of "New Mini Window" in the middle of the screen too, 490 x 329', () => {
+    const t = setup()
+    t.little.openBar({ x: 1700, y: 0, width: 800, height: 600 })
+    expect(t.created[0]!.bounds).toEqual({ x: 2395, y: 376, width: 490, height: 329 })
+  })
+
+  it('stays in the middle when the bar becomes the window of a page', () => {
+    const t = setup()
+    const id = t.little.openBar()
+    t.little.command(id, 'go:https://example.com/')
+    expect(t.created[0]!.bounds.width).toBeGreaterThan(490)
+    const after = t.created[0]!.bounds
+    // Within a pixel of the middle of the work area: the half pixels of an odd height are rounded.
+    expect(Math.abs(centreOf(after).x - centreOf(FIRST_SCREEN).x)).toBeLessThanOrEqual(1)
+    expect(Math.abs(centreOf(after).y - centreOf(FIRST_SCREEN).y)).toBeLessThanOrEqual(1)
+    expect(inside(after, FIRST_SCREEN)).toBe(true)
+  })
+})
+
+describe('always on top', () => {
+  it('puts every window above the others at the level of a palette: a window of a page, and the command bar alone', () => {
+    const t = setup()
+    t.little.open('https://link.example/')
+    t.little.openBar()
+    expect(t.created).toHaveLength(2)
+    for (const win of t.created) expect(win.setAlwaysOnTop).toHaveBeenCalledWith(true, 'floating')
+  })
+
+  it('does it before the window is shown, so it never appears under the others for a moment', () => {
+    const t = setup()
+    t.little.open('https://link.example/')
+    const win = t.created[0]!
+    expect(win.setAlwaysOnTop.mock.invocationCallOrder[0]).toBeLessThan(win.show.mock.invocationCallOrder[0]!)
   })
 })

@@ -1,4 +1,5 @@
 import { t } from './i18n'
+import type { Rect } from './peek'
 
 // Mini windows are meant to be short-lived: left without activity past a delay they are closed and archived, unless the pin "Garder ouvert" is on.
 
@@ -6,9 +7,13 @@ import { t } from './i18n'
  * Where a mini window comes from: the space of the tab whose link opened it, or of the window whose command bar did. Its page is made with the
  * profile of that space (the cookies the link was clicked with), and it is archived there, or opened there as a tab. Without one, the space the
  * main window is on.
+ *
+ * `from` is where the window it comes from sits on the desktop: the mini window opens on the screen that window is on. Without it (a link from
+ * another application) it opens on the screen of the pointer.
  */
 export interface LittleOrigin {
   spaceId?: string
+  from?: Rect
 }
 
 const HOUR_MS = 3_600_000

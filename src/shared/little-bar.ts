@@ -3,27 +3,26 @@
 
 import { effectiveAccelerator, type KeyBindings } from './keybindings'
 import type { LittleCommand } from './ipc'
+import { centeredBounds } from './little-window'
 import type { Rect } from './peek'
 
 /** The window of the first state: the card of the command bar, 490 x 329. */
 export const LITTLE_BAR = { width: 490, height: 329 } as const
-/** A mini window opens 20 px from the top and right edges of the screen. */
-export const LITTLE_BAR_MARGIN = 20
 
-/** Where the window of the first state opens: its top right corner is 20 px from the corner of the work area. */
+/** Where the window of the first state opens: in the middle of the work area, like the window of a page. */
 export function littleBarBounds(workArea: Rect): Rect {
-  return { x: workArea.x + workArea.width - LITTLE_BAR.width - LITTLE_BAR_MARGIN, y: workArea.y + LITTLE_BAR_MARGIN, ...LITTLE_BAR }
+  return centeredBounds(LITTLE_BAR, workArea)
 }
 
 /**
- * The window once a page is chosen: it keeps the top and the right edge where they were and grows toward the left and the bottom.
- * Kept inside the work area, so a window that was dragged to a corner still fits.
+ * The window once a page is chosen: it grows around its centre, so a window that opened in the middle of the screen stays in the middle, and one the
+ * user moved stays where they put it. Kept inside the work area, so a window that was dragged to a corner still fits.
  */
 export function littleExpandedBounds(current: Rect, size: { width: number; height: number }, workArea: Rect): Rect {
   const width = Math.min(size.width, workArea.width)
   const height = Math.min(size.height, workArea.height)
-  const x = Math.max(workArea.x, Math.min(current.x + current.width - width, workArea.x + workArea.width - width))
-  const y = Math.max(workArea.y, Math.min(current.y, workArea.y + workArea.height - height))
+  const x = Math.max(workArea.x, Math.min(Math.round(current.x + (current.width - width) / 2), workArea.x + workArea.width - width))
+  const y = Math.max(workArea.y, Math.min(Math.round(current.y + (current.height - height) / 2), workArea.y + workArea.height - height))
   return { x, y, width, height }
 }
 

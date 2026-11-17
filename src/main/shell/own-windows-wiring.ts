@@ -6,11 +6,8 @@ import { BrowserWindow, nativeTheme, screen, WebContentsView, type WebContents, 
 import { FLOATING_MIN_WIDTH } from '@shared/floating-video'
 import { t } from '@shared/i18n'
 import type { SettingsAnchor, SettingsPane } from '@shared/ipc'
-import { littleBarBounds } from '@shared/little-bar'
-import { littleWindowBounds } from '@shared/little-window'
 import { panelWindowBackground } from '@shared/panel-window'
 import { settingsHash } from '@shared/settings-target'
-import { isNavigableUrl } from '@shared/url'
 import type { ElectronEngine } from '../engine/electron-engine'
 import type { HistoryBook } from '../history'
 import type { currentPlatform } from '../platform'
@@ -59,11 +56,12 @@ export function createOwnWindows({ engine, store, sharedStore, browser, history,
     windows,
     trusted,
     focusMain,
-    createWindow: (id, bar) => {
-      const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
+    // The screen of the window the link comes from, else the one of the pointer (a link from another application has no window of ours).
+    workArea: (near) => (near ? screen.getDisplayMatching(near) : screen.getDisplayNearestPoint(screen.getCursorScreenPoint())).workArea,
+    createWindow: (id, bar, bounds) => {
       // The first state is the command bar alone (490 x 329); the window only gets its minimum size once a page is chosen.
       const lw = new BrowserWindow({
-        ...(bar ? littleBarBounds(area) : littleWindowBounds(area)),
+        ...bounds,
         minWidth: bar ? undefined : 480,
         minHeight: bar ? undefined : 360,
         resizable: !bar,
@@ -88,9 +86,7 @@ export function createOwnWindows({ engine, store, sharedStore, browser, history,
       return view
     }
   })
-  browser.setLittleOpener((url, origin) => {
-    if (isNavigableUrl(url)) little.open(url, undefined, origin?.spaceId)
-  })
+  browser.setLittleOpener((url, origin) => little.openLink(url, origin))
   // « Image dans l'image » asked from Lucium (the menu, the media player): the live view of the tab in a small window without a frame, above the others,
   // with a bar of controls over it (shell/floating-video.ts). One for the whole group of windows. Its own content is black and loads nothing: the page
   // is lent to it, and the bar is a view of the interface laid over the page.
@@ -123,7 +119,7 @@ export function createOwnWindows({ engine, store, sharedStore, browser, history,
   })
   browser.setFloatingVideo(floatingVideo)
   // File › New Mini Window opens the window in its first state: a small window with the command bar alone.
-  browser.setLittleBarOpener(() => little.openBar())
+  browser.setLittleBarOpener((from) => little.openBar(from))
   // An error page's « Ouvrir en mini-fenêtre » opens the address in one of these windows.
   engine.setMiniWindowOpener((url) => browser.openLittle(url))
 
