@@ -315,6 +315,13 @@ export const demoWindows = (bounds: { x: number; y: number; width: number; heigh
 /** The page the shot `quick-notes` shows its notes over: two notes are about it, one about its space, one about another page. */
 export const NOTES_PAGE = 'recipes'
 
+/**
+ * The request that opens the notes panel for the shot, on « Toutes » (what the toolbar's « Toutes les notes » asks for). Opened plainly, the panel keeps to
+ * « Cette page » when the page has notes, so only two of the four notes would be listed and the shot would not show the sections of the description
+ * (demo.test.ts holds the two together).
+ */
+export const NOTES_PANEL_REQUEST = { panel: 'notes', scope: 'all' } as const
+
 /** `notes.json` (src/shared/notes.ts, `notesFileText`): notes written a few days before the run. */
 export function demoNotes(lang: Lang, now: number): { version: 1; notes: Array<{ id: string; text: string; createdAt: number; updatedAt: number; link: { kind: 'page'; url: string } | { kind: 'space'; spaceId: string } }> } {
   const fr = lang === 'fr'
@@ -331,6 +338,17 @@ export function demoNotes(lang: Lang, now: number): { version: 1; notes: Array<{
     ]
   }
 }
+
+// ---------- the background video of the framing card (features.ts `fn-background-framing`) ----------
+
+/**
+ * The video the card `fn-background-framing` gives a space (the panel's own file field, as a person adds a file of theirs): wider than the sidebar,
+ * which the videos Lucium comes with are not (they are all 9:16, shaped for it), so that the frame has a part of the video to choose. A soft gradient
+ * drawn for the shots, with nothing of anyone's in it: 640 × 360, two seconds, 14 KB. Made with
+ *   ffmpeg -f lavfi -i "gradients=size=640x360:duration=2:rate=12:speed=0.012:x0=0:y0=60:x1=640:y1=300:c0=0x1b1f4b:c1=0x6a3f8f:c2=0xe8795a:c3=0xf6c177:nb_colors=4" \
+ *     -c:v libvpx -b:v 150k -crf 18 -an -pix_fmt yuv420p framing.webm
+ */
+export const FRAMING_VIDEO = { file: 'media/framing.webm', width: 640, height: 360 } as const
 
 // ---------- the password vault (the shot `vault-touch-id`) ----------
 

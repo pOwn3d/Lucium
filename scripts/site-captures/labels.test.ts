@@ -4,7 +4,8 @@ import { describe, expect, it } from 'vitest'
 import { en } from '../../src/shared/i18n-en'
 import { fr } from '../../src/shared/i18n-fr'
 import { frenchSpaces } from '../../src/shared/french-typography'
-import { COMMAND_GROUP, IMPORT_ROWS, NEWS_SHEET, PDF_VIEWER, READER_MENU, sameText } from './labels'
+import { INTERNAL_ORIGIN } from '../../src/shared/internal-page'
+import { COMMAND_GROUP, EXTENSIONS_PAGE, EXTENSIONS_SECTION, IMPORT_ROWS, NEWS_SHEET, PDF_VIEWER, READER_MENU, sameText } from './labels'
 
 const source = (path: string) => readFileSync(fileURLToPath(new URL(`../../${path}`, import.meta.url)), 'utf8')
 
@@ -44,6 +45,12 @@ describe('the texts the script looks for on screen', () => {
 
   it('are the ones of the item of the menu that opens the reader mode, in both languages', () => {
     expect(READER_MENU).toEqual([fr['menu.mode-lecture'], en['menu.mode-lecture']])
+  })
+
+  it('are the ones of the section of the extensions of the site panel and of the Extensions page', () => {
+    expect(EXTENSIONS_SECTION).toEqual({ fr: fr['settings.extensions'], en: en['settings.extensions'] })
+    expect(source('src/shared/site-sections.ts')).toContain("return t('settings.extensions')")
+    expect(EXTENSIONS_PAGE).toBe(`${INTERNAL_ORIGIN}/`)
   })
 
   it('know the address of the PDF viewer of the engine', () => {
