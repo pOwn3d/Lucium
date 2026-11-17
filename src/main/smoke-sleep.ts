@@ -396,8 +396,10 @@ export async function smokeSleep({ browser, store, win }: SmokeContext, check: C
     const a = await open(`${base}/sl-n1`)
     await open(`${base}/sl-z`)
     const slept = await sweep()
+    // The notice is published once the sweep has put the tab to sleep; on a slow machine (a runner) it is there a moment after the sweep answers.
+    await waitFor(() => browser.snapshot().toast?.message === 'Onglet mis en veille')
     const toast = browser.snapshot().toast
-    check('a tab put to sleep by the delay shows "Onglet mis en veille" with a "Réveiller" button', slept.join() === a && toast?.message === 'Onglet mis en veille' && toast.action === 'Réveiller', JSON.stringify(toast))
+    check('a tab put to sleep by the delay shows "Onglet mis en veille" with a "Réveiller" button', slept.join() === a && toast?.message === 'Onglet mis en veille' && toast.action === 'Réveiller', JSON.stringify({ slept, a, toast }))
     browser.runToastAction(toast!.id)
     check('"Réveiller" selects the tab and wakes it', store.get().activeTabBySpace[tabs().find((t) => t.id === a)!.spaceId] === a && live(a) && browser.snapshot().toast === null)
 
