@@ -385,6 +385,374 @@
         }
       }
     },
+    "lock.alert.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The lock was turned off"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le verrou a été désactivé"
+          }
+        }
+      }
+    },
+    "lock.notice.cancelled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlocking was cancelled."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le déverrouillage a été annulé."
+          }
+        }
+      }
+    },
+    "lock.notice.failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You could not be recognised. Try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous n'avez pas été reconnu. Réessayez."
+          }
+        }
+      }
+    },
+    "lock.notice.no-passcode": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Set a passcode in the iOS Settings to use the lock."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Définissez un code dans les Réglages d'iOS pour utiliser le verrou."
+          }
+        }
+      }
+    },
+    "lock.notice.save-failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The lock setting could not be saved, so it was not changed."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le réglage du verrou n'a pas pu être enregistré ; il n'a donc pas été modifié."
+          }
+        }
+      }
+    },
+    "lock.notice.switched-off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device has no passcode any more, so the lock was turned off."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet appareil n'a plus de code, le verrou a donc été désactivé."
+          }
+        }
+      }
+    },
+    "lock.notice.unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device cannot check who you are right now. Try again in a moment."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet appareil ne peut pas vérifier votre identité pour le moment. Réessayez dans un instant."
+          }
+        }
+      }
+    },
+    "lock.notice.unreadable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The lock settings could not be read. To be safe, Lucium is locked."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les réglages du verrou n'ont pas pu être lus. Par précaution, Lucium est verrouillé."
+          }
+        }
+      }
+    },
+    "lock.reason.turn-off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn the lock off."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactiver le verrou."
+          }
+        }
+      }
+    },
+    "lock.reason.turn-on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirm that you can unlock Lucium before the lock is turned on."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Confirmez que vous pouvez déverrouiller Lucium avant d'activer le verrou."
+          }
+        }
+      }
+    },
+    "lock.reason.unlock-app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock Lucium."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déverrouiller Lucium."
+          }
+        }
+      }
+    },
+    "lock.reason.unlock-space": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock this space."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déverrouiller cet espace."
+          }
+        }
+      }
+    },
+    "lock.screen.app.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium is locked"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium est verrouillé"
+          }
+        }
+      }
+    },
+    "lock.screen.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use Face ID, Touch ID or your passcode to unlock."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Utilisez Face ID, Touch ID ou votre code pour déverrouiller."
+          }
+        }
+      }
+    },
+    "lock.screen.space.title %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ is locked"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ est verrouillé"
+          }
+        }
+      }
+    },
+    "lock.screen.unlock": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Déverrouiller"
+          }
+        }
+      }
+    },
+    "lock.settings.app": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock Lucium"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrouiller Lucium"
+          }
+        }
+      }
+    },
+    "lock.settings.app.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium locks when you leave it, and asks for Face ID, Touch ID or your passcode when you come back."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium se verrouille quand vous le quittez et demande Face ID, Touch ID ou votre code à votre retour."
+          }
+        }
+      }
+    },
+    "lock.settings.limits": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The lock covers the screens of Lucium. It does not encrypt the files of the application."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le verrou couvre les écrans de Lucium. Il ne chiffre pas les fichiers de l'application."
+          }
+        }
+      }
+    },
+    "lock.settings.spaces.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A locked space keeps its tabs asleep and hidden until you unlock it. It locks again each time you leave Lucium."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un espace verrouillé garde ses onglets endormis et masqués jusqu'à son déverrouillage. Il se reverrouille chaque fois que vous quittez Lucium."
+          }
+        }
+      }
+    },
+    "lock.settings.spaces.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spaces"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espaces"
+          }
+        }
+      }
+    },
+    "lock.settings.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrouillage"
+          }
+        }
+      }
+    },
+    "lock.sheet.locked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This space is locked. Its tabs are hidden until you unlock it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet espace est verrouillé. Ses onglets sont masqués tant que vous ne l'avez pas déverrouillé."
+          }
+        }
+      }
+    },
     "privacy.fallback %@": {
       "localizations": {
         "en": {
@@ -893,6 +1261,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Licences"
+          }
+        }
+      }
+    },
+    "tabs.lock": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lock…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrouillage…"
           }
         }
       }

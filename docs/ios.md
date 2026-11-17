@@ -120,7 +120,7 @@ Légende : **reprise** = même comportement ; **adaptée** = même but, autre mo
 | DNS chiffré, proxy | **absente** | réglage du système (le proxy par application existe, `WKWebsiteDataStore.proxyConfigurations` : **non lu**) |
 | Mode strict / standard, exceptions par site | **reprise en partie** (§7.1) | le **niveau de protection** (Standard / Renforcée) est repris, sous les mêmes noms de `Settings` ; « Stricte » et le mode strict du bloqueur (`blockMode`) restent à la carte du bloqueur ; les exceptions par site aussi |
 | Effacer les données d'un site (⇧⌘X) | **adaptée** | `removeData(ofTypes:for:)` du magasin du profil |
-| Verrou d'espace, verrou de l'application | **adaptée** | Face ID / Touch ID (`LocalAuthentication`) à la place de Touch ID du Mac |
+| Verrou d'espace, verrou de l'application | **adaptée, faite** (§4.5) | Face ID / Touch ID puis code de l'appareil (`LocalAuthentication`) à la place de la phrase et de Touch ID du Mac |
 | Gestionnaire de mots de passe de Lucium | **absente** en v1 | AutoFill du système et passkeys passent par le système ; **non vérifié** pour un `WKWebView` tiers ; carte à part |
 
 ### 4.3 Pages, médias, fichiers
@@ -145,6 +145,32 @@ Légende : **reprise** = même comportement ; **adaptée** = même but, autre mo
 ### 4.4 Spécifique à l'iPhone (nouveau)
 
 Barre du bas et feuilles ; navigateur par défaut (§9.4) ; partage (`UIActivityViewController`) ; « Ouvrir dans Lucium » depuis une autre application ; widgets : plus tard.
+
+### 4.5 Le verrou : espaces et application (fait)
+
+**Ce que c'est, et n'est pas** : comme sur le Mac (`src/shared/lock.ts`), un verrou de l'**interface**. Verrouillé, l'écran ne montre ni onglet, ni titre, ni adresse ; les pages de ce qui est verrouillé sont **endormies** (leurs vues n'existent plus : rien n'y joue ni n'y charge). Les fichiers de l'application (état, vignettes, états de page) ne sont **pas chiffrés par Lucium** : l'écran de réglages le dit.
+
+**Qui est interrogé** : le propriétaire de l'appareil, par `LAPolicy.deviceOwnerAuthentication` : Face ID ou Touch ID, puis le code de l'appareil. Lucium ne garde **aucun secret** et n'invente pas de phrase (le Mac en demande une parce qu'un Mac n'a pas toujours Touch ID). Sans code sur l'appareil, rien ne peut interroger le propriétaire : le verrou **ne peut pas être activé**, et un verrou déjà activé est **désactivé** au retour (avis à la personne) : il ne protège rien et personne ne pourrait l'ouvrir, comme le Mac désactive son verrou quand le fichier de sa phrase a disparu. `NSFaceIDUsageDescription` est dans l'application, en français et en anglais (`InfoPlist.xcstrings`).
+
+**Réglages** : feuille « Verrouillage… » de la feuille des onglets ; un interrupteur pour l'application, un par espace. **Chaque changement demande le propriétaire**, dans les deux sens : prouver que le verrou s'ouvre avant de l'activer, et qu'un voleur du téléphone ouvert ne le coupe pas. Un changement qui ne peut pas être enregistré n'est **pas fait** (un verrou actif jusqu'au prochain lancement est un mensonge). Les réglages sont dans `lock.json`, dans le dossier de l'application, **jamais dans `state.json`** : un état venu du Mac ou, plus tard, d'une synchronisation ne peut ni activer ni couper un verrou (même règle que `exportableState` du Mac). Un fichier illisible (abîmé, d'un format plus récent) **verrouille l'application** au lieu de l'ouvrir ; la personne l'ouvre avec l'appareil.
+
+**Quand ça se verrouille** : au lancement, si l'application est verrouillable ; et **à chaque passage en arrière-plan** (application et espaces, sans délai de grâce : à ajouter si l'usage le demande). Activer le verrou ne verrouille pas l'écran qu'on est en train d'utiliser ; garder un espace le verrouille tout de suite. Choisir un espace verrouillé lance la demande ; au retour d'un arrière-plan, l'application verrouillée la lance une fois (une demande annulée ne revient pas toute seule : le bouton « Déverrouiller » est là). Une seule demande à la fois ; une réponse qui arrive **après** que Lucium a été quitté n'ouvre rien.
+
+**Ce que ça cache** : `activeTab` et `activeTabs` du modèle sont vides pour un espace couvert, ce qui est aussi la garde qui empêche de lui faire une vue ; la feuille des onglets se ferme quand l'application se verrouille ; **tant que la scène n'est pas active** et qu'un verrou existe, une **fenêtre de masquage** (`PrivacyCover`, au-dessus de tout, feuilles comprises) cache l'écran à l'image que le système garde pour le sélecteur d'applications. Les écrans n'utilisent aucun symbole du système : le cadenas est le dessin du Mac (`LockGlyph`).
+
+**Où est le code** : règles pures et contrôleur dans `LuciumKit` (`LockSettings.swift`, `LockController.swift` : testés avec `swift test`, avec un propriétaire qui accepte et un qui refuse) ; `SystemAuthenticator` (`LocalAuthentication`), l'écran, la feuille de réglages, la fenêtre de masquage et `BrowserModel+Lock.swift` dans l'application.
+
+**Vérifié sur simulateur (iOS 26.5)** : un refus ne change rien (propriétaire factice qui refuse de chaque façon : annulé, non reconnu, indisponible) ; un espace verrouillé n'a ni vue, ni onglet, ni adresse, et aucune requête ne part vers son site ; le vrai `LocalAuthentication`, interrogé **sans invite** (`interactionNotAllowed`), refuse et n'ouvre rien ; la scène : le masque monte dès que la scène n'est plus active, le départ verrouille, le retour demande une fois ; captures des écrans en français et en anglais relues.
+
+**Non vérifié** : Face ID et Touch ID réels (invite du système, code de l'appareil, erreurs rendues sur un appareil : il faut un appareil et une build signée) ; **le simulateur répond que `canEvaluatePolicy(.deviceOwnerAuthentication)` est vrai** : le chemin « appareil sans code » n'est donc éprouvé qu'avec un propriétaire factice, pas avec le système ; l'image du sélecteur d'applications (le simulateur ne la montre pas : la fenêtre de masquage est prouvée présente, pas photographiée par le système) ; le comportement des feuilles de réglages sous VoiceOver.
+
+**À essayer sur un appareil (essai non fait : il demande une build signée, une action du mainteneur, §10)** :
+
+1. Activer le verrou de l'application : Face ID est demandé pour confirmer ; le refuser (détourner le visage, puis annuler) n'active rien ; le code de l'appareil confirme.
+2. Quitter Lucium puis ouvrir le sélecteur d'applications : l'image de Lucium est le masque, pas une page ; revenir : l'écran de verrou, Face ID une fois, « Déverrouiller » après une annulation.
+3. Verrouiller un espace, y lancer une vidéo, quitter Lucium : le son s'arrête ; revenir, choisir l'espace : Face ID est demandé, la page revient où elle était.
+4. Retirer le code de l'appareil (Réglages d'iOS), revenir dans Lucium : le verrou est désactivé et la personne en est avertie.
+5. Refuser Face ID à Lucium dans les Réglages d'iOS : l'invite propose le code de l'appareil.
 
 ## 5. Modèle d'état : compatible avec `state.json`
 
@@ -397,8 +423,8 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 
 | Couche | Outil | Où ça tourne | Fenêtre ? |
 |---|---|---|---|
-| Logique pure (`LuciumKit` : adresses, état, fichier d'état, onglets, règle du sommeil) | Swift Testing, `swift test` | le Mac, sans simulateur | non |
-| Application (modèle, une vue par onglet, sommeil et réveil, restauration, WebKit réel, bloqueur, textes) | XCTest hébergé, `xcodebuild test` | simulateur iOS | **non** (démarré par `simctl`, jamais `Simulator.app`) |
+| Logique pure (`LuciumKit` : adresses, état, fichier d'état, onglets, règle du sommeil, verrou) | Swift Testing, `swift test` | le Mac, sans simulateur | non |
+| Application (modèle, une vue par onglet, sommeil et réveil, restauration, WebKit réel, bloqueur, textes, verrou) | XCTest hébergé, `xcodebuild test` | simulateur iOS | **non** (démarré par `simctl`, jamais `Simulator.app`) |
 | Contrat avec le Mac (vecteurs, état de référence) | Vitest (`ios-contract.test.ts`, `ios-state-contract.test.ts`, `ios-privacy-contract.test.ts`) puis `swift test` | le Mac, avec `pnpm test` | non |
 | Convertisseur et registre des listes (`scripts/ios-filter-lists/`) | Vitest | le Mac, avec `pnpm test` | non |
 | Preuve de blocage (liste d'essai jouée par WebKit sur de vraies pages locales), listes réelles de la build compilées | XCTest hébergé | simulateur iOS | **non** |
@@ -448,6 +474,47 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 | La vignette est prise à la sortie de l'écran | appel retiré de `leaveActiveTab` | `testAPictureOfThePageIsKeptWhenATabLeavesTheScreen` (la vignette est lue : le milieu est rouge, comme la page) |
 | Chaque profil a son magasin | identifiant constant | `testEveryAwakeTabHasItsOwnViewAndEachProfileItsOwnDataStore` |
 | Le plafond de vues est tenu | plafond ignoré | `testTabsBeyondTheCapSleepTheLeastRecentlyShownFirst` |
+| *Verrou — paquet (`swift test`, 18 mutations, toutes vues échouer)* | | |
+| Un refus n'ouvre rien | la réponse « refusé » est traitée comme un accord | `theApplicationStaysLockedWhenTheOwnerIsRefused`, `aSpaceStaysLockedForEveryKindOfRefusal…` |
+| Quitter Lucium reverrouille tout | `lockAll` n'oublie plus les espaces ouverts | `leavingLuciumLocksEverythingAgain` |
+| Une application verrouillée couvre tous les espaces | `covers(space:)` sans `appLocked` | `aLockedApplicationCoversEverySpaceAGuardedSpaceOnlyItself` |
+| Un fichier illisible verrouille (jamais ne laisse ouvert) | réglages vides au lieu de « verrouillé » | `anUnreadableFileLocksTheApplicationInsteadOfOpeningIt` |
+| Un changement qui ne peut pas être gardé n'est pas fait | l'échec d'écriture est ignoré | `aChangeThatCannotBeKeptIsNotMade` |
+| Une réponse arrivée après avoir quitté Lucium n'ouvre rien | compteur de départs ignoré | `anAnswerThatArrivesAfterLuciumWasLeftOpensNothing` |
+| Une seule demande à la fois | garde `isAuthenticating` retirée | `aSecondRequestWhileAPromptIsOpenAsksNothing` |
+| Sans code sur l'appareil, le verrou est coupé au retour | vérification retirée | `aLockIsTurnedOffAtLaunchWhenTheDeviceLostItsPasscode` |
+| Couper un verrou demande le propriétaire | demande retirée | `aRefusedOwnerTurnsNothingOnOrOff` |
+| Une demande annulée ne revient pas toute seule | `promptPending` n'est plus remis à zéro | `theScreenAsksOncePerLaunchOrLeaveNotAgainAfterARefusal` |
+| Un espace relâché puis regardé de nouveau est verrouillé | `formIntersection` retiré dans `apply` | `aSpaceThatIsReleasedAndGuardedAgainIsLocked` |
+| Un espace sous une application verrouillée n'est pas demandé | garde retirée | `aSpaceUnderALockedApplicationIsNotAskedFor` |
+| Le verrou ne s'active pas sans code | vérification retirée | `aLockCannotBeTurnedOnWhereNothingCanAskTheOwner` |
+| Seul un espace gardé s'ouvre | `unlock` insère tout identifiant | `aSpaceThatIsNotGuardedCannotBeOpenedIntoTheList` |
+| Pas de masque sans verrou | `coversScreen` sans `isActive` | `theScreenIsHiddenFromTheSystemOnlyWhenSomethingIsSetToBeLocked` |
+| Un espace n'est gardé qu'une fois | doublons gardés | `aSpaceIsKeptOnceAndOnlyIfItExists` |
+| Un format plus récent n'est pas lu | contrôle de version retiré | `aNewerFormatOrAMissingFieldIsNotRead` |
+| Un avis reste jusqu'à sa lecture | `dismissNotice` ne fait rien | `aNoticeStaysUntilThePersonHasReadIt` |
+| *Verrou — application (XCTest sur simulateur, 16 mutations, toutes vues échouer)* | | |
+| Un espace verrouillé n'a pas d'onglet à l'écran (donc pas de vue) | `activeTab` sans la garde `activeSpaceCovered` | `testALockedSpaceHasNoViewNoTabAndNoAddressUntilTheOwnerOpensIt` et 3 autres |
+| Ses pages sont endormies | la boucle `putToSleep` de `applyLock` retirée | idem, `testLeavingLuciumPutsEverythingToSleepAndTheOwnerBringsItBack` |
+| Aucun onglet n'est ajouté à un espace verrouillé | garde de `newTab` retirée | `testALockedSpaceHasNoViewNoTabAndNoAddressUntilTheOwnerOpensIt` |
+| Rien d'un espace verrouillé n'est touché (ni montré, ni daté) | garde de `openTab` retirée | idem |
+| Choisir un espace verrouillé demande le propriétaire | appel de `requestUnlock` retiré | `testChoosingALockedSpaceAsksTheOwnerAndARefusalKeepsItCovered` |
+| Quitter Lucium verrouille | `lockOnLeaving` vide ; ou appel retiré de `sceneChanged` | `testLeavingLuciumPutsEverything…`, `testTheSceneLocksOnLeavingCoversWhileInactiveAndAsksOnceOnReturn` |
+| Le masque monte quand la scène n'est plus active | masque jamais montré | `testTheSceneLocksOnLeaving…` |
+| Le retour demande une fois | `promptIfPending` retiré de `sceneChanged` | `testTheSceneLocksOnLeaving…` |
+| La fenêtre de masquage se montre | `isHidden` toujours vrai | `testTheCoverIsAWindowAboveEverythingThatComesAndGoes` |
+| La feuille des onglets se ferme quand l'application se verrouille | ligne retirée | `testLeavingLuciumPutsEverything…` |
+| La barre ne garde pas l'adresse d'une page couverte | branche `syncFrom(nil)` retirée | `testALockedSpaceHasNoViewNo…`, `testLeavingLuciumPutsEverything…` |
+| Le modèle écoute le verrou | `onChange` jamais branché | 3 tests de `LockBrowserTests` |
+| Une erreur inconnue du système est un refus, jamais une ouverture | classée « annulation » | `testOnlyACancellationIsACancellationAndOnlyAMissingMeansIsUnavailable` |
+| Pas de code = indisponible | classé « échec » | idem, `testTheRealSystemRefusesWhenItMayNotAskAndNothingOpens` |
+| Un `false` du système n'ouvre pas | `outcome(confirmed:)` renvoie toujours « accordé » | `testOnlyAConfirmationOpens` |
+| Un lancement verrouillé ne charge aucune page | `activeTab` sans la garde (la page de l'état serait réveillée) | `testALaunchWithTheApplicationLockedLoadsNoPage` |
+| *Verrou — contrat (Vitest, 4 mutations)* | | |
+| Le plafond d'espaces est celui du Mac | 200 → 100 côté Swift | `ios-contract.test.ts` : « guards at most as many spaces as the Mac does » |
+| La phrase Face ID est dans le projet | clé retirée de `project.yml` | « carries the Face ID sentence… » |
+| …et en français | texte français = anglais | idem |
+| Chaque clé lue par le code existe | clé `lock.alert.title` retirée du catalogue | « has no key the code does not read… » |
 
 **Mutations du convertisseur et du registre** (carte « Bloqueur », chacune appliquée puis retirée, le test échoue) : alternation acceptée dans une expression ; bouclier retiré ; blocages `$important` avant les exceptions ; séparateur réduit à `/` ; sélecteur procédural gardé ; CSS dans un sélecteur gardé ; domaines mêlés gardés ; option inconnue ignorée au lieu d'écarter le filtre ; exception de masquage ignorée ; `$badfilter` ignoré ; limite de 150 000 non appliquée ; nom d'hôte non vérifié ; alternation d'une expression régulière non découpée ; blocages de fenêtres surgissantes envoyés avec les blocages ; adresse de la licence, auteur ou limite de règles non vérifiés dans le registre ; écriture atomique du script (liste en échec : rien n'est écrit).
 
@@ -589,6 +656,8 @@ Un module `src/main/sync/` (écoute TLS, appairage, fusion), une page de Réglag
 **Vérifié** (essayé dans ce dépôt, simulateur iOS 26.5) : un projet XcodeGen + paquet local se génère et se compile pour le simulateur sans signature ; 25 tests XCTest passent ; un `WKWebView` charge une page d'un serveur local en http (**sans exception d'`App Transport Security`** : l'adresse `127.0.0.1` passe) ; une règle de contenu bloque une requête réelle avant qu'elle n'atteigne le serveur ; deux profils ont deux magasins de données ; les textes français et anglais sont dans la build ; la limite de 150 000 règles par liste ; le simulateur se démarre sans `Simulator.app` ; les 29 vecteurs d'adresses donnent le même résultat côté Mac et côté Swift ; **(noyau navigateur)** un onglet endormi reprend sa page **avec son historique** (`interactionState` rendu à WebKit), un redémarrage ramène les espaces, les onglets et l'historique de l'onglet montré, la vignette d'un onglet qui quitte l'écran est celle de sa page (pas une image vide), un état de version supérieure ou abîmé est mis de côté sans être supprimé ni réécrit, et une écriture qui échoue est dite et n'arrête pas la navigation ; **les 9 listes du Mac converties (158 280 règles en 18 fichiers) sont acceptées par WebKit et compilées en 11 secondes ; la liste d'essai est jouée par de vraies pages** (§6.3).
 
 **Vérifié pour la carte « Vie privée et réglages »** (simulateur iOS 26.5, `swift test`, Vitest) : les 84 vecteurs de vie privée donnent le même résultat côté Mac et côté Swift ; les paramètres de suivi n'atteignent jamais le serveur ; `Sec-GPC: 1` part avec la navigation et `navigator.globalPrivacyControl` vaut `true` dans la page et dans un cadre ; une adresse qui n'a pas pu être chargée en https s'ouvre en http, après un refus de connexion comme après cinq secondes de silence ; un certificat refusé ne s'ouvre jamais en http sans l'appui ; **les requêtes qu'une page fait d'elle-même ne portent pas l'en-tête** ; WebKit refuse les pages http d'un hôte public sans `NSAllowsArbitraryLoadsInWebContent` (code d'erreur d'App Transport Security, §7.1) ; le code n'appelle aucune API « à raison requise ».
+
+**Vérifié pour la carte « Verrou »** (simulateur iOS 26.5, `swift test`, Vitest) : 40 tests Swift du verrou (propriétaire qui accepte, qui refuse, réponse tardive, appareil sans code, fichier illisible, écriture impossible), 14 XCTest (vues réelles et serveur local : aucun site d'un espace verrouillé n'est interrogé ; le vrai `LocalAuthentication`, interrogé sans invite, refuse) ; **34 mutations** (18 sur le paquet, 16 sur l'application) vues échouer, et 4 sur le contrat Vitest. **Ni Face ID ni Touch ID réels** : §4.5.
 
 **Lu dans la documentation d'Apple** : les directives de l'App Store citées au §9 (sauf 5.1.1, 5.1.2, 5.2 : résumé) ; les pages `WKContentRuleList`, `WKContentRuleListStore`, `WKWebExtension`, l'entitlement `com.apple.developer.web-browser`, `NSLocalNetworkUsageDescription`, `NSBonjourServices`, l'entitlement multicast, l'aide d'App Store Connect (TestFlight, fiche, rôles, confidentialité).
 

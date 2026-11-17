@@ -52,6 +52,8 @@ targets:
         # Merged with the generated keys: the one setting a build setting cannot express (App Transport Security for web content).
         INFOPLIST_FILE: Lucium/Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: Lucium
+        # The sentence the system shows when Face ID is first asked for. Its text is in InfoPlist.xcstrings (French and English); this is the fallback.
+        INFOPLIST_KEY_NSFaceIDUsageDescription: "Lucium uses Face ID to unlock the application and the spaces you chose to lock."
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
