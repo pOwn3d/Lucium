@@ -8,10 +8,21 @@
 // Pure, and loaded by Node with type stripping: no runtime import, no enum, no parameter property.
 
 import type { Favorite, Folder, Settings, Space, TabItem } from '../../src/shared/model'
-import { PROTECTION_OF_NEW_PROFILES } from '../../src/shared/model-defaults'
 import type { SpaceTheme } from '../../src/shared/theme'
 import type { Site } from './pages'
 import type { DemoExtensionKind, Lang, Localized, SpaceKey, Theme } from './shots'
+
+/**
+ * The four settings a new profile starts with for its protection, the values of `PROTECTION_OF_NEW_PROFILES` (src/shared/model-defaults.ts), written
+ * out here: that module cannot be loaded by Node alone (it and its neighbours import each other without an extension), and this one has to be, as
+ * the header says. demo.test.ts compares the state read back with the application's own constant, so the two cannot drift apart unseen.
+ */
+const DEMO_PROTECTION: Pick<Settings, 'blockCookieBanners' | 'sendGpc' | 'stripTrackingParams' | 'stripCopiedLinks'> = {
+  blockCookieBanners: true,
+  sendGpc: true,
+  stripTrackingParams: true,
+  stripCopiedLinks: true
+}
 
 export type PageKind = 'notes' | 'board' | 'weather' | 'recipes' | 'museum' | 'agenda' | 'checklist' | 'library' | 'trip' | 'article' | 'sowing' | 'roadmap' | 'palette' | 'pdf'
 
@@ -225,13 +236,13 @@ export function spaceTheme(colors: [string, string]): SpaceTheme {
 /**
  * The settings of the demonstration. The language and the theme are the application's own settings (Réglages › Pour commencer › Langue, Apparence);
  * the rest keeps the shots clean: no question before quitting, no sheet of a first launch, no suggestion asked of a search engine, every tab awake.
- * The protection is the one a new profile starts with (« Renforcée », `PROTECTION_OF_NEW_PROFILES`), written out with the baseline of a new profile: a
+ * The protection is the one a new profile starts with (« Renforcée », `DEMO_PROTECTION`), written out with the baseline of a new profile: a
  * state file that does not name those settings is read as a profile made before that default, which keeps « Standard » and takes it as its reference
  * (sidebar-state.ts), so the images would show the protection as changed. They show what a new user sees.
  */
 export function demoSettings(lang: Lang, theme: Theme): Partial<Settings> {
   return {
-    ...PROTECTION_OF_NEW_PROFILES,
+    ...DEMO_PROTECTION,
     protectionBaseline: 'renforcee',
     interfaceTranslated: true,
     language: lang,
