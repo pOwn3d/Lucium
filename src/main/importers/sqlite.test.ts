@@ -317,8 +317,10 @@ describe('a database somebody else wrote', () => {
 describe('the copies an import cut short left behind', () => {
   it('removes them at the next import, and only them: a recent copy (an import running beside this one), a link and other folders stay', () => {
     const scratch = mkdtempSync(join(tmpdir(), 'lucium-sqlite-stale-'))
-    const previous = process.env['TMPDIR']
-    process.env['TMPDIR'] = scratch
+    // The folder of temporary files is TMPDIR where there is one, TEMP then TMP on Windows (os.tmpdir()).
+    const names = ['TMPDIR', 'TEMP', 'TMP']
+    const previous = names.map((name) => process.env[name])
+    for (const name of names) process.env[name] = scratch
     try {
       const old = (Date.now() - STALE_COPY_MS - 60_000) / 1000
       const stale = join(scratch, 'lucium-import-Stale1')
@@ -339,8 +341,10 @@ describe('the copies an import cut short left behind', () => {
       expect(readChromiumHistory(path)).toHaveLength(1)
       expect(readdirSync(scratch).sort()).toEqual(['cible', 'lucium-import-Link', 'lucium-import-Recent', 'lucium-sqlite-autre'])
     } finally {
-      if (previous === undefined) delete process.env['TMPDIR']
-      else process.env['TMPDIR'] = previous
+      names.forEach((name, i) => {
+        if (previous[i] === undefined) delete process.env[name]
+        else process.env[name] = previous[i]
+      })
       rmSync(scratch, { recursive: true, force: true })
     }
   })
