@@ -361,7 +361,16 @@ export async function smokeGuard({ browser, store }: SmokeContext, check: Check)
     await sleep(300)
     const s1 = (await measure(origin)).measure
     const common = ['1280x720', '1366x768', '1440x900', '1536x864', '1600x900', '1920x1080', '2560x1440', '3840x2160']
-    check('strict: the screen is a common size that fits the real one, and the colour depth is 24', s1 !== null && base !== null && common.includes(`${s1.screen[0]}x${s1.screen[1]}`) && (s1.screen[0] ?? 0) <= (base.screen[0] ?? 0) && s1.screen[2] === 24, JSON.stringify(s1?.screen))
+    // A screen smaller than every common size keeps its figures (the guard does not invent a larger one: guard-world.test.ts), and that is what the virtual screen of
+    // a CI runner is (1024 x 768).
+    const fits = (size: string): boolean => {
+      const [width = 0, height = 0] = size.split('x').map(Number)
+      return base !== null && width <= (base.screen[0] ?? 0) && height <= (base.screen[1] ?? 0)
+    }
+    const smallerThanAll = base !== null && !common.some(fits)
+    const rounded = s1 !== null && base !== null && common.includes(`${s1.screen[0]}x${s1.screen[1]}`) && (s1.screen[0] ?? 0) <= (base.screen[0] ?? 0)
+    const kept = smallerThanAll && s1 !== null && base !== null && s1.screen[0] === base.screen[0] && s1.screen[1] === base.screen[1]
+    check('strict: the screen is a common size that fits the real one (or the real one, when it is smaller than all of them), and the colour depth is 24', (rounded || kept) && s1?.screen[2] === 24, JSON.stringify([s1?.screen, base?.screen]))
     check('...the graphics card is a generic one, the list of local fonts is empty, at most 4 cores', s1 !== null && (s1.renderer === 'none' || s1.renderer === 'ANGLE (Generic GPU)') && (s1.fonts === 0 || s1.fonts === 'none') && s1.cores <= 4, JSON.stringify([s1?.renderer, s1?.fonts, s1?.cores]))
 
     patch({ fingerprintExceptions: ['127.0.0.1'] })

@@ -37,6 +37,8 @@ The required checks of a pull request open no window. The engine chain (`pnpm te
 - if the branch is in the main repository (Dependabot's are), run **Smoke (macOS)** from the Actions tab on that branch (*Run workflow*): it runs the chain, the comparison with the reference of the engine and the two suites that run apart; or
 - check the branch out locally and run `pnpm test:engine` when you are not using the machine (it opens windows and takes the focus), then `pnpm compat:compare`, which sets the report of the run against `compat/baseline-electron-<version>.json` and lists what the run lost.
 
+The runner is a virtual machine with one screen of 1024 × 768 points at scale 1, which leaves a window 674 points tall; the checks were written and run on a Retina screen, so some suites cannot pass there. They are named, each with its reason, in `compat/runner-limits.json`. **Smoke (macOS)** does not stop on a suite named there, and leaves it out of the comparison with the reference (`scripts/smoke-runner-verdict.mjs`, `--limits` of `compat:compare`); any other suite that fails stops the run. Read the step *Verdict of the chain*: it lists the suites it excused, and the ones of the list that passed (take those off the list). Nothing on a Mac reads that list: `pnpm test:engine`, `pnpm compat:compare` and `pnpm test:engine:release` judge every suite, and that is where what the runner cannot show is shown before a release.
+
 Do not run code from a fork on a machine that holds secrets without reading it first.
 
 ## Merging
