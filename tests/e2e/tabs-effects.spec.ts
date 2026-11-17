@@ -259,6 +259,9 @@ test.describe('in one window', () => {
   })
 
   test('little-modifier: ⌥⌘-click on a link opens it in a mini window while on; off, no mini window', async () => {
+    // Windows: the feature rests on the disposition Chromium gives a ⌥⌘-click ("other", measured on macOS only: shared/little-modifier.ts). What it reports for a
+    // Ctrl+Alt click on Windows is not known (and Ctrl+Alt is AltGr on many layouts), so the test has nothing to hold there until it is measured.
+    test.skip(process.platform === 'win32', 'the disposition of the ⌥⌘-click was measured on macOS only')
     const littleWindows = () => running.app.windows().filter((page) => page.url().includes('littlearc')).length
     for (const on of [false, true]) {
       await setSettings(running.page, { littleArcModifier: on })

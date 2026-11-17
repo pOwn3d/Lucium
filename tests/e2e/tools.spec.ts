@@ -375,7 +375,8 @@ test('auto-scroll: a middle click on the page and the pointer below it scroll th
     await tab.page.mouse.move(400, 480, { steps: 8 })
     const scrolled = () => tab.page.evaluate(() => scrollY)
     if (on) await expect.poll(scrolled, { message: 'the page scrolls under the pointer' }).toBeGreaterThan(0)
-    else await expectStays(scrolled, 0, 'nothing scrolls while the function is off', 1200)
+    // Windows: Chromium has its own middle-click autoscroll there (macOS has none), so the page scrolls with the function off as well; only the "on" half holds.
+    else if (process.platform !== 'win32') await expectStays(scrolled, 0, 'nothing scrolls while the function is off', 1200)
     // Leaves the mode (a click ends it).
     await tab.page.mouse.click(400, 480)
   }

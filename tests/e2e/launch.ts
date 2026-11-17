@@ -105,7 +105,9 @@ export async function launchLucium(options: string[] | LaunchOptions = {}): Prom
       if (timedOut && child.exitCode === null && child.signalCode === null) child.kill('SIGKILL')
       // The folder is removed once the process is gone: a process still writing into it makes the removal fail (ENOTEMPTY).
       if (child.exitCode === null && child.signalCode === null) await new Promise<void>((done) => { child.once('exit', () => done()); setTimeout(done, CLOSE_LIMIT_MS) })
-      if (!keepData) rmSync(userData, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 })
+      // On Windows a folder cannot be removed while a process that was just killed still holds a file of it (Chromium's helper processes outlive the main one for a
+      // moment, and a file with a delete pending refuses the removal with EPERM): it is tried for ten seconds instead of two.
+      if (!keepData) rmSync(userData, { recursive: true, force: true, maxRetries: process.platform === 'win32' ? 50 : 10, retryDelay: 200 })
     }
   }
 }
