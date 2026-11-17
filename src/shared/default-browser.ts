@@ -17,8 +17,9 @@ export const schemesToRegister = (built: boolean): readonly string[] => (built ?
 
 // ---- Windows ----
 // On Windows 10 and 11 the browser is the one the USER chose in Settings › Apps › Default apps. Windows keeps that choice, per user and signed, under
-// the `UserChoice` key of each scheme; nothing an application writes elsewhere changes it, and `app.isDefaultProtocolClient` reads another key
-// (HKCU\Software\Classes\<scheme>\shell\open\command) that Windows ignores, so it says "yes" after Electron wrote it while Edge still opens the links.
+// the `UserChoice` key of each scheme (recent Windows 11, seen on build 26300: under `UserChoiceLatest`, while `UserChoice` keeps the value it had before
+// and is no longer updated); nothing an application writes elsewhere changes it, and `app.isDefaultProtocolClient` reads another key
+// (HKCU\Software\Classes\<scheme>\shell\open\command) that Windows ignores, so it says "yes" after Electron wrote it while another browser still opens the links.
 
 /** The ProgID `build/installer.nsh` registers for web addresses: what `UserChoice` holds once the user has chosen Lucium for a scheme. */
 export const WINDOWS_URL_PROGID = 'LuciumURL'
@@ -29,8 +30,16 @@ export const WINDOWS_URL_PROGID = 'LuciumURL'
  */
 export const WINDOWS_DEFAULT_APPS_URL = 'ms-settings:defaultapps?registeredAppUser=Lucium'
 
-/** The registry key where Windows records the user's choice for a scheme (read with `reg query`, which takes the abbreviated root). */
-export const userChoiceKey = (scheme: string): string => `HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\${scheme}\\UserChoice`
+const URL_ASSOCIATIONS = 'HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations'
+
+/** The registry key where Windows before the recent Windows 11 records the user's choice for a scheme (read with `reg query`, which takes the abbreviated root). */
+export const userChoiceKey = (scheme: string): string => `${URL_ASSOCIATIONS}\\${scheme}\\UserChoice`
+
+/** Where recent Windows 11 records it: the ProgID is a value named `ProgId` in a subkey `ProgId`, and it wins over `UserChoice` when both exist. */
+export const userChoiceLatestKey = (scheme: string): string => `${URL_ASSOCIATIONS}\\${scheme}\\UserChoiceLatest\\ProgId`
+
+/** The keys to read for a scheme, in the order Windows trusts them: the choice a recent Windows 11 made, then the older one. */
+export const userChoiceKeys = (scheme: string): readonly string[] => [userChoiceLatestKey(scheme), userChoiceKey(scheme)]
 
 /** The ProgID `reg query <key> /v ProgId` printed, or null when the text holds none. The value name and the type are not translated, only the messages are. */
 export function parseUserChoiceProgId(output: string): string | null {

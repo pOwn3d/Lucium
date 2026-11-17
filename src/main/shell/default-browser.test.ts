@@ -38,8 +38,27 @@ describe('is Lucium the default browser, on Windows', () => {
     const { ports: p, calls } = ports('win32', { isClient: () => true })
     expect(await isDefaultBrowser(p)).toBe(false)
     expect(calls.queried).toHaveLength(2)
-    expect(calls.queried[0]).toContain('\\UrlAssociations\\http\\UserChoice')
-    expect(calls.queried[1]).toContain('\\UrlAssociations\\https\\UserChoice')
+    expect(calls.queried[0]).toContain('\\UrlAssociations\\http\\UserChoiceLatest\\ProgId')
+    expect(calls.queried[1]).toContain('\\UrlAssociations\\https\\UserChoiceLatest\\ProgId')
+  })
+
+  // Recent Windows 11 (build 26300, seen in the VM): after the user picks Lucium in Settings, `UserChoiceLatest` says Lucium and a link opens in Lucium, while
+  // `UserChoice` still holds the browser it had before, and is no longer updated.
+  it('says yes when UserChoiceLatest holds Lucium even though UserChoice still holds the older browser', async () => {
+    const { ports: p } = ports('win32', { queryRegistry: async (key) => printed(key.includes('UserChoiceLatest') ? 'LuciumURL' : 'MSEdgeHTM') })
+    expect(await isDefaultBrowser(p)).toBe(true)
+  })
+
+  it('says no when UserChoiceLatest holds another browser again, whatever an older UserChoice kept', async () => {
+    const { ports: p } = ports('win32', { queryRegistry: async (key) => printed(key.includes('UserChoiceLatest') ? 'MSEdgeHTM' : 'LuciumURL') })
+    expect(await isDefaultBrowser(p)).toBe(false)
+  })
+
+  it('reads UserChoice on the Windows that has no UserChoiceLatest', async () => {
+    const { ports: p } = ports('win32', { queryRegistry: async (key) => (key.includes('UserChoiceLatest') ? null : printed('LuciumURL')) })
+    expect(await isDefaultBrowser(p)).toBe(true)
+    const old = ports('win32', { queryRegistry: async (key) => (key.includes('UserChoiceLatest') ? null : printed('MSEdgeHTM')) })
+    expect(await isDefaultBrowser(old.ports)).toBe(false)
   })
 
   it('says yes once Windows holds Lucium for http and https', async () => {

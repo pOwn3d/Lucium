@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { WEB_SCHEMES, WINDOWS_DEFAULT_APPS_URL, WINDOWS_URL_PROGID, parseUserChoiceProgId, schemesToRegister, userChoiceKey, windowsChoiceIsLucium } from './default-browser'
+import { WEB_SCHEMES, WINDOWS_DEFAULT_APPS_URL, WINDOWS_URL_PROGID, parseUserChoiceProgId, schemesToRegister, userChoiceKey, userChoiceKeys, userChoiceLatestKey, windowsChoiceIsLucium } from './default-browser'
 
 describe('schemesToRegister', () => {
   it('lets the packaged application take the web links', () => {
@@ -44,6 +44,9 @@ describe('the choice Windows keeps', () => {
 
   it('names the key of each scheme and the ProgID the installer registers', () => {
     expect(userChoiceKey('https')).toBe('HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https\\UserChoice')
+    expect(userChoiceLatestKey('http')).toBe('HKCU\\Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\http\\UserChoiceLatest\\ProgId')
+    // The recent key first: it wins when both exist.
+    expect(userChoiceKeys('https')).toEqual([userChoiceLatestKey('https'), userChoiceKey('https')])
     expect(WINDOWS_URL_PROGID).toBe('LuciumURL')
     expect(WINDOWS_DEFAULT_APPS_URL).toBe('ms-settings:defaultapps?registeredAppUser=Lucium')
   })

@@ -8,7 +8,7 @@ import {
   WINDOWS_DEFAULT_APPS_URL,
   parseUserChoiceProgId,
   schemesToRegister,
-  userChoiceKey,
+  userChoiceKeys,
   windowsChoiceIsLucium,
   type DefaultBrowserOutcome
 } from '@shared/default-browser'
@@ -52,8 +52,13 @@ export async function isDefaultBrowser(ports: DefaultBrowserPorts): Promise<bool
   const progIds: Record<string, string | null> = {}
   for (const scheme of WEB_SCHEMES) {
     try {
-      const printed = await ports.queryRegistry(userChoiceKey(scheme))
-      progIds[scheme] = printed === null ? null : parseUserChoiceProgId(printed)
+      // The first key that holds a ProgID decides: UserChoiceLatest (recent Windows 11), else UserChoice, which Windows then no longer updates.
+      progIds[scheme] = null
+      for (const key of userChoiceKeys(scheme)) {
+        const printed = await ports.queryRegistry(key)
+        progIds[scheme] = printed === null ? null : parseUserChoiceProgId(printed)
+        if (progIds[scheme] !== null) break
+      }
     } catch (error) {
       // Not knowing is not a yes: the window offers the button, which only opens Settings.
       console.warn(`[default-browser] cannot read the choice Windows holds for ${scheme}:`, error instanceof Error ? error.message : String(error))
