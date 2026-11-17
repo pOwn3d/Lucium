@@ -33,7 +33,7 @@ D'où la règle : **la ligne principale suit Electron sans attendre ; la variant
 | `scripts/chromium-watch-issue.mjs` | L'issue de la veille : `node scripts/chromium-watch-issue.mjs --report=report.json --text=report.txt --repo=propriétaire/nom [--dry-run [--offline]]`. Une seule issue ouverte : créée s'il n'y en a pas, sinon réécrite. La version, le Chromium et la version déclarée sont vérifiés avant d'entrer dans le titre. Logique dans `src/main/chromium-watch-issue.ts`, tests dans `src/main/chromium-watch-issue.test.ts`. |
 | `.github/workflows/chromium-watch.yml` | Veille quotidienne (06:17 UTC). Permissions `contents: read` et `issues: write`, actions épinglées par SHA, aucun secret. Code 10 ou 20 : une issue créée ou réécrite (un commentaire seulement quand la version change). Code 30 ou 2 : la tâche échoue. |
 
-`.github/dependabot.yml` propose aussi une PR par version d'Electron, chaque semaine ; la veille ajoute la vue castLabs, Chromium et sécurité.
+`.github/dependabot.yml` ignore Electron : aucune PR automatique par version (la build castLabs `+wvcus` n'a pas d'entrée dans `scripts/ecs-checksums.json` tant que `pnpm electron:upgrade` ne l'a pas préparée). La veille ci-dessus est le seul signal : elle donne la vue castLabs, Chromium et sécurité.
 
 Les deux scripts filtrent eux-mêmes l'avertissement `MODULE_TYPELESS_PACKAGE_JSON` que Node émet en chargeant du TypeScript depuis un paquet sans champ `"type"`. Les options passent derrière la commande pnpm, par exemple `pnpm electron:upgrade 45.3.0 --dry-run`.
 

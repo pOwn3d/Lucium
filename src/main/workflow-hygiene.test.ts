@@ -451,13 +451,13 @@ describe('.github/dependabot.yml', () => {
     for (const file of ACTION_FILES) expect(actions, file).toContain(`\n      - /${dirname(file)}\n`)
   })
 
-  it('keeps Electron alone in its group and leaves a new major to the upgrade chain', () => {
+  it('ignores Electron for every update: it moves by hand (pnpm electron:upgrade), and a pull request of Dependabot would fail on the missing castLabs checksums', () => {
     const npm = entries[0] ?? ''
-    expect(npm).toMatch(/\n {6}electron:\n {8}patterns: \[electron\]\n/)
-    // No other group may catch it: no wildcard, and no other pattern that names it alone.
+    // The whole dependency is ignored: no `update-types` line may narrow the rule to a kind of version (a major only, say).
+    expect(npm).toMatch(/\n {4}ignore:\n {6}- dependency-name: electron\n {4}groups:\n/)
+    // No group may propose it either: no wildcard, and no pattern that names it or catches it by prefix.
     const patterns = [...npm.matchAll(/^ {8}patterns: \[(.+)\]$/gm)].flatMap((match) => (match[1] ?? '').split(', ').map((pattern) => pattern.replaceAll("'", '')))
-    expect(patterns.filter((pattern) => pattern === 'electron' || pattern === '*' || pattern === 'electron*')).toEqual(['electron'])
-    expect(npm).toMatch(/\n {4}ignore:\n {6}- dependency-name: electron\n {8}update-types: \['version-update:semver-major'\]\n/)
+    expect(patterns.filter((pattern) => pattern === 'electron' || pattern === '*' || pattern === 'electron*')).toEqual([])
     expect(npm).toMatch(/\n {6}prefix: 'chore\(deps\)'\n {6}prefix-development: 'chore\(deps-dev\)'\n/)
   })
 })
