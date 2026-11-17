@@ -83,6 +83,21 @@ describe('createGuestState', () => {
     expect(guest.settings.uiScale).toBe(120)
   })
 
+  // The menu bar is built in the language of the window in front: a guest window that read the language of the system, not the owner's choice, changed
+  // the language of the whole menu bar when it took the focus (on a Mac in English, with the interface set to French). It is the default of the settings
+  // (`interfaceTranslated` on, `language` on « auto ») that a guest window must not fall back on.
+  it('follows the language of the interface the owner chose, not the one of the system', () => {
+    const french = run(createInitialState(ctx), { type: 'settings/update', patch: { interfaceTranslated: true, language: 'fr' } })
+    const english = run(createInitialState(ctx), { type: 'settings/update', patch: { interfaceTranslated: true, language: 'en' } })
+    const frenchOnly = run(createInitialState(ctx), { type: 'settings/update', patch: { interfaceTranslated: false, language: 'en' } })
+    const languageOf = (state: typeof french) => ({ interfaceTranslated: createGuestState(state, ctx).settings.interfaceTranslated, language: createGuestState(state, ctx).settings.language })
+    expect(languageOf(french)).toEqual({ interfaceTranslated: true, language: 'fr' })
+    expect(languageOf(english)).toEqual({ interfaceTranslated: true, language: 'en' })
+    expect(languageOf(frenchOnly)).toEqual({ interfaceTranslated: false, language: 'en' })
+    // And it follows a change made afterwards in the main window.
+    expect(guestInherited(english.settings)).toMatchObject({ interfaceTranslated: true, language: 'en' })
+  })
+
   // The fingerprint protection and the extended rules of the blocker are read by the page guard of the window's own settings, so a guest
   // that did not follow them browsed without the protection its owner switched on. The owner's list of excepted sites is not shared.
   it('follows the fingerprint protection and the extended rules, but not the sites the owner excepted', () => {

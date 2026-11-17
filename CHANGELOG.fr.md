@@ -12,6 +12,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Corrections
 
 - **Icônes de site** : un fichier d’icône piégé, un kilooctet de commentaires à la suite, pouvait figer Lucium : la vérification qui distingue une icône vectorielle d’une page d’erreur prenait un temps exponentiel. Elle lit maintenant le début du fichier en temps linéaire.
+- **Fenêtre invité, langue** : une fenêtre invité utilise désormais la langue d’interface choisie dans la fenêtre principale, et non celle du système. Sur un Mac en anglais dont l’interface est réglée en français, elle passait la barre des menus et ses propres messages en anglais dès qu’elle prenait le focus.
 
 ## [1.1.2] - 2026-11-17
 
