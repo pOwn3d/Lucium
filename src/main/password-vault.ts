@@ -25,6 +25,8 @@ import { ATTEMPTS_FILE_MAX, NO_ATTEMPTS, afterWrongPhrase, attemptsText, parseAt
 import { PASSWORD_LIMITS, checkedLogin, cleanPassword, cleanUsername, eligibleOriginOf, entriesForPage, captureKind, rowOf, sameLogin, type ImportReport, type PasswordEntry, type PasswordRow } from '@shared/passwords'
 import { PASSWORD_EXPORT_FORMAT, SEALED_FILE_MAX, VAULT_FORMAT, keyMaterialOf, newSealKeys, openSealed, parseSealed, seal, sealKeysFor, sealKeysFromMaterial, zeroKeys, type ParsedSealed, type SealKeys } from './vault-crypto'
 import { isRecord } from '@shared/record'
+import { isOwnerOnlyMode, type PlatformId } from '@shared/platform'
+import { currentPlatform } from './platform'
 
 export type VaultErrorKind = 'exists' | 'missing' | 'locked' | 'phrase' | 'full' | 'corrupt' | 'write' | 'invalid' | 'wait'
 
@@ -102,14 +104,16 @@ function sameBytes(a: string, b: string): boolean {
  * mode. With `keepPrevious` the file it replaces stays as `<file>.bak`. Throws `VaultError('write')`; the message holds an error code,
  * never a path or a value.
  */
-export function writePrivateFile(path: string, text: string, options: { keepPrevious?: boolean } = {}): void {
+export function writePrivateFile(path: string, text: string, options: { keepPrevious?: boolean; platform?: PlatformId } = {}): void {
   const temporary = `${path}.tmp`
   try {
     writeDurableFile(temporary, text)
     if (options.keepPrevious) keepPreviousVault(path)
     renameSync(temporary, path)
-    if ((statSync(path).mode & 0o777) !== 0o600) chmodSync(path, 0o600)
-    if ((statSync(path).mode & 0o777) !== 0o600) throw new VaultError('write', 'the file is not private')
+    // The mode is the privacy of the file on macOS and Linux; Windows has none to read (isOwnerOnlyMode), and the vault must be writable there.
+    const platform = options.platform ?? currentPlatform().id
+    if (!isOwnerOnlyMode(statSync(path).mode, platform)) chmodSync(path, 0o600)
+    if (!isOwnerOnlyMode(statSync(path).mode, platform)) throw new VaultError('write', 'the file is not private')
   } catch (error) {
     rmSync(temporary, { force: true })
     if (error instanceof VaultError) throw error
