@@ -1,6 +1,6 @@
 {
-  "main": "Its sidebar part (iso-sidebar) needs a window taller than the 674 points the 1024 x 768 screen of the runner leaves: the rows of the list end at 718 points, below the work area (measured on the runner, 2026-11-17), the part stops at the first check and the checks after it are not made. This excuses the whole suite on the runner; the Mac judges all of it.",
-  "sitedata": "From the click on « Effacer » on, 11 checks fail when the suite runs alone on the runner (2026-11-17). The click is a real mouse event at the centre of the button, which probably lies below the 674 points the window has there. Cause not isolated.",
+  "main:iso-sidebar": "Needs a window taller than the 675 points or so that the 1024 x 768 screen of the runner leaves (work area measured at 674 to 678): five rows of the list end at 718 points, below it, and the part stops at its first check (2026-11-17).",
+  "sitedata": "From the click on « Effacer » on, 11 checks fail when the suite runs alone on the runner (2026-11-17). The click is a real mouse event at the centre of the button, which probably lies below the 675 points or so that the window has there. Cause not isolated.",
   "privacy2": "5 checks fail when the suite runs alone on the runner (2026-11-17): the autoplay cases B and C, which need a click of the user sent as real input, and the row of the site panel. Cause not isolated.",
   "markdown": "2 checks fail when the suite runs alone on the runner (2026-11-17): the page given as Markdown lacks its headings, its bold and its link, and the blocks clicked away are still there. Cause not isolated.",
   "search2": "1 check fails when the suite runs alone on the runner (2026-11-17): « bangs: Enter opens it in a new tab », the tab is never opened. Cause not isolated.",

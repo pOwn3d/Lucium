@@ -31,7 +31,7 @@ import { smokeIsoMedia } from './smoke-iso-media'
 import { menuItems } from './shell/context-menus'
 import type { LittleArc } from './shell/little'
 import type { StateStore } from './store'
-import { checkExtensionFolder, recorderOf, reportFact, requireProbes, skippedBecause, sleep, waiterOf } from './smoke-kit'
+import { checkExtensionFolder, readSkips, recorderOf, reportFact, requireProbes, skippedBecause, sleep, waiterOf } from './smoke-kit'
 import { frenchSpaces } from '@shared/french-typography'
 import { SETTINGS_CATEGORIES } from '@shared/settings-catalog'
 
@@ -1037,7 +1037,15 @@ export async function runEngineSmoke(
 
   // A part that throws is one failed check (with the stack), and the parts after it still run: one broken step must not hide what the rest of the run would say.
   const context = { browser, store, engine, history, win, overlayView, little }
+  // LUCIUM_SMOKE_SKIP=main:<part> leaves a part out (the Smoke (macOS) workflow does it for what a GitHub runner cannot pass: compat/runner-limits.json).
+  const skipped = readSkips(process.env['LUCIUM_SMOKE_SKIP'], []).parts
+  const seen = new Set<string>()
   const part = async (name: string, run: (ctx: SmokeContext, check: (name: string, ok: boolean, detail?: string) => void) => Promise<void>): Promise<void> => {
+    seen.add(name)
+    if (skipped.has(name)) {
+      console.log(`[smoke] part "${name}" left out on request (LUCIUM_SMOKE_SKIP)`)
+      return
+    }
     try {
       await run(context, check)
     } catch (error) {
@@ -1056,6 +1064,8 @@ export async function runEngineSmoke(
   await part('sec2', smokeSec2)
   await part('sec1', smokeSec1)
   await part('iso-media', smokeIsoMedia)
+  // A part named in the list that does not exist is a typing mistake: it would leave out nothing, and say nothing.
+  for (const name of skipped) if (!seen.has(name)) check(`LUCIUM_SMOKE_SKIP names a part of the principal suite: "${name}"`, false, [...seen].join(', '))
 
   server.close()
   server.closeAllConnections()

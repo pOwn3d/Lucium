@@ -9,6 +9,7 @@
 //   node scripts/smoke-runner-verdict.mjs --chain-code <n>    the exit code of `pnpm test:engine`: a chain that failed (or was stopped) with no suite
 //                                                             of the report failed has crashed, and that is not excused
 //
+// The suites of the list are not run by the workflow (LUCIUM_SMOKE_SKIP): they are listed here as not run, with their reason.
 // Exit code: 0 when every suite that failed is in the list, 1 when one is not (or when the chain failed and no suite shows it), 2 when a file is missing or cannot be read.
 
 import { existsSync, readFileSync } from 'node:fs'
@@ -54,8 +55,8 @@ const verdict = judgeRun(report, limits)
 const suites = Object.keys(report.suites).length
 console.log(`smoke-runner-verdict: ${suites} suite(s) in ${reportFile}, ${Object.keys(limits).length} named in ${limitsFile}`)
 if (verdict.tolerated.length > 0) console.log(`\n${verdict.tolerated.length} failed and excused (the limits of the runner):\n${verdict.tolerated.map(({ suite, reason }) => `  ~ ${suite}: ${reason}`).join('\n')}`)
+if (verdict.notRun.length > 0) console.log(`\n${verdict.notRun.length} named in the limits and not run (left out on request, as the workflow does):\n${verdict.notRun.map((suite) => `  - ${suite}: ${limits[suite]}`).join('\n')}`)
 if (verdict.stale.length > 0) console.log(`\n${verdict.stale.length} named in the limits and passed (the limit may be gone):\n${verdict.stale.map((suite) => `  ? ${suite}`).join('\n')}`)
-if (verdict.absent.length > 0) console.log(`\n${verdict.absent.length} named in the limits and not in the report (renamed, removed or not run):\n${verdict.absent.map((suite) => `  ? ${suite}`).join('\n')}`)
 
 if (verdict.unexpected.length > 0) {
   console.log(`\n${verdict.unexpected.length} failed and not excused:\n${verdict.unexpected.map((suite) => `  - ${suite}`).join('\n')}`)

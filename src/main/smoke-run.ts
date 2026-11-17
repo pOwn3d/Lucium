@@ -17,6 +17,7 @@ import {
   runChain,
   RunStop,
   runReportOf,
+  readSkips,
   runSuite,
   saveReport,
   suiteTimeoutMs,
@@ -88,8 +89,16 @@ export async function runSmokeSuites(smokeContext: SmokeContext, fromEnv: string
     app.exit(await only.run(smokeContext, fromEnv))
     return
   }
+  const skips = readSkips(process.env['LUCIUM_SMOKE_SKIP'], SUITES.map((suite) => suite.name))
+  if (skips.unknown.length > 0) {
+    console.error(`[smoke] LUCIUM_SMOKE_SKIP names no suite: ${skips.unknown.join(', ')}. A part of the principal suite is main:<part>.`)
+    app.exit(2)
+    return
+  }
+  // An explicit LUCIUM_SMOKE_ONLY runs its suite whatever the list says; the chain leaves out the suites of the list.
+  const entries = only ? [only] : CHAIN.filter((suite) => !skips.suites.has(suite.name))
+  if (!only && (skips.suites.size > 0 || skips.parts.size > 0)) console.log(`[smoke] left out on request (LUCIUM_SMOKE_SKIP): ${[...skips.suites, ...[...skips.parts].map((part) => `main:${part}`)].join(', ')}`)
   const putClipboardBack = await keepClipboard(systemClipboard)
-  const entries = only ? [only] : CHAIN
   // The run stops when the Mac sleeps, locks its screen or puts its displays to sleep, or when the application is asked to quit (smoke-kit.ts).
   const stop = new RunStop()
   const unwatch = watchRun(stop, {

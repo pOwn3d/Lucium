@@ -11,6 +11,9 @@
 //   pnpm compat:compare --limits <file>         the suites a GitHub runner cannot pass (compat/runner-limits.json, src/shared/runner-limits.ts) are left out of
 //                                               the reference and of the run before they are compared: only the Smoke (macOS) workflow passes it, the Mac never does.
 //                                               Not with --write: a reference is written from a run that judged every suite
+//   pnpm compat:compare --informational        prints the comparison and exits 0 whatever it lost: the Smoke (macOS) workflow reads it that way on a runner, where
+//                                               the reference of the Mac does not hold (the names of some checks carry the scale of the screen, 2 there and 1 on
+//                                               the runner; the voice of the system is missing) and the verdict of the chain decides. Not with --write
 //   pnpm compat:baseline                        writes compat/baseline-electron-<version of the run>.json from the report: the new reference,
 //                                               to commit once the differences have been read and accepted. It holds what the run made and
 //                                               nothing else: a check of the reference before that the run did not make is not kept.
@@ -40,10 +43,10 @@ const stop = (message) => {
 let args
 try {
   args = parseArgs({
-    options: { report: { type: 'string' }, baseline: { type: 'string' }, compat: { type: 'string' }, explained: { type: 'string' }, limits: { type: 'string' }, write: { type: 'boolean', default: false } }
+    options: { report: { type: 'string' }, baseline: { type: 'string' }, compat: { type: 'string' }, explained: { type: 'string' }, limits: { type: 'string' }, informational: { type: 'boolean', default: false }, write: { type: 'boolean', default: false } }
   }).values
 } catch (error) {
-  stop(`${error.message}. Options: --report <file>, --baseline <file>, --compat <folder>, --explained <file>, --limits <file>, --write`)
+  stop(`${error.message}. Options: --report <file>, --baseline <file>, --compat <folder>, --explained <file>, --limits <file>, --informational, --write`)
 }
 
 const compatDir = resolve(args.compat ?? join(root, 'compat'))
@@ -59,7 +62,7 @@ const readJson = (file, what, read) => {
 }
 const load = (file, what) => readJson(file, what, readReport)
 
-if (args.limits !== undefined && args.write) stop('--limits cannot go with --write: a reference is written from a run that judged every suite')
+if ((args.limits !== undefined || args.informational) && args.write) stop('--limits and --informational cannot go with --write: a reference is written from a run that judged every suite')
 const limitsFile = args.limits === undefined ? null : resolve(args.limits)
 const limits = limitsFile === null ? {} : readJson(limitsFile, 'the limits', readRunnerLimits)
 const run = withoutLimitedSuites(load(reportFile, 'the report'), limits)
@@ -113,4 +116,6 @@ if (args.write) {
   process.exit(0)
 }
 
-process.exit(compare() > 0 ? 1 : 0)
+const lost = compare()
+if (lost > 0 && args.informational) console.log('\nNot an error: this comparison is informational (--informational).')
+process.exit(lost > 0 && !args.informational ? 1 : 0)

@@ -370,7 +370,8 @@ export async function smokeGuard({ browser, store }: SmokeContext, check: Check)
     const smallerThanAll = base !== null && !common.some(fits)
     const rounded = s1 !== null && base !== null && common.includes(`${s1.screen[0]}x${s1.screen[1]}`) && (s1.screen[0] ?? 0) <= (base.screen[0] ?? 0)
     const kept = smallerThanAll && s1 !== null && base !== null && s1.screen[0] === base.screen[0] && s1.screen[1] === base.screen[1]
-    check('strict: the screen is a common size that fits the real one (or the real one, when it is smaller than all of them), and the colour depth is 24', (rounded || kept) && s1?.screen[2] === 24, JSON.stringify([s1?.screen, base?.screen]))
+    // The name is the one of the reference of the engine (compat/baseline-*.json): a new name would be a check lost.
+    check('strict: the screen is a common size that fits the real one, and the colour depth is 24', (rounded || kept) && s1?.screen[2] === 24, JSON.stringify([s1?.screen, base?.screen]))
     check('...the graphics card is a generic one, the list of local fonts is empty, at most 4 cores', s1 !== null && (s1.renderer === 'none' || s1.renderer === 'ANGLE (Generic GPU)') && (s1.fonts === 0 || s1.fonts === 'none') && s1.cores <= 4, JSON.stringify([s1?.renderer, s1?.fonts, s1?.cores]))
 
     patch({ fingerprintExceptions: ['127.0.0.1'] })

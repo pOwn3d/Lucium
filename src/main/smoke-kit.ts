@@ -183,6 +183,33 @@ export function chooseSuite(only: string | undefined, names: readonly string[]):
   return { kind: 'unknown', message: `LUCIUM_SMOKE_ONLY="${only}" names no suite. Suites: ${[...names].sort().join(', ')}. A part of the principal suite is run with LUCIUM_SMOKE_ONLY=parts LUCIUM_SMOKE_PARTS=<part>.` }
 }
 
+/** What `LUCIUM_SMOKE_SKIP` leaves out of a run. */
+export interface SkipChoice {
+  /** The suites of the chain that are not run. */
+  suites: ReadonlySet<string>
+  /** The parts of the principal suite that are not run (`main:<part>`). */
+  parts: ReadonlySet<string>
+  /** The names that are no suite of the table: a typing mistake must not run what it was meant to leave out. */
+  unknown: string[]
+}
+
+/**
+ * Reads LUCIUM_SMOKE_SKIP, a comma-separated list of suites to leave out of the chain (`fullscreen,sitedata`), where `main:<part>` leaves out one part of the
+ * principal suite. The Smoke (macOS) workflow sets it from compat/runner-limits.json, for what a GitHub runner cannot pass and what its failures would leave
+ * open for the suites after them; on the Mac it is not set, and the whole chain runs. A part is checked where the parts are (smoke.ts), a suite here.
+ */
+export function readSkips(value: string | undefined, names: readonly string[]): SkipChoice {
+  const suites = new Set<string>()
+  const parts = new Set<string>()
+  const unknown: string[] = []
+  for (const entry of (value ?? '').split(',').map((item) => item.trim()).filter((item) => item !== '')) {
+    if (entry.startsWith('main:') && entry.length > 'main:'.length) parts.add(entry.slice('main:'.length))
+    else if (names.includes(entry)) suites.add(entry)
+    else unknown.push(entry)
+  }
+  return { suites, parts, unknown }
+}
+
 /** How one suite of a run ended. */
 export interface SuiteOutcome {
   name: string

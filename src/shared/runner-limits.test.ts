@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { SUITES } from '../main/smoke-suites'
 import type { CompatReport } from './compat-report'
-import { judgeRun, readRunnerLimits, suiteFailed, withoutLimitedSuites } from './runner-limits'
+import { isPart, judgeRun, readRunnerLimits, suiteFailed, withoutLimitedSuites } from './runner-limits'
 
 const engine = { name: 'electron', version: '45.2.1', chromium: '156.0.8078.120' }
 const report = (suites: CompatReport['suites']): CompatReport => ({ engine, suites, apiProbe: null, declarativeNetRequestEnforced: null, extensionNetworkRules: null })
@@ -14,7 +14,7 @@ const pass = (name: string) => ({ name, ok: true })
 const fail = (name: string) => ({ name, ok: false })
 const skip = (name: string) => ({ name, ok: true, skipped: true as const })
 
-const limits = { guard: 'the screen of the runner is 1024 x 768', fullscreen: 'no window takes the full screen on the runner' }
+const limits = { guard: 'the screen of the runner is 1024 x 768', fullscreen: 'no window takes the full screen on the runner', 'main:iso-sidebar': 'the window is shorter than the rows of the list' }
 
 describe('the list of the limits of the runner', () => {
   it('is read as names with reasons', () => {
@@ -32,7 +32,9 @@ describe('the list of the limits of the runner', () => {
     const file = fileURLToPath(new URL('../../compat/runner-limits.json', import.meta.url))
     const read = readRunnerLimits(JSON.parse(readFileSync(file, 'utf8')), file)
     const chain = new Set(SUITES.filter((suite) => suite.chain).map((suite) => suite.name))
-    expect(Object.keys(read).filter((name) => !chain.has(name))).toEqual([])
+    expect(Object.keys(read).filter((name) => !isPart(name) && !chain.has(name))).toEqual([])
+    // A part is a part of the principal suite, and a part that is not one is refused when the run starts (smoke.ts).
+    expect(Object.keys(read).filter((name) => isPart(name) && !/^main:[a-z0-9-]+$/.test(name))).toEqual([])
     // A reason says what the runner lacks, in a sentence: not a word.
     for (const [name, reason] of Object.entries(read)) expect(reason.split(/\s+/).length, name).toBeGreaterThan(4)
   })
@@ -58,7 +60,7 @@ describe('the verdict of a run on a runner', () => {
       unexpected: ['sitedata'],
       tolerated: [{ suite: 'guard', reason: limits.guard }],
       stale: [],
-      absent: ['fullscreen']
+      notRun: ['fullscreen']
     })
   })
 
@@ -67,9 +69,11 @@ describe('the verdict of a run on a runner', () => {
     expect(judgeRun(run, limits).unexpected).toEqual(['markdown', 'windows'])
   })
 
-  it('says which listed suites passed (the limit may be gone) and which are not in the report, and fails neither', () => {
+  it('says which listed suites passed (the limit may be gone) and which were not run, and fails neither: a part of the principal suite is not a suite', () => {
     const run = report({ guard: { code: 0, checks: [pass('a')] }, main: { code: 0, checks: [pass('b')] } })
-    expect(judgeRun(run, limits)).toEqual({ unexpected: [], tolerated: [], stale: ['guard'], absent: ['fullscreen'] })
+    expect(judgeRun(run, limits)).toEqual({ unexpected: [], tolerated: [], stale: ['guard'], notRun: ['fullscreen'] })
+    expect(isPart('main:iso-sidebar')).toBe(true)
+    expect(isPart('main')).toBe(false)
   })
 
   it('does not take the name of an Object for a listed suite', () => {
@@ -104,6 +108,14 @@ describe('scripts/smoke-runner-verdict.mjs', () => {
     expect(result.status).toBe(0)
     expect(result.out).toContain(`~ guard: ${limits.guard}`)
     expect(result.out).toContain('Every suite that failed is a limit of the runner')
+  })
+
+  it('lists the suites it did not run, with the reason of each, and passes a run where they are the only ones missing', () => {
+    const result = run({ main: { code: 0, checks: [pass('a')] } }, limits)
+    expect(result.status).toBe(0)
+    expect(result.out).toContain('2 named in the limits and not run')
+    expect(result.out).toContain(`- fullscreen: ${limits.fullscreen}`)
+    expect(result.out).not.toContain('main:iso-sidebar:')
   })
 
   it('fails a run with a suite that failed outside the list, and names it', () => {
@@ -154,5 +166,19 @@ describe('scripts/compat-compare.mjs --limits', () => {
 
   it('does not write a reference from a run that did not judge every suite', () => {
     expect(compare(guardFails, ...limited, '--write').status).toBe(2)
+    expect(compare(guardFails, '--informational', '--write').status).toBe(2)
+  })
+
+  it('prints what the run lost and exits 0 when it is only informational (the runner: the reference was recorded on a Retina Mac)', () => {
+    const lostOne = { main: { code: 0, checks: [] as Array<{ name: string; ok: boolean }> }, guard: reference.guard }
+    expect(compare(lostOne).status).toBe(1)
+    const informational = compare(lostOne, '--informational')
+    expect(informational.status).toBe(0)
+    expect(informational.out).toContain('- main: no longer made: page loads')
+    expect(informational.out).toContain('this comparison is informational')
+    // A report that is missing still stops it: informational is not blind.
+    rmSync(join(folder, 'report.json'), { force: true })
+    const missing = spawnSync(process.execPath, ['--disable-warning=MODULE_TYPELESS_PACKAGE_JSON', script, '--baseline', join(folder, 'reference.json'), '--report', join(folder, 'report.json'), '--informational'], { encoding: 'utf8' })
+    expect(missing.status).toBe(2)
   })
 })
