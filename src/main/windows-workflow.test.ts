@@ -48,11 +48,11 @@ describe('.github/workflows/windows.yml', () => {
     expect(workflow).not.toMatch(/ELECTRON_MIRROR|ELECTRON_BUILDER_BINARIES_MIRROR|ELECTRON_CUSTOM_DIR/i)
   })
 
-  it('keeps the installer as an unsigned check build, under a name that says so, for 14 days', () => {
+  it('keeps the installer as an unsigned check build, under a name that says so, for 7 days', () => {
     const installer = job('installer')
     expect(installer).toMatch(/electron-builder --win nsis --x64 --publish never/)
     expect(installer).toMatch(/\$\{file%\.\*\}-UNSIGNED-check-build\.\$\{file##\*\.\}/)
-    expect(installer).toMatch(/name: lucium-win-UNSIGNED-check-build\n\s+path: dist\/\*-UNSIGNED-check-build\.exe\n\s+if-no-files-found: error\n\s+retention-days: 14/)
+    expect(installer).toMatch(/name: lucium-win-UNSIGNED-check-build\n\s+path: dist\/\*-UNSIGNED-check-build\.exe\n\s+if-no-files-found: error\n\s+retention-days: 7/)
   })
 
   it('reads the registry keys that build/installer.nsh writes, after the install and after the uninstall', () => {

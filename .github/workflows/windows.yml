@@ -141,7 +141,7 @@ jobs:
           name: lucium-win-UNSIGNED-check-build
           path: dist/*-UNSIGNED-check-build.exe
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 7
 
   e2e:
     name: E2E (Windows)
@@ -176,4 +176,4 @@ jobs:
           name: e2e-windows-results
           path: test-results/
           if-no-files-found: ignore
-          retention-days: 14
+          retention-days: 7
