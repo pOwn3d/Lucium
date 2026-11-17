@@ -6,8 +6,7 @@ version: 2
 # `cooldown`: a version is proposed only once it has been out for some days. A release that is withdrawn or found compromised in its
 # first days never reaches a pull request here.
 updates:
-  # Electron bumps are how Chromium gets updated: one PR per release. The checks of a pull request (ci.yml) open no window: before merging,
-  # run the "Smoke (macOS)" workflow on the PR branch (or `pnpm test:engine` then `pnpm compat:compare` locally): it compares with compat/baseline-*.json.
+  # Electron is not proposed here, see `ignore` below: it is how Chromium gets updated, and it moves by hand.
   - package-ecosystem: npm
     directory: /
     schedule:
@@ -22,19 +21,11 @@ updates:
       prefix: 'chore(deps)'
       prefix-development: 'chore(deps-dev)'
     ignore:
-      # A new major of Electron is a new Chromium: it comes through `pnpm electron:upgrade` (docs/mise-a-jour-chromium.md), never
-      # through a pull request of Dependabot.
+      # Electron comes through `pnpm electron:upgrade` (docs/mise-a-jour-chromium.md), never through a pull request of Dependabot: the
+      # downloads are built with the Electron of castLabs (the Widevine variant, `+wvcus` builds), and scripts/ecs-checksums.json has no
+      # entry for a build that nobody has prepared by hand, so every such pull request fails its checks.
       - dependency-name: electron
-        update-types: ['version-update:semver-major']
     groups:
-      # Electron is how Chromium gets updated, and it is apart from everything else: one pull request per release, alone in its group.
-      # The downloads are built with the Electron of castLabs (the Widevine variant), which comes out some days after Electron's own:
-      # merge this pull request only once the issue opened by chromium-watch.yml says that the castLabs build of that very version
-      # exists, so that the `electron` of package.json stays the version of the engine people run. The checks of a pull request open
-      # no window; before merging, run the "Smoke (macOS)" workflow on the branch (or `pnpm test:engine` then `pnpm compat:compare`
-      # locally) and read the comparison with compat/baseline-*.json.
-      electron:
-        patterns: [electron]
       # The two packages that carry the extensions. electron-chrome-extensions is patched (patches/): a new version needs its patch
       # written again, so it never hides in a larger group.
       extensions:
