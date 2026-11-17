@@ -9,6 +9,8 @@ import {
   cleanSpaceBackground,
   coverShare,
   draggedPosition,
+  FRAMING_STAGE_MAX_HEIGHT,
+  framingStageMaxWidth,
   steppedPosition,
   withBackgroundPosition,
   type SpaceBackground
@@ -139,6 +141,43 @@ describe('the frame over the whole video', () => {
     expect(coverShare({ width: 500, height: 1000 }, { width: 50, height: 100 })).toEqual({ x: 1, y: 1 })
     expect(coverShare({ width: 0, height: 0 }, { width: 50, height: 100 })).toEqual({ x: 1, y: 1 })
     expect(coverShare({ width: 1920, height: 1080 }, { width: 0, height: 100 })).toEqual({ x: 1, y: 1 })
+  })
+})
+
+describe('the picture of the video under the frame', () => {
+  const SHAPES = [
+    { name: 'a tall video (9:16)', width: 1080, height: 1920 },
+    { name: 'a very tall video (1:3)', width: 400, height: 1200 },
+    { name: 'a square video', width: 800, height: 800 },
+    { name: 'a wide video (16:9)', width: 1920, height: 1080 },
+    { name: 'a very wide video (21:9)', width: 2520, height: 1080 }
+  ]
+
+  it.each(SHAPES)('keeps the shape of $name and is never taller than the cap, whatever the width of the panel', ({ width, height }) => {
+    const maxWidth = framingStageMaxWidth({ width, height })!
+    for (const panel of [180, 330, 640, 1200]) {
+      // The box is `width: 100%` of the panel, held down by this maximum; its height is what the aspect ratio gives for that width.
+      const box = Math.min(panel, maxWidth)
+      expect(box * (height / width), `${panel} px panel`).toBeLessThanOrEqual(FRAMING_STAGE_MAX_HEIGHT + 1e-9)
+    }
+  })
+
+  it('lets a panel narrower than the cap decide: the box is as wide as the panel and the frame stays on the video', () => {
+    // 9:16 at a cap of 260 px: 146 px wide at most. A panel of 120 px is narrower, the box is 120 px by 213 px, the video's own shape.
+    expect(framingStageMaxWidth({ width: 1080, height: 1920 })).toBe(146)
+    expect(Math.min(120, 146) * (1920 / 1080)).toBeCloseTo(213.3, 1)
+  })
+
+  it('does not hold a video back that is wider than tall: the cap on the width is more than a panel gives', () => {
+    expect(framingStageMaxWidth({ width: 1920, height: 1080 })).toBe(462)
+    expect(framingStageMaxWidth({ width: 1920, height: 1080 })!).toBeGreaterThan(330)
+  })
+
+  it('takes the cap it is given, and says nothing for a size that is not known', () => {
+    expect(framingStageMaxWidth({ width: 1000, height: 500 }, 100)).toBe(200)
+    expect(framingStageMaxWidth({ width: 0, height: 0 })).toBeUndefined()
+    expect(framingStageMaxWidth({ width: 1080, height: 0 })).toBeUndefined()
+    expect(framingStageMaxWidth({ width: 1080, height: 1920 }, 0)).toBeUndefined()
   })
 })
 

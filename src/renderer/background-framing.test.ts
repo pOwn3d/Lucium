@@ -8,6 +8,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { setLanguage, t } from '@shared/i18n'
 import type { SpaceBackground } from '@shared/space-media'
+import panelCss from './space-media-panel.css?raw'
 
 vi.mock('./api', () => ({ api: () => ({ dispatch: () => Promise.resolve() }), useSnapshot: () => null }))
 
@@ -87,5 +88,32 @@ describe('the frame over the video', () => {
     expect(elementsOf(createElement(BackgroundFraming, { src: 'blob:fond', position: undefined, onChange: () => undefined })).length).toBeGreaterThan(0)
     const { elements } = afterMetadata(undefined, { videoWidth: 323, videoHeight: 720 })
     expect(elements.some((el) => el.type === 'video' || el.props['role'] === 'slider')).toBe(false)
+  })
+})
+
+describe('the box of the frame', () => {
+  const stageAfterMetadata = (size: { videoWidth: number; videoHeight: number }) => {
+    const [, drawn] = rendersOf(2, (pass) => {
+      const elements = expandedElements(createElement(BackgroundFraming, { src: 'blob:fond', position: undefined, onChange: () => undefined }))
+      if (pass === 0) ((elements.find((el: Element) => el.type === 'video')!.props['onLoadedMetadata']) as (event: unknown) => void)({ currentTarget: size })
+      return elements
+    })
+    return drawn!.find((el) => el.props['className'] === 'media-framing-stage')!.props['style'] as { aspectRatio?: string; maxWidth?: number } | undefined
+  }
+
+  it('has the shape of the video and is held to the cap through its width, so a tall video does not leave the frame outside of it', () => {
+    // 9:16: 260 px tall at most is 146 px wide at most; the aspect ratio gives the height from the width.
+    expect(stageAfterMetadata({ videoWidth: 1080, videoHeight: 1920 })).toEqual({ aspectRatio: '1080 / 1920', maxWidth: 146 })
+    expect(stageAfterMetadata({ videoWidth: 1920, videoHeight: 1080 })).toEqual({ aspectRatio: '1920 / 1080', maxWidth: 462 })
+  })
+
+  it('has no shape of its own before the size of the video is known', () => {
+    const before = elementsOf(createElement(BackgroundFraming, { src: 'blob:fond', position: undefined, onChange: () => undefined }))
+    expect(before.find((el) => el.props['className'] === 'media-framing-stage')!.props['style']).toBeUndefined()
+  })
+
+  it('is given no height of its own by the stylesheet: a cap on the height would break the shape and push the frame off the video', () => {
+    const rule = /\.media-framing-stage\s*\{([^}]*)\}/.exec(panelCss)![1]!
+    expect(rule).not.toMatch(/(^|[\s;])(max-|min-)?height\s*:/)
   })
 })
