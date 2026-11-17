@@ -69,6 +69,9 @@ describe('.github/workflows/linux.yml', () => {
     const off = /--no-sandbox|--disable-setuid-sandbox|--disable-gpu-sandbox|--disable-seccomp-filter-sandbox|ELECTRON_DISABLE_SANDBOX|\bno-sandbox\b/
     expect(workflow).not.toMatch(off)
     expect(code(read('tests/e2e/launch.ts').replaceAll('//', '#'))).not.toMatch(off)
+    // Not passing the switch is not enough: Playwright adds `--no-sandbox` to every launch of Electron on Linux unless `chromiumSandbox` is set, and without
+    // the sandbox no extension worker runs a preload script (tests/e2e/launch.ts). The launcher says it, and tests/e2e/smoke.spec.ts reads the command line.
+    expect(code(read('tests/e2e/launch.ts').replaceAll('//', '#'))).toMatch(/chromiumSandbox: true/)
     // The script talks about the switch to find it in a process and to say that it is refused, never to pass it.
     for (const line of script.split('\n').filter((candidate) => off.test(candidate))) expect(line).toMatch(/grep|fail |refused/)
     // And what proves the sandbox is on: a renderer without a seccomp filter fails the smoke test.

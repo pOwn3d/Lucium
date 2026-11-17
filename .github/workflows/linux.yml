@@ -7,7 +7,9 @@ name: Linux
 #   Linux packages (arm64)   (on Ubuntu 24.04 that is where its AppArmor profile is loaded) and started, the AppImage is started, and a start that
 #                            would need `--no-sandbox` is shown to be refused. The arm64 leg is the architecture of a Linux virtual machine on a Mac.
 #   E2E (Linux, xvfb)        the Playwright suite of tests/e2e (the same run as `pnpm test:e2e`) against Electron's Linux binary and the built
-#                            interface, on a virtual screen.
+#                            interface, on a virtual screen. Chromium's sandbox is on there too: Playwright adds `--no-sandbox` to every launch of
+#                            Electron on Linux unless `chromiumSandbox: true` is given (tests/e2e/launch.ts), and without the sandbox Electron's
+#                            renderers run no preload script in a service worker, so no extension worker had the APIs the shims and the library give.
 #
 # The packages are kept as artifacts for seven days, named `lucium-linux-<arch>-UNSIGNED-check-build` and every file inside
 # `…-UNSIGNED-check-build.<ext>`, the way build.yml names its check builds: nobody must take one for a download of Lucium. Unsigned, the fuses and
@@ -219,7 +221,8 @@ jobs:
       - name: Build
         run: pnpm build
       # The Electron binary of node_modules is not named by any AppArmor profile: on Ubuntu 24.04 it could not create the user namespace of its
-      # sandbox. It is given the profile the .deb ships, and nothing else is loosened (see the comment at the top of this file).
+      # sandbox. It is given the profile the .deb ships, and nothing else is loosened (see the comment at the top of this file). The tests start
+      # that binary with the sandbox on (`chromiumSandbox: true`, tests/e2e/launch.ts; smoke.spec.ts reads its command line).
       - name: Sandbox
         run: bash scripts/linux-ci.sh sandbox-profile "$(node -p "require('electron')")"
       # `pnpm test:e2e` is `electron-vite build && playwright test`: the build is the step above. A runner draws no reference picture
