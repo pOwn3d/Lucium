@@ -2,7 +2,7 @@
 
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve } from 'node:path'
+import { delimiter, join, resolve } from 'node:path'
 import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
 
 const ROOT = resolve(__dirname, '../..')
@@ -77,7 +77,7 @@ export async function launchLucium(options: string[] | LaunchOptions = {}): Prom
   const { extensions = [], dataDir, args = [], colorScheme } = Array.isArray(options) ? { extensions: options } : options
   const userData = dataDir ?? mkdtempSync(join(tmpdir(), 'lucium-e2e-'))
   // LUCIUM_E2E=1: the blocker downloads no list (src/main/blocking/index.ts); the lists of a test are given as text.
-  const env = { ...process.env, LUCIUM_E2E: '1', ...(extensions.length > 0 ? { LUCIUM_EXTENSIONS: extensions.join(':') } : {}) }
+  const env = { ...process.env, LUCIUM_E2E: '1', ...(extensions.length > 0 ? { LUCIUM_EXTENSIONS: extensions.join(delimiter) } : {}) }
   const app = await electron.launch({ args: ['.', `--user-data-dir=${userData}`, HOST_RULES, ...args], cwd: ROOT, env, ...(colorScheme !== undefined ? { colorScheme } : {}) })
   // Main-process output (the extension library's debug lines with DEBUG set) goes to the test log.
   app.process().stdout?.on('data', (chunk: Buffer) => process.stdout.write(`[app] ${chunk}`))

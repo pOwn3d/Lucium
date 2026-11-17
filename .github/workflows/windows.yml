@@ -1,0 +1,179 @@
+name: Windows
+
+# The Windows checks of Lucium, on a GitHub runner (windows-latest). Lucium is written and measured on macOS; this is the only place the code runs on
+# Windows (docs/plateformes.md). Three jobs, none of them a REQUIRED check of main (the seven of ci.yml and pr-conventions.yml are untouched; docs/community/
+# maintainers.md holds the table), and none of them hides a failure: no `continue-on-error`, no retry. What cannot pass on Windows for a reason of substance
+# (a macOS feature) is skipped in the test itself, per platform, with the reason written there; a failing test is a defect to fix or a line to explain.
+#
+#   Unit tests (Windows)           `pnpm test`: the same Vitest run as "Unit tests (Linux)" and "(macOS)" of ci.yml, on Windows.
+#   Installer (Windows, unsigned)  `pnpm build`, then the NSIS installer (x64) of electron-builder.yml, unsigned, kept as an artifact (name below). The installer
+#                                  is then run silently for the current user and removed, to read the registry keys of build/installer.nsh (default browser
+#                                  entries, the lucium:// scheme) after the install and after the uninstall: the one place that script is ever run.
+#   E2E (Windows)                  tests/e2e (Playwright driving the real Electron, the same run as `pnpm test:e2e` and e2e.yml) against the application built
+#                                  from the sources, on the runner's desktop. Windows runners are free on a public repository, so no cost rule here (ci.yml, e2e.yml).
+#
+# The installer is a CHECK BUILD, named so before it is uploaded (`…-UNSIGNED-check-build.exe`, as in build.yml): nothing is signed (no certificate exists:
+# Windows SmartScreen warns), nothing is published (`--publish never`), and the downloads of Lucium are made and published by the maintainer
+# (docs/community/release-process.md). Anyone who wants to try Windows downloads it from the run's page, Artifacts: `lucium-win-UNSIGNED-check-build`.
+#
+# When it runs: on every pull request that touches more than documents, by hand, and every night (E2E only: the other two jobs are what a pull request needs).
+#
+# Security: `pull_request` (never `pull_request_target`), a read-only token, no secret, nothing written back to the repository, no signing step anywhere
+# (AGENTS.md section 7). The setup is the local action of ci.yml. electron-builder fetches its Windows tools (NSIS, winCodeSign) from the releases of
+# electron-userland/electron-builder-binaries; the address stays the default one (a test of build-files.test.ts refuses a mirror).
+
+on:
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch:
+  schedule:
+    # Every night, 03:15 UTC.
+    - cron: '15 3 * * *'
+
+permissions: {}
+
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  unit:
+    name: Unit tests (Windows)
+    if: ${{ github.event_name != 'schedule' }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Machine
+        run: |
+          uname -a
+          node --version
+          pnpm --version
+      - run: pnpm test
+
+  installer:
+    name: Installer (Windows, unsigned)
+    if: ${{ github.event_name != 'schedule' }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      # A safety net when the install script of the electron package did not fetch its binary (allowBuilds in pnpm-workspace.yaml).
+      - run: node node_modules/electron/install.js
+      - name: Build
+        run: pnpm build
+      # The NSIS installer of electron-builder.yml (win.target), x64, with build/icon.ico and build/installer.nsh. Never a signing identity, never a publication.
+      - name: Package the installer (unsigned, nothing published)
+        env:
+          # Never look for a signing identity; no certificate is configured anywhere.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          pnpm exec electron-builder --win nsis --x64 --publish never
+          ls -l dist
+          test -f dist/win-unpacked/Lucium.exe
+          ls dist/Lucium-Setup-*-x64.exe
+      # What build/installer.nsh does, read on the machine that runs it: silent install for the current user into a folder of the runner, then the keys.
+      - name: Install silently and read the registry
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $installer = Get-ChildItem -Path dist -Filter 'Lucium-Setup-*-x64.exe' | Select-Object -First 1
+          $dir = Join-Path $env:RUNNER_TEMP 'LuciumInstalled'
+          # /S silent, /currentuser the per-user install, /D= the folder (last, without quotes: NSIS reads the end of the line).
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList '/S', '/currentuser', "/D=$dir" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "The installer exited with $($install.ExitCode)" }
+          if (-not (Test-Path (Join-Path $dir 'Lucium.exe'))) { throw "Lucium.exe is not in $dir" }
+          $client = 'HKCU:\Software\Clients\StartMenuInternet\Lucium'
+          $urls = Get-ItemProperty -Path "$client\Capabilities\URLAssociations"
+          foreach ($scheme in 'http', 'https') {
+            if ($urls.$scheme -ne 'LuciumURL') { throw "No $scheme association under $client" }
+          }
+          $registered = (Get-ItemProperty -Path 'HKCU:\Software\RegisteredApplications').Lucium
+          if ($registered -ne 'Software\Clients\StartMenuInternet\Lucium\Capabilities') { throw "RegisteredApplications says '$registered'" }
+          foreach ($key in 'HKCU:\Software\Classes\LuciumURL', 'HKCU:\Software\Classes\lucium') {
+            $command = (Get-ItemProperty -Path "$key\shell\open\command").'(default)'
+            Write-Host "$key -> $command"
+            if ($command -notlike "*$dir*Lucium.exe*--*%1*") { throw "Unexpected command under $key" }
+          }
+          Write-Host "Registry entries of the installer are there."
+      - name: Uninstall silently and read the registry again
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $dir = Join-Path $env:RUNNER_TEMP 'LuciumInstalled'
+          $uninstaller = Join-Path $dir 'Uninstall Lucium.exe'
+          # `_?=` makes the uninstaller run in place and wait (it otherwise copies itself and returns at once); last, without quotes.
+          $uninstall = Start-Process -FilePath $uninstaller -ArgumentList '/S', "_?=$dir" -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "The uninstaller exited with $($uninstall.ExitCode)" }
+          foreach ($key in 'HKCU:\Software\Clients\StartMenuInternet\Lucium', 'HKCU:\Software\Classes\LuciumURL', 'HKCU:\Software\Classes\lucium') {
+            if (Test-Path $key) { throw "$key is still there after the uninstall" }
+          }
+          if ($null -ne (Get-ItemProperty -Path 'HKCU:\Software\RegisteredApplications').Lucium) { throw 'RegisteredApplications still names Lucium' }
+          Write-Host 'Nothing of the installer is left in the registry.'
+      # The name says what the file is before it leaves the runner (as build.yml does).
+      - name: Name the installer as a check build
+        run: |
+          set -euo pipefail
+          for file in dist/*.exe; do
+            mv "$file" "${file%.*}-UNSIGNED-check-build.${file##*.}"
+          done
+          ls -l dist/*-UNSIGNED-check-build.*
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lucium-win-UNSIGNED-check-build
+          path: dist/*-UNSIGNED-check-build.exe
+          if-no-files-found: error
+          retention-days: 14
+
+  e2e:
+    name: E2E (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Machine
+        run: |
+          uname -a
+          node --version
+      # A safety net when the install script of the electron package did not fetch its binary (allowBuilds in pnpm-workspace.yaml).
+      - run: node node_modules/electron/install.js
+      - name: Build
+        run: pnpm build
+      # `pnpm test:e2e` is `electron-vite build && playwright test`: the build is the step above. A missing reference picture fails the visual test of the
+      # Settings, which compares only on the system that drew it (macOS): it is skipped elsewhere, with its reason, in the test itself.
+      - name: Playwright
+        run: pnpm exec playwright test
+      - name: Keep the results
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: e2e-windows-results
+          path: test-results/
+          if-no-files-found: ignore
+          retention-days: 14
