@@ -167,6 +167,9 @@ export function validOverlay(request: unknown, store: Pick<StateStore, 'get'>): 
       return store.get().settings.bookmarkManager
     case 'livefolder':
       return store.get().settings.liveFolders && (r.folderId === undefined || (typeof r.folderId === 'string' && store.get().folders.some((f) => f.id === r.folderId && f.live !== undefined)))
+    // One folder that exists (a private window keeps no folder, see canOpenInPrivate).
+    case 'foldericon':
+      return typeof r.folderId === 'string' && store.get().folders.some((f) => f.id === r.folderId)
     case 'autoreload':
       return typeof r.tabId === 'string' && store.get().tabs.some((t) => t.id === r.tabId) && (r.anchor === undefined || isPlusAnchor(r.anchor))
     case 'theme':

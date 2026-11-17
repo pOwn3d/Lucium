@@ -46,3 +46,32 @@ describe('the row of a folder', () => {
     expect(markup(base)).not.toContain('folder-asleep')
   })
 })
+
+describe('the icon of a folder row', () => {
+  it('is the folder drawing, closed or open, when the folder has no emoji', () => {
+    expect(markup(base)).toContain('class="folder-glyph"')
+    expect(markup({ ...base, collapsed: false })).toContain('class="folder-glyph open"')
+    expect(markup(base)).not.toContain('folder-emoji')
+  })
+
+  it('is the emoji of the folder in place of the drawing, whether the folder is open or closed', () => {
+    for (const collapsed of [true, false]) {
+      const html = markup({ ...base, collapsed, icon: '📚' })
+      expect(html, String(collapsed)).toContain('<span class="folder-emoji" aria-hidden="true">📚</span>')
+      expect(html, String(collapsed)).not.toContain('folder-glyph')
+    }
+  })
+
+  it('leaves the name of the row to the folder, and its state to aria-expanded: the emoji is decoration', () => {
+    const html = markup({ ...base, collapsed: false, icon: '📚' })
+    expect(html).toContain('aria-expanded="true"')
+    expect(html).toContain('<span class="folder-name">Anciens sites</span>')
+    expect(markup({ ...base, collapsed: true, icon: '📚' })).toContain('aria-expanded="false"')
+  })
+
+  it('carries the moon of a sleeping folder as well as its emoji', () => {
+    const html = markup({ ...base, noWake: true, icon: '🌙' })
+    expect(html).toContain('folder-emoji')
+    expect(html).toContain('class="folder-asleep"')
+  })
+})

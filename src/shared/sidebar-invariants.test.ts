@@ -235,7 +235,9 @@ const GENERATORS: Generators = {
   'container/rule': (g) => ({ type: 'container/rule', host: g.pick(['a.example', 'b.example', '']), container: g.chance(0.3) ? null : g.containerId() }),
   'container/permission': (g) => ({ type: 'container/permission', id: g.containerId(), origin: g.pick(['https://a.example', 'https://b.example']), permission: g.pick(['camera', 'geolocation']), decision: g.pick(['allow', 'deny', null]) }),
   'tab/forget-origin': (g) => ({ type: 'tab/forget-origin', id: g.tabId() }),
-  'tab/back-to-origin': (g) => ({ type: 'tab/back-to-origin', id: g.tabId() }),
+  // A tab that has an origin when there is one: a tab picked at random almost never has, so the action would only do something by luck of the seeds (and a new
+  // action type, which shifts the draws of every run, made it vanish from the run).
+  'tab/back-to-origin': (g) => ({ type: 'tab/back-to-origin', id: g.idFrom(g.state.tabs.filter((t) => t.openerId !== undefined).map((t) => t.id), 'tab') }),
   'tab/select': (g) => ({ type: 'tab/select', id: g.tabId() }),
   'tab/close': (g) => ({ type: 'tab/close', id: g.tabId() }),
   'tab/pin': (g) => ({ type: 'tab/pin', id: g.tabId() }),
@@ -321,6 +323,8 @@ const GENERATORS: Generators = {
   'folder/create-with': (g) => ({ type: 'folder/create-with', tabIds: g.tabIds(), ...(g.chance(0.5) ? { name: g.text() } : {}) }),
   'folder/bottom': (g) => ({ type: 'folder/bottom', id: g.folderId(), bottom: g.chance(0.6) }),
   'folder/no-wake': (g) => ({ type: 'folder/no-wake', id: g.folderId(), on: g.chance(0.5) }),
+  // An emoji, nothing, or what a hand-edited message could hold: the reducer must keep the state valid whichever it gets.
+  'folder/icon': (g) => ({ type: 'folder/icon', id: g.folderId(), icon: g.pick(['📚', '🏳️‍🌈', null, 'x', '', '📚📚']) }),
   'tabs/tidy': (g) => {
     // What the panel sends: groups of the Today tabs of the space on screen (a name now and then that a folder already has, a tab that cannot move, a name that is no text).
     const pool = tidyCandidates(g.state, g.state.activeSpaceId).map((tab) => tab.id)

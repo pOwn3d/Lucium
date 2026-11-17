@@ -155,6 +155,11 @@ export interface Folder {
    * asleep until the user opens one. For the old sites kept to take a project up again, unused for months. Absent for an ordinary folder.
    */
   noWake?: true
+  /**
+   * One emoji the user chose for the folder: it shows in the row in place of the folder drawing (open or closed). Absent is the drawing, which is what a folder
+   * has always had, so a file saved before the choice existed needs no migration (`cleanFolders` keeps it only when it is exactly one emoji).
+   */
+  icon?: string
 }
 
 /**

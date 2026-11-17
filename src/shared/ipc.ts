@@ -218,6 +218,8 @@ export type OverlayRequest =
   | { panel: 'bookmarks' }
   /** The sheet of a live folder (setting `liveFolders`): the source of a new one, or, with `folderId`, the source and name of one that exists. */
   | { panel: 'livefolder'; folderId?: string }
+  /** « Icône… » of a folder's menu: the emoji of the folder, chosen in the picker of the spaces (emoji only). Centred; never in a private window. */
+  | { panel: 'foldericon'; folderId: string }
   /** The name and icon of a tab. `anchor` (the tab's row) hangs the sheet from it as a bubble; without it the sheet is centred. */
   | { panel: 'tab'; tabId: string; focus?: 'name' | 'icon'; anchor?: PlusAnchor }
   /** Fenêtre › Nommer la fenêtre…: the name of the window the panel is in. Centred unless given an `anchor`. */

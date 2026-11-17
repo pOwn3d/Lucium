@@ -134,6 +134,21 @@ describe('the panels of a space the interface may open', () => {
   })
 })
 
+describe('the icon sheet of a folder the interface may open', () => {
+  const withFolder = { get: () => ({ ...store.get(), folders: [{ id: 'dossier', spaceId: 'espace', name: 'Clients', collapsed: false }] }) }
+
+  it('opens for a folder that exists', () => {
+    expect(validOverlay({ panel: 'foldericon', folderId: 'dossier' }, withFolder)).toBe(true)
+  })
+
+  it('refuses a folder that does not exist, and a request that names none or something else', () => {
+    for (const request of [{ panel: 'foldericon', folderId: 'gone' }, { panel: 'foldericon' }, { panel: 'foldericon', folderId: 42 }, { panel: 'foldericon', folderId: null }]) {
+      expect(validOverlay(request, withFolder), JSON.stringify(request)).toBe(false)
+    }
+    expect(validOverlay({ panel: 'foldericon', folderId: 'dossier' }, store)).toBe(false)
+  })
+})
+
 describe('the small editors hung from the element that opened them', () => {
   const state = { ...store.get(), tabs: [{ id: 't1' }], favorites: [{ id: 'f1' }], settings: { ...defaultSettings(), nameWindows: true } }
   const withEditors = { get: () => state } as unknown as Parameters<typeof validOverlay>[1]

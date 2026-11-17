@@ -269,6 +269,7 @@ export const PANEL_PLACEMENT: Record<OverlayRequest['panel'], 'centred' | 'place
   readlater: 'centred',
   bookmarks: 'centred',
   livefolder: 'centred',
+  foldericon: 'centred',
   tab: 'centred',
   windowname: 'centred',
   autoreload: 'centred',

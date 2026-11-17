@@ -17,7 +17,7 @@ import { isSearchAddress } from './site-search'
 import { t } from './i18n'
 import { rememberSiteHosts } from './site-data'
 import { isSpaceImageName } from './space-image'
-import { spaceEmojiOr } from './space-emoji'
+import { isSpaceEmoji, spaceEmojiOr } from './space-emoji'
 import { cleanIconColor, cleanIconLetter, isSpaceIconKind } from './space-icon'
 import { cleanWebPanels } from './web-panels'
 import { LIVE_FOLDERS_MAX, cleanLiveFolder } from './live-folders'
@@ -155,7 +155,7 @@ export function cleanFolders(raw: unknown): Folder[] {
     // The side is kept as it is read (`atBottom` before `atTodayStart` when a hand-edited file says both: a folder has one): a folder that turns out to be inside
     // another has it taken off by `normalizeFolders`, which knows where the folder ends up.
     const side = entry['atBottom'] === true ? { atBottom: true as const } : entry['atTodayStart'] === true ? { atTodayStart: true as const } : {}
-    out.push({ id, spaceId, name: label(entry['name'], NAME_MAX, t('import.dossier-sans-nom')), collapsed: entry['collapsed'] === true, ...(parentId ? { parentId } : {}), ...(liveFolder ? { live: liveFolder } : {}), ...side, ...(entry['noWake'] === true ? { noWake: true as const } : {}) })
+    out.push({ id, spaceId, name: label(entry['name'], NAME_MAX, t('import.dossier-sans-nom')), collapsed: entry['collapsed'] === true, ...(parentId ? { parentId } : {}), ...(liveFolder ? { live: liveFolder } : {}), ...side, ...(entry['noWake'] === true ? { noWake: true as const } : {}), ...(isSpaceEmoji(entry['icon']) ? { icon: entry['icon'] } : {}) })
   }
   return out
 }

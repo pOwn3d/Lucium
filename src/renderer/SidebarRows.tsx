@@ -655,6 +655,24 @@ function FolderField({ name, onCommit }: { name: string; onCommit: (name: string
   )
 }
 
+/**
+ * What stands at the start of a folder's row: the emoji the user chose for it, else the folder drawing, open or closed. The emoji is decoration (the row is
+ * named by the folder's name, and `aria-expanded` says whether it is open).
+ */
+function FolderMark({ folder }: { folder: Folder }) {
+  return (
+    <span className="folder-icon">
+      {folder.icon !== undefined ? (
+        <span className="folder-emoji" aria-hidden="true">
+          {folder.icon}
+        </span>
+      ) : (
+        <FolderIcon open={!folder.collapsed} />
+      )}
+    </span>
+  )
+}
+
 /** A folder: its row (the state is the icon, no chevron), then its tabs and the folders inside it, 16 px deeper. */
 export function FolderBlock({ folder, first, side, children }: { folder: Folder; first: boolean; /** A root folder at the start of Today or under its tabs (it says so to the drop code, see `RowBox.side`). */ side?: 'today-start' | 'bottom'; children: ReactNode }) {
   const [editing, setEditing] = useState(false)
@@ -669,9 +687,7 @@ export function FolderBlock({ folder, first, side, children }: { folder: Folder;
     <div className="folder">
       {editing ? (
         <div className="folder-title editing">
-          <span className="folder-icon">
-            <FolderIcon open={!folder.collapsed} />
-          </span>
+          <FolderMark folder={folder} />
           <FolderField name={folder.name} onCommit={commit} />
         </div>
       ) : (
@@ -700,9 +716,7 @@ export function FolderBlock({ folder, first, side, children }: { folder: Folder;
             act.showMenu({ kind: 'folder', id: folder.id })
           }}
         >
-          <span className="folder-icon">
-            <FolderIcon open={!folder.collapsed} />
-          </span>
+          <FolderMark folder={folder} />
           <span className="folder-name">{folder.name}</span>
           {/* A folder whose tabs are never woken by themselves (the menu's tick): a moon at the end of its row. */}
           {folder.noWake === true && (
