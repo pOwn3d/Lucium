@@ -32,6 +32,16 @@ const CHROMIUM_FAMILY: Readonly<Record<string, { win32: string; linux: string }>
 
 const FIREFOX = { win32: 'Mozilla\\Firefox\\Profiles', linux: '.mozilla/firefox' }
 
+/**
+ * Linux, installed as a snap or a flatpak, relative to the home folder. Snap: `~/snap/<name>/common` holds what the browser writes; flatpak: `~/.var/app/<id>`.
+ * The flatpak identifiers are the ones Flathub publishes; they were not checked on a real machine (docs/plateformes.md).
+ */
+const LINUX_SANDBOXED: Readonly<Record<string, readonly string[]>> = {
+  firefox: ['snap/firefox/common/.mozilla/firefox', '.var/app/org.mozilla.firefox/.mozilla/firefox'],
+  chromium: ['snap/chromium/common/chromium', '.var/app/org.chromium.Chromium/config/chromium'],
+  brave: ['.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser']
+}
+
 /** Whether this system offers to import from this source at all. */
 export function importAvailable(sourceId: string, platform: PlatformId = 'darwin'): boolean {
   const facts = PLATFORM_FACTS[platform]
@@ -41,18 +51,31 @@ export function importAvailable(sourceId: string, platform: PlatformId = 'darwin
 }
 
 /**
- * The folder that holds the profiles of a browser (`Local State`, `Default/`, `Profile 1/`; for Firefox the `<random>.<name>` profile folders), or
- * null when this system does not have that browser's data in a place the application knows. Safari's folder is `~/Library/Safari` and does not come here.
+ * The folders that may hold the profiles of a browser (`Local State`, `Default/`, `Profile 1/`; for Firefox the `<random>.<name>` profile folders), in the
+ * order of preference, or none when this system does not have that browser's data in a place the application knows. On Linux, a browser installed
+ * as a snap or a flatpak keeps its data under `~/snap` or `~/.var/app`: those folders come after the ordinary one. Safari's folder is `~/Library/Safari`
+ * and does not come here.
  */
-export function browserDataDir(source: SourceFolder, platform: PlatformId, env: PathEnv): string | null {
-  if (!importAvailable(source.id, platform)) return null
-  if (platform === 'darwin') return posix.join(env.home, 'Library/Application Support', source.support ?? '')
+export function browserDataDirs(source: SourceFolder, platform: PlatformId, env: PathEnv): string[] {
+  if (!importAvailable(source.id, platform)) return []
+  if (platform === 'darwin') return [posix.join(env.home, 'Library/Application Support', source.support ?? '')]
   if (platform === 'win32') {
-    if (source.id === 'firefox') return win32.join(env.appData ?? win32.join(env.home, 'AppData', 'Roaming'), FIREFOX.win32)
+    if (source.id === 'firefox') return [win32.join(env.appData ?? win32.join(env.home, 'AppData', 'Roaming'), FIREFOX.win32)]
     const name = CHROMIUM_FAMILY[source.id]?.win32
-    return name ? win32.join(env.localAppData ?? win32.join(env.home, 'AppData', 'Local'), name) : null
+    return name ? [win32.join(env.localAppData ?? win32.join(env.home, 'AppData', 'Local'), name)] : []
   }
-  if (source.id === 'firefox') return posix.join(env.home, FIREFOX.linux)
-  const name = CHROMIUM_FAMILY[source.id]?.linux
+  const native = source.id === 'firefox' ? posix.join(env.home, FIREFOX.linux) : nativeChromium(source.id, env)
+  if (native === null) return []
+  return [native, ...(LINUX_SANDBOXED[source.id] ?? []).map((relative) => posix.join(env.home, relative))]
+}
+
+/** The first folder of `browserDataDirs` that `exists` says is there, else the first one, else null: what the import looks in. */
+export function browserDataDir(source: SourceFolder, platform: PlatformId, env: PathEnv, exists: (dir: string) => boolean = () => false): string | null {
+  const dirs = browserDataDirs(source, platform, env)
+  return dirs.find(exists) ?? dirs[0] ?? null
+}
+
+function nativeChromium(sourceId: string, env: PathEnv): string | null {
+  const name = CHROMIUM_FAMILY[sourceId]?.linux
   return name ? posix.join(env.xdgConfigHome || posix.join(env.home, '.config'), name) : null
 }

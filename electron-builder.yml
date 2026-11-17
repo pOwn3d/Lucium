@@ -203,6 +203,8 @@ linux:
       arch: [x64]
   category: Network;WebBrowser
   packageCategory: web
+  # The first line of the Debian description (the .deb shows it in the software centre); without it the field is empty.
+  synopsis: Web browser with a vertical sidebar and spaces, built on Chromium
   maintainer: Lucium contributors <contact@lucium.app>
   vendor: Lucium contributors
   # What makes the launcher offer Lucium as a web browser (xdg-settings); the %U argument is added by electron-builder.

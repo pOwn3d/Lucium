@@ -1,6 +1,7 @@
 // The parts of the application menu that open a dialog or reach outside the window: updates, privacy policy, restoring data,
 // recording a trace, the documentation. Each takes what it needs from the focused window, so the menu stays a description.
 
+import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, contentTracing, dialog, net, shell, type BrowserWindow } from 'electron'
 import { importSource } from '@shared/import-sources'
@@ -303,5 +304,5 @@ export function importFolderOf(sourceId: string, home: string, platform: Platfor
   if (def?.kind === 'html') return join(home, 'Downloads')
   if (def?.kind === 'safari') return join(home, 'Library/Safari')
   // A browser whose folder this system does not know: the file chooser opens in the home folder.
-  return (def && browserDataDir(def, platform, { ...paths, home })) || home
+  return (def && browserDataDir(def, platform, { ...paths, home }, existsSync)) || home
 }
