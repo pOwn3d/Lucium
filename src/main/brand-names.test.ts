@@ -130,6 +130,7 @@ const ENGINE_INLINE: readonly InlineException[] = [
   { file: 'src/main/shell/app-menu-wiring.ts', line: /· Chromium \$\{info\.chromium\}/, why: 'the versions at the head of the diagnostic copied to the clipboard for a bug report' },
   { file: 'src/shared/import-sources.ts', line: /'org\.chromium\.Chromium'/, why: 'the application the import looks for on the disk, with its name: it is a browser one imports from' },
   { file: 'src/main/platform/paths.ts', line: /chromium: \{ win32: 'Chromium\\\\User Data'/, why: 'the folder of the profile of that browser on Windows' },
+  { file: 'src/main/platform/paths.ts', line: /'\.var\/app\/org\.chromium\.Chromium\//, why: 'the flatpak folder of that browser on Linux: a Flathub identifier, the browser one imports from' },
   { file: 'src/main/electron-watch.ts', line: /Chromium/, why: 'the report of the maintenance script that watches Electron releases (pnpm electron:watch), read by the maintainer in a terminal' },
   { file: 'src/main/chromium-watch-issue.ts', line: /Chromium/, why: 'the GitHub issue the daily watch opens for the maintainer (scripts/chromium-watch-issue.mjs): it announces a version of the engine, and is not part of the application' }
 ]

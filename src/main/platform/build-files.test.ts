@@ -141,6 +141,11 @@ describe('.github/workflows/linux.yml', () => {
 describe('electron-builder.yml', () => {
   const config = code(read('electron-builder.yml'))
 
+  it('gives the Linux package a synopsis: the .deb description starts with it, and an empty one is shown as nothing', () => {
+    const linux = config.slice(config.indexOf('\nlinux:'))
+    expect(linux).toMatch(/^ {2}synopsis: \S.*\S$/m)
+  })
+
   it('keeps what the macOS build had: unsigned, the directory target first, the fuses', () => {
     expect(config).toMatch(/^ {2}identity: null$/m)
     expect(config).toMatch(/^ {2}target:\n {4}- target: dir\n {6}arch: \[arm64\]/m)

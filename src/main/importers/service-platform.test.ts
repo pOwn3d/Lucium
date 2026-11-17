@@ -69,6 +69,21 @@ describe('the import on Linux', () => {
     expect((await service({ platform: 'win32' }).run({ source: 'safari', categories: ['bookmarks'] })).message).toBe('Ce navigateur n’est pas pris en charge.')
   })
 
+  it('finds a Firefox installed as a snap, in its own folder, when the ordinary one is missing', () => {
+    // A second pretend home: only the snap folder of Firefox exists in it.
+    const snapHome = mkdtempSync(join(tmpdir(), 'lucium-import-snap-'))
+    try {
+      const profile = join(snapHome, 'snap/firefox/common/.mozilla/firefox/abc123.default')
+      mkdirSync(profile, { recursive: true })
+      writeFileSync(join(profile, 'places.sqlite'), '')
+      const sources = service({ platform: 'linux', home: snapHome }).listSources()
+      expect(sources.map((s) => s.id)).toContain('firefox')
+      expect(sources.find((s) => s.id === 'firefox')!.profiles).toEqual([{ id: 'abc123.default', name: 'default' }])
+    } finally {
+      rmSync(snapHome, { recursive: true, force: true })
+    }
+  })
+
   it('still looks in Application Support when no platform is given, as it always did', () => {
     expect(service().listSources().map((s) => s.id)).toEqual(expect.arrayContaining(['vivaldi', 'arc', 'safari']))
   })

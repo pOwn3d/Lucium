@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { PLATFORM_IDS } from '@shared/platform'
 import { NO_TOUCH_ID } from '../lock-service'
 import { createPlatform, currentPlatform, type TouchIdSource } from './index'
-import { browserDataDir, importAvailable } from './paths'
+import { browserDataDir, browserDataDirs, importAvailable } from './paths'
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -207,6 +207,30 @@ describe('the folders of the other browsers', () => {
     expect(browserDataDir({ id: 'brave' }, 'linux', { home: '/home/u' })).toBe('/home/u/.config/BraveSoftware/Brave-Browser')
     expect(browserDataDir({ id: 'vivaldi' }, 'linux', { home: '/home/u' })).toBe('/home/u/.config/vivaldi')
     expect(browserDataDir(firefox, 'linux', { home: '/home/u', xdgConfigHome: '/data/cfg' })).toBe('/home/u/.mozilla/firefox')
+  })
+
+  it('know the snap and flatpak folders of Linux browsers, after the ordinary one', () => {
+    const home = '/home/u'
+    expect(browserDataDirs(firefox, 'linux', { home })).toEqual([
+      '/home/u/.mozilla/firefox',
+      '/home/u/snap/firefox/common/.mozilla/firefox',
+      '/home/u/.var/app/org.mozilla.firefox/.mozilla/firefox'
+    ])
+    expect(browserDataDirs({ id: 'chromium' }, 'linux', { home })).toEqual([
+      '/home/u/.config/chromium',
+      '/home/u/snap/chromium/common/chromium',
+      '/home/u/.var/app/org.chromium.Chromium/config/chromium'
+    ])
+    expect(browserDataDirs({ id: 'brave' }, 'linux', { home })).toEqual(['/home/u/.config/BraveSoftware/Brave-Browser', '/home/u/.var/app/com.brave.Browser/config/BraveSoftware/Brave-Browser'])
+    expect(browserDataDirs(chrome, 'linux', { home })).toEqual(['/home/u/.config/google-chrome'])
+  })
+
+  it('pick the folder that exists, the ordinary one first, and the first one when none exists', () => {
+    const snap = '/home/u/snap/firefox/common/.mozilla/firefox'
+    const onlySnap = (dir: string) => dir === snap
+    expect(browserDataDir(firefox, 'linux', { home: '/home/u' }, onlySnap)).toBe(snap)
+    expect(browserDataDir(firefox, 'linux', { home: '/home/u' }, (dir) => dir === snap || dir === '/home/u/.mozilla/firefox')).toBe('/home/u/.mozilla/firefox')
+    expect(browserDataDir(firefox, 'linux', { home: '/home/u' })).toBe('/home/u/.mozilla/firefox')
   })
 
   it('do not exist for Safari and Arc away from macOS, and for a browser the table does not know', () => {

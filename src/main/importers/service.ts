@@ -208,7 +208,7 @@ export class ImportService {
 
   /** The folder of the profiles of a browser, or null when this system has none known for it. */
   private supportDir(def: ImportSourceDef): string | null {
-    return browserDataDir(def, this.deps.platform ?? 'darwin', { ...this.deps.paths, home: this.deps.home })
+    return browserDataDir(def, this.deps.platform ?? 'darwin', { ...this.deps.paths, home: this.deps.home }, existsSync)
   }
 
   profilesOf(def: ImportSourceDef): ImportProfile[] {
