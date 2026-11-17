@@ -163,7 +163,7 @@ Ce que ces chiffres tranchent : le lancement paie environ **9 ms** pour le bloqu
 - **La croissance est linéaire** : environ 450 octets, 0,4 µs de sérialisation et 0,6 µs de lecture par onglet. Le test le vérifie (la taille par onglet ne bouge pas de plus de 15 % entre 500 et 5 000).
 - **La taille dépend du contenu des onglets**, pas seulement de leur nombre : une mesure du 5 novembre donnait 941 Kio pour la partie `state` de 5 000 onglets plus courts (environ 190 octets chacun) ; avec des adresses, des titres et des icônes ordinaires on trouve 1,8 Mio. Un seul `faviconUrl` en `data:` de 10 Ko fait autant que vingt onglets (aucun producteur de `data:` côté processus principal n'a été trouvé ; `FAVICON_MAX` de `state-clean.ts` borne chacun à 64 Ko quand un état est lu).
 - **Le coût par changement** est le nombre de destinataires fois l'instantané : à 5 000 onglets, 2 ms de sérialisation par fenêtre sur le fil du processus principal, et 3 ms de lecture dans chaque interface. Avec le plafond de la fusion (5 publications par seconde par fenêtre pour les pages en arrière-plan), cela fait au plus 10 ms par seconde et par fenêtre, soit environ 1 % du fil principal.
-- **Non mesuré** : le transfert entre les processus, le rendu de l'interface une fois le message lu (la barre latérale n'est pas virtualisée ; les rangées sont mémoïsées, `SidebarRows.tsx`), et ce qui s'ajoute à `state` en dehors des onglets : l'archive, les signets, « Lire plus tard », les sessions enregistrées, qui pèsent à peu près autant par entrée qu'un onglet. Ces chiffres sont donc un plancher ; seul un `pnpm perf` avec des milliers d'onglets dirait ce que coûte la réception de bout en bout.
+- **Non mesuré** : le transfert entre les processus, le rendu des autres parties de l'interface une fois le message lu (le rendu de la barre latérale, lui, est mesuré plus bas), et ce qui s'ajoute à `state` en dehors des onglets : l'archive, les signets, « Lire plus tard », les sessions enregistrées, qui pèsent à peu près autant par entrée qu'un onglet. Ces chiffres sont donc un plancher ; seul un `pnpm perf` avec des milliers d'onglets dirait ce que coûte la réception de bout en bout.
 
 **Recommandation : garder l'envoi complet, ne pas envoyer de différences pour l'instant.** À 5 000 onglets, le haut de la mesure, une publication coûte 2 ms à émettre et 3 ms à lire, sous la durée d'une image (16,7 ms), et la fusion borne déjà le rythme. Un protocole de différences ajoute un second chemin à garder identique au premier (reprise après une fenêtre qui a manqué un message, ordre avec les messages qui suivent un instantané, panneaux ouverts plus tard), pour un gain qu'on ne verrait pas à cette taille. **À revoir** si l'une de ces deux choses arrive : (1) un état de l'ordre de 10 000 éléments (onglets, entrées d'archive et signets ensemble), soit environ 4,4 Mio par message, 4 ms de sérialisation et 6 ms de lecture par fenêtre ; (2) un `pnpm perf` avec des milliers d'onglets qui montre le fil principal d'une interface occupé plus d'un tiers d'image (5 ms) à la réception d'un instantané. Si cela arrive, ne renvoyer d'abord que les onglets modifiés (`state.tabs` par identifiant) et l'entrée de `runtime` qui a changé, et garder l'instantané complet pour une fenêtre qui ouvre ou qui reprend.
 
@@ -190,7 +190,33 @@ Ce qui se refait à chaque changement de l'état ne dépend pas d'Electron et se
 - **La barre latérale** : l'arbre (`treeRows`) est calculé niveau par niveau au lieu d'un tri ; le reste de ce qu'elle calcule est linéaire.
 - La clé du menu de l'application (`menuKey`) coûte moins de 0,1 ms à 5 000 onglets : ce qui coûte dans le menu, c'est sa reconstruction native, que seule l'application mesure.
 
-**Non mesuré ici** : le dessin des rangées par React. « Rangées comparées » est la comparaison par valeur qui décide quelles rangées redessiner (`sameTabRow`), et « Instantané copié » la copie de l'instantané d'un processus à l'autre (sérialisation dans le processus principal et lecture dans l'interface, comme `webContents.send`). Avec un espace de 5 000 onglets, chaque instantané coûte donc au moins 6 ms de copie, partagés entre les deux processus, puis 2,6 ms de calcul et 1,5 ms de comparaison dans l'interface, avant que React ne dessine quoi que ce soit. Une liste virtualisée ne réduirait que le dessin et la comparaison des rangées, pas la copie ni le calcul.
+**Non mesuré ici** : le dessin des rangées par React (mesuré pour la barre latérale, plus bas). « Rangées comparées » est la comparaison par valeur qui décide quelles rangées redessiner (`sameTabRow`), et « Instantané copié » la copie de l'instantané d'un processus à l'autre (sérialisation dans le processus principal et lecture dans l'interface, comme `webContents.send`). Avec un espace de 5 000 onglets, chaque instantané coûte donc au moins 6 ms de copie, partagés entre les deux processus, puis 2,6 ms de calcul et 1,5 ms de comparaison dans l'interface, avant que React ne dessine quoi que ce soit. Une liste virtualisée ne réduirait que le dessin et la comparaison des rangées, pas la copie ni le calcul.
+
+## Le rendu de la barre latérale
+
+La barre latérale n'est pas virtualisée : chaque onglet est une rangée dans le DOM. Son rendu a été mesuré une fois, sur la build des sources de la 1.1.2, le 17 novembre 2026.
+
+**Méthode** : l'application est lancée par Playwright sur un profil de test jetable, jamais sur le profil réel, avec N onglets d'un seul espace ; seul l'onglet affiché est chargé. Les chiffres viennent du protocole DevTools (les données de `chrome://inspect` > Performance), en médiane de 5 répétitions, sur un Mac Retina à 120 Hz non au repos.
+
+| Rangées | Montage | Mise à jour d'une rangée (médiane · p95) | Défilement (image moyenne · p95 ; images > 34 ms) | Nœuds DOM |
+|---|---|---|---|---|
+| 30 | 31,7 ms | 6,5 · 10,4 ms | 8,4 · 10,3 ms ; 0 | 417 |
+| 300 | 46,0 ms | 8,2 · 13,0 ms | 8,4 · 10,3 ms ; 0 | 2 847 |
+| 1 000 | 102,8 ms | 11,4 · 16,8 ms | 8,4 · 10,1 ms ; 0 | 9 147 |
+
+**Décision : ne rien changer à ~300 rangées.**
+
+- Le montage n'a lieu qu'au chargement de l'interface. À 300 rangées, la mise à jour médiane (8,2 ms) et le défilement (image moyenne 8,4 ms) restent proches du budget d'une image à 120 Hz (8,3 ms), et aucune image ne dépasse 34 ms.
+- **content-visibility est écarté** : il ne gagne rien au montage (47,3 ms contre 46,0 ms) et, pendant le défilement, il multiplie par 2,4 le temps de tâche du fil principal (1 755 ms contre 652 ms à 300 rangées).
+- **La virtualisation** gagnerait environ 14 ms au montage et 1,7 ms par mise à jour à 300 rangées (plancher mesuré avec 30 et 60 rangées, sans le virtualiseur). Elle n'est pas engagée. Si le budget est dépassé, il faudra d'abord mesurer vers 1 000 rangées avec de vraies rangées (dossiers, arbre d'onglets, pastilles d'état).
+
+**Limites** :
+
+- Mesuré sous charge : la charge moyenne du Mac allait de 11 à 78 pendant la série. Elle ne peut que gonfler les chiffres, donc la conclusion « rien » est prudente.
+- Rangées simples d'un seul espace : ni dossiers, ni arbre d'onglets, ni pastilles d'état. Les icônes ont été testées à part.
+- Pages non chargées, sauf celle qui est affichée.
+- Non mesurés : glisser-déposer à 300 rangées, cartes au survol, ouverture d'un gros dossier, navigation au clavier, recherche dans la page.
+- Le script de mesure est un outil local, non suivi par Git : ces chiffres ne se relancent pas avec une commande `pnpm`.
 
 ## Pièces
 
