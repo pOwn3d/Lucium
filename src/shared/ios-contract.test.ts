@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { LOCKED_SPACES_MAX } from './lock'
 import { hostOf, resolveInput } from './url'
 
 interface Vectors {
@@ -73,5 +74,29 @@ describe('iOS contract: string catalogue', () => {
       const source = readFileSync(join(IOS_SOURCES, name), 'utf8')
       expect(source, name).not.toMatch(/Color\(\s*(red|white|hue)\s*:|UIColor\(\s*(red|white|hue)\s*:|#[0-9a-fA-F]{6}\b|0x[0-9a-fA-F]{6}\b/)
     }
+  })
+})
+
+// The lock of the iOS application (ios/LuciumKit/Sources/LuciumKit/LockSettings.swift) follows the Mac's (src/shared/lock.ts) on the number it shares.
+describe('iOS contract: lock', () => {
+  it('guards at most as many spaces as the Mac does', () => {
+    const swift = readFileSync(join(__dirname, '../../ios/LuciumKit/Sources/LuciumKit/LockSettings.swift'), 'utf8')
+    expect(Number(swift.match(/static let maxSpaces = (\d+)/)?.[1])).toBe(LOCKED_SPACES_MAX)
+  })
+
+  it('keeps its settings out of state.json: no Swift source of the lock reads or writes the state\'s settings', () => {
+    for (const name of ['LockSettings.swift', 'LockController.swift']) {
+      const source = readFileSync(join(__dirname, '../../ios/LuciumKit/Sources/LuciumKit', name), 'utf8')
+      expect(source, name).not.toMatch(/BrowserState|StateFile|"settings"/)
+    }
+  })
+
+  it('carries the Face ID sentence in both languages, and in the project so that the system never stops the application at the first prompt', () => {
+    const info = JSON.parse(readFileSync(join(IOS_SOURCES, 'InfoPlist.xcstrings'), 'utf8')) as Catalogue
+    const entry = info.strings['NSFaceIDUsageDescription']?.localizations
+    expect(entry?.en?.stringUnit?.state).toBe('translated')
+    expect(entry?.fr?.stringUnit?.state).toBe('translated')
+    expect(entry?.fr?.stringUnit?.value).not.toBe(entry?.en?.stringUnit?.value)
+    expect(readFileSync(join(IOS_SOURCES, '../project.yml'), 'utf8')).toMatch(/INFOPLIST_KEY_NSFaceIDUsageDescription: "[^"]{10,}"/)
   })
 })

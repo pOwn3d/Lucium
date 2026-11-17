@@ -9,7 +9,7 @@ project.yml      the Xcode project, described for XcodeGen (Lucium.xcodeproj is 
 Contracts/       files shared with the Mac. Address vectors: src/shared/ios-contract.test.ts runs them against the TypeScript, LuciumKit against the Swift.
                  state-reference.json: a state file written by the Mac's own store (src/main/ios-state-contract.test.ts), which LuciumKit reads, writes back and compares.
                  privacy-vectors.json: tracking parameters, HTTPS first and the one rewrite of a navigation (src/shared/ios-privacy-contract.test.ts runs it against src/shared/privacy.ts)
-LuciumKit/       Swift package: pure logic (state format and file, tab operations, sleep rule, address rules, the privacy rules and their settings). `swift test` runs it on the Mac, with no simulator
+LuciumKit/       Swift package: pure logic (state format and file, tab operations, sleep rule, address rules, the privacy rules and their settings, the lock). `swift test` runs it on the Mac, with no simulator
 Lucium/          the application (SwiftUI, WebKit, Localizable.xcstrings, blocker rules): one web view per awake tab, sleeping tabs, saved state, the privacy rules on every navigation
                  (PrivacyNavigation.swift) and their settings sheet (PrivacyScreen.swift); Info.plist holds the one key a build setting cannot (App Transport Security for web content)
 Lucium/FilterLists/   the filter lists converted for WebKit, and their registry: generated, not committed (see below)
@@ -19,6 +19,10 @@ LuciumTests/     XCTest bundle hosted by the application (runs on a simulator); 
 ## The filter lists of the blocker
 
 The blocker carries the lists of the Mac (EasyList, EasyPrivacy, uBlock filters…), converted to WebKit's content rules and embedded: nothing is downloaded on the phone, and they change with the application only. They are other people's work and are not committed: `node scripts/ios-filter-lists.mjs` fetches them from their public addresses, converts them (`scripts/ios-filter-lists/`), and writes `Lucium/FilterLists/` with a registry of where each comes from, which the application shows on its licenses screen. Without that folder the application runs with a short built-in list; a build that is handed out needs it. `node scripts/ios-filter-lists.mjs --from DIR` reads `DIR/<id>.txt` instead of fetching. With the folder present, `scripts/ios-check.sh` also compiles every list with WebKit. Details: [docs/ios.md](../docs/ios.md), section 6.3 (in French).
+
+## The lock
+
+Spaces and the application can be locked with Face ID, Touch ID or the passcode of the device (`LocalAuthentication`; Lucium keeps no secret of its own). It locks the interface, not the disk: a locked space has no tab on screen and its pages are asleep, the application is covered at launch and every time it is left, and a window above everything hides the screen from the system's picture for the app switcher. Turning a lock on or off asks the owner, a refusal or a change that cannot be saved changes nothing, and a device with no passcode cannot use the lock. The choices are in `lock.json` next to the state, never in `state.json`. The rules and the controller are in `LuciumKit` (`LockSettings.swift`, `LockController.swift`) and are proved there with an owner that agrees and one that refuses; details in [docs/ios.md](../docs/ios.md), section 4.5 (in French).
 
 ## Check it
 

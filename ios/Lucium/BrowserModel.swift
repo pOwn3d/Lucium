@@ -17,6 +17,9 @@ final class BrowserModel {
     private(set) var state: BrowserState
     private let styles: [String: SpaceStyle]
 
+    /// What is locked (`BrowserModel+Lock.swift`). Nil in a model with no lock (most tests): nothing is covered then.
+    var lock: LockController?
+
     var tabsSheetShown = false
     var addressText = ""
     private(set) var host = ""
@@ -91,8 +94,9 @@ final class BrowserModel {
 
     var spaces: [Space] { state.spaces }
     var activeSpace: Space { state.spaces.first { $0.id == state.activeSpaceId } ?? state.spaces[0] }
-    var activeTabs: [TabItem] { state.tabs(in: state.activeSpaceId) }
-    var activeTab: TabItem? { state.activeTab(in: state.activeSpaceId) }
+    /// A space that is locked has no tab to show: whatever reads these (the screen, the list of tabs, the wake-up) finds nothing, which is the guard.
+    var activeTabs: [TabItem] { activeSpaceCovered ? [] : state.tabs(in: state.activeSpaceId) }
+    var activeTab: TabItem? { activeSpaceCovered ? nil : state.activeTab(in: state.activeSpaceId) }
     func style(of space: Space) -> SpaceStyle { styles[space.id] ?? SpaceStyle(symbol: "square", tint: .gray) }
 
     /// The view of the tab on screen. It exists once the model is ready; asking for it wakes the tab if it was asleep.
@@ -159,12 +163,13 @@ final class BrowserModel {
         state.selectSpace(id)
         ensureActiveTab()
         arrive()
+        if activeSpaceCovered { requestUnlock() }  // the person chose a locked space: the owner is asked at once
     }
 
     /// Shows a tab of the active space, waking it if it slept.
     func openTab(_ tab: TabItem) {
         tabsSheetShown = false
-        guard tab.id != activeTab?.id else { return }
+        guard !activeSpaceCovered, tab.id != activeTab?.id else { return }
         leaveActiveTab()
         state.show(tabId: tab.id, now: clock())
         arrive()
@@ -173,7 +178,7 @@ final class BrowserModel {
     /// A new blank tab in the active space, unless the one on screen is blank already.
     func newTab() {
         tabsSheetShown = false
-        if activeTab?.isBlank == true { return }
+        if activeSpaceCovered || activeTab?.isBlank == true { return }
         leaveActiveTab()
         openBlankTab()
         arrive()
@@ -238,7 +243,7 @@ final class BrowserModel {
         if tabId == activeTab?.id { syncFrom(view) }
     }
 
-    private func syncFrom(_ view: WKWebView?) {
+    func syncFrom(_ view: WKWebView?) {
         canGoBack = view?.canGoBack ?? false
         canGoForward = view?.canGoForward ?? false
         isLoading = view?.isLoading ?? false
@@ -317,7 +322,7 @@ extension BrowserModel {
     }
 
     /// The model of the running application: the state file of `directory` is read, and what it cannot read is put aside.
-    static func launch(directory: URL = supportDirectory(), awakeCap: Int = SleepPlanner.defaultCap,
+    static func launch(directory: URL = supportDirectory(), awakeCap: Int = SleepPlanner.defaultCap, lock: LockController? = nil,
                        rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
                        embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
                        store: WKContentRuleListStore = .default()) -> BrowserModel {
@@ -325,8 +330,10 @@ extension BrowserModel {
         let load = file.load()
         var state = defaultState()
         if case .loaded(let loaded) = load { state = loaded }
-        return BrowserModel(state: state, styles: defaultStyles, stateFile: file,
-                            sideStore: TabSideStore(directory: directory.appending(path: TabSideStore.directoryName, directoryHint: .isDirectory)), startup: load,
-                            awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, store: store)
+        let model = BrowserModel(state: state, styles: defaultStyles, stateFile: file,
+                                 sideStore: TabSideStore(directory: directory.appending(path: TabSideStore.directoryName, directoryHint: .isDirectory)), startup: load,
+                                 awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, store: store)
+        if let lock { model.attach(lock) }
+        return model
     }
 }

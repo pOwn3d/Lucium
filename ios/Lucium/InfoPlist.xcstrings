@@ -1,0 +1,22 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSFaceIDUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium uses Face ID to unlock the application and the spaces you chose to lock. Nothing is sent anywhere."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium utilise Face ID pour déverrouiller l'application et les espaces que vous avez choisi de verrouiller. Rien n'est envoyé nulle part."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}
