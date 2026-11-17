@@ -128,13 +128,17 @@ export async function smokeTranslate(ctx: SmokeContext, check: Check): Promise<v
     check('translate: and the panel does not open', browser.currentPanel() !== 'translate')
     check('translate: and the main process answers nothing to its channel', (await ask<TranslateView | null>({ action: 'refresh' })) === null)
 
-    patch({ translateLocal: true })
-    check('translate: switched on, the File menu gets the entry', await waitFor(() => fileMenu().includes('Traduire cette page…')), fileMenu().join('|'))
-
+    // The entry of the File menu is « Traduire cette page… » only while the page on screen is not offered a translation: on a web page in another language than the
+    // target it reads « Traduire en <langue> », done at once (web-tools-menu.ts). The tab on screen is whatever an earlier suite of the chain left: `search2` leaves the
+    // page of a search engine, in the language the system asks it in (English on a machine in English: « Traduire en français »). So the page of this test, in French
+    // like the interface, is put on screen first, and the entry is the same on every machine.
     browser.dispatch({ type: 'tab/open', url: `${base}/page` })
     const id = state().tabs.at(-1)!.id
     mine.push(id)
     await waitFor(() => state().tabs.find((t) => t.id === id)?.title === 'Page de test' && browser.snapshot().runtime.tabs[id]?.loading === false)
+
+    patch({ translateLocal: true })
+    check('translate: switched on, the File menu gets the entry', await waitFor(() => fileMenu().includes('Traduire cette page…')), fileMenu().join('|'))
     await sleep(500)
     const inPage = <T>(js: string) => wcOf(id)!.executeJavaScript(js) as Promise<T>
     const original = await inPage<string>(`document.body.innerText`)

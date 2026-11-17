@@ -7556,10 +7556,6 @@
           "ok": true
         },
         {
-          "name": "little: it grew toward the left and the bottom: same top, same right edge, larger, and now resizable",
-          "ok": true
-        },
-        {
           "name": "little: then the header shows, with the page below it",
           "ok": true
         },
