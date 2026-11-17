@@ -458,6 +458,14 @@ Rien à corriger aujourd'hui ; ces points sont écrits pour qu'une modification 
 - **Fin** : « Revenir à l'onglet » rend la page telle qu'elle était, ramène la vue dans sa fenêtre et y montre l'onglet, sélectionné, fenêtre au premier plan ; le bouton de fermeture et ⌘W font de même en mettant la vidéo en pause et sans passer la fenêtre devant. La rangée de l'onglet porte une marque tant qu'il flotte (un clic sur la marque ou le choix de l'onglet ramènent la fenêtre flottante devant, sans le focus) et la place de sa page le dit, avec « Ramener la vidéo ici » (`TabRuntime.floating`).
 - **Veille** : un onglet dont la page est dans la fenêtre flottante n'est jamais mis en veille ni gelé, même à la main (`SleepFacts.floating`, lu dans l'état du processus principal : la page, elle, ne sait pas qu'elle flotte).
 
+## Fenêtres au niveau `floating`
+
+Trois fenêtres de Lucium sont au niveau `floating` (`setAlwaysOnTop(true, 'floating')`, NSFloatingWindowLevel) : au-dessus des fenêtres normales de toutes les applications, sous la barre des menus, le Dock et les alertes du système. Elles gardent leur ordre entre elles.
+
+- L'image dans l'image de Lucium (`src/main/shell/floating-video.ts`).
+- La mini-fenêtre (`src/main/shell/little.ts`, `LittleArc.create`), qui s'ouvre centrée sur l'écran d'où vient le lien.
+- La barre d'annotation (`src/main/shell/page-annotate.ts`). Le calque qui montre où elle se pose pendant un glissement (`src/main/shell/annotate-bar-ghost.ts`) est aussi au même niveau.
+
 ## Licence
 
 Lucium est publié sous **GPL-3.0-or-later** (fichier `LICENSE`). Les dépendances sont sous des licences permissives ou à copyleft faible compatibles avec la GPL-3.0-or-later : surtout MIT (dont `electron-chrome-extensions` 4.10), plus MPL-2.0 (`@ghostery/adblocker` et ses dépendances) et Apache-2.0 (`@mozilla/readability`) ; le détail, avec l'obligation d'attribution de chacune, est dans `docs/licences-tierces.md`. Aucun asset, texte ou code propriétaire d'un autre navigateur n'est repris.

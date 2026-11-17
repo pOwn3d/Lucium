@@ -1,12 +1,13 @@
 import { copyableUrl } from '@shared/copy-url'
-import { BrowserWindow, clipboard, dialog, ipcMain, screen, type WebContents, type WebContentsView } from 'electron'
+import { BrowserWindow, clipboard, dialog, ipcMain, type WebContents, type WebContentsView } from 'electron'
 import { Channel, LITTLE_HEADER_HEIGHT, LITTLE_STRIP_HEIGHT, type LittleCommand, type LittleState } from '@shared/ipc'
-import { littleArcExpired } from '@shared/little'
-import { littleExpandedBounds, littleKeyCommand, type KeyInput } from '@shared/little-bar'
+import { littleArcExpired, type LittleOrigin } from '@shared/little'
+import { littleBarBounds, littleExpandedBounds, littleKeyCommand, type KeyInput } from '@shared/little-bar'
 import { devToolsRequestForKey, type DevToolsRequest } from '@shared/devtools-request'
 import { runDevTools } from './devtools-command'
 import { gotoTabTarget, openInTarget } from '@shared/little-picker'
-import { littleWindowBounds } from '@shared/little-window'
+import { littleCenteredBounds, littleWindowSize } from '@shared/little-window'
+import type { Rect } from '@shared/peek'
 import { trayBounds, trayRows, withDownload } from '@shared/little-tray'
 import { LITTLE_BUBBLE, bubbleAfter, bubbleDownload, bubbleExtra } from '@shared/little-bubble'
 import { activeProfileId, profileSearch } from '@shared/profiles'
@@ -58,8 +59,13 @@ export interface LittleDeps {
   windows: Map<string, BrowserWindow>
   /** Webcontents allowed to call the privileged IPC. */
   trusted: Set<number>
-  /** Creates the BrowserWindow for a mini window (preload, frame style) and loads its UI; `bar` is the first state, the command bar alone. */
-  createWindow: (id: string, bar: boolean) => BrowserWindow
+  /**
+   * The work area (the screen without the menu bar and the Dock) of the screen a new mini window opens on: the one `near` (the bounds of the
+   * window the link comes from) is on, else the one of the pointer.
+   */
+  workArea: (near?: Rect) => Rect
+  /** Creates the BrowserWindow for a mini window (preload, frame style) and loads its UI, at `bounds`; `bar` is the first state, the command bar alone. */
+  createWindow: (id: string, bar: boolean, bounds: Rect) => BrowserWindow
   /** Creates the view of the space picker (the same UI, loaded with `picker=1`); main places and shows it. */
   createPicker: (id: string) => WebContentsView
   /** Creates the view of the downloads tray (the same UI, loaded with `tray=1`); main places and shows it. */
@@ -197,29 +203,42 @@ export class LittleArc {
    * A window that shows a page right away (links of other apps, extension popups). While the application is locked none opens, and the id
    * given back is '' (no window has it): the lock closes these windows when it starts, and a popup an extension asks for afterwards
    * (`chrome.windows.create`) must not bring a live page of the profile over the lock screen. The links of other applications wait for the
-   * unlock on their own (`deferredLinks`).
+   * unlock on their own (`deferredLinks`). `from` is where the window the link comes from sits: the new window opens in the middle of its screen.
    */
-  open(url: string, profileId?: string, spaceId?: string): string {
+  open(url: string, profileId?: string, spaceId?: string, from?: Rect): string {
     if (appLocked()) {
       console.warn('[little] refused to open a window while the application is locked')
       return ''
     }
-    const little = this.create(false)
+    const little = this.create(false, from)
     if (spaceId !== undefined && this.deps.store.get().spaces.some((space) => space.id === spaceId)) little.spaceId = spaceId
     this.startPage(little, url, profileId)
     return little.id
   }
 
-  /** "New Mini Window" (File menu): the first state of the mini window, the command bar alone. The page comes when an address is chosen. None while locked (''). */
-  openBar(): string {
-    if (appLocked()) return ''
-    return this.create(true).id
+  /**
+   * A link a window of the browser asks to open here (a click, the command bar, a menu): only a web address opens. The window opens in the space and on the
+   * screen of the window it comes from (`LittleOrigin`).
+   */
+  openLink(url: string, origin?: LittleOrigin): void {
+    if (isNavigableUrl(url)) this.open(url, undefined, origin?.spaceId, origin?.from)
   }
 
-  private create(bar: boolean): LittleWindow {
+  /** "New Mini Window" (File menu): the first state of the mini window, the command bar alone. The page comes when an address is chosen. None while locked (''). */
+  openBar(from?: Rect): string {
+    if (appLocked()) return ''
+    return this.create(true, from).id
+  }
+
+  private create(bar: boolean, from?: Rect): LittleWindow {
     const id = `little-${++this.counter}`
     const state = this.deps.store.get()
-    const win = this.deps.createWindow(id, bar)
+    const workArea = this.deps.workArea(from)
+    const win = this.deps.createWindow(id, bar, bar ? littleBarBounds(workArea) : littleCenteredBounds(workArea))
+    // Above the windows of the other applications: 'floating' is the level of a palette (NSFloatingWindowLevel), over every normal window and under the menu
+    // bar, the Dock and the dialogs of the system, which 'screen-saver' or 'pop-up-menu' would cover. The other floating windows of Lucium (picture in picture, the
+    // annotation bar) are at the same level, so they keep their order among themselves.
+    win.setAlwaysOnTop(true, 'floating')
     // The traffic lights belong to the header; the first state has a close button of its own.
     if (bar) currentPlatform().setWindowButtonVisibility(win, false)
     this.deps.windows.set(id, win)
@@ -346,12 +365,12 @@ export class LittleArc {
     this.expand(little)
   }
 
-  /** The first state becomes the page window: top and right edge stay, the window grows to the size a page opens in. */
+  /** The first state becomes the page window: it grows around its centre to the size a page opens in. */
   private expand(little: LittleWindow): void {
     const { win } = little
     if (win.isDestroyed()) return
-    const area = screen.getDisplayMatching(win.getBounds()).workArea
-    const size = littleWindowBounds(area)
+    const area = this.deps.workArea(win.getBounds())
+    const size = littleWindowSize(area)
     win.setResizable(true)
     win.setMinimumSize(480, 360)
     win.setBounds(littleExpandedBounds(win.getBounds(), size, area))

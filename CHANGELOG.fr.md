@@ -10,6 +10,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 - **Ouvrir avec** : « Ouvrir avec » du Finder propose Lucium pour les documents PDF et les images (PNG, JPEG, GIF, WebP, SVG), jamais comme application par défaut.
 - **Icônes de dossier** : « Changer l’icône… » dans le menu d’un dossier lui met un emoji à la place du dessin, avec le sélecteur des espaces, pour un dossier créé à la main comme pour un dossier en direct. « Retirer l’icône » rend le dessin ; sans emoji, rien ne change.
 
+### Changements
+
+- **Mini-fenêtre centrée et au premier plan** : une mini-fenêtre s’ouvre au milieu de l’écran d’où vient le lien (celui du pointeur pour un lien d’une autre application) et reste au-dessus des autres fenêtres. « Nouvelle mini-fenêtre » s’ouvre là aussi. Elle ne passe pas encore au-dessus d’une application en plein écran.
+
 ### Corrections
 
 - **Icônes de site** : un fichier d’icône piégé, un kilooctet de commentaires à la suite, pouvait figer Lucium : la vérification qui distingue une icône vectorielle d’une page d’erreur prenait un temps exponentiel. Elle lit maintenant le début du fichier en temps linéaire.

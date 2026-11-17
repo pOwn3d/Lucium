@@ -223,6 +223,18 @@ export async function smokeLittleArc(ctx: SmokeContext, check: Check): Promise<v
     check('delay: the archiving gate runs while there is a delay', runningGates().includes('little-archive'))
     const forgotten = little.open(`${base}/t?id=forgotten`)
     check('delay: a window of a web page opens', await waitFor(() => stateOf(forgotten)?.url === `${base}/t?id=forgotten`))
+    // Where it opened: the middle of the work area of its screen, and above the other windows (the level of a palette). Written, not run by the person who wrote it
+    // (opening a window needs the owner of the machine, AGENTS.md §1): the cut of the layout is shared/little-window.test.ts.
+    const forgottenWindow = ElectronWindow.getAllWindows().find((w) => new RegExp(`[?&]id=${forgotten}(&|$)`).test(w.webContents.getURL()))
+    if (forgottenWindow) {
+      const at = forgottenWindow.getBounds()
+      const area = screen.getDisplayMatching(at).workArea
+      const off = { x: Math.abs(at.x + at.width / 2 - (area.x + area.width / 2)), y: Math.abs(at.y + at.height / 2 - (area.y + area.height / 2)) }
+      check('position: a window of a page opens in the middle of the work area of its screen', off.x <= 2 && off.y <= 2, JSON.stringify({ at, area }))
+      check('position: ...and stays above the other windows', forgottenWindow.isAlwaysOnTop())
+    } else {
+      check('position: the window of the page is found', false)
+    }
     check('delay: it is not closed before the delay (30 minutes of 1 hour)', little.sweep(Date.now() + 30 * 60_000) === 0 && little.count() === 1)
     const archived = state().archive.length
     check('delay: it is closed once the delay is over (2 hours of 1 hour)', little.sweep(Date.now() + 2 * 3_600_000) === 1 && (await waitFor(() => little.count() === 0)))

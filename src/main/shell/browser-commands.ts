@@ -457,7 +457,7 @@ export abstract class BrowserCommands extends BrowserOverlay {
   }
 
   openLittle(url: string): void {
-    if (/^https?:\/\//i.test(url)) this.littleOpener?.(url)
+    if (/^https?:\/\//i.test(url)) this.littleOpener?.(url, { from: this.windowBounds() })
   }
 
   /** The page history of the current tab on one side of the current page, nearest first: what the back or forward long press lists. */

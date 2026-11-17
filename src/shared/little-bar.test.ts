@@ -5,18 +5,19 @@ const key = (k: string, mods: Partial<KeyInput> = {}): KeyInput => ({ key: k, me
 const area = { x: 0, y: 25, width: 1680, height: 960 }
 
 describe('littleBarBounds', () => {
-  it('is 490 x 329, 20 px from the top and right edges of the work area', () => {
-    expect(littleBarBounds(area)).toEqual({ x: 1680 - 490 - 20, y: 45, width: LITTLE_BAR.width, height: LITTLE_BAR.height })
+  it('is 490 x 329, in the middle of the work area', () => {
+    expect(littleBarBounds(area)).toEqual({ x: 595, y: 341, width: LITTLE_BAR.width, height: LITTLE_BAR.height })
   })
 })
 
 describe('littleExpandedBounds', () => {
-  it('keeps the top and the right edge and grows toward the left and the bottom', () => {
+  it('grows around its centre: a bar in the middle of the screen becomes a window in the middle of the screen', () => {
     const bar = littleBarBounds(area)
     const next = littleExpandedBounds(bar, { width: 900, height: 650 }, area)
-    expect(next.x + next.width).toBe(bar.x + bar.width)
-    expect(next.y).toBe(bar.y)
-    expect(next).toMatchObject({ width: 900, height: 650 })
+    expect(next).toEqual({ x: 390, y: 181, width: 900, height: 650 })
+    expect(next.x + next.width / 2).toBe(bar.x + bar.width / 2)
+    // Within a pixel: the half pixels of an odd height are rounded.
+    expect(Math.abs(next.y + next.height / 2 - (bar.y + bar.height / 2))).toBeLessThanOrEqual(1)
   })
 
   it('stays inside the work area when the window was left near an edge', () => {

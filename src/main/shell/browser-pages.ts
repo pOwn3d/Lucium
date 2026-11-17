@@ -192,7 +192,7 @@ export abstract class BrowserPages extends BrowserTools {
           isOwnSite
         )
         // The window is made with the profile of this tab's space, and archived there: not the space another window happens to show.
-        if (where === 'little') this.littleOpener?.(url, { spaceId: (current ?? tab).spaceId })
+        if (where === 'little') this.littleOpener?.(url, { spaceId: (current ?? tab).spaceId, from: this.windowBounds() })
         else if (where === 'peek') this.openPeek(url, tab.id)
         else this.openTabFromPage(tab, url, disposition, byPage)
       },

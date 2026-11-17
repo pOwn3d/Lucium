@@ -19,6 +19,7 @@ function fakeWindow() {
     contentView: { addChildView: vi.fn(), removeChildView: vi.fn() },
     setWindowButtonVisibility: vi.fn(),
     show: vi.fn(),
+    setAlwaysOnTop: vi.fn(),
     getContentBounds: () => ({ x: 0, y: 0, width: 900, height: 650 }),
     isDestroyed: () => win.destroyed,
     close: () => {
@@ -65,6 +66,7 @@ describe('mini window', () => {
       history: { of: () => ({ record: vi.fn(), retitle: vi.fn() }) } as never,
       windows: new Map() as never,
       trusted: new Set<number>(),
+      workArea: () => ({ x: 0, y: 25, width: 1680, height: 960 }),
       createWindow: () => {
         const win = fakeWindow()
         wins.push(win)

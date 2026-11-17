@@ -86,7 +86,7 @@ export abstract class BrowserOverlay extends BrowserSite {
   openOverlay(request: OverlayRequest): void {
     this.tooltipWindow.hide()
     // "New Mini Window" asks for the bar in `little` mode: it shows in a window of its own, not over this one.
-    if (request.panel === 'commandbar' && request.mode === 'little' && this.littleBarOpener) return this.littleBarOpener()
+    if (request.panel === 'commandbar' && request.mode === 'little' && this.littleBarOpener) return this.littleBarOpener(this.windowBounds())
     // The editor asking to leave the Eraser mode: the page's picker ends first, and `startZap` reopens the editor once the picks are saved.
     if (this.zapping && request.panel === 'boost' && !request.zap) return this.endZap()
     if (this.isPrivate() && !canOpenInPrivate(request.panel)) return
@@ -273,7 +273,7 @@ export abstract class BrowserOverlay extends BrowserSite {
     // The page of a private tab asked for in another place (⌘↩ on its line, a mini window, a split view): it stays private. An ordinary tab or a
     // mini window would write its address in the saved state and the history.
     const privately = knownOnlyPrivately(this.store.get(), resolved.url)
-    if (mode === 'little' && !privately) return this.littleOpener?.(resolved.url, { spaceId: this.store.get().activeSpaceId })
+    if (mode === 'little' && !privately) return this.littleOpener?.(resolved.url, { spaceId: this.store.get().activeSpaceId, from: this.windowBounds() })
     if (mode === 'current' && page) return page.loadURL(resolved.url)
     const beside = mode === 'split' ? activeTab(this.store.get()) : undefined
     const before = this.store.get()
