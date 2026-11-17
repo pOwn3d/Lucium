@@ -16,6 +16,8 @@ type Check = (name: string, ok: boolean, detail?: string) => void
 
 const waitFor = waiterOf(10_000, 80)
 
+const escapeHtml = (text: string): string => text.replace(/[&<>"']/g, (char) => `&#${char.charCodeAt(0)};`)
+
 export async function smokeDroppedLinks({ browser, store, win }: SmokeContext, check: Check): Promise<void> {
   const ui = win.webContents
   const state = () => store.get()
@@ -23,7 +25,8 @@ export async function smokeDroppedLinks({ browser, store, win }: SmokeContext, c
     res.setHeader('cache-control', 'no-store')
     res.setHeader('connection', 'close')
     res.setHeader('content-type', 'text/html; charset=utf-8')
-    res.end(`<!doctype html><title>${decodeURIComponent((req.url ?? '/').slice(1))}</title><p>dropped link</p>`)
+    // The title is the path of the request, written as text: the page it makes is never one that runs what the address holds.
+    res.end(`<!doctype html><title>${escapeHtml(decodeURIComponent((req.url ?? '/').slice(1)))}</title><p>dropped link</p>`)
   })
   await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve))
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`

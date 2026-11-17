@@ -12,7 +12,7 @@ describe('droppedLinkUrl', () => {
   it('gives the address of a web link, written again by the parser', () => {
     expect(droppedLinkUrl('https://example.com/page?q=1#top')).toBe('https://example.com/page?q=1#top')
     expect(droppedLinkUrl('http://localhost:3000')).toBe('http://localhost:3000/')
-    expect(droppedLinkUrl('HTTPS://Example.COM/A b'.replace(' ', '%20'))).toBe('https://example.com/A%20b')
+    expect(droppedLinkUrl('HTTPS://Example.COM/A%20b')).toBe('https://example.com/A%20b')
   })
 
   it('asks the check of the address of the bar, and opens nothing that it refuses', () => {
