@@ -232,7 +232,8 @@ describe('the real effects of the records', () => {
     expect(deps.exists(file)).toBe(false)
     expect(deps.git(['rev-parse', '--is-inside-work-tree'])).toMatchObject({ status: 0, stdout: 'true\n' })
     expect(deps.git(['no-such-command']).status).not.toBe(0)
-  })
+    // Two real Git processes in a row: a second on a quiet Mac, several on a Windows runner (a process there costs far more to start).
+  }, 30_000)
 })
 
 // Each test starts the script, a Node of its own that asks Git, two to four times: more than a second on a quiet machine, several times that when every core is taken.
