@@ -385,6 +385,294 @@
         }
       }
     },
+    "privacy.fallback %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ doesn’t answer over HTTPS: the page opens over HTTP, without encryption."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ ne répond pas en HTTPS : la page s’ouvre en HTTP, sans chiffrement."
+          }
+        }
+      }
+    },
+    "privacy.gpc": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask sites not to track me (GPC signal)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Demander aux sites de ne pas me suivre (signal GPC)"
+          }
+        }
+      }
+    },
+    "privacy.gpc-help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sends the Global Privacy Control signal with every page you open, and lets the page read it. The requests a page makes by itself (images, scripts, frames) carry no header: iOS gives no way to add one."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envoie le signal Global Privacy Control avec chaque page que vous ouvrez, et le laisse lire à la page. Les requêtes qu’une page fait d’elle-même (images, scripts, cadres) ne portent aucun en-tête : iOS ne permet pas d’en ajouter."
+          }
+        }
+      }
+    },
+    "privacy.https": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPS first"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HTTPS d’abord"
+          }
+        }
+      }
+    },
+    "privacy.https-help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An http:// address is opened as https://. If the site does not answer over HTTPS (refused, or silent for 5 seconds), the page opens over HTTP and a notice says so. An invalid certificate never opens the HTTP version by itself."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une adresse http:// s’ouvre en https://. Si le site ne répond pas en HTTPS (refus, ou silence pendant 5 secondes), la page s’ouvre en HTTP et un avis le dit. Un certificat non valide n’ouvre jamais la version HTTP de lui-même."
+          }
+        }
+      }
+    },
+    "privacy.level.custom": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your settings match none of the levels: they stay as you chose them."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vos réglages ne correspondent à aucun niveau : ils restent tels que vous les avez choisis."
+          }
+        }
+      }
+    },
+    "privacy.level.enhanced": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Enhanced"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Renforcée"
+          }
+        }
+      }
+    },
+    "privacy.level.enhanced-effect": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tracking parameters come off the addresses you open, and the “do not track me” signal is sent."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les paramètres de suivi sont retirés des adresses que vous ouvrez, et le signal « ne pas me suivre » est envoyé."
+          }
+        }
+      }
+    },
+    "privacy.level.standard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Normal"
+          }
+        }
+      }
+    },
+    "privacy.level.standard-effect": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Addresses stay as they are and no signal is sent."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les adresses restent telles quelles et aucun signal n’est envoyé."
+          }
+        }
+      }
+    },
+    "privacy.level.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Protection level"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Niveau de protection"
+          }
+        }
+      }
+    },
+    "privacy.refused.back": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retour"
+          }
+        }
+      }
+    },
+    "privacy.refused.http": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open over HTTP (not secure)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir en HTTP (non sécurisé)"
+          }
+        }
+      }
+    },
+    "privacy.refused.message %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The security certificate of %@ is not valid, so the page did not open. Lucium never opens the HTTP version of a site by itself in that case."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le certificat de sécurité de %@ n’est pas valide : la page ne s’est pas ouverte. Lucium n’ouvre jamais de lui-même la version HTTP d’un site dans ce cas."
+          }
+        }
+      }
+    },
+    "privacy.refused.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your connection isn’t private"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre connexion n’est pas privée"
+          }
+        }
+      }
+    },
+    "privacy.strip": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove tracking parameters from addresses"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer les paramètres de suivi des adresses"
+          }
+        }
+      }
+    },
+    "privacy.strip-help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Removes a fixed list of parameters (utm_*, fbclid, gclid…) from the addresses you open. A parameter that picks the page, the language or the item shown is never removed."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retire une liste fixe de paramètres (utm_*, fbclid, gclid…) des adresses que vous ouvrez. Un paramètre qui choisit la page, la langue ou l’élément affiché n’est jamais retiré."
+          }
+        }
+      }
+    },
+    "privacy.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vie privée"
+          }
+        }
+      }
+    },
     "space.home": {
       "localizations": {
         "en": {
@@ -621,6 +909,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nouvel onglet"
+          }
+        }
+      }
+    },
+    "tabs.privacy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vie privée"
           }
         }
       }

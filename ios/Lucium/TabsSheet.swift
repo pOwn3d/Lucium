@@ -19,11 +19,13 @@ struct TabsSheet: View {
             .navigationTitle(model.activeSpace.name)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) { Button("tabs.privacy") { model.privacyPrompts.settingsShown = true } }
                 ToolbarItem(placement: .confirmationAction) { Button("tabs.done") { model.tabsSheetShown = false } }
                 ToolbarItem(placement: .cancellationAction) { Button("tabs.licenses") { licensesShown = true } }
                 ToolbarItem(placement: .bottomBar) { Button("tabs.new") { model.newTab() } }
             }
         }
+        .sheet(isPresented: $model.privacyPrompts.settingsShown) { PrivacySheet(model: model) }
         .presentationDetents([.medium, .large])
         .sheet(isPresented: $licensesShown) { LicensesSheet() }
     }

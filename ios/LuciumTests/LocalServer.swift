@@ -9,23 +9,35 @@ final class LocalServer: @unchecked Sendable {
         let body: String
         /// A route that takes the request and never answers: a page that is loading for as long as the test needs.
         static let hang = Route(contentType: "hang", body: "")
+        /// A route that answers with a redirect to `location`.
+        static func redirect(_ location: String) -> Route { Route(contentType: "redirect", body: location) }
+    }
+
+    /// What the server was asked: the path, and the headers of the request (names in lower case).
+    struct Request: Equatable {
+        let path: String
+        let headers: [String: String]
     }
 
     private let listener: NWListener
     private let routes: [String: Route]
     private let lock = NSLock()
-    private var asked: [String] = []
+    private var asked: [Request] = []
+    /// A server that accepts every connection and never answers: a site that is silent over TLS.
+    private let silent: Bool
     private var hung: [NWConnection] = []
     private let queue = DispatchQueue(label: "app.lucium.tests.local-server")
 
-    init(routes: [String: Route]) throws {
+    init(routes: [String: Route], silent: Bool = false) throws {
+        self.silent = silent
         let parameters = NWParameters.tcp
         parameters.requiredInterfaceType = .loopback
         listener = try NWListener(using: parameters)
         self.routes = routes
     }
 
-    var requestedPaths: [String] { lock.withLock { asked } }
+    var requests: [Request] { lock.withLock { asked } }
+    var requestedPaths: [String] { requests.map(\.path) }
 
     /// Starts listening and returns the port.
     func start() async throws -> UInt16 {
@@ -53,13 +65,29 @@ final class LocalServer: @unchecked Sendable {
     private func serve(_ connection: NWConnection) {
         connection.start(queue: queue)
         connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { [weak self] data, _, _, _ in
-            guard let self, let data, let text = String(data: data, encoding: .utf8) else { connection.cancel(); return }
-            // "GET /path HTTP/1.1": the second word of the first line.
-            let path = text.split(separator: " ", maxSplits: 2).dropFirst().first.map(String.init) ?? ""
-            self.lock.withLock { self.asked.append(path) }
+            guard let self, let data else { connection.cancel(); return }
+            // Not text (the first bytes of a TLS handshake, say): a silent server keeps the connection and says nothing, the others hang up.
+            guard let text = String(data: data, encoding: .utf8) else {
+                if self.silent { self.lock.withLock { self.hung.append(connection) } } else { connection.cancel() }
+                return
+            }
+            // "GET /path HTTP/1.1": the second word of the first line, then the headers up to the blank line.
+            let lines = text.components(separatedBy: "\r\n")
+            let path = lines.first?.split(separator: " ", maxSplits: 2).dropFirst().first.map(String.init) ?? ""
+            var headers: [String: String] = [:]
+            for line in lines.dropFirst().prefix(while: { !$0.isEmpty }) {
+                guard let colon = line.firstIndex(of: ":") else { continue }
+                headers[line[..<colon].lowercased()] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
+            }
+            self.lock.withLock { self.asked.append(Request(path: path, headers: headers)) }
             let route = self.routes[path]
-            if route?.contentType == "hang" {
+            if route?.contentType == "hang" || self.silent {
                 self.lock.withLock { self.hung.append(connection) }
+                return
+            }
+            if route?.contentType == "redirect", let route {
+                let head = "HTTP/1.1 302 Found\r\nLocation: \(route.body)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                connection.send(content: Data(head.utf8), completion: .contentProcessed { _ in connection.cancel() })
                 return
             }
             let body = route?.body ?? "not found"

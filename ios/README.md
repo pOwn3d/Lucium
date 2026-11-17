@@ -7,9 +7,11 @@ published** (`AGENTS.md`, section 7). The study and the decisions of the project
 ```
 project.yml      the Xcode project, described for XcodeGen (Lucium.xcodeproj is generated and not committed)
 Contracts/       files shared with the Mac. Address vectors: src/shared/ios-contract.test.ts runs them against the TypeScript, LuciumKit against the Swift.
-                 state-reference.json: a state file written by the Mac's own store (src/main/ios-state-contract.test.ts), which LuciumKit reads, writes back and compares
-LuciumKit/       Swift package: pure logic (state format and file, tab operations, sleep rule, address rules). `swift test` runs it on the Mac, with no simulator
-Lucium/          the application (SwiftUI, WebKit, Localizable.xcstrings, blocker rules): one web view per awake tab, sleeping tabs, saved state
+                 state-reference.json: a state file written by the Mac's own store (src/main/ios-state-contract.test.ts), which LuciumKit reads, writes back and compares.
+                 privacy-vectors.json: tracking parameters, HTTPS first and the one rewrite of a navigation (src/shared/ios-privacy-contract.test.ts runs it against src/shared/privacy.ts)
+LuciumKit/       Swift package: pure logic (state format and file, tab operations, sleep rule, address rules, the privacy rules and their settings). `swift test` runs it on the Mac, with no simulator
+Lucium/          the application (SwiftUI, WebKit, Localizable.xcstrings, blocker rules): one web view per awake tab, sleeping tabs, saved state, the privacy rules on every navigation
+                 (PrivacyNavigation.swift) and their settings sheet (PrivacyScreen.swift); Info.plist holds the one key a build setting cannot (App Transport Security for web content)
 Lucium/FilterLists/   the filter lists converted for WebKit, and their registry: generated, not committed (see below)
 LuciumTests/     XCTest bundle hosted by the application (runs on a simulator); Fixtures/ is the converted proof list
 ```
@@ -38,5 +40,7 @@ On GitHub the same script runs in [`.github/workflows/ios.yml`](../.github/workf
 - No colour is written in the Swift sources: system colours and the asset catalogue (`AGENTS.md`, section 4).
 - No telemetry, no account, no network call of our own, no online service (`AGENTS.md`, section 5).
 - The code here is under GPL-3.0-or-later with the additional permission that lets the maintainer hand it out through the App Store and TestFlight ([ADDITIONAL-PERMISSION-APP-STORE.txt](../ADDITIONAL-PERMISSION-APP-STORE.txt)). Code that other people hold, such as a filter list, keeps its own license, which the application shows.
+- `Lucium/PrivacyInfo.xcprivacy` says what the code does: no tracking, no data collected, and a reason for every API of Apple's "required reason" list that the code calls. `src/shared/ios-privacy-manifest.test.ts` reads the Swift sources and the manifest together, so a call to such an API without its declaration (or a declaration nothing calls) fails `pnpm test`.
+- A connection of the application's own gets its line in the iOS table of the README (`Connections of the iOS version`), off by default with its switch, in the same change.
 - Pure logic goes in `LuciumKit`. What the Mac also does is tested by the shared vectors, not by a second opinion.
 - The state format is held by `Contracts/state-reference.json`. When the Mac's format changes on purpose, `pnpm test` refuses the file until it is rewritten (`pnpm exec vitest run src/main/ios-state-contract.test.ts -u`), then `swift test` in `LuciumKit/` says whether the iPhone still reads it: a field the Swift model does not type goes through `rest` and passes.

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The keys Xcode generates (project.yml, INFOPLIST_KEY_*) are merged into this file. Only what a build setting cannot hold is written here. -->
+	<!-- A browser opens the pages the person asks for, and some of them are http: with HTTPS first, an http page is what a site that does not answer
+	     over HTTPS falls back to, and without this key WebKit refuses it on the device (App Transport Security). The key lifts the rule for web
+	     content only: nothing else in the application is allowed a plain connection, and it makes none of its own (docs/ios.md, "Vie privée"). -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+	</dict>
+</dict>
+</plist>
