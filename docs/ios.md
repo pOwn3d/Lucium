@@ -1,6 +1,6 @@
 # Version iOS (iPhone et iPad)
 
-Étude et fondations de la carte LUC-061. **Rien ici n'est publié, signé ni envoyé à Apple.** Ce document dit ce qui est *vérifié* (lu dans la documentation d'Apple, ou essayé dans ce dépôt sur un simulateur iOS), ce qui est *supposé*, et ce qu'il reste à décider. Une phrase « mesuré » renvoie à un essai fait pour cette étude ; une phrase « supposé » n'a été ni lue ni essayée.
+Étude et fondations de la version iOS. **Rien ici n'est publié, signé ni envoyé à Apple.** Ce document dit ce qui est *vérifié* (lu dans la documentation d'Apple, ou essayé dans ce dépôt sur un simulateur iOS), ce qui est *supposé*, et ce qu'il reste à décider. Une phrase « mesuré » renvoie à un essai fait pour cette étude ; une phrase « supposé » n'a été ni lue ni essayée.
 
 ![La maquette de fondation sur un simulateur iPhone : une page, l'adresse, les trois espaces, précédent, suivant, onglets](images/ios-fondation-fr.png)
 
