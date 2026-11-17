@@ -33,7 +33,7 @@ final class EmbeddedListsTests: XCTestCase {
         }
         let first = await lists.compile(in: store)
         XCTAssertTrue(first.failures.isEmpty)
-        XCTAssertEqual(first.lists.map(\.identifier), lists.registry.lists.flatMap(\.files).map(\.storeIdentifier), "in the order of the registry")
+        XCTAssertEqual(first.lists.map { $0.identifier }, lists.registry.lists.flatMap { $0.files }.map { $0.storeIdentifier }, "in the order of the registry")
         XCTAssertEqual(reads, 2)
         XCTAssertTrue(first.lists.allSatisfy { $0.identifier.hasPrefix("app.lucium.list.proof.") })
 
@@ -51,12 +51,12 @@ final class EmbeddedListsTests: XCTestCase {
         // A list that is not ours (another name) is left alone.
         _ = try await ContentBlocker.compile(#"[{ "trigger": { "url-filter": "other" }, "action": { "type": "block" } }]"#, identifier: "someone.else", in: store)
 
-        let outcome = await (try proofLists(reading: realRules)).compile(in: store)
+        let outcome = await (try proofLists { try self.realRules($0) }).compile(in: store)
         XCTAssertTrue(outcome.failures.isEmpty)
         let available = Set(await store.availableIdentifiers() ?? [])
         XCTAssertFalse(available.contains(stale), "a list that the registry no longer names must go")
         XCTAssertTrue(available.contains("someone.else"))
-        XCTAssertTrue(Set(outcome.lists.map(\.identifier)).isSubset(of: available))
+        XCTAssertTrue(Set(outcome.lists.map { $0.identifier }).isSubset(of: available))
     }
 
     func testAListThatDoesNotCompileDoesNotStopTheOthers() async throws {
