@@ -7,6 +7,7 @@ import {
   defaultAcceleratorFor,
   formatAcceleratorFor,
   isAbsolutePath,
+  LINUX_DEFAULTS,
   linksFromArgv,
   NON_MAC_DEFAULTS,
   PLATFORM_FACTS,
@@ -171,6 +172,54 @@ describe('shortcuts', () => {
     })
   }
 
+  // What GNOME 46 binds by default, read in gsettings-desktop-schemas 46.0 (org.gnome.desktop.wm.keybindings, org.gnome.mutter.wayland) and in
+  // the GNOME 46 user help « Useful keyboard shortcuts » / « Keyboard navigation ». Ubuntu 24.04 keeps them. Super shortcuts are left out: no Lucium
+  // accelerator can name Super. The window manager takes these before the application sees them.
+  const GNOME_46_RESERVED: readonly string[] = [
+    // Workspaces: switch (Ctrl+Alt+arrows) and move the window along (with Shift).
+    ...['Left', 'Right', 'Up', 'Down'].flatMap((arrow) => [`Ctrl+Alt+${arrow}`, `Ctrl+Alt+Shift+${arrow}`]),
+    'Ctrl+Alt+Tab', 'Ctrl+Alt+Shift+Tab', 'Ctrl+Alt+Escape', 'Ctrl+Alt+Shift+Escape', 'Ctrl+Alt+Delete', 'Ctrl+Alt+Shift+R',
+    ...Array.from({ length: 12 }, (_, i) => `Ctrl+Alt+F${i + 1}`),
+    'Alt+Tab', 'Alt+Shift+Tab', 'Alt+Escape', 'Alt+Shift+Escape', 'Alt+Space', 'Alt+F2', 'Alt+F4', 'Alt+F5', 'Alt+F6', 'Alt+Shift+F6', 'Alt+F7', 'Alt+F8', 'Alt+F10'
+  ]
+
+  it('gives no default on Linux to a shortcut GNOME 46 reserves, which the application would never receive', () => {
+    const reserved = new Set(GNOME_46_RESERVED.map((accelerator) => canonicalAccelerator(accelerator, 'linux')))
+    const taken = COMMANDS.flatMap((command) => {
+      const accelerator = defaultAcceleratorFor('linux', command.id, command.accelerator)
+      return accelerator && reserved.has(canonicalAccelerator(accelerator, 'linux')) ? [`${command.id} ${accelerator}`] : []
+    })
+    expect(taken).toEqual([])
+  })
+
+  it('has a witness: the macOS defaults of tabs and spaces are the keys GNOME 46 takes', () => {
+    const reserved = new Set(GNOME_46_RESERVED.map((accelerator) => canonicalAccelerator(accelerator, 'linux')))
+    const clashing = ['nextSpace', 'previousSpace', 'nextTab', 'previousTab', 'moveTabUp', 'moveTabDown'].filter((id) => reserved.has(canonicalAccelerator(COMMANDS.find((c) => c.id === id)!.accelerator, 'linux')!))
+    expect(clashing).toEqual(['nextSpace', 'previousSpace', 'nextTab', 'previousTab', 'moveTabUp', 'moveTabDown'])
+  })
+
+  it('moves the tabs with the keys of the other browsers on Linux, and the spaces with Alt and the same keys', () => {
+    expect(effectiveAccelerator('nextTab', undefined, 'linux')).toBe('CmdOrCtrl+PageDown')
+    expect(effectiveAccelerator('previousTab', undefined, 'linux')).toBe('CmdOrCtrl+PageUp')
+    expect(effectiveAccelerator('moveTabDown', undefined, 'linux')).toBe('CmdOrCtrl+Shift+PageDown')
+    expect(effectiveAccelerator('moveTabUp', undefined, 'linux')).toBe('CmdOrCtrl+Shift+PageUp')
+    expect(effectiveAccelerator('nextSpace', undefined, 'linux')).toBe('Alt+PageDown')
+    expect(effectiveAccelerator('previousSpace', undefined, 'linux')).toBe('Alt+PageUp')
+    for (const [id, accelerator] of Object.entries(LINUX_DEFAULTS)) expect(isValidAccelerator(accelerator), `${id} ${accelerator}`).toBe(true)
+  })
+
+  it('leaves the macOS defaults of tabs and spaces alone', () => {
+    expect(effectiveAccelerator('nextTab', undefined, 'darwin')).toBe('CmdOrCtrl+Alt+Down')
+    expect(effectiveAccelerator('previousSpace', undefined, 'darwin')).toBe('CmdOrCtrl+Alt+Left')
+    expect(effectiveAccelerator('moveTabUp', undefined, 'darwin')).toBe('CmdOrCtrl+Alt+Shift+Up')
+    expect(Object.keys(LINUX_DEFAULTS).filter((id) => !COMMANDS.some((c) => c.id === id))).toEqual([])
+  })
+
+  it('lets a choice of the user win over the Linux defaults', () => {
+    expect(effectiveAccelerator('nextTab', { nextTab: 'CmdOrCtrl+Alt+Down' }, 'linux')).toBe('CmdOrCtrl+Alt+Down')
+    expect(effectiveAccelerator('nextTab', { nextTab: '' }, 'linux')).toBeUndefined()
+  })
+
   it('shows the defaults of macOS for what the other systems did not change, and F11 for the full screen', () => {
     expect(effectiveAccelerator('newTab', undefined, 'win32')).toBe('CmdOrCtrl+T')
     expect(effectiveAccelerator('fullscreen', undefined, 'win32')).toBe('F11')
@@ -194,6 +243,10 @@ describe('shortcuts', () => {
     expect(formatAccelerator('CmdOrCtrl+Backspace', 'win32')).toBe('Ctrl+Retour arrière')
     expect(formatAcceleratorFor('Shift+Delete', 'win32')).toBe('Maj+Suppr')
     expect(formatAcceleratorFor('Ctrl+Space', 'linux')).toBe('Ctrl+Espace')
+    expect(formatAcceleratorFor('CmdOrCtrl+PageDown', 'linux')).toBe('Ctrl+Page suiv.')
+    expect(formatAcceleratorFor('CmdOrCtrl+Shift+PageUp', 'linux')).toBe('Ctrl+Maj+Page préc.')
+    expect(formatAcceleratorFor('Alt+PageDown', 'win32')).toBe('Alt+Page suiv.')
+    expect(formatAcceleratorFor('CmdOrCtrl+PageDown', 'darwin')).toBe('⌘⇟')
   })
 
   it('names the keys in words of the language of the interface elsewhere than on macOS', () => {
@@ -202,6 +255,8 @@ describe('shortcuts', () => {
       expect(formatAcceleratorFor('CmdOrCtrl+Shift+J', 'win32')).toBe('Ctrl+Shift+J')
       expect(formatAcceleratorFor('Shift+Delete', 'win32')).toBe('Shift+Del')
       expect(formatAcceleratorFor('Ctrl+Space', 'linux')).toBe('Ctrl+Space')
+      expect(formatAcceleratorFor('CmdOrCtrl+PageDown', 'linux')).toBe('Ctrl+Page Down')
+      expect(formatAcceleratorFor('Alt+PageUp', 'linux')).toBe('Alt+Page Up')
       expect(formatAcceleratorFor('CmdOrCtrl+Shift+J', 'darwin')).toBe('⇧⌘J')
     } finally {
       setLanguage('fr')
@@ -217,6 +272,8 @@ describe('shortcuts', () => {
     expect(acceleratorFromKeyEvent(press({ metaKey: true }), 'win32')).toBeNull()
     expect(acceleratorFromKeyEvent(press({ metaKey: true, ctrlKey: true }), 'linux')).toBeNull()
     expect(acceleratorFromKeyEvent(press({}), 'win32')).toBeNull()
+    expect(acceleratorFromKeyEvent({ ...press({ ctrlKey: true }), code: 'PageDown' }, 'linux')).toBe('CmdOrCtrl+PageDown')
+    expect(acceleratorFromKeyEvent({ ...press({ altKey: true }), code: 'PageUp' }, 'linux')).toBe('Alt+PageUp')
   })
 
   it('flags the Ctrl+Alt shortcuts only where Ctrl+Alt is the AltGr key (Windows)', () => {

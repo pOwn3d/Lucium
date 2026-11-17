@@ -186,7 +186,7 @@ export const COMMANDS: readonly CommandDef[] = [
 export type KeyBindings = Record<string, string>
 
 const MODIFIER = /^(CmdOrCtrl|Cmd|Ctrl|Alt|Shift)$/
-const KEY = /^([A-Z0-9]|F([1-9]|1[0-9]|2[0-4])|Up|Down|Left|Right|Space|Return|Tab|Backspace|Delete|Plus|[,./\[\]\\=\-;'`])$/
+const KEY = /^([A-Z0-9]|F([1-9]|1[0-9]|2[0-4])|Up|Down|Left|Right|PageUp|PageDown|Space|Return|Tab|Backspace|Delete|Plus|[,./\[\]\\=\-;'`])$/
 
 /** An accelerator Electron will accept, with at least one real modifier (Shift alone is not enough) unless it is a function key. */
 export function isValidAccelerator(accelerator: string): boolean {
@@ -267,7 +267,7 @@ export function keyLayoutOf(characters: Readonly<Record<string, string>>): KeyLa
 
 /** The keys that are the same on every layout. */
 const FIXED_KEYS: Record<string, string> = {
-  Space: 'Space', Enter: 'Return', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right'
+  Space: 'Space', Enter: 'Return', Tab: 'Tab', Backspace: 'Backspace', Delete: 'Delete', ArrowUp: 'Up', ArrowDown: 'Down', ArrowLeft: 'Left', ArrowRight: 'Right', PageUp: 'PageUp', PageDown: 'PageDown'
 }
 
 /** The punctuation of a key by its position, as a US keyboard has it: read only when nothing says what the key gives. */

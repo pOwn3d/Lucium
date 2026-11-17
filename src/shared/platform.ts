@@ -200,9 +200,31 @@ export const NON_MAC_DEFAULTS: Readonly<Record<string, string>> = {
   newNote: ''
 }
 
+/**
+ * What the default shortcut of a command becomes on Linux, over `NON_MAC_DEFAULTS`. GNOME (Ubuntu's desktop) binds Ctrl+Alt+arrows to the
+ * workspaces and Ctrl+Alt+Shift+arrows to « move the window to the workspace »: the window manager takes them before the application, so
+ * the six shortcuts that went from tab to tab, from space to space and moved a tab (⌥⌘ and ⌥⇧⌘ arrows on macOS) never arrived (trial of
+ * 17 November 2026, docs/plateformes.md §8). GNOME 46 itself binds Super+Page Up and Super+Page Down for the workspaces, and nothing with Ctrl
+ * and the Page keys, nor with Alt and the Page keys (gsettings-desktop-schemas 46.0; `platform.test.ts` holds the list).
+ *  - Tabs: Ctrl+Page Down / Ctrl+Page Up are the keys every browser has for the next and previous tab. Ctrl+Shift with them moves the tab, as in
+ *    Chrome and Firefox; the tabs are a list down the sidebar, so « down » is the tab after.
+ *  - Spaces: Alt is already what picks a space off macOS (Alt+1…9, above), so Alt+Page Down / Alt+Page Up go to the next and previous one. Not
+ *    Alt+arrows: those are Back and Forward in the browsers.
+ * Windows keeps the macOS shortcuts for these six: its Ctrl+Alt question (the AltGr key) is open, docs/plateformes.md §9.
+ */
+export const LINUX_DEFAULTS: Readonly<Record<string, string>> = {
+  nextTab: 'CmdOrCtrl+PageDown',
+  previousTab: 'CmdOrCtrl+PageUp',
+  moveTabDown: 'CmdOrCtrl+Shift+PageDown',
+  moveTabUp: 'CmdOrCtrl+Shift+PageUp',
+  nextSpace: 'Alt+PageDown',
+  previousSpace: 'Alt+PageUp'
+}
+
 /** The default shortcut of a command on this system, given the macOS one (`standard`, '' for none). */
 export function defaultAcceleratorFor(platform: PlatformId, commandId: string, standard: string): string {
   if (platform === 'darwin') return standard
+  if (platform === 'linux' && Object.hasOwn(LINUX_DEFAULTS, commandId)) return LINUX_DEFAULTS[commandId]!
   return Object.hasOwn(NON_MAC_DEFAULTS, commandId) ? NON_MAC_DEFAULTS[commandId]! : standard
 }
 
@@ -232,11 +254,11 @@ export function formatAcceleratorFor(accelerator: string, platform: PlatformId):
   const arrows: Record<string, string> = { Up: '↑', Down: '↓', Left: '←', Right: '→' }
   if (platform === 'darwin') {
     const symbols = `${has('Ctrl') ? '⌃' : ''}${has('Alt') ? '⌥' : ''}${has('Shift') ? '⇧' : ''}${has('CmdOrCtrl') || has('Cmd') ? '⌘' : ''}`
-    const shown: Record<string, string> = { ...arrows, Return: '↩', Backspace: '⌫', Delete: '⌦', Space: '␣', Tab: '⇥', Plus: '+' }
+    const shown: Record<string, string> = { ...arrows, Return: '↩', Backspace: '⌫', Delete: '⌦', Space: '␣', Tab: '⇥', PageUp: '⇞', PageDown: '⇟', Plus: '+' }
     return symbols + (shown[key] ?? key)
   }
   const words = [has('Ctrl') || has('CmdOrCtrl') ? 'Ctrl' : '', has('Alt') ? 'Alt' : '', has('Shift') ? t('platform.maj') : '']
-  const shown: Record<string, string> = { ...arrows, Return: t('platform.entree'), Backspace: t('platform.retour-arriere'), Delete: t('platform.suppr'), Space: t('platform.espace'), Plus: '+' }
+  const shown: Record<string, string> = { ...arrows, Return: t('platform.entree'), Backspace: t('platform.retour-arriere'), Delete: t('platform.suppr'), Space: t('platform.espace'), PageUp: t('platform.page-prec'), PageDown: t('platform.page-suiv'), Plus: '+' }
   return [...words.filter(Boolean), shown[key] ?? key].join('+')
 }
 

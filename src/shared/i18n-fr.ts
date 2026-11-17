@@ -2968,6 +2968,8 @@ export const fr = {
   'platform.entree': 'Entrée',
   'platform.espace': 'Espace',
   'platform.maj': 'Maj',
+  'platform.page-prec': 'Page préc.',
+  'platform.page-suiv': 'Page suiv.',
   'platform.retour-arriere': 'Retour arrière',
   'platform.suppr': 'Suppr',
   'plus-menu.nouvelle-vue-scindee': 'Nouvelle vue scindée',
