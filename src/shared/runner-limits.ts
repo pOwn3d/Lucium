@@ -1,6 +1,6 @@
 // What a GitHub runner cannot do for the engine checks, and the verdict of a run there. The checks of the suites were written and run on the Mac of the maintainer
-// (a Retina screen, the animations on) and the runner of the Smoke (macOS) workflow is a virtual machine with one screen of 1024 x 768 points at scale 1, which leaves a
-// window about 675 points tall. A suite whose checks cannot hold there is named in compat/runner-limits.json with the reason: the workflow does not run it (LUCIUM_SMOKE_SKIP), and only that workflow reads the file:
+// (a Retina screen, the animations on) and the runner of the Smoke (macOS) workflow is a virtual machine with one screen of 1024 x 768 points at scale 1 (the main window
+// of an engine run may be larger than that screen: smokeWindowOptions, src/main/runtime.ts). A suite whose checks cannot hold there is named in compat/runner-limits.json with the reason: the workflow does not run it (LUCIUM_SMOKE_SKIP), and only that workflow reads the file:
 // `pnpm test:engine` and `pnpm compat:compare` on the Mac read nothing from it, and judge every suite. No Electron, no Node here: the script
 // (scripts/smoke-runner-verdict.mjs, scripts/compat-compare.mjs) and the unit tests both load this file.
 

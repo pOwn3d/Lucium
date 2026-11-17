@@ -136,7 +136,7 @@ describe('.github/workflows/smoke-macos.yml', () => {
     expect(workflow).toMatch(/uses: actions\/upload-artifact@[0-9a-f]{40} # v[\d.]+\n {8}with:\n {10}name: engine-run\n {10}path: out-engine\/\n/)
   })
 
-  // The suites of compat/runner-limits.json cannot pass on a runner (a window about 675 points tall): the workflow does not run them (LUCIUM_SMOKE_SKIP), they are judged
+  // The suites of compat/runner-limits.json cannot pass on a runner (a virtual machine with a screen of 1024 x 768 points): the workflow does not run them (LUCIUM_SMOKE_SKIP), they are judged
   // on the Mac, which reads no list. Any other suite that fails stops this run, and so does a chain that ended badly with no suite to show for it. The comparison with
   // the reference of a Retina Mac is printed and does not decide on a runner.
   it('leaves the suites of the limits of the runner out of the chain, lets the verdict decide, and only prints the comparison', () => {
