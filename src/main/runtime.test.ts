@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 const electron = vi.hoisted(() => ({ app: { isPackaged: false } }))
 vi.mock('electron', () => electron)
 
-const { dropDevelopmentEnv, isBuiltApp, isSmokeRun, isTestEnv, mayReadDevelopmentEnv, readDevelopmentEnv, refusalMessage, refusedSwitches, REFUSED_SWITCHES } = await import('./runtime')
+const { dropDevelopmentEnv, isBuiltApp, isSmokeRun, isTestEnv, mayReadDevelopmentEnv, readDevelopmentEnv, refusalMessage, refusedSwitches, REFUSED_SWITCHES, smokeWindowOptions } = await import('./runtime')
 const { annotateShareEnabled } = await import('@shared/window-share')
 const { readdirSync, readFileSync } = await import('node:fs')
 const { join } = await import('node:path')
@@ -244,5 +244,21 @@ describe('the development variables are read through it', () => {
       .filter((file) => file.endsWith('.ts') && !file.endsWith('.test.ts') && !file.includes('test-support') && !/(^|\/)smoke[^/]*\.ts$/.test(file))
       .filter((file) => /process\.env\[['"]LUCIUM_(EXTENSIONS|DEBUG_APPEARANCE|DEBUG_PANEL|IMPORT_APP_FOLDERS)['"]\]|process\.env\.LUCIUM_(EXTENSIONS|DEBUG_APPEARANCE|DEBUG_PANEL|IMPORT_APP_FOLDERS)\b/.test(readFileSync(join(__dirname, file), 'utf8')))
     expect(readers).toEqual([])
+  })
+})
+
+describe('smokeWindowOptions: only the main window of the engine test may be larger than the screen', () => {
+  it('lets the window of the engine test be larger than the screen (a runner screen is 1024 x 768)', () => {
+    expect(smokeWindowOptions(true)).toEqual({ enableLargerThanScreen: true })
+  })
+
+  it('leaves the window of a person to the rule of macOS, which keeps it inside the screen', () => {
+    expect(smokeWindowOptions(false)).toEqual({})
+  })
+
+  it('is how the main window is made: index.ts names no such option of its own, and takes it from here', () => {
+    const source = readFileSync(join(__dirname, 'index.ts'), 'utf8')
+    expect(source).toContain('...smokeWindowOptions(smoke),')
+    expect(source).not.toContain('enableLargerThanScreen')
   })
 })
