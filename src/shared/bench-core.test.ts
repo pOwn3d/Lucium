@@ -562,6 +562,13 @@ describe('buildReport and renderMarkdown', () => {
     const markdown = renderMarkdown(buildReport(reportInput({ browsers: [{ id: 'chrome', name: 'Chrome | test', version: null, engine: null, mode: 'launched', notes: [] }, browsers[1]!] })))
     expect(markdown).toContain('| Chrome \\| test | inconnue |')
   })
+
+  it('escapes the backslash of a name too, so that it cannot cancel the escape of a bar', () => {
+    const named = (name: string) => renderMarkdown(buildReport(reportInput({ browsers: [{ id: 'chrome', name, version: null, engine: null, mode: 'launched', notes: [] }, browsers[1]!] })))
+    // `a\|b` must read as a backslash then a bar inside the cell, not as one escaped bar behind a lost backslash.
+    expect(named('Chrome \\| test')).toContain('| Chrome \\\\\\| test | inconnue |')
+    expect(named('C:\\Chrome')).toContain('| C:\\\\Chrome | inconnue |')
+  })
 })
 
 describe('redactHome', () => {
