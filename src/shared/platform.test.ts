@@ -18,7 +18,8 @@ import {
   revealLabel,
   settingsLink,
   splitPathList,
-  usesCtrlAlt
+  usesCtrlAlt,
+  WINDOWS_DEFAULTS
 } from './platform'
 import { DISK_ACCESS_SETTINGS_URL } from './import-sources'
 import { parseSysfsCapacity } from './battery-saver'
@@ -244,6 +245,59 @@ describe('shortcuts', () => {
     expect(effectiveAccelerator('previousSpace', undefined, 'darwin')).toBe('CmdOrCtrl+Alt+Left')
     expect(effectiveAccelerator('moveTabUp', undefined, 'darwin')).toBe('CmdOrCtrl+Alt+Shift+Up')
     expect(Object.keys(LINUX_DEFAULTS).filter((id) => !COMMANDS.some((c) => c.id === id))).toEqual([])
+  })
+
+  // The key of an accelerator as a person types it: a letter, a digit or a punctuation mark, which AltGr turns into a character on many layouts.
+  const typesACharacter = (accelerator: string): boolean => /^[A-Za-z0-9;,./=\-[\]`']$/.test(accelerator.split('+').at(-1)!)
+  /** Ctrl+Alt without Shift on a key that types: where Ctrl+Alt is AltGr, the press types a character instead of running the command. */
+  const bareAltGrPress = (accelerator: string): boolean => usesCtrlAlt(accelerator, 'win32') && !canonicalAccelerator(accelerator, 'win32')!.split('+').includes('Shift') && typesACharacter(accelerator)
+
+  it('gives no default on Windows that AltGr would type: Ctrl+Alt with no Shift on a letter or a digit', () => {
+    const typed = COMMANDS.flatMap((command) => {
+      const accelerator = defaultAcceleratorFor('win32', command.id, command.accelerator)
+      return accelerator && bareAltGrPress(accelerator) ? [`${command.id} ${accelerator}`] : []
+    })
+    expect(typed).toEqual([])
+  })
+
+  it('has a witness: the macOS defaults of 9 commands are such a press, which is what Windows replaces', () => {
+    const typed = COMMANDS.filter((command) => command.accelerator && bareAltGrPress(command.accelerator)).map((command) => command.id)
+    expect(typed.sort()).toEqual(['archive', 'captureVisible', 'devTools', 'findReplace', 'inspectElement', 'jsConsole', 'newLittleArc', 'newNote', 'viewSource'].sort())
+  })
+
+  it('adds Shift to the Ctrl+Alt+letter shortcuts on Windows, and leaves macOS and Linux with Ctrl+Alt', () => {
+    expect(effectiveAccelerator('newLittleArc', undefined, 'win32')).toBe('CmdOrCtrl+Alt+Shift+N')
+    expect(effectiveAccelerator('findReplace', undefined, 'win32')).toBe('CmdOrCtrl+Alt+Shift+F')
+    expect(effectiveAccelerator('viewSource', undefined, 'win32')).toBe('CmdOrCtrl+Alt+Shift+U')
+    expect(effectiveAccelerator('devTools', undefined, 'win32')).toBe('CmdOrCtrl+Alt+Shift+I')
+    expect(effectiveAccelerator('jsConsole', undefined, 'win32')).toBe('CmdOrCtrl+Alt+Shift+J')
+    expect(effectiveAccelerator('archive', undefined, 'win32')).toBe('CmdOrCtrl+Alt+Shift+A')
+    for (const platform of ['darwin', 'linux'] as const) {
+      expect(effectiveAccelerator('newLittleArc', undefined, platform), platform).toBe('CmdOrCtrl+Alt+N')
+      expect(effectiveAccelerator('devTools', undefined, platform), platform).toBe('CmdOrCtrl+Alt+I')
+      expect(effectiveAccelerator('archive', undefined, platform), platform).toBe('CmdOrCtrl+Alt+A')
+    }
+  })
+
+  it('leaves the shortcuts that already carry Shift, and the arrows, as they were on Windows', () => {
+    for (const id of ['captureFull', 'copyUrlMarkdown', 'clearSiteDataNow', 'nextTab', 'previousTab', 'nextSpace', 'previousSpace', 'moveTabUp', 'moveTabDown']) {
+      expect(effectiveAccelerator(id, undefined, 'win32'), id).toBe(COMMANDS.find((c) => c.id === id)!.accelerator)
+    }
+  })
+
+  it('gives no default on Windows to the two commands whose Ctrl+Shift+Alt press another command already holds', () => {
+    // Capture the visible part (S) and Inspect (C) would become Ctrl+Shift+Alt+S and +C, which Capture the whole page and Copy as Markdown keep.
+    expect(effectiveAccelerator('captureVisible', undefined, 'win32')).toBeUndefined()
+    expect(effectiveAccelerator('inspectElement', undefined, 'win32')).toBeUndefined()
+    expect(canonicalAccelerator(effectiveAccelerator('captureFull', undefined, 'win32')!, 'win32')).toBe('Alt+Ctrl+Shift+S')
+    expect(canonicalAccelerator(effectiveAccelerator('copyUrlMarkdown', undefined, 'win32')!, 'win32')).toBe('Alt+Ctrl+Shift+C')
+    expect(Object.entries(WINDOWS_DEFAULTS).filter(([, accelerator]) => accelerator === '').map(([id]) => id)).toEqual(['captureVisible', 'inspectElement'])
+  })
+
+  it('only rewrites commands that exist on Windows, and keeps a choice of the user over them', () => {
+    expect(Object.keys(WINDOWS_DEFAULTS).filter((id) => !COMMANDS.some((c) => c.id === id))).toEqual([])
+    expect(effectiveAccelerator('newLittleArc', { newLittleArc: 'CmdOrCtrl+Alt+N' }, 'win32')).toBe('CmdOrCtrl+Alt+N')
+    expect(effectiveAccelerator('captureVisible', { captureVisible: 'CmdOrCtrl+Shift+Alt+V' }, 'win32')).toBe('CmdOrCtrl+Shift+Alt+V')
   })
 
   it('lets a choice of the user win over the Linux defaults', () => {

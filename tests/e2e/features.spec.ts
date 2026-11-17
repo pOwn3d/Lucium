@@ -3,7 +3,7 @@
 
 import { expect, test } from '@playwright/test'
 import { launchLucium, type Running } from './launch'
-import { chooseMenuEntry, dispatch, searchHistoryTitles, serveSite, titledPage, viewportWidth, waitForState, waitForWindow, expectStays, type LocalSite } from './helpers'
+import { chooseMenuEntry, defaultShortcut, dispatch, searchHistoryTitles, serveSite, titledPage, viewportWidth, waitForState, waitForWindow, expectStays, type LocalSite } from './helpers'
 
 let site: LocalSite
 let running: Running
@@ -102,6 +102,6 @@ test.describe('sidebar-right: the sidebar moves to the right edge of the window'
 })
 
 test('little-shortcut: ⌘⌥N opens the mini window, a window of its own', async () => {
-  await chooseMenuEntry(running.app, 'CmdOrCtrl+Alt+N')
+  await chooseMenuEntry(running.app, defaultShortcut('newLittleArc'))
   await waitForWindow(running.app, (url) => url.includes('littlearc'))
 })

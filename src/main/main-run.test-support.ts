@@ -37,12 +37,14 @@ export interface MainWorld {
   quits: number
   /** The boxes of the system main() showed (`dialog.showMessageBox`), by their options. */
   boxes: unknown[]
+  /** The system-wide shortcuts main() holds now (`globalShortcut.register` less `unregister`), in the order they were taken. */
+  shortcuts: string[]
 }
 
 const KEY = '__luciumMainWorld'
 const world = (): MainWorld => {
   const holder = globalThis as unknown as Record<string, MainWorld | undefined>
-  return (holder[KEY] ??= { appEvents: [], origins: [], exits: [], locks: 0, packaged: false, userData: '', logged: [], themeSources: [], quits: 0, boxes: [] })
+  return (holder[KEY] ??= { appEvents: [], origins: [], exits: [], locks: 0, packaged: false, userData: '', logged: [], themeSources: [], quits: 0, boxes: [], shortcuts: [] })
 }
 
 /** An object that does nothing, whatever is done to it: called, built, read, iterated, turned into a number. */
@@ -111,6 +113,11 @@ export async function mainElectron(): Promise<Record<string, unknown>> {
         current.themeSources.push(value)
       }
     },
+    // The shortcuts held for every application (the mini window's): the accelerator is kept as main() wrote it.
+    globalShortcut: {
+      register: (accelerator: string) => (current.shortcuts.push(accelerator), true),
+      unregister: (accelerator: string) => void (current.shortcuts = current.shortcuts.filter((held) => held !== accelerator))
+    },
     clipboard: engine['clipboard'],
     shell: engine['shell'],
     // Nothing of the run reaches the network: the lists the blocker would update are refused here.
@@ -143,7 +150,7 @@ export async function runMain(options: { argv?: string[]; env?: Record<string, s
   // A data folder given is kept after the run (a second run reads what the first one left in it); otherwise it is made for the run and removed with it.
   const folder = options.dataFolder ?? mkdtempSync(join(tmpdir(), 'lucium-main-run-'))
   mkdirSync(join(folder, 'userData'), { recursive: true })
-  Object.assign(current, { appEvents: [], origins: [], exits: [], locks: 0, packaged: options.packaged ?? false, userData: join(folder, 'userData'), logged: [], themeSources: [], quits: 0, boxes: [] })
+  Object.assign(current, { appEvents: [], origins: [], exits: [], locks: 0, packaged: options.packaged ?? false, userData: join(folder, 'userData'), logged: [], themeSources: [], quits: 0, boxes: [], shortcuts: [] })
   const windows = await import('./shell/own-windows.test-support')
   windows.windowsWorld.reset()
   const engineWorld = (await import('./engine/engine-constructed.test-support')).world
