@@ -71,11 +71,16 @@ describe('the custom icon of the application bundle', () => {
     expect(bundleIconStep('sepia-or', { custom: false, posed: 'sepia-or' })).toBe('set')
   })
 
-  it('never puts the default icon on the bundle, which is its own, and takes off what is there when it is chosen', () => {
+  it('never puts the default icon on the bundle, which is its own, and takes off the icon this profile put there when the default one is chosen', () => {
     expect(bundleIconStep(DEFAULT_APP_ICON, { custom: true, posed: 'cyber' })).toBe('clear')
-    expect(bundleIconStep(DEFAULT_APP_ICON, { custom: true, posed: null })).toBe('clear')
     expect(bundleIconStep(DEFAULT_APP_ICON, { custom: false, posed: null })).toBe('none')
     expect(bundleIconStep(DEFAULT_APP_ICON, { custom: false, posed: 'cyber' })).toBe('none')
+  })
+
+  it('leaves a custom icon this profile did not put on the bundle: the bundle is shared by every profile, the icon is the choice of one', () => {
+    // A profile that never put an icon (a blank profile for a test, a capture, a measure) has no record: the icon of another profile stays.
+    expect(bundleIconStep(DEFAULT_APP_ICON, { custom: true, posed: null })).toBe('none')
+    for (const bad of ['inconnu', '', '__proto__']) expect(bundleIconStep(bad, { custom: true, posed: null }), bad).toBe('none')
   })
 
   it('takes an id that is not one of the list for the default icon: nothing made of it is ever put on the bundle', () => {

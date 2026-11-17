@@ -85,8 +85,56 @@ describe('the custom icon of the bundle, as the choice changes', () => {
     expect(b.calls).toHaveLength(1)
   })
 
+  it('leaves the custom icon of another profile alone: a profile that put none on this bundle takes none off, whatever it asks for', async () => {
+    // A second instance on a blank profile (a test, a capture, a measure): the bundle is shared, the record of the icon put is not.
+    const blank = bundle({ custom: true })
+    expect(await blank.keeper.keep('clair')).toBeNull()
+    expect(await blank.keeper.keep('../../../etc/passwd')).toBeNull()
+    expect(blank.calls).toEqual([])
+    expect(blank.state.custom).toBe(true)
+    expect(blank.logs).toEqual([])
+    // The record names another copy of the application, not this bundle: no icon of this profile is on it either.
+    const elsewhere = bundle({ custom: true, posed: { bundle: '/Users/someone/Desktop/Lucium.app', icon: 'cyber' } })
+    expect(await elsewhere.keeper.keep('clair')).toBeNull()
+    expect(elsewhere.calls).toEqual([])
+    // A record that cannot be read proves nothing either: nothing is taken off.
+    const unread = bundle({ custom: true, readPosed: () => { throw new SyntaxError('Unexpected token') } })
+    expect(await unread.keeper.keep('clair')).toBeNull()
+    expect(unread.calls).toEqual([])
+    expect(unread.state.custom).toBe(true)
+  })
+
+  it('keeps the icon one profile put through the launches of another, and still takes it off when that profile goes back to the default icon', async () => {
+    const owner = bundle()
+    // A launch of another profile: its own record (none), the bundle of the owner.
+    const launchOther = () => {
+      const other: ReturnType<typeof bundle> = bundle({
+        hasCustomIcon: () => owner.state.custom,
+        call: async (target, picture) => {
+          other.calls.push([target, picture])
+          owner.state.custom = picture !== ''
+          return 'true\n'
+        }
+      })
+      return other
+    }
+    await owner.keeper.keep('cyber')
+    expect(owner.state.custom).toBe(true)
+    // The other profile starts on the default icon, as a new profile does: the icon of the owner stays, at each launch.
+    const first = launchOther()
+    const second = launchOther()
+    await first.keeper.keep('clair')
+    await second.keeper.keep('clair')
+    expect(first.calls.concat(second.calls)).toEqual([])
+    expect(owner.state.custom).toBe(true)
+    // The owner goes back to the default icon: it comes off.
+    await owner.keeper.keep('clair')
+    expect(owner.state).toMatchObject({ custom: false, posed: null })
+    expect(owner.calls).toEqual([[BUNDLE, pictureOf('cyber')], [BUNDLE, '']])
+  })
+
   it('takes an id that is not one of the list for the default icon: no picture of it is ever looked for', async () => {
-    const b = bundle({ custom: true, picture: () => { throw new Error('no picture is looked for') } })
+    const b = bundle({ custom: true, posed: { bundle: BUNDLE, icon: 'cyber' }, picture: () => { throw new Error('no picture is looked for') } })
     expect(await b.keeper.keep('../../../etc/passwd')).toBeNull()
     expect(b.calls).toEqual([[BUNDLE, '']])
   })
@@ -127,9 +175,11 @@ describe('a bundle that cannot take the icon', () => {
   })
 
   it('writes to the log when the custom icon cannot be taken off for the default icon (the Dock shows the default one all the same)', async () => {
-    const b = bundle({ custom: true, call: async () => 'false\n' })
+    const b = bundle({ custom: true, posed: { bundle: BUNDLE, icon: 'cyber' }, call: async () => 'false\n' })
     expect(await b.keeper.keep('clair')).toBeNull()
     expect(b.logs).toEqual([`[icon] cannot take the custom icon off ${BUNDLE}: macOS refused (it answered "false")`])
+    // The record stays: the next launch, still on the default icon, tries again.
+    expect(b.state.posed).toEqual({ bundle: BUNDLE, icon: 'cyber' })
   })
 
   it('puts the icon again, and says why, when the record cannot be read; writes to the log when it cannot be written', async () => {
