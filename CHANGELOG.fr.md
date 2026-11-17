@@ -8,6 +8,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 - **Liens déposés sur une fenêtre** : un lien glissé d’une autre application (un message, un document, un terminal) sur une fenêtre de Lucium s’ouvre dans un nouvel onglet, dans l’espace affiché. Seules les adresses http et https sans nom ni mot de passe s’ouvrent, dix au plus ; une notification dit combien ont été laissées de côté.
 - **Ouvrir avec** : « Ouvrir avec » du Finder propose Lucium pour les documents PDF et les images (PNG, JPEG, GIF, WebP, SVG), jamais comme application par défaut.
+- **Icônes de dossier** : « Changer l’icône… » dans le menu d’un dossier lui met un emoji à la place du dessin, avec le sélecteur des espaces, pour un dossier créé à la main comme pour un dossier en direct. « Retirer l’icône » rend le dessin ; sans emoji, rien ne change.
 
 ## [1.1.2] - 2026-11-17
 

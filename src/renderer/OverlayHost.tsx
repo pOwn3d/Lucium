@@ -27,6 +27,7 @@ import { WorkViewSheet } from './WorkViewSheet'
 import { ReadLater } from './ReadLater'
 import { Bookmarks } from './Bookmarks'
 import { LiveFolderSheet } from './LiveFolderSheet'
+import { FolderIconSheet } from './FolderIconSheet'
 import { ExtensionReview } from './ExtensionReview'
 import { Sessions } from './Sessions'
 import { WindowName } from './WindowName'
@@ -54,7 +55,7 @@ import './popovers.css'
  * Panels that dim the window; a click outside closes them. The others are small and leave the page usable.
  * The Tweak editor and Glance are not in the set: they cover the window like modal panels, but draw (or do not draw) their own dimming.
  */
-const MODAL = new Set<OverlayRequest['panel']>(['commandbar', 'shortcuts', 'downloads', 'shortcut', 'space', 'spacecreate', 'plus', 'spacemenu', 'tidy', 'deadtabs', 'archive', 'site', 'sitedata', 'cookies', 'sessions', 'readlater', 'history', 'spaces', 'tab', 'autoreload', 'import', 'firstlaunch', 'qr', 'windowname', 'translate', 'translatepop', 'passwords', 'bookmarks', 'livefolder', 'welcome', 'whatsnew', 'arcguide', 'problemreport', 'notices', 'notes', 'workview'])
+const MODAL = new Set<OverlayRequest['panel']>(['commandbar', 'shortcuts', 'downloads', 'shortcut', 'space', 'spacecreate', 'plus', 'spacemenu', 'tidy', 'deadtabs', 'archive', 'site', 'sitedata', 'cookies', 'sessions', 'readlater', 'history', 'spaces', 'tab', 'autoreload', 'import', 'firstlaunch', 'qr', 'windowname', 'translate', 'translatepop', 'passwords', 'bookmarks', 'livefolder', 'foldericon', 'welcome', 'whatsnew', 'arcguide', 'problemreport', 'notices', 'notes', 'workview'])
 
 /** Modal panels drawn as a popover next to what opened them (or, for the command bar, over the page): no dimming, and where they sit decides the variant. */
 const POPOVER_CLASS: Partial<Record<OverlayRequest['panel'], string>> = { site: 'popover', downloads: 'popover popover-left', commandbar: 'cb-backdrop', plus: 'plus-host', spacemenu: 'plus-host' }
@@ -247,6 +248,8 @@ export function OverlayHost() {
         return <Bookmarks key={version} />
       case 'livefolder':
         return <LiveFolderSheet key={version} folderId={request.folderId} />
+      case 'foldericon':
+        return <FolderIconSheet key={version} folderId={request.folderId} />
       case 'settings':
         // The Settings window is a window of its own: the overlay never receives this request.
         return null

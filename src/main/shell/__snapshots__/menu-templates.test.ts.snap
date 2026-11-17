@@ -75,6 +75,7 @@ exports[`the context menus of the sidebar, as built > of a folder and of a live 
 - enabled=true label="Copier tous les liens" icon=copy(template) click
 - enabled=true label="Copier tous les liens en Markdown" icon=copy(template) click
 - label="Personnaliser" type="header"
+- enabled=true label="Changer l’icône…" icon=icon(template) click
 - label="Renommer…" icon=rename(template) click
 - label="Organiser" type="header"
 - label="Dupliquer" icon=dup(template) click
@@ -96,6 +97,7 @@ exports[`the context menus of the sidebar, as built > of a folder and of a live 
 - label="Actualiser le dossier en direct" icon=reload(template) click
 - label="Modifier la source…" icon=link(template) click
 - label="Personnaliser" type="header"
+- enabled=true label="Changer l’icône…" icon=icon(template) click
 - label="Renommer…" icon=rename(template) click
 - label="Organiser" type="header"
 - label="Dupliquer" icon=dup(template) click
@@ -114,6 +116,7 @@ exports[`the context menus of the sidebar, as built > of a folder and of a live 
 - enabled=false label="Copier tous les liens" icon=copy(template) click
 - enabled=false label="Copier tous les liens en Markdown" icon=copy(template) click
 - label="Personnaliser" type="header"
+- enabled=false label="Changer l’icône…" icon=icon(template) click
 - label="Renommer…" icon=rename(template) click
 - label="Organiser" type="header"
 - label="Dupliquer" icon=dup(template) click

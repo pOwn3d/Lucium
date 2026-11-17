@@ -119,6 +119,7 @@ function rich(): SidebarState {
     name: 'Dedans',
     collapsed: false,
     parentId: 'f-root',
+    icon: '📚',
     live: { source: { kind: 'github', repo: 'owner/repo', what: 'releases' }, items: [{ title: 'v1.0', url: 'https://github.com/owner/repo/releases/tag/v1.0', at: 5 }], checkedAt: 9, failure: 'HTTP 500' }
   }
   const favorite: Required<Favorite> = { id: 'fav-1', url: 'https://fav.example/', title: 'Favori', faviconUrl: 'https://fav.example/i.png', profileId: 'default' }

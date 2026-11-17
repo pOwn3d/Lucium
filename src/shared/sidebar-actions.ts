@@ -290,6 +290,8 @@ export type Action =
   | { type: 'folder/bottom'; id: string; bottom: boolean }
   /** Marks (or unmarks) a folder whose tabs are never woken by themselves (`Folder.noWake`). */
   | { type: 'folder/no-wake'; id: string; on: boolean }
+  /** Puts one emoji on a folder, in place of the folder drawing of its row (`Folder.icon`); `null` takes it away. Anything that is not one emoji changes nothing. */
+  | { type: 'folder/icon'; id: string; icon: string | null }
   /** Archives the tabs of the folder and of the folders inside it, then removes them all. */
   | { type: 'folder/archive'; id: string }
   | { type: 'folder/toggle'; id: string }

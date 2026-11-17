@@ -8,7 +8,7 @@
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { getLanguage, t, tp } from '@shared/i18n'
 import { gridMove, isGridKey } from '@shared/grid-nav'
-import { emojiCategories, isSpaceMark, searchEmojis, type EmojiEntry } from '@shared/space-emoji'
+import { emojiCategories, isSpaceEmoji, isSpaceMark, searchEmojis, type EmojiEntry } from '@shared/space-emoji'
 import { LETTER_COLORS, cleanIconLetter, pickerModeOfKey, readRecentEmojis, rememberEmoji, type SpaceIconChoice } from '@shared/space-icon'
 import type { SpaceIconKind } from '@shared/model'
 import { SpaceMark } from './SpaceMark'
@@ -20,9 +20,9 @@ import './icon-picker.css'
 const COLS = 8
 const RECENT_KEY = 'lucium.recent-emoji'
 
-function loadRecents(): string[] {
+function loadRecents(accepts: (value: unknown) => boolean): string[] {
   try {
-    return readRecentEmojis(window.localStorage.getItem(RECENT_KEY), isSpaceMark)
+    return readRecentEmojis(window.localStorage.getItem(RECENT_KEY), accepts)
   } catch (error) {
     console.warn('[icon picker] the recent emoji cannot be read (storage is not available):', error)
     return []
@@ -50,10 +50,19 @@ export interface PicturePart {
   onClear: () => void
 }
 
+/** The picture tab of a picker that has none (`emojiOnly`): never drawn, so nothing here is called. */
+const NO_PICTURE: PicturePart = { onPick: () => undefined, onClear: () => undefined }
+
 export interface IconPickerProps {
   choice: SpaceIconChoice
   onChange: (next: SpaceIconChoice) => void
-  picture: PicturePart
+  /** Required for a space, which can wear a picture; left out with `emojiOnly`. */
+  picture?: PicturePart
+  /**
+   * Only the emoji tab, without the type switch and its ⌘1-⌘3 keys: for what can wear an emoji and nothing else (the icon of a folder). A letter or a digit is
+   * then no emoji either: the recent ones and a pasted value are checked as one emoji, not as the mark of a space. `choice.emoji` may be empty (nothing chosen yet).
+   */
+  emojiOnly?: boolean
   /** The drawing on the right (a SidebarThumb wearing the icon); without it the picker is one column. */
   preview?: ReactNode
   /** A class of the picker itself, for the panel that holds it. */
@@ -86,10 +95,11 @@ interface Group {
 /** The words a person can read on an emoji: its first keywords in the language of the interface. */
 const titleOf = (entry: EmojiEntry): string => (getLanguage() === 'en' ? entry.en : entry.fr).slice(0, 3).join(' · ')
 
-export function IconPicker({ choice, onChange, picture, preview, className }: IconPickerProps) {
-  const [mode, setMode] = useState<SpaceIconKind>(choice.kind)
+export function IconPicker({ choice, onChange, picture = NO_PICTURE, emojiOnly = false, preview, className }: IconPickerProps) {
+  const [mode, setMode] = useState<SpaceIconKind>(emojiOnly ? 'emoji' : choice.kind)
   const [query, setQuery] = useState('')
-  const [recent, setRecent] = useState<string[]>(loadRecents)
+  const accepts = emojiOnly ? isSpaceEmoji : isSpaceMark
+  const [recent, setRecent] = useState<string[]>(() => loadRecents(accepts))
   const [category, setCategory] = useState('')
   const [hint, setHint] = useState(false)
   // The one cell of the grid that Tab reaches (the others are reached by the arrows): the last one that had the focus.
@@ -109,19 +119,20 @@ export function IconPicker({ choice, onChange, picture, preview, className }: Ic
       opened.current = true
       return
     }
+    if (emojiOnly) return
     setMode((was) => (was === 'image' && picture.name === undefined && choice.kind !== 'image' ? was : choice.kind))
-  }, [choice.kind, picture.name])
+  }, [choice.kind, picture.name, emojiOnly])
 
   const groups = useMemo<Group[]>(() => {
     const text = query.trim()
     if (text !== '') {
       const found = searchEmojis(text)
       // An emoji pasted in the search that the catalogue does not hold is still an emoji a space can wear, and so is one letter or one digit no keyword answers: it is offered as the one result.
-      const pasted: readonly EmojiEntry[] = found.length === 0 && isSpaceMark(text) ? [{ emoji: text, en: [], fr: [], keywords: [] }] : found
+      const pasted: readonly EmojiEntry[] = found.length === 0 && accepts(text) ? [{ emoji: text, en: [], fr: [], keywords: [] }] : found
       return [{ id: 'results', label: '', emojis: pasted }]
     }
     return emojiCategories().map((entry) => ({ id: entry.id, label: entry.label, emojis: entry.emojis }))
-  }, [query])
+  }, [query, accepts])
   const searching = query.trim() !== ''
   // The grids that are drawn: a category with nothing in it (a search with no result) has none, and the keys count the ones there are.
   const sizes = groups.map((group) => group.emojis.length).filter((size) => size > 0)
@@ -177,7 +188,7 @@ export function IconPicker({ choice, onChange, picture, preview, className }: Ic
   }
 
   const onRootKey = (event: KeyboardEvent<HTMLDivElement>): void => {
-    const wanted = pickerModeOfKey(event.nativeEvent)
+    const wanted = emojiOnly ? null : pickerModeOfKey(event.nativeEvent)
     if (wanted === null) return
     event.preventDefault()
     show(wanted)
@@ -206,13 +217,15 @@ export function IconPicker({ choice, onChange, picture, preview, className }: Ic
   return (
     <div ref={root} className={['ip', preview ? 'with-preview' : '', className].filter(Boolean).join(' ')} onKeyDown={onRootKey}>
       <div className="ip-main">
-        <div className="ip-seg" role="group" aria-label={t('icon-picker.type-d-icone')}>
-          {(['emoji', 'letter', 'image'] as const).map((kind) => (
-            <button key={kind} type="button" aria-pressed={mode === kind} aria-disabled={kind === 'image' && picture.reason !== undefined ? true : undefined} onClick={() => show(kind)}>
-              {KIND_LABELS[kind]()}
-            </button>
-          ))}
-        </div>
+        {!emojiOnly && (
+          <div className="ip-seg" role="group" aria-label={t('icon-picker.type-d-icone')}>
+            {(['emoji', 'letter', 'image'] as const).map((kind) => (
+              <button key={kind} type="button" aria-pressed={mode === kind} aria-disabled={kind === 'image' && picture.reason !== undefined ? true : undefined} onClick={() => show(kind)}>
+                {KIND_LABELS[kind]()}
+              </button>
+            ))}
+          </div>
+        )}
 
         {mode === 'emoji' && (
           <div className="ip-mode">
@@ -380,9 +393,11 @@ export function IconPicker({ choice, onChange, picture, preview, className }: Ic
           </div>
         )}
 
-        <p className="ip-keys" aria-hidden="true">
-          <kbd className="tk-kbd">⌘1</kbd> {t('icon-picker.emoji')} <kbd className="tk-kbd">⌘2</kbd> {t('icon-picker.lettre')} <kbd className="tk-kbd">⌘3</kbd> {t('space-image-picker.image')}
-        </p>
+        {!emojiOnly && (
+          <p className="ip-keys" aria-hidden="true">
+            <kbd className="tk-kbd">⌘1</kbd> {t('icon-picker.emoji')} <kbd className="tk-kbd">⌘2</kbd> {t('icon-picker.lettre')} <kbd className="tk-kbd">⌘3</kbd> {t('space-image-picker.image')}
+          </p>
+        )}
       </div>
       {preview && <div className="ip-side">{preview}</div>}
     </div>

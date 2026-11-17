@@ -162,11 +162,11 @@ const BEFORE: Record<string, string[]> = {
     'Retirer des favoris'
   ],
   'folder': [
-    'Nouveau sous-dossier', frenchSpaces('Transformer « Dossier » en espace'), 'Copier tous les liens', 'Copier tous les liens en Markdown', 'Renommer…', 'Dupliquer',
+    'Nouveau sous-dossier', frenchSpaces('Transformer « Dossier » en espace'), 'Copier tous les liens', 'Copier tous les liens en Markdown', 'Changer l’icône…', 'Renommer…', 'Dupliquer',
     'Mettre au début d’Aujourd’hui', 'Mettre en bas de la liste', 'Ne jamais réveiller automatiquement', 'Archiver le dossier', 'Supprimer le dossier (garder les onglets)'
   ],
   'folder-live': [
-    'Nouveau sous-dossier', frenchSpaces('Transformer « Live » en espace'), 'Copier tous les liens', 'Copier tous les liens en Markdown', 'Renommer…',
+    'Nouveau sous-dossier', frenchSpaces('Transformer « Live » en espace'), 'Copier tous les liens', 'Copier tous les liens en Markdown', 'Changer l’icône…', 'Renommer…',
     'Actualiser le dossier en direct', 'Modifier la source…', 'Dupliquer', 'Mettre au début d’Aujourd’hui', 'Mettre en bas de la liste', 'Ne jamais réveiller automatiquement', 'Archiver le dossier', 'Supprimer le dossier (garder les onglets)'
   ],
   // « Empiler les volets (vertical) » became « Disposition », which offers the row, the column and the grid. « Enregistrer comme vue de travail… » came with
@@ -460,6 +460,25 @@ describe('the icons', () => {
     expect(lastBlock({ kind: 'folder', id: f.folder })).toEqual(['Supprimer le dossier (garder les onglets)'])
     expect(lastBlock({ kind: 'favorite', id: f.favorite })).toEqual(['Retirer des favoris'])
     expect(lastBlock({ kind: 'tab', id: f.b }).slice(-2)).toEqual(['Fermer l’onglet', 'Fermer les autres onglets du jour'])
+  })
+})
+
+describe('the icon of a folder', () => {
+  const f = fixture()
+
+  it('is chosen in a sheet of its own, from « Changer l’icône… », for an ordinary folder and for a live one', () => {
+    for (const id of [f.folder, f.live]) {
+      const { items, overlays, dispatched } = menu({ kind: 'folder', id }, f.state)
+      press(find(blockOf(items, 'Personnaliser'), 'Changer l’icône…'))
+      expect(overlays).toEqual([{ panel: 'foldericon', folderId: id }])
+      // Nothing is changed by the menu itself: the sheet saves.
+      expect(dispatched).toEqual([])
+    }
+  })
+
+  it('is greyed out in a private window, which opens no such sheet', () => {
+    const { items } = menu({ kind: 'folder', id: f.folder }, f.state, WITH_HEADERS, true)
+    expect(find(blockOf(items, 'Personnaliser'), 'Changer l’icône…').enabled).toBe(false)
   })
 })
 

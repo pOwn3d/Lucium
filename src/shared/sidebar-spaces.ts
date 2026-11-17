@@ -5,7 +5,7 @@ import { CONTAINERS_MAX, CONTAINER_COLORS, containerById, isContainerColor, newC
 import { asideOf, asideRefusal, cleanSessionName, reopenAside, sessionTabsOf } from './sessions'
 import { cleanTheme, themeFromHue, themeHue, type SpaceTheme } from './theme'
 import { isSpaceImageName } from './space-image'
-import { isSpaceMark, spaceEmojiOr } from './space-emoji'
+import { isSpaceEmoji, isSpaceMark, spaceEmojiOr } from './space-emoji'
 import { LETTER_COLORS, cleanIconColor, cleanIconLetter, isSpaceIconKind } from './space-icon'
 import { withWebPanel, withoutWebPanel } from './web-panels'
 import { importedFavorites } from './favorite-scope'
@@ -170,6 +170,14 @@ export function reduceSpaces(state: SidebarState, action: Action, ctx: Ctx, agai
       if (!folder || (folder.noWake === true) === on) return state
       const { noWake: _was, ...rest } = folder
       return { ...state, folders: state.folders.map((f) => (f.id === folder.id ? (on ? { ...rest, noWake: true as const } : rest) : f)) }
+    }
+    case 'folder/icon': {
+      const folder = state.folders.find((f) => f.id === action.id)
+      // Exactly one emoji, or null to take it away: a letter, text or several emoji would end up drawn in the row (and saved), so they change nothing.
+      // (The same emoji again, or none on a folder that has none, is no change: `reduce` gives the state back.)
+      if (!folder || (action.icon !== null && !isSpaceEmoji(action.icon))) return state
+      const { icon: _was, ...rest } = folder
+      return { ...state, folders: state.folders.map((f) => (f.id === folder.id ? (action.icon === null ? rest : { ...rest, icon: action.icon }) : f)) }
     }
     case 'folder/duplicate': {
       const folder = state.folders.find((f) => f.id === action.id)

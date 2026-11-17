@@ -269,6 +269,7 @@
 .sidebar .folder-title { position: relative; display: flex; align-items: center; gap: 8px; width: 100%; height: 36px; margin: 2px 0 3px; padding: 0 9px; border-radius: 10px; text-align: left; color: var(--sb-text); font-size: 14px; font-weight: var(--w-regular); line-height: 19px; }
 .sidebar .folder-title:hover { background: var(--tile-hover); }
 .sidebar .folder-icon { flex: none; width: 18px; height: 18px; display: grid; place-items: center; overflow: visible; }
+.sidebar .folder-emoji { font-size: 15px; line-height: 18px; }
 .sidebar .folder-glyph { display: block; flex: none; transform: translateY(-1px); }
 .sidebar .folder-glyph.open { transform: translateY(1px); }
 .sidebar .folder-asleep { flex: none; display: inline-flex; color: var(--sb-dim); opacity: 0.8; }

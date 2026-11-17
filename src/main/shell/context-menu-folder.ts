@@ -23,8 +23,8 @@ export function folderMenuItems(target: Extract<MenuTarget, { kind: 'folder' }>,
   const subtree = new Set(folderSubtreeIds(state.folders, folder.id))
   const inside = sidebarOrder(state, folder.spaceId).filter((t) => t.folderId && subtree.has(t.folderId))
   const copyLinks = (text: string) => writeClipboard(browser, text, () => browser.showToast(inside.length === 1 ? t('browser.lien-copie') : t('ctx.length-liens-copies', { length: inside.length })))
-  // The menu of a folder, without what is excluded (sharing a folder) or not modelled (an icon for a folder,
-  // moving a folder to another space), then what Lucium adds (archiving), in blocks.
+  // The menu of a folder, without what is excluded (sharing a folder) or not modelled (moving a folder to another space),
+  // then what Lucium adds (archiving), in blocks.
   return template(
     [
       block(t('ctx.bloc-creer-et-copier'), [
@@ -50,6 +50,8 @@ export function folderMenuItems(target: Extract<MenuTarget, { kind: 'folder' }>,
           : []
       ),
       block(t('ctx.bloc-personnaliser'), [
+        // The emoji of the row, chosen in the picker of the spaces. A private window keeps no folder, so it opens no sheet for one (see canOpenInPrivate).
+        entry('icon', { label: t('ctx.changer-l-icone'), enabled: !browser.isPrivate(), click: () => browser.openOverlay({ panel: 'foldericon', folderId: folder.id }) }),
         // The row renames in place when it is double-clicked: this is that double click.
         entry('rename', {
           label: t('ctx.renommer'),

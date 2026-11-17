@@ -80,6 +80,9 @@ export function choiceOf(space: Pick<Space, 'name' | 'emoji' | 'iconKind' | 'ico
   return { kind: spaceIconKind(space), emoji: space.emoji, letter: cleanIconLetter(space.iconLetter) ?? initialsOf(space.name), color, round }
 }
 
+/** The choice of a picker that offers the emoji alone (the icon of a folder): `emoji` is empty while nothing is chosen, the letters and the shape stay at their defaults. */
+export const emojiOnlyChoice = (emoji: string): SpaceIconChoice => ({ kind: 'emoji', emoji, letter: '', color: LETTER_COLORS[0]!, round: false })
+
 /**
  * The patch of `space/update` that makes the space wear a choice. Only what the choice is about travels: an emoji changes the emoji, letters change the letters
  * with their colour and shape, a picture changes the kind. What the space kept for the others (the letters it had, the emoji it had) is not overwritten by a
