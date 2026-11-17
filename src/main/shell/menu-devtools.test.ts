@@ -1,5 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { effectiveAccelerator } from '@shared/keybindings'
+import type { PlatformId } from '@shared/platform'
 import { createInitialState, reduce } from '@shared/sidebar'
+import { played, resetPlayedPlatform } from '../platform/platform.test-support'
 
 // The menu bar is built from a template: what Menu.buildFromTemplate receives is what is checked.
 const electron = vi.hoisted(() => ({ template: [] as unknown[] }))
@@ -12,7 +15,12 @@ vi.mock('electron', () => ({
   BrowserWindow: class {}
 }))
 
+// The menu of the system a test names, on any machine (a Windows runner included): the shortcuts differ by system (shared/platform.ts).
+vi.mock('../platform', async (original) => (await import('../platform/platform.test-support')).playedPlatform(await original()))
+
 const { buildMenu } = await import('./menu')
+
+afterEach(resetPlayedPlatform)
 
 interface Item {
   label?: string
@@ -37,7 +45,10 @@ function developerEntries(keyBindings: Record<string, string> = {}): { items: It
 }
 
 describe('Affichage › Développeur', () => {
-  it('has the tools on ⌥⌘I, the picking mode on ⌥⌘C and the console on ⌥⌘J, each asking for what its name says', () => {
+  // The shortcuts are read from where the application reads them (`effectiveAccelerator`, which the platform layer calls), not written again here: they differ
+  // by system (Windows adds Shift to the Ctrl+Alt+letter ones, which are AltGr there, and gives none to the picking mode).
+  it.each<PlatformId>(['darwin', 'win32', 'linux'])('has the tools, the picking mode and the console on the shortcuts of %s, each asking for what its name says', (system) => {
+    played.id = system
     const { items, devTools } = developerEntries()
     const by = (label: string) => items.find((item) => item.label === label && item.visible !== false)!
     by('Outils de développement').click!()
@@ -45,7 +56,11 @@ describe('Affichage › Développeur', () => {
     by('Console JavaScript').click!()
     by('Inspecteur réseau').click!()
     expect(devTools.mock.calls.map((call) => call[0])).toEqual(['tools', 'inspect', 'console', 'network'])
-    expect([by('Outils de développement').accelerator, by('Inspecter les éléments').accelerator, by('Console JavaScript').accelerator]).toEqual(['CmdOrCtrl+Alt+I', 'CmdOrCtrl+Alt+C', 'CmdOrCtrl+Alt+J'])
+    expect([by('Outils de développement').accelerator, by('Inspecter les éléments').accelerator, by('Console JavaScript').accelerator]).toEqual([
+      effectiveAccelerator('devTools', undefined, system),
+      effectiveAccelerator('inspectElement', undefined, system),
+      effectiveAccelerator('jsConsole', undefined, system)
+    ])
   })
 
   it('has F12 as a second, hidden entry for the tools', () => {
