@@ -2964,6 +2964,8 @@ export const en: Record<MessageKey, string> = {
   'platform.entree': 'Return',
   'platform.espace': 'Space',
   'platform.maj': 'Shift',
+  'platform.page-prec': 'Page Up',
+  'platform.page-suiv': 'Page Down',
   'platform.retour-arriere': 'Delete',
   'platform.suppr': 'Del',
   'plus-menu.nouvelle-vue-scindee': 'New Split View',

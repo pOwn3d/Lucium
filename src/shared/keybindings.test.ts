@@ -29,7 +29,7 @@ describe('effectiveAccelerator', () => {
 
 describe('isValidAccelerator', () => {
   it('accepts modified keys and function keys, refuses bare letters and Shift-only', () => {
-    for (const ok of ['CmdOrCtrl+T', 'CmdOrCtrl+Shift+[', 'Alt+F4', 'F5', 'Ctrl+Alt+Left']) expect(isValidAccelerator(ok)).toBe(true)
+    for (const ok of ['CmdOrCtrl+T', 'CmdOrCtrl+Shift+[', 'Alt+F4', 'F5', 'Ctrl+Alt+Left', 'CmdOrCtrl+PageDown', 'Alt+PageUp']) expect(isValidAccelerator(ok)).toBe(true)
     for (const bad of ['T', 'Shift+T', 'CmdOrCtrl+', 'Cmd++', 'Hyper+T', 'CmdOrCtrl+CmdOrCtrl+T', 'CmdOrCtrl+TT', '']) expect(isValidAccelerator(bad)).toBe(false)
   })
 })
