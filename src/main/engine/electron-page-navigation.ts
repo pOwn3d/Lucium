@@ -23,6 +23,8 @@ import { ElectronPageBase } from './electron-page-base'
 import { internalLoadHeaders } from './internal-pages'
 
 export abstract class ElectronPageNavigation extends ElectronPageBase {
+  /** The Back / Forward list as the page had it when its close started (`keepHistory`): null while the page is open or if it was not read. */
+  private leftHistory: { entries: Array<{ title: string; url: string }>; index: number } | null = null
   /** Lets go of the session an extension holds on the page (ElectronPageContent): the page goes where it may not follow. */
   abstract debugDetach(): void
   /**
@@ -113,8 +115,30 @@ export abstract class ElectronPageNavigation extends ElectronPageBase {
     this.webContents.reload()
   }
   navigationEntries(): { entries: Array<{ title: string; url: string }>; index: number } {
+    if (!this.gone) return this.readHistory()
+    // Electron takes `view.webContents` away when the close is over: a sleep keeps the list after `release()` (browser-sleep.ts), so what the page had
+    // when it was let go is what it answers. A page that left nothing cannot answer, and the caller is told so.
+    if (this.leftHistory) return this.leftHistory
+    throw new Error(`page ${this.id} is gone and left no list of its pages`)
+  }
+  private readHistory(): { entries: Array<{ title: string; url: string }>; index: number } {
     const history = this.webContents.navigationHistory
     return { entries: history.getAllEntries().map((e) => ({ title: e.title, url: e.url })), index: history.getActiveIndex() }
+  }
+  /** Reads the list of pages just before the close starts (`release`, `destroy`), while the web contents is still there to be asked. */
+  protected keepHistory(): void {
+    if (this.gone) return
+    try {
+      this.leftHistory = this.readHistory()
+    } catch (error) {
+      // The close goes on without the list: the tab wakes at its address alone, as before the list was kept.
+      console.warn(`[engine] the pages of page ${this.id} could not be read before it closed:`, (error as Error).message)
+      this.leftHistory = null
+    }
+  }
+  /** A close that did not happen (the page kept itself awake): the list is read live again, and the one kept would be out of date. */
+  protected forgetKeptHistory(): void {
+    this.leftHistory = null
   }
   goToIndex(index: number): void {
     this.leave.intend(() => this.goToIndex(index))

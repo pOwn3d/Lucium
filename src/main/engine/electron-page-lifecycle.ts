@@ -147,6 +147,7 @@ export abstract class ElectronPageLifecycle extends ElectronPageMedia {
     this.loan?.end('gone')
     this.hide()
     if (this.gone) return
+    this.keepHistory()
     this.endOfPage()
     this.webContents.close()
   }
@@ -183,14 +184,18 @@ export abstract class ElectronPageLifecycle extends ElectronPageMedia {
       clearTimeout(timer)
       wc.removeListener('destroyed', ended)
       if (gone && !this.closing) this.endOfPage()
+      if (!gone) this.forgetKeptHistory()
       settle(gone)
     }
     this.releasing = { settle: settleWith, promise }
     this.hide()
     wc.once('destroyed', ended)
+    // The list is read now: the sleep that follows the close asks for it when the web contents is gone.
+    this.keepHistory()
     timer = setTimeout(() => {
       if (this.releasing?.promise !== promise) return
       console.warn(`[engine] page ${this.id} did not answer the close of a sleep within ${RELEASE_ANSWER_MS} ms: it is closed`)
+      this.keepHistory()
       this.endOfPage()
       wc.close()
       settleWith(true)

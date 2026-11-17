@@ -37,7 +37,10 @@ export interface PageNavigation {
   goBack(): void
   goForward(): void
   reload(): void
-  /** The pages this tab went through, oldest first, and the one it is on. */
+  /**
+   * The pages this tab went through, oldest first, and the one it is on. Still answers once `release()` or `destroy()` has closed the page, with the
+   * list it had when the close started (a sleep keeps it after the close); a page that never had one to give throws.
+   */
   navigationEntries(): { entries: Array<{ title: string; url: string }>; index: number }
   goToIndex(index: number): void
   /**

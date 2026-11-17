@@ -3,6 +3,7 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { makePage, settle } from './electron-page.test-support'
+import { SleptHistory } from '../shell/slept-history'
 
 vi.mock('electron', async () => (await import('./electron-page.test-support')).electronStub())
 vi.mock('electron-chrome-extensions', () => ({ ElectronChromeExtensions: { fromSession: () => undefined } }))
@@ -58,6 +59,106 @@ describe('the close of a page for a sleep (ElectronPage.release)', () => {
     wc.emit('will-prevent-unload', { preventDefault: vi.fn() })
     expect(await first).toBe(false)
     await settle()
+  })
+})
+
+const entry = (n: number) => ({ url: `https://site.example/${n}`, title: `Page ${n}` })
+
+describe('the Back / Forward list of a page let go (ElectronPage.navigationEntries)', () => {
+  /** A page that went through three pages and went back to the second. */
+  async function pageWithHistory() {
+    const made = await makePage()
+    made.wc.navigationHistory.entries = [entry(1), entry(2), entry(3)]
+    made.wc.navigationHistory.active = 1
+    return made
+  }
+  /** What Electron does once the close is over: the web contents is destroyed and `view.webContents` is undefined. */
+  const closed = (made: { wc: { destroyed: boolean; emit: (event: string) => boolean }; view: { webContents: unknown } }): void => {
+    made.wc.destroyed = true
+    made.wc.emit('destroyed')
+    made.view.webContents = undefined
+  }
+
+  it('still gives its list once the close for a sleep is over: what a sleep keeps is read after it (browser-sleep.ts)', async () => {
+    const made = await pageWithHistory()
+    const answer = made.page.release()
+    closed(made)
+    expect(await answer).toBe(true)
+    expect(made.page.navigationEntries()).toEqual({ entries: [entry(1), entry(2), entry(3)], index: 1 })
+  })
+
+  it('is what a sleep keeps for the next page of the tab: SleptHistory reads it from the real page after the close, as destroyPage does', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const made = await pageWithHistory()
+    const answer = made.page.release()
+    closed(made)
+    await answer
+    const slept = new SleptHistory()
+    const tab = { id: 'tab-1', url: entry(2).url }
+    slept.keep(tab, 'profile:default', () => made.page.navigationEntries())
+    expect(warn).not.toHaveBeenCalled()
+    expect(slept.take(tab, 'profile:default')).toEqual({ entries: [entry(1), entry(2), entry(3)], index: 1 })
+  })
+
+  it('gives the list the page had when its close started, not one it was changed to meanwhile', async () => {
+    const made = await pageWithHistory()
+    const answer = made.page.release()
+    made.wc.navigationHistory.entries = [entry(9)]
+    closed(made)
+    await answer
+    expect(made.page.navigationEntries().entries).toEqual([entry(1), entry(2), entry(3)])
+  })
+
+  it('still gives its list once destroy() has closed it', async () => {
+    const made = await pageWithHistory()
+    made.page.destroy()
+    closed(made)
+    expect(made.page.navigationEntries()).toEqual({ entries: [entry(1), entry(2), entry(3)], index: 1 })
+  })
+
+  it('still gives its list when the close is forced after the bound', async () => {
+    vi.useFakeTimers()
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const made = await pageWithHistory()
+    const answer = made.page.release()
+    made.wc.navigationHistory.entries = [entry(1), entry(2), entry(3), entry(4)]
+    await vi.advanceTimersByTimeAsync(RELEASE_ANSWER_MS)
+    await answer
+    closed(made)
+    expect(made.page.navigationEntries().entries).toEqual([entry(1), entry(2), entry(3), entry(4)])
+  })
+
+  it('reads the list live again when the page refused to close: the one kept would be out of date', async () => {
+    const made = await pageWithHistory()
+    const answer = made.page.release()
+    made.wc.emit('will-prevent-unload', { preventDefault: vi.fn() })
+    expect(await answer).toBe(false)
+    made.wc.navigationHistory.entries = [entry(1), entry(2), entry(3), entry(4)]
+    made.wc.navigationHistory.active = 3
+    expect(made.page.navigationEntries()).toEqual({ entries: [entry(1), entry(2), entry(3), entry(4)], index: 3 })
+    // Gone later without a close of ours (a crash, the page closing itself): there is nothing of the refused close to give back.
+    closed(made)
+    expect(() => made.page.navigationEntries()).toThrow(/left no list/)
+  })
+
+  it('says so when a page that is gone left no list, instead of failing on a web contents that is not there', async () => {
+    const made = await pageWithHistory()
+    closed(made)
+    expect(() => made.page.navigationEntries()).toThrow(/page tab-1 is gone and left no list/)
+  })
+
+  it('closes without its list when the list cannot be read, and says why', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const made = await pageWithHistory()
+    made.wc.navigationHistory.getAllEntries = () => {
+      throw new Error('no history')
+    }
+    const answer = made.page.release()
+    expect(made.wc.close).toHaveBeenCalledWith({ waitForBeforeUnload: true })
+    expect(warn).toHaveBeenCalledWith('[engine] the pages of page tab-1 could not be read before it closed:', 'no history')
+    closed(made)
+    expect(await answer).toBe(true)
+    expect(() => made.page.navigationEntries()).toThrow(/left no list/)
   })
 })
 

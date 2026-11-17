@@ -115,6 +115,9 @@ export class FakePageContents extends EventEmitter {
     getActiveIndex(): number {
       return this.active
     },
+    getAllEntries(): Array<{ url: string; title: string }> {
+      return this.entries
+    },
     getEntryAtIndex(index: number): { url: string; title: string } | null {
       return this.entries[index] ?? null
     }

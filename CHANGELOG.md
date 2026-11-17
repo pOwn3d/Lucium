@@ -16,6 +16,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Fixed
 
+- **Sleeping tabs, Back and Forward**: a tab put to sleep to free its memory kept only its address, and woke without the list of the pages it had gone through. The list was read after the page was already closed. It is now read just before the close, and the tab wakes with its Back and Forward pages.
 - **Windows, links under a file name**: the files Lucium writes (state, history, vault, download records) and a download that resumes are no longer opened through a link left under their name. Windows cannot make `open` refuse one, so the name is now looked at first.
 - **Default browser, Windows**: Settings no longer says Lucium is the default browser while Windows opens links in another one. The state is what Windows holds for http and https, read again when you come back, and “Make Default Browser” opens Windows Settings on Lucium, where the choice is yours.
 - **Spelling dictionaries, Windows and Linux**: Chromium no longer downloads the dictionary of the system language from its CDN at the first launch, with the checker off. A session starts without a language: nothing is fetched until you switch Spelling on in the Edit menu.
