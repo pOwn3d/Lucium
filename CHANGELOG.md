@@ -12,7 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Fixed
 
-- **Spelling dictionaries, Windows and Linux**: Chromium no longer downloads the dictionary of the system language from its CDN (Google’s) at the first launch, with the checker off. Every session now starts without a language, so there is nothing to fetch until you switch Spelling on in the Edit menu; switching it on, and the choice kept for the next launch, work as before. macOS is unchanged (its checker is the system’s).
+- **Spelling dictionaries, Windows and Linux**: Chromium no longer downloads the dictionary of the system language from its CDN at the first launch, with the checker off. A session starts without a language: nothing is fetched until you switch Spelling on in the Edit menu.
 
 ## [1.1.3] - 2026-11-17
 

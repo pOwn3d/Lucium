@@ -6,7 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Corrections
 
-- **Dictionnaires du correcteur, Windows et Linux** : Chromium ne télécharge plus, au premier lancement et correcteur éteint, le dictionnaire de la langue du système depuis son CDN (celui de Google). Chaque session démarre désormais sans langue : il n’y a rien à télécharger tant que vous n’avez pas activé l’orthographe dans le menu Édition ; l’activer, et le choix gardé pour le lancement suivant, marchent comme avant. macOS ne change pas (son correcteur est celui du système).
+- **Dictionnaires du correcteur, Windows et Linux** : Chromium ne télécharge plus, au premier lancement et correcteur éteint, le dictionnaire de la langue du système depuis son CDN. Une session démarre sans langue : rien n’est téléchargé avant que vous activiez l’orthographe dans le menu Édition.
 
 ## [1.1.3] - 2026-11-17
 
