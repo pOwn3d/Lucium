@@ -30,7 +30,11 @@ struct BottomBar: View {
 
     private var addressPill: some View {
         HStack(spacing: 6) {
-            Image(systemName: "link").foregroundStyle(.secondary).imageScale(.small)
+            if model.activeTab?.isPrivate == true {
+                ProjectIcon(name: .privateMask, size: 16).foregroundStyle(.secondary)  // what a private tab is, always in sight
+            } else {
+                Image(systemName: "link").foregroundStyle(.secondary).imageScale(.small)
+            }
             TextField("bar.address.placeholder", text: addressBinding)
                 .focused($addressFocused)
                 .keyboardType(.webSearch)
@@ -46,6 +50,11 @@ struct BottomBar: View {
         .padding(.horizontal, 14)
         .frame(height: 44)
         .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
+        .contextMenu {
+            if let site = model.siteOfActivePage {
+                Button("sitedata.menu \(site)") { model.siteDataAsked = site }
+            }
+        }
     }
 
     /// Idle, the pill shows the host only (what the Mac's address place shows); typing, the whole address.
@@ -57,18 +66,16 @@ struct BottomBar: View {
     }
 
     private func spaceButton(_ space: Space) -> some View {
-        let style = model.style(of: space)
         let selected = space.id == model.activeSpace.id
         return Button { model.selectSpace(space.id) } label: {
-            Image(systemName: style.symbol)
-                .imageScale(.small)
-                .foregroundStyle(.white)
-                .frame(width: 30, height: 30)
-                .background(style.tint.gradient, in: Circle())
-                .overlay { if selected { Circle().strokeBorder(Color.accentColor, lineWidth: 2).padding(-3) } }
+            SpacePastille(space: space, colors: model.colors(of: space), size: 30, selected: selected)
                 .frame(width: 44, height: 44)
         }
         .accessibilityLabel(Text("bar.space.of \(space.name)"))
+        .contextMenu {
+            Button("spaces.title") { model.spacesSheetShown = true }
+            Button("spaces.private.new") { model.newPrivateTab() }
+        }
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 

@@ -15,7 +15,10 @@ extension BrowserModel {
     func wake(_ tab: TabItem) -> WKWebView {
         if let existing = webViews[tab.id] { return existing }
         let configuration = WKWebViewConfiguration()
-        if let space = state.spaces.first(where: { $0.id == tab.spaceId }) {
+        if tab.isPrivate {
+            // A private tab has no profile: its cookies and storage live in memory and go with its last view (`SpacesModel.swift`).
+            configuration.websiteDataStore = privateDataStore()
+        } else if let space = state.spaces.first(where: { $0.id == tab.spaceId }) {
             configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: ProfileStore.identifier(for: space.profileId))
         }
         for list in blockers { ContentBlocker.install(list, on: configuration) }
@@ -32,7 +35,7 @@ extension BrowserModel {
     }
 
     private func restore(_ tab: TabItem, into view: WKWebView) {
-        let saved = tab.isBlank ? nil : sideStore?.read(.interaction, for: tab.id)
+        let saved = tab.isBlank || tab.isPrivate ? nil : sideStore?.read(.interaction, for: tab.id)
         // The kept state is used once. Left in place it would go stale as soon as the page moves, and a restart after a crash would bring back
         // an older page than the address of the state.
         sideStore?.remove(.interaction, for: tab.id)
@@ -63,12 +66,14 @@ extension BrowserModel {
         view.navigationDelegate = nil
         view.removeFromSuperview()
         webViews[tabId] = nil
+        releasePrivateStoreIfUnused()
     }
 
     /// The history and the scroll position of the page, in a file of the tab. A blank tab keeps nothing: its page is the start page.
     func keepPageState(of view: WKWebView, tabId: String) {
         guard let sideStore else { return }
-        guard let tab = state.tabs.first(where: { $0.id == tabId }), !tab.isBlank else {
+        // A blank tab keeps nothing, and a private tab is never written anywhere: not even the history of its page, in a file of its own.
+        guard let tab = state.tabs.first(where: { $0.id == tabId }), !tab.isBlank, !tab.isPrivate else {
             sideStore.remove(.interaction, for: tabId)
             return
         }
@@ -93,7 +98,8 @@ extension BrowserModel {
             guard let tab = state.tabs.first(where: { $0.id == id }) else { continue }
             facts.append(AwakeTab(id: id, lastShownAt: tab.lastActiveAt ?? 0, isSelected: id == activeTab?.id, isLoading: view.isLoading,
                                   isPlayingMedia: playing[id] ?? false, isCapturing: view.cameraCaptureState != .none || view.microphoneCaptureState != .none,
-                                  keepAwake: tab.keepAwake))
+                                  // A private tab that is freed loses its cookies with its view, and its page state is never kept: it stays awake.
+                                  keepAwake: tab.keepAwake || tab.isPrivate))
         }
         for id in SleepPlanner.tabsToSleep(facts, cap: awakeCap, underPressure: underPressure) { putToSleep(id) }
     }
@@ -107,7 +113,7 @@ extension BrowserModel {
     func enterBackground() async {
         for (id, view) in webViews { keepPageState(of: view, tabId: id) }
         flush()
-        if let tab = activeTab, !tab.isBlank, let view = webViews[tab.id] { await storeThumbnail(of: view, tabId: tab.id) }
+        if let tab = activeTab, !tab.isBlank, !tab.isPrivate, let view = webViews[tab.id] { await storeThumbnail(of: view, tabId: tab.id) }
     }
 
     /// Back on screen, the pages that are awake are the truth again: the state kept for the background would restore an older page after a crash.
@@ -120,7 +126,7 @@ extension BrowserModel {
     /// Takes the picture of a tab now, while it is on screen. A blank tab has none (its page is the start page). The snapshot is asked for
     /// at once, not from a task that would start after the screen has changed: the view must still be on screen when WebKit looks at it.
     func captureThumbnail(of tabId: String) {
-        guard sideStore != nil, let view = webViews[tabId], state.tabs.first(where: { $0.id == tabId })?.isBlank == false else { return }
+        guard sideStore != nil, let view = webViews[tabId], let tab = state.tabs.first(where: { $0.id == tabId }), !tab.isBlank, !tab.isPrivate else { return }
         view.takeSnapshot(with: Self.snapshotConfiguration()) { [weak self] image, error in
             MainActor.assumeIsolated { self?.keepThumbnail(image, error, tabId: tabId) }
         }

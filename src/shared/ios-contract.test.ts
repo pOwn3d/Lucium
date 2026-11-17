@@ -4,6 +4,8 @@ import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { LOCKED_SPACES_MAX } from './lock'
+import { isProfileId, newProfileId, PRIVATE_PROFILE_ID } from './profiles'
+import { themeFromHue, themeHue } from './theme'
 import { hostOf, resolveInput } from './url'
 
 interface Vectors {
@@ -26,6 +28,38 @@ describe('iOS contract: address vectors', () => {
 
   it.each(vectors.host)('hostOf($input)', ({ input, expect: expected }) => {
     expect(hostOf(input)).toBe(expected)
+  })
+})
+
+// Spaces and profiles: what the iPhone writes when a person makes a space or a profile has to be what the Mac would have written.
+interface ThemeVectors {
+  theme: { hue: number; saturation?: number; baseColors: string[]; themeHue: number }[]
+  newProfileId: { name: string; existing: string[]; expect: string }[]
+  profileId: { id: string; valid: boolean }[]
+}
+
+const themeVectors = JSON.parse(readFileSync(join(__dirname, '../../ios/Contracts/theme-vectors.json'), 'utf8')) as ThemeVectors
+
+describe('iOS contract: spaces and profiles', () => {
+  it('has vectors to run', () => {
+    expect(themeVectors.theme.length).toBeGreaterThan(10)
+    expect(themeVectors.newProfileId.length).toBeGreaterThan(5)
+    expect(themeVectors.profileId.length).toBeGreaterThan(5)
+  })
+
+  it.each(themeVectors.theme)('themeFromHue($hue, $saturation)', ({ hue, saturation, baseColors, themeHue: expectedHue }) => {
+    const theme = themeFromHue(hue, saturation)
+    expect(theme.baseColors).toEqual(baseColors)
+    expect(themeHue(theme)).toBe(expectedHue)
+  })
+
+  // The Swift side adds the id of the private window to the taken ones (`reservedProfileId`), as `takenProfileIds` does here.
+  it.each(themeVectors.newProfileId)('newProfileId($name, $existing)', ({ name, existing, expect: expected }) => {
+    expect(newProfileId(name, [...existing, PRIVATE_PROFILE_ID])).toBe(expected)
+  })
+
+  it.each(themeVectors.profileId)('isProfileId($id) is $valid', ({ id, valid }) => {
+    expect(isProfileId(id)).toBe(valid)
   })
 })
 
