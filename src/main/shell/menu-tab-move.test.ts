@@ -1,7 +1,7 @@
 // Onglets › Déplacer l’onglet vers le haut / le bas (⌥⇧⌘↑ / ⌥⇧⌘↓): the tab on screen goes one place in its group, as the entries of its own menu move it
 // (tab-step.ts). The shortcut runs the entry, so pressing the entry is pressing the key. The menu is the real one, with Electron's `Menu` handing the template back.
 
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createInitialState, reduce, type Action } from '@shared/sidebar'
 import type { SidebarState } from '@shared/model'
 
@@ -12,7 +12,13 @@ vi.mock('electron', () => {
   return new Proxy(target, { get: (t, prop: string) => (prop in t ? t[prop] : inert(prop) ? undefined : stub) })
 })
 
+// The menu of macOS on any machine (a Linux runner included), and of Linux when a test asks: the shortcuts differ (shared/platform.ts, LINUX_DEFAULTS).
+vi.mock('../platform', async (original) => (await import('../platform/platform.test-support')).playedPlatform(await original()))
+
 import { buildMenu } from './menu'
+import { played, resetPlayedPlatform } from '../platform/platform.test-support'
+
+afterEach(resetPlayedPlatform)
 
 interface Item {
   label?: string
@@ -65,6 +71,17 @@ describe('Onglets › Déplacer l’onglet vers le haut / le bas', () => {
     const shown = run(state, { type: 'tab/select', id: id('b') })
     expect(tabsMenu(shown).up.accelerator).toBe('CmdOrCtrl+Alt+Shift+Up')
     expect(tabsMenu(shown).down.accelerator).toBe('CmdOrCtrl+Alt+Shift+Down')
+    const own = run(shown, { type: 'settings/update', patch: { keyBindings: { moveTabUp: 'Ctrl+Alt+Up', moveTabDown: '' } } })
+    expect(tabsMenu(own).up.accelerator).toBe('Ctrl+Alt+Up')
+    expect(tabsMenu(own).down.accelerator).toBeUndefined()
+  })
+
+  it('carry Ctrl+Shift+Page Up and Ctrl+Shift+Page Down on Linux, where GNOME keeps Ctrl+Alt+Shift+arrows for the workspaces', () => {
+    const { state, id } = fixture()
+    const shown = run(state, { type: 'tab/select', id: id('b') })
+    played.id = 'linux'
+    expect(tabsMenu(shown).up.accelerator).toBe('CmdOrCtrl+Shift+PageUp')
+    expect(tabsMenu(shown).down.accelerator).toBe('CmdOrCtrl+Shift+PageDown')
     const own = run(shown, { type: 'settings/update', patch: { keyBindings: { moveTabUp: 'Ctrl+Alt+Up', moveTabDown: '' } } })
     expect(tabsMenu(own).up.accelerator).toBe('Ctrl+Alt+Up')
     expect(tabsMenu(own).down.accelerator).toBeUndefined()
