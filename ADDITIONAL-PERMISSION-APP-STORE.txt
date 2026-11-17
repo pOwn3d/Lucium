@@ -1,0 +1,50 @@
+Lucium for iOS: additional permission under GNU GPL version 3 section 7
+=======================================================================
+
+Copyright © 2026 ConsilioWeb and contributors
+
+Lucium is licensed under the GNU General Public License, version 3 or (at
+your option) any later version (the file LICENSE), with the additional
+permissions that go with it: the one for the Widevine module
+(ADDITIONAL-PERMISSION.txt) and the one below. The permission below is
+granted under section 7 of version 3 of that License by every holder of a
+copyright in the code it covers: ConsilioWeb, for the code it wrote, and each
+contributor, for what they contribute, with the sign-off of the Developer
+Certificate of Origin on their commits.
+
+    The application of Lucium for iPhone and iPad ("the iOS App") is made of
+    the code in the folder ios/ of the repository of Lucium and of the other
+    parts of Lucium that a build of that application contains.
+
+    If you convey the iOS App to the public through the App Store of Apple,
+    or through TestFlight, the licensors of Lucium grant you additional
+    permission to do so under the terms that Apple applies there to the
+    people who download it, even where those terms put on the recipient a
+    restriction that section 10 of the License does not allow, such as a
+    limit on the number of devices the iOS App may be used on.
+
+    Because an iPhone or an iPad runs only software that Apple has signed,
+    the licensors also grant you additional permission to convey the iOS App
+    without the Installation Information that section 6 of the License asks
+    for in a User Product, and with the protection that Apple applies to the
+    binary it hands out.
+
+    The Corresponding Source of the iOS App is not reduced by this: it stays
+    complete, under the License, in the repository of Lucium, and anyone may
+    build, change and convey a version of it under the License.
+
+    This permission covers the conveying of the iOS App through the App
+    Store and TestFlight, and nothing else. It applies to a part of the iOS
+    App only if the licensors of that part have granted it; a part that
+    other people hold under another license, such as a filter list, stays
+    under that license, which this permission does not change. It leaves the
+    License unchanged for every other part of the work and for every other
+    way of conveying it.
+
+As section 7 of the License says, you may remove this additional permission
+from a copy you convey. If you convey Lucium under a later version of the
+License, the permission holds under the provision of that version that
+takes the place of section 7.
+
+This text was written for the maintainer of Lucium on 17 November 2026, who
+granted it. A lawyer has not reviewed it yet.

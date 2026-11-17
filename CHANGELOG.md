@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **License, App Store**: a second additional permission (GPL version 3, section 7) lets the maintainer hand out the iPhone and iPad application through Apple’s App Store and TestFlight, its source staying whole under the GPL. Text: `ADDITIONAL-PERMISSION-APP-STORE.txt` and `NOTICE`. The application is not published yet.
+
 ### Fixed
 
 - **Spelling dictionaries, Windows and Linux**: Chromium no longer downloads the dictionary of the system language from its CDN at the first launch, with the checker off. A session starts without a language: nothing is fetched until you switch Spelling on in the Edit menu.

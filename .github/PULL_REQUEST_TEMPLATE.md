@@ -24,7 +24,7 @@ check verifies its form. Read CONTRIBUTING.md first if you have not. If a coding
 - [ ] No new dependency, or I justify it below (license compatible with GPL-3.0-or-later, listed in `docs/licences-tierces.md`; no install script).
 - [ ] Docs updated if behavior changed, and an entry added to the topmost section of `CHANGELOG.md` and of `CHANGELOG.fr.md` (the version being prepared, or `## [Unreleased]` after a release) for anything a user would notice.
 - [ ] Screenshots or recordings (if any) show no personal data.
-- [ ] I have the right to submit this work, and I submit it under the project's license, GPL-3.0-or-later with its additional permission for the Widevine module (`ADDITIONAL-PERMISSION.txt`), keeping my copyright ([Developer Certificate of Origin](https://developercertificate.org)). **Every commit carries my `Signed-off-by` line** (`git commit -s`): a required check refuses the pull request otherwise.
+- [ ] I have the right to submit this work, and I submit it under the project's license, GPL-3.0-or-later with its additional permissions for the Widevine module (`ADDITIONAL-PERMISSION.txt`) and for the iOS application handed out through the App Store (`ADDITIONAL-PERMISSION-APP-STORE.txt`), keeping my copyright ([Developer Certificate of Origin](https://developercertificate.org)). **Every commit carries my `Signed-off-by` line** (`git commit -s`): a required check refuses the pull request otherwise.
 
 ## Notes for the reviewer
 

@@ -62,4 +62,21 @@ describe('what the About group says about the project', () => {
     expect(notice).toContain(granted.join(' '))
     expect(notice).toContain('ADDITIONAL-PERMISSION.txt')
   })
+
+  // The iPhone and iPad application is handed out through the App Store: its permission is a file of its own, and NOTICE repeats it
+  // word for word. The Mac application does not carry the file (it holds no code of ios/), so the build does not copy it.
+  it('keeps the additional permission for the App Store: its file, and whole in the notice', () => {
+    const flat = (text: string) => text.replace(/\s+/g, ' ').trim()
+    const granted = readFileSync(fromRoot('ADDITIONAL-PERMISSION-APP-STORE.txt'), 'utf8')
+      .split(/\n{2,}/)
+      .filter((paragraph) => paragraph.startsWith('    '))
+      .map(flat)
+    expect(granted.length).toBeGreaterThanOrEqual(5)
+    expect(granted.join(' ')).toMatch(/If you convey the iOS App to the public through the App Store of Apple, or through TestFlight/)
+    expect(granted.join(' ')).toMatch(/Installation Information that section 6 of the License asks for in a User Product/)
+    expect(granted.join(' ')).toMatch(/applies to a part of the iOS App only if the licensors of that part have granted it/)
+    const notice = flat(readFileSync(fromRoot('NOTICE'), 'utf8'))
+    expect(notice).toContain(granted.join(' '))
+    expect(notice).toContain('ADDITIONAL-PERMISSION-APP-STORE.txt')
+  })
 })

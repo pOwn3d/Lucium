@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Licence, App Store** : une seconde permission additionnelle (GPL version 3, article 7) permet au mainteneur de distribuer l’application iPhone et iPad par l’App Store d’Apple et TestFlight, ses sources restant complètes sous GPL. Texte : `ADDITIONAL-PERMISSION-APP-STORE.txt` et `NOTICE`. L’application n’est pas encore publiée.
+
 ### Corrections
 
 - **Dictionnaires du correcteur, Windows et Linux** : Chromium ne télécharge plus, au premier lancement et correcteur éteint, le dictionnaire de la langue du système depuis son CDN. Une session démarre sans langue : rien n’est téléchargé avant que vous activiez l’orthographe dans le menu Édition.

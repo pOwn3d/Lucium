@@ -1,0 +1,69 @@
+# The Xcode project of the iOS application, described in a few lines (docs/ios.md). `xcodegen generate` writes Lucium.xcodeproj,
+# which is not committed: a project file is a generated artefact that breaks every merge. XcodeGen (MIT) is a development tool,
+# never shipped with the application.
+name: Lucium
+options:
+  bundleIdPrefix: app.lucium
+  deploymentTarget:
+    iOS: "26.0"
+  developmentLanguage: en
+  createIntermediateGroups: true
+  generateEmptyDirectories: false
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    # No signature anywhere in the repository: the team and the profiles are given on the command line at archive time (docs/ios.md).
+    CODE_SIGN_STYLE: Automatic
+    DEVELOPMENT_TEAM: ""
+packages:
+  LuciumKit:
+    path: LuciumKit
+targets:
+  Lucium:
+    type: application
+    platform: iOS
+    sources:
+      - path: Lucium
+    dependencies:
+      - package: LuciumKit
+    settings:
+      base:
+        # Provisional: the identifier cannot change once a build has been uploaded (docs/ios.md, "Signature et TestFlight").
+        PRODUCT_BUNDLE_IDENTIFIER: app.lucium.browser.ios
+        PRODUCT_NAME: Lucium
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: Lucium
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        SWIFT_EMIT_LOC_STRINGS: YES
+  LuciumTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: LuciumTests
+    dependencies:
+      - target: Lucium
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.lucium.browser.ios.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Lucium.app/Lucium"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+schemes:
+  Lucium:
+    build:
+      targets:
+        Lucium: all
+        LuciumTests: [test]
+    test:
+      targets:
+        - LuciumTests
