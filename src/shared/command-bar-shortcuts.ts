@@ -4,6 +4,7 @@
 import type { SidebarState } from './model'
 import { t } from './i18n'
 import { effectiveAccelerator, formatAccelerator } from './keybindings'
+import type { PlatformId } from './platform'
 import type { Candidate, CommandAction } from './command-bar-types'
 
 /** What the right of a result says it will do ("Switch to Tab"). */
@@ -70,18 +71,22 @@ const ACTION_SHORTCUT: Partial<Record<CommandAction, string>> = {
   'aside-space': 'asideSpace'
 }
 
-/** The shortcut of a command of the bar as the user has it, drawn (⌘F), or null when it has none (or none was given). */
-export function actionShortcut(action: CommandAction, state: Pick<SidebarState, 'settings'>): string | null {
+/**
+ * The shortcut of a command of the bar as the user has it, drawn for the system (⌘F on macOS, Ctrl+F elsewhere), or null when it has none. Without
+ * a platform no key is drawn: a line says no shortcut rather than the keys of another system.
+ */
+export function actionShortcut(action: CommandAction, state: Pick<SidebarState, 'settings'>, platform: PlatformId | undefined): string | null {
   const id = ACTION_SHORTCUT[action]
-  const accelerator = id ? effectiveAccelerator(id, state.settings.keyBindings) : undefined
-  return accelerator ? formatAccelerator(accelerator) : null
+  if (!id || !platform) return null
+  const accelerator = effectiveAccelerator(id, state.settings.keyBindings, platform)
+  return accelerator ? formatAccelerator(accelerator, platform) : null
 }
 
 /**
  * What the line of a command says after its name: « Action », and the shortcut of the command as it is set now when it has one. The key is
  * never written in the text itself: it would stay after the shortcut is changed, or name a key that was never the command's.
  */
-export function actionDetail(action: CommandAction, state: Pick<SidebarState, 'settings'>): string {
-  const shortcut = actionShortcut(action, state)
+export function actionDetail(action: CommandAction, state: Pick<SidebarState, 'settings'>, platform: PlatformId | undefined): string {
+  const shortcut = actionShortcut(action, state, platform)
   return shortcut ? `${t('cmd.action')} · ${shortcut}` : t('cmd.action')
 }

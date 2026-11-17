@@ -20,6 +20,7 @@ import { cleanNoteText, defaultNoteLink, notesContext } from './notes'
 import { isReadableWebPage, siteReadableOf, type ReadableMode } from './readable-mode'
 import type { Candidate, CommandAction } from './command-bar-types'
 import { actionDetail } from './command-bar-shortcuts'
+import type { PlatformId } from './platform'
 import { fold, matchScore, byScore, nameScore } from './command-bar-match'
 
 export const MAX_TABS = 6
@@ -40,7 +41,7 @@ export const MAX_BANG_HINTS = 5
 export const newFolderName = (): string => t('cmd.nouveau-dossier')
 export const SPACE_EMOJIS = ['🚀', '🎨', '📚', '🛠️', '🌱', '🎧', '💡', '🧪']
 
-export function actionCandidates(state: SidebarState): Candidate[] {
+export function actionCandidates(state: SidebarState, platform: PlatformId | undefined): Candidate[] {
   const tab = activeTab(state)
   const list: Candidate[] = []
   if (tab) {
@@ -64,14 +65,14 @@ export function actionCandidates(state: SidebarState): Candidate[] {
     { kind: 'action', id: 'action:new-space', label: t('cmd.nouvel-espace'), detail: t('cmd.action'), action: 'new-space' },
     { kind: 'action', id: 'action:edit-space', label: t('cmd.modifier-l-espace-nom-icone-couleur-profil'), detail: t('cmd.action'), action: 'edit-space' },
     { kind: 'action', id: 'action:edit-theme', label: t('cmd.modifier-le-theme-de-l-espace'), detail: t('cmd.action'), action: 'edit-theme' },
-    { kind: 'action', id: 'action:find', label: t('cmd.rechercher-dans-la-page'), detail: actionDetail('find', state), action: 'find' },
+    { kind: 'action', id: 'action:find', label: t('cmd.rechercher-dans-la-page'), detail: actionDetail('find', state, platform), action: 'find' },
     { kind: 'action', id: 'action:downloads', label: t('cmd.afficher-les-telechargements'), detail: t('cmd.action'), action: 'downloads' },
-    { kind: 'action', id: 'action:capture', label: t('cmd.capturer-la-partie-visible'), detail: actionDetail('capture', state), action: 'capture' },
-    { kind: 'action', id: 'action:capture-region', label: t('cmd.capturer-une-zone'), detail: actionDetail('capture-region', state), action: 'capture-region' },
-    { kind: 'action', id: 'action:capture-full', label: t('cmd.capturer-la-page-entiere'), detail: actionDetail('capture-full', state), action: 'capture-full' },
-    { kind: 'action', id: 'action:archive', label: t('cmd.ouvrir-l-archive'), detail: actionDetail('archive', state), action: 'archive' },
-    { kind: 'action', id: 'action:site-info', label: t('cmd.infos-et-reglages-du-site'), detail: actionDetail('site-info', state), action: 'site-info' },
-    { kind: 'action', id: 'action:settings', label: t('cmd.reglages'), detail: actionDetail('settings', state), action: 'settings' }
+    { kind: 'action', id: 'action:capture', label: t('cmd.capturer-la-partie-visible'), detail: actionDetail('capture', state, platform), action: 'capture' },
+    { kind: 'action', id: 'action:capture-region', label: t('cmd.capturer-une-zone'), detail: actionDetail('capture-region', state, platform), action: 'capture-region' },
+    { kind: 'action', id: 'action:capture-full', label: t('cmd.capturer-la-page-entiere'), detail: actionDetail('capture-full', state, platform), action: 'capture-full' },
+    { kind: 'action', id: 'action:archive', label: t('cmd.ouvrir-l-archive'), detail: actionDetail('archive', state, platform), action: 'archive' },
+    { kind: 'action', id: 'action:site-info', label: t('cmd.infos-et-reglages-du-site'), detail: actionDetail('site-info', state, platform), action: 'site-info' },
+    { kind: 'action', id: 'action:settings', label: t('cmd.reglages'), detail: actionDetail('settings', state, platform), action: 'settings' }
   )
   return list
 }
@@ -165,12 +166,12 @@ export function windowSidebarChangeOf(action: CommandAction): WindowSidebarChang
 }
 
 /** Commands that only show up when what is typed asks for them: listing them on an empty bar would bury the rest. */
-export function searchOnlyActions(state: Pick<SidebarState, 'settings'>): Candidate[] {
+export function searchOnlyActions(state: Pick<SidebarState, 'settings'>, platform: PlatformId | undefined): Candidate[] {
   return [
     { kind: 'action', id: 'action:new-folder', label: newFolderName(), detail: t('cmd.action'), action: 'new-folder' },
     { kind: 'action', id: 'action:edit-shortcuts', label: t('cmd.modifier-les-raccourcis-clavier'), detail: t('cmd.action'), action: 'edit-shortcuts' },
-    { kind: 'action', id: 'action:clear-site-data', label: t('cmd.effacer-les-donnees-du-site'), detail: actionDetail('clear-site-data', state), action: 'clear-site-data' },
-    { kind: 'action', id: 'action:clear-site-now', label: t('cmd.effacer-les-donnees-du-site-maintenant'), detail: actionDetail('clear-site-now', state), action: 'clear-site-now' },
+    { kind: 'action', id: 'action:clear-site-data', label: t('cmd.effacer-les-donnees-du-site'), detail: actionDetail('clear-site-data', state, platform), action: 'clear-site-data' },
+    { kind: 'action', id: 'action:clear-site-now', label: t('cmd.effacer-les-donnees-du-site-maintenant'), detail: actionDetail('clear-site-now', state, platform), action: 'clear-site-now' },
     { kind: 'action', id: 'action:reload-all', label: t('cmd.actualiser-tous-les-onglets'), detail: t('cmd.action'), action: 'reload-all' },
     { kind: 'action', id: 'action:recent-notices', label: t('cmd.notifications-recentes'), detail: t('cmd.action'), action: 'recent-notices' }
   ]

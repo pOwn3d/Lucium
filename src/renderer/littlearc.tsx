@@ -14,11 +14,11 @@ import { HostText } from './HostText'
 import './styles.css'
 import './little.css'
 import { lockDocumentDrops } from './surface'
-import { t } from '@shared/i18n'
+import { setKeyPlatform, t } from '@shared/i18n'
 import { followLanguage } from './document-language'
 import { InLanguage } from './InLanguage'
 import { labelWithShortcut } from '@shared/keybindings'
-import { platformOf } from '@shared/platform'
+import { commandPress, platformOf } from '@shared/platform'
 import { useSystemDark } from './system-dark'
 import { iconSource } from '@shared/site-icon'
 
@@ -64,7 +64,10 @@ function LittleArc() {
   }, [])
 
   // This window reads the snapshot itself (not through useSnapshot), so it sets the language of the interface itself, before any text is read.
-  if (snapshot) followLanguage(document.documentElement, snapshot.state.settings, navigator.language)
+  if (snapshot) {
+    followLanguage(document.documentElement, snapshot.state.settings, navigator.language)
+    setKeyPlatform(platformOf(snapshot.platform))
+  }
   const space = targetSpace(state, snapshot)
   // The keys of this window are those of the menu bar as the user set them (shared/little-bar.ts): its tooltips say the same.
   const withKey = (label: string, command: string): string => labelWithShortcut(label, command, snapshot?.state.settings.keyBindings, platformOf(snapshot?.platform))
@@ -145,7 +148,7 @@ function LittleArc() {
           <button className="la-open-main" title={space ? t('littlearc.ouvrir-dans-name-o', { name: space.name }) : t('littlearc.ouvrir-dans-la-fenetre-principale-o')} onClick={openHere}>
             <span className="la-open-label">{t('littlearc.ouvrir-dans')}</span>
             <span className="la-open-space">{space ? `${space.emoji} ${space.name}`.trim() : ''}</span>
-            <kbd>⌘O</kbd>
+            <kbd>{commandPress('O', platformOf(snapshot?.platform))}</kbd>
           </button>
           <span className="la-open-sep" />
           <button className="la-open-more" title={t('littlearc.autres-espaces')} aria-label={t('littlearc.autres-espaces')} aria-haspopup="menu" onClick={() => act.littleAction(id, 'move-menu')}>

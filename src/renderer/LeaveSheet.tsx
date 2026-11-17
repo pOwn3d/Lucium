@@ -6,11 +6,15 @@
 import { useEffect, useRef } from 'react'
 import type { LeaveRequest } from '@shared/leave-sheet'
 import { api } from './api'
+import { usePlatform } from './use-platform'
+import { commandHeld } from '@shared/keybindings'
+import { commandPress } from '@shared/platform'
 import { t } from '@shared/i18n'
 import './leave-sheet.css'
 
 export function LeaveSheet({ request }: { request: LeaveRequest }) {
   const act = api()
+  const platform = usePlatform()
   const stay = useRef<HTMLButtonElement>(null)
   const answer = (leave: boolean) => act.answerLeave(request.id, leave)
 
@@ -18,10 +22,10 @@ export function LeaveSheet({ request }: { request: LeaveRequest }) {
     stay.current?.focus()
   }, [])
 
-  // Escape stays and ⌘↩ leaves, wherever the focus is while the sheet is open.
+  // Escape stays and ⌘↩ (Ctrl+Enter away from macOS) leaves, wherever the focus is while the sheet is open.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      const leave = e.key === 'Enter' && e.metaKey
+      const leave = e.key === 'Enter' && commandHeld(e, platform)
       if (e.key !== 'Escape' && !leave) return
       e.preventDefault()
       e.stopImmediatePropagation()
@@ -29,7 +33,7 @@ export function LeaveSheet({ request }: { request: LeaveRequest }) {
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [act, request.id])
+  }, [act, request.id, platform])
 
   return (
     <div className="leave-scrim" onMouseDown={(e) => e.target === e.currentTarget && answer(false)}>
@@ -49,7 +53,7 @@ export function LeaveSheet({ request }: { request: LeaveRequest }) {
           </button>
           <button type="button" className="button" onClick={() => answer(true)}>
             {t('app.quitter')}
-            <kbd>⌘↩</kbd>
+            <kbd>{commandPress('↩', platform)}</kbd>
           </button>
         </div>
       </div>

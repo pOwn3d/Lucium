@@ -11,6 +11,7 @@ import {
   type PlusEntryId
 } from '@shared/plus-menu'
 import { activeTab } from '@shared/sidebar'
+import { platformOf } from '@shared/platform'
 import { themeHue } from '@shared/theme'
 import { hostnameOf } from '@shared/url'
 import { api, useSnapshot } from './api'
@@ -109,7 +110,7 @@ export function PlusMenu({ anchor }: { anchor: PlusAnchor }) {
           {g > 0 && <div className="plus-separator" role="separator" />}
           {group.map((entry) => {
             const i = ++index
-            const shortcut = plusShortcut(entry, state.settings.keyBindings)
+            const shortcut = plusShortcut(entry, state.settings.keyBindings, platformOf(snapshot?.platform))
             // A row the lock greys out says why under the pointer.
             const refusal = plusEntryRefusal(entry.id, context)
             return (

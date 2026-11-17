@@ -13,6 +13,7 @@ import { hostOf, isTypedAddress, resolveInput } from './url'
 import { takesTerm } from './site-search'
 import type { NamedWindow } from './window-names'
 import type { WindowSidebar } from './window-sidebar'
+import type { PlatformId } from './platform'
 import { t } from './i18n'
 import { COMMAND_BAR_CARD } from './command-bar-surface'
 import type { Candidate } from './command-bar-types'
@@ -138,7 +139,7 @@ export const tabLeadsSearch = (state: Pick<SidebarState, 'settings'>, newTab: bo
 
 /**
  * `options.newTab` says the bar was opened to open a new tab (⌘T, new window, split view) and not to change the page of the tab on screen: it is
- * what `tabLeadsSearch` asks about.
+ * what `tabLeadsSearch` asks about. `options.platform` is the system the keys of the commands are drawn for; without it the lines name no shortcut.
  */
 export function rankCandidates(
   query: string,
@@ -146,7 +147,7 @@ export function rankCandidates(
   history: HistoryEntry[] = [],
   suggestions: string[] = [],
   extensions: readonly ExtensionInfo[] = [],
-  options: { private?: boolean; windows?: readonly NamedWindow[]; newTab?: boolean; windowSidebar?: WindowSidebar } = {}
+  options: { private?: boolean; windows?: readonly NamedWindow[]; newTab?: boolean; windowSidebar?: WindowSidebar; platform?: PlatformId } = {}
 ): Candidate[] {
   const q = query.trim()
   const { suggestHistory, suggestTabs, suggestArchive, suggestReadLater } = state.settings
@@ -163,7 +164,7 @@ export function rankCandidates(
     )
       .slice(0, MAX_TABS + 2)
       .map((t) => tabCandidate(t, state))
-    return [...recent, ...actionCandidates(state)]
+    return [...recent, ...actionCandidates(state, options.platform)]
   }
 
   const result: Candidate[] = []
@@ -287,8 +288,8 @@ export function rankCandidates(
       .slice(0, MAX_HISTORY)
       .map(({ h }): Candidate => ({ kind: 'history', id: `history:${h.url}`, label: h.title || h.url, detail: t('cmd.historique-host', { host: hostOf(h.url) }), url: h.url }))
   )
-  result.push(...actionCandidates(state).filter((c) => matchScore(c.label, q) > 0))
-  result.push(...searchOnlyActions(state).filter((c) => nameScore(c.label, q) > 0))
+  result.push(...actionCandidates(state, options.platform).filter((c) => matchScore(c.label, q) > 0))
+  result.push(...searchOnlyActions(state, options.platform).filter((c) => nameScore(c.label, q) > 0))
   result.push(...tabSearchActions(state).filter((c) => nameScore(c.label, q) > 0))
   result.push(...autoReloadActions(state).filter((c) => nameScore(c.label, q) > 0))
   result.push(...readLaterActions(state, options.private === true).filter((c) => nameScore(c.label, q) > 0))

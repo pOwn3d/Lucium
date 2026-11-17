@@ -31,7 +31,7 @@ const brought: ArcImported = { spaces: 3, tabs: 42, folders: 5, favorites: 0, sp
 
 function guide(settings: Partial<Settings> = {}, imported?: ArcImported) {
   const state: SidebarState = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: { ...defaultSettings(), ...settings } }
-  holder.snapshot = { state, runtime: { tabs: {}, canGoBack: false, canGoForward: false } }
+  holder.snapshot = { state, runtime: { tabs: {}, canGoBack: false, canGoForward: false }, platform: 'darwin' }
   const props = imported ? { imported } : {}
   const markup = renderToStaticMarkup(createElement(ArcGuide, props))
   const elements = elementsOf(createElement(ArcGuide, props))
@@ -84,6 +84,12 @@ describe('the shortcut of the mini window', () => {
     expect(removed).toContain('Ouvrez-en une par Fichier › Nouvelle mini-fenêtre.')
     expect(removed).not.toContain('⌥⌘N')
     expect(removed).not.toContain('Ouvrez-en une avec')
+  })
+
+  it('is drawn with Ctrl and Alt on a system that has no Command key', () => {
+    const state: SidebarState = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: defaultSettings() }
+    holder.snapshot = { state, runtime: { tabs: {}, canGoBack: false, canGoForward: false }, platform: 'linux' }
+    expect(renderToStaticMarkup(createElement(ArcGuide, {}))).toContain('Ouvrez-en une avec Ctrl+Alt+N, ou par Fichier › Nouvelle mini-fenêtre.')
   })
 })
 

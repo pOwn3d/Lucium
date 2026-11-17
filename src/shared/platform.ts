@@ -262,6 +262,15 @@ export function formatAcceleratorFor(accelerator: string, platform: PlatformId):
   return [...words.filter(Boolean), shown[key] ?? key].join('+')
 }
 
+/**
+ * The press of the main modifier and one key as a hint of a sheet draws it: "⌘↵" on macOS, "Ctrl+Entrée" elsewhere (the Command key does not exist
+ * there). `key` is the key as the macOS hint writes it (↵, ↩, Z, 1…); the Enter glyphs become the word of the system.
+ */
+export function commandPress(key: string, platform: PlatformId): string {
+  if (platform === 'darwin') return `⌘${key}`
+  return `Ctrl+${key === '↵' || key === '↩' ? t('platform.entree') : key}`
+}
+
 /** Whether an accelerator holds Ctrl and Alt together: where that is AltGr, it fires while a character is being typed. */
 export function usesCtrlAlt(accelerator: string, platform: PlatformId): boolean {
   if (!PLATFORM_FACTS[platform].ctrlAltIsAltGr) return false

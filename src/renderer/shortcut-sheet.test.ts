@@ -17,7 +17,7 @@ import { createInitialState } from '@shared/sidebar'
 import { elementsOf } from './render.test-support'
 
 // As the real `useSnapshot` does: the language of the settings is set while the view renders, long after the modules were loaded.
-const holder = vi.hoisted(() => ({ snapshot: null as { state: { settings: { interfaceTranslated: boolean; language: 'auto' | 'fr' | 'en' } } } | null, sent: [] as unknown[] }))
+const holder = vi.hoisted(() => ({ snapshot: null as { state: { settings: { interfaceTranslated: boolean; language: 'auto' | 'fr' | 'en' } }; platform: string } | null, sent: [] as unknown[] }))
 vi.mock('./api', () => ({
   api: () => ({ dispatch: (action: unknown) => void holder.sent.push(action), closeOverlay: () => undefined }),
   useSnapshot: () => {
@@ -38,7 +38,7 @@ afterEach(() => setLanguage('fr'))
 
 function snapshotWith(settings: Partial<Settings>): void {
   const state: SidebarState = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: { ...defaultSettings(), ...settings } }
-  holder.snapshot = { state } as typeof holder.snapshot
+  holder.snapshot = { state, platform: 'darwin' } as typeof holder.snapshot
 }
 
 function sheet(settings: Partial<Settings>, url: string, title = 'Twitch'): string {

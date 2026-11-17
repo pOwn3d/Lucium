@@ -69,15 +69,15 @@ describe('plusShortcut', () => {
   const entry = (id: string) => PLUS_GROUPS.flat().find((e) => e.id === id)!
 
   it('prints the shortcut in force with its keys spaced, and nothing for a row without a command', () => {
-    expect(plusShortcut(entry('split'), undefined)).toBe('⌃ ⇧ =')
-    expect(plusShortcut(entry('boost'), { boost: 'CmdOrCtrl+Alt+B' })).toBe('')
+    expect(plusShortcut(entry('split'), undefined, 'darwin')).toBe('⌃ ⇧ =')
+    expect(plusShortcut(entry('boost'), { boost: 'CmdOrCtrl+Alt+B' }, 'darwin')).toBe('')
   })
 
   it('follows what the user bound, and shows nothing for a shortcut they removed', () => {
-    expect(plusShortcut(entry('split'), { addSplit: 'CmdOrCtrl+Alt+S' })).toBe('⌥ ⌘ S')
-    expect(plusShortcut(entry('split'), { addSplit: '' })).toBe('')
-    expect(plusShortcut(entry('space'), undefined)).toBe('')
-    expect(plusShortcut(entry('space'), { newSpace: 'CmdOrCtrl+Shift+N' })).toBe('⇧ ⌘ N')
+    expect(plusShortcut(entry('split'), { addSplit: 'CmdOrCtrl+Alt+S' }, 'darwin')).toBe('⌥ ⌘ S')
+    expect(plusShortcut(entry('split'), { addSplit: '' }, 'darwin')).toBe('')
+    expect(plusShortcut(entry('space'), undefined, 'darwin')).toBe('')
+    expect(plusShortcut(entry('space'), { newSpace: 'CmdOrCtrl+Shift+N' }, 'darwin')).toBe('⇧ ⌘ N')
   })
 })
 

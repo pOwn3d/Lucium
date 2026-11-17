@@ -5,7 +5,8 @@
 import { useContext, useState, type CSSProperties, type ReactNode } from 'react'
 import { t } from '@shared/i18n'
 import { illustrationTip, type Illustration } from '@shared/settings-illustrations'
-import { SettingsStateContext } from './settings-context'
+import type { PlatformId } from '@shared/platform'
+import { PlatformContext, SettingsStateContext } from './settings-context'
 import { PauseGlyph, PlayGlyph } from './media-glyphs'
 import './settings-illustrations.css'
 
@@ -102,8 +103,22 @@ const Look = ({ scheme }: { scheme: 'light' | 'dark' }) => (
   </div>
 )
 
+/** One key cap of a scene: the symbol on macOS, the word elsewhere. */
+const Cap = ({ cls = 'key', style, children }: { cls?: string; style?: CSSProperties; children: ReactNode }) => (
+  <span className={cls} style={style}>
+    {children}
+  </span>
+)
+
+/**
+ * The keys of the scenes that show a press. macOS draws the symbols of its modifiers (⌃ ⌥ ⌘ ⇥); the other systems have no Command key, their main modifier is
+ * Ctrl, and their caps are words (wider: the scene that places its caps by hand moves the second one along).
+ */
+const capsOf = (platform: PlatformId | null) => (platform === 'darwin' ? { ctrl: '⌃', alt: '⌥', cmd: '⌘', tab: '⇥', mac: true } : { ctrl: 'Ctrl', alt: 'Alt', cmd: 'Ctrl', tab: 'Tab', mac: false })
+
 function Scene({ id }: { id: string }) {
   const w = words()
+  const caps = capsOf(useContext(PlatformContext))
   switch (id) {
     case 'sleepAfterMinutes':
       return (
@@ -226,8 +241,8 @@ function Scene({ id }: { id: string }) {
             <div className="ph" />
             <Lines />
           </Page>
-          <span className="key" style={{ left: 110, top: 16 }}>⌃</span>
-          <span className="key tabk a" style={{ left: 132, top: 16 }}>⇥</span>
+          <Cap style={{ left: caps.mac ? 110 : 96, top: 16 }}>{caps.ctrl}</Cap>
+          <Cap cls="key tabk a" style={{ left: caps.mac ? 132 : 128, top: 16 }}>{caps.tab}</Cap>
           <div className="cyc a">
             <div className="th">
               <i />
@@ -310,8 +325,17 @@ function Scene({ id }: { id: string }) {
             <b style={width('40%')} />
           </div>
           <div className="keys">
-            <span className="key press a">⌥</span>
-            <span className="key press a">⌘</span>
+            {caps.mac ? (
+              <>
+                <Cap cls="key press a">{caps.alt}</Cap>
+                <Cap cls="key press a">{caps.cmd}</Cap>
+              </>
+            ) : (
+              <>
+                <Cap cls="key press a">{caps.cmd}</Cap>
+                <Cap cls="key press a">{caps.alt}</Cap>
+              </>
+            )}
             <span className="key press a">N</span>
           </div>
           <div className="mini pop a">
@@ -477,7 +501,7 @@ function Scene({ id }: { id: string }) {
           <SmallWindow cls="w1" tabs={['70%', '55%', '64%', '48%']} />
           <SmallWindow cls="w2" tabs={['62%', '50%', '68%']} />
           <div className="keys">
-            <span className="key a">⌘</span>
+            <Cap cls="key a">{caps.cmd}</Cap>
             <span className="key a">Q</span>
           </div>
           <span className="app a" />
@@ -592,7 +616,8 @@ function Scene({ id }: { id: string }) {
 export function SettingIllustration({ illustration, name }: { illustration: Illustration; name: string }) {
   const [paused, setPaused] = useState(false)
   const settings = useContext(SettingsStateContext)
-  const tip = illustrationTip(illustration, settings?.keyBindings ?? {})
+  const platform = useContext(PlatformContext)
+  const tip = illustrationTip(illustration, settings?.keyBindings ?? {}, platform ?? undefined)
   return (
     <>
       <figure className={`illu ${paused ? 'paused' : ''}`.trim()} data-illu={illustration.key} aria-label={t('settings-illustrations.effet-de-name', { name })}>

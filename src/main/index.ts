@@ -40,7 +40,8 @@ import { installAnnotation } from './shell/annotate-wiring'
 import { installWebApps } from './shell/web-apps-wiring'
 import { createWindowManager, followDockClicks, openExtensionWindows } from './shell/windows-wiring'
 import { installExternalLinks } from './shell/external-links-wiring'
-import { t } from '@shared/i18n'
+import { setKeyPlatform, t } from '@shared/i18n'
+import { platformOf } from '@shared/platform'
 import { WaitingLinks } from '@shared/waiting-links'
 import { followSpellChecking } from './shell/page-commands'
 import { MAIN_WINDOW_ID } from './shell/windows'
@@ -188,6 +189,8 @@ function floatingSidebar(webPreferences: WebPreferences, query?: Record<string, 
 async function main(): Promise<void> {
   // The last error lines stay in memory for Settings › Général › État de Lucium (the console still writes as before).
   installErrorLog()
+  // The keys named inside the sentences (menus, dialogs) are those of the system this process runs on (shared/key-words.ts).
+  setKeyPlatform(platformOf(process.platform))
   await app.whenReady()
   // On the castLabs build of Electron (docs/drm.md) the Widevine module is installed from here, without holding the start back; on the Electron of the project there is no
   // such module and nothing happens. A test run contacts nobody.

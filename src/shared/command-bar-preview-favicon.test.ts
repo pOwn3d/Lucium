@@ -18,7 +18,7 @@ function world(tabIcon: string | undefined, extra: Partial<SidebarState> = {}): 
   return s
 }
 const openLine: Candidate = { kind: 'open', id: 'open', label: 'learn.datascientest.com', detail: '', url: ADDRESS }
-const preview = (state: SidebarState, candidate: Candidate = openLine) => candidatePreview(candidate, { state, now: ctx.now, mode: 'current' })
+const preview = (state: SidebarState, candidate: Candidate = openLine) => candidatePreview(candidate, { state, now: ctx.now, mode: 'current', platform: 'darwin' })
 
 describe('the icon of the preview for an address', () => {
   it('is the icon of the tab open on that address, first', () => {

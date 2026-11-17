@@ -13,10 +13,10 @@ describe('the rows', () => {
 
   it('shows the shortcut the user has bound, none when they removed it', () => {
     const clear = SPACE_MENU_ENTRIES().find((entry) => entry.id === 'clear')!
-    expect(spaceMenuShortcut(clear, undefined)).toBe('⇧⌘K')
-    expect(spaceMenuShortcut(clear, { clearToday: 'CmdOrCtrl+Alt+K' })).toBe('⌥⌘K')
-    expect(spaceMenuShortcut(clear, { clearToday: '' })).toBe('')
-    expect(spaceMenuShortcut(SPACE_MENU_ENTRIES().find((entry) => entry.id === 'rename')!, undefined)).toBe('')
+    expect(spaceMenuShortcut(clear, undefined, 'darwin')).toBe('⇧⌘K')
+    expect(spaceMenuShortcut(clear, { clearToday: 'CmdOrCtrl+Alt+K' }, 'darwin')).toBe('⌥⌘K')
+    expect(spaceMenuShortcut(clear, { clearToday: '' }, 'darwin')).toBe('')
+    expect(spaceMenuShortcut(SPACE_MENU_ENTRIES().find((entry) => entry.id === 'rename')!, undefined, 'darwin')).toBe('')
   })
 })
 

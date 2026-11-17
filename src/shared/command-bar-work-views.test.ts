@@ -39,7 +39,7 @@ describe('the work views in the command bar', () => {
   it('shows in its preview the layout, the sites and where it opens', () => {
     const state = withView()
     const [found] = views(rankCandidates('dupont', state))
-    const preview = candidatePreview(found!, { state, now: 1_000, mode: 'new' })
+    const preview = candidatePreview(found!, { state, now: 1_000, mode: 'new', platform: 'darwin' })
     expect(preview.note).toBe('dupont.example · admin.dupont.example · docs.example')
     expect(preview.chips).toEqual(['3 sites, en grille, 50 / 50 en largeur, 50 / 50 en hauteur', 'S’ouvre dans l’espace affiché'])
   })

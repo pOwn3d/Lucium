@@ -12,6 +12,8 @@ import { foldedQuery, foldedText, scoreFolded } from './command-bar'
 import { profileOfSpace } from './profiles'
 import { splitFor } from './sidebar'
 import { hostOf } from './url'
+import { commandHeld } from './keybindings'
+import type { PlatformId } from './platform'
 import { tabName, type ArchivedTab, type RuntimeState, type SidebarState, type TabItem } from './model'
 
 /** The states a tab can be filtered on, in the order the chips show them. `archived` stands alone: the archive has no sleeping, sound or split tab. */
@@ -304,9 +306,9 @@ export function canArchiveRow(row: TabSearchRow, state: SidebarState): boolean {
 }
 
 /**
- * ⌫ archives the highlighted tab on an empty field, and ⌘⌫ with a text in it. Never from a key held down: clearing a long text by holding ⌫ must stop
- * at the empty field, not go on to archive a tab.
+ * ⌫ archives the highlighted tab on an empty field, and ⌘⌫ (Ctrl+Backspace away from macOS) with a text in it. Never from a key held down: clearing a
+ * long text by holding ⌫ must stop at the empty field, not go on to archive a tab.
  */
-export function isArchiveKey(event: { key: string; metaKey: boolean; repeat: boolean }, query: string): boolean {
-  return event.key === 'Backspace' && !event.repeat && (query === '' || event.metaKey)
+export function isArchiveKey(event: { key: string; metaKey: boolean; ctrlKey: boolean; repeat: boolean }, query: string, platform: PlatformId): boolean {
+  return event.key === 'Backspace' && !event.repeat && (query === '' || commandHeld(event, platform))
 }

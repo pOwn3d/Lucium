@@ -8,6 +8,7 @@ import type { UiSnapshot } from '@shared/ipc'
 import type { LinkRoute, Settings } from '@shared/model'
 import { routeTargetLabel } from '@shared/sessions'
 import { effectiveAccelerator, formatAccelerator } from '@shared/keybindings'
+import { platformOf } from '@shared/platform'
 import { LinksPresetRow } from './CategoryRows'
 import { LittleArcSettings } from './LittleArcSettings'
 import { Check, Choice, Group, Place, Row, Subpage, SubpageEntry, type DrawsRows } from './settings-parts'
@@ -75,8 +76,9 @@ export function LinkRoutes({ snapshot, update }: PaneProps) {
 /** ⌥⌘N, the mini window from any application: in Clavier et souris › Raccourcis dans toutes les applications. */
 export function LittleShortcutRow({ snapshot, update }: PaneProps) {
   const { settings } = snapshot.state
-  const accelerator = effectiveAccelerator('newLittleArc', settings.keyBindings)
-  const shortcut = accelerator ? formatAccelerator(accelerator) : ''
+  const platform = platformOf(snapshot.platform)
+  const accelerator = effectiveAccelerator('newLittleArc', settings.keyBindings, platform)
+  const shortcut = accelerator ? formatAccelerator(accelerator, platform) : ''
   return (
     <Check
       settingKey="littleArcShortcut"

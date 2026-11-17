@@ -155,7 +155,7 @@ describe('the genre chips and the letters that name them', () => {
 })
 
 describe('the preview of the highlighted line', () => {
-  const at = { now: 1_000_000 + 3 * 3_600_000, mode: 'new' as const }
+  const at = { now: 1_000_000 + 3 * 3_600_000, mode: 'new' as const, platform: 'darwin' as const }
 
   it('describes an open tab: its picture is asked for, its address, its space, when it was used, and the keys', () => {
     const state = world()
@@ -215,8 +215,8 @@ describe('the preview of the highlighted line', () => {
 
   it('draws the shortcut of a command from the same bindings as the menus', () => {
     const state = world()
-    expect(actionShortcut('settings', state)).toBe('⌘,')
-    expect(actionShortcut('edit-space', state)).toBeNull()
+    expect(actionShortcut('settings', state, 'darwin')).toBe('⌘,')
+    expect(actionShortcut('edit-space', state, 'darwin')).toBeNull()
   })
 })
 
@@ -240,7 +240,7 @@ describe('"Rechercher un onglet…", the way into the "Onglets" mode from the ba
   it('shows the key the user has for the mode, in the preview', () => {
     const state = world({ keyBindings: { tabSearch: 'CmdOrCtrl+Alt+J' } })
     const found = offered(state, 'rechercher un onglet')!
-    expect(candidatePreview(found, { state, history, now: 1_000_000, mode: 'new' }).chips).toEqual(['Raccourci ⌥⌘J'])
-    expect(candidatePreview(found, { state: world(), history, now: 1_000_000, mode: 'new' }).chips).toEqual(['Raccourci ⇧⌘A'])
+    expect(candidatePreview(found, { state, history, now: 1_000_000, mode: 'new', platform: 'darwin' }).chips).toEqual(['Raccourci ⌥⌘J'])
+    expect(candidatePreview(found, { state: world(), history, now: 1_000_000, mode: 'new', platform: 'darwin' }).chips).toEqual(['Raccourci ⇧⌘A'])
   })
 })

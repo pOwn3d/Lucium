@@ -2,7 +2,8 @@ import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, use
 import { gotoTabCommand } from '@shared/little-picker'
 import { actionToDispatch, BAR_WIDTH, barBox, barLayout, candidateDispatches, candidateHint, candidatePreview, cardSurface, completedRow, groupCandidates, groupStarts, groupTitle, inScope, littleCandidates, littleGroupStarts, newTabOf, pageColorBehind, typedStaysPrivate, inlineCompletion, rankCandidates, resultAtEdge, scopeSiteFor, SCOPE_PREFIX, splitScope, suggestionQuery, usageKey, windowSidebarChangeOf, type BarScope, type Candidate, type CommandAction } from '@shared/command-bar'
 import type { CommandBarMode } from '@shared/ipc'
-import { effectiveAccelerator, formatAccelerator } from '@shared/keybindings'
+import { commandHeld, effectiveAccelerator, formatAccelerator } from '@shared/keybindings'
+import { commandPress, platformOf } from '@shared/platform'
 import type { HistoryEntry, SiteSearch } from '@shared/model'
 import { copyableUrl } from '@shared/copy-url'
 import { activeTab } from '@shared/sidebar'
@@ -212,6 +213,8 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
 
   // In a private window and over a private tab, what is typed is not sent to the search engine (the main process refuses it as well).
   const staysPrivate = snapshot ? typedStaysPrivate(snapshot.state, snapshot.private === true) : true
+  // The system the keys of the bar are drawn for, and the one whose main modifier (Command or Ctrl) the keys of the bar read.
+  const platform = platformOf(snapshot?.platform)
   // Web suggestions come from the search engine: ask only for text that is not a URL, and drop outdated answers.
   useEffect(() => {
     let stale = false
@@ -249,12 +252,12 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       return text ? [{ kind: 'open', id: 'scope', label: text, detail: scope.name, url: scope.url.replace('%s', encodeURIComponent(text)), search: true } satisfies Candidate] : []
     }
     // A bar opened for a new tab (⌘T, new window, split view) opens a new tab with what is typed; the open tabs follow in the list (setting `goToOpenTab` brings back the switch to an open tab).
-    const found = rankCandidates(lookFor, snapshot.state, history, suggestions, snapshot.extensions, { private: snapshot.private === true, windows: snapshot.windows, newTab: mode === 'new' || mode === 'split', ...(snapshot.windowSidebar ? { windowSidebar: snapshot.windowSidebar } : {}) })
+    const found = rankCandidates(lookFor, snapshot.state, history, suggestions, snapshot.extensions, { private: snapshot.private === true, windows: snapshot.windows, platform, newTab: mode === 'new' || mode === 'split', ...(snapshot.windowSidebar ? { windowSidebar: snapshot.windowSidebar } : {}) })
     if (barScope === null) return found
     // Narrowed to a genre: its lines only. The history has no line of its own while nothing is typed (the ranking lists it only for a text), so the recent pages are the list.
     if (barScope === 'history' && lookFor.trim() === '') return history.slice(0, HISTORY_RECENT).map((h): Candidate => ({ kind: 'history', id: `history:${h.url}`, label: h.title || h.url, detail: t('cmd.history-host', { host: hostOf(h.url) }), url: h.url }))
     return inScope(found, barScope)
-  }, [snapshot, query, lookFor, barScope, history, suggestions, scope, little, mode])
+  }, [snapshot, query, lookFor, barScope, history, suggestions, scope, little, mode, platform])
   // Narrowed to a genre, no letters are completed: the field holds a prefix and a search, not an address.
   const completion = typing && barScope === null ? inlineCompletion(query, ranked) : null
   // The address on screen is what Enter opens: when the field shows a completed address and the first row would search for the letters typed, a row for the address leads.
@@ -557,8 +560,8 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
     } else if (e.key === 'Enter' && e.shiftKey && query.trim() && !scope && !little && barScope === null) {
       // ⇧↩: the first result of the search, not the results page; commas open several.
       api().submitUrl(query, mode, true)
-    } else if (e.key === 'Enter' && e.metaKey && !little && candidates[selected]) {
-      // ⌘↩: the page of the line in a new tab, whatever Enter does on it.
+    } else if (e.key === 'Enter' && commandHeld(e, platform) && !little && candidates[selected]) {
+      // ⌘↩ (Ctrl+Enter away from macOS): the page of the line in a new tab, whatever Enter does on it.
       openInNewTab(candidates[selected]!)
     } else if (e.key === 'Enter') {
       // Enter on raw text must always navigate, even before the candidate list has caught up. Inside a genre there is no raw text to send: `@abc` is not an address.
@@ -582,8 +585,8 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
   // The size and the shape the user chose (Settings › Recherche): the width, the height of the list and the preview column, which the style sheet reads.
   const box = barBox(snapshot.state.settings.commandBarSize, snapshot.state.settings.commandBarShape, layout.preview)
   const current = candidates[selected]
-  const preview = !little && layout.preview && current ? candidatePreview(current, { state: snapshot.state, runtime: snapshot.runtime, history, now: Date.now(), mode, picked }) : null
-  const helpKey = effectiveAccelerator('shortcutHelp', snapshot.state.settings.keyBindings)
+  const preview = !little && layout.preview && current ? candidatePreview(current, { state: snapshot.state, runtime: snapshot.runtime, history, now: Date.now(), mode, picked, platform }) : null
+  const helpKey = effectiveAccelerator('shortcutHelp', snapshot.state.settings.keyBindings, platform)
   // The function `shortcutHelp` gives the button its sheet; off, the button keeps the older reminder of the keys of the bar.
   const openHelp = () => {
     if (snapshot.state.settings.shortcutHelp) return api().openOverlay({ panel: 'shortcuts' })
@@ -672,7 +675,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
           // The round "i" had no word and led nowhere: a word, and the key of the sheet of the shortcuts when there is one.
           <button className={`palette-info ${help ? 'on' : ''}`} title={t('cmd.aide-de-la-barre-de-commandes')} aria-label={t('cmd.aide-de-la-barre-de-commandes')} aria-expanded={snapshot.state.settings.shortcutHelp ? undefined : help} onMouseDown={(e) => e.preventDefault()} onClick={openHelp}>
             {t('cmd.raccourcis')}
-            {snapshot.state.settings.shortcutHelp && helpKey && <kbd aria-hidden="true">{formatAccelerator(helpKey)}</kbd>}
+            {snapshot.state.settings.shortcutHelp && helpKey && <kbd aria-hidden="true">{formatAccelerator(helpKey, platform)}</kbd>}
           </button>
         )}
       </div>
@@ -786,8 +789,8 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
         <div className="ts-undo cb-undo" role="status" aria-live="polite" key={forgotten.url} style={{ '--notice-ms': `${ACTION_NOTICE_MS}ms` } as CSSProperties} {...undoNotice.props}>
           <b>{t('cmd.page-oubliee')}</b>
           <span className="ts-undo-spacer" />
-          <kbd aria-hidden="true">⌘Z</kbd>
-          <button type="button" aria-keyshortcuts="Meta+Z" onMouseDown={(e) => e.preventDefault()} onClick={undoForget}>
+          <kbd aria-hidden="true">{commandPress('Z', platform)}</kbd>
+          <button type="button" aria-keyshortcuts={platform === 'darwin' ? 'Meta+Z' : 'Control+Z'} onMouseDown={(e) => e.preventDefault()} onClick={undoForget}>
             {t('cmd.annuler')}
           </button>
         </div>
@@ -821,7 +824,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
             <>
               <span><kbd>↑↓</kbd> {t('cmd.pied-parcourir')}</span>
               <span><kbd>↵</kbd> {t('cmd.pied-ouvrir')}</span>
-              <span><kbd>⌘↵</kbd> {t('cmd.pied-nouvel-onglet')}</span>
+              <span><kbd>{commandPress('↵', platform)}</kbd> {t('cmd.pied-nouvel-onglet')}</span>
               <span><kbd>{t('cmd.echap')}</kbd> {t('cmd.pied-fermer')}</span>
             </>
           )}

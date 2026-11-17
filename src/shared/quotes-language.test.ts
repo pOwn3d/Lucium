@@ -41,7 +41,7 @@ describe('the texts built in code, in English', () => {
   })
 
   it('quotes the search in the preview of the highlighted line', () => {
-    const at = { now: 1_000_000, mode: 'new' as const, history: [] }
+    const at = { now: 1_000_000, mode: 'new' as const, history: [], platform: 'darwin' as const }
     const search = rankCandidates('something', state, []).find((c) => c.kind === 'open')!
     setLanguage('en')
     expect(candidatePreview(search, { state, ...at }).title).toBe('“something”')

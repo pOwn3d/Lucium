@@ -4,10 +4,14 @@
 import { createContext } from 'react'
 import type { SettingsPane, SettingsSubpage } from '@shared/ipc'
 import type { Settings } from '@shared/model'
+import type { PlatformId } from '@shared/platform'
 import type { SettingKey } from '@shared/settings-catalog'
 
 /** The settings the window shows, so that a row can tell whether it is at its default. Absent in a pane drawn alone (a test): nothing is marked then. */
 export const SettingsStateContext = createContext<Settings | null>(null)
+
+/** The system the window runs on, for the keys it draws (⌘ or Ctrl). Absent in a pane drawn alone (a test): no key is drawn then. */
+export const PlatformContext = createContext<PlatformId | null>(null)
 
 /**
  * How a row that is not at its default puts it back (« Rétablir » on the row): the window writes the default of its settings (every one a preset

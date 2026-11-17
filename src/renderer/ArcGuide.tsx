@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { ARC_GUIDE_PLACES, importedParts, type ArcGuidePlace, type ArcImported } from '@shared/arc-guide'
 import { t } from '@shared/i18n'
 import { effectiveAccelerator, formatAccelerator } from '@shared/keybindings'
+import { platformOf } from '@shared/platform'
 import type { SettingsPane } from '@shared/ipc'
 import { settingsPaneLabel } from '@shared/settings-catalog'
 import { api, useSnapshot } from './api'
@@ -37,7 +38,8 @@ export function ArcGuide({ imported }: { imported?: ArcImported }) {
     act.openOverlay(ARC_GUIDE_PLACES[place])
   }
 
-  const accelerator = effectiveAccelerator('newLittleArc', settings.keyBindings)
+  const platform = platformOf(snapshot.platform)
+  const accelerator = effectiveAccelerator('newLittleArc', settings.keyBindings, platform)
   const menu = `${t('menu.fichier')} › ${t('menu.nouvelle-mini-fenetre')}`
   const parts = importedParts(imported)
 
@@ -94,7 +96,7 @@ export function ArcGuide({ imported }: { imported?: ArcImported }) {
             'mini',
             t('arc-guide.ancien-little-arc'),
             t('little-arc-settings.mini-fenetre'),
-            accelerator ? t('arc-guide.mini-fenetre-raccourci', { shortcut: formatAccelerator(accelerator), menu }) : t('arc-guide.mini-fenetre-sans-raccourci', { menu }),
+            accelerator ? t('arc-guide.mini-fenetre-raccourci', { shortcut: formatAccelerator(accelerator, platform), menu }) : t('arc-guide.mini-fenetre-sans-raccourci', { menu }),
             [{ label: t('arc-guide.ouvrir-mini-fenetre'), place: 'miniWindow' }]
           )}
           {row(

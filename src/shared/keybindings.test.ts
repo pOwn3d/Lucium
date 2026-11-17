@@ -116,9 +116,9 @@ describe('cleanBindings and conflicts', () => {
 
 describe('formatAccelerator', () => {
   it('shows macOS symbols in the usual order', () => {
-    expect(formatAccelerator('CmdOrCtrl+Shift+J')).toBe('⇧⌘J')
-    expect(formatAccelerator('CmdOrCtrl+Alt+Shift+S')).toBe('⌥⇧⌘S')
-    expect(formatAccelerator('Ctrl+Left')).toBe('⌃←')
+    expect(formatAccelerator('CmdOrCtrl+Shift+J', 'darwin')).toBe('⇧⌘J')
+    expect(formatAccelerator('CmdOrCtrl+Alt+Shift+S', 'darwin')).toBe('⌥⇧⌘S')
+    expect(formatAccelerator('Ctrl+Left', 'darwin')).toBe('⌃←')
   })
 })
 
@@ -150,7 +150,7 @@ describe('the commands that had no shortcut to give', () => {
 
 describe('window commands', () => {
   it('open a window, a blank window and a private window with their usual shortcuts', () => {
-    expect(['newWindow', 'blankWindow', 'privateWindow'].map((id) => formatAccelerator(effectiveAccelerator(id, {})!))).toEqual(['⌘N', '⌃⌘N', '⇧⌘N'])
+    expect(['newWindow', 'blankWindow', 'privateWindow'].map((id) => formatAccelerator(effectiveAccelerator(id, {})!, 'darwin'))).toEqual(['⌘N', '⌃⌘N', '⇧⌘N'])
   })
 })
 
@@ -158,10 +158,10 @@ describe('the sidebar of this window docked to a column of icons', () => {
   it('is ⌃⌘S by default, in View, which no other command takes (⌘S hides the sidebar, ⇧⌘S saves the page, ⌥⌘S captures it)', () => {
     const dock = COMMANDS.find((c) => c.id === 'dockSidebar')!
     expect(dock.group).toBe('Affichage')
-    expect(formatAccelerator(effectiveAccelerator('dockSidebar', {})!)).toBe('⌃⌘S')
+    expect(formatAccelerator(effectiveAccelerator('dockSidebar', {})!, 'darwin')).toBe('⌃⌘S')
     const taken = COMMANDS.filter((c) => c.id !== 'dockSidebar' && c.accelerator !== '' && sameAccelerator(c.accelerator, dock.accelerator)).map((c) => c.id)
     expect(taken).toEqual([])
-    expect(['toggleSidebar', 'savePage', 'captureVisible'].map((id) => formatAccelerator(effectiveAccelerator(id, {})!))).toEqual(['⌘S', '⇧⌘S', '⌥⌘S'])
+    expect(['toggleSidebar', 'savePage', 'captureVisible'].map((id) => formatAccelerator(effectiveAccelerator(id, {})!, 'darwin'))).toEqual(['⌘S', '⇧⌘S', '⌥⌘S'])
   })
 
   it('can be moved or switched off in Réglages › Raccourcis, and conflicts with a command given the same keys', () => {
@@ -173,12 +173,12 @@ describe('the sidebar of this window docked to a column of icons', () => {
 
 describe('site commands', () => {
   it('clear the data of a site with ⇧⌘X, which no other command takes', () => {
-    expect(formatAccelerator(effectiveAccelerator('clearSiteData', {})!)).toBe('⇧⌘X')
+    expect(formatAccelerator(effectiveAccelerator('clearSiteData', {})!, 'darwin')).toBe('⇧⌘X')
     expect(COMMANDS.filter((c) => c.accelerator === 'CmdOrCtrl+Shift+X').map((c) => c.id)).toEqual(['clearSiteData'])
   })
 
   it('clear them without the panel with ⌥⇧⌘X, which no other command takes, and both can be moved or switched off', () => {
-    expect(formatAccelerator(effectiveAccelerator('clearSiteDataNow', {})!)).toBe('⌥⇧⌘X')
+    expect(formatAccelerator(effectiveAccelerator('clearSiteDataNow', {})!, 'darwin')).toBe('⌥⇧⌘X')
     expect(COMMANDS.filter((c) => c.accelerator === 'CmdOrCtrl+Alt+Shift+X').map((c) => c.id)).toEqual(['clearSiteDataNow'])
     expect(effectiveAccelerator('clearSiteDataNow', { clearSiteDataNow: 'CmdOrCtrl+Shift+X', clearSiteData: '' })).toBe('CmdOrCtrl+Shift+X')
     expect(effectiveAccelerator('clearSiteData', { clearSiteData: '' })).toBeUndefined()
@@ -204,14 +204,14 @@ describe('the keys a web page keeps', () => {
   })
 
   it('leave the panel of the site on ⇧⌘I, where nothing else is', () => {
-    expect(formatAccelerator(effectiveAccelerator('siteInfo', {})!)).toBe('⇧⌘I')
+    expect(formatAccelerator(effectiveAccelerator('siteInfo', {})!, 'darwin')).toBe('⇧⌘I')
     expect(COMMANDS.filter((c) => c.accelerator === 'CmdOrCtrl+Shift+I').map((c) => c.id)).toEqual(['siteInfo'])
   })
 })
 
 describe('the reference menu shortcuts', () => {
   it('are the defaults of the commands that carry them', () => {
-    const ours = Object.fromEntries(Object.keys(ARC_MENU_SHORTCUTS).map((id) => [id, formatAccelerator(effectiveAccelerator(id, {}) ?? '')]))
+    const ours = Object.fromEntries(Object.keys(ARC_MENU_SHORTCUTS).map((id) => [id, formatAccelerator(effectiveAccelerator(id, {}) ?? '', 'darwin')]))
     expect(ours).toEqual(ARC_MENU_SHORTCUTS)
   })
 

@@ -9,6 +9,8 @@ import { relativeAgo } from './relative-time'
 import { splitAddress, cardStatus } from './hover-card'
 import type { Candidate } from './command-bar-types'
 import { candidateHint, actionShortcut } from './command-bar-shortcuts'
+import { formatAccelerator } from './keybindings'
+import { commandPress, type PlatformId } from './platform'
 import { workViewPlace, workViewSummary } from './work-views'
 import { hostOf } from './url'
 
@@ -42,6 +44,8 @@ export interface PreviewContext {
   history?: readonly HistoryEntry[] | undefined
   now: number
   mode: CommandBarMode
+  /** The system the keys of the preview are drawn for. */
+  platform: PlatformId
   /**
    * Whether the line was chosen with the arrows. ⇧⌫ forgets a page of the history only then (while typing, the key is the field's): with false, the
    * preview does not list a key that would do nothing. Left out, the line counts as chosen.
@@ -78,7 +82,8 @@ export function candidatePreview(candidate: Candidate, ctx: PreviewContext): Can
   }
   const where = ctx.mode === 'current' ? t('cmd.dans-cet-onglet') : ctx.mode === 'split' ? t('cmd.dans-le-volet-de-droite') : t('cmd.dans-un-nouvel-onglet')
   // ⌘↵ opens in a new tab: it says something only where ↵ does not already.
-  const newTabKey: PreviewKey[] = ctx.mode === 'current' ? [{ keys: '⌘↵', label: t('cmd.ouvrir-dans-un-nouvel-onglet') }] : []
+  const newTabPress = commandPress('↵', ctx.platform)
+  const newTabKey: PreviewKey[] = ctx.mode === 'current' ? [{ keys: newTabPress, label: t('cmd.ouvrir-dans-un-nouvel-onglet') }] : []
   switch (candidate.kind) {
     case 'tab': {
       const tab = state.tabs.find((x) => x.id === candidate.tabId)
@@ -89,7 +94,7 @@ export function candidatePreview(candidate: Candidate, ctx: PreviewContext): Can
         title: candidate.label,
         address: address(candidate.url),
         chips: [...(space && state.spaces.length > 1 ? [`${space.emoji} ${space.name}`.trim()] : []), ...(tab ? [t('cmd.actif', { when: relativeAgo(tab.lastActiveAt, now) })] : []), ...status],
-        keys: [{ keys: ENTER, label: candidateHint(candidate) }, { keys: '⌘↵', label: t('cmd.ouvrir-dans-un-nouvel-onglet') }],
+        keys: [{ keys: ENTER, label: candidateHint(candidate) }, { keys: newTabPress, label: t('cmd.ouvrir-dans-un-nouvel-onglet') }],
         thumbTabId: candidate.tabId
       })
     }
@@ -113,7 +118,7 @@ export function candidatePreview(candidate: Candidate, ctx: PreviewContext): Can
         title: candidate.label,
         address: address(candidate.url),
         chips: entry ? [t('cmd.visite', { when: relativeAgo(entry.lastVisitAt, now) }), tp('cmd.visites', entry.visitCount)] : [],
-        keys: [{ keys: ENTER, label: t('cmd.ouvrir-la-page') }, ...newTabKey, ...(ctx.picked === false ? [] : [{ keys: '⇧⌫', label: t('cmd.retirer-de-l-historique') }])],
+        keys: [{ keys: ENTER, label: t('cmd.ouvrir-la-page') }, ...newTabKey, ...(ctx.picked === false ? [] : [{ keys: formatAccelerator('Shift+Backspace', ctx.platform), label: t('cmd.retirer-de-l-historique') }])],
         faviconUrl: pageFavicon(candidate.url, state)
       })
     }
@@ -141,7 +146,7 @@ export function candidatePreview(candidate: Candidate, ctx: PreviewContext): Can
     case 'action': {
       // "note <text>": where the note will go, and what Enter does with it.
       if (candidate.action === 'jot-note') return make({ glyph: 'command', title: candidate.label, note: candidate.detail, keys: [{ keys: ENTER, label: t('command-bar.creer-la-note') }] })
-      const shortcut = actionShortcut(candidate.action, state)
+      const shortcut = actionShortcut(candidate.action, state, ctx.platform)
       return make({ glyph: 'command', title: candidate.label, chips: [shortcut ? t('cmd.raccourci', { keys: shortcut }) : t('cmd.sans-raccourci')], keys: [{ keys: ENTER, label: t('cmd.executer') }] })
     }
     case 'workview': {
