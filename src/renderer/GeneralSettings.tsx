@@ -58,18 +58,21 @@ export function DefaultBrowserRow() {
 
   const hint = isDefault === null ? undefined : isDefault ? t('settings.home-lucium-est-par-defaut') : t('settings.lucium-n-est-pas-votre-navigateur-par')
   return (
-    <Row label={t('settings.home-navigateur-par-defaut')} hint={hint} searchKey="defaultBrowser">
-      {isDefault === false && (
-        <button className="button" onClick={makeDefault}>
-          {t('settings.definir-lucium-par-defaut')}
-        </button>
-      )}
-      {defaultNote !== '' && (
-        <span className="pref-hint" role="status" data-role="default-browser-note">
+    <>
+      <Row label={t('settings.home-navigateur-par-defaut')} hint={hint} searchKey="defaultBrowser">
+        {isDefault === false && (
+          <button className="button" onClick={makeDefault}>
+            {t('settings.definir-lucium-par-defaut')}
+          </button>
+        )}
+      </Row>
+      {/* A row of its own under the button: a sentence in the control column would squeeze the label (seen on Windows). It goes once Lucium is the default. */}
+      {defaultNote !== '' && isDefault !== true && (
+        <div className="pref-row pref-message" role="status" data-role="default-browser-note">
           {defaultNote}
-        </span>
+        </div>
       )}
-    </Row>
+    </>
   )
 }
 
