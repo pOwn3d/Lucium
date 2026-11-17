@@ -1,0 +1,66 @@
+/* First-launch guide: three-step setup sheet. It sits in the centred modal card; these rules only add what the card lacks. */
+.card.first-launch { width: min(560px, calc(100% - 48px)); }
+.first-launch > h3 { margin: 0 0 8px 0; }
+
+.first-launch-step { min-height: 200px; }
+.first-launch-step h4 { margin: 0 0 6px 0; font-size: 1rem; font-weight: 600; }
+/* The title takes the focus when its step is shown, to be read: it is no control, and shows no ring. */
+.first-launch-step h4:focus { outline: none; }
+.first-launch-step > .muted { margin: 0 0 12px 0; }
+
+/* Step 1: the browsers found, one to choose (or none), and what to bring along from it */
+.first-launch-sources { list-style: none; margin: 0 0 10px; padding: 0; display: flex; flex-direction: column; gap: 4px; max-height: 240px; overflow-y: auto; }
+.first-launch-source {
+  display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0; padding: 6px 10px; border-radius: 10px;
+  background: var(--hover); color: var(--text); font-size: 13px; cursor: pointer;
+}
+.first-launch-source:hover, .first-launch-source.chosen { background: var(--active); }
+.first-launch-source input { flex: none; margin: 0; accent-color: var(--accent); }
+.first-launch-source-text { flex: 1; min-width: 0; display: flex; flex-direction: column; line-height: 1.25; }
+.first-launch-source-text strong { font-weight: 600; }
+.first-launch-source-text span { color: var(--muted); font-size: 12px; }
+.first-launch-what { display: flex; flex-direction: column; gap: 8px; margin: 0 0 10px; padding: 8px 10px; border-radius: 10px; background: var(--hover); }
+.first-launch-check { display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer; }
+.first-launch-check input { margin: 0; accent-color: var(--accent); }
+.first-launch .import-missing { font-style: normal; color: var(--muted); font-size: 12px; }
+
+/* The answer of the import */
+.first-launch .import-report { margin: 0 0 6px; font-size: 13px; font-weight: 600; user-select: text; overflow-wrap: anywhere; }
+.first-launch .import-report.ok { color: var(--ok); }
+.first-launch .import-report.failed { color: var(--danger); }
+.first-launch .import-details { margin: 0 0 8px; padding: 0 0 0 16px; font-size: 12px; color: var(--muted); user-select: text; overflow-wrap: anywhere; max-height: 160px; overflow-y: auto; }
+
+/* Step 2: Appearance options */
+.first-launch-option { display: flex; flex-direction: column; gap: 6px; margin: 0 0 12px 0; }
+.first-launch-option > span { font-size: 13px; font-weight: 500; }
+.first-launch-option .field { width: 100%; }
+
+.first-launch-colors { display: flex; gap: 8px; flex-wrap: wrap; }
+.color-chip { width: 44px; height: 44px; border-radius: 6px; border: 2px solid var(--line); cursor: pointer; transition: border-color var(--dur), box-shadow var(--dur); }
+.color-chip:hover { border-color: var(--text); }
+.color-chip.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.color-chip[data-color="persimmon"] { background: #D84E54; }
+.color-chip[data-color="bluegreen"] { background: #2B8E82; }
+.color-chip[data-color="deepviolet"] { background: #43299F; }
+.color-chip[data-color="sunburst"] { background: #E8A800; }
+
+/* Step 3: Summary and confirmation */
+.first-launch-summary { display: flex; flex-direction: column; gap: 12px; }
+.first-launch-option > input[type="checkbox"] { width: auto; margin-right: 8px; accent-color: var(--accent); }
+.first-launch-option > input[type="checkbox"] + span { display: inline; }
+.summary-note { margin: 8px 0 0 0; padding: 8px; border-radius: 6px; background: var(--tile); font-size: 12px; color: var(--text-2); }
+.summary-note ul { margin: 4px 0 0; padding: 0 0 0 16px; }
+.summary-note li { margin: 2px 0; }
+
+/* Navigation buttons */
+.first-launch-nav { display: flex; gap: 8px; justify-content: flex-end; padding-top: 12px; border-top: 1px solid var(--line); margin-top: 16px; }
+.first-launch-nav button { padding: 6px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+/* The ink of the accent, not white: the accent of the dark appearance is a light colour, on which white is unreadable. */
+.first-launch-nav .btn.primary { background: var(--accent); color: var(--on-accent); border: none; }
+.first-launch-nav .btn.primary:hover:not(:disabled) { background: var(--accent-strong); }
+.first-launch-nav .btn.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+.first-launch-nav .btn.secondary { background: var(--hover); color: var(--text); border: 1px solid var(--line); }
+.first-launch-nav .btn.secondary:hover:not(:disabled) { background: var(--active); }
+.first-launch-nav .btn.secondary:disabled { opacity: 0.5; cursor: not-allowed; }
+

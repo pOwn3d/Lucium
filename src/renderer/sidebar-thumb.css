@@ -1,0 +1,27 @@
+/*
+ * The drawing of the sidebar (SidebarThumb.tsx): the gradient, the ink and the tiles come from the theme it is given (inline, from shared/theme.ts), so the
+ * values below are only the ones it has before it has a theme. A picture of the sidebar, 11 px at the smallest.
+ */
+.sb-thumb {
+  --th-bg: linear-gradient(155deg, var(--space-a), var(--space-b));
+  --th-ink: var(--text-on-space);
+  --th-tile: var(--tile);
+  --th-sel: var(--tile-active);
+  position: relative; display: grid; align-content: start; gap: 6px; min-height: 100%; padding: 8px 6px 34px; border-radius: var(--r-m);
+  background: var(--th-bg); color: var(--th-ink); font-size: var(--t-xs); box-shadow: inset 0 0 0 1px var(--line); overflow: hidden;
+}
+.sb-thumb .sb-cap { position: absolute; left: 0; right: 0; top: 2px; text-align: center; font-size: var(--t-xs); color: var(--th-ink); opacity: 0.8; }
+.sb-thumb .sb-fav { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-top: 12px; }
+.sb-thumb .sb-fav i { height: 14px; border-radius: 4px; background: var(--th-tile); }
+.sb-thumb .sb-head { display: flex; align-items: center; gap: 4px; min-width: 0; margin: 2px; font-weight: var(--w-semibold); }
+.sb-thumb .sb-mark { display: inline-grid; place-items: center; flex: none; min-width: 16px; height: 16px; font-size: 12px; line-height: 1; }
+.sb-thumb .sb-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb-thumb .sb-rows { display: grid; gap: 3px; }
+.sb-thumb .sb-rows i { height: 12px; border-radius: 4px; background: var(--th-tile); }
+.sb-thumb .sb-rows i.sel { background: var(--th-sel); }
+.sb-thumb .sb-foot { position: absolute; left: 6px; right: 6px; bottom: 6px; display: flex; gap: 3px; justify-content: center; }
+.sb-thumb .sb-foot span { display: grid; place-items: center; width: 22px; height: 22px; border-radius: 6px; font-size: 12px; line-height: 1; }
+.sb-thumb .sb-foot span[aria-current='true'] { background: var(--th-sel); }
+.sb-thumb .space-letter { width: 16px; height: 16px; font-size: var(--t-xs); }
+.sb-thumb .sb-foot .space-letter { width: 18px; height: 18px; }
+.sb-thumb .space-image { display: block; width: 16px; height: 16px; border-radius: 50%; object-fit: cover; }

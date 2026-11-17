@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- DRM variant only (scripts/package-drm.mjs, src/main/mac-sign-order.ts: entitlementsFor): the main application, the plain helper and the plugin
+         helper. Widevine (signed by its vendor, not by our team) needs library validation off and the unsigned executable memory: with them on the plugin
+         helper alone, Netflix answered M7702-1003 on 8 Nov 2026 (no CDM process was even started: the module is registered by the main process). The
+         renderer and GPU helpers keep library validation (build/entitlements.drm.helper.mac.plist). Same keys as build/entitlements.mac.plist plus the two. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <!-- A browser: with the hardened runtime, the pages that ask for the camera, the microphone or the position are only offered the system's question with these. -->
+    <key>com.apple.security.device.camera</key>
+    <true/>
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <key>com.apple.security.personal-information.location</key>
+    <true/>
+  </dict>
+</plist>

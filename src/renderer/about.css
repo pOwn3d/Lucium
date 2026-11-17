@@ -1,0 +1,35 @@
+/* Settings › À propos et mises à jour › À propos: the last group at the top of the page (« État de Lucium » follows, in « Plus de réglages »). It reuses the window's rows (.pref-row) and the navigation rows of the Profiles
+   pane (.nav-row, .nav-arrow); only what those do not say is here. */
+
+/* The hover of a link row must not square off the card's rounded corners. */
+.about-group { overflow: hidden; }
+.about-name { font-weight: 700; color: var(--text); }
+.about-version { color: var(--text-3); font-size: 12px; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.about-tagline .pref-label { color: var(--text-2); }
+.about-link { color: var(--s-text); }
+.about-detail { flex: none; margin-right: -8px; color: var(--text-3); font-size: 12px; white-space: nowrap; }
+.about-link:hover .about-detail { color: var(--text-2); }
+.about-link:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
+
+/* ---- The About window: a small window of 340 px, centred, in the theme ---- */
+.about-window { box-sizing: border-box; height: 100vh; display: flex; flex-direction: column; background: var(--s-bg, var(--surface-2)); color: var(--text); user-select: text; }
+.about-body { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 24px 24px 12px; text-align: center; }
+/* The picture has 10 % of margin on each side (Apple's grid, where the shadow falls): at 80 px its tile is 64 px, and the box keeps the 64 px the layout counts on. */
+.about-icon { display: grid; place-items: center; width: 64px; height: 64px; margin-bottom: 8px; }
+.about-icon img { display: block; width: 80px; height: 80px; }
+.about-window h1 { margin: 0; font-size: var(--t-2xl); font-weight: var(--w-semibold); }
+.about-ver { display: flex; align-items: center; gap: 4px; font-size: var(--t-m); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.about-engine { font-size: var(--t-s); color: var(--text-2); }
+.about-status { min-height: 16px; margin: 0; font-size: var(--t-s); color: var(--danger-ink); }
+.about-lic { max-width: 280px; margin: 0 0 12px; font-size: var(--t-s); line-height: 1.45; color: var(--text-2); }
+.about-actions { width: 100%; display: flex; flex-direction: column; align-items: stretch; gap: 8px; }
+.about-note { margin: 0; font-size: var(--t-xs); line-height: 1.4; color: var(--text-3); }
+.about-links { display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.about-btn { min-height: var(--target); padding: 0 12px; border: 1px solid var(--line-strong); border-radius: var(--r-s); background: var(--surface); color: var(--text); font-size: var(--t-s); font-weight: var(--w-regular); }
+.about-btn:hover:not(:disabled) { background: var(--tile); }
+.about-btn:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.about-btn:disabled { opacity: 0.55; }
+.about-btn.primary { border-color: transparent; background: var(--accent); color: var(--on-accent); font-weight: var(--w-semibold); }
+.about-btn.primary:hover:not(:disabled) { background: var(--accent-strong); }
+.about-btn.quiet { border-color: transparent; background: transparent; color: var(--accent-text); }
+.about-foot { flex: none; padding: 10px 16px; border-top: 1px solid var(--line); text-align: center; font-size: var(--t-xs); color: var(--text-3); }

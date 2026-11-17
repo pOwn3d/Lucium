@@ -1,0 +1,6 @@
+/* The sheet that makes a direct shortcut for a site: a narrow centred card, the same tokens as the other sheets. */
+.shortcut-sheet { display: grid; gap: var(--sp-3); width: min(420px, calc(100vw - 32px)); padding: 20px 22px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow-s); }
+.shortcut-sheet h3 { margin: 0; font-size: var(--t-m); font-weight: var(--w-semibold); color: var(--text); }
+.shortcut-sheet label { display: grid; gap: var(--sp-1); font-size: var(--t-s); color: var(--text-2); }
+.shortcut-help { margin: 0; font-size: var(--t-s); color: var(--text-2); }
+.shortcut-actions { display: flex; justify-content: flex-end; gap: var(--sp-2); }

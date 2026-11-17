@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Surface Probe",
+  "version": "0.1.0",
+  "description": "Declares the permissions of an agent-style assistant extension and reports, API by API, what the engine gives it. Contains no third-party code.",
+  "minimum_chrome_version": "116",
+  "icons": { "128": "icon.png" },
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": [
+    "sidePanel",
+    "storage",
+    "activeTab",
+    "scripting",
+    "debugger",
+    "tabGroups",
+    "tabs",
+    "alarms",
+    "notifications",
+    "webNavigation",
+    "declarativeNetRequestWithHostAccess",
+    "offscreen",
+    "nativeMessaging",
+    "unlimitedStorage",
+    "downloads",
+    "identity"
+  ],
+  "host_permissions": ["<all_urls>"],
+  "action": { "default_title": "Open the probe panel" },
+  "options_page": "options.html",
+  "commands": {
+    "toggle-side-panel": {
+      "description": "Toggle the probe side panel",
+      "suggested_key": { "default": "Ctrl+Shift+9", "mac": "Command+Shift+9" }
+    }
+  },
+  "content_scripts": [
+    { "matches": ["<all_urls>"], "js": ["content.js"], "run_at": "document_idle", "all_frames": false }
+  ],
+  "externally_connectable": { "matches": ["http://127.0.0.1/*", "http://localhost/*"] }
+}

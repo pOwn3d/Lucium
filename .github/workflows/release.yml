@@ -1,0 +1,146 @@
+name: Release
+
+# Pushing a tag `vX.Y.Z` (or `vX.Y.Z-alpha.1`) prepares a DRAFT GitHub Release that holds three things and NO APPLICATION:
+#
+#   the notes        the section of the version in CHANGELOG.md;
+#   the SHA-256 sums of the files people download, read from the annotation of the tag;
+#   a link           to lucium.app, where the download is.
+#
+# Nothing is public until the maintainer publishes the draft. This workflow builds nothing, signs nothing, attaches nothing and holds no
+# signing, notarization or server secret: what people download is the DRM variant, signed by EVS then with the Developer ID and notarized
+# by Apple on the maintainer's Mac (scripts/build-drm-release.sh --notarize, docs/drm.md), and published from that Mac.
+#
+# Where the sums come from. The files are made on the Mac BEFORE the tag, and their sums are written in the annotation of the tag, one
+# line per file as `shasum -a 256` prints it (`<64 hex>  Lucium-X.Y.Z-arm64.dmg`, and the same for the `.zip` of the updates):
+#
+#   git tag -a vX.Y.Z -m "vX.Y.Z" -m "$(cat dist-drm/Lucium-X.Y.Z-arm64.dmg.sha256 dist-drm/Lucium-X.Y.Z-arm64.zip.sha256)"
+#
+# A sum written there is bound to the tag (and signed with it when the tag is signed), and does not come from the server that serves the
+# file. A tag without annotation, or whose annotation names no file of the version, fails the run: delete the tag, tag again.
+#
+# That the tagged commit type-checks, passes the unit tests and packages is checked by build.yml, which the same tag starts.
+#
+# Manual run (Actions tab > Release > Run workflow, "Use workflow from" a TAG): the same steps, and the notes are shown on the page of
+# the run; no Release is created. The workflow file must be on the default branch for that button to appear.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  # One job, with the write permission a draft needs. Nothing of the repository is installed or run in it: package.json and
+  # CHANGELOG.md are read as text.
+  draft:
+    name: Draft release
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      REPO: ${{ github.repository }}
+      TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Read the version and check it against the tag
+        run: |
+          set -euo pipefail
+          if [ "$GITHUB_REF_TYPE" != "tag" ]; then
+            echo "::error::This workflow runs on a tag. For a manual run, choose a tag in \"Use workflow from\"."
+            exit 1
+          fi
+          VERSION="$(jq -r .version package.json)"
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::The tag $TAG does not match the version $VERSION in package.json. Fix one of them and tag again."
+            exit 1
+          fi
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+
+      - name: Read the annotation of the tag
+        run: |
+          set -euo pipefail
+          gh api "repos/$REPO/git/ref/tags/$TAG" > tag-ref.json
+          if [ "$(jq -r .object.type tag-ref.json)" != "tag" ]; then
+            echo "::error::$TAG is a tag without annotation: the SHA-256 sums of the files are read from the annotation. Delete it and tag again with git tag -a (see the top of release.yml)."
+            exit 1
+          fi
+          gh api "repos/$REPO/git/tags/$(jq -r .object.sha tag-ref.json)" > tag-object.json
+          jq -r .message tag-object.json > tag-message.txt
+          # Whether GitHub could check a signature on the tag: said in the notes, never required here.
+          echo "TAG_VERIFIED=$(jq -r '.verification.verified // false' tag-object.json)" >> "$GITHUB_ENV"
+
+      # Reads tag-message.txt, writes checksums.txt. Run by src/main/workflow-hygiene.test.ts on annotations made for the test.
+      - name: Checksums from the annotation
+        run: |
+          set -euo pipefail
+          # Only the lines `<64 hex>  <file>` that name a file of this version: the disk image of the site and the archive of the updates.
+          awk -v version="$VERSION" '
+            NF == 2 && length($1) == 64 && $1 !~ /[^0-9a-f]/ && ($2 == "Lucium-" version "-arm64.dmg" || $2 == "Lucium-" version "-arm64.zip") { print $1 "  " $2 }
+          ' tag-message.txt | sort -u > checksums.txt
+          if ! [ -s checksums.txt ]; then
+            echo "::error::The annotation of the tag holds no SHA-256 sum of Lucium-$VERSION-arm64.dmg or Lucium-$VERSION-arm64.zip. Delete the tag and tag again with the sums (see the top of release.yml)."
+            exit 1
+          fi
+          # Two different sums for one file: one of them is wrong, and nobody can tell which.
+          if [ -n "$(awk '{ print $2 }' checksums.txt | sort | uniq -d)" ]; then
+            echo "::error::The annotation of the tag gives two different SHA-256 sums for the same file."
+            exit 1
+          fi
+          cat checksums.txt
+
+      - name: Release notes
+        run: |
+          set -euo pipefail
+          # The section "## [X.Y.Z] - date" of CHANGELOG.md, without its heading and without the link references at the end of the file.
+          awk -v heading="## [$VERSION]" '
+            index($0, heading) == 1 { found = 1; next }
+            found && (/^## \[/ || /^\[[^]]+\]: /) { exit }
+            found { print }
+          ' CHANGELOG.md > changelog-section.md
+          if ! grep -q '[^[:space:]]' changelog-section.md; then
+            echo "::error::CHANGELOG.md has no (or an empty) section '## [$VERSION]'. Add it, then delete this tag and tag again."
+            exit 1
+          fi
+          if [ "$TAG_VERIFIED" = "true" ]; then SIGNED="The tag is signed, and GitHub verified its signature."; else SIGNED="The tag carries no signature that GitHub could verify."; fi
+          {
+            cat changelog-section.md
+            echo
+            echo '### Download'
+            echo
+            echo "Lucium is downloaded from **[lucium.app](https://lucium.app/en/download/)**: macOS, Apple silicon, a disk image signed with a Developer ID and notarized by Apple, built on the maintainer's Mac. It plays protected videos (Widevine, the Electron of castLabs)."
+            echo
+            echo 'This Release holds no application: the only files GitHub lists below are the sources of the tag.'
+            echo
+            echo '### SHA-256'
+            echo
+            echo '```'
+            cat checksums.txt
+            echo '```'
+            echo
+            echo "Check a download with \`shasum -a 256 <file>\` and compare. Once installed, \`spctl --assess --type execute -vv /Applications/Lucium.app\` answers \`accepted\`, \`source=Notarized Developer ID\`."
+            echo
+            echo "These sums are read from the annotation of the tag \`$TAG\`. $SIGNED"
+          } > release-notes.md
+          cat release-notes.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Create the draft release, with no file
+        if: ${{ github.event_name == 'push' }}
+        run: |
+          set -euo pipefail
+          FLAGS=(--draft --verify-tag --title "Lucium $VERSION" --notes-file release-notes.md)
+          # Versions below 1.0.0 and versions with a suffix (-alpha.1, -rc.1) are flagged as pre-releases.
+          case "$VERSION" in
+            0.* | *-*) FLAGS+=(--prerelease) ;;
+          esac
+          # No file here, ever: the application is on lucium.app, published by the maintainer.
+          gh release create "$TAG" "${FLAGS[@]}"

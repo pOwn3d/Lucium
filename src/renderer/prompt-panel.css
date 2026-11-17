@@ -1,0 +1,18 @@
+/*
+ * The box of a page's prompt(): the same box as the sign-in panel (arc-dialog.css: 450 px, radius 16, #151c30), with the message of the page
+ * between the title and the field. The message is the page's text, so it is shown as plain text, wrapped, and scrolls past a few lines
+ * instead of pushing the buttons out of the box.
+ */
+.adlg.adlg-prompt { min-height: 0; padding: 51px 28px 28px 38px; }
+.adlg-prompt .adlg-icon { margin-left: 12px; }
+.adlg-prompt .adlg-title { margin-top: 35px; overflow-wrap: anywhere; }
+.adlg-prompt .adlg-message { margin-top: 10px; max-height: 144px; overflow-y: auto; white-space: pre-wrap; overflow-wrap: anywhere; user-select: text; }
+.adlg-prompt .adlg-fields { margin-top: 20px; }
+.adlg-prompt .adlg-field {
+  box-sizing: border-box; width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 9px;
+  background: var(--surface-2); color: var(--text); font: 500 14px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; user-select: text;
+  caret-color: var(--accent); outline: 0;
+}
+.adlg-prompt .adlg-field:focus { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent); }
+.adlg-prompt .adlg-suppress { display: flex; align-items: center; gap: 8px; margin-top: 14px; font-size: 13px; line-height: 16px; color: var(--text-2); }
+.adlg-prompt .adlg-actions { margin-top: 24px; padding-top: 0; }

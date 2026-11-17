@@ -1,0 +1,29 @@
+/* The sheet that follows a capture (AnnotateSheet.tsx): it dims the whole window itself and holds its card, like the region selection does. */
+.annotate-surface { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--scrim); outline: none; }
+.annotate-card {
+  display: flex; flex-direction: column; gap: 10px; max-width: 100%; max-height: 100%; padding: 14px 16px; border-radius: 16px;
+  background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow);
+}
+.annotate-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+.annotate-group { display: flex; align-items: center; gap: 4px; }
+.annotate-tool { padding: 5px 10px; border-radius: 8px; font-size: 13px; background: var(--hover); }
+.annotate-tool:hover:not(:disabled) { background: var(--active); }
+.annotate-tool.on { background: var(--accent); color: var(--on-accent); }
+.annotate-swatch { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line-strong); }
+.annotate-swatch.on { border-color: var(--text); box-shadow: 0 0 0 2px var(--surface); }
+.annotate-stage { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.annotate-wrap { position: relative; display: inline-block; line-height: 0; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px var(--line); background: var(--surface); }
+/* Both limits with automatic width and height: the canvas keeps its proportions whatever its size in pixels. */
+.annotate-canvas { display: block; width: auto; height: auto; max-width: calc(100vw - 100px); max-height: calc(100vh - 210px); cursor: crosshair; touch-action: none; }
+.annotate-canvas.text { cursor: text; }
+/* The picture takes the keys (AnnotateSheet.tsx): its ring is drawn inside, the wrap clips what is outside. */
+.annotate-canvas:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: calc(-1 * var(--focus-width)); }
+/* The point the keyboard places a shape at: a ring of the focus colour, seen only while the picture has the keyboard's focus. */
+.annotate-cursor { display: none; position: absolute; width: 14px; height: 14px; margin: -9px 0 0 -9px; border: 2px solid var(--focus); border-radius: 50%; box-shadow: 0 0 0 1px var(--surface); pointer-events: none; }
+.annotate-canvas:focus-visible ~ .annotate-cursor { display: block; }
+.annotate-keys { margin: 0; font-size: var(--t-s); line-height: 1.4; color: var(--text-2); }
+.annotate-text { position: absolute; min-width: 140px; padding: 0 2px; margin: 0; border: 1px dashed rgb(255 255 255 / 0.8); outline: none; background: rgb(0 0 0 / 0.35); font-weight: 600; line-height: 1.1; user-select: text; }
+.annotate-note { margin: 0; font-size: 12px; }
+.annotate-note .annotate-continue { margin: 0 0 0 4px; }
+.annotate-actions { margin-top: 2px; }
+.annotate-actions .annotate-hint { flex: 1; }

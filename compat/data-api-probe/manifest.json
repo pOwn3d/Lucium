@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Data API Probe",
+  "version": "0.1.0",
+  "description": "Declares history, bookmarks and browsingData and does what a local page asks of it, to see what the engine gives such an extension (smokeExtensions2).",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["history", "bookmarks", "browsingData", "storage"],
+  "action": { "default_title": "Data API probe" },
+  "externally_connectable": { "matches": ["http://127.0.0.1/*"] }
+}

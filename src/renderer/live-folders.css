@@ -1,0 +1,4 @@
+/* The items of a live folder (LiveRows.tsx) are rows of the sidebar like the others: only their glyph and the status line are drawn here. */
+.sidebar .tab.live-item .live-glyph { color: var(--sb-glyph); }
+.sidebar .tab.live-item:hover .live-glyph { color: var(--text-on-space); }
+.sidebar .live-status { margin: 2px 0 3px; padding: 0 9px; min-height: 18px; font-size: 12px; line-height: 18px; color: var(--sb-glyph); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

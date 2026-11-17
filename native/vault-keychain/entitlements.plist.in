@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!--
+      The entitlements of the keychain service (an XPC service), filled in by build.sh with the team identifier (never written here).
+      The data protection keychain (the only one that protects an item with Touch ID) builds the access groups of a program from these
+      entitlements, and they must be authorized by a provisioning profile embedded in an app-like bundle (Apple, TN3137 "On Mac keychain
+      APIs and implementations"; "Sharing access to keychain items among a collection of apps").
+    -->
+    <key>com.apple.application-identifier</key>
+    <string>__TEAM_ID__.app.lucium.browser.keychain</string>
+    <key>com.apple.developer.team-identifier</key>
+    <string>__TEAM_ID__</string>
+    <!-- The first group is the default one of every item the service writes: it stays the same if the service's bundle identifier ever changes. -->
+    <key>keychain-access-groups</key>
+    <array>
+      <string>__TEAM_ID__.app.lucium.browser.vault</string>
+    </array>
+  </dict>
+</plist>

@@ -1,0 +1,15 @@
+/* History and the tab editor (ManagePanels.tsx). */
+
+/* History in two columns: the days at the left, the pages of the chosen day at the right; the frame is the list panel's (560 x 480). */
+.hist-cols { display: grid; grid-template-columns: 152px minmax(0, 1fr); gap: var(--sp-2); }
+.hist-days { display: grid; align-content: start; gap: 2px; padding: var(--sp-2) var(--sp-2) 0 0; border-right: 1px solid var(--line); }
+.hist-days button { display: flex; align-items: center; justify-content: space-between; min-height: var(--target); padding: 0 10px; border: 0; border-radius: var(--r-s); background: transparent; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.hist-days button:hover { background: var(--tile); }
+.hist-days button[aria-current='true'] { background: var(--accent-soft); font-weight: var(--w-semibold); }
+.hist-days button span { font-size: var(--t-xs); font-weight: var(--w-semibold); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.hist-pages { min-width: 0; }
+.hist-pages .lp-list { padding-top: var(--sp-2); }
+/* Modifier l'onglet: the picture chosen for the tab, then « Choisir une image… », under the emojis. */
+.tab-editor-picture { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); }
+.tab-editor-picture-shown { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; background: var(--active); outline: 1px solid var(--line-strong); }
+.tab-editor-picture-shown .favicon { width: 20px; height: 20px; border-radius: 4px; object-fit: cover; }

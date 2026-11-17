@@ -1,0 +1,6 @@
+{
+  "$comment": "SHA-256 of the castLabs archives downloaded once by scripts/electron-upgrade.mjs (step ecs), read again on every later download of the same version: an archive replaced on castLabs' side since is refused. Add the line the step prints for a new version; never change a recorded sum (src/main/ecs-checksum.ts, docs/drm.md).",
+  "v45.2.1+wvcus": {
+    "electron-v45.2.1+wvcus-darwin-arm64.zip": "93e1976a66d58004bf25e5b777c979cc3c03513868d5faf294bcd6f58e63bd24"
+  }
+}

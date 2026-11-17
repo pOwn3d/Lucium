@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- The bundle of the keychain service (build.sh). Its identifier is the name Lucium reaches it by, and the App ID the provisioning profile is made for. -->
+    <key>CFBundleIdentifier</key>
+    <string>app.lucium.browser.keychain</string>
+    <key>CFBundleExecutable</key>
+    <string>lucium-keychain</string>
+    <!-- The name the Touch ID prompt of the system shows. -->
+    <key>CFBundleName</key>
+    <string>Lucium</string>
+    <key>CFBundleDisplayName</key>
+    <string>Lucium</string>
+    <!-- An XPC service of the application that carries it in Contents/XPCServices/: only the processes of that application can look it up. -->
+    <key>CFBundlePackageType</key>
+    <string>XPC!</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <key>XPCService</key>
+    <dict>
+      <!-- One instance for each running copy of the application. -->
+      <key>ServiceType</key>
+      <string>Application</string>
+      <!-- In the session of the user who runs Lucium, as the earlier helper it started was: the keychain and the Touch ID prompt are of that session. -->
+      <key>JoinExistingSession</key>
+      <true/>
+    </dict>
+  </dict>
+</plist>

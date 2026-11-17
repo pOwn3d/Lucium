@@ -1,0 +1,3 @@
+/* Private window: the sidebar is the same, with one space and no space switcher. */
+/* The guest window has one space too: the same rule, and nothing else of the private look (its theme and its name are its own). */
+html.private .footer .spaces, html.guest .footer .spaces { display: none; }

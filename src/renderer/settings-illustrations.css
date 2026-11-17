@@ -1,0 +1,379 @@
+/*
+ * The animated cards of the Settings, on the tokens: not a colour is written
+ * here, the scenes are drawn from --surface, --text, --accent and the meaning colours, so they follow the system's appearance (light-dark) and the hue of the
+ * space, and keep the contrast the tokens are measured for. CSS only: no picture, no video, no script.
+ *
+ * One card = <figure class="illu" data-illu="<key of the setting>">; the scene is 300 x 170 px. One timeline for all (4.5 s, looping): 0-10 % before,
+ * 10-35 % the gesture, 35-55 % the effect, 55-100 % after (held). With "reduce motion" a card shows the state "after" and has nothing to play.
+ */
+
+.illu {
+  /* the ink of the scenes: the text colour at a low strength, so that it is a grey of the scheme in both */
+  --i-sb: light-dark(color-mix(in srgb, var(--surface) 42%, transparent), color-mix(in srgb, var(--text) 10%, transparent));
+  --i-row-on: light-dark(color-mix(in srgb, var(--surface) 55%, transparent), color-mix(in srgb, var(--text) 20%, transparent));
+  --i-dot: light-dark(color-mix(in srgb, var(--surface) 90%, transparent), color-mix(in srgb, var(--text) 75%, transparent));
+  --i-bar: color-mix(in srgb, var(--text) 28%, transparent);
+  --i-ink: light-dark(color-mix(in srgb, var(--text) 16%, transparent), color-mix(in srgb, var(--text) 14%, transparent));
+  --i-ink-2: color-mix(in srgb, var(--text) 30%, transparent);
+  --i-page: var(--surface);
+  /* the page of "forced dark": the text colour of the light scheme is a dark; in the dark scheme the page already is one */
+  --i-page-dark: light-dark(var(--text), var(--surface));
+  --i-ph-dark: light-dark(color-mix(in srgb, var(--text) 85%, var(--surface)), var(--surface-3));
+  --i-ink-dark: light-dark(color-mix(in srgb, var(--surface) 34%, transparent), color-mix(in srgb, var(--text) 34%, transparent));
+  --i-dur: 4.5s;
+}
+
+/* ---- the card as it opens under a row: the scene, then a few lines ---- */
+.pref-illus { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 14px; padding: 10px 14px 14px; border-top: 1px dashed var(--line); background: var(--surface-2); }
+.pref-illus .txt { flex: 1 1 150px; min-width: 0; font-size: var(--t-s); color: var(--text-2); }
+.pref-illus .txt b { display: block; margin-bottom: 3px; color: var(--text); font-weight: var(--w-semibold); }
+.pref-illus .txt .tip, .pref-illus .txt .esc { display: block; margin-top: 3px; }
+.pref-illus + .pref-row::before { display: none; }
+
+/* the button of a row: "Voir l'effet" (--text-2: the accent is for backgrounds) */
+.pref-illus-button { flex: none; min-height: var(--target); padding: 0 10px; border-radius: var(--r-s); background: transparent; color: var(--text-2); font-size: var(--t-s); white-space: nowrap; }
+.pref-illus-button:hover { background: var(--tile); color: var(--text); }
+.pref-illus-button[aria-expanded='true'] { background: var(--accent-soft); color: var(--text); }
+.pref-illus-button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; }
+
+/* ---- the template of a card ---- */
+.illu { position: relative; width: 300px; max-width: 100%; margin: 0; border-radius: var(--r-l); overflow: hidden; border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: var(--shadow-s); font: var(--w-regular) 9px/1.2 var(--font); }
+.illu .scene { position: relative; height: 170px; overflow: hidden; background: linear-gradient(155deg, var(--space-a), var(--space-b)); color: var(--text-on-space); }
+.illu figcaption { padding: 7px 42px 8px 10px; font-size: var(--t-xs); line-height: 1.35; color: var(--text-2); min-height: 40px; }
+.illu .play { position: absolute; right: 6px; bottom: 6px; width: var(--target); height: var(--target); padding: 0; border-radius: var(--r-s); border: 1px solid var(--line-strong); background: var(--surface); color: var(--text-2); display: grid; place-items: center; }
+.illu .play:hover { background: var(--surface-3); color: var(--text); }
+.illu .play:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; }
+.illu .prog { position: absolute; left: 0; bottom: 0; height: 2px; width: 0; background: var(--accent); animation: il-prog var(--i-dur) linear infinite both; }
+.illu.paused .scene *, .illu.paused .prog { animation-play-state: paused !important; }
+.illu .phase { position: absolute; left: 10px; top: 8px; display: grid; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--surface) 88%, transparent); color: var(--text-2); font-size: 10px; font-weight: var(--w-semibold); letter-spacing: 0.04em; text-transform: uppercase; z-index: 8; }
+.illu .phase span { grid-area: 1 / 1; animation: il-p1 var(--i-dur) steps(1) infinite both; }
+.illu .phase span:nth-child(2) { animation-name: il-p2; }
+.illu .phase span:nth-child(3) { animation-name: il-p3; }
+
+/* "reduce motion": the state "after" is shown at once, and a card has nothing to play or to count */
+@media (prefers-reduced-motion: reduce) {
+  .illu .scene *, .illu .scene *::before, .illu .scene *::after, .illu .prog { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; }
+  .illu .play, .illu .prog { display: none; }
+  .illu figcaption { padding-right: 10px; }
+}
+@media (prefers-contrast: more) {
+  .illu { --i-ink: color-mix(in srgb, var(--text) 40%, transparent); --i-ink-2: color-mix(in srgb, var(--text) 62%, transparent); --i-bar: color-mix(in srgb, var(--text) 55%, transparent); }
+  .illu .phase, .illu .key, .illu .play { outline: 1px solid currentColor; outline-offset: -1px; }
+}
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .illu { --i-ink: color-mix(in srgb, var(--text) 40%, transparent); --i-ink-2: color-mix(in srgb, var(--text) 62%, transparent); --i-bar: color-mix(in srgb, var(--text) 55%, transparent); }
+:root[data-contrast='more'] .illu .phase, :root[data-contrast='more'] .illu .key, :root[data-contrast='more'] .illu .play { outline: 1px solid currentColor; outline-offset: -1px; }
+@media (prefers-reduced-transparency: reduce) {
+  .illu .phase, .illu .hcard, .illu .cyc, .illu .count, .illu .idc, .illu .dl, .illu .mini .cb, .illu .scale, .illu .sess, .illu .cmd, .illu .ckb, .illu .sheet { background: var(--surface); }
+}
+
+/* what moves in a scene shares the duration and holds the last image */
+.illu .scene .a { animation-duration: var(--i-dur); animation-timing-function: ease-in-out; animation-iteration-count: infinite; animation-fill-mode: both; }
+
+/* the mini sidebar */
+.illu .sb { position: absolute; left: 12px; top: 12px; bottom: 12px; width: 72px; padding: 8px 6px; border-radius: 8px; background: var(--i-sb); overflow: hidden; }
+.illu .sb i { position: relative; display: block; height: 12px; margin-top: 6px; border-radius: 4px; background: linear-gradient(var(--i-dot), var(--i-dot)) 4px 50% / 6px 6px no-repeat, linear-gradient(var(--i-bar), var(--i-bar)) 14px 50% / var(--w, 60%) 4px no-repeat; }
+.illu .sb i:first-child { margin-top: 0; }
+.illu .sb i.on { background-color: var(--i-row-on); }
+.illu .sb i.fav { height: 14px; background: var(--i-row-on); border-radius: 5px; }
+.illu .sb .hd { height: 10px; margin: 0 2px 6px; border-radius: 3px; background: linear-gradient(var(--i-ink-2), var(--i-ink-2)) 0 50% / 42px 5px no-repeat; }
+
+/* the mini page */
+.illu .pg { position: absolute; left: 94px; right: 12px; top: 12px; bottom: 12px; border-radius: 8px; background: var(--i-page); box-shadow: var(--shadow-s); overflow: hidden; }
+.illu .pg .ph { height: 14px; background: var(--accent-soft); }
+.illu .pg b { display: block; height: 5px; margin: 8px 10px 0; border-radius: 3px; background: var(--i-ink); width: var(--w, 70%); }
+.illu .pg b.lnk { background: var(--accent); opacity: 0.75; }
+.illu .pg b.t { height: 8px; width: 55%; background: var(--i-ink-2); }
+.illu .pg .img { height: 34px; margin: 8px 10px 0; border-radius: 5px; background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 35%, var(--surface-3)), var(--surface-3)); }
+
+/* the pointer (an arrow drawn with a clip-path: it takes the colours of the scheme), the keys, the tags */
+.illu .cur { position: absolute; left: 0; top: 0; width: 11px; height: 15px; z-index: 5; transform: translate(var(--x0), var(--y0)); animation-name: il-move; filter: drop-shadow(0 0 1px var(--surface)) drop-shadow(0 0 1px var(--surface)); }
+.illu .cur::before { content: ''; position: absolute; inset: 0; background: var(--text); clip-path: polygon(9% 7%, 9% 87%, 36% 67%, 55% 93%, 73% 87%, 55% 60%, 91% 60%); }
+.illu .key { position: absolute; z-index: 6; padding: 2px 5px; border-radius: 4px; border: 1px solid var(--line-strong); background: var(--surface); color: var(--text); font: var(--w-semibold) 9px/1.2 var(--font); box-shadow: var(--shadow-s); }
+.illu .key.press { animation-name: il-press; }
+.illu .tag { position: absolute; z-index: 6; padding: 2px 6px; border-radius: 999px; background: var(--accent); color: var(--on-accent); font: var(--w-semibold) 8px/1.2 var(--font); white-space: nowrap; }
+.illu .swap { position: relative; display: inline-block; }
+.illu .swap .n2 { position: absolute; left: 0; top: 0; white-space: nowrap; }
+.illu .swap .n1 { animation-name: il-out; white-space: nowrap; }
+.illu .swap .n2 { animation-name: il-in; }
+.illu .pop { animation-name: il-pop; }
+.illu .vanish { animation-name: il-vanish; }
+
+/* ---- the key frames the scenes share ---- */
+@keyframes il-prog { from { width: 0 } to { width: 100% } }
+@keyframes il-p1 { 0%, 34% { opacity: 1 } 35%, 100% { opacity: 0 } }
+@keyframes il-p2 { 0%, 34% { opacity: 0 } 35%, 55% { opacity: 1 } 56%, 100% { opacity: 0 } }
+@keyframes il-p3 { 0%, 55% { opacity: 0 } 56%, 100% { opacity: 1 } }
+@keyframes il-move { 0%, 10% { transform: translate(var(--x0), var(--y0)) } 32%, 100% { transform: translate(var(--x1), var(--y1)) } }
+@keyframes il-press { 0%, 28% { transform: none; background: var(--surface); color: var(--text) } 33%, 45% { transform: scale(0.92); background: var(--accent); color: var(--on-accent) } 50%, 100% { transform: none; background: var(--surface); color: var(--text) } }
+@keyframes il-out { 0%, 38% { opacity: 1 } 52%, 100% { opacity: 0 } }
+@keyframes il-in { 0%, 38% { opacity: 0 } 52%, 100% { opacity: 1 } }
+@keyframes il-pop { 0%, 36% { opacity: 0; transform: scale(0.92) translateY(4px) } 52%, 100% { opacity: 1; transform: none } }
+@keyframes il-vanish { 0%, 36% { opacity: 1; transform: none } 52%, 100% { opacity: 0; transform: scale(0.5) } }
+
+/* ---- 1. sleep ---- */
+.illu[data-illu='sleepAfterMinutes'] .sb i.sleepy { animation-name: il-sleep; }
+.illu[data-illu='sleepAfterMinutes'] .zz { position: absolute; left: 62px; top: 30px; z-index: 6; font: 700 9px/1 var(--font); color: var(--text-on-space-2); animation-name: il-in; }
+.illu[data-illu='sleepAfterMinutes'] .gauge { position: absolute; left: 10px; right: 10px; bottom: 10px; font-size: 8px; color: var(--text-2); }
+.illu[data-illu='sleepAfterMinutes'] .gauge .bar { height: 6px; margin-top: 3px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.illu[data-illu='sleepAfterMinutes'] .gauge .bar i { display: block; height: 100%; width: 88%; border-radius: 3px; background: var(--warn); animation-name: il-gauge; }
+.illu[data-illu='sleepAfterMinutes'] .gauge .swap { float: right; font-variant-numeric: tabular-nums; }
+@keyframes il-sleep { 0%, 36% { opacity: 1 } 52%, 100% { opacity: 0.4 } }
+@keyframes il-gauge { 0%, 36% { width: 88%; background: var(--warn) } 55%, 100% { width: 41%; background: var(--ok) } }
+
+/* ---- 2. previews on hover ---- */
+.illu[data-illu='hoverCards'] .hcard { position: absolute; left: 92px; top: 42px; width: 118px; padding: 6px; border-radius: 7px; background: var(--overlay); border: 1px solid var(--line); box-shadow: var(--shadow-s); z-index: 7; color: var(--text); }
+.illu[data-illu='hoverCards'] .hcard b { display: block; height: 5px; border-radius: 3px; background: var(--i-ink-2); width: 70%; }
+.illu[data-illu='hoverCards'] .hcard small { display: block; margin-top: 4px; font-size: 7px; color: var(--text-3); }
+.illu[data-illu='hoverCards'] .hcard .th { height: 36px; margin-top: 5px; border-radius: 4px; background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 35%, var(--surface-3)), var(--surface-3)); }
+.illu[data-illu='hoverCards'] .sb i.hov { animation-name: il-hov; }
+@keyframes il-hov { 0%, 30% { background-color: transparent } 36%, 100% { background-color: var(--i-row-on) } }
+
+/* ---- 3. archive the tabs of the day ---- */
+.illu[data-illu='autoArchiveHours'] .sb i.arch { animation-name: il-archive; }
+.illu[data-illu='autoArchiveHours'] .abox { position: absolute; left: 6px; right: 6px; bottom: 8px; display: flex; align-items: center; gap: 4px; padding: 3px 5px; border-radius: 5px; background: var(--i-row-on); font-size: 8px; color: var(--text-on-space); }
+.illu[data-illu='autoArchiveHours'] .abox::before { content: ''; width: 8px; height: 7px; border-radius: 1px 1px 2px 2px; background: var(--text-on-space-2); }
+.illu[data-illu='autoArchiveHours'] .clock { position: absolute; left: 52px; top: 60px; z-index: 6; animation-name: il-clock; }
+@keyframes il-archive { 0%, 36% { transform: none; opacity: 1 } 52% { transform: translateY(58px) scale(0.6); opacity: 0 } 100% { transform: translateY(58px) scale(0.6); opacity: 0 } }
+@keyframes il-clock { 0%, 10% { opacity: 0 } 16%, 34% { opacity: 1 } 42%, 100% { opacity: 0 } }
+
+/* ---- 4. drag a tab to split ---- */
+.illu[data-illu='dragToSplit'] .ghost { position: absolute; left: 18px; top: 44px; width: 60px; height: 12px; border-radius: 4px; background: var(--i-row-on); box-shadow: var(--shadow-s); z-index: 6; animation-name: il-ghost; }
+.illu[data-illu='dragToSplit'] .ghost::before { content: ''; position: absolute; left: 4px; top: 3px; width: 6px; height: 6px; border-radius: 2px; background: var(--i-dot); }
+.illu[data-illu='dragToSplit'] .pane2 { position: absolute; right: 0; top: 0; bottom: 0; width: 0; background: var(--i-page); border-left: 2px solid var(--accent); animation-name: il-pane; overflow: hidden; }
+.illu[data-illu='dragToSplit'] .pane2 .ph { background: color-mix(in srgb, var(--ok) 25%, var(--surface)); }
+.illu[data-illu='dragToSplit'] .drop { position: absolute; right: 0; top: 0; bottom: 0; width: 50%; background: color-mix(in srgb, var(--accent) 18%, transparent); animation-name: il-drop; }
+@keyframes il-ghost { 0%, 12% { transform: none; opacity: 0 } 16% { opacity: 1 } 34% { transform: translate(200px, 40px); opacity: 1 } 44%, 100% { transform: translate(200px, 40px); opacity: 0 } }
+@keyframes il-drop { 0%, 24% { opacity: 0 } 30%, 38% { opacity: 1 } 46%, 100% { opacity: 0 } }
+@keyframes il-pane { 0%, 38% { width: 0 } 54%, 100% { width: 50% } }
+
+/* ---- 5. tab tree ---- */
+.illu[data-illu='tabTree'] .sb i.child { margin-left: 14px; height: 0; margin-top: 0; opacity: 0; animation-name: il-child; }
+.illu[data-illu='tabTree'] .sb i.child::before { content: ''; position: absolute; left: -9px; top: -4px; width: 6px; height: 10px; border-left: 1px solid var(--i-ink-2); border-bottom: 1px solid var(--i-ink-2); border-radius: 0 0 0 3px; }
+.illu[data-illu='tabTree'] .pg b.lnk { animation-name: il-lnk; }
+@keyframes il-child { 0%, 38% { height: 0; margin-top: 0; opacity: 0 } 54%, 100% { height: 12px; margin-top: 6px; opacity: 1 } }
+@keyframes il-lnk { 0%, 28% { opacity: 0.75 } 34%, 40% { opacity: 1; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent) } 46%, 100% { opacity: 0.75 } }
+
+/* ---- 6. ⌃Tab in the order of use ---- */
+.illu[data-illu='tabCycleRecent'] .cyc { position: absolute; left: 104px; top: 42px; width: 174px; padding: 8px; border-radius: 8px; background: var(--overlay); border: 1px solid var(--line); box-shadow: var(--shadow); z-index: 7; animation-name: il-cyc; }
+.illu[data-illu='tabCycleRecent'] .cyc .th { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; position: relative; }
+.illu[data-illu='tabCycleRecent'] .cyc .th i { display: block; height: 30px; border-radius: 4px; background: linear-gradient(140deg, var(--surface-3), color-mix(in srgb, var(--accent) 22%, var(--surface-3))); }
+.illu[data-illu='tabCycleRecent'] .cyc .th i:nth-child(2) { background: linear-gradient(140deg, var(--surface-3), color-mix(in srgb, var(--ok) 25%, var(--surface-3))); }
+.illu[data-illu='tabCycleRecent'] .cyc .th i:nth-child(3) { background: linear-gradient(140deg, var(--surface-3), color-mix(in srgb, var(--warn) 25%, var(--surface-3))); }
+.illu[data-illu='tabCycleRecent'] .cyc .hl { position: absolute; top: -3px; bottom: -3px; left: -3px; width: calc(25% + 1.5px); border-radius: 6px; border: 2px solid var(--accent); animation-name: il-hl; }
+.illu[data-illu='tabCycleRecent'] .cyc small { display: block; margin-top: 6px; font-size: 7px; color: var(--text-3); text-align: center; }
+.illu[data-illu='tabCycleRecent'] .cyc small .swap { font-weight: var(--w-semibold); color: var(--text-2); }
+.illu[data-illu='tabCycleRecent'] .key.tabk { animation-name: il-tabk; }
+@keyframes il-cyc { 0%, 8% { opacity: 0 } 14%, 100% { opacity: 1 } }
+@keyframes il-hl { 0%, 18% { left: -3px } 24%, 42% { left: calc(25% + 1.5px - 3px) } 48%, 100% { left: calc(50% + 3px - 3px) } }
+@keyframes il-tabk { 0%, 18% { transform: none; background: var(--surface); color: var(--text) } 21%, 24% { transform: scale(0.92); background: var(--accent); color: var(--on-accent) } 27%, 42% { transform: none; background: var(--surface); color: var(--text) } 45%, 48% { transform: scale(0.92); background: var(--accent); color: var(--on-accent) } 51%, 100% { transform: none; background: var(--surface); color: var(--text) } }
+
+/* ---- 7. sidebar on the right ---- */
+.illu[data-illu='sidebarRight'] .sb { animation-name: il-sb-right; }
+.illu[data-illu='sidebarRight'] .pg { animation-name: il-pg-left; }
+@keyframes il-sb-right { 0%, 36% { transform: none } 56%, 100% { transform: translateX(204px) } }
+@keyframes il-pg-left { 0%, 36% { transform: none } 56%, 100% { transform: translateX(-82px) } }
+
+/* ---- 8. compact mode ---- */
+.illu[data-illu='compactMode'] .sb i { height: 16px; margin-top: 8px; animation-name: il-compact; }
+.illu[data-illu='compactMode'] .sb i:first-child { margin-top: 0; animation-name: il-compact-first; }
+.illu[data-illu='compactMode'] .count { position: absolute; right: 18px; bottom: 18px; z-index: 6; padding: 3px 7px; border-radius: 6px; background: var(--overlay); border: 1px solid var(--line); color: var(--text-2); font-size: 8px; }
+@keyframes il-compact { 0%, 36% { height: 16px; margin-top: 8px } 56%, 100% { height: 11px; margin-top: 5px } }
+@keyframes il-compact-first { 0%, 36% { height: 16px } 56%, 100% { height: 11px } }
+
+/* ---- 9. readable mode (shown dark) ---- */
+.illu[data-illu='readableMode'] .pg { animation-name: il-page-dark; }
+.illu[data-illu='readableMode'] .pg b { animation-name: il-ink-dark; }
+.illu[data-illu='readableMode'] .pg .ph { animation-name: il-ph-dark; }
+.illu[data-illu='readableMode'] .moon { position: absolute; right: 20px; top: 18px; z-index: 6; width: 12px; height: 12px; border-radius: 50%; box-shadow: inset -4px -2px 0 0 var(--text-on-space); animation-name: il-in; }
+@keyframes il-page-dark { 0%, 36% { background: var(--i-page) } 56%, 100% { background: var(--i-page-dark) } }
+@keyframes il-ink-dark { 0%, 36% { background: var(--i-ink) } 56%, 100% { background: var(--i-ink-dark) } }
+@keyframes il-ph-dark { 0%, 36% { background: var(--accent-soft) } 56%, 100% { background: var(--i-ph-dark) } }
+
+/* ---- 10. the mini window with ⌥⌘N ---- */
+.illu[data-illu='littleArcShortcut'] .app { position: absolute; inset: 12px; border-radius: 8px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.illu[data-illu='littleArcShortcut'] .app .bar { height: 16px; background: var(--surface-3); border-bottom: 1px solid var(--line); }
+.illu[data-illu='littleArcShortcut'] .app .bar::before { content: ''; position: absolute; left: 7px; top: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); box-shadow: 10px 0 0 var(--warn), 20px 0 0 var(--ok); }
+.illu[data-illu='littleArcShortcut'] .app .title { position: absolute; left: 0; right: 0; top: 4px; text-align: center; font-size: 8px; color: var(--text-3); }
+.illu[data-illu='littleArcShortcut'] .app b { display: block; height: 5px; margin: 9px 12px 0; border-radius: 3px; background: var(--i-ink); width: var(--w, 60%); }
+.illu[data-illu='littleArcShortcut'] .keys { position: absolute; left: 50%; top: 36px; transform: translateX(-50%); display: flex; gap: 4px; z-index: 6; }
+.illu[data-illu='littleArcShortcut'] .keys .key { position: static; }
+.illu[data-illu='littleArcShortcut'] .mini { position: absolute; left: 70px; top: 58px; width: 160px; height: 92px; border-radius: 9px; background: linear-gradient(155deg, var(--space-a), var(--space-b)); box-shadow: var(--shadow); z-index: 7; overflow: hidden; }
+.illu[data-illu='littleArcShortcut'] .mini::before { content: ''; position: absolute; left: 7px; top: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--danger); box-shadow: 9px 0 0 var(--warn), 18px 0 0 var(--ok); }
+.illu[data-illu='littleArcShortcut'] .mini .cb { position: absolute; left: 10px; right: 10px; top: 20px; height: 20px; border-radius: 6px; background: var(--overlay); box-shadow: var(--shadow-s); }
+.illu[data-illu='littleArcShortcut'] .mini .cb::after { content: ''; position: absolute; left: 8px; top: 5px; width: 1px; height: 10px; background: var(--text); animation: il-caret 1s steps(2) infinite; }
+.illu[data-illu='littleArcShortcut'] .mini .pg2 { position: absolute; left: 10px; right: 10px; top: 48px; bottom: 8px; border-radius: 5px; background: var(--i-page); }
+.illu[data-illu='littleArcShortcut'] .mini small { position: absolute; right: 8px; top: 5px; font-size: 7px; color: var(--text-on-space-2); }
+@keyframes il-caret { to { opacity: 0 } }
+
+/* ---- 11. Glance with Shift + click ---- */
+.illu[data-illu='peekWithShift'] .dim { position: absolute; inset: 0; background: var(--scrim); z-index: 6; animation-name: il-in; }
+.illu[data-illu='peekWithShift'] .peek { position: absolute; left: 60px; top: 30px; width: 180px; height: 110px; border-radius: 9px; background: var(--i-page); box-shadow: var(--shadow); z-index: 7; overflow: hidden; border: 1px solid var(--line); }
+.illu[data-illu='peekWithShift'] .peek .bar { height: 16px; background: var(--surface-2); border-bottom: 1px solid var(--line); }
+.illu[data-illu='peekWithShift'] .peek .bar::before { content: ''; position: absolute; left: 7px; top: 5px; width: 6px; height: 6px; border-radius: 50%; background: var(--text-3); box-shadow: 10px 0 0 var(--text-3), 20px 0 0 var(--text-3); opacity: 0.6; }
+.illu[data-illu='peekWithShift'] .peek .url { position: absolute; left: 40px; right: 8px; top: 4px; height: 8px; border-radius: 3px; background: var(--i-ink); }
+.illu[data-illu='peekWithShift'] .peek b { display: block; height: 5px; margin: 8px 10px 0; border-radius: 3px; background: var(--i-ink); width: var(--w, 70%); }
+.illu[data-illu='peekWithShift'] .peek .img { height: 28px; margin: 8px 10px 0; border-radius: 4px; background: linear-gradient(120deg, color-mix(in srgb, var(--ok) 30%, var(--surface-3)), var(--surface-3)); }
+.illu[data-illu='peekWithShift'] .key.shift { animation-name: il-press; }
+
+/* ---- 12. block the ads ---- */
+.illu[data-illu='blockAds'] .ad { position: absolute; display: grid; place-items: center; border-radius: 4px; background: color-mix(in srgb, var(--warn) 30%, var(--surface)); border: 1px dashed var(--warn); color: var(--warn); font: 700 8px/1 var(--font); letter-spacing: 0.06em; animation-name: il-vanish; }
+.illu[data-illu='blockAds'] .trk { position: absolute; width: 6px; height: 6px; border-radius: 50%; background: var(--danger); animation-name: il-vanish; }
+.illu[data-illu='blockAds'] .shield { position: absolute; right: 18px; top: 18px; z-index: 6; width: 26px; height: 28px; display: grid; place-items: center; border-radius: 6px 6px 50% 50% / 6px 6px 60% 60%; background: var(--surface); border: 1.5px solid var(--text-3); color: var(--text); font: 700 9px/1 var(--font); animation-name: il-shield; }
+.illu[data-illu='blockAds'] .shield .swap .n1, .illu[data-illu='blockAds'] .shield .swap .n2 { font-variant-numeric: tabular-nums; }
+@keyframes il-shield { 0%, 38% { border-color: var(--text-3); color: var(--text) } 52%, 100% { border-color: var(--ok); color: var(--ok) } }
+
+/* ---- 13. reduce the fingerprint ---- */
+.illu[data-illu='reduceFingerprint'] .cv { position: absolute; left: 104px; top: 40px; width: 90px; height: 60px; border-radius: 6px; background: linear-gradient(120deg, color-mix(in srgb, var(--accent) 40%, var(--surface-3)), color-mix(in srgb, var(--ok) 30%, var(--surface-3))); overflow: hidden; }
+.illu[data-illu='reduceFingerprint'] .cv::after { content: ''; position: absolute; inset: 0; background-image: radial-gradient(var(--surface) 0.6px, transparent 0.7px), radial-gradient(var(--text) 0.6px, transparent 0.7px); background-size: 5px 5px, 7px 7px; background-position: 0 0, 2px 3px; opacity: 0; animation: il-noise var(--i-dur) ease-in-out infinite both; }
+.illu[data-illu='reduceFingerprint'] .fp { position: absolute; right: 24px; top: 38px; width: 50px; height: 50px; border-radius: 50%; border: 2px dashed var(--text-3); animation-name: il-fp; }
+.illu[data-illu='reduceFingerprint'] .fp::before, .illu[data-illu='reduceFingerprint'] .fp::after { content: ''; position: absolute; inset: 8px; border-radius: 50%; border: 2px dashed var(--text-3); }
+.illu[data-illu='reduceFingerprint'] .fp::after { inset: 17px; border-style: solid; }
+.illu[data-illu='reduceFingerprint'] .idc { position: absolute; left: 104px; top: 108px; z-index: 6; padding: 3px 6px; border-radius: 5px; background: var(--overlay); border: 1px solid var(--line); font: var(--w-semibold) 8px/1.2 var(--mono); color: var(--text-2); }
+.illu[data-illu='reduceFingerprint'] .idc .n1 { animation-name: il-id1; }
+.illu[data-illu='reduceFingerprint'] .idc .n2 { animation-name: il-id2; }
+.illu[data-illu='reduceFingerprint'] .idc .n3 { position: absolute; left: 0; top: 0; white-space: nowrap; animation-name: il-id3; }
+@keyframes il-noise { 0%, 38% { opacity: 0 } 52%, 100% { opacity: 0.85 } }
+@keyframes il-fp { 0%, 38% { opacity: 0.9; transform: none } 52%, 100% { opacity: 0.35; transform: rotate(25deg) } }
+@keyframes il-id1 { 0%, 50% { opacity: 1 } 54%, 100% { opacity: 0 } }
+@keyframes il-id2 { 0%, 52% { opacity: 0 } 56%, 74% { opacity: 1 } 78%, 100% { opacity: 0 } }
+@keyframes il-id3 { 0%, 76% { opacity: 0 } 80%, 100% { opacity: 1 } }
+
+/* ---- 14. tidy the name of the downloads (the chip of a download is the one of "ask where", 22) ---- */
+.illu:is([data-illu='tidyDownloads'], [data-illu='downloadAskWhere']) .dl { position: absolute; right: 20px; bottom: 20px; z-index: 6; display: flex; align-items: center; gap: 7px; width: 160px; padding: 6px 8px; border-radius: 8px; background: var(--overlay); border: 1px solid var(--line); box-shadow: var(--shadow-s); color: var(--text); }
+.illu:is([data-illu='tidyDownloads'], [data-illu='downloadAskWhere']) .dl .doc { flex: none; width: 14px; height: 18px; border-radius: 2px 5px 2px 2px; background: var(--danger); opacity: 0.85; }
+.illu:is([data-illu='tidyDownloads'], [data-illu='downloadAskWhere']) .dl .nm { font: var(--w-semibold) 8px/1.3 var(--font); min-width: 0; }
+.illu:is([data-illu='tidyDownloads'], [data-illu='downloadAskWhere']) .dl .nm small { display: block; font-weight: var(--w-regular); font-size: 7px; color: var(--text-3); }
+.illu[data-illu='tidyDownloads'] .dl .swap .n1 { font-family: var(--mono); color: var(--text-2); }
+.illu[data-illu='tidyDownloads'] .arrow { position: absolute; left: 120px; top: 30px; z-index: 6; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid var(--text-on-space-2); animation-name: il-dlarrow; }
+.illu[data-illu='tidyDownloads'] .arrow::before { content: ''; position: absolute; left: 8.5px; top: 4px; width: 1.5px; height: 9px; background: var(--text-on-space-2); }
+.illu[data-illu='tidyDownloads'] .arrow::after { content: ''; position: absolute; left: 5px; top: 8px; width: 7px; height: 7px; border-right: 1.5px solid var(--text-on-space-2); border-bottom: 1.5px solid var(--text-on-space-2); transform: rotate(45deg); }
+@keyframes il-dlarrow { 0%, 10% { opacity: 0; transform: translateY(-6px) } 16%, 30% { opacity: 1; transform: none } 38%, 100% { opacity: 0; transform: translateY(70px) } }
+
+/* ---- 15. Tweaks ---- */
+.illu[data-illu='boostsEnabled'] .pg .ph { animation-name: il-boost-ph; }
+.illu[data-illu='boostsEnabled'] .pg .ban { height: 22px; margin: 8px 10px 0; border-radius: 4px; background: repeating-linear-gradient(135deg, var(--surface-3) 0 4px, var(--i-ink) 4px 8px); animation-name: il-ban; overflow: hidden; }
+.illu[data-illu='boostsEnabled'] .pg b { animation-name: il-boost-font; }
+.illu[data-illu='boostsEnabled'] .bolt { position: absolute; right: 18px; top: 16px; z-index: 6; width: 14px; height: 18px; background: var(--text-3); clip-path: polygon(58% 0, 14% 56%, 46% 56%, 38% 100%, 86% 40%, 54% 40%); animation-name: il-bolt; }
+@keyframes il-boost-ph { 0%, 38% { background: var(--accent-soft) } 54%, 100% { background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 50%, var(--ok))) } }
+@keyframes il-ban { 0%, 38% { height: 22px; margin-top: 8px; opacity: 1 } 54%, 100% { height: 0; margin-top: 0; opacity: 0 } }
+@keyframes il-boost-font { 0%, 38% { height: 5px } 54%, 100% { height: 6px; background: var(--i-ink-2) } }
+@keyframes il-bolt { 0%, 38% { background: var(--text-3) } 54%, 100% { background: var(--warn) } }
+
+/* ---- 16. mouse gestures ---- */
+.illu[data-illu='mouseGestures'] .trail { position: absolute; left: 150px; top: 97px; height: 3px; width: 0; border-radius: 2px; background: var(--accent); z-index: 5; transform-origin: right center; animation-name: il-trail; }
+.illu[data-illu='mouseGestures'] .ring { position: absolute; width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--accent); z-index: 5; left: 214px; top: 88px; animation-name: il-ring; }
+.illu[data-illu='mouseGestures'] .pg .layer { position: absolute; inset: 0; background: var(--i-page); animation-name: il-back; }
+.illu[data-illu='mouseGestures'] .pg .prev .ph { background: color-mix(in srgb, var(--ok) 25%, var(--surface)); }
+.illu[data-illu='mouseGestures'] .tag.back { left: 150px; top: 70px; animation-name: il-pop; }
+@keyframes il-trail { 0%, 12% { width: 0; left: 230px } 32%, 44% { width: 80px; left: 150px } 54%, 100% { width: 0; left: 150px } }
+@keyframes il-ring { 0%, 8% { opacity: 0; transform: scale(0.6) } 12%, 40% { opacity: 1; transform: none } 50%, 100% { opacity: 0; transform: scale(0.6) } }
+@keyframes il-back { 0%, 40% { transform: none } 58%, 100% { transform: translateX(105%) } }
+
+/* ---- 17. light, dark or the Mac's: the window is drawn twice, with the tokens of each scheme (tk-light, tk-dark); the Mac's sun turns, and the dark one spreads from its moon ---- */
+.illu[data-illu='interfaceAppearance'] .look { position: absolute; inset: 0; isolation: isolate; background: linear-gradient(155deg, var(--space-a), var(--space-b)); color: var(--text-on-space); }
+.illu[data-illu='interfaceAppearance'] .look.a { animation-name: il-look; }
+.illu[data-illu='interfaceAppearance'] .mode { position: absolute; right: 20px; top: 18px; z-index: 6; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: var(--shadow-s); }
+.illu[data-illu='interfaceAppearance'] .mode .sun { position: absolute; left: 6px; top: 6px; width: 8px; height: 8px; border-radius: 50%; background: var(--warn); box-shadow: 0 0 0 1.5px var(--surface), 0 0 0 2.5px var(--warn); animation-name: il-sun; }
+.illu[data-illu='interfaceAppearance'] .mode .moon { position: absolute; left: 4px; top: 4px; width: 12px; height: 12px; border-radius: 50%; box-shadow: inset -4px -2px 0 0 var(--text-2); }
+@keyframes il-look { 0%, 34% { clip-path: circle(0 at 269px 29px) } 56%, 100% { clip-path: circle(310px at 269px 29px) } }
+@keyframes il-sun { 0%, 14% { transform: none } 24% { transform: rotate(60deg) scale(0.7) } 32%, 100% { transform: rotate(120deg) scale(0.55) } }
+
+/* ---- 18. the size of the interface: the slider goes from 100 to 125 %, the rows of the sidebar grow by as much, the page keeps its size ---- */
+.illu[data-illu='uiScale'] .sb .hd { animation: il-scale-hd var(--i-dur) ease-in-out infinite both; }
+.illu[data-illu='uiScale'] .sb i { animation-name: il-scale-row; }
+.illu[data-illu='uiScale'] .scale { position: absolute; right: 18px; bottom: 18px; z-index: 6; display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; background: var(--overlay); border: 1px solid var(--line); box-shadow: var(--shadow-s); color: var(--text-2); font: var(--w-semibold) 8px/1.2 var(--font); font-variant-numeric: tabular-nums; }
+.illu[data-illu='uiScale'] .scale .track { position: relative; width: 48px; height: 3px; border-radius: 2px; background: var(--line-strong); }
+.illu[data-illu='uiScale'] .scale .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; border-radius: 2px; background: var(--accent); animation-name: il-scale-fill; }
+.illu[data-illu='uiScale'] .scale .thumb { position: absolute; left: 0; top: -3.5px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--surface); border: 1px solid var(--line-strong); box-shadow: var(--shadow-s); animation-name: il-scale-thumb; }
+@keyframes il-scale-hd { 0%, 36% { height: 10px; margin-bottom: 6px; background-size: 42px 5px } 56%, 100% { height: 12.5px; margin-bottom: 7.5px; background-size: 52px 6px } }
+@keyframes il-scale-row {
+  0%, 36% { height: 12px; margin-top: 6px; border-radius: 4px; background-position: 4px 50%, 14px 50%; background-size: 6px 6px, var(--w, 60%) 4px }
+  56%, 100% { height: 15px; margin-top: 7.5px; border-radius: 5px; background-position: 5px 50%, 17.5px 50%; background-size: 7.5px 7.5px, var(--w, 60%) 5px }
+}
+@keyframes il-scale-fill { 0%, 12% { width: 0 } 32%, 100% { width: 25% } }
+@keyframes il-scale-thumb { 0%, 12% { left: 0 } 32%, 100% { left: 25% } }
+
+/* ---- 19. restore the windows: ⌘Q, the two windows go, the application comes back, and so do they, where they were, then their tabs ---- */
+.illu[data-illu='restoreWindows'] .scene { background: linear-gradient(155deg, var(--surface-3), color-mix(in srgb, var(--space-b) 50%, var(--surface-3))); }
+.illu[data-illu='restoreWindows'] .win { position: absolute; width: 150px; height: 92px; border-radius: 8px; background: linear-gradient(155deg, var(--space-a), var(--space-b)); border: 1px solid var(--line-strong); box-shadow: var(--shadow); overflow: hidden; animation-name: il-quit; }
+.illu[data-illu='restoreWindows'] .w1 { left: 16px; top: 30px; }
+.illu[data-illu='restoreWindows'] .w2 { left: 132px; top: 50px; }
+.illu[data-illu='restoreWindows'] .win .sb { left: 5px; top: 5px; bottom: 5px; width: 46px; padding: 5px 4px; border-radius: 5px; }
+.illu[data-illu='restoreWindows'] .win .sb .hd { height: 6px; margin: 0 1px 4px; background-size: 24px 4px; }
+.illu[data-illu='restoreWindows'] .win .sb i { height: 9px; margin-top: 4px; border-radius: 3px; background-position: 3px 50%, 11px 50%; background-size: 5px 5px, var(--w, 60%) 3px; animation-name: il-restore-tab; }
+.illu[data-illu='restoreWindows'] .win .pg { left: 57px; right: 5px; top: 5px; bottom: 5px; border-radius: 5px; }
+.illu[data-illu='restoreWindows'] .win .pg .ph { height: 9px; }
+.illu[data-illu='restoreWindows'] .win .pg b { height: 4px; margin: 6px 7px 0; }
+.illu[data-illu='restoreWindows'] .win .pg b.t { height: 6px; }
+.illu[data-illu='restoreWindows'] .keys { position: absolute; left: 50%; top: 8px; transform: translateX(-50%); display: flex; gap: 4px; z-index: 6; }
+.illu[data-illu='restoreWindows'] .keys .key { position: static; animation-name: il-quit-key; }
+.illu[data-illu='restoreWindows'] .app { position: absolute; left: 137px; top: 70px; z-index: 4; width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(145deg, var(--accent), var(--accent-strong)); box-shadow: var(--shadow-s); animation-name: il-relaunch; }
+.illu[data-illu='restoreWindows'] .app::before { content: ''; position: absolute; inset: 7px; border-radius: 50%; border: 2px solid var(--on-accent); }
+.illu[data-illu='restoreWindows'] .app::after { content: ''; position: absolute; left: 11px; bottom: -7px; width: 4px; height: 4px; border-radius: 50%; background: var(--text-2); }
+.illu[data-illu='restoreWindows'] .sess { position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%); z-index: 6; display: grid; padding: 2px 8px; border-radius: 999px; background: var(--overlay); border: 1px solid var(--line); color: var(--text-2); font: var(--w-semibold) 8px/1.3 var(--font); white-space: nowrap; }
+.illu[data-illu='restoreWindows'] .sess span { grid-area: 1 / 1; text-align: center; }
+.illu[data-illu='restoreWindows'] .sess .n1 { animation-name: il-sess; }
+.illu[data-illu='restoreWindows'] .sess .n2 { animation-name: il-sess-relaunch; }
+@keyframes il-quit-key { 0%, 9% { transform: none; background: var(--surface); color: var(--text) } 12%, 20% { transform: scale(0.92); background: var(--accent); color: var(--on-accent) } 24%, 100% { transform: none; background: var(--surface); color: var(--text) } }
+@keyframes il-quit { 0%, 14% { opacity: 1; transform: none } 24%, 40% { opacity: 0; transform: scale(0.94) } 50%, 100% { opacity: 1; transform: none } }
+@keyframes il-restore-tab { 0%, 14% { opacity: 1 } 24%, 46% { opacity: 0 } 56%, 100% { opacity: 1 } }
+@keyframes il-relaunch { 0%, 24% { opacity: 0; transform: scale(0.6) } 30% { opacity: 1; transform: translateY(-6px) } 35% { opacity: 1; transform: none } 39% { opacity: 1; transform: translateY(-4px) } 44%, 100% { opacity: 0; transform: none } }
+@keyframes il-sess { 0%, 12% { opacity: 1 } 18%, 44% { opacity: 0 } 52%, 100% { opacity: 1 } }
+@keyframes il-sess-relaunch { 0%, 12% { opacity: 0 } 18%, 44% { opacity: 1 } 52%, 100% { opacity: 0 } }
+
+/* ---- 20. the suggestions of the search engine: "météo" is typed, then the engine's searches come under the search line, marked with a magnifier ---- */
+.illu[data-illu='searchSuggestions'] .cmd { position: absolute; left: 44px; right: 44px; top: 26px; z-index: 6; padding-bottom: 4px; border-radius: 9px; background: var(--overlay); -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px); border: 1px solid var(--line); box-shadow: var(--shadow); color: var(--text); overflow: hidden; }
+.illu[data-illu='searchSuggestions'] .cmd .q { display: flex; align-items: center; gap: 6px; height: 22px; padding: 0 9px; border-bottom: 1px solid var(--line); color: var(--text-3); font: var(--w-semibold) 9px/1 var(--font); }
+.illu[data-illu='searchSuggestions'] .cmd .typed { display: inline-block; max-width: 0; overflow: hidden; white-space: nowrap; color: var(--text); animation-name: il-type; }
+.illu[data-illu='searchSuggestions'] .cmd .q::after { content: ''; width: 1px; height: 11px; margin-left: -5px; background: var(--text); animation: il-caret 1s steps(2) infinite; }
+.illu[data-illu='searchSuggestions'] .cmd .r { display: flex; align-items: center; gap: 6px; height: 14px; margin: 3px 4px 0; padding: 0 6px; border-radius: 5px; color: var(--text-2); font: var(--w-regular) 8px/1 var(--font); white-space: nowrap; overflow: hidden; animation-name: il-cmd-row; }
+.illu[data-illu='searchSuggestions'] .cmd .r.sel { background: var(--accent-soft); color: var(--text); box-shadow: inset 2px 0 0 var(--accent); font-weight: var(--w-semibold); }
+.illu[data-illu='searchSuggestions'] .cmd .r.sug { animation-name: il-cmd-sug; }
+.illu[data-illu='searchSuggestions'] .cmd .r b { display: block; height: 4px; border-radius: 2px; background: var(--i-ink-2); width: var(--w, 60%); }
+.illu[data-illu='searchSuggestions'] .ico { position: relative; flex: none; width: 8px; height: 8px; }
+.illu[data-illu='searchSuggestions'] .ico::before, .illu[data-illu='searchSuggestions'] .ico::after { content: ''; position: absolute; box-sizing: border-box; }
+.illu[data-illu='searchSuggestions'] .ico.mag::before { left: 0; top: 0; width: 6px; height: 6px; border-radius: 50%; border: 1.2px solid currentColor; }
+.illu[data-illu='searchSuggestions'] .ico.mag::after { left: 5.2px; top: 4.4px; width: 1.3px; height: 3.6px; border-radius: 1px; background: currentColor; transform: rotate(-45deg); }
+.illu[data-illu='searchSuggestions'] .ico.tab::before { inset: 1px 0; border-radius: 2px; border: 1.2px solid currentColor; }
+.illu[data-illu='searchSuggestions'] .ico.clock::before { inset: 0; border-radius: 50%; border: 1.2px solid currentColor; }
+.illu[data-illu='searchSuggestions'] .ico.clock::after { left: 3.4px; top: 1.8px; width: 2.4px; height: 2.8px; border-left: 1.2px solid currentColor; border-bottom: 1.2px solid currentColor; }
+@keyframes il-type { 0%, 10% { max-width: 0; animation-timing-function: steps(5, end) } 30%, 100% { max-width: 40px } }
+@keyframes il-cmd-row { 0%, 22% { height: 0; margin-top: 0; opacity: 0 } 27% { height: 14px; margin-top: 3px; opacity: 0 } 31%, 100% { height: 14px; margin-top: 3px; opacity: 1 } }
+@keyframes il-cmd-sug { 0%, 38% { height: 0; margin-top: 0; opacity: 0 } 47% { height: 14px; margin-top: 3px; opacity: 0 } 55%, 100% { height: 14px; margin-top: 3px; opacity: 1 } }
+
+/* ---- 21. block the cookie banners: the page loads again, the banner that covered its bottom is gone, the cookie is struck out ---- */
+.illu[data-illu='blockCookieBanners'] .pg .load { position: absolute; left: 0; top: 14px; height: 2px; width: 0; background: var(--accent); animation-name: il-load; }
+.illu[data-illu='blockCookieBanners'] .ckb { position: absolute; left: 6px; right: 6px; bottom: 6px; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 5px 7px; padding: 7px 8px; border-radius: 6px; background: var(--overlay); border: 1px solid var(--line-strong); box-shadow: var(--shadow); color: var(--text); animation-name: il-banner; }
+.illu[data-illu='blockCookieBanners'] .ckb .ck, .illu[data-illu='blockCookieBanners'] .nock { border-radius: 50%; background: radial-gradient(circle at 35% 36%, var(--warn) 1.3px, transparent 1.6px), radial-gradient(circle at 66% 58%, var(--warn) 1.3px, transparent 1.6px), radial-gradient(circle at 40% 72%, var(--warn) 1px, transparent 1.3px), color-mix(in srgb, var(--warn) 30%, var(--surface)); }
+.illu[data-illu='blockCookieBanners'] .ckb .ck { grid-row: span 2; width: 18px; height: 18px; }
+.illu[data-illu='blockCookieBanners'] .ckb .msg { font: var(--w-semibold) 8px/1.2 var(--font); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.illu[data-illu='blockCookieBanners'] .ckb .btns { display: flex; gap: 5px; }
+.illu[data-illu='blockCookieBanners'] .ckb .btns i { width: 44px; height: 9px; border-radius: 999px; background: var(--accent); }
+.illu[data-illu='blockCookieBanners'] .ckb .btns i + i { width: 36px; background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.illu[data-illu='blockCookieBanners'] .nock { position: absolute; right: 18px; top: 18px; z-index: 6; width: 20px; height: 20px; border: 1.5px solid var(--ok); animation-name: il-pop; }
+.illu[data-illu='blockCookieBanners'] .nock::after { content: ''; position: absolute; left: 50%; top: -2px; bottom: -2px; width: 1.5px; margin-left: -0.75px; background: var(--ok); transform: rotate(45deg); }
+@keyframes il-load { 0%, 10% { width: 0; opacity: 1 } 32% { width: 100%; opacity: 1 } 36%, 100% { width: 100%; opacity: 0 } }
+@keyframes il-banner { 0%, 36% { opacity: 1; transform: none } 54%, 100% { opacity: 0; transform: translateY(110%) } }
+
+/* ---- 22. ask where to save each file: a click on a file, the sheet "Enregistrer sous", another folder, then the chip of the download ---- */
+.illu[data-illu='downloadAskWhere'] .pg b.lnk { animation-name: il-ask-link; }
+.illu[data-illu='downloadAskWhere'] .sheet { position: absolute; left: 12px; right: 12px; top: 0; z-index: 3; display: grid; gap: 4px; padding: 5px 8px 7px; border-radius: 0 0 7px 7px; background: var(--overlay); border: 1px solid var(--line-strong); border-top: 0; box-shadow: var(--shadow); color: var(--text); font: var(--w-regular) 7.5px/1.2 var(--font); animation-name: il-sheet; }
+.illu[data-illu='downloadAskWhere'] .sheet .ttl { text-align: center; font-weight: var(--w-semibold); color: var(--text-2); }
+.illu[data-illu='downloadAskWhere'] .sheet .fld { padding: 3px 5px; border-radius: 4px; background: var(--surface); border: 1px solid var(--line-strong); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.illu[data-illu='downloadAskWhere'] .sheet .dir { display: flex; align-items: center; gap: 5px; padding: 3px 5px; border-radius: 4px; background: var(--tile); white-space: nowrap; animation-name: il-ask-dir; }
+.illu[data-illu='downloadAskWhere'] .sheet .fold { flex: none; width: 10px; height: 7px; border-radius: 1px 2px 2px 2px; background: var(--info); }
+.illu[data-illu='downloadAskWhere'] .sheet .dir .swap .n1 { animation-name: il-ask-from; }
+.illu[data-illu='downloadAskWhere'] .sheet .dir .swap .n2 { animation-name: il-ask-to; }
+.illu[data-illu='downloadAskWhere'] .sheet .btn { justify-self: end; padding: 2px 8px; border-radius: 4px; background: var(--accent); color: var(--on-accent); font-weight: var(--w-semibold); animation-name: il-ask-save; }
+.illu[data-illu='downloadAskWhere'] .cur { animation-name: il-ask-cur; }
+.illu[data-illu='downloadAskWhere'] .dl { animation-name: il-ask-dl; }
+.illu[data-illu='downloadAskWhere'] .dl .nm { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes il-ask-link { 0%, 18% { opacity: 0.75; box-shadow: none } 21%, 25% { opacity: 1; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 40%, transparent) } 29%, 100% { opacity: 0.75; box-shadow: none } }
+@keyframes il-sheet { 0%, 24% { transform: translateY(-105%); opacity: 0 } 25% { opacity: 1 } 30%, 48% { transform: none; opacity: 1 } 53% { opacity: 1 } 54%, 100% { transform: translateY(-105%); opacity: 0 } }
+@keyframes il-ask-dir { 0%, 33% { background: var(--tile); box-shadow: none } 36%, 42% { background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent) } 46%, 100% { background: var(--tile); box-shadow: none } }
+@keyframes il-ask-from { 0%, 36% { opacity: 1 } 40%, 100% { opacity: 0 } }
+@keyframes il-ask-to { 0%, 36% { opacity: 0 } 40%, 100% { opacity: 1 } }
+@keyframes il-ask-save { 0%, 43% { transform: none } 45%, 47% { transform: scale(0.92) } 49%, 100% { transform: none } }
+@keyframes il-ask-cur { 0%, 8% { transform: translate(232px, 140px) } 20%, 26% { transform: translate(135px, 63px) } 34%, 37% { transform: translate(148px, 55px) } 43%, 100% { transform: translate(234px, 73px) } }
+@keyframes il-ask-dl { 0%, 52% { opacity: 0; transform: scale(0.92) translateY(4px) } 60%, 100% { opacity: 1; transform: none } }

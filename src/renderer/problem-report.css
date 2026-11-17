@@ -1,0 +1,12 @@
+/*
+ * « Signaler un problème » (ProblemReport.tsx): the small editor (templates/Sheet) widened, the report in a scrollable block of monospace text, the buttons that
+ * put it on the clipboard or in a file, and the link to the site. Tokens only; the sheet gives the header, the foot and the scrolling of the body.
+ */
+.sh.problem-report { width: 600px; }
+.problem-report .pr-intro, .problem-report .pr-note, .problem-report .pr-status { margin: 0; }
+.problem-report .pr-text { margin: 0; padding: var(--sp-2) var(--sp-3); max-height: 300px; min-height: 120px; overflow: auto; border-radius: var(--r-s); background: var(--surface-2); color: var(--text-2); font: var(--t-xs)/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; user-select: text; }
+.problem-report .pr-wait { margin: 0; min-height: 120px; }
+.problem-report .pr-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.problem-report .pr-status { font-size: var(--t-s); color: var(--text-2); }
+.problem-report .pr-status.failed { color: var(--danger-ink); }
+.problem-report .pr-note { font-size: var(--t-s); line-height: 1.4; }

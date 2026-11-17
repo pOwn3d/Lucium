@@ -1,0 +1,27 @@
+/*
+ * The bubble hung from the element that opened a panel: the panel keeps its own look, the bubble adds
+ * the place and a 12 px arrow turned by 45 degrees, half of it outside, on the side of the element. The arrow is drawn after the panel so that it hides
+ * the stretch of the panel's border it stands on; it shows the two borders that face outwards.
+ *
+ * overlay.tsx loads the popover stylesheets before styles.css, so the host's rule starts with `body.overlay`.
+ */
+/* The layer behind a bubble: no dimming (the element it points at stays in view), a click on it closes the panel. */
+body.overlay .backdrop.bubble-host { display: block; padding: 0; background: transparent; }
+
+.ab { position: fixed; z-index: 2; width: max-content; max-width: calc(100% - 20px); animation: ab-in 0.14s ease-out; }
+.ab > .sh, .ab > .iv { max-height: calc(100vh - 20px); }
+/* The bubble is as wide as its panel (max-content) and keeps itself inside the window: the panel's own margin rule (its width less 2 × 16 px, made for a
+   centred sheet) would take 32 px off a bubble that takes its width from it, and cut the end of its foot (« Enregistrer » of Modifier l'onglet). */
+.ab > .sh, .ab > .iv { max-width: 100%; }
+.ab-arrow { position: absolute; width: 12px; height: 12px; background: var(--overlay); border-left: 1px solid var(--line); border-top: 1px solid var(--line); pointer-events: none; }
+.ab-right > .ab-arrow { left: -7px; transform: rotate(-45deg); }
+.ab-left > .ab-arrow { right: -7px; transform: rotate(135deg); }
+.ab-bottom > .ab-arrow { top: -7px; transform: rotate(45deg); }
+.ab-top > .ab-arrow { bottom: -7px; transform: rotate(-135deg); }
+@keyframes ab-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ab { animation: none; }
+}

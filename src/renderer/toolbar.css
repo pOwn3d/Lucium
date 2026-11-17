@@ -1,0 +1,160 @@
+@import './palette.css';
+/* ---- The toolbar above the page ----
+   32 px tall (y = 10 → 42 in a 1680 x 888 window), buttons 32 x 24 five px apart, the site control centre 32 x 28, the address
+   centred on the bar. The colour of a bar is the page's `theme-color` (set inline by toolbarTint); a page that declares none
+   keeps the default bar: --surface-3 in a dark window, --surface-2 in a light one, but the colour of the window's theme in a private window (see below).
+   Under a light bar a 1 px line (black at 5 %) closes it. */
+
+.shell {
+  --toolbar-bg: var(--surface-3);
+  --toolbar-texture: none;
+  --toolbar-line: transparent;
+  --tb-icon: color-mix(in srgb, var(--text-on-space) 67%, transparent);
+  --tb-icon-off: color-mix(in srgb, var(--text-on-space) 25%, transparent);
+  --tb-text: color-mix(in srgb, var(--text-on-space) 75%, transparent);
+  --tb-rest: color-mix(in srgb, var(--text-on-space) 62%, transparent);
+  --tb-hover: color-mix(in srgb, var(--text-on-space) 8%, transparent);
+}
+/* A light window's default bar: the light surface of the tokens, with the line under it (the ink of the glyphs follows the scheme by itself). */
+.shell.light {
+  --toolbar-bg: var(--surface-2);
+  --toolbar-line: var(--line);
+}
+
+/* A private window's bar on a page with no colour of its own is the colour of the window's theme, in diagonal stripes #4147d3 / #3d43d2,
+   not a grey: 2 px each, 45 degrees. Only that one theme has its values, so a normal space keeps the grey bar until the bar is
+   defined for another theme. */
+html.private .shell {
+  /* The identity of the private window: a colour of its own, not a role of the tokens. */
+  --toolbar-bg: #4147d3;
+  --toolbar-texture: repeating-linear-gradient(135deg, transparent 0 2px, rgb(0 0 0 / 0.04) 2px 4px);
+  /* The address on that blue: the 75 % and 62 % of the grey bar give 4.2:1 and 3.4:1 here. 90 % and 82 % give 5.3:1 and 4.7:1, the host still the stronger. */
+  --tb-text: color-mix(in srgb, var(--text-on-space) 90%, transparent);
+  --tb-rest: color-mix(in srgb, var(--text-on-space) 82%, transparent);
+}
+
+/* The page card starts under the bar. The native page view is placed by the shell (one row lower under a light bar, below the line). */
+.stage.with-toolbar { margin-top: calc(var(--window-border, 10px) + 32px); }
+.page-toolbar {
+  position: absolute; left: 0; right: 0; top: -32px; height: 32px; box-sizing: border-box;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 5px; background-color: var(--toolbar-bg); background-image: var(--toolbar-texture); border-radius: 8px 8px 0 0; color: var(--tb-icon);
+}
+/* Under the bar: the line (over the first row of the page, which sits one row lower when it is drawn), and a filler that continues
+   the bar behind the rounded top corners of the page view. */
+.page-toolbar::before { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 8px; background: var(--toolbar-bg); pointer-events: none; }
+.page-toolbar::after { content: ''; position: absolute; left: 0; right: 0; top: 100%; height: 1px; background: var(--toolbar-line); pointer-events: none; }
+.page-toolbar.draggable { -webkit-app-region: drag; }
+.page-toolbar.draggable button, .page-toolbar.draggable browser-action-list, .page-toolbar.draggable .tb-actions { -webkit-app-region: no-drag; }
+
+.tb-left, .tb-right { display: flex; align-items: center; min-width: 0; }
+.tb-left { gap: 5px; }
+.tb-right { gap: 4px; justify-content: flex-end; }
+
+.tb-button { width: 32px; height: 24px; border-radius: 6px; display: inline-grid; place-items: center; flex: none; color: var(--tb-icon); }
+.tb-button:hover:not(:disabled) { background: var(--tb-hover); }
+/* A disabled glyph is a dimmer glyph (25 %), not a faded button: the global disabled opacity does not apply here. */
+.tb-button:disabled, .tb-link:disabled { opacity: 1; color: var(--tb-icon-off); }
+/* The site control centre is four px taller than its neighbours (32 x 28 at y = 12). */
+.tb-control { height: 28px; }
+/* « Nouvelle note » and « Toutes les notes » (both `.tb-note`) look like their neighbours (32 x 24) and take a press over 32 x 28: two px more above and below, the smallest target of the tokens. */
+.tb-note { position: relative; }
+.tb-note::after { content: ''; position: absolute; inset: -2px 0; }
+/* In a split pane the close button follows the others without the usual gap (x = 1602 then 1634). */
+.tb-close { margin-left: -4px; }
+
+/* The address: centred on the bar, between the two groups. The wider group sets the room on both sides (`--tb-side`, measured by
+   the component; the bar's own 5 px of padding and a 6 px gap come on top: the address starts 6 px after the last button), and the
+   whole address never takes more than 38 % of the window. A 24 px slot on each side of the text keeps the
+   text itself centred (the left one is the link glyph, which copies the URL). */
+.tb-address {
+  position: absolute; top: 0; bottom: 0; left: calc(var(--tb-side, 0px) + 11px); right: calc(var(--tb-side, 0px) + 11px);
+  display: flex; align-items: center; justify-content: center; pointer-events: none;
+}
+.tb-address > * { pointer-events: auto; }
+.tb-address-inner { display: flex; align-items: center; gap: 3px; min-width: 0; max-width: 38vw; }
+.tb-link { width: 24px; height: 24px; border-radius: 6px; display: inline-grid; place-items: center; flex: none; color: var(--tb-icon); }
+.tb-link:hover:not(:disabled) { background: var(--tb-hover); }
+.tb-slot { width: 24px; height: 24px; flex: none; }
+/* The "Privé" chip of a private window or tab, inverted so that it reads on any bar. */
+.tb-chip { display: none; flex: none; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px; background: var(--text); color: var(--surface); font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.03em; text-transform: uppercase; }
+html.private .tb-chip, .tb-chip.on { display: inline-flex; }
+/* « Non sécurisé »: a page shown over a certificate let through although it was not valid. Red, so that it reads on any bar. */
+.tb-insecure { display: inline-flex; flex: none; align-items: center; height: 18px; padding: 0 7px; border-radius: 999px; background: var(--danger); color: var(--on-accent); font-size: var(--t-xs); font-weight: var(--w-semibold); white-space: nowrap; }
+.tb-slot.tb-private { display: grid; place-items: center; color: currentColor; opacity: 0.85; }
+.tb-url { display: flex; align-items: center; min-width: 0; height: 24px; font-size: 13px; line-height: 16px; color: var(--tb-text); border-radius: 6px; }
+.tb-url:hover { box-shadow: 0 0 0 3px var(--tb-hover); background: var(--tb-hover); }
+.tb-host { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tb-rest { font-weight: 400; color: var(--tb-rest); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex-shrink: 100; }
+.tb-placeholder { font-weight: 500; color: var(--tb-rest); }
+
+/* Extension icons: 16 px glyphs in 24 px buttons, 12 px from the control centre. */
+.page-toolbar browser-action-list { margin: 0 4px 0 0; gap: 6px; }
+.page-toolbar browser-action-list::part(action) { width: 24px; height: 24px; border-radius: 6px; background-size: 16px; }
+.page-toolbar browser-action-list::part(action):hover { background-color: var(--tb-hover); }
+
+/* The extension icons and, when some do not fit or were unpinned, the « button after them (24 px, like an icon). The wrapper is a plain
+   flex row: with nothing in the menu it measures exactly what the bare list did. */
+.tb-actions { display: flex; align-items: center; flex: none; }
+.tb-overflow { width: 24px; }
+
+/* The strips of a split view are always dark, whatever the page or the window: they wear `tk-dark` (Toolbar.tsx), so the tokens below are the dark ones. */
+.page-toolbar.pane {
+  right: auto;
+  --toolbar-bg: var(--surface-3); --toolbar-texture: none; --toolbar-line: transparent;
+  --tb-icon: color-mix(in srgb, var(--text-on-space) 67%, transparent); --tb-icon-off: color-mix(in srgb, var(--text-on-space) 25%, transparent); --tb-text: color-mix(in srgb, var(--text-on-space) 75%, transparent);
+  --tb-rest: color-mix(in srgb, var(--text-on-space) 62%, transparent); --tb-hover: color-mix(in srgb, var(--text-on-space) 8%, transparent);
+}
+.page-toolbar.pane:hover { --toolbar-bg: color-mix(in srgb, var(--surface-3), var(--text-on-space) 6%); }
+/* No line under a strip (the filler behind the page's rounded top corners stays). */
+.page-toolbar.pane::after { display: none; }
+
+/* The focused pane's ring: 2 px of the accent of the space on the card's own edge, bar included (the page inside is inset by the same 2 px). */
+.pane-ring { position: absolute; pointer-events: none; box-sizing: border-box; border: var(--focus-width) solid var(--focus); border-radius: 8px; }
+
+/* The mark of a page that is not at 100 %: text only, no icon, no fill until the pointer is on it. It exists only while the page is zoomed. */
+.tb-zoom { height: 20px; padding: 0 6px; border-radius: 6px; flex: none; font-size: 11px; line-height: 20px; font-weight: 500; font-variant-numeric: tabular-nums; color: var(--tb-text); }
+.tb-zoom:hover { background: var(--tb-hover); }
+
+/* The line of 2 px at the foot of the bar while the page loads: a stretch of the accent that slides along it (no figure of progress exists, only loading or not). Still, half way, for less motion. */
+.tb-progress { position: absolute; left: 8px; right: 6px; bottom: 0; height: 2px; border-radius: 1px; overflow: hidden; background: color-mix(in srgb, var(--text-on-space) 10%, transparent); pointer-events: none; }
+.tb-progress::before { content: ''; position: absolute; top: 0; bottom: 0; left: 0; width: 40%; border-radius: 1px; background: var(--accent); animation: tb-progress 1.2s ease-in-out infinite; }
+@keyframes tb-progress { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+@media (prefers-reduced-motion: reduce) {
+  .tb-progress::before { width: 50%; animation: none; }
+}
+
+/* The button « Contraste de la page »: the only coloured glyph of the bar. Its outline stays in the ink of the bar, like its neighbours, so that it keeps their
+   contrast on a light, dark or coloured bar; the colour is inside it: four dots of paint for Original, a bluish moon for Dark, an amber sun for Light.
+   The fills are set here, over the attributes of the SVG (which keep the glyph whole without this file). */
+.tb-readable[data-mode='dark'] .tb-readable-tint { fill: var(--fixed-6577e8); fill-opacity: 0.9; }
+.tb-readable[data-mode='light'] .tb-readable-tint { fill: var(--fixed-eba21a); fill-opacity: 0.9; }
+.tb-readable [class^='tb-paint-'] { stroke: none; }
+.tb-readable .tb-paint-1 { fill: var(--fixed-e5484d); }
+.tb-readable .tb-paint-2 { fill: var(--fixed-f5a524); }
+.tb-readable .tb-paint-3 { fill: var(--fixed-30a46c); }
+.tb-readable .tb-paint-4 { fill: var(--fixed-3e7bfa); }
+
+/* The button « Traduction de la page » while its page is being translated: the card of its A breathes (its fill, below). Still, half full, for less motion. */
+.tb-translate[data-state='working'] .tb-tint-lang { animation: tb-translate-busy 1.2s ease-in-out infinite alternate; }
+@keyframes tb-translate-busy { from { fill-opacity: 0.15; } to { fill-opacity: 0.6; } }
+@media (prefers-reduced-motion: reduce) {
+  .tb-translate[data-state='working'] .tb-tint-lang { animation: none; }
+}
+
+/* The other glyphs of the bar in colour, like « Contraste de la page »: every stroke keeps the ink of the bar (and its contrast on any bar, a coloured stroke
+   falls under 3:1 on a strongly coloured space), the colour is in the fills: the body of the pencil, the sheet of the note, the knobs of the control
+   centre (ringed with the ink), the left pane of the split view. Only in the toolbar: the same glyphs elsewhere stay monochrome. The SVG's own
+   attributes keep each glyph whole without this file. */
+.tb-button .tb-tint-pen { fill: var(--fixed-f5a524); fill-opacity: 0.9; }
+.tb-button .tb-tint-note { fill: var(--fixed-ffe082); fill-opacity: 0.85; }
+.tb-button .tb-knob-1, .tb-button .tb-knob-2 { stroke: currentColor; stroke-width: 1.1; r: 2px; }
+.tb-button .tb-knob-1 { fill: var(--fixed-3e7bfa); }
+.tb-button .tb-knob-2 { fill: var(--fixed-f5a524); }
+.tb-button .tb-tint-pane { fill: var(--fixed-3e7bfa); fill-opacity: 0.35; stroke: none; }
+/* The card of the A of « Traduction de la page »: light while the translation is only offered, fuller once the page is translated (with the bar's hover
+   behind the button: it is on). */
+.tb-button .tb-tint-lang { fill: var(--fixed-3e7bfa); fill-opacity: 0.3; stroke: none; }
+.tb-button.tb-translate[data-state='translated'] { background: var(--tb-hover); }
+.tb-button.tb-translate[data-state='translated'] .tb-tint-lang { fill-opacity: 0.6; }
+.tb-button:disabled [class^='tb-tint-'], .tb-button:disabled [class^='tb-knob-'] { fill-opacity: 0.35; }

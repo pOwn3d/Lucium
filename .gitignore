@@ -1,0 +1,86 @@
+# Dependencies and build output
+node_modules/
+out/
+out-test/
+out-*/
+# The copy of Electron.app named Lucium that `pnpm start` and `pnpm dev` run (scripts/dev-electron.mjs)
+.dev-electron/
+# Reports of `pnpm perf` (scripts/perf.mjs): one JSON and one table per run, and latest.json
+.perf/
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# Release artefacts produced by a local dry run of the release steps (docs/community/release-process.md)
+/release/
+/release-notes.md
+
+# Environment files and signing material: never commit these (they stay in the keychain of the maintainer's Mac and in a password manager;
+# no workflow holds a secret: docs/community/release-process.md)
+.env
+.env.*
+!.env.example
+*.p12
+*.p8
+*.pem
+*.cer
+*.mobileprovision
+*.provisionprofile
+
+# Scratch, temporary and backup files
+scratch*
+*.tmp
+*.rej
+*.orig
+*.swp
+*.log
+
+# Screenshots and captures taken while testing: they can show tabs, titles or accounts.
+# Curated images for the documentation go in docs/images/ (see docs/images/README.md).
+/captures/
+/screenshots/
+/screenshot*/
+/Screenshot *.png
+/Capture d*cran*.png
+# The screenshots of the site made by `pnpm captures:site` (scripts/site-captures.mjs): chosen by hand before they join assets/screenshots/ of the site repository (docs/captures-du-site.md).
+/out-captures/
+# The presentation film made by `pnpm film:site` (scripts/site-film/film.mjs): the videos, posters and transcripts, and the cache of its frames.
+/out-film/
+
+# Editors, OS and per-user tool settings
+.DS_Store
+# The empty "Icon\r" file the Finder writes for a custom folder icon (not Icons/ nor IconPicker.tsx)
+Icon[^a-zA-Z0-9]
+.idea/
+.vscode/
+# Lucium DRM (castLabs Electron, docs/drm.md): built locally, signed by a service tied to an account
+dist-drm/
+# The trial copies of its fuses (scripts/package-drm.mjs --fuse-trial)
+dist-drm-trial/
+
+# Playwright outputs, and the reference pictures drawn on the machine at hand (tests/e2e/settings.spec.ts): the pixels are that machine's.
+# The pictures of the CI runner (`*-ci.png`, same folder) are kept in Git: the nightly run compares with them.
+test-results/
+playwright-report/
+tests/e2e/*-snapshots/*-local.png
+
+# Copies of real application data (safety checkpoints, profile copies): never in the repository
+/~/
+*SafetyCheckpoint*/
+
+# Settings, notes and working folders of coding assistants: personal, never in the repository. A public AGENTS.md at the root is not
+# covered by these lines. The two exceptions are the maintainer's to-do and its archive, which a tool of theirs reads and commits in the
+# private repository; .gitattributes keeps the whole folder out of the public tree (export-ignore).
+.claude/*
+!.claude/TODOS.md
+!.claude/TODOS-archive.md
+CLAUDE.local.md
+.cursor/
+.codex/
+.gemini/
+.windsurf/
+.continue/
+.aider*
+.agents/
+.worktrees/

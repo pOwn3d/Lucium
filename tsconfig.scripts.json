@@ -1,0 +1,14 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "allowImportingTsExtensions": true,
+    "noImplicitAny": false,
+    "noUncheckedIndexedAccess": false,
+    "useUnknownInCatchVariables": false,
+    "types": ["node"]
+  },
+  "include": ["scripts/**/*.mjs", "scripts/**/*.cjs"],
+  "exclude": ["scripts/compare-browsers.mjs", "scripts/perf.mjs", "scripts/readable-bench.mjs", "scripts/site-captures.mjs", "scripts/site-film/**/*"]
+}

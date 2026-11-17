@@ -1,0 +1,56 @@
+// The linter (oxlint): a short list of rules that each catch a real mistake, and no formatting rule (there is no formatter: CONTRIBUTING.md).
+//
+//   react-hooks/rules-of-hooks, react-hooks/exhaustive-deps   a hook called in a branch, an effect that reads a value it does not list
+//   typescript/no-floating-promises                           a promise nobody waits for: its failure is lost
+//   no-unused-vars                                            what is declared and never read
+//   reportUnusedDisableDirectives                             an `oxlint-disable` comment that switches nothing off is an error
+//
+// The promises rule reads the code with its types (`typeAware`, done by the package oxlint-tsgolint on the TypeScript of the project). It finds
+// the project of a file through tsconfig.json, which names the tsconfig files of `pnpm typecheck`. A file that none of them includes is read
+// without the options and the path aliases of the project, where a promise may go unseen: workflow-hygiene.test.ts refuses such a file, and
+// the three `lint-witness.ts` files fail the lint when the types are no longer resolved.
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "react"],
+  // Only the rules named here: the ready-made sets of oxlint are not used.
+  "categories": { "correctness": "off", "suspicious": "off", "pedantic": "off", "perf": "off", "style": "off", "restriction": "off", "nursery": "off" },
+  "options": {
+    "typeAware": true,
+    "reportUnusedDisableDirectives": "error",
+    // One way to write an exception, the one this linter documents.
+    "respectEslintDisableDirectives": false,
+    "denyWarnings": true
+  },
+  "rules": {
+    "typescript/no-floating-promises": "error",
+    // `_name` says "not read, on purpose" (a parameter that keeps its place); a caught error may stay unread.
+    "no-unused-vars": ["error", { "args": "after-used", "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrors": "none", "ignoreRestSiblings": true }]
+  },
+  "overrides": [
+    {
+      "files": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
+      "rules": { "react-hooks/rules-of-hooks": "error", "react-hooks/exhaustive-deps": "error" }
+    }
+  ],
+  "ignorePatterns": [
+    "node_modules/",
+    "out/",
+    "out-*/",
+    "dist/",
+    "dist-*/",
+    "coverage/",
+    "release/",
+    "test-results/",
+    ".dev-electron/",
+    ".perf/",
+    ".claude/",
+    // Code of other projects, kept as it was published.
+    "src/main/translate/vendor/",
+    "resources/",
+    "docs/",
+    // The probe extensions of the engine checks: plain scripts a browser loads, with the globals of an extension.
+    "compat/",
+    // The page of the site film: scripts a browser loads.
+    "scripts/site-film/montage/"
+  ]
+}

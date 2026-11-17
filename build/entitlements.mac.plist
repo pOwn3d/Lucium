@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- The main application and the plain helper. `pnpm package:signed` gives this file to every piece it signs (electron-builder has one file for all the
+         nested pieces); the DRM variant signs piece by piece, with a file of its own for the main process and the plain and plugin helpers and another for
+         the renderer and GPU helpers (scripts/package-drm.mjs, src/main/mac-sign-order.ts: entitlementsFor). Electron: V8 needs the JIT. -->
+    <!-- Neither allow-unsigned-executable-memory nor disable-library-validation here: with the hardened runtime, only libraries signed by Apple or by the
+         same team load in the processes of the browser (koffi.node, vault-xpc.node and Electron's frameworks are signed by the same identity). The normal
+         build has no Widevine module, so no piece needs them. The DRM variant has them in a file of its own: build/entitlements.drm.mac.plist.
+         src/main/drm-packaging-files.test.ts fails if either key comes back here. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <!-- A browser: with the hardened runtime, the pages that ask for the camera, the microphone or the position are only offered the system's question with these. -->
+    <key>com.apple.security.device.camera</key>
+    <true/>
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <key>com.apple.security.personal-information.location</key>
+    <true/>
+  </dict>
+</plist>

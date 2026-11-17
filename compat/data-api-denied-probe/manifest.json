@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Data API Denied Probe",
+  "version": "0.1.0",
+  "description": "The same driver as the data API probe, without history, bookmarks or browsingData: every one of those calls must be refused (smokeExtensions2).",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["storage"],
+  "action": { "default_title": "Data API denied probe" },
+  "externally_connectable": { "matches": ["http://127.0.0.1/*"] }
+}

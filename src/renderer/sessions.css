@@ -1,0 +1,24 @@
+/* "Sessions" (Sessions.tsx): the saved sets of tabs, on the template of the panels of a list (templates/list-panel.css). These rules only add what is its own. */
+.lp.sessions { height: 580px; }
+
+/* naming and saving the session of now, above the list */
+.sessions .sessions-new { padding: var(--sp-2) var(--sp-2) 0; }
+.sessions .sessions-new label { display: block; margin-bottom: var(--sp-1); font-size: var(--t-s); color: var(--text-2); }
+.sessions .sessions-save { display: flex; align-items: center; gap: var(--sp-2); }
+.sessions .sessions-save .tk-field { flex: 1; min-width: 0; }
+.sessions .sessions-save-button { flex: none; }
+.sessions .sessions-new .tk-status { padding-left: 0; padding-right: 0; }
+.sessions .sessions-hint { line-height: 1.4; }
+.sessions .sessions-saved { font-weight: var(--w-semibold); color: var(--ok-ink); }
+.sessions .sessions-empty { padding-bottom: var(--sp-2); }
+
+/* a row: its name and what it holds, then what can be done with it, always in sight */
+.sessions .sessions-row, .sessions .backups-row { gap: var(--sp-1); }
+.sessions .sessions-name { font-weight: var(--w-semibold); }
+.sessions .sessions-actions { display: flex; flex: none; gap: var(--sp-1); }
+.sessions .sessions-editing { flex: 1; min-width: 0; padding: var(--sp-1) var(--sp-2); }
+.sessions .sessions-copy { padding: var(--sp-1) var(--sp-2); }
+
+.sessions .sessions-backup-actions { padding: var(--sp-1) 0 0; }
+.sessions .sessions-target { display: flex; align-items: center; gap: 6px; font-size: var(--t-s); color: var(--text-2); cursor: pointer; }
+.sessions .sessions-target input { margin: 0; accent-color: var(--accent); }

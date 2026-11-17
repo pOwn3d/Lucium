@@ -1,0 +1,33 @@
+/* ---- The floating sidebar: its panel slides over the page when the sidebar is hidden and the pointer touches the left edge ----
+   The card itself (inset 5 px, 1 px edge, shadow) belongs to sidebar.css; this file plays it in and out, at the timings below.
+   In: the card's right edge (shadow included) covers 17 · 86 · 168 · 236 · 284 · 314 · 330 · 338 · 341 · 341 · 339 · 338 · 337 · 336 px at 17 ms steps:
+   about 0.13 s to arrive, a 1.5 % overshoot, rested at 0.22 s. Out: 326 · 218 · 140 · 78 · 37 · 12 · 10 px, gone in about 0.10 s. */
+.floating-shell:not(.in):not(.out) .sidebar { visibility: hidden; }
+.floating-shell.in .sidebar { animation: float-in 0.22s linear both; }
+.floating-shell.out .sidebar { animation: float-out 0.1s ease-out both; }
+@keyframes float-in {
+  0% { transform: translateX(calc(var(--sidebar-width) * -0.9876)); }
+  7.7% { transform: translateX(calc(var(--sidebar-width) * -0.7740)); }
+  15.4% { transform: translateX(calc(var(--sidebar-width) * -0.5201)); }
+  23.1% { transform: translateX(calc(var(--sidebar-width) * -0.3096)); }
+  30.8% { transform: translateX(calc(var(--sidebar-width) * -0.1610)); }
+  38.5% { transform: translateX(calc(var(--sidebar-width) * -0.0681)); }
+  46.2% { transform: translateX(calc(var(--sidebar-width) * -0.0186)); }
+  53.8% { transform: translateX(calc(var(--sidebar-width) * 0.0062)); }
+  61.5% { transform: translateX(calc(var(--sidebar-width) * 0.0155)); }
+  69.2% { transform: translateX(calc(var(--sidebar-width) * 0.0155)); }
+  76.9% { transform: translateX(calc(var(--sidebar-width) * 0.0093)); }
+  84.6% { transform: translateX(calc(var(--sidebar-width) * 0.0062)); }
+  92.3% { transform: translateX(calc(var(--sidebar-width) * 0.0031)); }
+  100% { transform: translateX(calc(var(--sidebar-width) * 0.0000)); }
+}
+/* Out: the right edge (shadow included) goes 326 → 10 px: the card ends at x = 1 px, entirely out of the window but its shadow. */
+@keyframes float-out { to { transform: translateX(calc(var(--sidebar-width) * -0.9814)); } }
+/* "Reduce motion": the system's preference, or the attribute that the setting forceReduceMotion sets (tokens.css). The card does not slide: it is where it rests
+   when it arrives, and it leaves at once. */
+@media (prefers-reduced-motion: reduce) {
+  .floating-shell.in .sidebar { animation: none; }
+  .floating-shell.out .sidebar { animation: none; visibility: hidden; }
+}
+:root[data-motion='reduce'] .floating-shell.in .sidebar { animation: none; }
+:root[data-motion='reduce'] .floating-shell.out .sidebar { animation: none; visibility: hidden; }

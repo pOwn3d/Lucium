@@ -1,0 +1,60 @@
+name: Scorecard
+
+# OpenSSF Scorecard (https://scorecard.dev): a weekly reading of the repository's own practices (pinned actions, token permissions,
+# branch protection, dangerous workflows, review, signed releases…). The results go to the Security tab (code scanning) and, because
+# `publish_results` is on, to the public Scorecard API, which is what a badge reads.
+#
+# What it needs: no secret. `id-token: write` lets the action prove to the Scorecard API that the results come from this workflow of
+# this repository (an OIDC token, nothing stored); `security-events: write` uploads the results to code scanning.
+#
+# Publishing has rules that the Scorecard API checks on this very file, and refuses the results otherwise: no `env` or `defaults` at the
+# top, no write permission at the top, a GitHub-hosted Ubuntu runner, and steps that only `use` actions/checkout, actions/upload-artifact,
+# github/codeql-action/upload-sarif and ossf/scorecard-action. Do not add a `run:` step to this job.
+#
+# The action runs its own image, `ghcr.io/ossf/scorecard-action`, by the tag of its release: that is written in the action, not here.
+#
+# Public repositories only (the job is skipped while the repository is private), and only on the default branch.
+
+on:
+  # A change of the rules of a branch changes the score: read it again.
+  branch_protection_rule:
+  schedule:
+    - cron: '23 5 * * 2'
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: scorecard-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analysis:
+    name: Scorecard
+    if: ${{ !github.event.repository.private && github.ref_name == github.event.repository.default_branch }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ossf/scorecard-action@fa7117db83c52d787ae5a89f350999701505d78e # v2.5.0
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          publish_results: true
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: scorecard-results
+          path: results.sarif
+          if-no-files-found: error
+          retention-days: 7
+      - uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: results.sarif

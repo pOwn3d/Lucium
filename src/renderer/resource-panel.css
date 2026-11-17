@@ -1,0 +1,90 @@
+/*
+ * The ring of the resources at the foot of the sidebar and the panel of glass that slides up from it (ResourcePanel.tsx, the function
+ * `resource-gauge`). Roles of the tokens only. The panel rises in about 0.2 s with a little overshoot (transform and
+ * opacity, nothing that lays the sidebar out again) and goes down in 0.14 s; nothing moves when the system or the setting asks for less motion.
+ */
+
+/* The group holds the button and the panel without a box of its own: the button is an item of the footer, the panel hangs from the footer. */
+.sidebar .rg-group { display: contents; }
+
+/* The ring: the share of the Mac's memory (--p, 0 to 100) cut out of a disc, in the colour of the glyphs; amber past half, or under pressure. */
+.sidebar .footer .rg-gauge.footer-side { position: static; --rg-fill: var(--sb-glyph); }
+.sidebar .footer .rg-gauge.warn { --rg-fill: var(--warn); }
+.sidebar .footer .rg-gauge.open { background: var(--tile-hover); color: var(--text-on-space); }
+.sidebar .rg-ring {
+  display: block; width: 18px; height: 18px; border-radius: 50%;
+  background: conic-gradient(var(--rg-fill) calc(var(--p, 0) * 1%), color-mix(in srgb, var(--text-on-space) 16%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), currentcolor calc(100% - 3px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3.5px), currentcolor calc(100% - 3px));
+}
+/* Its tooltip holds figures and, under pressure, a sentence: it spans the foot instead of hanging from a 32 px button. */
+.sidebar .footer .rg-gauge.footer-side[data-tip]::after { left: var(--sp-2); right: var(--sp-2); transform: none; white-space: normal; text-align: left; }
+
+/* ---- the panel ---- */
+.sidebar .rp-panel {
+  position: absolute; left: var(--sp-2); right: var(--sp-2); bottom: calc(100% + 2px); z-index: 30; box-sizing: border-box;
+  max-height: calc(100vh - 120px); overflow-y: auto; padding: var(--sp-3);
+  border: 1px solid var(--line); border-radius: var(--r-l); background: var(--overlay); color: var(--text); box-shadow: var(--shadow);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4); backdrop-filter: blur(20px) saturate(1.4);
+  font-size: var(--t-s); outline: 0; transform-origin: 50% 100%;
+  animation: rp-in 0.22s cubic-bezier(0.34, 1.45, 0.64, 1) both;
+}
+.sidebar .rp-panel.closing { animation: rp-out 0.14s ease-in both; pointer-events: none; }
+@keyframes rp-in { from { opacity: 0; transform: translateY(14px) scale(0.97); } to { opacity: 1; transform: none; } }
+@keyframes rp-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(10px) scale(0.98); } }
+@media (prefers-reduced-motion: reduce) {
+  .sidebar .rp-panel, .sidebar .rp-panel.closing { animation: none; }
+}
+:root[data-motion='reduce'] .sidebar .rp-panel { animation: none; }
+
+.sidebar .rp-head { display: flex; justify-content: space-between; align-items: baseline; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.sidebar .rp-head b { font-size: var(--t-m); font-weight: var(--w-semibold); }
+.sidebar .rp-head span { min-width: 0; overflow: hidden; color: var(--text-3); font-size: var(--t-xs); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* The share of the Mac's memory, as the ring has it. */
+.sidebar .rp-memory { display: flex; align-items: center; gap: var(--sp-2); margin: 2px 0 var(--sp-2); color: var(--text-2); font-size: var(--t-xs); }
+.sidebar .rp-bar { flex: 1; height: 6px; border-radius: 3px; background: var(--tile); overflow: hidden; }
+.sidebar .rp-bar i { display: block; height: 100%; width: calc(var(--w, 0) * 100%); border-radius: inherit; background: var(--accent); }
+.sidebar .rp-bar i.warn { background: var(--warn); }
+.sidebar .rp-percent { font-variant-numeric: tabular-nums; }
+
+/* The rows: the row itself shows the tab, ☾ and ✕ are buttons of their own. */
+.sidebar .rp-rows { display: grid; gap: 1px; margin: 0; padding: 0; list-style: none; }
+.sidebar .rp-row { display: flex; align-items: center; gap: var(--sp-1); border-radius: var(--r-s); }
+.sidebar .rp-row:hover, .sidebar .rp-row:focus-within { background: var(--tile); }
+.sidebar .rp-show {
+  flex: 1; min-width: 0; display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: center; gap: var(--sp-2);
+  padding: 6px; border-radius: var(--r-s); color: inherit; text-align: left;
+}
+.sidebar .rp-icon { display: grid; place-items: center; width: 18px; height: 18px; }
+.sidebar .rp-text { display: grid; gap: 3px; min-width: 0; }
+.sidebar .rp-line { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.sidebar .rp-name { min-width: 0; overflow: hidden; font-size: var(--t-s); text-overflow: ellipsis; white-space: nowrap; }
+.sidebar .rp-where { flex: none; max-width: 45%; overflow: hidden; color: var(--text-3); font-size: var(--t-xs); text-overflow: ellipsis; white-space: nowrap; }
+.sidebar .rp-meter { display: block; height: 3px; border-radius: 2px; background: var(--tile); overflow: hidden; }
+.sidebar .rp-meter i { display: block; height: 100%; width: calc(var(--w, 0) * 100%); border-radius: inherit; background: var(--accent); }
+.sidebar .rp-meter i.hot { background: linear-gradient(90deg, var(--warn), var(--danger)); }
+.sidebar .rp-num { display: grid; justify-items: end; min-width: 48px; color: var(--text-2); font-size: var(--t-xs); line-height: 1.3; font-variant-numeric: tabular-nums; }
+.sidebar .rp-act { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 6px; background: var(--tile); color: var(--text-2); }
+.sidebar .rp-act:hover { background: var(--tile-hover); color: var(--text); }
+.sidebar .rp-act svg { width: 11px; height: 11px; }
+
+.sidebar .rp-empty { margin: var(--sp-2) 0; color: var(--text-3); font-size: var(--t-xs); }
+/* What the last button did, said to a screen reader too (role="status"); empty, it takes no room. */
+.sidebar .rp-notice { margin: var(--sp-1) 0 0; color: var(--text-2); font-size: var(--t-xs); }
+.sidebar .rp-notice:empty { display: none; }
+
+.sidebar .rp-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--line); }
+.sidebar .rp-link { padding: 4px 2px; color: var(--text-2); font-size: var(--t-xs); text-align: left; }
+.sidebar .rp-link:hover { color: var(--text); text-decoration: underline; }
+.sidebar .rp-sleep-all {
+  display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); padding: 4px var(--sp-2); border-radius: var(--r-s);
+  background: var(--accent-soft); color: var(--accent-text); font-size: var(--t-xs); font-weight: var(--w-semibold); text-align: left;
+}
+.sidebar .rp-sleep-all:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.sidebar .rp-sleep-all:disabled { opacity: 0.5; }
+.sidebar .rp-sleep-all svg { flex: none; width: 12px; height: 12px; }
+
+.sidebar .rp-show:focus-visible, .sidebar .rp-act:focus-visible, .sidebar .rp-link:focus-visible, .sidebar .rp-sleep-all:focus-visible {
+  outline: var(--focus-width) solid var(--focus); outline-offset: -2px;
+}

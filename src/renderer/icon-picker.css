@@ -1,0 +1,66 @@
+/*
+ * The icon picker (IconPicker.tsx): the type (emoji, letters, picture), the search, the recent emoji, the categories and the grid,
+ * and on the right the drawing of the sidebar that wears the icon. Tokens only; the colours of the letters are the user's, set inline by the component.
+ */
+.ip { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-3); font-size: var(--t-m); color: var(--text); }
+.ip.with-preview { grid-template-columns: minmax(0, 1fr) 150px; }
+.ip-main { display: grid; gap: var(--sp-2); align-content: start; min-width: 0; }
+.ip-mode { display: grid; gap: var(--sp-2); min-width: 0; }
+.ip-side { display: grid; min-width: 0; }
+.ip-label { margin: var(--sp-1) 0 0; font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.ip-help { margin: 0; font-size: var(--t-s); line-height: 1.4; color: var(--text-3); }
+.ip-warn { color: var(--warn-ink); }
+.ip-keys { margin: 0; font-size: var(--t-xs); color: var(--text-3); }
+.ip-keys .tk-kbd { margin-left: var(--sp-1); }
+
+/* the type: a segment of text, 28 px */
+.ip-seg { display: inline-flex; justify-self: start; gap: 2px; padding: 2px; border-radius: var(--r-s); background: var(--tile); }
+.ip-seg button { min-height: var(--target); padding: 0 10px; border: 0; border-radius: 6px; background: transparent; color: var(--text-2); font: inherit; font-size: var(--t-s); font-weight: var(--w-semibold); cursor: pointer; }
+.ip-seg button:hover { color: var(--text); }
+.ip-seg button[aria-pressed='true'] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-s); }
+.ip-seg button[aria-disabled='true'] { color: var(--text-3); }
+
+/* the categories: pills, not captions; the one in view is the selected one */
+.ip-pills { display: flex; gap: 4px; overflow-x: auto; padding: 2px 0; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, canvastext calc(100% - 28px), transparent); mask-image: linear-gradient(90deg, canvastext calc(100% - 28px), transparent); }
+.ip-pills::-webkit-scrollbar { display: none; }
+:root[data-scrollbars='always'] .ip-pills { scrollbar-width: thin; scrollbar-color: var(--text-3) transparent; }
+.ip-pills button { flex: none; min-height: var(--target); padding: 0 10px; border: 1px solid transparent; border-radius: 999px; background: var(--tile); color: var(--text-2); font: inherit; font-size: var(--t-xs); font-weight: var(--w-semibold); white-space: nowrap; cursor: pointer; }
+.ip-pills button:hover { background: var(--tile-hover); color: var(--text); }
+.ip-pills button[aria-pressed='true'] { background: var(--accent-soft); border-color: var(--accent); color: var(--text); }
+
+/* the grid: cells of 32 px, a title above each category that stays at the top while it scrolls */
+.ip-scroll { height: 188px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; background: var(--surface); border-radius: var(--r-s); padding: 0 var(--sp-1); }
+.ip-cat { position: sticky; top: 0; z-index: 1; margin: 0; padding: 6px 0 4px; background: var(--surface); font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.ip-results { margin: var(--sp-2) 0 var(--sp-1); font-size: var(--t-s); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.ip-grid, .ip-recents { display: grid; grid-template-columns: repeat(8, 32px); gap: 3px; justify-content: space-between; }
+.ip-recents { display: flex; justify-content: flex-start; }
+.ip-grid button, .ip-recents button { width: 32px; height: 32px; padding: 0; border: 2px solid transparent; border-radius: var(--r-s); background: transparent; font-size: 18px; line-height: 1; cursor: pointer; }
+.ip-recents button { background: var(--tile); }
+.ip-grid button:hover, .ip-recents button:hover { background: var(--tile-hover); }
+.ip-grid button[aria-pressed='true'], .ip-recents button[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); }
+.ip-grid button:focus-visible, .ip-recents button:focus-visible { outline-offset: -2px; }
+
+/* the letters */
+.ip-letter { display: flex; align-items: flex-end; gap: var(--sp-3); margin-top: var(--sp-1); }
+.ip-field { display: grid; gap: var(--sp-1); font-size: var(--t-xs); color: var(--text-3); }
+.ip-field .tk-field { width: 64px; height: 32px; text-align: center; font-size: var(--t-l); font-weight: var(--w-semibold); text-transform: uppercase; }
+.space-letter.ip-big { width: 64px; height: 64px; font-size: 30px; border-radius: var(--r-l); }
+.space-letter.ip-big.round { border-radius: 50%; }
+.ip-colors { display: flex; flex-wrap: wrap; gap: 6px; }
+.ip-colors button { width: var(--target); height: var(--target); padding: 0; border: 2px solid transparent; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line-strong); cursor: pointer; }
+.ip-colors button[aria-pressed='true'] { border-color: var(--text); box-shadow: inset 0 0 0 2px var(--surface); }
+.ip-colors button:focus-visible { border-radius: 50%; }
+
+/* the picture */
+.ip-drop { display: grid; justify-items: center; gap: 6px; padding: var(--sp-4); border: 1.5px dashed var(--line-strong); border-radius: var(--r-l); text-align: center; color: var(--text-2); font-size: var(--t-s); }
+.ip-drop b { color: var(--text); font-weight: var(--w-semibold); }
+.ip-drop-mark { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; overflow: hidden; background: var(--tile); color: var(--text-2); }
+.ip-drop-mark svg { fill: none; stroke: currentColor; stroke-width: var(--icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.ip-drop-mark .space-image { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ip-drop-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--sp-2); }
+
+@media (prefers-contrast: more) {
+  .ip-grid button[aria-pressed='true'], .ip-recents button[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--line-strong); }
+}
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .ip-grid button[aria-pressed='true'], :root[data-contrast='more'] .ip-recents button[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--line-strong); }

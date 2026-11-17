@@ -1,0 +1,20 @@
+/* The welcome of the first launch (WelcomeSheet.tsx). It sits in the centred modal card; these rules add what the card lacks. Tokens only. */
+.card.welcome { width: min(560px, calc(100% - 48px)); }
+.welcome h2 { font-size: var(--t-2xl); }
+.welcome .welcome-lead { margin: -6px 0 var(--sp-3); font-size: var(--t-m); }
+.welcome-block { margin: 0 0 var(--sp-3); padding: var(--sp-3); border-radius: var(--r-m); background: var(--tile); }
+.welcome-block h3 { margin: 0 0 var(--sp-2); font-size: var(--t-m); font-weight: var(--w-semibold); }
+.welcome-found { margin: 0 0 var(--sp-2); color: var(--text); font-size: var(--t-m); }
+.welcome-fine { margin: var(--sp-2) 0 0; }
+.welcome-looks { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-2); }
+.welcome .welcome-look {
+  display: flex; flex-direction: column; gap: 2px; margin: 0; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); border: 1px solid var(--line);
+  background: var(--surface); color: var(--text); font-size: var(--t-m); cursor: pointer;
+}
+.welcome .welcome-look small { color: var(--text-2); font-size: var(--t-s); }
+.welcome .welcome-look input { position: absolute; opacity: 0; pointer-events: none; }
+.welcome .welcome-look.chosen { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.welcome .welcome-look:has(input:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.welcome .row.end { gap: var(--sp-2); }
+.welcome .welcome-again { flex: 1; text-align: left; }
+.welcome .button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }

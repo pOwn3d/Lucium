@@ -1,0 +1,78 @@
+name: Missing from your previous browser
+description: Something you miss from your previous browser, in looks or behavior. / Ce qui manque par rapport à votre ancien navigateur (aspect ou comportement).
+title: 'missing: '
+labels: ['arc-gap', 'triage', 'community-public']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Tell us what Lucium lacks or does differently: layout, sizes, colors, labels, behavior. How to observe a browser without
+        touching your data is in the "Measuring a browser" section of [CONTRIBUTING.md](https://github.com/pOwn3d/Lucium/blob/main/CONTRIBUTING.md).
+
+        **Do not attach anything copied from another browser**: no extracted image, icon, font, sound, string table or code. Your own
+        screenshots of the running apps are fine if they show no personal data (use a test space with neutral tabs).
+  - type: dropdown
+    id: area
+    attributes:
+      label: Where is the gap?
+      options:
+        - Sidebar (tabs, folders, favorites, spaces)
+        - Toolbar and page card
+        - Command bar
+        - Menus (menu bar, context menus)
+        - Settings window
+        - Split View
+        - Glance / Mini window
+        - Tweaks
+        - Space theme editor
+        - Site control center / popovers
+        - Media player, downloads, captures
+        - Import from another browser
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Your previous browser (name and version) and Lucium version
+      placeholder: <browser> <version>, Lucium 1.0.0
+    validations:
+      required: true
+  - type: textarea
+    id: difference
+    attributes:
+      label: What differs
+      description: What your previous browser does or shows, what Lucium does or shows instead. State in which situation (window size, light or dark, active or hovered, private window...).
+    validations:
+      required: true
+  - type: textarea
+    id: measure
+    attributes:
+      label: Measurement
+      description: |
+        Give numbers when it is a matter of size, position, color or timing. For each value say how you got it.
+        Examples: `row height 41 px (accessibility inspector, scale 1)`, `background #18171b (pixel sampled in a screenshot at scale 1)`, `popover opens in about 0.22 s (60 fps screen recording)`.
+        If you are not sure of a value, say so. If you have no measurement, describe what you see.
+      placeholder: |
+        Element:
+        Value in your previous browser (and how it was measured):
+        Lucium value:
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to see it
+      description: The shortest steps that show the difference, in both applications.
+      placeholder: |
+        1. Open a test space with two neutral tabs (example.com)
+        2. ...
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before sending
+      options:
+        - label: I searched the existing issues; this gap is not already listed.
+          required: true
+        - label: I attached nothing copied from another browser (images, icons, fonts, sounds, strings, code) and nothing that shows personal data.
+          required: true

@@ -1,0 +1,16 @@
+/* Automatic reload of a tab: the mark on its sidebar row (AutoReloadMark.tsx) and the interval panel (AutoReloadPanel.tsx, the small-editor sheet of templates/Sheet.tsx). */
+
+/* After the title, clear of its flexible width: the arrow and the time left (digits of one width, so the title does not shake as they change), dimmed like the other glyphs of the row.
+   Under the pointer they give way, in the same box (so the pointer never leaves it), to a cross: the button that stops the reloading. */
+.sidebar .auto-reload-mark { flex: none; height: 16px; min-width: 12px; padding: 0 2px; border: 0; border-radius: 5px; background: transparent; display: inline-grid; place-items: center; font: inherit; font-size: 10px; line-height: 1; font-variant-numeric: tabular-nums; color: var(--sb-dim, var(--muted)); opacity: 0.8; cursor: default; }
+.sidebar .auto-reload-mark > * { grid-area: 1 / 1; }
+.sidebar .auto-reload-mark .auto-reload-face { display: inline-flex; align-items: center; gap: 3px; }
+.sidebar .auto-reload-mark .auto-reload-stop { visibility: hidden; }
+.sidebar .tab:hover .auto-reload-mark { color: var(--sb-glyph, var(--text)); opacity: 1; }
+.sidebar .auto-reload-mark:is(:hover, :focus-visible) { color: var(--text-on-space); }
+.sidebar .auto-reload-mark:is(:hover, :focus-visible) .auto-reload-face { visibility: hidden; }
+.sidebar .auto-reload-mark:is(:hover, :focus-visible) .auto-reload-stop { visibility: visible; }
+
+.auto-reload .auto-reload-fields { display: flex; gap: 8px; }
+.auto-reload .auto-reload-fields input.tk-field { flex: 1; min-width: 0; }
+.auto-reload .auto-reload-fields select.tk-field { flex: none; width: 120px; }

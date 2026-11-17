@@ -1,0 +1,161 @@
+/*
+ * The site control center: a card with 20 px corners, 33 px discs for the
+ * settings and a bump pointing at the toolbar button; it grows out of that button in 0.22 s (2 % past its size) and folds back in 0.15 s. The card
+ * is 340 px wide, not 236 (no label is cut any more): four labelled actions in a grid, then the settings in foldable sections
+ * whose titles say what is inside; the part under the actions scrolls when the sections are open and the window is short.
+ *
+ * styles.css still holds the older rules and is loaded after this file: every selector starts with `body.overlay`.
+ */
+
+/* The control center only: the downloads popover (`popover-left`, popovers.css) hangs from the sidebar instead. */
+body.overlay .backdrop.popover:not(.popover-left) { padding: 51px var(--popover-right, 13px) 0 0; }
+
+body.overlay .scc {
+  /* The fill is computed dark from the page behind (popoverSurface): the text takes the dark values of the tokens whatever the system appearance is. */
+  color-scheme: dark;
+  --scc-fill: var(--overlay);
+  --scc-tile: var(--surface-3);
+  position: relative;
+  width: 340px;
+  padding: 9px 9px 10px;
+  border: 0;
+  border-radius: 20px;
+  background: var(--scc-fill);
+  box-shadow: none;
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  /* The animations start at the bump: 53 px from the right edge, just above the card. */
+  transform-origin: calc(100% - 53px) -9px;
+  animation: scc-grow 0.37s linear(0, 0.17 4.5%, 0.34 9%, 0.5 13.5%, 0.64 18%, 0.76 22.5%, 0.84 27%, 0.9 31.5%, 0.95 36%, 0.99 40.5%, 1.01 45%, 1.02 49.5%, 1.027 54%, 1.012 78%, 1) both;
+}
+body.overlay .scc::before { display: none; }
+body.overlay .scc.closing { animation: scc-fold 0.15s cubic-bezier(0.45, 0, 0.55, 1) forwards; }
+/* The width and height come from the same progress: the card is about a third narrower and four fifths shorter when it starts. */
+@keyframes scc-grow {
+  from { transform: scale(0.66, 0.22); }
+  to { transform: scale(1, 1); }
+}
+@keyframes scc-fold {
+  from { transform: scale(1, 1); }
+  to { transform: scale(0.66, 0.22); }
+}
+/* What is inside appears over 0.3 s while the card grows. */
+body.overlay .scc > * { animation: scc-fade 0.3s ease-out both; }
+body.overlay .scc.closing > * { animation: none; }
+@keyframes scc-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  body.overlay .scc, body.overlay .scc > * { animation: none; }
+}
+
+body.overlay .scc .scc-arrow { position: absolute; top: -9px; right: 38px; width: 30px; height: 9px; color: var(--scc-fill); animation: none; }
+
+body.overlay .scc-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--sp-2); }
+/* A label is never cut: "Rechercher dans la page" takes two lines when it does not fit beside its icon. */
+body.overlay .scc-tiles .scc-tile { display: flex; justify-content: flex-start; gap: var(--sp-2); width: auto; height: auto; min-height: 36px; padding: 5px 10px; font-size: var(--t-m); font-weight: var(--w-semibold); line-height: 1.2; text-align: left; }
+body.overlay .scc-tiles .scc-tile svg { flex: none; }
+body.overlay .scc-tiles .scc-tile span { min-width: 0; overflow-wrap: anywhere; }
+body.overlay .scc-tile {
+  flex: none; width: 48px; height: 32px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--scc-tile); box-shadow: inset 0 0 0 1px var(--line), 0 1px 1px var(--line); color: var(--text);
+}
+body.overlay .scc-tile:hover { background: var(--tile-hover); }
+body.overlay .scc-tile.small { width: 48px; background: var(--tile); box-shadow: none; font-size: 13px; font-weight: var(--w-semibold); }
+body.overlay .scc-tile.small:hover { background: var(--tile-hover); }
+body.overlay .scc-ext-icon { width: 16px; height: 16px; object-fit: contain; }
+
+/*
+ * The row of the extensions, then « + » and the folder: it goes to the line when it is full (five tiles fit the card), so that no tile is cut
+ * at the edge of the card nor laid over another. The room above each line is the room the ⋯ of a tile takes over its corner.
+ */
+body.overlay .scc-extensions { display: flex; flex-wrap: wrap; gap: 10px 8px; padding: 6px 0 var(--sp-3) 1px; }
+/* A tile and its ⋯, which sits over the top right corner of the tile: in view under the pointer, with the focus of the keyboard and while its menu is open. */
+body.overlay .scc-ext { position: relative; flex: none; }
+body.overlay .scc-ext-more {
+  position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--scc-fill); box-shadow: inset 0 0 0 1px var(--line-strong); color: var(--text); opacity: 0;
+}
+body.overlay .scc-ext:hover .scc-ext-more, body.overlay .scc-ext:has(:focus-visible) .scc-ext-more, body.overlay .scc-ext.open .scc-ext-more { opacity: 1; }
+body.overlay .scc-ext-more:hover { background: var(--tile-hover); }
+body.overlay .scc-ext-more:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; }
+/* An extension that is off: its picture faded, and a barred disc at the bottom right of the tile. */
+body.overlay .scc-ext.off .scc-tile.small { color: var(--text-3); }
+body.overlay .scc-ext.off .scc-ext-icon { opacity: 0.4; filter: grayscale(1); }
+body.overlay .scc-ext-off { position: absolute; right: 4px; bottom: 3px; border-radius: 50%; background: var(--scc-fill); color: var(--text-2); pointer-events: none; }
+/* The menu of a tile, under the row: the name of the extension, its actions, and « Retirer… » apart, in red. */
+body.overlay .scc-ext-pop { margin: 10px 0 0; padding: 4px; border-radius: 12px; background: var(--tile); }
+body.overlay .scc-ext-pop-name { margin: 3px 8px 4px; color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.overlay .scc-ext-menu { display: flex; flex-direction: column; }
+body.overlay .scc-ext-item { display: flex; align-items: center; min-height: var(--target); padding: 0 var(--sp-2); border-radius: var(--r-s); color: var(--text); font-size: var(--t-m); font-weight: var(--w-semibold); text-align: left; }
+body.overlay .scc-ext-item:hover { background: var(--tile-hover); }
+body.overlay .scc-ext-item:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; background: var(--tile-hover); }
+body.overlay .scc-ext-item.danger { color: var(--danger); }
+body.overlay .scc-ext-sep { height: 1px; margin: 3px var(--sp-2); background: var(--line); }
+/* « Retirer ? » in place of the menu: what goes with the extension, then « Annuler » (the focus) and « Retirer ». */
+body.overlay .scc-ext-confirm { display: flex; flex-direction: column; gap: 6px; padding: 6px 8px 4px; }
+body.overlay .scc-ext-confirm strong { color: var(--text); font-size: var(--t-m); font-weight: var(--w-semibold); overflow-wrap: anywhere; }
+body.overlay .scc-ext-confirm p { margin: 0; color: var(--text-2); font-size: var(--t-s); line-height: 1.35; }
+body.overlay .scc-ext-answers { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: 2px; }
+body.overlay .scc-ext-answer { min-height: var(--target); padding: 0 12px; border-radius: var(--r-s); background: var(--tile-active); color: var(--text); font-size: var(--t-s); font-weight: var(--w-semibold); }
+body.overlay .scc-ext-answer.danger { background: var(--danger); color: var(--on-accent); }
+body.overlay .scc-ext-answer:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+body.overlay .scc-ext-done { margin: 6px 0 0; }
+body.overlay .scc-ext-done:empty { margin: 0; }
+
+body.overlay .scc-setting, body.overlay .scc-boost-row { width: 100%; height: 33px; margin: 0 0 10px; padding: 0; border-radius: 17px; }
+body.overlay .scc-setting { display: flex; align-items: center; gap: 7px; text-align: left; }
+body.overlay .scc-setting:hover { background: transparent; }
+/*
+ * A Tweak's row: its switch takes the room its buttons leave (the name ends in an ellipsis), and the buttons (edit, export, delete) sit side by
+ * side after it, in the flow of the row: two or three of them, their width is the room they take. They were laid at the same spot of the row, on
+ * top of one another, and drew a glyph nobody could read. They are in view at all times, in the secondary ink, the main ink under the pointer.
+ */
+body.overlay .scc-boost-row { display: flex; align-items: center; gap: var(--sp-1); }
+body.overlay .scc-boost-row .scc-setting { margin: 0; flex: 1; min-width: 0; }
+body.overlay .scc-boost-actions { display: flex; flex: none; align-items: center; gap: 2px; }
+body.overlay .scc-boost-action { width: var(--target); height: var(--target); border-radius: var(--r-s); display: grid; place-items: center; color: var(--text-2); }
+body.overlay .scc-boost-action:hover { background: var(--tile); color: var(--text); }
+body.overlay .scc-boost-action:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; color: var(--text); }
+/* The bin says what it does before the question: red under the pointer and with the focus of the keyboard. */
+body.overlay .scc-boost-action.scc-delete:hover, body.overlay .scc-boost-action.scc-delete:focus-visible { color: var(--danger); }
+body.overlay .scc-badge { width: 33px; height: 33px; border-radius: 50%; display: grid; place-items: center; flex: none; background: var(--tile-active); color: var(--text-2); font-size: 0; }
+body.overlay .scc-badge.on { background: var(--accent); color: var(--on-accent); }
+body.overlay .scc-setting-text { display: flex; flex-direction: column; min-width: 0; line-height: 17px; }
+body.overlay .scc-setting-text strong { font-size: 14px; font-weight: 600; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+body.overlay .scc-setting-text span { font-size: 12px; font-weight: 500; color: var(--text-2); }
+
+/* A separator, then the connection on the left and a round button on the right. */
+body.overlay .scc-footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-2) var(--sp-1); margin: -5px 1px 0; padding-top: 10px; border-top: 1px solid var(--line-strong); }
+body.overlay .scc-secure { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; min-width: 0; padding: 4px 10px 4px 9px; line-height: 1.25; border-radius: 9px; background: var(--tile); font-size: 13px; font-weight: 700; color: var(--text); }
+body.overlay .scc-more { flex: none; width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: var(--tile); color: var(--text); }
+body.overlay .scc-more:hover { background: var(--tile-hover); }
+body.overlay .scc-site-settings { flex: none; margin: 0 8px 0 auto; white-space: nowrap; height: 32px; padding: 0 10px; border-radius: 9px; background: transparent; color: var(--text); font-size: 13px; font-weight: 600; }
+body.overlay .scc-site-settings:hover { background: var(--tile-hover); }
+
+body.overlay .shields-note { margin: -4px 0 10px; }
+
+/* ---- the foldable sections ---- */
+body.overlay .scc-scroll { max-height: calc(100vh - 220px); margin: var(--sp-2) -4px 0; padding: 0 4px; overflow-y: auto; overscroll-behavior: contain; }
+body.overlay .scc-section { border-top: 1px solid var(--line); }
+body.overlay .scc-section-head { display: flex; align-items: center; gap: var(--sp-2); width: 100%; min-height: 36px; padding: 6px var(--sp-2); border-radius: var(--r-s); color: var(--text); font-size: var(--t-m); font-weight: var(--w-semibold); text-align: left; }
+body.overlay .scc-section-head:hover { background: var(--tile); }
+body.overlay .scc-section-head:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
+body.overlay .scc-section-chevron { flex: none; color: var(--text-3); transition: transform 0.15s; }
+body.overlay .scc-section.open .scc-section-chevron { transform: rotate(90deg); }
+/* The line at the right of a title: grey text that is readable on the card; the colour is only the dot before it. */
+body.overlay .scc-section-sum { display: inline-flex; align-items: center; gap: 5px; margin-left: auto; color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-regular); font-variant-numeric: tabular-nums; }
+body.overlay .scc-section-sum.ok::before, body.overlay .scc-section-sum.warn::before { content: ''; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); }
+body.overlay .scc-section-sum.warn::before { background: var(--warn); }
+/* Some air under the header: its hover ground and a tooltip under the pointer no longer touch the first line of the body. */
+body.overlay .scc-section-body { padding: calc(var(--sp-3) / 2) 0 6px; }
+body.overlay .scc-section-body > .scc-setting:last-child, body.overlay .scc-section-body > .scc-boost-row:last-child { margin-bottom: 0; }
+/* One line for each permission of the site: the disc, its name and what it was answered, and the choice in place. */
+body.overlay .scc-perm { display: flex; align-items: center; gap: 7px; min-height: 33px; margin: 0 0 10px; }
+body.overlay .scc-perm .scc-setting-text { flex: 1; }
+body.overlay .scc-perm-choice { flex: none; min-height: var(--target); max-width: 112px; padding: 0 var(--sp-2); border: 1px solid var(--line-strong); border-radius: var(--r-s); background: var(--tile); color: var(--text); font: inherit; font-size: var(--t-s); font-weight: var(--w-semibold); }
+body.overlay .scc-perm-choice:focus-visible, body.overlay .scc-perm-forget:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+body.overlay .scc-perm-forget { padding: 0; border: 0; background: transparent; color: var(--accent-text); font: inherit; text-decoration: underline; cursor: pointer; }
+body.overlay .scc-section-body > .scc-perm:last-child { margin-bottom: 0; }
+@media (prefers-reduced-motion: reduce) {
+  body.overlay .scc-section-chevron { transition: none; }
+}

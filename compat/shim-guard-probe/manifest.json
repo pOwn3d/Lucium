@@ -1,0 +1,8 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Shim Guard Probe",
+  "version": "0.1.0",
+  "description": "Declares almost no permission and tries the APIs that Lucium provides itself: each one must be refused.",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["storage", "tabs"]
+}

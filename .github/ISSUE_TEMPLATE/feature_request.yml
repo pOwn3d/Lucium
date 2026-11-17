@@ -1,0 +1,60 @@
+name: Feature request
+description: Suggest something Lucium should do. / Proposer une fonction.
+title: 'feat: '
+labels: ['enhancement', 'triage', 'community-public']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please read this first. / À lire d'abord.
+
+        Lucium keeps the behavior and layout it has, then adds new features. Some things are **out of scope by decision**
+        and will be closed without discussion:
+
+        - an **AI assistant** of any kind built into the browser;
+        - a **user account**, **cloud synchronization**, or sharing that needs a server;
+        - **telemetry** or analytics;
+        - anything that requires copying code, images, fonts or icons from another browser or from another proprietary product.
+
+        See the [roadmap](https://github.com/pOwn3d/Lucium/blob/main/docs/roadmap.md) (in French) for what is done, planned or excluded.
+        For a vague idea or a question, open a [Discussion](https://github.com/pOwn3d/Lucium/discussions) instead.
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem or need
+      description: What are you trying to do, and what gets in the way today? Describe it without presupposing the solution.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you propose
+      description: How it would work for the user. Menu, shortcut, setting, default state. A sketch is welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and prior art
+      description: Workarounds you use, how other browsers or extensions solve it (describe the behavior, do not paste their code or assets).
+  - type: dropdown
+    id: contribute
+    attributes:
+      label: Would you like to build it?
+      options:
+        - 'No, I am only suggesting it'
+        - 'Yes, with some guidance'
+        - 'Yes, I can do it'
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before sending
+      options:
+        - label: I searched the existing issues and the roadmap; this is not already planned or excluded.
+          required: true
+        - label: This is not an AI assistant, an account, cloud sync or telemetry feature.
+          required: true
+        - label: It does not require copying code or assets from another browser or from another proprietary product.
+          required: true

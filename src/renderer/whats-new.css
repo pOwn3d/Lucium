@@ -1,0 +1,11 @@
+/* "Quoi de neuf" (WhatsNewSheet.tsx). It sits in the centred modal card; these rules add what the card lacks. Tokens only. */
+.card.news { width: min(640px, calc(100% - 48px)); }
+.news .news-lead { margin: -6px 0 var(--sp-3); font-size: var(--t-s); }
+.news-points { list-style: none; margin: 0 0 var(--sp-2); padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); max-height: 60vh; overflow-y: auto; }
+.news-points li { display: flex; flex-direction: column; gap: 2px; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--tile); font-size: var(--t-m); line-height: 1.4; user-select: text; }
+.news-points b { font-weight: var(--w-semibold); }
+.news-points span { color: var(--text-2); font-size: var(--t-s); }
+.news-empty { margin: 0 0 var(--sp-2); color: var(--text-2); font-size: var(--t-m); }
+.news .row.end { gap: var(--sp-2); }
+.news .news-never { margin-right: auto; }
+.news .button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }

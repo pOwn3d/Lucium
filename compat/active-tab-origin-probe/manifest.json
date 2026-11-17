@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Active Tab Origin Probe",
+  "version": "0.1.0",
+  "description": "Declares activeTab and scripting and no host permission. After the one click that lends it a page, it sends the tab to another address and at once asks for a script or a style sheet, to see whether what runs or is inserted stays on the origin that was lent (smokeActiveTabOrigin).",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["activeTab", "scripting"],
+  "action": { "default_title": "Active tab origin probe" },
+  "externally_connectable": { "matches": ["http://127.0.0.1/*", "http://localhost/*"] }
+}

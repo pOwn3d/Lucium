@@ -1,0 +1,22 @@
+/*
+ * "Ranger les onglets…": the small editor (templates/Sheet) with a list of the folders proposed, each with its tabs. Tokens only; the sheet gives the width,
+ * the header, the foot and the scrolling of the body, this draws what is inside.
+ */
+.sh.tidy-panel { width: 460px; }
+.tidy-panel .tp-empty { margin: 0; padding: var(--sp-3) 0; color: var(--text-2); }
+.tidy-panel .tp-groups { list-style: none; display: grid; gap: var(--sp-2); margin: 0; padding: 0; }
+.tidy-panel .tp-group { display: grid; gap: var(--sp-1); padding: var(--sp-2); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); }
+.tidy-panel .tp-group.off .tp-name, .tidy-panel .tp-group.off .tp-tabs { opacity: 0.55; }
+.tidy-panel .tp-head { display: flex; align-items: center; gap: var(--sp-2); }
+.tidy-panel input[type='checkbox'], .tidy-panel input[type='radio'] { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.tidy-panel .tp-name { flex: 1; min-width: 0; font-weight: var(--w-semibold); }
+.tidy-panel .tp-count { flex: none; font-size: var(--t-s); color: var(--text-2); font-variant-numeric: tabular-nums; }
+.tidy-panel .tp-note { margin: 0 0 0 24px; font-size: var(--t-s); line-height: 1.4; color: var(--text-3); }
+.tidy-panel .tp-note.warn { color: var(--warn-ink); }
+.tidy-panel .tp-tabs { list-style: none; display: grid; margin: 0; padding: 0 0 0 24px; }
+.tidy-panel .tp-tab { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--target); font-size: var(--t-m); cursor: pointer; }
+.tidy-panel .tp-tab-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tidy-panel .tp-tab-host { flex: none; max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-s); color: var(--text-3); }
+.tidy-panel .tp-place { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) var(--sp-3); font-size: var(--t-s); color: var(--text-2); }
+.tidy-panel .tp-place label { display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); cursor: pointer; }
+.tidy-panel .tp-summary { margin: 0; }

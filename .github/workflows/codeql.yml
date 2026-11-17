@@ -1,0 +1,80 @@
+name: CodeQL
+
+# Static security analysis (GitHub code scanning). Results appear in the Security tab. Four analyses, one job each:
+#
+#   javascript-typescript   the application (src/, scripts/), read as source: nothing is installed, nothing is built.
+#   actions                 the workflows of this folder (an injection through `${{ }}`, a token with too many rights).
+#   c-cpp                   native/vault-xpc/vault_xpc.c, the addon that reaches the keychain service. CodeQL watches the compiler:
+#                           the job builds it with its own script, on macOS.
+#   swift                   native/vault-keychain/ and native/system-translate/, built the same way.
+#
+# The two native jobs run the build scripts of native/ and nothing else: no `pnpm install`, no dependency, no secret. They sign ad hoc,
+# as on any machine without an identity.
+#
+# Free on PUBLIC repositories. On a private repository it needs GitHub Code Security (a paid feature), so the jobs are skipped while
+# the repository is private: nothing to change when it becomes public, they start running by themselves.
+# Scheduled runs only happen on the default branch.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: '30 5 * * 3'
+
+permissions: {}
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  analyze:
+    name: CodeQL (${{ matrix.language }})
+    if: ${{ !github.event.repository.private }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+      actions: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: javascript-typescript
+            build-mode: none
+            os: ubuntu-latest
+          - language: actions
+            build-mode: none
+            os: ubuntu-latest
+          - language: c-cpp
+            build-mode: manual
+            os: macos-latest
+            build: bash native/vault-xpc/build.sh --arch arm64
+          - language: swift
+            build-mode: manual
+            os: macos-latest
+            build: bash native/vault-keychain/build.sh --arch arm64 && bash native/system-translate/build.sh --arch arm64
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The addon is compiled against the Node-API headers that sit beside the local Node (native/vault-xpc/build.sh).
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        if: ${{ matrix.build-mode == 'manual' }}
+        with:
+          node-version-file: .nvmrc
+      - uses: github/codeql-action/init@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - name: Build the native pieces (watched by CodeQL)
+        if: ${{ matrix.build-mode == 'manual' }}
+        env:
+          BUILD: ${{ matrix.build }}
+        run: bash -c "$BUILD"
+      - uses: github/codeql-action/analyze@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          category: /language:${{ matrix.language }}

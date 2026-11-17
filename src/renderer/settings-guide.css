@@ -1,0 +1,65 @@
+/*
+ * « Régler en quelques questions » (GuideSettings.tsx): the card at the top of a category, the flow that takes the place of its rows (one question,
+ * its answers as cards, a progress line), and « Ce qui va changer », before → after. Tokens only, so light and dark follow the window; the only
+ * motion (the progress line, the border of an answer) is left out when the system asks for less, and tokens.css stops it when the setting does.
+ */
+
+/* ---- the card ---- */
+.guide-card { display: flex; align-items: center; gap: 12px; margin: 10px 0 2px; padding: 12px 14px; border-radius: var(--r-l); border: 1px solid var(--line); background: linear-gradient(135deg, var(--accent-soft), var(--surface-2)); }
+.guide-card-mark { flex: none; width: 28px; height: 28px; border-radius: 50%; background: radial-gradient(circle, var(--surface) 0 16%, var(--accent) 42%, var(--accent-soft) 70%, transparent 72%); }
+.guide-card-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.guide-card-text > b { font-size: var(--t-m); font-weight: var(--w-semibold); color: var(--text); }
+.guide-card-text > span { font-size: var(--t-s); line-height: 16px; color: var(--text-2); }
+.guide-card-last { margin-top: 2px; }
+/* A category whose rows begin with a paragraph (Profils) keeps it apart from the card, as the first section title is: it was drawn against its border. */
+.guide-card + .pref-intro { margin-top: 16px; }
+.guide-start { flex: none; }
+
+/* ---- the flow ---- */
+.guide-flow { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.guide-flow-title { margin: 6px 2px 0; font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.guide-head { margin: 0 0 4px; }
+.guide-step { display: flex; flex-direction: column; gap: 10px; }
+.guide-progress { margin: 0; font-size: var(--t-xs); color: var(--text-3); }
+.guide-eyebrow { font-weight: var(--w-semibold); color: var(--text-2); }
+.guide-bar { height: 4px; border-radius: 2px; background: var(--tile); overflow: hidden; }
+.guide-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
+.guide-question { display: flex; flex-direction: column; gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.guide-question > legend { margin: 0; padding: 0; }
+.guide-question-title { margin: 6px 0 2px; font-size: var(--t-xl); line-height: 22px; font-weight: var(--w-semibold); color: var(--text); }
+/* The title takes focus only so that a screen reader reads each new question; it is not a control, so it draws no ring. */
+.guide-question-title:focus { outline: none; }
+.guide-hint { margin: 0; font-size: var(--t-s); line-height: 16px; color: var(--text-2); }
+.guide-note { margin: 0; font-size: var(--t-xs); line-height: 14px; color: var(--text-3); }
+.guide-custom { padding: 6px 10px; border-radius: var(--r-s); background: var(--tile); color: var(--text-2); }
+
+/* an answer: a card that is its own label, checked by its radio button */
+.guide-answers { display: flex; flex-direction: column; gap: 8px; }
+.guide-answer { display: flex; align-items: flex-start; gap: 10px; padding: 11px 12px; border-radius: var(--r-m); border: 1.5px solid var(--line-strong); background: var(--surface); cursor: pointer; }
+.guide-answer:hover { border-color: color-mix(in srgb, var(--accent) 50%, var(--line-strong)); }
+.guide-answer:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+.guide-answer:has(input:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.guide-answer input { flex: none; margin: 2px 0 0; accent-color: var(--accent); }
+.guide-answer-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.guide-answer-label { font-size: var(--t-m); font-weight: var(--w-semibold); color: var(--text); }
+.guide-answer-effect { font-size: var(--t-s); line-height: 16px; color: var(--text-2); }
+.guide-badge { display: inline-block; margin-left: 6px; padding: 1px 6px; border-radius: 5px; background: var(--accent-soft); color: var(--accent-text); font-size: var(--t-xs); font-weight: var(--w-semibold); vertical-align: 1px; }
+.guide-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; }
+.guide-nav-end { display: flex; gap: 8px; }
+
+/* ---- « Ce qui va changer » ---- */
+.guide-items, .guide-changes { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.guide-items { gap: 12px; }
+.guide-changes { gap: 4px; }
+.guide-item-question { display: block; margin: 0 2px 4px; font-size: var(--t-xs); color: var(--text-3); }
+.guide-change { display: grid; grid-template-columns: minmax(0, 1fr) auto auto auto; align-items: center; gap: 6px; padding: 8px 11px; border-radius: var(--r-s); border: 1px solid var(--line); background: var(--surface); font-size: var(--t-s); }
+.guide-change-label { color: var(--text); }
+.guide-old { color: var(--text-3); text-decoration: line-through; }
+.guide-arrow { color: var(--text-3); }
+.guide-new { font-weight: var(--w-semibold); color: var(--accent-text); }
+.guide-plan-pane > h4 { margin: 12px 2px 6px; font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+
+@media (prefers-reduced-motion: no-preference) {
+  .guide-bar > span { transition: width var(--dur) ease-out; }
+  .guide-answer { transition: border-color var(--dur), box-shadow var(--dur); }
+}

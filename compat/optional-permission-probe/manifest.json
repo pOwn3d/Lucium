@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Optional Permission Probe",
+  "version": "0.1.0",
+  "description": "Holds nothing by its manifest and lists one permission and one site as optional: what it holds is only what the person grants when it asks (smokeProbesExt). Contains no third-party code.",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": [],
+  "optional_permissions": ["bookmarks"],
+  "optional_host_permissions": ["http://127.0.0.1/*"],
+  "externally_connectable": { "matches": ["http://127.0.0.1/*"] }
+}

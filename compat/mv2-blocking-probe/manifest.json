@@ -1,0 +1,8 @@
+{
+  "manifest_version": 2,
+  "name": "Lucium MV2 Blocking Probe",
+  "version": "0.1.0",
+  "description": "A Manifest V2 extension whose background page holds blocking chrome.webRequest listeners on paths of a local server only (a cancel, a redirect, a redirect to a local file, a request header added and one removed, an answer header added and one removed, a late answer), to check that the engine applies what they answer and nothing more (smokeMv2Blocking).",
+  "background": { "scripts": ["background.js"], "persistent": true },
+  "permissions": ["webRequest", "webRequestBlocking", "http://127.0.0.1/*"]
+}

@@ -1,0 +1,11 @@
+/* « Notifications récentes » (NoticesPanel.tsx). It sits in the centred modal card; these rules add what the card lacks. Tokens only. */
+.card.notices { width: min(560px, calc(100% - 48px)); }
+.notices .notices-lead { margin: -6px 0 var(--sp-3); font-size: var(--t-s); }
+.notices-list { list-style: none; margin: 0 0 var(--sp-2); padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); max-height: 60vh; overflow-y: auto; }
+.notices-list li { display: flex; gap: var(--sp-3); align-items: baseline; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--tile); font-size: var(--t-m); line-height: 1.4; user-select: text; }
+.notices-list time { flex: none; color: var(--text-2); font-size: var(--t-s); font-variant-numeric: tabular-nums; }
+.notices-words { display: flex; flex-direction: column; gap: 2px; min-width: 0; overflow-wrap: anywhere; }
+.notices-words .muted { font-size: var(--t-s); }
+.notices-empty { margin: 0 0 var(--sp-2); color: var(--text-2); font-size: var(--t-m); }
+.notices .row.end { gap: var(--sp-2); }
+.notices .button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }

@@ -1,0 +1,113 @@
+/*
+ * What a tab row says of its page and the status of the downloads at the foot of the sidebar.
+ * Nothing here applies unless the interface puts a class or an element for it: the rows wear `st-*` classes and the marks only while the setting
+ * `tabStateBadges` is on, the chip and its bubble exist only while `downloadStatusChip` is on. With both off the sidebar is the one of sidebar.css.
+ * Tokens only; the motion is CSS (no timer), and a person who asks for less motion gets a still ring.
+ */
+
+/* ---- the states of a tab row: loading, asleep, frozen, sound, failed ---- */
+
+/* Loading: the ring of the row (sidebar.css), the same with the marks on: 14 px, its arc still when the system asks for less motion. */
+
+/* Asleep: the title is dimmed (sidebar.css), and "zz" shows on the pointer and on the focus, so a list of two hundred rows is not full of badges. */
+.sidebar .tab-zz { display: inline-flex; align-items: center; flex: none; height: 20px; padding: 0 7px; border-radius: 6px; background: color-mix(in srgb, var(--text-on-space) 8%, transparent); color: var(--sb-dim); font: var(--w-semibold) var(--t-xs) / 1 var(--font); opacity: 0; }
+.sidebar .tab:hover .tab-zz, .sidebar .tab:focus-within .tab-zz, .sidebar .tab:has(> .tab-main:focus-visible) .tab-zz { opacity: 1; }
+
+/* Frozen: the page is kept and stopped, not dimmed; a snowflake that stays. It is the button « Dégeler l'onglet » (sidebar.css), and turns into its
+   drop under the pointer or the focus, as the cross shows then. */
+.sidebar .tab-frozen { display: inline-flex; flex: none; color: var(--info); }
+.sidebar .tab-thaw.marked .tab-thaw-glyph { display: none; }
+.sidebar .tab:hover .tab-thaw.marked .tab-frozen, .sidebar .tab:focus-within .tab-thaw.marked .tab-frozen { display: none; }
+.sidebar .tab:hover .tab-thaw.marked .tab-thaw-glyph, .sidebar .tab:focus-within .tab-thaw.marked .tab-thaw-glyph { display: inline-flex; }
+
+/* Icon changed while the tab was in the background (shared/icon-mark.ts): a small dot that goes once the tab is shown. */
+.sidebar .tab-icon-dot { display: inline-block; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 25%, transparent); }
+
+/* Message badge: unread message count from tab title. */
+.sidebar .tab-message-badge { display: inline-flex; align-items: center; justify-content: center; flex: none; height: 22px; min-width: 22px; padding: 0 7px; border-radius: 11px; background: var(--accent); color: var(--on-accent); font: var(--w-semibold) var(--t-xs) / 1 var(--font); font-variant-numeric: tabular-nums; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); letter-spacing: 0.5px; }
+/* Subtle pulse for the message badge to draw attention when it shows: two beats, then it stays still. A shadow is not composited: a pulse
+   for ever made the interface and the GPU draw a frame at every refresh while a badge was on screen. */
+@media (prefers-reduced-motion: no-preference) {
+  .sidebar .tab-message-badge { animation: tab-badge-pulse 2s ease-in-out 2; }
+}
+@keyframes tab-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent); }
+  50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 10%, transparent); }
+}
+
+/* Sound: the button is a 28 px target and says what it does in a bubble (the title of the row's button waited, and was cut by the list). */
+.sidebar .tab-sound[data-label] { position: relative; width: 28px; height: 28px; margin-right: -5px; border-radius: 7px; }
+.sidebar .tab-sound[data-label]:hover, .sidebar .tab-sound[data-label]:focus-visible { background: var(--tile-active); color: var(--text-on-space); }
+.sidebar .tab-sound[data-label]::after {
+  content: attr(data-label); position: absolute; right: 0; bottom: calc(100% + var(--sp-1)); padding: 3px var(--sp-2); border-radius: 6px; background: var(--surface); color: var(--text);
+  font-size: var(--t-xs); font-weight: var(--w-semibold); white-space: nowrap; box-shadow: var(--shadow-s); opacity: 0; pointer-events: none; z-index: 6;
+}
+.sidebar .tab-sound[data-label]:hover::after, .sidebar .tab-sound[data-label]:focus-visible::after { opacity: 1; }
+
+/* Failed: a red dot on the icon, the title in the grey of the labels; the words are in the name of the row and in the card. */
+.sidebar .tab-error-dot { position: absolute; right: -4px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 0 2px var(--surface); }
+.sidebar .tab.st-error .tab-title { color: var(--sb-dim); }
+
+/* ---- the chip of the downloads, and its bubble ---- */
+
+.sidebar .dlc-group { position: relative; display: flex; flex: none; }
+.sidebar .st-live { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* At rest the chip is the button the footer had. While a file comes it grows to hold the ring and the count. */
+.sidebar .dlc.busy { width: auto; min-width: 32px; gap: 6px; padding: 0 var(--sp-2) 0 6px; display: inline-flex; align-items: center; background: color-mix(in srgb, var(--text-on-space) 7%, transparent); color: var(--text-on-space); font: var(--w-semibold) var(--t-s) / 1 var(--font); font-variant-numeric: tabular-nums; }
+.sidebar .dlc.busy:hover { background: var(--tile-hover); }
+.sidebar .dlc-ic { position: relative; display: grid; place-items: center; flex: none; width: 20px; height: 20px; }
+/* The ring: the share that has come (--p, 0 to 100), cut out of a disc; green and whole when it came to its end, red when it did not, turning when the size is not known. */
+.sidebar .dlc-arc {
+  position: absolute; inset: -2px; border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--p, 0) * 1%), color-mix(in srgb, var(--text-on-space) 14%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), currentcolor calc(100% - 2px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2.5px), currentcolor calc(100% - 2px));
+}
+.sidebar .dlc-arc.done { background: var(--ok); }
+.sidebar .dlc-arc.fail { background: var(--danger); }
+.sidebar .dlc-arc.unknown { background: conic-gradient(var(--accent) 28%, color-mix(in srgb, var(--text-on-space) 14%, transparent) 0); animation: dlc-turn 1s linear infinite; }
+@keyframes dlc-turn { to { transform: rotate(360deg); } }
+.sidebar .dlc-n { min-width: 10px; }
+
+/* "Annuler le téléchargement": its own button, which shows at the right of the chip on the pointer and the focus (a click on the chip itself opens the panel and cancels nothing). */
+.sidebar .dlc-cancel {
+  position: absolute; left: 100%; top: 0; z-index: 5; display: none; align-items: center; gap: 6px; height: 32px; padding: 0 var(--sp-3) 0 10px; border: 1px solid var(--line); border-radius: 8px;
+  background: var(--overlay); color: var(--text); box-shadow: var(--shadow-s); font: var(--w-semibold) var(--t-s) / 1 var(--font); white-space: nowrap;
+}
+.sidebar .dlc-cancel svg { width: 11px; height: 11px; }
+.sidebar .dlc-group:hover .dlc-cancel, .sidebar .dlc-group:focus-within .dlc-cancel { display: inline-flex; }
+.sidebar .dlc-cancel:hover { background: var(--surface-3); }
+
+/* The bubble, above the foot: the end of a file, its failure, its cancellation. */
+.sidebar .dl-bubble {
+  position: absolute; left: var(--sp-2); width: calc(100% - 17px); bottom: 54px; z-index: 30; box-sizing: border-box; overflow: hidden; padding: 10px var(--sp-3) var(--sp-3);
+  border: 1px solid var(--line); border-radius: var(--r-l); background: var(--overlay); color: var(--text); box-shadow: var(--shadow); font-size: var(--t-s);
+  animation: toast-in 0.16s ease-out;
+}
+.sidebar .dl-head { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.sidebar .dl-ic { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: var(--r-s); background: var(--tile); color: var(--text-2); }
+.sidebar .dl-bubble.done .dl-ic { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok-ink); }
+.sidebar .dl-bubble.fail .dl-ic { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger-ink); }
+.sidebar .dl-text { flex: 1; min-width: 0; }
+.sidebar .dl-text b { display: block; overflow: hidden; font-weight: var(--w-semibold); text-overflow: ellipsis; white-space: nowrap; }
+.sidebar .dl-text small { display: block; color: var(--text-3); font-size: var(--t-xs); font-variant-numeric: tabular-nums; }
+.sidebar .dl-x { display: grid; place-items: center; flex: none; width: var(--target); height: var(--target); border-radius: 7px; color: var(--text-3); }
+.sidebar .dl-x:hover { background: var(--tile); color: var(--text); }
+.sidebar .dl-x svg { width: 11px; height: 11px; }
+.sidebar .dl-acts { display: flex; gap: 6px; }
+.sidebar .dl-btn { display: inline-flex; align-items: center; gap: 5px; min-height: var(--target); padding: 0 var(--sp-3); border-radius: var(--r-s); background: var(--tile); color: var(--text); font-weight: var(--w-semibold); }
+.sidebar .dl-btn:hover { background: var(--tile-hover); }
+.sidebar .dl-btn.primary { background: var(--accent); color: var(--on-accent); }
+.sidebar .dl-btn.primary:hover { background: var(--accent-strong); }
+.sidebar .dl-btn:focus-visible, .sidebar .dl-x:focus-visible, .sidebar .dlc-cancel:focus-visible, .sidebar .dlc:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
+/* The time that is left to it, 6 s: a line that shortens, held while the pointer or the focus is on the bubble. */
+.sidebar .dl-timer { position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background: var(--text-3); transform-origin: left; animation: dl-shrink 6s linear forwards; }
+.sidebar .dl-bubble:hover .dl-timer, .sidebar .dl-bubble:focus-within .dl-timer { animation-play-state: paused; }
+@keyframes dl-shrink { to { transform: scaleX(0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar .dlc-arc.unknown { animation: none; }
+  .sidebar .dl-bubble { animation: none; }
+  .sidebar .dl-timer { animation: none; width: 50%; }
+}

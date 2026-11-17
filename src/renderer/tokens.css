@@ -1,0 +1,193 @@
+/*
+ * Design tokens: the one visual system of Lucium.
+ * Every surface (index, overlay, settings, littlearc, taskmanager, extensions) loads this file first; stylesheets then speak of roles
+ * (--surface, --text-2, --accent...), never of colours or sizes.
+ *
+ * Light and dark are one set of tokens: `light-dark(a, b)` is read where the token is used, from the `color-scheme` of that element.
+ *  - The root is `light dark`: it follows the system, and so Electron's `nativeTheme.themeSource` (View > Appearance forces it for
+ *    every window: no script needed). Settings, lists, command bar, site panel and editors are light in light and dark in dark.
+ *  - A part that must not follow (the window of a space whose theme forces an appearance) says so: `.shell.light` / `.shell.dark`,
+ *    or `[data-theme="light" | "dark"]`, or `.tk-light` / `.tk-dark`.
+ * The hue is the one of the space (`--hue`, 0..359): accent and tinted surfaces derive from it. A custom property that holds `var(--hue)` is
+ * worked out where it is declared, so every element that sets its own `--hue` must be in the hue rule below (the shells already are) or carry
+ * `.tk-hue`. The lightness of the accent follows the hue (a yellow or green at 44 % is too light for white text), so the accent keeps its contrast
+ * at every hue, in both schemes, without a second text colour.
+ *
+ * Measured in src/shared/design-tokens.test.ts: text pairs >= 4.5:1, controls and icons >= 3:1, in both schemes, at every hue, and with
+ * "Increase contrast" on. Corrected by that measure: text-3 4.4 -> 5.2 and text-on-space-2 4.3 -> 5.4, info 4.4 -> 4.8 on a window
+ * background, and the accent of the yellow, green and cyan hues, and of the dark scheme at blue-violet (see --accent-l).
+ */
+
+:root {
+  color-scheme: light dark;
+
+  /* ---- rhythm and shape (same in both schemes) ---- */
+  --hue: 250;
+  --r-s: 8px;
+  --r-m: 10px;
+  --r-l: 14px;
+  --r-xl: 18px;
+  --r-inner: calc(var(--r-l) - var(--sp-2)); /* concentric: inner radius = outer radius - the gap between them */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 24px;
+  --row: 36px; /* a row of the sidebar (36 + 5 apart) */
+  --target: 28px; /* the smallest control */
+  --focus-width: 2px;
+  --icon-stroke: 1.5px; /* one family of icons: 1.5 px stroke on a 16 / 20 grid */
+  --dur: 0.15s;
+
+  /* ---- type: one scale, two weights ---- */
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+  --mono: 'SF Mono', ui-monospace, Menlo, monospace;
+  --t-xs: 11px;
+  --t-s: 12px;
+  --t-m: 13px;
+  --t-l: 15px;
+  --t-xl: 17px;
+  --t-2xl: 22px;
+  --w-regular: 400;
+  --w-semibold: 600;
+
+  /* ---- surfaces, lines and tiles ---- */
+  --surface: light-dark(#ffffff, #1e2027);
+  --overlay: light-dark(rgb(255 255 255 / 0.92), rgb(30 32 39 / 0.94));
+  --line: light-dark(rgb(20 24 40 / 0.1), rgb(255 255 255 / 0.1));
+  --line-strong: light-dark(rgb(20 24 40 / 0.18), rgb(255 255 255 / 0.2));
+  --tile: light-dark(rgb(20 24 40 / 0.07), rgb(255 255 255 / 0.09));
+  --tile-hover: light-dark(rgb(20 24 40 / 0.11), rgb(255 255 255 / 0.14));
+  --tile-active: light-dark(rgb(20 24 40 / 0.16), rgb(255 255 255 / 0.2));
+  --scrim: light-dark(rgb(20 24 40 / 0.28), rgb(0 0 0 / 0.4));
+  /* The veils of a space's media background (Lisibilité des onglets): opaque, the strength is the percentage the space chose. */
+  --veil-light: light-dark(rgb(255 255 255), rgb(255 255 255));
+  --veil-dark: light-dark(rgb(12 14 22), rgb(4 5 9));
+  /* The text of the sidebar over a veil of the same tone: light over a dark veil, dark over a light one. */
+  --tone-on-dark: rgb(246 247 250);
+  --tone-on-dark-2: rgb(246 247 250 / 0.82);
+  --tone-on-light: rgb(20 22 32);
+  --tone-on-light-2: rgb(20 22 32 / 0.8);
+  /* The shadow behind the tab text (Ombre du texte): dark enough to separate the letters from a bright picture. */
+  --text-halo: light-dark(rgb(0 0 0 / 0.75), rgb(0 0 0 / 0.85));
+
+  /* ---- text: AA on the surfaces and on the background of the space ---- */
+  --text: light-dark(#16181f, #f1f2f6);
+  --text-2: light-dark(#4b5060, #b9bcc8);
+  --text-3: light-dark(#62677a, #9498a6); /* 5.2:1 on --surface-2 in light (was #6e7383, 4.4); 5.0:1 in dark (was #8b8f9c, 4.5 on the edge) */
+  --text-on-space: light-dark(#1a1d2b, #f1f2f6);
+  --text-on-space-2: light-dark(rgb(26 29 43 / 0.74), rgb(241 242 246 / 0.7)); /* 5.4:1 on --space-a in light (was 0.66, 4.3) */
+  /* The secondary text written on a tile laid over the space, and the glyphs of a quiet header on the space. A window that draws the theme of a
+     space sets the four inks itself, measured on the colours of that theme (shared/theme.ts, spaceInks): these are the values before it does. */
+  --text-on-tile-2: var(--text-on-space-2);
+  /* The secondary text of a row under the pointer (the title of a sleeping tab): the hover wash takes more contrast than a tile at rest. */
+  --text-on-tile-hover-2: light-dark(rgb(26 29 43 / 0.78), rgb(241 242 246 / 0.8));
+  /* The text of a row under the pointer (the title of an awake tab): the text of the space, which reads at 4.5:1 on the hover wash at every hue.
+     A theme where it does not (« Sable » in dark) gets a plainer ink from the window (shared/theme.ts, spaceInks). */
+  --text-on-tile-hover: var(--text-on-space);
+  --glyph-on-space: var(--text-on-space-2);
+  --on-accent: light-dark(#ffffff, #0c0f1a);
+
+  /* ---- meaning (not the accent) ---- */
+  --ok: light-dark(#166e3c, #4fc47f);
+  --warn: light-dark(#8a5000, #f0b24a);
+  --danger: light-dark(#c93a2f, #ff6b5e);
+  --info: light-dark(#2868d3, #6ea2ff); /* #2a6fdb was 4.4:1 on a window background */
+  /* text on a tint of the same colour at 16 %: >= 5.7:1 measured */
+  --ok-ink: light-dark(#14633a, #8fe0ad);
+  --warn-ink: light-dark(#7a4700, #f7cf86);
+  --danger-ink: light-dark(#a3271e, #ffa198);
+  --info-ink: light-dark(#1d55ad, #a9c6ff);
+
+  /* ---- depth ---- */
+  --shadow: 0 12px 36px light-dark(rgb(10 14 30 / 0.18), rgb(0 0 0 / 0.5)), 0 1px 2px light-dark(rgb(10 14 30 / 0.12), rgb(0 0 0 / 0.4));
+  --shadow-s: 0 2px 8px light-dark(rgb(10 14 30 / 0.12), rgb(0 0 0 / 0.4));
+
+  /* ---- roles: a stylesheet speaks of these ---- */
+  --surface-raised: var(--surface); /* card, panel */
+  --text-muted: var(--text-3); /* help, meta: >= 4.5:1 on --surface and --surface-2 */
+  --focus: var(--accent);
+  --link: var(--accent-text);
+
+  /* ---- names the stylesheets used before the tokens (the shells still set their own, inline): same roles ---- */
+  --muted: var(--text-2); /* AA on a tile too, which the lighter --text-3 is not in dark */
+  --hover: var(--tile);
+  --active: var(--tile-hover);
+}
+
+/* The tokens that hold the hue: worked out at every element that sets its own `--hue`. */
+:root,
+.tk-hue,
+.shell,
+.la {
+  /* Lightness of the accent in light: 44 % for blue, violet and red, lower for orange, yellow, green and cyan, whose 44 % is too light for the white
+     text on it (a piecewise line fitted under the lightness that gives 4.5:1 with white, measured at every hue). */
+  --accent-l: calc(min(44, max(26.5, 51 - var(--hue) * 0.43) + max(0, var(--hue) - 180) * 0.4) * 1%);
+  --accent: light-dark(hsl(var(--hue) 78% var(--accent-l)), hsl(var(--hue) 80% 70%)); /* the dark one carries dark ink: 70 % is light enough at every hue */
+  --accent-strong: light-dark(hsl(var(--hue) 78% calc(var(--accent-l) - 6%)), hsl(var(--hue) 80% 75%)); /* hover: darker in light, lighter in dark */
+  --accent-text: light-dark(hsl(var(--hue) 70% calc(var(--accent-l) - 14%)), hsl(var(--hue) 70% 78%)); /* the accent as text, link or icon */
+  --accent-soft: light-dark(hsl(var(--hue) 70% 92%), hsl(var(--hue) 40% 22%));
+  --space-a: light-dark(hsl(var(--hue) 72% 84%), hsl(var(--hue) 36% 18%)); /* the background of the space (one end of its gradient) */
+  --space-b: light-dark(hsl(calc(var(--hue) + 40) 60% 88%), hsl(calc(var(--hue) + 40) 28% 14%));
+  --surface-2: light-dark(hsl(var(--hue) 20% 97%), #262932); /* window background, rail */
+  --surface-3: light-dark(hsl(var(--hue) 16% 93%), #2f323c); /* sunken field, hover of a button */
+  --surface-sunken: var(--surface-2);
+  --surface-inset: var(--surface-3);
+}
+
+/* The parts that do not follow the system. */
+[data-theme='light'],
+.tk-light,
+.shell.light {
+  color-scheme: light;
+}
+[data-theme='dark'],
+.tk-dark,
+.shell.dark {
+  color-scheme: dark;
+}
+
+/* ---- the preferences of the system: "Increase contrast" (data-contrast="more" forces it) ---- */
+@media (prefers-contrast: more) {
+  :root {
+    --line: light-dark(rgb(20 24 40 / 0.35), rgb(255 255 255 / 0.35));
+    --line-strong: light-dark(rgb(20 24 40 / 0.6), rgb(255 255 255 / 0.6));
+    --text-2: var(--text);
+    --text-3: light-dark(#3a3f52, #d2d5df);
+    --focus-width: 3px;
+  }
+}
+:root[data-contrast='more'] {
+  --line: light-dark(rgb(20 24 40 / 0.35), rgb(255 255 255 / 0.35));
+  --line-strong: light-dark(rgb(20 24 40 / 0.6), rgb(255 255 255 / 0.6));
+  --text-2: var(--text);
+  --text-3: light-dark(#3a3f52, #d2d5df);
+  --focus-width: 3px;
+}
+
+/* "Reduce transparency" (data-transparency="reduce" forces it): the floating surfaces become opaque. */
+@media (prefers-reduced-transparency: reduce) {
+  :root {
+    --overlay: var(--surface);
+  }
+}
+:root[data-transparency='reduce'] {
+  --overlay: var(--surface);
+}
+
+/* "Reduce motion" (data-motion="reduce" forces it, setting forceReduceMotion): every animation and transition of the interface stops; the sheets' own media blocks cover the system's. */
+:root[data-motion='reduce'] *,
+:root[data-motion='reduce'] *::before,
+:root[data-motion='reduce'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+/* The system's "Reduce motion": the duration of the interface's transitions is nil (the sheets that name --dur take it). */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0s;
+  }
+}

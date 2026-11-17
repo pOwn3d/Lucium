@@ -1,0 +1,204 @@
+appId: app.lucium.browser
+# The name shown: the .app, its process, the menus. It never reaches the package.json inside app.asar: there, app.name is the productName of
+# package.json (`Lucium`), which names the profile folder (~/Library/Application Support/Lucium) and the keychain key of the cookies
+# ("Lucium Safe Storage"). Never add a name or productName under extraMetadata (test src/main/platform/build-files.test.ts).
+productName: Lucium
+# The holder is the one NOTICE names: ConsilioWeb for the code it wrote, each contributor for their contributions (DCO, no assignment). The text of the
+# licence is in LICENSE, and the additional permission for the Widevine module (GPL section 7) in ADDITIONAL-PERMISSION.txt, which NOTICE reproduces.
+copyright: Copyright © 2026 ConsilioWeb and contributors. GPL-3.0-or-later.
+# Descriptive fields only the Linux packages ask for (a .deb needs a homepage and a maintainer address, a window needs desktopName to be matched with its
+# launcher). They are added to the package.json inside the app, on every system; nothing reads them at run time. The address is the one SECURITY.md gives.
+extraMetadata:
+  homepage: https://github.com/pOwn3d/Lucium
+  author:
+    name: Lucium contributors
+    email: contact@lucium.app
+  desktopName: lucium.desktop
+directories:
+  output: dist
+# Puts back the *.lproj folders (the languages of the application) that a copy of Electron may have left out, and puts the licence of Electron and the
+# notices of Chromium in the application: see the script.
+afterPack: scripts/after-pack.cjs
+files:
+  - out/**
+  # The engine tests (src/main/smoke*.ts) are loaded by import() from main/index.ts only when --smoke is passed, which the packaged app refuses
+  # (src/main/runtime.ts): it does not carry them, nor the test helpers they import (*.test-support.ts, *-test-support.ts), built as pieces of their own.
+  - '!out/main/smoke*.js'
+  - '!out/main/*test-support*.js'
+  # React is inside the bundles of the interface (out/renderer) and the main process never loads it (renderer-modules-packaging.test.ts): its
+  # packages would only add 8 MB to app.asar. They stay in `dependencies`, so that THIRD-PARTY-NOTICES.txt keeps their licence, which ships with the bundles.
+  - '!node_modules/{react,react-dom,scheduler}/**'
+  - package.json
+asar: true
+# Fuses of the packaged Electron binary. Left at their defaults, `RunAsNode` and the Node CLI/inspector switches let any local
+# process start Lucium as a Node interpreter with the app's rights (including the Full Disk Access an import from another browser asks for).
+# `grantFileProtocolExtraPrivileges` stays on (its default, not written), for two reasons: the interface is loaded from file:// inside
+# app.asar, and only this fuse makes Electron read app.asar for a file:// address (its AsarURLLoaderFactory) and lets the module scripts load;
+# and castLabs' signing service signs no set where it is off (docs/drm.md, section 5). What it grants every file:// document (reading other files
+# by fetch or through a frame) is taken back from the pages of the tabs by the hook of their sessions (src/main/engine/local-file-guard.ts).
+# The six written here are castLabs' set, the one the DRM variant has (scripts/package-drm.mjs --castlabs-fuses, CASTLABS_SIGNED_SET of src/main/drm-fuse-trial.ts).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  # Refuses to start when app.asar has been modified: the header hash is checked against the one written into Info.plist at packaging.
+  # It protects only a build signed with a Developer ID: unsigned (`identity: null` below, as the builds are today) or signed ad hoc,
+  # Info.plist can be rewritten as easily as app.asar, hash included, and macOS has no signature to refuse.
+  enableEmbeddedAsarIntegrityValidation: true
+  # Chromium encrypts the cookies with a key kept in the keychain (macOS may ask for access to it). On because the DRM variant has it (EVS signs
+  # no closed set without it) and both applications open the same profile: one way (Electron, Fuses), a build without it no longer reads the
+  # cookies the other encrypted (docs/drm.md, « Chiffrement des cookies : un passage à sens unique »).
+  enableCookieEncryption: true
+  # Changing a fuse invalidates the ad-hoc signature Electron ships with; on Apple silicon macOS then kills the app at launch (exit 137).
+  resetAdHocDarwinSignature: true
+# Help › Getting Started and Documentation open these files (menu-actions.ts reads them from the application's resources).
+extraResources:
+  - from: README.md
+    to: docs/README.md
+  # « Premiers pas » opens the README in the language of the interface (gettingStartedFile).
+  - from: README.fr.md
+    to: docs/README.fr.md
+  # The licence of the application travels with the binary (GPL-3.0-or-later), with its notice (the copyright holder, what is not under the GPL, the
+  # facts about the DRM variant and the additional permission that goes with them) and the notices of the npm packages it carries, generated from the lockfile (scripts/make-third-party-notices.mjs).
+  # The licence of Electron and the notices of Chromium are put beside them by scripts/after-pack.cjs, from the engine the build is made on; it
+  # stops a build that lacks any of the six (scripts/notices/shipped-notices.cjs).
+  - from: LICENSE
+    to: LICENSE
+  - from: NOTICE
+    to: NOTICE
+  # The additional permission for the Widevine module, as its own file too: NOTICE repeats it and names this file, which a reader then finds beside it.
+  - from: ADDITIONAL-PERMISSION.txt
+    to: ADDITIONAL-PERMISSION.txt
+  - from: THIRD-PARTY-NOTICES.txt
+    to: THIRD-PARTY-NOTICES.txt
+  # The fonts the Tweaks can give to a page (main/shell/boost-fonts.ts reads them from here), with their licences.
+  - from: resources/fonts
+    to: fonts
+  # The application icons of Settings › Icône, put in the Dock (main/shell/app-icon.ts).
+  - from: resources/app-icons
+    to: app-icons
+  # The videos Lucium offers for the background of a space (shared/builtin-backgrounds.ts, read by main/media-storage.ts), with their posters.
+  - from: resources/backgrounds
+    to: backgrounds
+    filter:
+      - "lucium-*.mp4"
+      - "lucium-*.jpg"
+  - from: docs
+    to: docs
+    filter:
+      # The user-facing documents only.
+      - architecture.md
+      - roadmap.md
+      - compat-extension-claude.md
+      - licences-tierces.md
+# Chromium reads extension-service-worker preloads from disk, not from inside app.asar.
+asarUnpack:
+  - out/preload/extension-shims.js
+  - out/preload/media-bridge.js
+  # The page script of the Chrome Web Store installer is a frame preload as well (engine/web-store.ts passes the unpacked path).
+  - node_modules/electron-chrome-web-store/dist/chrome-web-store.preload.js
+  # The extension library's preload runs in the service workers as well (engine/extension-runtime.ts passes the unpacked path when it exists).
+  - node_modules/electron-chrome-extensions/dist/chrome-extension-api.preload.js
+  - out/preload/dialog-bridge.js
+  - out/preload/chrome-app.js
+  - out/preload/page-guard.js
+  - out/preload/password-bridge.js
+  # The runtime of the scripts an extension injects into a tab the user lent it is a frame preload too (engine/electron-engine-preloads.ts, installShims).
+  - out/preload/lent-tab.js
+  # The script of the Extensions page (a tab at lucium-ui://extensions/) is a frame preload too (engine/internal-pages.ts passes the unpacked path).
+  - out/preload/internal-extensions.js
+mac:
+  category: public.app-category.productivity
+  # The Lucium icon (the default version of the fan logo, Clair), written by `pnpm icons:logo` from the drawing of scripts/logo/fan-logo.ts.
+  icon: build/icon.icns
+  # `dir` is what `pnpm package` builds. The project targets Apple silicon only: building on arm64 must produce an arm64 app, not an x64 bundle.
+  # `zip` and `dmg` are for `electron-builder --mac`: one archive per processor, built side by side (docs/plateformes.md: why not `universal`).
+  target:
+    - target: dir
+      arch: [arm64]
+    - target: zip
+      arch: [x64, arm64]
+    - target: dmg
+      arch: [x64, arm64]
+  artifactName: Lucium-${version}-mac-${arch}.${ext}
+  # The keychain helper of the password vault (Touch ID, src/main/vault-keychain.ts), an XPC service carried in Contents/XPCServices/, and the helper
+  # of the system's translation (macOS 26+, src/main/translate/system.ts), carried in Contents/Helpers/, built before the packaging by `pnpm build:native`
+  # (native/vault-keychain/build.sh, native/system-translate/build.sh) into out-native/. Missing, a copy is skipped with a warning: Touch ID, or the
+  # translation of macOS, is then unavailable.
+  extraFiles:
+    - from: out-native/LuciumKeychain.xpc
+      to: XPCServices/LuciumKeychain.xpc
+    - from: out-native/LuciumTranslate.app
+      to: Helpers/LuciumTranslate.app
+  # The addon through which the main process reaches the keychain helper (native/vault-xpc/build.sh), in Contents/Resources/ outside app.asar: the
+  # signature of the application signs it as one of its pieces, with its own identity (the hardened runtime loads only code of the same team).
+  extraResources:
+    - from: out-native/vault-xpc.node
+      to: vault-xpc.node
+  # Each build.sh signs its helper itself: the keychain one with its own entitlements and its provisioning profile (LUCIUM_SIGN_IDENTITY,
+  # LUCIUM_KEYCHAIN_PROFILE), the translation one with the hardened runtime and no entitlement at all. The signature of the application must not
+  # sign them again with the app's entitlements, over their own (Touch ID would be refused; the translation helper would get rights it has no use for).
+  signIgnore:
+    - 'Contents/XPCServices/LuciumKeychain\.xpc'
+    - 'Contents/Helpers/LuciumTranslate\.app'
+  # Unsigned build: signing and notarization need an Apple developer identity (see docs/architecture.md).
+  identity: null
+  extendInfo:
+    # The permission "Réseau local" of macOS (System Settings › Privacy & Security): without this key the application is never offered it, and the pages of
+    # the devices of the home (a box, a NAS, Home Assistant at homeassistant.local) fail with ERR_ADDRESS_UNREACHABLE while another browser opens them.
+    NSLocalNetworkUsageDescription: Lucium ouvre les pages des appareils de votre réseau local (domotique, NAS, imprimante, serveur de la maison).
+    # What makes the app selectable as default browser in System Settings.
+    CFBundleURLTypes:
+      - CFBundleURLName: Web site URL
+        CFBundleURLSchemes: [http, https]
+      # The commands by address (`lucium://open?url=…`, shared/automation-url.ts): macOS hands them to the app for AppleScript's
+      # `open location`, the Shortcuts app and `open`. Declared whatever the setting says; the app refuses them while "urlAutomation" is off.
+      # A scripting dictionary (NSAppleScriptEnabled + a .sdef) is not offered: it needs Objective-C command classes Electron does not ship.
+      - CFBundleURLName: Lucium command
+        CFBundleURLSchemes: [lucium]
+    CFBundleDocumentTypes:
+      - CFBundleTypeName: HTML document
+        CFBundleTypeRole: Viewer
+        LSItemContentTypes: [public.html, public.xhtml]
+    # The update installer (Squirrel.Mac, src/main/shell/app-update.ts) refuses a bundle whose CFBundleShortVersionString is lower than the running
+    # one: a feed someone else controls could otherwise install an older build signed by the same team (fuses open, flaws fixed since). Read from
+    # the Info.plist of the running application, which the signature seals.
+    ElectronSquirrelPreventDowngrades: true
+
+# ---- Windows and Linux: PREPARED, NEVER RUN (docs/plateformes.md). Built by .github/workflows/build.yml; nothing is signed, nothing is published. ----
+
+win:
+  # No build/icon.ico yet: electron-builder converts the macOS icon. build/icons/ cannot be used for this (it holds no 16x16.png ... 256x256.png).
+  icon: build/icon.icns
+  target:
+    - target: nsis
+      arch: [x64]
+  artifactName: Lucium-Setup-${version}-${arch}.${ext}
+  # Unsigned: no certificate is configured, so SmartScreen will warn. Signing needs a certificate the project does not have.
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  deleteAppDataOnUninstall: false
+  # Not done: the registry entries that make Lucium selectable as default browser (an installer script, build/installer.nsh).
+
+linux:
+  # No build/icons/NxN.png yet: electron-builder converts the macOS icon (Linux falls back to it by itself, written down here to say so).
+  icon: build/icon.icns
+  target:
+    - target: AppImage
+      arch: [x64]
+    - target: deb
+      arch: [x64]
+  category: Network;WebBrowser
+  packageCategory: web
+  maintainer: Lucium contributors <contact@lucium.app>
+  vendor: Lucium contributors
+  # What makes the launcher offer Lucium as a web browser (xdg-settings); the %U argument is added by electron-builder.
+  mimeTypes:
+    - x-scheme-handler/http
+    - x-scheme-handler/https
+    - text/html
+    - application/xhtml+xml
+  artifactName: Lucium-${version}-linux-${arch}.${ext}

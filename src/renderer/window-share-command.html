@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./tokens.css" />
+    <title>Lucium</title>
+  </head>
+  <body class="settings-window window-share-body">
+    <main class="window-share-command">
+      <header class="ws-head">
+        <h1 id="window-share-title" class="ws-title"></h1>
+        <p id="window-share-pill" class="ws-pill"></p>
+      </header>
+
+      <section class="ws-section" aria-labelledby="window-share-label">
+        <label id="window-share-label" class="ws-caption" for="window-share-windows"></label>
+        <div class="ws-row">
+          <select id="window-share-windows"></select>
+          <button id="window-share-refresh" type="button" class="ws-icon-button"></button>
+        </div>
+        <p id="window-share-current" class="ws-muted"></p>
+        <div id="window-share-notice" class="ws-notice" role="alert" hidden>
+          <p id="window-share-notice-text"></p>
+        </div>
+        <div class="ws-row ws-row-actions">
+          <button id="window-share-switch" type="button" class="ws-button" hidden></button>
+          <button id="window-share-toggle" type="button" class="ws-button ws-primary"></button>
+        </div>
+      </section>
+
+      <fieldset id="window-share-draw" class="ws-group" disabled>
+        <legend id="window-share-cap-mode" class="ws-caption"></legend>
+        <div class="ws-segment" role="group" aria-labelledby="window-share-cap-mode">
+          <button id="window-share-mode-draw" type="button" aria-pressed="true"></button>
+          <button id="window-share-mode-pass" type="button" aria-pressed="false"></button>
+        </div>
+
+        <p id="window-share-cap-tools" class="ws-caption"></p>
+        <div id="window-share-tools" class="ws-tools" role="group" aria-labelledby="window-share-cap-tools"></div>
+        <p id="window-share-tool-name" class="ws-muted"></p>
+
+        <div class="ws-style">
+          <div class="ws-style-block">
+            <p id="window-share-cap-color" class="ws-caption"></p>
+            <div id="window-share-colors" class="ws-swatches" role="group" aria-labelledby="window-share-cap-color"></div>
+          </div>
+          <div class="ws-style-block">
+            <p id="window-share-cap-width" class="ws-caption"></p>
+            <div id="window-share-widths" class="ws-widths" role="group" aria-labelledby="window-share-cap-width"></div>
+          </div>
+        </div>
+
+        <p id="window-share-cap-edit" class="ws-caption"></p>
+        <div class="ws-edit" role="group" aria-labelledby="window-share-cap-edit">
+          <button id="window-share-undo" type="button" class="ws-button"></button>
+          <button id="window-share-redo" type="button" class="ws-button"></button>
+          <button id="window-share-clear" type="button" class="ws-button"></button>
+        </div>
+      </fieldset>
+
+      <p id="window-share-status" class="ws-message" role="status"></p>
+      <p id="window-share-hint" class="ws-hint"></p>
+
+      <label class="ws-check">
+        <input id="window-share-shortcut" type="checkbox" checked />
+        <span id="window-share-shortcut-label"></span>
+      </label>
+      <p id="window-share-shortcut-hint" class="ws-message" role="status"></p>
+    </main>
+    <style>
+      /* The page is built from the design tokens (tokens.css): roles and sizes, never colours of its own. The window is 400 px wide. */
+      body.window-share-body {
+        background: var(--surface-2);
+        color: var(--text);
+        font: var(--t-m) / 1.35 var(--font);
+        overflow: auto;
+        user-select: none;
+      }
+      .window-share-command [hidden] {
+        display: none !important;
+      }
+      .window-share-command :focus-visible {
+        outline: var(--focus-width) solid var(--focus);
+        outline-offset: 2px;
+      }
+      .window-share-command {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sp-3);
+        box-sizing: border-box;
+        padding: var(--sp-3) var(--sp-4) var(--sp-4);
+      }
+      .ws-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--sp-2);
+      }
+      .ws-title {
+        margin: 0;
+        font-size: var(--t-l);
+        font-weight: var(--w-semibold);
+      }
+      .ws-pill {
+        margin: 0;
+        padding: 2px 9px;
+        border-radius: 999px;
+        background: var(--tile);
+        color: var(--text-2);
+        font-size: var(--t-xs);
+        font-weight: var(--w-semibold);
+      }
+      .ws-pill[data-state='on'] {
+        background: var(--accent-soft);
+        color: var(--text);
+      }
+      .ws-section,
+      .ws-group,
+      .ws-style-block {
+        display: flex;
+        flex-direction: column;
+        gap: var(--sp-2);
+        min-width: 0;
+        margin: 0;
+        padding: 0;
+        border: 0;
+      }
+      .ws-group:disabled {
+        opacity: 0.5;
+      }
+      .ws-caption {
+        margin: 0;
+        padding: 0;
+        color: var(--text-3);
+        font-size: var(--t-xs);
+        font-weight: var(--w-semibold);
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .ws-caption:empty {
+        display: none;
+      }
+      .ws-muted {
+        margin: 0;
+        color: var(--text-2);
+        font-size: var(--t-s);
+      }
+      .ws-muted:empty {
+        display: none;
+      }
+      .ws-message {
+        margin: 0;
+        min-height: 1.2em;
+        color: var(--text-2);
+        font-size: var(--t-s);
+      }
+      .ws-hint {
+        margin: 0;
+        color: var(--text-3);
+        font-size: var(--t-xs);
+      }
+      .ws-row {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-2);
+      }
+      .ws-row > select {
+        flex: 1;
+        min-width: 0;
+        height: var(--target);
+        padding: 0 var(--sp-2);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-s);
+        background: var(--surface);
+        color: var(--text);
+        font: inherit;
+      }
+      .ws-row-actions > .ws-button {
+        min-width: 0;
+      }
+      .ws-button,
+      .ws-icon-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        min-height: var(--target);
+        padding: 0 var(--sp-3);
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-s);
+        background: var(--surface);
+        color: var(--text);
+        font-weight: var(--w-semibold);
+        white-space: nowrap;
+      }
+      .ws-icon-button {
+        width: var(--target);
+        padding: 0;
+        flex: none;
+      }
+      .ws-button:hover:not(:disabled),
+      .ws-icon-button:hover:not(:disabled) {
+        background: var(--surface-3);
+      }
+      .ws-button:disabled,
+      .ws-icon-button:disabled {
+        opacity: 0.4;
+      }
+      .ws-primary {
+        flex: 1;
+        min-height: 34px;
+        border-color: transparent;
+        background: var(--accent);
+        color: var(--on-accent);
+      }
+      .ws-primary:hover:not(:disabled) {
+        background: var(--accent-strong);
+      }
+      .ws-primary[data-action='stop'] {
+        background: var(--surface);
+        border-color: var(--danger);
+        color: var(--danger);
+      }
+      .ws-primary[data-action='stop']:hover:not(:disabled) {
+        background: var(--surface-3);
+      }
+      .ws-notice {
+        display: flex;
+        padding: var(--sp-2) var(--sp-3);
+        border-left: 3px solid var(--warn);
+        border-radius: var(--r-s);
+        background: var(--surface);
+      }
+      .ws-notice p {
+        margin: 0;
+        color: var(--text);
+        font-size: var(--t-s);
+      }
+      .ws-segment {
+        display: flex;
+        gap: 2px;
+        padding: 2px;
+        border-radius: var(--r-m);
+        background: var(--surface-3);
+      }
+      .ws-segment button {
+        flex: 1;
+        min-height: 26px;
+        border-radius: var(--r-inner);
+        color: var(--text-2);
+        font-weight: var(--w-semibold);
+      }
+      .ws-segment button:hover:not(:disabled) {
+        color: var(--text);
+      }
+      .ws-segment button[aria-pressed='true'] {
+        background: var(--surface);
+        color: var(--text);
+        box-shadow: var(--shadow-s);
+      }
+      .ws-tools {
+        display: grid;
+        grid-template-columns: repeat(9, 1fr);
+        gap: 3px;
+        padding: 3px;
+        border: 1px solid var(--line);
+        border-radius: var(--r-m);
+        background: var(--surface);
+      }
+      .ws-tools button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 32px;
+        border-radius: var(--r-s);
+        color: var(--text-2);
+      }
+      .ws-tools button:hover:not(:disabled) {
+        background: var(--surface-3);
+        color: var(--text);
+      }
+      .ws-tools button[aria-pressed='true'] {
+        background: var(--accent);
+        color: var(--on-accent);
+      }
+      .ws-style {
+        display: flex;
+        gap: var(--sp-4);
+      }
+      .ws-swatches,
+      .ws-widths {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-2);
+        min-height: 30px;
+      }
+      .ws-swatch {
+        width: 22px;
+        height: 22px;
+        padding: 0;
+        border: 1px solid var(--line-strong);
+        border-radius: 50%;
+      }
+      .ws-swatch[aria-pressed='true'] {
+        box-shadow: 0 0 0 2px var(--surface-2), 0 0 0 4px var(--text);
+      }
+      .ws-width {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 30px;
+        border: 1px solid var(--line-strong);
+        border-radius: var(--r-s);
+        background: var(--surface);
+        color: var(--text);
+      }
+      .ws-width[aria-pressed='true'] {
+        background: var(--accent-soft);
+        border-color: var(--accent);
+      }
+      .ws-width span {
+        display: block;
+        width: 22px;
+        border-radius: 999px;
+        background: currentColor;
+      }
+      .ws-edit {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: var(--sp-2);
+      }
+      .ws-edit .ws-button {
+        padding: 0 var(--sp-2);
+        font-weight: var(--w-regular);
+      }
+      .ws-icon {
+        flex: none;
+        width: 16px;
+        height: 16px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: var(--icon-stroke);
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .ws-check {
+        display: flex;
+        align-items: center;
+        gap: var(--sp-2);
+        color: var(--text-2);
+        font-size: var(--t-s);
+      }
+      .ws-check input {
+        accent-color: var(--accent);
+        margin: 0;
+      }
+    </style>
+    <script type="module" src="./window-share-command.ts"></script>
+  </body>
+</html>

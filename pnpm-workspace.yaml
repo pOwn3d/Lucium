@@ -1,0 +1,13 @@
+allowBuilds:
+  electron: true
+  # Windows-only Squirrel installer helper pulled in by electron-builder: not needed to package for macOS.
+  electron-winstaller: false
+  # koffi (FFI for the Accessibility and CoreGraphics calls, docs/design/annotation-partage-fenetre.md) ships its binary in the optional package
+  # @koromix/koffi-<platform> (koffi.node for darwin-arm64). Its install script only compiles from source: not run.
+  koffi: false
+patchedDependencies:
+  electron-chrome-extensions@4.10.0: patches/electron-chrome-extensions@4.10.0.patch
+
+# adm-zip 0.5.18 has a known vulnerability: the store's dependency is forced to the fixed release.
+overrides:
+  adm-zip: 0.6.1

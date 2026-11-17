@@ -1,0 +1,20 @@
+name: Set up pnpm and install
+description: pnpm, Node from .nvmrc, the pnpm store cache and `pnpm install --frozen-lockfile`. The one place where the pin and the version of pnpm are written for the jobs that install.
+
+# Used by ci.yml (every job), build.yml, e2e.yml and smoke-macos.yml, right after actions/checkout (a local action is read from the checked-out
+# repository, so the checkout cannot be a step of this file). audit.yml and sbom.yml call pnpm/setup themselves, with `install: false`: they
+# install nothing, and their pin and their version are to be moved together with these.
+#
+# pnpm/setup is the successor of pnpm/action-setup (its README directs pnpm 11 and newer to it). It installs the pnpm release binary (checking
+# its npm signature), installs Node from .nvmrc, caches the store and runs `pnpm install --frozen-lockfile`. It is pinned to a commit because it is a
+# third-party action; Dependabot (github-actions, dependabot.yml, which names this folder) keeps the pin up to date. The pnpm version is the
+# "packageManager" of package.json (pnpm@12.16.1, the one that wrote pnpm-lock.yaml).
+
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+      with:
+        version: 12.16.1
+        cache: true
+        require-lockfile: true

@@ -1,0 +1,52 @@
+/*
+ * The sheet of the shortcuts: 780 px, the contexts in two columns, a search, "Modifier…" to Réglages › Raccourcis.
+ * It sits on the panel surface of the templates (`tk-panel`, `tk-search`, `tk-field`, `tk-btn`, `tk-kbd`, `tk-empty`) and speaks only of tokens.
+ * A shortcut the user changed carries a dot and its old key crossed out; one whose function is off carries a sentence: the colour is never the only sign.
+ */
+
+.sk { display: flex; flex-direction: column; width: min(780px, calc(100% - 2 * var(--sp-4))); max-height: calc(100vh - 12vh - var(--sp-5)); overflow: hidden; border-radius: var(--r-xl); }
+
+.sk-head { display: flex; align-items: center; gap: var(--sp-3); padding: 14px var(--sp-4) 10px; }
+.sk-head h2 { flex: 1; min-width: 0; margin: 0; font-size: var(--t-l); font-weight: var(--w-semibold); }
+.sk-head .sk-search { flex: none; width: 260px; }
+
+.sk-cols { flex: 1; min-height: 0; display: grid; grid-template-columns: 1fr 1fr; align-content: start; gap: 0 var(--sp-5); padding: var(--sp-1) var(--sp-4) 10px; overflow-y: auto; border-top: 1px solid var(--line); }
+.sk-group { break-inside: avoid; padding: 10px 0 6px; }
+.sk-group h3 { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-1); padding: 0 var(--sp-2); font-size: var(--t-xs); font-weight: var(--w-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+.sk-group h3 svg { width: 14px; height: 14px; color: var(--accent-text); }
+.sk-group ul { margin: 0; padding: 0; list-style: none; }
+
+.sk-row { display: flex; align-items: center; gap: 10px; min-height: 30px; padding: 0 var(--sp-2); border-radius: var(--r-s); }
+.sk-row:hover { background: var(--tile); }
+.sk-label { flex: 1; min-width: 0; }
+.sk-label small { display: block; font-size: var(--t-xs); color: var(--text-3); }
+/* Under the pointer the row is a tile: the small line takes the secondary text. */
+.sk-row:hover .sk-label small { color: var(--text-2); }
+.sk-row.note .sk-label small { color: var(--warn-ink); }
+.sk-label mark { padding: 0 1px; border-radius: 3px; background: color-mix(in srgb, var(--accent) 22%, transparent); color: inherit; }
+.sk-keys { display: inline-flex; flex: none; gap: 3px; }
+.sk-keys .tk-kbd { min-width: 22px; font-variant-numeric: tabular-nums; }
+.sk-gap { color: var(--text-3); }
+/* The second press of a command, after the first: « ou », then its keys, which a change of the first leaves as they are. */
+.sk-or { flex: none; font-size: var(--t-xs); color: var(--text-2); }
+.sk-row.custom .sk-keys:not(.sk-also) .tk-kbd { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); color: var(--accent-text); }
+.sk-dot { display: inline-block; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.sk-was { margin-right: 2px; font-size: var(--t-xs); color: var(--text-3); text-decoration: line-through; }
+.sk-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.sk-empty { grid-column: 1 / -1; padding: 30px var(--sp-4); }
+
+.sk-foot { display: flex; align-items: center; gap: var(--sp-4); padding: var(--sp-2) var(--sp-4) var(--sp-3); border-top: 1px solid var(--line); font-size: var(--t-xs); color: var(--text-3); }
+.sk-legend { display: inline-flex; align-items: center; gap: 6px; }
+.sk-legend.off { color: var(--warn-ink); }
+.sk-spacer { flex: 1; }
+
+@media (max-width: 680px) {
+  .sk-cols { grid-template-columns: 1fr; }
+  .sk-head .sk-search { width: 170px; }
+}
+@media (prefers-contrast: more) {
+  .sk-row.custom .tk-kbd { border-width: 2px; }
+}
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .sk-row.custom .tk-kbd { border-width: 2px; }

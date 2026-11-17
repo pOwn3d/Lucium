@@ -1,0 +1,41 @@
+name: Dependency review
+
+# On a pull request that changes the dependencies (package.json, pnpm-lock.yaml, the actions of the workflows): GitHub compares the
+# dependency graph of the base and of the head, and the check fails when the pull request brings in a version with a known advisory of
+# moderate severity or above. It reads GitHub's data only: nothing of the pull request is installed or run.
+#
+# The advisories that appear later, on what is already in main, are the matter of audit.yml (every day) and of Dependabot alerts
+# (a setting of the repository).
+#
+# Free on PUBLIC repositories; on a private one the dependency review API needs GitHub Advanced Security, so the job is skipped until
+# the repository is public.
+#
+# Security: `pull_request`, never `pull_request_target`; a read-only token; no comment is written on the pull request (that would
+# need a write permission), the result is on the page of the run.
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: dependency-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  review:
+    name: Dependency review
+    if: ${{ !github.event.repository.private }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          fail-on-severity: moderate
+          comment-summary-in-pr: never

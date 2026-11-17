@@ -1,0 +1,118 @@
+/*
+ * The Extensions page (chrome://extensions), in the family of Settings (settings.css gives the switch and the
+ * muted text, templates/primitives.css the buttons, the field, the key and the empty state): a title bar with ☰, the search and "Mode développeur",
+ * the developer's bar, a grid of cards. Only tokens: the state of an extension is written in a chip, the colour repeats it.
+ */
+.settings-window .xp { display: grid; grid-template-rows: 52px minmax(0, 1fr); height: 100%; background: var(--surface-2); color: var(--text); font-size: var(--t-m); }
+.settings-window .xp svg { fill: none; stroke: currentColor; stroke-width: var(--icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.settings-window .xp :focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; border-radius: var(--r-s); }
+
+/* ---- title bar: the page is a tab, so no traffic lights to clear and no window to drag ---- */
+.settings-window .xp-titlebar { display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-4); border-bottom: 1px solid var(--line); background: var(--surface); }
+.settings-window .xp-title { margin: 0; font-size: var(--t-m); font-weight: var(--w-semibold); }
+.settings-window .xp-back { gap: var(--sp-1); }
+.settings-window .xp-tools { display: flex; align-items: center; gap: var(--sp-3); margin-left: auto; }
+/* Wide enough for « Rechercher dans les extensions »: at 220px the French placeholder was cut after « extensio ». */
+.settings-window .xp-search { width: 280px; }
+.settings-window .xp-search .tk-field { height: var(--target); font-size: var(--t-s); }
+.settings-window .xp-icon { width: var(--target); min-width: var(--target); padding: 0; justify-content: center; }
+
+/* ---- The ☰ menu and the box of "Empaqueter l'extension": a list under the button ---- */
+.settings-window .xp-menu, .settings-window .xp-pack { position: relative; }
+.settings-window .xp-pop { position: absolute; top: calc(100% + var(--sp-1)); left: 0; z-index: 2; display: grid; min-width: 220px; padding: var(--sp-1); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); box-shadow: var(--shadow-s); }
+.settings-window .xp-pop[hidden] { display: none; }
+.settings-window .xp-pack:not([open]) .xp-pop { display: none; }
+.settings-window .xp-pack summary { list-style: none; }
+.settings-window .xp-pack summary::-webkit-details-marker { display: none; }
+.settings-window .xp-pop .xp-note { margin: var(--sp-1) var(--sp-2); }
+.settings-window .xp-item { min-height: var(--target); padding: 0 var(--sp-2); border: 0; border-radius: var(--r-s); background: none; color: var(--text); font: inherit; font-size: var(--t-s); text-align: left; cursor: pointer; }
+.settings-window .xp-item:hover:not(:disabled), .settings-window .xp-item[aria-current='page'] { background: var(--accent-soft); }
+.settings-window .xp-dev { display: inline-flex; align-items: center; gap: var(--sp-2); min-height: var(--target); font-size: var(--t-s); color: var(--text-2); cursor: pointer; }
+
+.settings-window .xp-main { overflow-y: auto; overflow-x: hidden; padding: var(--sp-3) var(--sp-4) var(--sp-5); user-select: text; }
+
+/* ---- The developer's bar, then the profile (when there are several) ---- */
+.settings-window .xp-devbar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin: calc(-1 * var(--sp-3)) calc(-1 * var(--sp-4)) var(--sp-3); padding: var(--sp-2) var(--sp-4); border-bottom: 1px solid var(--line); background: var(--surface); }
+.settings-window .xp-bar { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); }
+.settings-window .xp-bar .xp-note { margin: 0; }
+.settings-window .xp-profile { min-height: var(--target); padding: 0 var(--sp-2); border: 1px solid var(--line-strong); border-radius: var(--r-s); background: var(--surface); color: var(--text); font: inherit; font-size: var(--t-s); }
+.settings-window .xp-profile:disabled { opacity: 1; color: var(--text-2); }
+.settings-window .xp-note { margin: var(--sp-1) 0 0; font-size: var(--t-s); color: var(--text-3); }
+
+.settings-window .xp-notice { display: flex; align-items: center; gap: var(--sp-2); margin-bottom: var(--sp-3); padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: var(--accent-soft); border: 1px solid var(--line); }
+.settings-window .xp-notice span { flex: 1; }
+.settings-window .xp-notice.failed { background: color-mix(in srgb, var(--danger) 12%, transparent); border-color: color-mix(in srgb, var(--danger) 35%, transparent); }
+
+/* ---- the grid of cards (two columns in the default window, one when it is narrow) ---- */
+.settings-window .xp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: var(--sp-3); align-items: start; margin-bottom: var(--sp-3); }
+.settings-window .xp-card { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); }
+/* An extension that is off: its icon alone is greyed and dimmed. Dimming the card took its grey texts (version, facts, hints) under 4.5:1. */
+.settings-window .xp-card.off .xp-glyph { filter: grayscale(1); opacity: 0.6; }
+.settings-window .xp-top { flex: 1; display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: var(--sp-3); align-items: start; padding: var(--sp-3) 14px; }
+.settings-window .xp-glyph { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-s); background: var(--accent-soft); color: var(--accent-text); font-size: var(--t-xl); font-weight: var(--w-semibold); overflow: hidden; }
+.settings-window .xp-glyph img { display: block; width: 36px; height: 36px; object-fit: contain; }
+.settings-window .xp-name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-weight: var(--w-semibold); }
+.settings-window .xp-ver { font-weight: var(--w-regular); font-size: var(--t-s); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.settings-window .xp-desc { margin: 2px 0 var(--sp-1); color: var(--text-2); font-size: var(--t-s); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.settings-window .xp-failed { color: var(--danger-ink); }
+/* what the extension asks for and this version does not do (its network rules): a warning, in the ink of the warnings */
+.settings-window .xp-note { margin: 2px 0 var(--sp-1); color: var(--warn-ink); font-size: var(--t-s); }
+.settings-window .xp-facts { display: flex; flex-wrap: wrap; gap: 2px var(--sp-3); font: var(--t-xs)/1.4 var(--mono); color: var(--text-3); overflow-wrap: anywhere; }
+.settings-window .xp-facts b { font: var(--w-semibold) var(--t-xs)/1.4 var(--font); }
+.settings-window .xp-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: var(--sp-2) 14px; border-top: 1px solid var(--line); }
+.settings-window .xp-end { display: inline-flex; align-items: center; gap: var(--sp-2); margin-left: auto; }
+.settings-window .xp-main .tk-btn[aria-disabled='true'] { opacity: 0.5; cursor: not-allowed; }
+
+/* the chips: the word is the state; ok / danger / warn borrow the AA inks of the tokens */
+.settings-window .xp-chip { display: inline-flex; align-items: center; min-height: 18px; padding: 0 var(--sp-2); border-radius: 999px; background: var(--tile); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); font-variant-numeric: tabular-nums; }
+.settings-window .xp-chip.ok { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok-ink); }
+.settings-window .xp-chip.danger { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger-ink); }
+.settings-window .xp-chip.warn { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn-ink); }
+
+/* ---- the journal: folded under the card (or under the list), open when it holds an error ---- */
+.settings-window .xp-errs { margin: 0 14px var(--sp-3); border: 1px solid color-mix(in srgb, var(--danger) 35%, transparent); border-radius: var(--r-s); overflow: hidden; }
+.settings-window .xp-errs:not(:has(.xp-journal li.error)) { border-color: var(--line); }
+.settings-window .xp-errs summary { display: flex; align-items: center; gap: var(--sp-2); min-height: var(--target); padding: var(--sp-1) 10px; cursor: pointer; font-size: var(--t-s); background: var(--surface-2); list-style: none; }
+.settings-window .xp-errs summary::-webkit-details-marker { display: none; }
+.settings-window .xp-errs-foot { display: flex; justify-content: flex-end; padding: var(--sp-1) var(--sp-2); border-top: 1px solid var(--line); }
+.settings-window .xp-errs.flat { margin: 0; border: 0; border-radius: 0; }
+.settings-window .xp-main > .xp-errs { margin: 0 0 var(--sp-3); background: var(--surface); }
+.settings-window .xp-journal { margin: 0; padding: 6px 10px; max-height: 260px; overflow-y: auto; font: var(--t-xs)/1.5 var(--mono); background: var(--surface-2); user-select: text; }
+.settings-window .xp-journal li { list-style: none; padding: 2px 0; white-space: pre-wrap; word-break: break-word; }
+.settings-window .xp-journal .error { color: var(--danger-ink); }
+.settings-window .xp-journal .warning { color: var(--warn-ink); }
+.settings-window .xp-journal .at, .settings-window .xp-journal .where { color: var(--text-3); }
+.settings-window .xp-journal .times { color: var(--text-3); font-weight: var(--w-semibold); white-space: nowrap; }
+
+/* ---- the page "Détails": its rows, one under the other; a row that is an action is a button the width of the block ---- */
+.settings-window .xp-sec { margin-bottom: var(--sp-4); }
+.settings-window .xp-sec h2 { margin: 0 0 var(--sp-2); font-size: var(--t-m); font-weight: var(--w-semibold); color: var(--text-2); }
+.settings-window .xp-block { border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); }
+.settings-window .xp-line { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); min-height: 36px; padding: var(--sp-1) 14px; }
+.settings-window .xp-line + .xp-line { border-top: 1px solid var(--line); }
+.settings-window .xp-line-text { display: grid; min-width: 0; }
+.settings-window .xp-hint { color: var(--text-3); font-size: var(--t-s); overflow-wrap: anywhere; }
+.settings-window .xp-hint p, .settings-window .xp-list { margin: 2px 0 0; }
+.settings-window .xp-list { padding-left: var(--sp-4); }
+.settings-window .xp-head { justify-content: flex-start; padding: var(--sp-3) 14px; }
+.settings-window .xp-head input { margin-left: auto; }
+.settings-window .xp-row { width: 100%; border: 0; border-top: 1px solid var(--line); background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.settings-window .xp-row:hover:not(:disabled) { background: var(--surface-2); }
+.settings-window .xp-row:disabled { color: var(--text-3); cursor: default; }
+.settings-window .xp-row.danger { color: var(--danger-ink); }
+.settings-window .xp-line-act { display: flex; align-items: center; gap: var(--sp-2); flex: none; }
+.settings-window .xp-code { font: var(--t-xs)/1.4 var(--mono); user-select: text; }
+.settings-window .xp-broad { color: var(--danger-ink); }
+.settings-window .xp-empty-line { margin: 0; color: var(--text-3); }
+
+.settings-window .xp-main > .tk-empty { padding: var(--sp-5) var(--sp-4); }
+
+@media (prefers-contrast: more) {
+  .settings-window .xp-chip { outline: 1px solid currentColor; outline-offset: -1px; }
+  .settings-window .xp-card { border-color: var(--line-strong); }
+  .settings-window .xp-card.off .xp-glyph { opacity: 1; }
+}
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .settings-window .xp-chip { outline: 1px solid currentColor; outline-offset: -1px; }
+:root[data-contrast='more'] .settings-window .xp-card { border-color: var(--line-strong); }
+:root[data-contrast='more'] .settings-window .xp-card.off .xp-glyph { opacity: 1; }

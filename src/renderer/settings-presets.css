@@ -1,0 +1,32 @@
+/*
+ * The presets of the Settings (PresetSettings.tsx): a row of exclusive buttons or a menu, the line of what the option does under it, « Personnalisé »,
+ * and the notice of a choice with « Annuler ». Tokens only, so light and dark follow the window. The rows a choice changed are lit by `.pref-flash`
+ * (settings.css), which stays still when the system asks for less motion; the only motion here, the button that takes the choice, is left out then.
+ */
+
+/* A row whose control sits under its name: the buttons take the whole width. */
+.pref-row.preset-row { flex-wrap: wrap; row-gap: 0; padding-bottom: 10px; }
+.preset-row > .pref-label { flex-basis: 100%; padding-bottom: 6px; }
+.preset-row > .pref-control { flex: 1 1 100%; align-items: flex-start; }
+/* The button of the row's illustration (« Voir l’effet ») and « Rétablir », when the row has them, stay at the right of the buttons. */
+.preset-row > .pref-control > :is(.pref-illus-button, .pref-reset) { order: 1; }
+.preset { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.preset-buttons { display: grid; grid-auto-columns: minmax(0, 1fr); grid-auto-flow: column; gap: 2px; padding: 3px; border-radius: var(--r-m); background: var(--tile); }
+.preset-buttons > button { min-height: 28px; padding: 4px 8px; border: 0; border-radius: var(--r-s); background: transparent; color: var(--text-2); font: inherit; font-size: var(--t-m); font-weight: var(--w-semibold); line-height: 16px; text-align: center; cursor: pointer; }
+.preset-buttons > button:hover:not([aria-checked='true']) { color: var(--text); background: var(--tile); }
+.preset-buttons > button[aria-checked='true'] { background: var(--surface); color: var(--accent-text); box-shadow: var(--shadow-s), inset 0 0 0 1.5px var(--accent); }
+.preset-buttons > button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.preset-menu { max-width: 100%; align-self: flex-start; }
+
+.preset-effect { margin: 0 2px; min-height: 15px; font-size: var(--t-s); line-height: 15px; color: var(--text-2); }
+.preset-custom { display: inline-block; margin-right: 4px; padding: 1px 6px; border-radius: 5px; background: var(--accent-soft); color: var(--accent-text); font-size: var(--t-xs); font-weight: var(--w-semibold); }
+
+/* Empty, it takes no room; it stays in the page so that a screen reader hears what is written in it. */
+.preset-notice { display: flex; align-items: baseline; gap: 8px; margin: 0 2px; font-size: var(--t-s); line-height: 15px; color: var(--text); }
+.preset-notice:empty { display: block; height: 0; }
+.preset-notice .link-button { margin: 0; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .preset-buttons > button { transition: background-color var(--dur), color var(--dur), box-shadow var(--dur); }
+}

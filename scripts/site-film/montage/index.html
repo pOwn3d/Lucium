@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>Lucium — montage du film</title>
+<!--
+  The montage page of the film. scripts/site-film/film.mjs opens it in Chrome without a window, gives it the plan of the film
+  (window.film.load), then asks for each frame (window.film.frame) and takes a picture of it. Nothing here moves by itself: every frame is a
+  function of its time. `pnpm film:site --page` writes a copy that loads the plan from a file, with a slider, to look at it in a browser.
+-->
+<link rel="stylesheet" href="montage.css">
+</head>
+<body>
+<div id="stage"></div>
+<script src="placeholders.js"></script>
+<script src="montage.js"></script>
+</body>
+</html>

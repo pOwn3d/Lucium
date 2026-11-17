@@ -1,0 +1,30 @@
+@import './palette.css';
+/* The lock screen (LockScreen.tsx): the whole window while Lucium is locked, or the page card while the space on screen is. */
+.lock-app { position: fixed; inset: 0; display: grid; place-items: center; -webkit-app-region: drag; }
+.lock-stage { position: absolute; inset: 0; display: grid; place-items: center; border-radius: 12px; background: var(--fixed-000000-32); }
+.lock-card {
+  -webkit-app-region: no-drag; box-sizing: border-box; width: 340px; max-width: calc(100% - 32px); padding: 28px 24px 22px; border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center;
+  background: var(--fixed-141622-86); color: var(--fixed-f1f1f5); box-shadow: 0 12px 40px var(--fixed-000000-35);
+  font: 500 14px/1.35 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+.lock-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 26px; background: var(--fixed-ffffff-10); }
+.lock-card h1 { margin: 4px 0 0; font-size: 16px; line-height: 20px; font-weight: 600; overflow-wrap: anywhere; }
+.lock-sub { margin: 0; font-size: 12px; line-height: 16px; color: var(--fixed-f1f1f5-62); }
+.lock-field {
+  box-sizing: border-box; width: 100%; height: 36px; margin-top: 8px; padding: 0 12px; border: 1px solid var(--fixed-2c3345); border-radius: 9px;
+  background: var(--fixed-0d1322); color: var(--fixed-ffffff); font: 500 14px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; caret-color: var(--fixed-007bff); outline: 0;
+}
+.lock-field::placeholder { color: var(--fixed-7f8399); }
+.lock-field:focus { border-color: var(--fixed-4049d7); box-shadow: 0 0 0 2px var(--fixed-4049d7-50); }
+.lock-message { margin: 0; font-size: 12px; line-height: 16px; color: var(--fixed-f0b27a); }
+.lock-actions { display: flex; gap: 8px; width: 100%; margin-top: 6px; }
+.lock-button {
+  flex: 1; height: 34px; border: 0; border-radius: 9px; background: var(--fixed-ffffff-12); color: var(--fixed-ffffff);
+  font: 600 13px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; cursor: default;
+}
+.lock-button:hover:not(:disabled) { background: var(--fixed-ffffff-20); }
+.lock-button.primary { background: var(--fixed-4049d7); }
+.lock-button.primary:hover:not(:disabled) { background: var(--fixed-5058e6); }
+.lock-button:disabled { opacity: 0.5; }
+.lock-button:focus-visible { outline: 2px solid var(--fixed-ffffff-70); outline-offset: 2px; }

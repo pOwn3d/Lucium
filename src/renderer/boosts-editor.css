@@ -1,0 +1,188 @@
+/*
+ * Tweak editor: a panel of 400 px (480 for the code), in the tokens, so it follows the
+ * system and the accent of the space like the other editors. The pad, the fonts and the buttons keep fixed cotes;
+ * what the width adds is a second column. overlay.tsx imports this before styles.css: every selector carries the bx- prefix so
+ * no shared rule (button, .field, .card) can win over it. The sizes of the panel are BOOST_PANEL / ZAP_PANEL (src/shared/boost.ts).
+ */
+/* The bundled fonts, for the sample of the font grid (the pages get them from main/shell/boost-fonts.ts; files and licences: resources/fonts). */
+@font-face { font-family: 'Lucium Inter'; src: url('../../resources/fonts/inter.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Lucium Hanken Grotesk'; src: url('../../resources/fonts/hanken-grotesk.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Lucium Manrope'; src: url('../../resources/fonts/manrope.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Lucium Figtree'; src: url('../../resources/fonts/figtree.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Lucium Space Grotesk'; src: url('../../resources/fonts/space-grotesk.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Lucium Fraunces'; src: url('../../resources/fonts/fraunces.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Lucium Literata'; src: url('../../resources/fonts/literata.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Lucium Bodoni Moda'; src: url('../../resources/fonts/bodoni-moda.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Lucium JetBrains Mono'; src: url('../../resources/fonts/jetbrains-mono.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Lucium Atkinson Hyperlegible Next'; src: url('../../resources/fonts/atkinson-hyperlegible-next.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+
+
+.bx-host { position: fixed; inset: 0; background: transparent; user-select: none; }
+.bx {
+  position: absolute; right: 44px; width: 400px; height: 400px; max-height: calc(100vh - var(--bx-top, 55px) - 22px); max-width: calc(100vw - 88px);
+  color: var(--text); font: var(--w-semibold) 14px/1 var(--font); outline: 0;
+  -webkit-font-smoothing: antialiased;
+}
+/* The code asks for room: it grows towards the left, the right edge stays where it is. */
+.bx.bx-wide { width: 480px; height: 588px; }
+.bx-card {
+  position: relative; box-sizing: border-box; width: 100%; height: 100%; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: var(--r-l); background: var(--surface); box-shadow: var(--shadow), 0 0 0 1px var(--line);
+}
+.bx button { color: inherit; }
+.bx button:focus-visible, .bx select:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; }
+
+/* ---- Header: close, name and menu, Style / Code, Undo ---- */
+.bx-head { flex: none; height: 44px; box-sizing: border-box; display: flex; align-items: center; gap: 4px; padding: 0 8px; border-bottom: 1px solid var(--line); background: var(--surface-2); }
+.bx-done { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--r-s); color: var(--text-2); }
+.bx-done span { display: grid; place-items: center; }
+.bx-done:hover { background: var(--tile); color: var(--text); }
+.bx-title { flex: 1; min-width: 0; height: 28px; display: flex; align-items: center; gap: 4px; padding: 0 8px; border-radius: var(--r-s); color: var(--text); font-weight: var(--w-semibold); }
+.bx-title span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bx-title svg { flex: none; color: var(--text-3); }
+.bx-title:hover { background: var(--tile); }
+.bx-rename {
+  flex: 1; min-width: 0; height: 28px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--focus); border-radius: var(--r-s); outline: 0;
+  background: var(--surface); color: var(--text); font: var(--w-semibold) 13px/26px var(--font); user-select: text;
+}
+.bx-tabs, .bx-seg { display: flex; gap: 2px; padding: 3px; border-radius: 9px; background: var(--tile); }
+.bx-tabs button, .bx-seg button { flex: 1; min-height: 28px; padding: 0 10px; border-radius: 6px; color: var(--text-2); font-size: var(--t-s); font-weight: var(--w-regular); white-space: nowrap; }
+.bx-tabs button.on, .bx-seg button.on { background: var(--surface); color: var(--text); font-weight: var(--w-semibold); box-shadow: var(--shadow-s); }
+.bx-undo { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: var(--r-s); color: var(--text-3); }
+.bx-undo:hover:not(:disabled) { background: var(--tile); color: var(--text); }
+.bx-undo:disabled { opacity: 0.55; }
+
+/* ---- Style: the pad and its tools in the first column; the fonts, Size and Case, Eraser in the second ---- */
+.bx-main { flex: 1; min-height: 0; overflow-y: auto; box-sizing: border-box; padding: 16px; display: grid; grid-template-columns: 147px minmax(0, 1fr); gap: 16px; align-items: start; }
+.bx-pad { box-sizing: border-box; width: 147px; height: 147px; padding: 7px; border-radius: 20px; }
+.bx-pad-in {
+  position: relative; box-sizing: border-box; width: 133px; height: 133px; border-radius: 14px; cursor: crosshair; touch-action: none;
+  background: var(--surface) radial-gradient(circle, var(--line-strong) 0.6px, transparent 0.9px) 0 0 / 8px 8px;
+}
+.bx-thumb { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; outline: 0; box-shadow: 0 0 0 3px var(--surface), var(--shadow-s); cursor: grab; }
+.bx-thumb.main { width: 30px; height: 30px; background: var(--text-3); }
+.bx-thumb.second { width: 19px; height: 19px; background: var(--text); }
+.bx-thumb:focus-visible { box-shadow: 0 0 0 3px var(--surface), 0 0 0 5px var(--focus); }
+
+.bx-tools { display: flex; gap: 10px; margin-top: 15px; }
+.bx-tool { flex: none; width: 42px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: var(--tile); color: var(--text); }
+.bx-tool:nth-child(2) { width: 43px; }
+.bx-tool:hover:not(:disabled):not([aria-pressed='true']) { background: var(--tile-hover); }
+.bx-tool[aria-pressed='true'] { background: var(--text); color: var(--surface); }
+.bx-tool:disabled { opacity: 0.4; cursor: default; }
+
+/* Four rows of five; the ten fonts Lucium adds make two more rows, reached by scrolling (no scroll bar, a rule of one row per step). */
+.bx-fonts {
+  box-sizing: border-box; width: 100%; height: 118px; padding: 7px 5px; border-radius: 12px; background: var(--surface-2);
+  display: grid; grid-template-columns: repeat(5, 1fr); grid-auto-rows: 26px; align-content: start;
+  overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; scroll-snap-type: y proximity; scroll-padding-block: 7px;
+}
+.bx-fonts::-webkit-scrollbar { display: none; }
+/* « Toujours afficher les barres de défilement » (macOS): the bars the list hides come back (data-scrollbars, set from the snapshot). */
+:root[data-scrollbars='always'] .bx-fonts { scrollbar-width: thin; scrollbar-color: var(--text-3) transparent; }
+/* The last visible row fades while more rows wait below it. */
+.bx-fonts[data-more='true'] { -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 20px), color-mix(in srgb, black 25%, transparent)); mask-image: linear-gradient(to bottom, black calc(100% - 20px), color-mix(in srgb, black 25%, transparent)); }
+.bx-font { height: 26px; border-radius: 7px; color: var(--text-3); font-size: 14px; font-weight: var(--w-regular); scroll-snap-align: start; }
+.bx-font:hover { color: var(--text); }
+.bx-font[aria-pressed='true'] { background: var(--accent-soft); color: var(--text); }
+
+.bx-btn { box-sizing: border-box; height: 38px; border-radius: 10px; background: var(--tile); color: var(--text); font: var(--w-semibold) 14px/38px var(--font); text-align: center; }
+.bx-btn:hover { filter: brightness(0.96); }
+.bx-row { display: flex; gap: 8px; margin-top: 14px; }
+.bx-size, .bx-case { flex: 1; min-width: 0; }
+/* The Size button takes its ground from the size (orange to red, inline, with its ink); the Case button is lit with the warning colour. */
+.bx-case.on { background: var(--warn); color: var(--on-accent); }
+.bx-wide-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 14px; padding: 0 14px 0 13px; }
+.bx-zap svg { color: var(--text-2); }
+
+/* ---- Advanced colour controls: a popover over the second column, next to the tools it opens from ---- */
+.bx-adv {
+  position: absolute; left: 164px; top: 98px; box-sizing: border-box; width: 216px; padding: 16px 16px 4px; border-radius: var(--r-l);
+  background: var(--overlay); backdrop-filter: blur(20px) saturate(1.4); box-shadow: var(--shadow), 0 0 0 1px var(--line);
+}
+.bx-slider { display: block; margin: 0 0 12px; }
+.bx-slider > span { display: block; margin-bottom: 4px; color: var(--text-2); font-size: var(--t-s); line-height: 15px; font-weight: var(--w-semibold); }
+.bx-slider input[type='range'] { display: block; width: 100%; height: 16px; margin: 0; background: transparent; -webkit-appearance: none; appearance: none; cursor: pointer; }
+.bx-slider input[type='range']::-webkit-slider-runnable-track { height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--text-3) var(--v, 50%), var(--tile-hover) var(--v, 50%)); }
+.bx-slider input[type='range']::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 16px; margin-top: -5px; border-radius: 8px; background: var(--surface); box-shadow: var(--shadow-s), 0 0 0 0.5px var(--line-strong); }
+
+/* ---- Title menu: under the name ---- */
+.bx-menu {
+  position: absolute; left: 44px; top: 46px; z-index: 5; box-sizing: border-box; width: 268px; max-width: calc(100% - 52px); padding: 5px; border-radius: var(--r-m);
+  background: var(--overlay); backdrop-filter: blur(20px); box-shadow: var(--shadow), 0 0 0 1px var(--line);
+}
+.bx-menu-item { display: block; width: 100%; height: 28px; padding: 0 10px; border-radius: 6px; color: var(--text); font: var(--w-regular) 13px/28px var(--font); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bx-menu-item:hover:not(:disabled) { background: var(--tile); }
+.bx-menu-item:disabled { color: var(--text-3); opacity: 1; cursor: default; }
+.bx-menu-item.danger { color: var(--danger); }
+.bx-menu hr { margin: 5px 6px; border: 0; height: 1px; background: var(--line); }
+
+/* ---- Code: CSS / JS / Eraser under the header, the editor, then pipette and developer tools ---- */
+.bx-seg { flex: none; margin: 8px 12px 0; }
+.bx-editor { flex: 1; min-height: 0; display: flex; flex-direction: column; margin-top: 8px; background: var(--surface-2); border-top: 1px solid var(--line); }
+.bx-text {
+  flex: 1; min-height: 0; box-sizing: border-box; width: 100%; padding: 12px 14px; border: 0; outline: 0; resize: none; background: transparent; color: var(--text);
+  font: var(--w-regular) 12.5px/1.55 var(--mono); white-space: pre; tab-size: 2; overflow: auto; caret-color: var(--accent); user-select: text;
+}
+.bx-text::placeholder { color: var(--text-3); }
+/* The way out of the field, where Tab indents: under the code, in the grey of a help text. */
+.bx-keys { flex: none; margin: 0; padding: 6px 14px; border-top: 1px solid var(--line); color: var(--text-2); font: var(--w-regular) var(--t-s)/1.4 var(--font); }
+.bx-warn { flex: none; margin: 0; padding: 8px 14px 10px; background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn-ink); font: var(--w-regular) 11px/1.4 var(--font); user-select: text; }
+/* A script that waits for its owner (it came from a file or a link): said above the code, with the one button that lets it run. */
+.bx-script-off { flex: none; display: flex; align-items: center; gap: 12px; padding: 9px 14px; background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn-ink); font: var(--w-regular) 12px/1.4 var(--font); user-select: text; }
+.bx-script-off > span { flex: 1; }
+/* Under `.bx button { color: inherit }`, which would make the label the colour of the banner. */
+.bx-script-off .bx-script-on { flex: none; height: 28px; padding: 0 10px; border-radius: 6px; background: var(--warn); color: var(--on-accent); font: var(--w-semibold) 12px/28px var(--font); }
+.bx-script-off .bx-script-on:hover { filter: brightness(1.08); }
+/* A script being typed: said under the code, with the buttons that save it, run it once, or put the saved one back. */
+.bx-script-draft { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 9px 14px; border-top: 1px solid var(--line); color: var(--text-2); font: var(--w-regular) 12px/1.4 var(--font); }
+.bx-script-draft > span { flex: 1 1 100%; user-select: text; }
+.bx-script-draft .bx-script-save { flex: none; height: 28px; padding: 0 10px; border-radius: 6px; background: var(--accent); color: var(--on-accent); font: var(--w-semibold) 12px/28px var(--font); }
+.bx-script-draft .bx-script-save:hover:not(:disabled) { filter: brightness(1.08); }
+.bx-script-draft button:disabled { opacity: 0.4; cursor: default; }
+.bx-foot { flex: none; box-sizing: border-box; height: 69px; padding: 15px; display: flex; align-items: flex-start; gap: 10px; border-top: 1px solid var(--line); background: var(--surface); }
+.bx-foot-btn { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 8px; background: var(--tile); color: var(--text); }
+.bx-foot-btn:hover:not(:disabled) { background: var(--tile-hover); }
+.bx-foot-btn:disabled { opacity: 0.4; cursor: default; }
+.bx-presets { margin-left: auto; height: 38px; max-width: 180px; padding: 0 10px; border: 0; border-radius: 8px; background: var(--tile); color: var(--text); font: var(--w-semibold) 13px/38px var(--font); }
+
+.bx-zap-list { flex: 1; min-height: 0; overflow-y: auto; margin-top: 8px; padding: 16px 18px; background: var(--surface); border-top: 1px solid var(--line); }
+.bx-zap-list p { margin: 0 0 12px; color: var(--text-2); font: var(--w-regular) 13px/1.45 var(--font); }
+.bx-zap-list ul { list-style: none; margin: 0 0 14px; padding: 0; }
+.bx-zap-list li { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--line); }
+.bx-zap-list code { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: var(--w-regular) 12px/1.4 var(--mono); color: var(--text); }
+.bx-link { flex: none; color: var(--accent-text); font-size: var(--t-s); font-weight: var(--w-semibold); }
+.bx-link:hover { text-decoration: underline; }
+.bx-zap-start { padding: 0 16px; }
+
+/* ---- Foot of both panes: the Tweak is on or off, and the file it can be sent in ---- */
+.bx-state { flex: none; box-sizing: border-box; height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 16px; border-top: 1px solid var(--line); background: var(--surface-2); color: var(--text-2); font-size: var(--t-s); font-weight: var(--w-regular); }
+.bx-switch { display: inline-flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer; }
+.bx-switch input { appearance: none; position: relative; flex: none; width: 30px; height: 18px; margin: 0; border-radius: 9px; background: var(--tile-active); cursor: pointer; transition: background var(--dur); }
+.bx-switch input::after { content: ''; position: absolute; left: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow-s); transition: transform var(--dur); }
+.bx-switch input:checked { background: var(--accent); }
+.bx-switch input:checked::after { transform: translateX(12px); }
+.bx-switch input:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.bx-export { min-height: 28px; padding: 0 12px; border-radius: var(--r-s); background: var(--tile); color: var(--text); font-size: var(--t-s); font-weight: var(--w-semibold); }
+.bx-export:hover:not(:disabled) { background: var(--tile-hover); }
+.bx-export:disabled { opacity: 0.4; cursor: default; }
+
+/* ---- Eraser: the layer is only the panel and the margin of its shadow (ZAP_PANEL), the page below stays clickable ---- */
+.bx-zapping .bx { top: 24px; right: 24px; height: calc(100vh - 48px); max-height: 400px; max-width: none; }
+.bx-btn.bx-zap.on { background: var(--text); color: var(--surface); }
+.bx-btn.bx-zap.on svg { color: var(--surface); }
+
+/* The Tweaks the site already has, under the title: pills, the open one filled; a cross to delete (with a question), "+ Nouvelle Retouche" at the end. */
+.bx-sites { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.bx-site-chip { display: inline-flex; align-items: center; border-radius: 999px; border: 1px solid var(--line-strong); background: var(--surface-2); }
+.bx-site-chip.current { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.bx-site { min-height: 24px; max-width: 150px; padding: 0 10px; overflow: hidden; border: 0; border-radius: 999px; background: transparent; color: inherit; font-size: 12px; font-weight: var(--w-semibold); text-overflow: ellipsis; white-space: nowrap; }
+.bx-site:disabled { opacity: 1; cursor: default; }
+.bx-site:not(:disabled):hover { background: var(--tile-hover); }
+.bx-site.new { border: 1px dashed var(--line-strong); }
+.bx-site.danger { background: var(--danger); color: var(--on-accent); }
+/* The cross is a target of its own: 24 px, beside the name and not over it, which keeps less room on its side for that. */
+.bx-site:has(+ .bx-site-x) { padding-right: 4px; }
+.bx-site-x { display: grid; place-items: center; width: 24px; height: 24px; margin-left: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; opacity: 0.7; }
+.bx-site-x:hover { opacity: 1; background: var(--tile-hover); }
+.bx-sites-ask { flex: 1 1 100%; font-size: 12px; font-weight: var(--w-semibold); }

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea to discuss / Question ou idée à discuter
+    url: https://github.com/pOwn3d/Lucium/discussions
+    about: How do I...? Is this expected? Do you want a feature like X? Ask here, in English or French. Issues are for bugs, concrete feature requests and what you miss from your previous browser.
+  - name: Security vulnerability / Faille de sécurité
+    url: https://github.com/pOwn3d/Lucium/security/advisories/new
+    about: Do not open a public issue. Report it privately here, or write to contact@lucium.app (see SECURITY.md).

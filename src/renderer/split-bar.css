@@ -1,0 +1,32 @@
+@import './palette.css';
+/*
+ * The layout bar of a split view of two panes: a 36 px pill centred in the strip under the
+ * panes. The strip is free of native pages (shared/split.ts). It rides on the window's own palette (--text, --muted, --hover, --active come with the
+ * space's theme) and on the accent of the space (--accent once the design tokens are in; the blue of the focus ring until then).
+ * `.shell.light` is the window in a light appearance.
+ */
+.split-bar-row { position: absolute; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+.split-bar {
+  pointer-events: auto; display: flex; align-items: center; gap: 2px; height: 36px; padding: 3px; border-radius: 999px; box-sizing: border-box;
+  /* The pill is a wash over the background of the space: its words take the secondary text measured under such a wash. */
+  background: var(--fixed-ffffff-10); border: 1px solid var(--fixed-ffffff-14); color: var(--text-on-tile-2);
+  font-size: 12px; font-weight: 600; white-space: nowrap; user-select: none;
+}
+.shell.light .split-bar { background: var(--fixed-ffffff-74); border-color: var(--fixed-000000-10); }
+.sb-group { display: contents; }
+.sb-btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 28px; padding: 0 10px; border: 0; border-radius: 999px; box-sizing: border-box;
+  background: transparent; color: var(--text-on-tile-2); font: inherit; white-space: nowrap;
+}
+.sb-btn.num { font-variant-numeric: tabular-nums; }
+.sb-btn:hover:not([aria-pressed='true']) { background: var(--hover); color: var(--text); }
+.sb-btn[aria-pressed='true'] { background: var(--accent, var(--fixed-2f39ff)); color: var(--on-accent, var(--fixed-ffffff)); }
+.sb-btn:focus-visible { outline: 2px solid var(--accent, var(--fixed-2f39ff)); outline-offset: 1px; }
+.sb-sep { width: 1px; height: 16px; margin: 0 3px; background: var(--active); flex: none; }
+@media (prefers-contrast: more) {
+  .split-bar { border-color: var(--text); }
+  .sb-btn:focus-visible { outline-width: 3px; }
+}
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .split-bar { border-color: var(--text); }
+:root[data-contrast='more'] .sb-btn:focus-visible { outline-width: 3px; }

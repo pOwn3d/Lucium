@@ -1,0 +1,82 @@
+/*
+ * The theme panel (ThemeEditor.tsx): 420 px wide beside the sidebar, which shows the theme live. A list of named themes with a drawing of
+ * the sidebar that takes the one under the pointer, the colour to start from, the hue, the strength and the texture; the colour pad and the codes are under
+ * "Contrôles de couleur avancés". It follows the system's light or dark like every panel; the opaque surface is because it covers the page, which is another view.
+ */
+.theme-pop { box-sizing: border-box; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--sp-2); align-content: start; width: 100%; max-height: 100%; padding: var(--sp-3) var(--sp-4) var(--sp-4); overflow-y: auto; border-radius: var(--r-xl); background: var(--surface); backdrop-filter: none; box-shadow: none; outline: 0; }
+.theme-pop .tp-head { display: flex; align-items: center; gap: var(--sp-2); }
+.theme-pop .tp-head h2 { flex: none; margin: 0; font-size: var(--t-l); font-weight: var(--w-semibold); }
+.theme-pop .tp-ctx { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-s); color: var(--text-3); }
+.theme-pop .tp-back { flex: none; width: var(--target); padding: 0; }
+.theme-pop .tp-back svg { fill: none; stroke: currentColor; stroke-width: var(--icon-stroke); stroke-linecap: round; stroke-linejoin: round; }
+.theme-pop .ip-seg { flex: none; }
+.theme-pop .tp-label { display: flex; white-space: nowrap; align-items: center; gap: var(--sp-2); min-height: 20px; margin-top: var(--sp-1); font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.theme-pop .tp-n { font-weight: var(--w-regular); letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.theme-pop .tp-link { margin: 0 0 0 -6px; min-height: var(--target); padding: 0 6px; border: 0; border-radius: var(--r-s); background: none; color: var(--link); font: inherit; font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0; text-transform: none; cursor: pointer; }
+.theme-pop .tp-link:hover:not(:disabled) { background: var(--tile); }
+.theme-pop .tp-link:disabled { opacity: 0.4; cursor: default; }
+
+/* the list and the drawing */
+.theme-pop .tp-twocol { display: grid; grid-template-columns: minmax(0, 1fr) 130px; gap: var(--sp-3); }
+.theme-pop .tp-left { min-width: 0; }
+.theme-pop .tp-list { display: grid; gap: 2px; max-height: 232px; overflow-y: auto; scrollbar-width: thin; }
+.theme-pop .tp-group { margin: var(--sp-2) 6px 2px; font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.theme-pop .tp-theme { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: var(--sp-2); width: 100%; min-height: var(--target); padding: 2px 6px; border: 0; border-radius: var(--r-s); background: transparent; color: var(--text); font: inherit; font-size: var(--t-s); text-align: left; cursor: pointer; }
+.theme-pop .tp-theme i { width: 20px; height: 20px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.theme-pop .tp-theme span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.theme-pop .tp-theme small { color: var(--text-3); font-size: var(--t-xs); }
+.theme-pop .tp-theme:hover, .theme-pop .tp-theme:focus-visible { background: var(--tile); }
+.theme-pop .tp-theme[aria-pressed='true'] { background: var(--accent-soft); }
+/* On a tile or on the tint of the chosen theme, the small word takes the secondary text: the grey of a help text is measured on a plain surface. */
+.theme-pop .tp-theme:hover small, .theme-pop .tp-theme:focus-visible small, .theme-pop .tp-theme[aria-pressed='true'] small { color: var(--text-2); }
+.theme-pop .tp-theme:focus-visible { outline-offset: -2px; }
+.theme-pop .tp-hint { margin: var(--sp-1) 0 0; font-size: var(--t-xs); color: var(--text-3); }
+.theme-pop .tp-thumb { align-self: stretch; min-height: 220px; }
+
+/* the colour to start from: named swatches, the chosen one ringed in the text colour */
+.theme-pop .tp-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
+.theme-pop .tp-swatch { width: var(--target); height: var(--target); padding: 0; border: 2px solid transparent; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px var(--line-strong); cursor: pointer; }
+.theme-pop .tp-swatch[aria-pressed='true'] { border-color: var(--text); box-shadow: inset 0 0 0 2px var(--surface); }
+.theme-pop .tp-swatch:focus-visible { border-radius: 50%; }
+.theme-pop .tp-sliders { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; gap: var(--sp-3); align-items: end; margin-top: var(--sp-1); }
+.theme-pop .tp-sliders label { display: grid; gap: 2px; font-size: var(--t-xs); color: var(--text-3); }
+.theme-pop .tp-sliders input[type='range'] { width: 100%; min-width: 0; height: var(--target); margin: 0; accent-color: var(--accent); }
+.theme-pop .tp-sliders select.tk-field { width: auto; font-size: var(--t-s); }
+
+/* the advanced controls */
+.theme-pop .theme-advanced { margin-top: var(--sp-1); font-size: var(--t-s); }
+.theme-pop .theme-advanced summary { display: flex; align-items: center; min-height: var(--target); padding: 0 4px; border-radius: var(--r-s); color: var(--text-2); cursor: pointer; }
+.theme-pop .theme-advanced summary:hover { background: var(--tile); }
+.theme-pop .theme-advanced[open] > :not(summary) { margin-top: var(--sp-2); }
+.theme-pop .theme-advanced label { display: grid; gap: 3px; font-size: var(--t-s); color: var(--text-2); }
+.theme-pop .theme-advanced label.inline { display: flex; align-items: center; gap: var(--sp-2); }
+.theme-pop .theme-advanced label input[type='range'] { width: 100%; accent-color: var(--accent); }
+.color-pad { position: relative; margin: 0 auto; border-radius: var(--r-s); background: var(--tile); overflow: hidden; cursor: crosshair; touch-action: none; }
+.pad-grid { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+.pad-dot { position: absolute; width: 24px; height: 24px; margin: -12px 0 0 -12px; border-radius: 50%; border: 3px solid var(--surface); box-shadow: var(--shadow-s); pointer-events: none; }
+.pad-dot.primary { width: 44px; height: 44px; margin: -22px 0 0 -22px; }
+.pad-dot.derived { opacity: 0.95; }
+.pad-dot.selected { box-shadow: 0 0 0 2px var(--accent), var(--shadow-s); }
+.pad-count { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); display: flex; gap: var(--sp-2); cursor: default; }
+.pad-count button { width: 32px; height: 32px; border-radius: var(--r-s); background: var(--surface); box-shadow: var(--shadow-s); font-size: 22px; line-height: 1; color: var(--text-2); }
+.pad-count button:hover:not(:disabled) { background: var(--surface-3); color: var(--text); }
+.pad-count button:disabled { opacity: 0.35; }
+.segmented { display: flex; flex-wrap: wrap; gap: 2px; padding: 2px; border-radius: var(--r-m); background: var(--tile); }
+.segmented button { flex: 1 1 auto; min-height: var(--target); padding: 0 var(--sp-2); border-radius: 6px; font-size: var(--t-s); white-space: nowrap; color: var(--text-2); }
+.segmented button:hover { color: var(--text); }
+.segmented button.current { background: var(--surface); color: var(--text); box-shadow: var(--shadow-s); }
+.theme-pop .swatches { display: flex; gap: var(--sp-2); }
+.theme-pop .swatch { width: var(--target); height: var(--target); border-radius: 50%; border: 2px solid transparent; box-shadow: inset 0 0 0 1px var(--line-strong); }
+.theme-pop .swatch.current { border-color: var(--text); }
+.code-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; }
+.code-row .tk-field { flex: 1; min-width: 0; font-size: var(--t-s); }
+.code-row .tk-field.code-text { font-family: var(--mono); font-size: var(--t-xs); }
+.code-row .tk-btn { flex: none; }
+
+/* notices and the foot */
+.theme-pop .tp-note { margin: 0; font-size: var(--t-s); color: var(--text-2); }
+.theme-pop .tp-note.warning { color: var(--warn-ink); }
+.theme-pop .tp-foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
+.theme-pop .tp-foot .tk-btn { min-height: 32px; }
+.theme-pop .tp-spacer { flex: 1; }
+.theme-pop .tp-esc { margin: 0; font-size: var(--t-xs); color: var(--text-3); }

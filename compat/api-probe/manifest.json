@@ -1,0 +1,48 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium API Probe",
+  "version": "0.1.0",
+  "description": "Reports which chrome.* APIs the engine exposes to Manifest V3 service workers.",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": [
+    "activeTab",
+    "alarms",
+    "bookmarks",
+    "browsingData",
+    "clipboardWrite",
+    "contextMenus",
+    "cookies",
+    "debugger",
+    "declarativeNetRequest",
+    "declarativeNetRequestFeedback",
+    "downloads",
+    "history",
+    "idle",
+    "management",
+    "notifications",
+    "offscreen",
+    "scripting",
+    "sessions",
+    "sidePanel",
+    "storage",
+    "system.memory",
+    "tabGroups",
+    "tabs",
+    "topSites",
+    "webNavigation",
+    "webRequest"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "omnibox": {
+    "keyword": "probe"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Lucium API probe"
+  }
+}

@@ -1,0 +1,23 @@
+/*
+ * "Gérer les espaces" (ManagePanels.tsx, SpacesPanel): the list panel of the templates, 640 px wide, with a grip, the icon, the name with
+ * the profile and the tab count, and the row's buttons. The archived spaces sit under their own title. Tokens only.
+ */
+.lp.sm-panel { width: min(640px, calc(100% - 2 * var(--sp-4))); }
+.sm-panel .sm-row { padding-left: var(--sp-1); }
+.sm-panel .sm-grip { display: grid; place-items: center; flex: none; width: 20px; height: 28px; color: var(--text-3); cursor: grab; }
+.sm-panel .sm-grip svg { fill: none; stroke: currentColor; }
+.sm-panel .sm-row.dragging { opacity: 0.5; }
+.sm-panel .sm-row.over { background: var(--accent-soft); box-shadow: 0 0 0 1px var(--accent); }
+.sm-panel .sm-row.archived { background: var(--surface-2); }
+.sm-panel .sm-row.archived .lp-title { color: var(--text-2); }
+.sm-panel .sm-ico { width: 32px; height: 32px; font-size: 18px; border-radius: var(--r-s); background: var(--tile); }
+.sm-panel .sm-ico .space-letter { width: 24px; height: 24px; }
+.sm-panel .sm-ico .space-image { display: block; width: 28px; height: 28px; border-radius: 50%; object-fit: cover; }
+.sm-panel .sm-sub { display: flex; align-items: center; gap: 6px; }
+.sm-panel .sm-chip { flex: none; padding: 0 6px; border-radius: 999px; background: var(--tile); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); line-height: 18px; }
+.sm-panel .sm-chip.current { background: var(--accent-soft); color: var(--text); }
+.sm-panel .lp-actions { gap: 2px; }
+.sm-panel .lp-actions .tk-btn { width: var(--target); }
+.sm-panel .lp-actions .tk-btn:disabled { opacity: 0.35; }
+.sm-panel .sm-restore { display: flex; align-items: center; flex: none; gap: 2px; }
+.sm-panel .tk-status { padding-bottom: var(--sp-1); }

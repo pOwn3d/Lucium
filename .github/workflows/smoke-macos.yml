@@ -1,0 +1,103 @@
+name: Smoke (macOS)
+
+# The one macOS workflow of the engine checks, on a GitHub macOS runner on Apple silicon, so that they never have to run on a maintainer's Mac in
+# use: they open real windows and take the focus (CONTRIBUTING.md). It runs, in this order:
+#
+#   pnpm test                    the unit tests again, on the commit the chain runs on (ci.yml runs them on every pull request)
+#   pnpm test:engine             the chain of the engine suites in a real Electron, with the probe extensions of compat/
+#   pnpm compat:compare          the report of that chain against the reference of the engine (compat/baseline-electron-<version>.json)
+#   pnpm test:engine:webstore    the web store suite, which cannot run next to the probe extensions of the chain
+#   pnpm test:engine:extwindows  the extensions in three profiles and three windows, which loads probes of its own
+#   pnpm package                 the unsigned .app: it is what users run
+#
+# This is the only workflow that runs the chain. ci.yml holds the checks of every push and pull request, which open no window: the type check,
+# the lint, the unit tests on Linux and on macOS, and an unsigned build.
+#
+# It uses the standard Electron of the project, not the DRM build: that one is made, signed and notarized on the maintainer's Mac
+# (docs/community/release-process.md), and Netflix is tried there by hand.
+#
+# MANUAL (Actions tab > Smoke (macOS) > Run workflow, on the branch or the tag to look at), on a pushed tag `vX.Y.Z`, and WEEKLY (Monday 06:00
+# UTC, which catches a Chromium or Electron regression even when nobody pushes). Never on a push to a branch or a pull request: a run takes a macOS
+# runner for a long while, and on a private repository GitHub bills macOS minutes at 10 times the Linux rate. A tag also starts build.yml,
+# which has a macOS leg of its own (release.yml builds nothing): that is two macOS runs per release.
+# Before a release, run it on the commit to tag. After an Electron bump, run it on the Dependabot branch and read the step of the comparison.
+#
+# What a run leaves to read: each check is written to the log as it is made, each suite has a time limit after which it is counted as failed and
+# named (LUCIUM_SMOKE_SUITE_TIMEOUT_MS changes it), and the chain ends with one line per suite. The log and the report are kept as an artifact.
+# The interface is pinned to French by the run itself (src/main/smoke-kit.ts): the checks read French menus, whatever the language of the runner.
+#
+# The checks need no secret. The suites that read the real Internet (`webstore-live`, `favicons-measure`) are started apart and are not run here
+# (CONTRIBUTING.md).
+#
+# Security: no `pull_request_target`, a read-only token, no secret, nothing written back to the repository.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: smoke-macos-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  engine:
+    name: Engine checks (macOS, Apple silicon)
+    runs-on: macos-latest
+    # The chain has a time limit per suite of its own; this one only bounds the whole job.
+    timeout-minutes: 120
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Machine
+        run: |
+          uname -m
+          sw_vers
+          defaults read -g AppleLanguages || true
+          # Electron runs natively on Apple silicon only here: refuse an Intel runner (or a Rosetta shell) rather than run on another architecture.
+          [ "$(uname -m)" = "arm64" ]
+      # A safety net when the install script of the electron package did not fetch its binary (allowBuilds in pnpm-workspace.yaml).
+      - run: node node_modules/electron/install.js
+      - name: Unit tests (macOS)
+        run: pnpm test
+      # Real Electron: the engine contract, the chrome.* API probes and every suite of the chain (src/main/smoke-suites.ts). It builds first
+      # (`electron-vite build`). The log is kept: `tee` must not hide the exit code of the chain.
+      - name: Engine checks
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p out-engine
+          pnpm test:engine 2>&1 | tee out-engine/engine.log
+      # What the run lost against the reference of the engine. Run even when a suite failed: the comparison says which checks are new failures.
+      - name: Compare with the reference of the engine
+        if: ${{ !cancelled() }}
+        run: pnpm compat:compare
+      # The web store suite on its own, without the probe extensions the chain loads. Run even when the chain failed: both results are wanted.
+      - name: Web store checks
+        if: ${{ !cancelled() }}
+        run: pnpm test:engine:webstore
+      # The extensions in three profiles and three windows, with probes of its own. Run even when the others failed.
+      - name: Extensions in several windows
+        if: ${{ !cancelled() }}
+        run: pnpm test:engine:extwindows
+      # The unsigned .app must build too: it is what users run (and what registers as default browser).
+      - name: Package
+        if: ${{ !cancelled() }}
+        run: pnpm package
+      - name: Keep the log and the report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: engine-run
+          path: out-engine/
+          if-no-files-found: warn

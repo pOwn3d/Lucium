@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Sec2 Active Tab Probe",
+  "version": "0.1.0",
+  "description": "Declares only activeTab: it sees a page, and may capture it, from the moment the user invokes it on that tab until the tab goes to another site.",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["activeTab"],
+  "commands": { "probe-activate": { "description": "Invoke the active tab probe", "suggested_key": { "default": "Ctrl+Shift+8", "mac": "Command+Shift+8" } } },
+  "externally_connectable": { "matches": ["http://127.0.0.1/*"] }
+}

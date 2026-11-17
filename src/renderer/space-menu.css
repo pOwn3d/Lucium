@@ -1,0 +1,77 @@
+/*
+ * The menu of a space, hung from its header. Tokens only: it is light in a light window and dark in a dark one.
+ * overlay.tsx loads this file before styles.css, so every selector starts with `body.overlay`.
+ */
+
+body.overlay .space-menu {
+  position: absolute;
+  box-sizing: border-box;
+  min-width: 236px;
+  width: max-content;
+  max-width: calc(100vw - 2 * var(--sp-2));
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-l);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font: var(--w-regular) var(--t-m) / 1.35 var(--font);
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  animation: space-menu-in 0.12s ease-out both;
+}
+@keyframes space-menu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+body.overlay .sm-row {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  width: 100%;
+  min-height: 32px;
+  padding: 0 10px;
+  border-radius: var(--r-s);
+  text-align: left;
+  color: var(--text);
+}
+body.overlay .sm-row:hover,
+body.overlay .sm-row:focus-visible {
+  background: var(--tile);
+}
+body.overlay .sm-row:focus-visible {
+  outline: var(--focus-width) solid var(--focus);
+  outline-offset: -2px;
+}
+body.overlay .sm-row[aria-disabled='true'] {
+  color: var(--text-3);
+  cursor: default;
+}
+body.overlay .sm-row[aria-disabled='true']:hover {
+  background: transparent;
+}
+body.overlay .sm-label {
+  white-space: nowrap;
+}
+body.overlay .sm-hint {
+  margin-left: auto;
+  color: var(--text-3);
+  font-size: var(--t-s);
+  white-space: nowrap;
+}
+body.overlay .sm-key {
+  margin-left: auto;
+  color: var(--text-3);
+  font: var(--w-regular) var(--t-s) var(--font);
+  letter-spacing: 0.04em;
+}
+body.overlay .sm-separator {
+  height: 1px;
+  margin: 5px 8px;
+  background: var(--line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body.overlay .space-menu { animation: none; }
+}

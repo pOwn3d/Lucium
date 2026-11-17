@@ -1,0 +1,15 @@
+/* The read-only views of the Settings window: the privacy dashboard and the state of the engine. Tokens only; figures in tabular digits. */
+.settings-window .insight-num { font-variant-numeric: tabular-nums; font-weight: var(--w-semibold); color: var(--text); }
+.settings-window .insight-chip { display: inline-flex; align-items: center; min-height: 20px; padding: 0 var(--sp-2); border-radius: 999px; background: var(--tile); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); }
+.settings-window .insight-chip.on { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok-ink); }
+.settings-window .insight-chip.warn { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn-ink); }
+.settings-window .insight-text { max-width: 360px; color: var(--text-2); text-align: right; user-select: text; }
+.settings-window .insight-report { margin: 0; padding: var(--sp-2) var(--sp-3); max-height: 220px; overflow: auto; border-radius: var(--r-s); background: var(--surface-2); color: var(--text-2); font: var(--t-xs)/1.5 var(--mono); white-space: pre-wrap; user-select: text; }
+.settings-window .insight-log { margin: 0; padding: var(--sp-2) var(--sp-3); max-height: 200px; overflow: auto; font: var(--t-xs)/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; user-select: text; }
+.settings-window .insight-status { margin: var(--sp-2) 0 0; font-size: var(--t-s); color: var(--text-2); }
+.settings-window .insight-status.failed { color: var(--danger-ink); }
+@media (prefers-contrast: more) {
+  .settings-window .insight-chip { outline: 1px solid currentColor; outline-offset: -1px; }
+}
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .settings-window .insight-chip { outline: 1px solid currentColor; outline-offset: -1px; }

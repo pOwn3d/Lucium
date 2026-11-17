@@ -1,0 +1,4 @@
+/* The QR code panel (QrPanel.tsx) is in the template of the small editors (templates/Sheet.tsx): these rules draw only what is its own. */
+.qr-panel .qr-code { display: block; width: 100%; max-width: 280px; aspect-ratio: 1; margin: var(--sp-1) auto; border-radius: var(--r-s); }
+.qr-panel .qr-text { margin: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; user-select: text; }
+.qr-panel .qr-hint { margin: 0; text-align: center; }

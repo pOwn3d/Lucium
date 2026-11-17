@@ -1,0 +1,58 @@
+/*
+ * The popover of the + at the foot of the sidebar:
+ * a card at least 209 px wide with 12 px corners and an 8 px padding, rows of 40 px (icon at 10 px, label at 42 px, shortcut 12 px from the right edge),
+ * separators that take 17 px (8 + a 1 px line + 8), the selected row #262a29 with 10 px corners, and a bump pointing at the button.
+ * The card is almost black (#020303 on a green space): here a hint of the space's hue over black.
+ *
+ * overlay.tsx loads this file before styles.css, so every selector starts with `body.overlay`.
+ */
+
+/* The overlay covers the window: no dimming, and the card is placed by its own right and bottom offsets. */
+body.overlay .backdrop.plus-host { display: block; padding: 0; background: transparent; }
+
+body.overlay .plus-menu {
+  --plus-fill: color-mix(in srgb, var(--accent) 6%, var(--surface));
+  --plus-line: var(--tile-hover);
+  position: absolute;
+  box-sizing: border-box;
+  /* 209 px for English labels; the card takes the width of its longest row, which French labels and shortcuts make a little wider. */
+  width: max-content;
+  min-width: 209px;
+  padding: 8px;
+  border-radius: 12px;
+  background: var(--plus-fill);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  user-select: none;
+  /* It grows out of the bump, which sits over the button. */
+  transform-origin: calc(100% - 15px) calc(100% + 9px);
+  animation: plus-grow 0.2s cubic-bezier(0.2, 0.9, 0.3, 1.08) both;
+}
+@keyframes plus-grow {
+  from { opacity: 0; transform: scale(0.7, 0.5); }
+  to { opacity: 1; transform: scale(1, 1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body.overlay .plus-menu { animation: none; }
+}
+
+body.overlay .plus-row {
+  display: flex; align-items: center; width: 100%; height: 40px; padding: 0 12px 0 7px; border-radius: 10px;
+  color: inherit; text-align: left; font-size: 13px; font-weight: 600; line-height: 19px;
+}
+body.overlay .plus-row.selected { background: var(--plus-line); }
+/* The chosen row is the focused one: reached from the keyboard, it has the ring of the focus inside its fill. */
+body.overlay .plus-row:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
+body.overlay .plus-row[aria-disabled='true'] { color: var(--text-3); }
+
+/* The glyphs are drawn in 22 x 22: with 7 px before them they start 10 px inside the row, and the label starts 42 px inside it. */
+body.overlay .plus-icon { flex: none; display: grid; place-items: center; width: 22px; height: 22px; margin-right: 13px; }
+body.overlay .plus-label { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+body.overlay .plus-key { flex: none; margin-left: 8px; font-size: 12px; font-weight: 500; color: var(--text-3); }
+body.overlay .plus-row[aria-disabled='true'] .plus-key { color: var(--text-3); }
+
+body.overlay .plus-separator { height: 1px; margin: 8px 3.5px; background: var(--plus-line); }
+
+body.overlay .plus-arrow { position: absolute; right: 0; bottom: -9px; color: var(--plus-fill); }

@@ -1,0 +1,136 @@
+name: CI
+
+# The quality checks of every pull request and of every push to main. Five jobs, and the NAME of each is the name of a required check in the
+# rules of main (docs/community/maintainers.md holds the table: a job renamed here must be renamed there, a test compares the two):
+#
+#   Type check                `pnpm typecheck`: the application, the end-to-end tests, the configuration files and the scripts.
+#   Lint                      `pnpm lint`: oxlint with the short list of rules of .oxlintrc.jsonc, the promises rule read with the types. No formatter.
+#   Unit tests (Linux)        `pnpm test`: Vitest, pure logic, no window.
+#   Unit tests (macOS)        the same on the system the application is made for: the tests that only run on macOS are skipped on Linux.
+#   Build (macOS, unsigned)   `pnpm build` (electron-vite: a broken import, asset or plugin fails here and nowhere above), then the
+#                             application packaged as a folder, unsigned. Nothing of it is kept.
+#
+# The public site and its tests live in their own repository.
+#
+# What opens a window is not here: the engine checks in a real Electron (`pnpm test:engine` and the suites run apart) are the workflow
+# "Smoke (macOS)" (smoke-macos.yml: manual, on a tag and weekly), and the Playwright suite (tests/e2e, `pnpm test:e2e`) is e2e.yml (manual
+# or nightly). Neither is a required check.
+#
+# The two macOS jobs are skipped while the repository is private, unless the run is started by hand: GitHub bills the macOS minutes of a
+# private repository at 10 times the Linux rate (free plan: 2,000 included minutes a month, so 200 macOS minutes), and standard runners are
+# free on a public one. Nothing to change when the repository becomes public: they start running by themselves. A required check that is
+# skipped counts as passed, so the rules of main are to be set on the public repository only.
+#
+# Security: this workflow uses `pull_request` (never `pull_request_target`): code from a fork runs with a read-only token and no
+# secret. Keep it that way. Nothing is signed, nothing is published, nothing is uploaded. In the repository settings, require approval to
+# run workflows from first-time contributors.
+#
+# The setup is the same in every job, and is written once: the local action .github/actions/setup, called right after actions/checkout
+# (pnpm/setup, pinned to a commit; pnpm of the "packageManager" of package.json, Node from .nvmrc, the cache of the store and
+# `pnpm install --frozen-lockfile`). Every workflow that installs (ci, build, e2e, smoke-macos) goes through it. audit.yml and sbom.yml call
+# pnpm/setup themselves (`install: false`): the pin and the pnpm version of the three places must stay the same.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+
+  unit-linux:
+    name: Unit tests (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - run: pnpm test
+
+  unit-macos:
+    name: Unit tests (macOS)
+    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Machine
+        run: |
+          uname -m
+          sw_vers
+      - run: pnpm test
+
+  build-macos:
+    name: Build (macOS, unsigned)
+    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
+    runs-on: macos-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup
+      - name: Machine
+        run: |
+          uname -m
+          sw_vers
+          # The application is packaged for Apple silicon: refuse an Intel runner rather than build for another architecture.
+          [ "$(uname -m)" = "arm64" ]
+      # A safety net when the install script of the electron package did not fetch its binary (allowBuilds in pnpm-workspace.yaml).
+      - run: node node_modules/electron/install.js
+      # The three bundles (main, preload, renderer). A type check and unit tests that pass say nothing of an import of a stylesheet, the
+      # path of an asset, the HTML of a surface or a Vite plugin: this step does.
+      - name: Build
+        run: pnpm build
+      # What `pnpm package` does after the build above: the helpers of native/, then the .app as a folder, on the standard Electron of the
+      # project (not the DRM variant, which is made on the maintainer's Mac). It proves that the commit packages; the folder stays on the runner.
+      - name: Package the application as a folder (unsigned, nothing kept)
+        env:
+          # Never look for a signing identity in the keychain of the runner; no certificate is configured anywhere.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          pnpm build:native
+          pnpm exec electron-builder --mac --dir --arm64 --publish never
+          test -d dist/mac-arm64/Lucium.app

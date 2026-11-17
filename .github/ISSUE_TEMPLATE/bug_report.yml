@@ -1,0 +1,82 @@
+name: Bug report
+description: Something does not work as it should. / Quelque chose ne fonctionne pas comme prévu.
+title: 'bug: '
+labels: ['bug', 'triage', 'community-public']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time. English or French, both are fine. / Merci. Anglais ou français, au choix.
+
+        - Search the [existing issues](https://github.com/pOwn3d/Lucium/issues?q=is%3Aissue) first.
+        - **Security problem?** Do not file it here: see [SECURITY.md](https://github.com/pOwn3d/Lucium/blob/main/SECURITY.md).
+        - **Something missing from your previous browser?** Use the "Missing from your previous browser" form instead.
+        - Lucium is a public beta. Only macOS on Apple silicon is tested.
+  - type: input
+    id: version
+    attributes:
+      label: Lucium version
+      description: The version that Lucium › About Lucium shows (for example `1.0.0`), or the commit if you built from the sources (`git rev-parse --short HEAD`).
+      placeholder: 1.0.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How did you install it?
+      options:
+        - Disk image downloaded from lucium.app
+        - Updated from inside Lucium (Check for Updates…)
+        - Built from the sources (pnpm package)
+        - Running from the sources (pnpm dev / pnpm start)
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS version and chip
+      description: Apple menu > About This Mac.
+      placeholder: macOS 15.x, Apple M2
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The shortest path that shows the problem, one step per line.
+      placeholder: |
+        1. Open ...
+        2. Right-click ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Error messages, what you see, how often it happens. A screenshot helps (see the privacy box below).
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else
+      description: Extensions loaded, a private window or not, the site involved (a test page if you can), output of the terminal if you started the app from `pnpm start`.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before sending
+      options:
+        - label: I searched the existing issues.
+          required: true
+        - label: I removed personal data (tab titles, addresses, accounts, file paths with my user name) from the screenshots and logs I attached.
+          required: true
+        - label: This is not a security vulnerability.
+          required: true

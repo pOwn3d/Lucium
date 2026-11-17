@@ -1,0 +1,62 @@
+name: SBOM
+
+# A software bill of materials in CycloneDX, written by `pnpm sbom` from pnpm-lock.yaml, kept as an artifact of the run. Two files:
+#
+#   lucium-shipped.cdx.json   what the application carries from npm (`dependencies` and what they bring in).
+#   lucium-all.cdx.json       the build and test tools too. Electron is in this one: it is a development dependency in package.json,
+#                             although its engine is what a user runs.
+#
+# What neither file says: the downloads are built on the maintainer's Mac with the Electron of castLabs (the Widevine variant), whose
+# version is the `electron` of package.json but whose binary is not the npm one; and what does not come from npm (the native pieces of
+# native/, the fonts, the filter lists) is listed in THIRD-PARTY-NOTICES.txt and docs/licences-tierces.md.
+#
+# Nothing is installed: pnpm reads the lockfile only. No secret, a read-only token, nothing attached to a Release.
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: sbom-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sbom:
+    name: SBOM (CycloneDX)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Same pinned action and pnpm version as .github/actions/setup (see ci.yml): keep the two in step. `install: false`: pnpm alone, no
+      # dependency is downloaded.
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          version: 12.16.1
+          install: false
+          require-lockfile: true
+      - name: Write the two files
+        run: |
+          set -euo pipefail
+          mkdir -p sbom
+          pnpm sbom --sbom-format cyclonedx --sbom-type application --lockfile-only --prod --out sbom/lucium-shipped.cdx.json
+          pnpm sbom --sbom-format cyclonedx --sbom-type application --lockfile-only --out sbom/lucium-all.cdx.json
+          # A file that is not a bill of materials, or an empty one, fails here and is not kept.
+          for file in sbom/lucium-shipped.cdx.json sbom/lucium-all.cdx.json; do
+            jq -e '.bomFormat == "CycloneDX" and (.components | length) > 0' "$file" > /dev/null
+            echo "$file: $(jq '.components | length' "$file") components"
+          done
+          jq -e '[.components[].name] | index("electron") != null' sbom/lucium-all.cdx.json > /dev/null
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lucium-sbom-cyclonedx
+          path: sbom/
+          if-no-files-found: error
+          retention-days: 90

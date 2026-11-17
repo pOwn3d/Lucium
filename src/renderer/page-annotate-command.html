@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'none'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="./tokens.css" />
+    <link rel="stylesheet" href="./palette.css" />
+    <title>Lucium</title>
+  </head>
+  <body class="settings-window page-annotate-body">
+    <!--
+      The bar of the page annotation, where the user put it (docs/design/annotation-partage-fenetre.md, « Position de la barre »): a column (groups of one
+      size, spaced evenly, centred) on the left or right edge, a row on the top or bottom one, either when floating. `data-layout` says which: main
+      sets the size of the window from shared/annotate-bar.ts, and the widths below are its numbers (the --pa-* properties, which a test compares).
+      Its colours are the roles of tokens.css, so the bar is light in light and dark in dark like the rest of the interface (the appearance of the system, or the one
+      the View menu forces); the only fixed colours are the red and the white of the preview of a laser's look (palette.css).
+      The handle at the head (the grip, which drags the bar, and the Position button, which opens its menu) is how the bar is placed; the groups are flat
+      children of the column (`display: contents`) and whole items of the row, which wraps by group. The row never scrolls: its window is the size of its groups.
+    -->
+    <nav class="page-annotate-bar" id="page-annotate-bar" data-layout="column">
+      <!-- The first-use hint (shown once, until « OK », Escape, or the first use of the grip or of the menu): a bubble above the grip, whose tail points at it. -->
+      <div id="page-annotate-hint" class="page-annotate-hint" role="group" aria-labelledby="page-annotate-hint-text" hidden>
+        <div class="page-annotate-bubble">
+          <span id="page-annotate-hint-text" class="page-annotate-hint-text"></span>
+          <button id="page-annotate-hint-ok" type="button" class="page-annotate-hint-ok"></button>
+        </div>
+      </div>
+      <div class="page-annotate-head">
+        <!-- The handle: the grip (a drag moves the bar, a right click opens the menu) and the Position button (a click opens the same menu). -->
+        <div class="page-annotate-handle">
+          <button id="page-annotate-grip" type="button" class="page-annotate-grip" aria-haspopup="menu">
+            <svg viewBox="0 0 8 14" fill="currentColor" aria-hidden="true">
+              <circle cx="2" cy="2" r="1.3" /><circle cx="6" cy="2" r="1.3" />
+              <circle cx="2" cy="7" r="1.3" /><circle cx="6" cy="7" r="1.3" />
+              <circle cx="2" cy="12" r="1.3" /><circle cx="6" cy="12" r="1.3" />
+            </svg>
+          </button>
+          <button id="page-annotate-position" type="button" class="page-annotate-position" aria-haspopup="menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true">
+              <path d="M4 5h16v14H4z" /><path d="M9.5 5v14" /><path d="M4 5h5.5v14H4z" fill="currentColor" fill-opacity="0.28" stroke="none" />
+            </svg>
+          </button>
+        </div>
+        <button id="page-annotate-mode" type="button" class="page-annotate-key"></button>
+      </div>
+      <span class="page-annotate-rule" aria-hidden="true"></span>
+      <div id="page-annotate-tools" role="group" class="page-annotate-tools"></div>
+      <div id="page-annotate-laser" role="group" class="page-annotate-styles" hidden>
+        <span id="page-annotate-laser-name" class="page-annotate-style-name" aria-hidden="true"></span>
+      </div>
+      <span class="page-annotate-rule" aria-hidden="true"></span>
+      <div id="page-annotate-colors" role="group" class="page-annotate-colors"></div>
+      <span class="page-annotate-rule" aria-hidden="true"></span>
+      <div class="page-annotate-edits">
+        <!-- The timer of the automatic clearing (shared/annotate-auto-clear.ts): a click goes to the next delay (off, 3, 5, 10, 20, 30 s). -->
+        <button id="page-annotate-timer" type="button" class="page-annotate-timer"></button>
+        <button id="page-annotate-undo" type="button" class="page-annotate-text"></button>
+        <button id="page-annotate-redo" type="button" class="page-annotate-text"></button>
+        <button id="page-annotate-clear" type="button" class="page-annotate-text page-annotate-danger"></button>
+        <button id="page-annotate-clear-all" type="button" class="page-annotate-text page-annotate-danger"></button>
+      </div>
+      <span class="page-annotate-rule" aria-hidden="true"></span>
+      <button id="page-annotate-stop" type="button" class="page-annotate-text"></button>
+      <p id="page-annotate-note" role="status"></p>
+    </nav>
+    <style>
+      /* The sizes of the bar: shared/annotate-bar.ts `barMetricVars` (a test compares them), which sizes the window for them. */
+      :root {
+        --pa-column-w: 84px;
+        --pa-button-h: 42px;
+        --pa-key-w: 72px;
+        --pa-grip-w: 28px;
+        --pa-position-w: 28px;
+        --pa-handle-gap: 2px;
+        --pa-head-h: 28px;
+        --pa-tool-w: 40px;
+        --pa-tool-gap: 2px;
+        --pa-swatch: 20px;
+        --pa-swatch-gap: 6px;
+        --pa-text-w: 50px;
+        --pa-styles-w: 78px;
+        --pa-group-gap: 10px;
+        --pa-line-gap: 4px;
+        --pa-pad-x: 10px;
+        --pa-pad-y: 6px;
+        --pa-note-h: 28px;
+        --pa-hint-col-h: 128px;
+        --pa-hint-row-h: 44px;
+      }
+      /* The window of the bar is not transparent: what shows round the corners of the bar is the page, which takes the ground of the bar so that the
+         window is one colour in light and in dark (a white page would show as four white corners round a dark bar). */
+      html,
+      body {
+        background: var(--surface);
+      }
+      .page-annotate-body {
+        margin: 0;
+        overflow: hidden;
+        font: 12px -apple-system, system-ui, sans-serif;
+      }
+      /* The column: centred, so that any spare height is shared above and below the groups, and never gathers at the foot. `safe` keeps the top of what is
+         taller than the window in view: with a plain `center` the overflow went half above the top, where no scrolling reaches (the grip and the first tools
+         were lost in a window shorter than the bar). */
+      .page-annotate-bar {
+        box-sizing: border-box;
+        font: 12px/1.2 -apple-system, system-ui, sans-serif;
+        width: var(--pa-column-w);
+        height: 100vh;
+        padding: 10px 5px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: safe center;
+        gap: 0;
+        overflow-x: hidden;
+        overflow-y: auto;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 16px;
+        box-shadow: var(--shadow);
+        color: var(--text);
+      }
+      /* The reset of the buttons has no specificity (:where): the classes below win over it. Before, `.page-annotate-bar button` (0,1,1) beat
+         `.page-annotate-text` and `.page-annotate-danger` (0,1,0): the font, the weight and the colour of the actions were never applied. */
+      :where(.page-annotate-bar) button {
+        font: inherit;
+        border: 0;
+        cursor: pointer;
+        background: transparent;
+        color: inherit;
+        padding: 0;
+        transition: background-color 120ms ease, box-shadow 120ms ease, transform 80ms ease;
+      }
+      /* When the page is shorter than the bar, the column scrolls: the scrollbar stays visible (not an overlay that hides). */
+      .page-annotate-bar::-webkit-scrollbar {
+        width: 8px;
+      }
+      .page-annotate-bar::-webkit-scrollbar-thumb {
+        background: var(--line-strong);
+        border-radius: 4px;
+      }
+      .page-annotate-bar button:disabled {
+        opacity: 0.35;
+        cursor: default;
+      }
+      /* One size for every button of the column (72 × 42), so that the groups line up. */
+      .page-annotate-key,
+      .page-annotate-tool,
+      .page-annotate-text {
+        width: var(--pa-key-w);
+        height: var(--pa-button-h);
+        border-radius: 10px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+      /* The actions share one weight and one size: Annuler, Rétablir, Page, Tout and Quitter. */
+      .page-annotate-text {
+        font-size: 12px;
+        font-weight: 500;
+        line-height: 1;
+      }
+      .page-annotate-danger {
+        color: var(--danger-ink);
+      }
+      /* The timer of the automatic clearing: a small button above Annuler in the column (the icon and the delay on one line, so that the column keeps its
+         height), as wide as a tool in the row (the icon over the delay, as the letter of a tool). In the accent while the clearing is on, plain while it is off
+         (the icon alone: there is no delay to show). */
+      .page-annotate-timer {
+        width: var(--pa-key-w);
+        height: 30px;
+        margin-bottom: 4px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        color: var(--text-2);
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+      }
+      .page-annotate-timer svg {
+        width: 16px;
+        height: 16px;
+        flex: none;
+      }
+      .page-annotate-timer[data-on='true'],
+      .page-annotate-timer[data-on='true']:hover:not(:disabled) {
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        box-shadow: inset 0 0 0 1.5px var(--accent);
+      }
+      .page-annotate-tools {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--pa-tool-gap);
+      }
+      .page-annotate-tool svg {
+        width: 20px;
+        height: 20px;
+      }
+      .page-annotate-key svg {
+        width: 20px;
+        height: 20px;
+      }
+      .page-annotate-key[aria-pressed='true'],
+      .page-annotate-tool[aria-pressed='true'] {
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        box-shadow: inset 0 0 0 1.5px var(--accent);
+      }
+      .page-annotate-letter {
+        font-size: 9.5px;
+        line-height: 1;
+        letter-spacing: 0.04em;
+        /* 4.5:1 or more on the bar, under the pointer and on the chosen tool, in light and in dark (the paler --text-3 does not reach it on the chosen tool). */
+        color: var(--text-2);
+      }
+      .page-annotate-colors {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: var(--pa-swatch-gap);
+      }
+      .page-annotate-swatch {
+        width: var(--pa-swatch);
+        height: var(--pa-swatch);
+        border-radius: 10px;
+        border: 1px solid var(--line-strong);
+      }
+      .page-annotate-swatch[aria-pressed='true'] {
+        border: 2px solid var(--text);
+      }
+      /* The laser's looks: three chips in a row, each with a preview of its look, and the name of the one chosen under them. */
+      .page-annotate-styles {
+        display: grid;
+        grid-template-columns: repeat(3, 22px);
+        justify-content: center;
+        column-gap: 3px;
+        row-gap: 4px;
+        padding-top: 2px;
+      }
+      .page-annotate-styles[hidden] {
+        display: none;
+      }
+      .page-annotate-style {
+        width: 22px;
+        height: 22px;
+        border-radius: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .page-annotate-style[aria-pressed='true'] {
+        background: var(--accent-soft);
+        box-shadow: inset 0 0 0 1.5px var(--accent);
+      }
+      .page-annotate-style-name {
+        grid-column: 1 / -1;
+        text-align: center;
+        font-size: 10px;
+        line-height: 1.2;
+        color: var(--text-2);
+      }
+      .page-annotate-dot {
+        display: block;
+        border-radius: 50%;
+      }
+      /* The previews are pictures of the laser as the page shows it (a red point, a white rim or a white core): fixed colours, in both appearances. */
+      .page-annotate-dot-net {
+        width: 7px;
+        height: 7px;
+        background: var(--fixed-e53935);
+        box-shadow: 0 0 0 1px var(--fixed-ffffff);
+      }
+      .page-annotate-dot-discret {
+        width: 3.5px;
+        height: 3.5px;
+        background: var(--fixed-e53935);
+      }
+      .page-annotate-dot-lumiere {
+        width: 8px;
+        height: 8px;
+        background: var(--fixed-ffffff);
+        box-shadow: 0 0 0 2px var(--fixed-e53935), 0 0 7px 4px var(--fixed-e53935-50);
+      }
+      /* Equal rules, equal spacing: the separators of the column are all the same. */
+      .page-annotate-rule {
+        width: 36px;
+        height: 1px;
+        background: var(--line);
+        margin: 6px 0;
+      }
+      /* Hover, press and keyboard focus: the buttons answer each pointer move (no layout change). */
+      .page-annotate-bar button:hover:not(:disabled) {
+        background: var(--tile);
+      }
+      /* The chosen tool keeps its ground under the pointer (the rule above would take it away), and answers with a heavier ring. */
+      .page-annotate-tool[aria-pressed='true']:hover:not(:disabled) {
+        background: var(--accent-soft);
+        box-shadow: inset 0 0 0 2px var(--accent);
+      }
+      .page-annotate-bar button:active:not(:disabled) {
+        transform: scale(0.96);
+      }
+      .page-annotate-bar button:focus-visible {
+        outline: var(--focus-width) solid var(--focus);
+        outline-offset: 1px;
+      }
+      .page-annotate-bar p {
+        margin: 0;
+        font-size: 10px;
+        text-align: center;
+        /* 4.5:1 or more on the bar in light and in dark, for a text of 10 px. */
+        color: var(--text-2);
+      }
+      .page-annotate-bar p:empty {
+        display: none;
+      }
+      /* The head and the edits are flat in the column (the same spacing as before they were grouped); the row takes them whole. */
+      .page-annotate-head,
+      .page-annotate-edits {
+        display: contents;
+      }
+      /* The handle at the head of the bar: the grip, which takes all the strip but the Position button, and that button. In the column the strip is as wide as a
+         button; in the row it is as high as one. */
+      .page-annotate-handle {
+        flex: none;
+        width: var(--pa-key-w);
+        height: var(--pa-head-h);
+        margin-bottom: 2px;
+        display: flex;
+        gap: var(--pa-handle-gap);
+      }
+      /* The grip: six dots on a tinted strip, so that it looks like what it is, a handle. A drag moves the bar, a right click opens its menu. The dots are the
+         control's mark: 4.5:1 and more on the strip, in light and in dark (3:1 is what a control needs). The hover and the drag tint it with the accent. */
+      .page-annotate-grip {
+        flex: 1 1 auto;
+        min-width: 0;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface-3);
+        color: var(--text-2);
+        cursor: grab;
+        touch-action: none;
+        user-select: none;
+      }
+      .page-annotate-grip svg {
+        width: 12px;
+        height: 21px;
+        transform: rotate(90deg);
+      }
+      .page-annotate-bar .page-annotate-grip:hover {
+        background: var(--accent-soft);
+        color: var(--accent-text);
+      }
+      .page-annotate-dragging,
+      .page-annotate-dragging * {
+        cursor: grabbing;
+      }
+      .page-annotate-dragging .page-annotate-grip {
+        background: var(--accent-soft);
+        color: var(--accent-text);
+        box-shadow: inset 0 0 0 1.5px var(--accent);
+      }
+      /* The Position button: a click opens the menu « Position de la barre », as a right click on the grip does. */
+      .page-annotate-position {
+        flex: 0 0 var(--pa-position-w);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface-3);
+        color: var(--text-2);
+      }
+      .page-annotate-position svg {
+        width: 18px;
+        height: 18px;
+      }
+      .page-annotate-bar .page-annotate-position:hover {
+        background: var(--accent-soft);
+        color: var(--accent-text);
+      }
+      /* The first-use hint: a slot above the handle, with the bubble in it, its tail pointing down at the handle. The slot has the model's heights (--pa-hint-col-h,
+         --pa-hint-row-h), the tail being in the space under the bubble. In the column the bubble is as wide as a button, with the text above « OK »; in the row
+         the slot is a line of its own, and the bubble is as wide as its text and « OK » side by side, at the left, above the grip. */
+      .page-annotate-hint {
+        flex: none;
+        width: var(--pa-key-w);
+        height: calc(var(--pa-hint-col-h) - 8px);
+        margin-bottom: 8px;
+        display: flex;
+      }
+      .page-annotate-hint[hidden] {
+        display: none;
+      }
+      .page-annotate-bubble {
+        position: relative;
+        box-sizing: border-box;
+        width: 100%;
+        height: 100%;
+        padding: 6px 4px 5px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        gap: 4px;
+        border: 1px solid var(--accent);
+        border-radius: 10px;
+        background: var(--accent-soft);
+        color: var(--text);
+        font-size: 10.5px;
+        line-height: 1.25;
+        text-align: center;
+        animation: page-annotate-hint-in 180ms ease-out;
+      }
+      .page-annotate-hint-text {
+        min-height: 0;
+        overflow: hidden;
+      }
+      /* The tail: a square turned on its corner, on the bottom edge, pointing at the handle under the bubble. */
+      .page-annotate-bubble::after {
+        content: '';
+        position: absolute;
+        bottom: -6px;
+        left: 50%;
+        width: 9px;
+        height: 9px;
+        margin-left: -4.5px;
+        box-sizing: border-box;
+        background: var(--accent-soft);
+        border-right: 1px solid var(--accent);
+        border-bottom: 1px solid var(--accent);
+        transform: rotate(45deg);
+      }
+      .page-annotate-hint-ok {
+        flex: none;
+        height: 22px;
+        padding: 0 12px;
+        border-radius: 6px;
+        background: var(--accent);
+        color: var(--on-accent);
+        font-size: 11px;
+        font-weight: 600;
+      }
+      .page-annotate-bar .page-annotate-hint-ok:hover:not(:disabled) {
+        background: var(--accent-strong);
+      }
+      @keyframes page-annotate-hint-in {
+        from {
+          opacity: 0;
+          transform: translateY(-4px);
+        }
+        to {
+          opacity: 1;
+          transform: none;
+        }
+      }
+      /* Reduced motion: the system's wish. The hint appears at once, and the buttons neither fade nor shrink when pressed. */
+      @media (prefers-reduced-motion: reduce) {
+        .page-annotate-bubble {
+          animation: none;
+        }
+        :where(.page-annotate-bar) button {
+          transition: none;
+        }
+        .page-annotate-bar button:active:not(:disabled) {
+          transform: none;
+        }
+      }
+
+      /* The row: the window is as wide as its longest line (shared/annotate-bar.ts barSize), and the groups wrap by themselves, a group at a time. */
+      .page-annotate-bar[data-layout='row'] {
+        width: 100vw;
+        padding: var(--pa-pad-y) var(--pa-pad-x);
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-content: safe center;
+        /* The row never scrolls: its window is the size of its groups (shared/annotate-bar.ts barSize). With `auto`, the column's tall content in a window that was
+           just made a row's size made a scrollbar of 8 points, which took the room the last group needed, wrapped it out of sight, and kept the scrollbar. */
+        overflow: hidden;
+        column-gap: var(--pa-group-gap);
+        row-gap: var(--pa-line-gap);
+      }
+      /* The rules between groups are for the column: the row spaces its groups instead (a rule could end a line). */
+      .page-annotate-bar[data-layout='row'] .page-annotate-rule {
+        display: none;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-head,
+      .page-annotate-bar[data-layout='row'] .page-annotate-edits {
+        display: flex;
+        align-items: center;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-tools,
+      .page-annotate-bar[data-layout='row'] .page-annotate-colors {
+        flex-direction: row;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-handle {
+        width: calc(var(--pa-grip-w) + var(--pa-handle-gap) + var(--pa-position-w));
+        height: var(--pa-button-h);
+        margin-bottom: 0;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-grip {
+        flex: 0 0 var(--pa-grip-w);
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-grip svg {
+        transform: none;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-hint {
+        flex: 0 0 100%;
+        width: auto;
+        height: calc(var(--pa-hint-row-h) - var(--pa-line-gap));
+        margin-bottom: 0;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-bubble {
+        width: fit-content;
+        max-width: 100%;
+        padding: 0 8px 0 12px;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 12px;
+        font-size: 12px;
+        text-align: left;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-bubble::after {
+        left: 14px;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-tool {
+        width: var(--pa-tool-w);
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-text {
+        width: var(--pa-text-w);
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-timer {
+        width: var(--pa-tool-w);
+        height: var(--pa-button-h);
+        margin-bottom: 0;
+        flex-direction: column;
+        gap: 2px;
+        font-size: 9.5px;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-timer svg {
+        width: 18px;
+        height: 18px;
+      }
+      .page-annotate-bar[data-layout='row'] .page-annotate-styles {
+        width: var(--pa-styles-w);
+        padding-top: 0;
+      }
+      /* The note takes a line of its own under the buttons: at most two lines. */
+      .page-annotate-bar[data-layout='row'] p {
+        flex: 0 0 100%;
+        max-height: calc(var(--pa-note-h) - var(--pa-line-gap));
+        overflow: hidden;
+      }
+    </style>
+    <script type="module" src="./page-annotate-command.ts"></script>
+  </body>
+</html>

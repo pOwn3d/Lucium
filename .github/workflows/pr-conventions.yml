@@ -1,0 +1,107 @@
+name: Pull request conventions
+
+# Two checks on every pull request to main, both meant to be REQUIRED by the rules of the branch:
+#
+#   DCO        every commit of the pull request carries a `Signed-off-by: Name <email>` line that names its author
+#              (`git commit -s`): the Developer Certificate of Origin 1.1 (https://developercertificate.org), which is how a
+#              contribution enters the project (CONTRIBUTING.md). Merge commits are skipped.
+#   PR title   the title follows Conventional Commits with the types of CONTRIBUTING.md. Pull requests are squash-merged: the title
+#              is the line that lands in the history of main.
+#
+# Security: `pull_request`, never `pull_request_target`. The DCO job checks the pull request out to READ its commits (`git rev-list`,
+# `git show`); it installs nothing and runs nothing that comes from the pull request. The title job has no checkout and no permission
+# at all. The title, the names and the subjects are text chosen by the author: they reach the scripts through the environment, never
+# through `${{ }}` inside a script.
+#
+# The two scripts are run by src/main/workflow-hygiene.test.ts, on a repository and on titles made for the test.
+
+on:
+  pull_request:
+    branches: [main]
+    # `edited`: a new title is checked again.
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: pr-conventions-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  dco:
+    name: DCO
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      # The merge commit of the pull request with its whole history: the base and the head of the pull request are both in it.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Every commit is signed off by its author
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -euo pipefail
+          for commit in "$BASE" "$HEAD"; do
+            if ! git cat-file -e "$commit^{commit}" 2>/dev/null; then
+              echo "::error title=DCO::The commit $commit of the pull request is not in the history that was fetched: nothing can be checked."
+              exit 1
+            fi
+          done
+          lower() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]'; }
+          checked=0
+          missing=0
+          while IFS= read -r sha; do
+            [ -n "$sha" ] || continue
+            checked=$((checked + 1))
+            name="$(git show -s --format=%an "$sha")"
+            email="$(git show -s --format=%ae "$sha")"
+            signed=no
+            # Only real trailers count (the last block of the message), one signer per line: "Name <email>".
+            while IFS= read -r signer; do
+              signer_email="$(printf '%s' "$signer" | sed -n 's/^.*[^[:space:]][[:space:]]*<\([^<>[:space:]]*@[^<>[:space:]]*\)>[[:space:]]*$/\1/p')"
+              signer_name="$(printf '%s' "$signer" | sed 's/[[:space:]]*<[^<>]*>[[:space:]]*$//')"
+              [ -n "$signer_email" ] && [ -n "$signer_name" ] || continue
+              if [ "$(lower "$signer_email")" = "$(lower "$email")" ] || [ "$(lower "$signer_name")" = "$(lower "$name")" ]; then signed=yes; fi
+            done < <(git show -s --format='%(trailers:key=Signed-off-by,valueonly)' "$sha")
+            if [ "$signed" = no ]; then
+              missing=$((missing + 1))
+              echo "::error title=DCO::Commit ${sha:0:12} has no Signed-off-by line that names its author."
+              echo "  author: $name <$email>"
+            fi
+          done < <(git rev-list --no-merges "$BASE..$HEAD")
+          if [ "$missing" -gt 0 ]; then
+            echo "$missing of $checked commit(s) lack the sign-off of their author."
+            echo "Add it with: git rebase --signoff $BASE && git push --force-with-lease"
+            echo "It certifies the Developer Certificate of Origin 1.1 (https://developercertificate.org), see CONTRIBUTING.md."
+            exit 1
+          fi
+          echo "$checked commit(s), all signed off by their author."
+
+  title:
+    name: PR title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: The title follows Conventional Commits
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          set -euo pipefail
+          # The types of CONTRIBUTING.md. An optional scope, `!` for a breaking change, then what changed: lower case first, no final period.
+          types='feat|fix|perf|refactor|docs|test|build|ci|chore|revert'
+          pattern="^($types)(\([a-z0-9][a-z0-9._/-]*\))?!?: [^[:space:][:upper:]].*[^[:space:].]\$"
+          if [[ "$TITLE" =~ $pattern ]]; then
+            echo "The title follows Conventional Commits."
+            exit 0
+          fi
+          echo "::error title=PR title::The title of the pull request does not follow Conventional Commits."
+          echo "Expected: <type>(<scope>): <what changed, imperative, lower case, no final period>"
+          echo "Types: ${types//|/, }. The scope is optional; a breaking change takes a ! before the colon."
+          echo "Example: fix(sidebar): keep the selection when a folder closes"
+          exit 1

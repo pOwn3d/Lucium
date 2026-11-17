@@ -1,0 +1,134 @@
+{
+  "version": 1,
+  "provisional": false,
+  "defaultMarginPercent": 25,
+  "reference": {
+    "machine": "Mac16,5",
+    "os": "macOS 27.2.1",
+    "cpu": "Apple M4 Max",
+    "memoryGb": 36,
+    "electron": "45.2.1"
+  },
+  "scenarios": {
+    "startup-cold": {
+      "readyMs": {
+        "baseline": 429.6
+      }
+    },
+    "idle-empty": {
+      "rssTotalMb": {
+        "baseline": 619.9
+      },
+      "rssMainMb": {
+        "baseline": 223.8
+      },
+      "rssRendererMb": {
+        "baseline": 255.7
+      },
+      "rssGpuMb": {
+        "baseline": 92.3
+      },
+      "rssUtilityMb": {
+        "baseline": 48.4
+      },
+      "processCount": {
+        "baseline": 5
+      },
+      "cpuMeanPct": {
+        "baseline": 0.4
+      }
+    },
+    "tabs-10": {
+      "rssTotalMb": {
+        "baseline": 1688.4
+      },
+      "rssMainMb": {
+        "baseline": 274.4
+      },
+      "rssRendererMb": {
+        "baseline": 1239.1
+      },
+      "rssGpuMb": {
+        "baseline": 121.7
+      },
+      "rssUtilityMb": {
+        "baseline": 53.8
+      },
+      "processCount": {
+        "baseline": 15
+      },
+      "cpuMeanPct": {
+        "baseline": 1
+      }
+    },
+    "tabs-50": {
+      "rssTotalMb": {
+        "baseline": 5753.7
+      },
+      "rssMainMb": {
+        "baseline": 297.4
+      },
+      "rssRendererMb": {
+        "baseline": 5198.6
+      },
+      "rssGpuMb": {
+        "baseline": 171.9
+      },
+      "rssUtilityMb": {
+        "baseline": 59.3
+      },
+      "processCount": {
+        "baseline": 55
+      },
+      "cpuMeanPct": {
+        "baseline": 3.7
+      }
+    },
+    "features-off": {
+      "rssTotalMb": {
+        "baseline": 1633.9
+      },
+      "rssMainMb": {
+        "baseline": 251
+      },
+      "rssRendererMb": {
+        "baseline": 1226.7
+      },
+      "rssGpuMb": {
+        "baseline": 102.5
+      },
+      "rssUtilityMb": {
+        "baseline": 53.6
+      },
+      "processCount": {
+        "baseline": 15
+      },
+      "cpuMeanPct": {
+        "baseline": 0.4
+      }
+    },
+    "features-on": {
+      "rssTotalMb": {
+        "baseline": 1749.9
+      },
+      "rssMainMb": {
+        "baseline": 279.5
+      },
+      "rssRendererMb": {
+        "baseline": 1303.3
+      },
+      "rssGpuMb": {
+        "baseline": 114
+      },
+      "rssUtilityMb": {
+        "baseline": 53.6
+      },
+      "processCount": {
+        "baseline": 15
+      },
+      "cpuMeanPct": {
+        "baseline": 1.4
+      }
+    }
+  }
+}

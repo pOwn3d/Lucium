@@ -1,0 +1,54 @@
+/*
+ * "Personnaliser l'espace" (SpaceCustomize.tsx): the small editor of the templates, 520 px wide. Icon and name at the top; three sections
+ * that say where the space stands; archive and delete at the bottom, far from "Terminé". Tokens only.
+ */
+.sh.sc-edit { width: min(520px, calc(100% - 2 * var(--sp-4))); }
+.sc-edit .sc-desc { margin: 0; font-size: var(--t-s); color: var(--text-3); }
+.sc-edit .sc-foot { display: flex; align-items: center; gap: var(--sp-2); }
+.sc-edit .sc-hint { font-size: var(--t-xs); color: var(--text-3); }
+.sc-edit .sc-hint .tk-kbd { margin-right: 2px; }
+
+/* icon + name */
+.sc-edit .sc-head { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: var(--sp-3); align-items: center; }
+.sc-edit .sc-iconbtn { position: relative; display: grid; place-items: center; width: 56px; height: 56px; padding: 0; border: 1px solid var(--line-strong); border-radius: var(--r-l); background: var(--surface); font-size: 30px; line-height: 1; cursor: pointer; }
+.sc-edit .sc-iconbtn:hover { background: var(--surface-3); }
+.sc-edit .sc-iconbtn .space-letter { width: 36px; height: 36px; font-size: var(--t-l); }
+.sc-edit .sc-iconbtn .space-image { display: block; width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.sc-edit .sc-badge { position: absolute; right: -5px; bottom: -5px; display: grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--on-accent); box-shadow: 0 0 0 2px var(--overlay); }
+.sc-edit .sc-name { height: 36px; font-size: var(--t-l); font-weight: var(--w-semibold); }
+
+/* the sections */
+.sc-edit .sc-sections { display: grid; gap: var(--sp-2); }
+.sc-edit .sc-sec { border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); }
+.sc-edit .sc-sec summary { display: flex; align-items: center; gap: 10px; min-height: var(--row); padding: 6px var(--sp-3); border-radius: var(--r-m); font-size: var(--t-m); font-weight: var(--w-semibold); list-style: none; cursor: pointer; }
+.sc-edit .sc-sec summary::-webkit-details-marker { display: none; }
+.sc-edit .sc-sec summary:hover { background: var(--surface-2); }
+.sc-edit .sc-sec[open] summary { border-bottom: 1px solid var(--line); border-radius: var(--r-m) var(--r-m) 0 0; }
+.sc-edit .sc-chev { flex: none; color: var(--text-3); fill: none; stroke: currentColor; stroke-width: var(--icon-stroke); stroke-linecap: round; stroke-linejoin: round; transition: transform var(--dur); }
+.sc-edit .sc-sec[open] .sc-chev { transform: rotate(90deg); }
+.sc-edit .sc-status { margin-left: auto; font-size: var(--t-s); font-weight: var(--w-regular); color: var(--text-3); font-variant-numeric: tabular-nums; }
+.sc-edit .sc-inner { display: grid; gap: var(--sp-2); padding: 10px var(--sp-3) var(--sp-3); }
+.sc-edit .sc-help { margin: 0; font-size: var(--t-xs); line-height: 1.4; color: var(--text-3); }
+.sc-edit .sc-link { margin-right: -6px; min-height: var(--target); padding: 0 6px; border: 0; border-radius: var(--r-s); background: none; color: var(--link); font: inherit; font-size: var(--t-xs); font-weight: var(--w-semibold); cursor: pointer; }
+.sc-edit .sc-link:hover { background: var(--tile); }
+.sc-edit .sc-colorrow { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); flex-wrap: wrap; }
+.sc-edit .sc-inline { display: flex; gap: 6px; }
+.sc-edit .sc-inline .tk-field { flex: 1; min-width: 0; }
+.sc-edit select.tk-field { width: auto; min-width: 220px; justify-self: start; }
+
+/* the colours (the same swatches as the new-space sheet) */
+.sc-edit .sc-swatches { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.sc-edit .spacecreate-swatch { width: var(--target); height: var(--target); padding: 0; border: 0; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px var(--line-strong); cursor: pointer; }
+.sc-edit .spacecreate-swatch:hover { box-shadow: inset 0 0 0 1px var(--line-strong), 0 0 0 2px var(--surface), 0 0 0 3px var(--line-strong); }
+.sc-edit .spacecreate-swatch[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--line-strong), 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.sc-edit .spacecreate-swatch:focus-visible { border-radius: 50%; outline-offset: 3px; }
+
+/* the picker inside its section: the picture of the sidebar is behind the panel, so no drawing of it here */
+.sc-edit .ip-scroll { height: 168px; }
+
+/* archive and delete */
+.sc-edit .sc-danger { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); font-size: var(--t-s); color: var(--text-2); }
+.sc-edit .sc-danger > span { flex: 1 1 180px; min-width: 0; text-wrap: balance; }
+.sc-edit .sc-confirm { display: grid; gap: 6px; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-s); background: color-mix(in srgb, var(--danger) 10%, transparent); font-size: var(--t-s); }
+.sc-edit .sc-confirm b { font-weight: var(--w-semibold); color: var(--text); }
+.sc-edit .sc-confirm-actions { display: flex; gap: 6px; justify-content: flex-end; }

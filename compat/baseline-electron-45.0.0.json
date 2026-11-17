@@ -1,0 +1,326 @@
+{
+  "engine": {
+    "name": "electron",
+    "version": "45.0.0",
+    "chromium": "156.0.8078.48"
+  },
+  "checks": [
+    {
+      "name": "engine reports a Chromium version",
+      "ok": true,
+      "detail": "electron 45.0.0 / Chromium 156.0.8078.48"
+    },
+    {
+      "name": "page loads and its title reaches the state",
+      "ok": true
+    },
+    {
+      "name": "pinning keeps an anchor URL",
+      "ok": true
+    },
+    {
+      "name": "opening a tab selects it and keeps the other page alive",
+      "ok": true
+    },
+    {
+      "name": "idle tabs are put to sleep, the visible tab stays awake",
+      "ok": true
+    },
+    {
+      "name": "selecting a sleeping tab wakes it",
+      "ok": true
+    },
+    {
+      "name": "closing a pinned tab sleeps it (tab kept, view destroyed)",
+      "ok": true
+    },
+    {
+      "name": "closing a Today tab removes it",
+      "ok": true
+    },
+    {
+      "name": "visited pages reach the history",
+      "ok": true
+    },
+    {
+      "name": "find in page counts the matches",
+      "ok": true,
+      "detail": "find={\"text\":\"needle\",\"matches\":3,\"ordinal\":1} active=http://127.0.0.1:54038/find"
+    },
+    {
+      "name": "closing the find bar clears the search",
+      "ok": true
+    },
+    {
+      "name": "a tab can be muted",
+      "ok": true
+    },
+    {
+      "name": "a permission request opens the prompt instead of being granted",
+      "ok": true
+    },
+    {
+      "name": "a refused permission is remembered for the origin",
+      "ok": true,
+      "detail": "{\"http://127.0.0.1:54038\":{\"geolocation\":\"deny\"}}"
+    },
+    {
+      "name": "an attachment is downloaded and listed",
+      "ok": true,
+      "detail": "downloads/smoke.bin"
+    },
+    {
+      "name": "the blank tab opened by a download link is closed",
+      "ok": true
+    },
+    {
+      "name": "a split view keeps both panes on screen with a live page each",
+      "ok": true
+    },
+    {
+      "name": "closing a pane dissolves the split view",
+      "ok": true
+    },
+    {
+      "name": "peek opens a preview panel",
+      "ok": true
+    },
+    {
+      "name": "the previewed page reports its title",
+      "ok": true,
+      "detail": "smoke /one"
+    },
+    {
+      "name": "promoting a peek opens a tab and closes the preview",
+      "ok": true
+    },
+    {
+      "name": "closing a peek opens nothing",
+      "ok": true
+    },
+    {
+      "name": "a boost injects its CSS and runs its script",
+      "ok": true,
+      "detail": "boost:rgb(1, 2, 3):yes"
+    },
+    {
+      "name": "a playing video enters Picture in Picture",
+      "ok": true
+    },
+    {
+      "name": "and leaves it again",
+      "ok": true
+    },
+    {
+      "name": "a visible-area capture is a PNG",
+      "ok": true
+    },
+    {
+      "name": "a full-page capture is taller than the viewport",
+      "ok": true,
+      "detail": "844 -> 3000"
+    },
+    {
+      "name": "a region capture is a PNG of the selected size",
+      "ok": true,
+      "detail": "200x120"
+    },
+    {
+      "name": "a selection that is not over any page captures nothing",
+      "ok": true
+    },
+    {
+      "name": "two boosts on the same site both apply",
+      "ok": true,
+      "detail": "boost-pending"
+    },
+    {
+      "name": "a remapped shortcut reaches the application menu",
+      "ok": true,
+      "detail": "CmdOrCtrl+T -> CmdOrCtrl+Alt+N"
+    },
+    {
+      "name": "a disabled shortcut leaves the menu item without one",
+      "ok": true,
+      "detail": "null"
+    },
+    {
+      "name": "and resetting restores the default",
+      "ok": true
+    },
+    {
+      "name": "a playing video is paused from outside its tab",
+      "ok": true
+    },
+    {
+      "name": "a boost zooms the whole page",
+      "ok": true,
+      "detail": "100 -> zap:block:150"
+    },
+    {
+      "name": "zap hides the element the user clicks",
+      "ok": true,
+      "detail": "zap:none:150"
+    },
+    {
+      "name": "and remembers its selector in the boost",
+      "ok": true,
+      "detail": "[\"#ad\"]"
+    },
+    {
+      "name": "the boost editor reopens after a zap",
+      "ok": true
+    },
+    {
+      "name": "a site keeps its cookie across reloads",
+      "ok": true,
+      "detail": "seen:k=v"
+    },
+    {
+      "name": "clearing site data removes the cookie",
+      "ok": true,
+      "detail": "seen:"
+    },
+    {
+      "name": "dragging the sidebar edge resizes it",
+      "ok": true,
+      "detail": "264 -> 323"
+    },
+    {
+      "name": "the pointer at the left edge slides the sidebar over the page",
+      "ok": true
+    },
+    {
+      "name": "and it slides away when the pointer leaves",
+      "ok": true
+    },
+    {
+      "name": "clicking an extension icon opens its popup",
+      "ok": true,
+      "detail": "icons=3 popups=1"
+    },
+    {
+      "name": "the tabGroups, sidePanel and debugger APIs exist in the extension worker",
+      "ok": true,
+      "detail": "warning: SIDEPANEL_PROBE_SURFACE {\"sidePanel\":\"function\",\"tabGroupsQuery\":\"function\",\"tabGroupColor\":\"blue\",\"tabGroupNone\":-1,\"debuggerAttach\":\"function\",\"tabsGroup\":\"function\"} (hljjhhpadanibfamecmnnjjipelblgln/backgrou"
+    },
+    {
+      "name": "an extension can set the panel to open on icon click",
+      "ok": true,
+      "detail": "warning: SIDEPANEL_PROBE_BEHAVIOR {\"openPanelOnActionClick\":true} (hljjhhpadanibfamecmnnjjipelblgln/background.js)"
+    },
+    {
+      "name": "tabGroups.query answers an empty list instead of crashing",
+      "ok": true,
+      "detail": "warning: SIDEPANEL_PROBE_GROUPS [] (hljjhhpadanibfamecmnnjjipelblgln/background.js)"
+    },
+    {
+      "name": "chrome.debugger runs a DevTools command on a tab",
+      "ok": true,
+      "detail": "warning: SIDEPANEL_PROBE_DEBUGGER 2 (hljjhhpadanibfamecmnnjjipelblgln/background.js)"
+    },
+    {
+      "name": "chrome.sidePanel.open docks the extension panel",
+      "ok": true
+    },
+    {
+      "name": "the panel page runs with extension APIs and talks to the worker",
+      "ok": true,
+      "detail": "warning: SIDEPANEL_PROBE_MESSAGE panel (hljjhhpadanibfamecmnnjjipelblgln/background.js)"
+    },
+    {
+      "name": "closing the panel removes it",
+      "ok": true
+    },
+    {
+      "name": "a Little Arc window opens for a link",
+      "ok": true
+    },
+    {
+      "name": "its page loads in that window and reports its title",
+      "ok": true,
+      "detail": "[\"smoke /one\"]"
+    },
+    {
+      "name": "closing it archives the page with the Little Arc source",
+      "ok": true,
+      "detail": "[{\"id\":\"5e751459-8f82-46da-b284-a49a1321528c\",\"spaceId\":\"8a4e4932-5373-447e-94f3-359c8d346608\",\"url\":\"http://127.0.0.1:54038/one\",\"title\":\"smoke /one\",\"archivedAt\":1792763212888,\"source\":\"little\"}]"
+    },
+    {
+      "name": "\"open in main window\" turns the page into a tab and closes the Little Arc window",
+      "ok": true
+    },
+    {
+      "name": "a promoted page is not archived",
+      "ok": true
+    },
+    {
+      "name": "non-web URLs are not opened as tabs",
+      "ok": true
+    },
+    {
+      "name": "extension loaded: api-probe",
+      "ok": true,
+      "detail": "Lucium API Probe@0.1.0, Lucium Side Panel Probe@0.1.0, Chrome Toolkit@0.1.0"
+    },
+    {
+      "name": "extension loaded: sidepanel-probe",
+      "ok": true,
+      "detail": "Lucium API Probe@0.1.0, Lucium Side Panel Probe@0.1.0, Chrome Toolkit@0.1.0"
+    },
+    {
+      "name": "extension loaded: Chrome_toolkit",
+      "ok": true,
+      "detail": "Lucium API Probe@0.1.0, Lucium Side Panel Probe@0.1.0, Chrome Toolkit@0.1.0"
+    }
+  ],
+  "runningExtensionWorkers": [
+    "chrome-extension://ehaejjgibnbpljlfleanacllbepfmkog/",
+    "chrome-extension://hljjhhpadanibfamecmnnjjipelblgln/",
+    "chrome-extension://hgihojdonlaiamoiejjhpbgkelnjmlcl/"
+  ],
+  "apiProbe": [
+    {
+      "present": 92,
+      "missing": [
+        "tabs.duplicate",
+        "tabs.move",
+        "tabs.captureVisibleTab",
+        "omnibox",
+        "history",
+        "browsingData",
+        "management.getAll",
+        "bookmarks",
+        "sessions"
+      ],
+      "calls": {
+        "storage.local set/get": "ok",
+        "storage.session set/get": "ok",
+        "alarms.create/get": "ok",
+        "tabs.query({})": "ok",
+        "tabs.create+remove": "ok",
+        "tabs.discard": "ok",
+        "windows.getCurrent": "ok",
+        "scripting.registerContentScripts": "ok",
+        "declarativeNetRequest.updateDynamicRules": "ok",
+        "contextMenus.create": "ok",
+        "offscreen.createDocument": "ok",
+        "cookies.getAll": "ok",
+        "system.memory.getInfo": "ok"
+      }
+    }
+  ],
+  "compat": {
+    "declarativeNetRequestEnforced": true,
+    "uncoveredScriptRequests": 2
+  },
+  "extensionConsole": {
+    "warning: SIDEPANEL_PROBE_SURFACE {\"sidePanel\":\"function\",\"tabGroupsQuery\":\"function\",\"tabGroupColor\":\"blue\",\"tabGroupNone\":-1,\"debuggerAttach\":\"function\",\"tabsGroup\":\"function\"} (hljjhhpadanibfamecmnnjjipelblgln/background.js)": 1,
+    "warning: SIDEPANEL_PROBE_BEHAVIOR {\"openPanelOnActionClick\":true} (hljjhhpadanibfamecmnnjjipelblgln/background.js)": 1,
+    "warning: SIDEPANEL_PROBE_GROUPS [] (hljjhhpadanibfamecmnnjjipelblgln/background.js)": 1,
+    "warning: SIDEPANEL_PROBE_DEBUGGER 2 (hljjhhpadanibfamecmnnjjipelblgln/background.js)": 1,
+    "warning: SIDEPANEL_PROBE_OPENED yes (hljjhhpadanibfamecmnnjjipelblgln/background.js)": 1,
+    "warning: SIDEPANEL_PROBE_MESSAGE panel (hljjhhpadanibfamecmnnjjipelblgln/background.js)": 1
+  },
+  "failed": 0
+}

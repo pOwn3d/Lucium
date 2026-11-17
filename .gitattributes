@@ -1,0 +1,43 @@
+# Normalise line endings: the repository stores LF.
+* text=auto eol=lf
+
+# Binary files: never diffed or converted.
+*.icns binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.mp4 binary
+*.webm binary
+*.mov binary
+*.wav binary
+*.mp3 binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.ico binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.dmg binary
+
+# Generated files: collapsed in pull request diffs by default (still reviewable; a lockfile change deserves a look).
+pnpm-lock.yaml linguist-generated=true
+compat/baseline-*.json linguist-generated=true
+
+# Kept in the private repository, left out of the public tree. The public repository is made from `git archive HEAD`, which skips every path
+# marked export-ignore: the maintainer's to-do and its archive, the working plans, the audit framing, and the design notes that were written
+# for the maintainer alone. src/main/public-tree.test.ts lists what the export holds and refuses anything internal in it.
+# A folder has two lines. Its own name, so that `git archive` does not write it as an empty folder; and `/**`, because `git check-attr`,
+# which that test asks, answers file by file and does not look at the folders above.
+/.claude export-ignore
+/.claude/** export-ignore
+/docs/plans export-ignore
+/docs/plans/** export-ignore
+/docs/audit-360 export-ignore
+/docs/audit-360/** export-ignore
+/docs/design/barre-collee export-ignore
+/docs/design/barre-collee/** export-ignore
+/docs/design/fonds-a-la-demande.md export-ignore

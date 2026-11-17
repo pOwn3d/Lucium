@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Active Tab Scripting Probe",
+  "version": "0.1.0",
+  "description": "Declares activeTab, scripting and storage and no host permission, with an icon that has no popup: a click on the icon is the only thing that may let it run a script in a page (smokeProbesExt).",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["activeTab", "scripting", "storage"],
+  "action": { "default_title": "Active tab scripting probe" },
+  "externally_connectable": { "matches": ["http://127.0.0.1/*"] }
+}

@@ -1,0 +1,347 @@
+// The settings of a new profile: the default of every key of `Settings` (model-settings.ts), the search engines and site searches Lucium
+// comes with, and the bounds of the widths. Moved out of model.ts as it was; model.ts still exports all of it.
+
+import { DEFAULT_SITE_DATA_TYPES } from './site-data'
+import { DEFAULT_SITE_DATA_ANIMATION } from './site-data-overlay'
+import { SYSTEM_PROXY } from './proxy'
+import { DEFAULT_OLLAMA_CONFIG } from './ollama'
+import { DEFAULT_BAR_POSITION } from './annotate-bar-position'
+import { DEFAULT_AUTO_CLEAR_SECONDS } from './annotate-auto-clear'
+import { type SiteSearch, type Settings, type ProtectionBaseline, SIDEBAR_OPACITY_DEFAULT, WINDOW_BORDER_DEFAULT, COMMAND_BAR_SIZE_DEFAULT, COMMAND_BAR_SHAPE_DEFAULT } from './model-settings'
+
+export const DEFAULT_SEARCH_URL = 'https://duckduckgo.com/?q=%s'
+
+/** `suggest` answers in the OpenSearch format `[query, [suggestion, ...]]`. Engines without one get no suggestions. */
+export const SEARCH_ENGINES: Array<{ name: string; url: string; suggest?: string }> = [
+  { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s', suggest: 'https://duckduckgo.com/ac/?type=list&q=%s' },
+  { name: 'Google', url: 'https://www.google.com/search?q=%s', suggest: 'https://suggestqueries.google.com/complete/search?client=firefox&q=%s' },
+  { name: 'Bing', url: 'https://www.bing.com/search?q=%s', suggest: 'https://api.bing.com/osjson.aspx?query=%s' },
+  { name: 'Brave Search', url: 'https://search.brave.com/search?q=%s', suggest: 'https://search.brave.com/api/suggest?rich=false&q=%s' },
+  { name: 'Qwant', url: 'https://www.qwant.com/?q=%s' },
+  { name: 'Ecosia', url: 'https://www.ecosia.org/search?q=%s' }
+]
+
+export const SIDE_PANEL_WIDTH_MIN = 280
+export const SIDE_PANEL_WIDTH_MAX = 720
+export const SIDEBAR_WIDTH_MIN = 200
+export const SIDEBAR_WIDTH_MAX = 420
+/** The sidebar is 323 px wide whatever the size of the window. */
+export const SIDEBAR_WIDTH_DEFAULT = 323
+/** The width Lucium used before 323 px: a file that still holds it was never resized by hand and takes the new one. */
+export const SIDEBAR_WIDTH_LEGACY = 264
+
+export const DEFAULT_SITE_SEARCHES: SiteSearch[] = [
+  { keyword: 'g', name: 'Google', url: 'https://www.google.com/search?q=%s' },
+  { keyword: 'img', name: 'Google Images', url: 'https://www.google.com/search?tbm=isch&q=%s' },
+  { keyword: 'gm', name: 'Google Maps', url: 'https://www.google.com/maps/search/%s' },
+  { keyword: 'tr', name: 'Google Traduction', url: 'https://translate.google.com/?sl=auto&tl=fr&text=%s&op=translate' },
+  { keyword: 'gmeet', name: 'Google Meet', url: 'https://meet.google.com/%s' },
+  { keyword: 'gdocs', name: 'Google Docs', url: 'https://docs.google.com/document/create?usp=%s' },
+  { keyword: 'gsheets', name: 'Google Sheets', url: 'https://sheets.google.com/create?usp=%s' },
+  { keyword: 'gslides', name: 'Google Slides', url: 'https://docs.google.com/presentation/create?usp=%s' },
+  { keyword: 'gdrive', name: 'Google Drive', url: 'https://drive.google.com/drive/search?q=%s' },
+  { keyword: 'gmail', name: 'Gmail', url: 'https://mail.google.com/mail/u/0/?q=%s' },
+  { keyword: 'gcal', name: 'Google Calendar', url: 'https://calendar.google.com/?q=%s' },
+  { keyword: 'ddg', name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=%s' },
+  { keyword: 'b', name: 'Bing', url: 'https://www.bing.com/search?q=%s' },
+  { keyword: 'brave', name: 'Brave Search', url: 'https://search.brave.com/search?q=%s' },
+  { keyword: 'qw', name: 'Qwant', url: 'https://www.qwant.com/?q=%s' },
+  { keyword: 'eco', name: 'Ecosia', url: 'https://www.ecosia.org/search?q=%s' },
+  { keyword: 'yt', name: 'YouTube', url: 'https://www.youtube.com/results?search_query=%s' },
+  { keyword: 'tw', name: 'Twitter/X', url: 'https://twitter.com/search?q=%s' },
+  { keyword: 'fb', name: 'Facebook', url: 'https://www.facebook.com/search?q=%s' },
+  { keyword: 'ig', name: 'Instagram', url: 'https://www.instagram.com/explore/tags/%s' },
+  { keyword: 'li', name: 'LinkedIn', url: 'https://www.linkedin.com/search/results/all/?keywords=%s' },
+  { keyword: 'tiktok', name: 'TikTok', url: 'https://www.tiktok.com/search?q=%s' },
+  { keyword: 'gh', name: 'GitHub', url: 'https://github.com/search?q=%s' },
+  { keyword: 'so', name: 'Stack Overflow', url: 'https://stackoverflow.com/search?q=%s' },
+  { keyword: 'mdn', name: 'MDN', url: 'https://developer.mozilla.org/fr/search?q=%s' },
+  { keyword: 'npm', name: 'npm', url: 'https://www.npmjs.com/search?q=%s' },
+  { keyword: 'pypi', name: 'PyPI', url: 'https://pypi.org/search/?q=%s' },
+  { keyword: 'caniuse', name: 'Can I use', url: 'https://caniuse.com/?search=%s' },
+  { keyword: 'hn', name: 'Hacker News', url: 'https://hn.algolia.com/?q=%s' },
+  { keyword: 'w', name: 'Wikipédia', url: 'https://fr.wikipedia.org/w/index.php?search=%s' },
+  { keyword: 'wen', name: 'Wikipedia (anglais)', url: 'https://en.wikipedia.org/w/index.php?search=%s' },
+  { keyword: 'wikt', name: 'Wiktionnaire', url: 'https://fr.wiktionary.org/w/index.php?search=%s' },
+  { keyword: 'osm', name: 'OpenStreetMap', url: 'https://www.openstreetmap.org/search?query=%s' },
+  { keyword: 'imdb', name: 'IMDb', url: 'https://www.imdb.com/find/?q=%s' },
+  { keyword: 'rd', name: 'Reddit', url: 'https://www.reddit.com/search/?q=%s' },
+  { keyword: 'az', name: 'Amazon.fr', url: 'https://www.amazon.fr/s?k=%s' },
+  { keyword: 'amz', name: 'Amazon.com', url: 'https://www.amazon.com/s?k=%s' },
+  { keyword: 'ebay', name: 'eBay', url: 'https://www.ebay.com/sch/i.html?_nkw=%s' },
+  { keyword: 'aliexpress', name: 'AliExpress', url: 'https://www.aliexpress.com/wholesale?SearchText=%s' },
+  { keyword: 'discord', name: 'Discord', url: 'https://discordapp.com/channels/@me/search?q=%s' },
+  { keyword: 'zoom', name: 'Zoom', url: 'https://zoom.us/search?q=%s' },
+  { keyword: 'trello', name: 'Trello', url: 'https://trello.com/search?q=%s' },
+  { keyword: 'notion', name: 'Notion', url: 'https://www.notion.so/search?q=%s' },
+  { keyword: 'figma', name: 'Figma', url: 'https://www.figma.com/files/search/%s' },
+  { keyword: 'jira', name: 'Jira Cloud', url: 'https://jira.atlassian.net/issues/?jql=text%20~%20%22%s%22' },
+  { keyword: 'twitch', name: 'Twitch', url: 'https://www.twitch.tv/search?term=%s' },
+  { keyword: 'maps', name: 'Google Maps', url: 'https://maps.google.com/?q=%s' }
+]
+
+/** The four settings that make the protection « Renforcée » rather than « Standard » (settings-presets.ts). */
+export type ProtectionDefaults = Pick<Settings, 'blockCookieBanners' | 'sendGpc' | 'stripTrackingParams' | 'stripCopiedLinks'>
+
+/**
+ * A new profile starts at the protection « Renforcée »: the cookie banners blocked, the tracking parameters taken off the addresses opened and
+ * copied, and the Global Privacy Control signal sent. A new profile used to have them off (`PROTECTION_OF_EARLIER_PROFILES`).
+ */
+export const PROTECTION_OF_NEW_PROFILES: Readonly<ProtectionDefaults> = { blockCookieBanners: true, sendGpc: true, stripTrackingParams: true, stripCopiedLinks: true }
+
+/**
+ * What a profile made before that default had for those four settings without choosing them. A saved file that lacks one of them was written before the
+ * setting existed, when its default was this: it keeps it (sidebar-state.ts, `mergeSettings`), so that the new defaults never change an existing
+ * profile behind its back. A file that holds a value keeps that value, whatever it is.
+ */
+export const PROTECTION_OF_EARLIER_PROFILES: Readonly<ProtectionDefaults> = { blockCookieBanners: false, sendGpc: false, stripTrackingParams: false, stripCopiedLinks: false }
+
+/**
+ * The baseline a saved file that does not name one has: that of a profile made before « Renforcée » was the default. A new profile starts at
+ * `defaultSettings().protectionBaseline`, « renforcee » (`Settings.protectionBaseline`).
+ */
+export const PROTECTION_BASELINE_OF_EARLIER_PROFILES: ProtectionBaseline = 'standard'
+
+/**
+ * The settings the Settings window compares with and goes back to (the « modified » mark, « Rétablir », « Tout rétablir »): the defaults, but for the
+ * four settings of the protection, which are those the profile began with (`Settings.protectionBaseline`), so that a profile made before « Renforcée »
+ * is not shown as having changed what it never touched, and « Rétablir » gives it back the protection it had.
+ */
+export function referenceSettings(settings: Pick<Settings, 'protectionBaseline'>): Settings {
+  return { ...defaultSettings(), ...(settings.protectionBaseline === PROTECTION_BASELINE_OF_EARLIER_PROFILES ? PROTECTION_OF_EARLIER_PROFILES : PROTECTION_OF_NEW_PROFILES) }
+}
+
+export function defaultSettings(): Settings {
+  return {
+    searchUrlTemplate: DEFAULT_SEARCH_URL,
+    siteSearches: DEFAULT_SITE_SEARCHES,
+    linkRoutes: [],
+    sidebarVisible: true,
+    sidebarWidth: SIDEBAR_WIDTH_DEFAULT,
+    sidePanelWidth: 400,
+    searchSuggestions: true,
+    keyBindings: {},
+    allowThemeToSites: false,
+    interfaceAppearance: 'auto',
+    websiteAppearance: 'auto',
+    warnBeforeQuitting: true,
+    autoUpdate: true,
+    updateChannel: 'stable',
+    chromeNativeHosts: false,
+    littleArcShortcut: true,
+    appIcon: 'clair',
+    showToolbar: true,
+    sidebarRight: false,
+    spaceImages: false,
+    webPanels: false,
+    hoverCards: true,
+    allowScreenShare: true,
+    showTabMemory: false,
+    tabStateBadges: true,
+    downloadStatusChip: true,
+    favoriteNames: false,
+    resourceGauge: true,
+    suggestionsNoticeSeen: false,
+    welcomeDone: false,
+    firstLaunchDone: false,
+    arcGuideSeen: false,
+    whatsNewSheet: true,
+    lastSeenVersion: '',
+    forceHighContrast: false,
+    forceReduceMotion: false,
+    forceReduceTransparency: false,
+    peekWithShift: true,
+    littleArcArchiveHours: 12,
+    fullUrlInToolbar: false,
+    showReloadAllButton: false,
+    reloadAllWakes: false,
+    dragWindowFromToolbar: true,
+    boostsEnabled: true,
+    boostScriptImport: 'ask',
+    boostSharing: true,
+    tidyPinnedTitles: false,
+    tidyFoldersPosition: 'top',
+    tidyDownloads: false,
+    blockAds: true,
+    blockTrackers: true,
+    blockCookieBanners: PROTECTION_OF_NEW_PROFILES.blockCookieBanners,
+    blockCosmetic: true,
+    disabledFilterLists: [],
+    filterUpdateDays: 4,
+    blockExceptions: [],
+    popupExceptions: [],
+    blockMode: 'standard',
+    blockModeSites: {},
+    blockScriptlets: false,
+    reduceFingerprint: false,
+    fingerprintStrict: false,
+    fingerprintExceptions: [],
+    profileNames: {},
+    externalLinksInLittleArc: true,
+    peekOnExternalLinks: false,
+    autoPictureInPicture: true,
+    mediaPlayer: true,
+    autoArchiveHours: 12,
+    profiles: {},
+    sleepAfterMinutes: 30,
+    sleepAwakeMax: 12,
+    sleepFreezeAfterMinutes: 0,
+    sleepMode: 'discard',
+    sleepExcludedHosts: [],
+    sleepExcludedKeepAll: false,
+    sleepSkipAudible: true,
+    sleepSkipPinned: false,
+    sleepNotify: false,
+    loadAllTabsAtLaunch: false,
+    extensionPaths: [],
+    webStoreInstall: true,
+    webStoreUpdates: 'manual',
+    siteDataTypes: [...DEFAULT_SITE_DATA_TYPES],
+    siteDataSubdomains: false,
+    siteDataReload: true,
+    siteDataHttp: false,
+    siteDataConfirm: false,
+    siteDataAutoClose: true,
+    siteDataNotify: true,
+    siteDataAnimation: DEFAULT_SITE_DATA_ANIMATION,
+    siteDataRecents: [],
+    developerHosts: [],
+    restoreWindows: true,
+    usedProfiles: [],
+    retiredProfileIds: [],
+    updateFeedUrl: '',
+    updateNotices: { version: '', shown: 0 },
+    httpsUpgrade: true,
+    sendGpc: PROTECTION_OF_NEW_PROFILES.sendGpc,
+    stripTrackingParams: PROTECTION_OF_NEW_PROFILES.stripTrackingParams,
+    stripCopiedLinks: PROTECTION_OF_NEW_PROFILES.stripCopiedLinks,
+    protectionBaseline: 'renforcee',
+    historyOff: false,
+    dohCustom: false,
+    dohMode: 'automatic',
+    dohProvider: 'system',
+    dohCustomUrl: '',
+    proxyEnabled: false,
+    proxy: { ...SYSTEM_PROXY },
+    cookieManager: true,
+    cookieKeepHosts: [],
+    privateTabs: true,
+    tabContainers: false,
+    containers: [],
+    containerRules: [],
+    independentWindows: false,
+    resolveFavicons: true,
+    siteZoom: {},
+    autoplayPolicy: 'block',
+    spellCheck: 'auto',
+    siteAutoplay: {},
+    autoplayPerSite: true,
+    siteDataClearOnCloseEnabled: false,
+    siteDataClearOnClose: [],
+    siteDataClearOnQuit: false,
+    customFilterListsEnabled: true,
+    customFilterLists: [],
+    autoBackup: true,
+    autoBackupKeep: 5,
+    autoBackupMinutes: 30,
+    lockEnabled: false,
+    lockApp: false,
+    lockedSpaces: [],
+    lockTouchId: true,
+    reopenHistory: false,
+    interfaceTranslated: true,
+    language: 'auto',
+    translateLocal: true,
+    translateSystemEngine: true,
+    translateTarget: 'auto',
+    translateModelsDir: '',
+    translateAlways: [],
+    translateNeverSites: [],
+    translateSystemNoticeSeen: false,
+    extensionOverflow: true,
+    unpinnedExtensions: [],
+    extensionDataApis: true,
+    extensionTabCapture: true,
+    userScripts: false,
+    vimKeys: false,
+    vimKeysExcludedHosts: [],
+    tabGroupFolders: false,
+    omniboxKeywords: false,
+    passwordManager: false,
+    qrCode: false,
+    autoScroll: false,
+    scrollSync: false,
+    // On: nothing exists, and nothing runs, until a view is saved.
+    workViewsEnabled: true,
+    mouseGestures: false,
+    mouseGestureExcludedHosts: [],
+    pageWatch: false,
+    pageWatches: [],
+    readAloud: false,
+    batterySaver: false,
+    downloadPause: false,
+    downloadResume: false,
+    downloadAskWhere: false,
+    openWithMemory: false,
+    openWithApps: {},
+    openUnsaved: false,
+    pdfWithSource: false,
+    useReadLaterFolders: false,
+    readableMode: 'original',
+    siteReadableMode: {},
+    readableToolbarButton: true,
+    windowVibrancy: 'none',
+    sidebarOpacity: SIDEBAR_OPACITY_DEFAULT,
+    windowBorder: WINDOW_BORDER_DEFAULT,
+    cardOutline: false,
+    backClosesOpenedTab: true,
+    tabCycleRecent: true,
+    spaceSwipe: true,
+    dragToSplit: true,
+    warnBeforeClosingWindow: false,
+    modifiedClickBackground: true,
+    blankLinkBackground: false,
+    showZoomIndicator: true,
+    nameWindows: false,
+    uiScale: 100,
+    panelSizes: {},
+    showAdvancedSettings: false,
+    suggestHistory: true,
+    suggestTabs: true,
+    suggestArchive: true,
+    suggestReadLater: true,
+    goToOpenTab: false,
+    searchBangs: true,
+    searchDiscovery: false,
+    searchDiscoverySeen: [],
+    commandBarCalc: true,
+    commandBarSize: COMMAND_BAR_SIZE_DEFAULT,
+    commandBarShape: COMMAND_BAR_SHAPE_DEFAULT,
+    tabSearch: true,
+    shortcutHelp: true,
+    findRegex: false,
+    compactMode: false,
+    tabTree: false,
+    littleArcModifier: false,
+    littleArcNewTabLinks: true,
+    littleDownloadBubble: false,
+    guestProfile: false,
+    webHardware: false,
+    annotateCapture: false,
+    annotateGlobalShortcut: false,
+    annotateBar: DEFAULT_BAR_POSITION,
+    annotateBarHintSeen: false,
+    annotateAutoClear: false,
+    annotateAutoClearSeconds: DEFAULT_AUTO_CLEAR_SECONDS,
+    annotateLetterKeys: true,
+    urlAutomation: false,
+    bookmarkManager: false,
+    liveFolders: false,
+    webAppWindows: false,
+    documentPictureInPicture: false,
+    notes: true,
+    notesListButton: true,
+    ollamaConfig: DEFAULT_OLLAMA_CONFIG,
+    aiSummary: false
+  }
+}

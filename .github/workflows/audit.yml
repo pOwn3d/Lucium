@@ -1,0 +1,52 @@
+name: Dependency audit
+
+# Every day, `pnpm audit` asks the npm registry whether an advisory was published on a version that pnpm-lock.yaml holds. A run that
+# finds one FAILS, and GitHub mails the owner about a failed scheduled run: that is the alert. Two questions, two thresholds:
+#
+#   shipped    what the application carries (`dependencies`): moderate severity and above fails.
+#   whole tree the build and test tools too, Electron among them: high severity and above fails. A moderate advisory on a tool that
+#              never reaches a user is shown in the log and does not fail the run.
+#
+# Nothing is installed: pnpm reads the lockfile and sends the names and versions it holds to the registry. No secret, a read-only token.
+#
+# An advisory with no fix yet, once read and judged: `pnpm audit --ignore <GHSA>` on the step, with the reason in a comment beside it.
+#
+# What this does not replace: Dependabot alerts and security updates are settings of the repository (Settings > Advanced Security), and
+# dependency-review.yml refuses a pull request that brings in a version with an advisory.
+#
+# GitHub stops the scheduled workflows of a public repository after 60 days without any activity in it.
+
+on:
+  schedule:
+    - cron: '41 5 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    name: pnpm audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # Same pinned action and pnpm version as .github/actions/setup (see ci.yml): keep the two in step. `install: false`: pnpm alone, no
+      # dependency is downloaded.
+      - uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          version: 12.16.1
+          install: false
+          require-lockfile: true
+      - name: Shipped dependencies (moderate and above fails)
+        run: pnpm audit --prod --audit-level moderate
+      - name: Whole tree (high and above fails)
+        if: ${{ !cancelled() }}
+        run: pnpm audit --audit-level high

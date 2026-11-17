@@ -1,0 +1,18 @@
+/*
+ * The sign-in panel (a server or a proxy asks for a login), drawn like the standard box (arc-dialog.css: 450 px, radius 16,
+ * #151c30, icon and title at the same places) with two fields where the message of a confirmation would end.
+ */
+.adlg.adlg-auth { min-height: 0; padding: 51px 28px 28px 38px; }
+.adlg-auth .adlg-icon { margin-left: 12px; }
+.adlg-auth .adlg-title { margin-top: 35px; }
+.adlg-auth .adlg-message { margin-top: 10px; overflow-wrap: anywhere; }
+.adlg-auth .adlg-fields { display: grid; gap: 10px; margin-top: 20px; }
+.adlg-auth .adlg-field {
+  box-sizing: border-box; width: 100%; height: 38px; padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 9px;
+  background: var(--surface-2); color: var(--text); font: 500 14px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; user-select: text;
+  caret-color: var(--accent); outline: 0;
+}
+.adlg-auth .adlg-field::placeholder { color: var(--text-3); }
+.adlg-auth .adlg-field:focus { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent); }
+.adlg-auth .adlg-warning { margin: 12px 0 0; font-size: 12px; line-height: 16px; color: var(--warn); }
+.adlg-auth .adlg-actions { margin-top: 24px; padding-top: 0; }

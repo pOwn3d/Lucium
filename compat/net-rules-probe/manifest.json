@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Net Rules Probe",
+  "version": "0.1.0",
+  "description": "Holds declarativeNetRequest rules of every action type (session, dynamic and static) and a listener on every chrome.webRequest event, on paths of a local server only, to measure which of them the engine applies (smokeProbesExt).",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["declarativeNetRequest", "declarativeNetRequestFeedback", "webRequest"],
+  "host_permissions": ["<all_urls>"],
+  "declarative_net_request": { "rule_resources": [{ "id": "static", "enabled": true, "path": "rules.json" }] },
+  "externally_connectable": { "matches": ["http://127.0.0.1/*"] }
+}

@@ -1,0 +1,36 @@
+/*
+ * The work views (WorkViewTiles.tsx, WorkViewSheet.tsx). The tile is a tile of the favourites (sidebar.css: 70 x 47, the same ground, the same bubble
+ * for its name, the same lit state): it draws the layout of its split view in small, a box per site with the site's icon. Every colour is a token.
+ */
+
+/* ---- the tile ---- */
+.sidebar .work-view-tile .work-view-mini { position: relative; width: 50px; height: 31px; }
+.sidebar .favorites.named .work-view-tile .work-view-mini { align-self: center; }
+.sidebar .work-view-pane {
+  position: absolute; display: grid; place-items: center; overflow: hidden; border-radius: 4px;
+  background: color-mix(in srgb, var(--sb-text) 9%, transparent); box-shadow: inset 0 0 0 1px var(--sb-line);
+}
+.sidebar .work-view-tile.active .work-view-pane { background: color-mix(in srgb, var(--sb-text) 14%, transparent); }
+.sidebar .work-view-pane .favicon { width: 12px; height: 12px; }
+.sidebar .work-view-pane .favicon.monogram { width: 12px; height: 12px; border-radius: 3px; font-size: 8px; }
+
+/* ---- the mark of the view on the row of its split view, in Today ---- */
+.sidebar .split-view-mark { flex: none; display: grid; place-items: center; width: 18px; margin-left: 6px; font-size: var(--t-s); line-height: 1; }
+
+/* ---- the sheet ---- */
+.work-view-sheet { width: min(520px, calc(100vw - 32px)); }
+.work-view-sheet .wv-summary { margin: 0; color: var(--text-2); font-size: var(--t-s); }
+.work-view-sheet .emoji-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.work-view-sheet .emoji { height: 30px; border: 0; border-radius: 6px; background: transparent; font-size: 17px; line-height: 1; cursor: default; }
+.work-view-sheet .emoji:hover { background: var(--hover); }
+.work-view-sheet .emoji.current { background: var(--active); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.work-view-sheet .emoji:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; }
+.work-view-sheet .wv-sites { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.work-view-sheet .wv-site { display: grid; grid-template-columns: 18px 1fr auto auto auto; align-items: center; gap: 6px; }
+.work-view-sheet .wv-site-number { color: var(--text-2); font-size: var(--t-xs); text-align: center; font-variant-numeric: tabular-nums; }
+.work-view-sheet .wv-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.work-view-sheet .wv-share { width: 64px; }
+.work-view-sheet .wv-share-label { display: inline-flex; align-items: center; gap: 6px; color: var(--text-2); font-size: var(--t-s); }
+.work-view-sheet .wv-note { margin: 0; color: var(--text-2); font-size: var(--t-xs); }
+.work-view-sheet .wv-choice { display: flex; align-items: center; gap: 8px; font-size: var(--t-s); }
+.work-view-sheet .sh-error { margin: 0; }

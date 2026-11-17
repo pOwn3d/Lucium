@@ -1,0 +1,87 @@
+@import './palette.css';
+/*
+ * The media player at the foot of the sidebar, at these measures (its design; smoke-iso-media.ts checks what the player does and the relations of its layout, not these numbers):
+ *  - folded: 307 x 33 at 8 px from each edge (323 px sidebar), corners 12 px, navy #060627, a 1 px edge of white at 5 % that is drawn
+ *    on the bottom, the right and the corners only; five 24 x 24 buttons at 5 px from the top: the site at 10 px from the left, the volume
+ *    at 10 px from the right, previous / play / next centred (58 px between their centres);
+ *  - unfolded by the pointer: a 33 px row of title above (13 px, white 80 %, at 14 px; the picture in picture and the cross at the right);
+ *    with the volume slider open: a third row below, a 6 px track and a 20 x 16 thumb, 8 px from the edges;
+ *  - pictograms white 66 %; a hovered button has a white 8 % square of 24 px, corners 6 px;
+ *  - the bar pushes the list of tabs up (it is a row of the sidebar's column, not an overlay), 8 px below it.
+ * Unfolding and folding take 0.2 s (0.24 s from the slider), decelerating.
+ */
+
+.media-players { flex: none; display: flex; flex-direction: column; gap: 8px; margin: 8px 8px 0; }
+
+.media-player {
+  --mp-ms: 200ms;
+  --mp-ease: cubic-bezier(0.3, 0.3, 0.5, 1);
+  position: relative; flex: none; color: var(--fixed-ffffff-66); font-size: 13px; -webkit-app-region: no-drag; -webkit-font-smoothing: antialiased;
+}
+
+/* The box: it clips the rows that are folded away, and carries the colour. The notes are outside it so they can leave it. */
+.media-player .mp-clip { position: relative; display: flex; flex-direction: column; border-radius: 12px; background: var(--fixed-060627); overflow: hidden; }
+/* The edge: a ring of white at 5 %, without its straight top and left sides (they are the colour of the box). */
+.media-player .mp-clip::after {
+  content: ''; position: absolute; inset: 0; box-sizing: border-box; border: 1px solid var(--fixed-ffffff-05); border-radius: 12px; pointer-events: none;
+  mask-image: linear-gradient(var(--fixed-000000) 0 0), linear-gradient(var(--fixed-000000) 0 0), linear-gradient(var(--fixed-000000) 0 0);
+  mask-size: 100% 100%, calc(100% - 24px) 1px, 1px calc(100% - 24px);
+  mask-position: 0 0, 12px 0, 0 12px;
+  mask-repeat: no-repeat;
+  mask-composite: exclude;
+}
+
+/* ---- the three rows ---- */
+.media-player .mp-header, .media-player .mp-volume-row {
+  position: relative; flex: none; height: 0; opacity: 0; overflow: hidden;
+  transition: height var(--mp-ms) var(--mp-ease), opacity var(--mp-ms) var(--mp-ease);
+}
+.media-player.open .mp-header, .media-player.volume .mp-header { height: 33px; opacity: 1; }
+.media-player.volume .mp-volume-row { height: 33px; opacity: 1; }
+.media-player .mp-controls { position: relative; flex: none; height: 33px; }
+
+/* ---- the buttons ---- */
+.media-player .mp-button { position: absolute; top: 5px; width: 24px; height: 24px; padding: 0; border-radius: 6px; display: grid; place-items: center; color: inherit; background: transparent; }
+.media-player .mp-button:hover, .media-player .mp-button.pressed { background: var(--fixed-ffffff-08); }
+/* What cannot act (no previous track on this site, no video to float): 30 % of the pictogram. */
+.media-player .mp-button.dim > * { opacity: 0.3; }
+/* The pause of a tab that is muted still pauses: toned down, yet 3:1 on the navy, as a control that works must be. */
+.media-player .mp-button.quiet > * { opacity: 0.6; }
+.media-player .mp-site { left: 10px; }
+.media-player .mp-site .favicon { width: 16px; height: 16px; border-radius: 4px; }
+.media-player .mp-site .favicon.fallback { font-size: 10px; background: var(--fixed-ffffff-14); color: var(--fixed-ffffff-80); }
+.media-player .mp-volume-button { right: 10px; }
+.media-player .mp-transport { position: absolute; top: 0; left: 50%; display: flex; gap: 34px; transform: translateX(-50%); }
+.media-player .mp-transport .mp-button { position: static; margin-top: 5px; }
+.media-player .mp-pip { right: 34px; }
+.media-player .mp-close { right: 10px; }
+
+/* ---- the title ---- */
+.media-player .mp-title { position: absolute; left: 14px; right: 64px; top: 8px; line-height: 16px; color: var(--fixed-ffffff-80); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---- the volume slider ---- */
+.media-player .mp-slider { position: absolute; left: 8px; right: 8px; top: 9px; height: 16px; outline: none; touch-action: none; cursor: default; }
+.media-player .mp-track, .media-player .mp-fill { position: absolute; top: 5px; height: 6px; border-radius: 3px; }
+.media-player .mp-track { left: 0; right: 0; background: var(--fixed-1e1e3c); }
+.media-player .mp-fill { left: 0; background: var(--fixed-eceeff); }
+.media-player .mp-thumb { position: absolute; top: 0; width: 20px; height: 16px; border-radius: 8px; background: var(--fixed-dadade); box-shadow: 0 1px 2px var(--fixed-000000-25); }
+.media-player .mp-slider:focus-visible .mp-thumb { outline: 2px solid var(--fixed-ffffff-60); outline-offset: 1px; }
+
+/* ---- the notes: a few small ones fly off the icon of the site while the tab plays, rise about 30 px and fade ---- */
+.media-player .mp-notes { position: absolute; left: 0; bottom: 14px; width: 80px; height: 10px; z-index: 2; pointer-events: none; }
+.media-player .mp-note { position: absolute; bottom: 0; color: var(--fixed-ffffff-55); opacity: 0; }
+/* Three flights when the playing starts, not for as long as it plays: each ends faded out, as a note is at rest. */
+.media-player[data-playing='true'] .mp-note { animation: mp-note-fly 2.6s ease-out 3; }
+.media-player .mp-note.n1 { left: 22px; }
+.media-player .mp-note.n2 { left: 30px; animation-delay: -0.9s; }
+.media-player .mp-note.n3 { left: 15px; animation-delay: -1.7s; animation-duration: 3s; }
+@keyframes mp-note-fly {
+  0% { transform: translate(0, 0) rotate(-6deg); opacity: 0; }
+  15% { opacity: 0.55; }
+  100% { transform: translate(9px, -34px) rotate(10deg); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .media-player .mp-header, .media-player .mp-volume-row { transition: none; }
+  .media-player .mp-note { animation: none !important; opacity: 0; }
+}

@@ -1,0 +1,19 @@
+/*
+ * What the tab tree (Réglages › Fonctions › Arbre d’onglets) and the compact mode (Mode compact) add to the sidebar. Every rule here needs a
+ * class or an attribute that only exists while the function is on, so with both off the sidebar keeps its default layout.
+ */
+
+/* ---- tab tree: a child is 16 px deeper at each level, as the content of a folder is ---- */
+.sidebar .tab.tree-child { margin-left: calc(var(--tree-depth, 0) * 16px); }
+
+/* The chevron at the right of a parent: shown while the pointer is on the row, and always once the branch is folded (with how many tabs it hides). */
+.sidebar .tree-toggle { display: inline-flex; align-items: center; justify-content: center; width: auto; min-width: 18px; gap: 3px; padding: 0 3px; font-size: var(--t-xs); font-weight: var(--w-semibold); }
+.sidebar .tab:not(:hover):not(:focus-within) .tree-toggle:not(.folded) { display: none; }
+.sidebar .tree-count { line-height: 1; }
+
+/* Dropped under a tab: the row lights up, as a folder does. */
+.sidebar .tab.drop-inside { background: var(--row-active); box-shadow: inset 0 0 0 1.5px var(--text-on-space); }
+
+/* ---- compact mode: the tab on screen is its address ---- */
+.sidebar .tab.address .tab-title { font-weight: var(--w-semibold); }
+.sidebar .tab.address .site-info { font-size: 12px; line-height: 1; }

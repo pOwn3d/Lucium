@@ -1,0 +1,61 @@
+/*
+ * Sidebar interactions: multiple selection, drag and drop (the picture dragged along, the insertion mark, the targets).
+ * Loaded with sidebar.css, whose geometry it follows: rows 36 px high and 5 px apart, corners 10 px, folders 16 px deeper at each level.
+ * Rules that must win over styles.css carry the `.sidebar` prefix.
+ */
+
+/* ---- multiple selection: a selected row looks like the active one ---- */
+.sidebar .tab.selected { background: var(--row-active); }
+/* A sleeping tab is dimmed (see sidebar.css); a selected one, like the active one, keeps its full colours. */
+
+/* ---- drag and drop ---- */
+.sidebar .tab.dragging, .sidebar .split-row.dragging, .sidebar .favorite.dragging, .sidebar .folder-title.dragging { opacity: 0.4; }
+.sidebar .favorites, .sidebar .pin-drop, .sidebar .folder-bottom-drop { -webkit-app-region: no-drag; }
+
+/* The picture dragged along: a copy of the row, kept out of sight until the browser has taken it. It is the row, lifted: the colour of an active row, a shadow. */
+.sidebar .drag-ghost {
+  position: absolute; left: -9999px; top: -9999px; margin: 0; pointer-events: none; z-index: 50; opacity: 0.97;
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow);
+}
+.sidebar .drag-ghost.stack { box-shadow: 3px 4px 0 -1px var(--tile-active), 6px 8px 0 -2px var(--tile-hover), var(--shadow); }
+.sidebar .drag-ghost.favorite { height: 47px; width: 70px; border-radius: 12px; display: grid; place-items: center; }
+.sidebar .drag-count { margin-left: auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: grid; place-items: center; background: var(--text); color: var(--surface); font-size: var(--t-xs); font-weight: var(--w-semibold); }
+
+/* The insertion mark: a 2 px line in the gap between two rows (the gap is 5 px, so it sits 1.5 px from each). */
+.sidebar .tab.drop-before::before, .sidebar .tab.drop-after::after,
+.sidebar .split-row.drop-before::before, .sidebar .split-row.drop-after::after,
+.sidebar .folder-title.drop-before::before, .sidebar .folder-title.drop-after::after,
+.sidebar .new-tab.drop-after::after {
+  content: ''; position: absolute; left: 0; right: 0; height: 2px; border-radius: 1px; background: var(--text-on-space); pointer-events: none; z-index: 3;
+}
+.sidebar .tab.drop-before::before, .sidebar .split-row.drop-before::before, .sidebar .folder-title.drop-before::before { top: -3.5px; }
+.sidebar .tab.drop-after::after, .sidebar .split-row.drop-after::after, .sidebar .folder-title.drop-after::after, .sidebar .new-tab.drop-after::after { bottom: -3.5px; }
+
+/* A dragged folder dropped on the new-tab row of Today goes under it: the button holds the line of the rows, drawn under it. */
+.sidebar .new-tab.drop-after { position: relative; }
+
+/* Dropping on a folder, an empty zone, the new-tab row or a space of the footer lights it up instead. */
+.sidebar .folder-title.drop-inside, .sidebar .pin-drop.drop-inside, .sidebar .new-tab.drop-inside { background: var(--row-active); box-shadow: inset 0 0 0 1.5px var(--text-on-space); }
+.sidebar .space.drop-inside { background: var(--row-active); opacity: 1; filter: none; box-shadow: 0 0 0 1.5px var(--text-on-space); }
+
+/* The zone that appears while dragging when nothing is pinned yet. */
+.sidebar .pin-drop {
+  height: 36px; margin: 2px 0 3px 16px; border-radius: 10px; display: grid; place-items: center;
+  border: 1.5px dashed var(--sb-dim); color: var(--sb-dim); font-size: 13px; font-weight: var(--w-regular);
+}
+/* The zone under everything that appears while a folder is dragged: the same dashed row, lit like the others when the folder is over it. */
+.sidebar .folder-bottom-drop {
+  height: 36px; margin: 2px 0 3px; border-radius: 10px; display: grid; place-items: center;
+  border: 1.5px dashed var(--sb-dim); color: var(--sb-dim); font-size: 13px; font-weight: var(--w-regular);
+}
+.sidebar .folder-bottom-drop.drop-inside { background: var(--row-active); box-shadow: inset 0 0 0 1.5px var(--text-on-space); color: var(--text-on-space); }
+
+/* Favourites: a vertical mark between two tiles (they are 8.7 px apart), and an empty row to drop the first one on. */
+.sidebar .favorite.drop-before::before, .sidebar .favorite.drop-after::after { content: ''; position: absolute; top: 0; bottom: 0; width: 2px; border-radius: 1px; background: var(--text-on-space); pointer-events: none; }
+.sidebar .favorite.drop-before::before { left: -5.3px; }
+.sidebar .favorite.drop-after::after { right: -5.3px; }
+.sidebar .favorites.empty-drop {
+  display: grid; grid-template-columns: 1fr; place-items: center; height: 47px; margin: 8px 9px 8px 8px; border-radius: 12px;
+  border: 1.5px dashed var(--sb-dim); color: var(--sb-dim); font-size: 13px; font-weight: var(--w-regular);
+}
+.sidebar .favorites.empty-drop.drop-inside { background: var(--row-active); border-color: var(--text-on-space); color: var(--text-on-space); }

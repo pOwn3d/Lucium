@@ -1,0 +1,59 @@
+@import './palette.css';
+/*
+ * Glance, with fixed cotes. The Find in page bar moved to find-bar.css (on the tokens).
+ * overlay.tsx imports this before styles.css: every selector carries its own prefix (pk-) so no shared rule can win over it.
+ */
+
+/* ---- Glance (a 40 px header with the actions written out, an edge in the colour of the space) ----
+ * The card follows the appearance of the window (`.dark` / `.light` on it) with its own variables, to be pointed at the shared tokens
+ * once those are in. `--pk-accent` and `--pk-on-accent` come from the hue of the space. */
+.pk-host { position: fixed; inset: 0; background: transparent; user-select: none; }
+/* The page card turns 44 % darker; the sidebar is not touched. */
+.pk-scrim { position: absolute; border-radius: 10px; background: var(--fixed-000000-44); pointer-events: none; }
+@media (prefers-contrast: more) { .pk-scrim { background: var(--fixed-000000-60); } }
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .pk-scrim { background: var(--fixed-000000-60); }
+/* The card takes the tokens of its own scheme: the colour-scheme of the card decides which value light-dark() gives, so the dark card reads the dark tokens. */
+.pk-card.dark { --pk-head: var(--surface-2); --pk-text: var(--text); --pk-text-2: var(--text-2); --pk-text-3: var(--text-3); --pk-line: var(--line); --pk-line-strong: var(--line-strong); --pk-tile: var(--tile); --pk-tile-hover: var(--tile-hover); --pk-shadow: 0 14px 40px var(--fixed-000000-50), 0 1px 2px var(--fixed-000000-40); color-scheme: dark; }
+.pk-card.light { --pk-head: var(--surface-2); --pk-text: var(--text); --pk-text-2: var(--text-2); --pk-text-3: var(--text-3); --pk-line: var(--line); --pk-line-strong: var(--line-strong); --pk-tile: var(--tile); --pk-tile-hover: var(--tile-hover); --pk-shadow: 0 10px 30px var(--fixed-0a0e1e-18), 0 1px 2px var(--fixed-0a0e1e-12); color-scheme: light; }
+.pk-card { --pk-accent: var(--accent, var(--fixed-4d7af6)); --pk-on-accent: var(--fixed-ffffff); --pk-hue: 220; }
+/* The card is only a frame here (shadow, edge and header): the previewed page is a native view above it, inside the edge. */
+.pk-card { container-type: inline-size; position: absolute; box-sizing: border-box; border: 2px solid var(--pk-accent); border-radius: 8px; background: var(--pk-head); color: var(--pk-text); box-shadow: var(--pk-shadow); font: 400 13px/1.35 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+@media (prefers-contrast: more) { .pk-card { border-color: var(--pk-text); } }
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .pk-card { border-color: var(--pk-text); }
+.pk-head { position: relative; display: flex; align-items: center; gap: 6px; box-sizing: border-box; padding: 0 6px; border-bottom: 1px solid var(--pk-line); border-radius: 6px 6px 0 0; background: var(--pk-head); }
+.pk-nav { display: flex; gap: 2px; flex: none; }
+.pk-nav-btn, .pk-copy { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; color: var(--pk-text-2); }
+.pk-nav-btn:disabled { opacity: 0.45; cursor: default; }
+.pk-nav-btn:hover:not(:disabled), .pk-copy:hover { background: var(--pk-tile); color: var(--pk-text); }
+.pk-card button:focus-visible { outline: 2px solid var(--pk-accent); outline-offset: 1px; }
+/* The page's icon, its title over its address, and the button that copies the address. The title keeps the width the buttons leave. */
+.pk-id { display: flex; align-items: center; gap: 6px; flex: 1 1 auto; min-width: 0; }
+.pk-fav { flex: none; width: 16px; height: 16px; border-radius: 4px; object-fit: contain; }
+.pk-fav.fallback { display: grid; place-items: center; background: var(--pk-tile-hover); color: var(--pk-text-2); font-size: 9px; font-weight: 600; }
+.pk-txt { display: grid; min-width: 0; line-height: 1.2; }
+.pk-ttl { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.pk-addr { display: flex; align-items: baseline; min-width: 0; color: var(--pk-text-3); font-size: 11px; white-space: nowrap; overflow: hidden; }
+/* The site keeps its room (its registrable domain is never cut, host-text.css); the path after it is what gives way. */
+.pk-site { flex: 0 1 auto; color: var(--pk-text-2); }
+.pk-rest { flex: 1 1 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.pk-insecure { flex: none; margin-right: 5px; color: var(--pk-text); font-weight: 600; }
+/* The actions, written out: the main one in the accent of the space, "Fermer" quiet. */
+.pk-btn { flex: none; display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border: 1px solid var(--pk-line-strong); border-radius: 8px; background: var(--pk-tile); color: var(--pk-text); font-size: 12px; font-weight: 600; white-space: nowrap; }
+.pk-btn:hover { background: var(--pk-tile-hover); }
+.pk-btn.primary { background: var(--pk-accent); border-color: transparent; color: var(--pk-on-accent); }
+.pk-btn.primary:hover { background: var(--pk-accent); filter: brightness(0.94); }
+.pk-btn.primary:focus-visible { outline-color: var(--pk-text); outline-offset: 2px; }
+.pk-btn.quiet { background: transparent; border-color: transparent; color: var(--pk-text-2); }
+.pk-btn.quiet:hover { background: var(--pk-tile); color: var(--pk-text); }
+.pk-btn kbd { height: 16px; padding: 0 5px; display: inline-grid; place-items: center; border-radius: 4px; background: color-mix(in srgb, currentColor 16%, transparent); color: inherit; font: 600 10px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+.pk-btn.split { padding: 0 8px; }
+/* A narrow card keeps the icon of "Vue scindée" and the keys of the others off: the names stay (the title and the label of each button). */
+@container (max-width: 700px) { .pk-btn-label { display: none; } }
+@container (max-width: 560px) { .pk-btn kbd { display: none; } }
+/* Loading: a 2 px line of the accent on the foot of the header, and the button that reloads stops instead. */
+.pk-progress { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--pk-accent); transform: scaleX(0); transform-origin: left; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+.pk-progress.on { opacity: 1; animation: pk-run 1.6s ease-in-out infinite; }
+@keyframes pk-run { 0% { transform: scaleX(0.08); } 60% { transform: scaleX(0.75); } 100% { transform: scaleX(0.95); } }
+@media (prefers-reduced-motion: reduce) { .pk-progress.on { animation: none; transform: scaleX(0.62); } }

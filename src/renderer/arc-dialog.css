@@ -1,0 +1,35 @@
+/*
+ * The standard confirmation box, as on the deletion of a Tweak:
+ * 450 x 273 with a message of one or two lines, radius 16, buttons 38 px tall, 28 px from the right and bottom edges, 8 px apart. The paddings
+ * below are 1 px smaller than the measured offsets: they are counted from inside the 1 px border.
+ * The parts are laid out one under the other, so a longer message (a translation, a larger text) makes the box taller and pushes the buttons
+ * down: it never runs under them.
+ */
+.adlg-scrim { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: var(--scrim); }
+.adlg {
+  position: relative; box-sizing: border-box; width: 450px; max-width: calc(100% - 24px); min-height: 273px; max-height: calc(100% - 24px); overflow-y: auto; border-radius: 16px;
+  display: flex; flex-direction: column; padding: 50px 27px 27px 37px;
+  background: var(--surface); border: 1px solid var(--line-strong); color: var(--text); box-shadow: var(--shadow);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+.adlg-icon { flex: none; margin-left: 12px; width: 34px; height: 34px; color: var(--text); }
+.adlg-title { flex: none; margin: 35px 0 0; font-size: 18px; line-height: 22px; font-weight: 700; overflow-wrap: anywhere; }
+.adlg-message { flex: none; margin: 10px 0 0; font-size: 14px; line-height: 18px; color: var(--text-2); overflow-wrap: anywhere; }
+/* At the foot of the box while the text is short, and 12 px under the text at least. */
+.adlg-actions { flex: none; display: flex; justify-content: flex-end; gap: 8px; margin-top: auto; padding-top: 12px; }
+.adlg-btn {
+  box-sizing: border-box; height: 38px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 0 12px;
+  border-radius: 9px; color: var(--text); font: 500 14px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+.adlg-btn kbd { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 4px; font: 500 11px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+.adlg-cancel { background: var(--tile-hover); box-shadow: inset 0 0 0 1px var(--line-strong); }
+.adlg-cancel kbd { background: var(--tile-active); }
+.adlg-danger { background: var(--danger); color: var(--on-accent); }
+.adlg-confirm { background: var(--accent); color: var(--on-accent); }
+.adlg-danger kbd, .adlg-confirm kbd { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--on-accent) 60%, transparent); }
+.adlg-btn:hover { filter: brightness(1.08); }
+.adlg-btn:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+/* A box that lists what it will erase (the profiles "Nettoyer" cleans): the list comes under the message and scrolls from the sixth row. */
+.adlg-items { flex: none; margin: 6px 0 0; padding: 0; list-style: none; max-height: 100px; overflow-y: auto; font-size: 14px; line-height: 20px; color: var(--text); }
+.adlg-items li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adlg-items li::before { content: "•"; margin-right: 8px; color: var(--text-2); }

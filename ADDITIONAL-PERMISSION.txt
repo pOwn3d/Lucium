@@ -1,0 +1,44 @@
+Lucium: additional permission under GNU GPL version 3 section 7
+================================================================
+
+Copyright © 2026 ConsilioWeb and contributors
+
+Lucium is licensed under the GNU General Public License, version 3 or (at
+your option) any later version (the file LICENSE), with the additional
+permission below. It is granted under section 7 of version 3 of that
+License by every holder of a copyright in Lucium.
+
+    If you modify Lucium, or any covered work, by linking or combining it
+    with
+
+      (a) the Widevine Content Decryption Module, a proprietary program of
+          Google LLC ("the Module"), or
+
+      (b) a build of Electron or of Chromium made to load the Module, such
+          as "Electron for Content Security" published by castLabs ("the
+          DRM Engine"),
+
+    or with a modified version of either, the licensors of Lucium grant you
+    additional permission to convey the resulting work, and to have it
+    download, install and load the Module on the computer of the person who
+    runs it.
+
+    The Corresponding Source for a non-source form of such a combination
+    need not include the source code of the Module, the source code of the
+    parts of the DRM Engine that are not available under a license
+    compatible with the GNU General Public License, or the keys and the
+    service used to sign the combination so that the Module accepts it. It
+    must include everything else the License requires.
+
+    This permission covers the Module and the DRM Engine and nothing else.
+    It gives no right to the Module itself, whose terms are those of its
+    publisher, and it leaves the License unchanged for every other part of
+    the work.
+
+As section 7 of the License says, you may remove this additional permission
+from a copy you convey. If you convey Lucium under a later version of the
+License, the permission holds under the provision of that version that
+takes the place of section 7.
+
+This text was written by the maintainer of Lucium on 11 November 2026. A
+lawyer has not reviewed it yet.

@@ -1,0 +1,36 @@
+/* "Signets…" (Bookmarks.tsx): the bookmark library, on the template of the panels of a list (templates/list-panel.css). These rules only add what is its own. */
+.lp.bookmarks { width: min(640px, calc(100% - 2 * var(--sp-4))); height: 580px; }
+.bookmarks .bookmarks-empty { line-height: 1.45; }
+.bookmarks .bookmarks-message, .bookmarks .bookmarks-more { line-height: 1.45; }
+
+/* the tags in use, as filters: many of them scroll instead of pushing the list out */
+.bookmarks .lp-filters { max-height: 84px; overflow-y: auto; }
+.bookmarks .bookmark-chip-count { font-weight: var(--w-regular); }
+.bookmarks .bookmark-tagtools { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-2) 0; min-height: var(--target); }
+.bookmarks .bookmark-rename { width: 220px; }
+
+/* a row: the page, what can be done with it, and its tags on a line of their own under it */
+.bookmarks .bookmark-row { flex-wrap: wrap; }
+.bookmarks .bookmark-row.editing { display: block; padding: var(--sp-1) var(--sp-3) var(--sp-3); border-radius: var(--r-m); background: var(--tile); }
+.bookmarks .bookmark-icon { width: 18px; height: 18px; border-radius: 4px; flex: none; }
+.bookmarks .bookmark-icon.fallback { font-size: var(--t-xs); }
+.bookmarks .bookmark-note { font-style: italic; }
+.bookmarks .bookmark-tags { display: flex; flex-wrap: wrap; flex-basis: 100%; gap: var(--sp-1); padding: 0 var(--sp-2) var(--sp-1) 34px; }
+.bookmarks .bookmark-tag { min-height: 20px; padding: 0 8px; font-size: var(--t-xs); font-weight: var(--w-regular); }
+
+.bookmarks .bookmark-form label { display: block; margin: var(--sp-2) 0 0; color: var(--text-2); font-size: var(--t-s); }
+.bookmarks .bookmark-form .tk-field { margin-top: 3px; }
+.bookmarks .bookmark-form textarea.tk-field { height: auto; min-height: 44px; padding: 6px 10px; resize: vertical; font-family: inherit; }
+.bookmarks .bookmark-form-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-3); }
+/* Why "Enregistrer" kept the form open, right under the address it is about. */
+.bookmarks .bookmark-form .bookmark-problem { margin: 4px 0 0; color: var(--danger-ink); font-size: 12px; line-height: 1.4; }
+
+/* The sheet of a live folder (LiveFolderSheet.tsx) shares this file: it is a card of the same overlay. */
+.card.livefolder { width: min(520px, calc(100% - 48px)); }
+.livefolder label { display: block; margin: 10px 0 0; color: var(--muted); font-size: 12px; }
+.livefolder label .field { margin-top: 3px; }
+.livefolder label.inline-select { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.livefolder label.inline-select .field { width: auto; margin: 0; }
+.livefolder .livefolder-problem { margin: 8px 0 0; color: var(--danger); }
+.livefolder .livefolder-note { margin: 12px 0 0; line-height: 1.45; }
+.livefolder .row.end { justify-content: flex-end; margin-top: 14px; position: static; padding: 0; background: none; }

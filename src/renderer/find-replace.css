@@ -1,0 +1,29 @@
+/*
+ * Find and Replace (FindReplace.tsx): the find panel's look with a second line,
+ * and the find panel's cotes: 300 wide, lines of 32, 8 px corners.
+ */
+.fr-host { position: fixed; inset: 0; background: transparent; user-select: none; }
+.fr {
+  position: absolute; top: var(--fr-shadow, 10px); right: var(--fr-shadow, 10px); box-sizing: border-box;
+  display: flex; flex-direction: column; padding: 0 2px; border-radius: 8px;
+  background: var(--surface); color: var(--text); box-shadow: var(--shadow-s);
+  font: 400 14px/18px -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+}
+.fr-line { flex: none; display: flex; align-items: center; height: 32px; }
+.fr-icon { flex: none; width: 28px; height: 28px; display: grid; place-items: center; color: var(--text-2); }
+.fr-input {
+  flex: 1; min-width: 0; height: 18px; margin: 0 0 0 1px; padding: 0; border: 0; outline: 0; background: transparent;
+  color: var(--text); font: inherit; caret-color: var(--accent); user-select: text;
+}
+.fr-input::placeholder { color: var(--text-3); }
+.fr-replacement { margin-left: 8px; }
+.fr-count { flex: none; margin: 0 2px; font: 600 13px/17px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; color: var(--text); font-variant-numeric: tabular-nums; }
+.fr-btn { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px; color: var(--text); }
+.fr-btn:hover:not(:disabled) { background: var(--tile); }
+.fr-btn:focus-visible, .fr-text:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
+.fr-btn:disabled, .fr-text:disabled { opacity: 0.4; }
+.fr-case { font: 600 12px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; color: var(--text-2); }
+.fr-case.on { color: var(--text); background: var(--tile-hover); }
+.fr-text { flex: none; height: 24px; margin: 0 2px; padding: 0 8px; border-radius: 6px; color: var(--text); font: 500 12px/24px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+.fr-text:hover:not(:disabled) { background: var(--tile); }
+.fr-failure { flex: none; margin: 0 4px; color: var(--danger); font: 500 12px/24px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; white-space: nowrap; }

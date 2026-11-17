@@ -1,0 +1,28 @@
+/*
+ * « Sites qui ne répondent plus »: the small editor (templates/Sheet) with a row for each tab whose site no longer answers. Tokens only; the sheet gives
+ * the width, the header, the foot and the scrolling of the body, this draws the rows.
+ */
+.sh.dead-tabs { width: 500px; }
+.dead-tabs .dt-rows { list-style: none; display: grid; gap: var(--sp-1); margin: 0; padding: 0; }
+.dead-tabs .dt-row { display: flex; align-items: center; gap: var(--sp-2); min-height: 52px; padding: var(--sp-1) var(--sp-2); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); }
+.dead-tabs .dt-row.off .dt-text, .dead-tabs .dt-row.off .dt-icon { opacity: 0.55; }
+.dead-tabs .dt-row[aria-current='true'] { border-color: var(--line-strong); }
+.dead-tabs input[type='checkbox'] { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.dead-tabs .dt-icon { display: grid; place-items: center; flex: none; width: 18px; height: 18px; }
+.dead-tabs .favicon { width: 16px; height: 16px; border-radius: 4px; }
+.dead-tabs .favicon.monogram { display: grid; place-items: center; color: var(--tone-on-dark); font-size: 10px; font-weight: var(--w-semibold); }
+.dead-tabs .favicon.emoji-icon { display: grid; place-items: center; font-size: 14px; border-radius: 0; }
+.dead-tabs .dt-text { display: grid; flex: 1; min-width: 0; }
+.dead-tabs .dt-name, .dead-tabs .dt-address { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dead-tabs .dt-name { font-size: var(--t-m); font-weight: var(--w-semibold); }
+.dead-tabs .dt-address { font-size: var(--t-s); color: var(--text-3); }
+.dead-tabs .dt-why { display: flex; flex-wrap: wrap; gap: 0 var(--sp-2); font-size: var(--t-s); color: var(--text-2); }
+.dead-tabs .dt-reason { color: var(--warn-ink); }
+.dead-tabs .dt-actions { display: grid; gap: var(--sp-1); flex: none; }
+.dead-tabs .dt-show, .dead-tabs .dt-close { min-height: var(--target); }
+.dead-tabs .dt-summary { margin: 0; }
+/* The groups, when pinned tabs are among the rows: the pinned ones first, then those of the day, each under a small heading. */
+.dead-tabs .dt-group { display: grid; gap: var(--sp-1); }
+.dead-tabs .dt-group + .dt-group { margin-top: var(--sp-2); }
+.dead-tabs .dt-group-title { margin: 0; font-size: var(--t-s); font-weight: var(--w-semibold); color: var(--text-2); }
+.dead-tabs .dt-running { margin-top: 0; color: var(--text-3); }

@@ -1,0 +1,18 @@
+/*
+ * The small editor: the same width, the same header (glyph, title and, in grey, what is being edited), the same fields,
+ * the same foot (the destructive action on the left, "Annuler" then the main action on the right). Centred today; the choice between a centred
+ * sheet and a bubble only changes where it is put, not what is in it.
+ */
+.sh { display: flex; flex-direction: column; width: 420px; max-width: calc(100% - 2 * var(--sp-4)); max-height: calc(100% - 2 * var(--sp-4)); overflow: hidden; border-radius: var(--r-l); margin: 0; }
+.sh-head { display: flex; align-items: center; gap: 10px; padding: var(--sp-4) var(--sp-4) var(--sp-2); }
+.sh-head h2 { flex: 1; min-width: 0; margin: 0; font-size: var(--t-l); font-weight: var(--w-semibold); }
+.sh-ctx { max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-s); color: var(--text-3); }
+.sh-body { display: grid; flex: 1 1 auto; min-height: 0; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4) var(--sp-3); overflow-y: auto; }
+.sh-field { display: grid; gap: var(--sp-1); font-size: var(--t-s); color: var(--text-2); }
+.sh-field .tk-field { font-size: var(--t-m); }
+.sh-help { margin: 0; font-size: var(--t-s); line-height: 1.4; color: var(--text-3); font-variant-numeric: tabular-nums; }
+.sh-error { display: flex; align-items: flex-start; gap: 6px; margin: 0; font-size: var(--t-s); line-height: 1.4; color: var(--danger); }
+.sh-error::before { content: ''; flex: none; width: 6px; height: 6px; margin-top: 6px; border-radius: 50%; background: var(--danger); }
+.sh-foot { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) var(--sp-4); }
+.sh-foot .sh-start { margin-right: auto; }
+.sh-foot .tk-btn { min-height: 32px; }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- DRM variant only (scripts/package-drm.mjs, src/main/mac-sign-order.ts: entitlementsFor): the renderer and the GPU helpers. They run V8 (the pages)
+         and the graphics stack, so they need the JIT and nothing else; the camera, the microphone and the position are asked by the main process and the
+         plain helper, never by them. Same as Chromium's helper-renderer-entitlements.plist and helper-gpu-entitlements.plist, and the defaults of
+         @electron/osx-sign. -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+  </dict>
+</plist>

@@ -1,0 +1,362 @@
+/*
+ * The command bar: a card 640 px wide for the
+ * field alone and 720 px when there are lines to choose from, which come grouped by genre on the left with the preview of the highlighted one on the
+ * right. Every colour and size is a token (tokens.css). The fill is the dark glass computed from the page behind (cardSurface: --cb-fill, --cb-edge,
+ * --cb-ring, set by the interface), so the card reads the dark values of the tokens whatever the appearance of the system is (rule below).
+ *
+ * The size and the shape the user chose (Settings › Recherche › Apparence de la barre de commandes) reach this sheet as three custom properties the bar sets on
+ * the card (shared/command-bar.ts, `barBox`): --cb-width (the card), --cb-list (the height the list grows to) and --cb-preview (the preview column). The values
+ * below are those of the size M and the balanced shape, which the Onglets mode (TabSearch), that sets none, keeps. Whatever they say, the card stays inside the window.
+ *
+ * The bar of a Mini-fenêtre (`.cb-little`) keeps its own look, at the end of this file: it fills a 490 x 329 window.
+ *
+ * styles.css still holds the older rules of the card and is loaded after this file, so every selector here starts with `body:is(.overlay, .little)`
+ * to win over it whatever the order of the bundle.
+ */
+
+body:is(.overlay, .little) .backdrop.cb-backdrop { display: block; padding: 0; background: transparent; }
+
+/* The card of the command bar has a fill computed dark from the page behind (cardSurface): its text takes the dark values of the tokens whatever the system appearance is. The Mini-fenêtre follows the system. */
+body.overlay .palette:not(.cb-little) { color-scheme: dark; }
+
+/* ---- the card ---- */
+body:is(.overlay, .little) .palette:not(.cb-little) {
+  --cb-width: 640px;
+  --cb-list: 380px;
+  --cb-preview: 250px;
+  --cb-top: clamp(24px, 14vh, 140px);
+  position: absolute;
+  left: max(8px, calc(50% - var(--cb-width) / 2));
+  top: var(--cb-top);
+  display: flex;
+  flex-direction: column;
+  width: min(var(--cb-width), calc(100% - 16px));
+  max-height: calc(100% - var(--cb-top) - 16px);
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--cb-edge, var(--line-strong));
+  border-radius: var(--r-xl);
+  background: var(--cb-fill, var(--surface));
+  color: var(--text);
+  box-shadow: 0 0 0 1px var(--cb-ring, var(--line)), var(--shadow);
+  font: var(--t-m)/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+body:is(.overlay, .little) .palette.cb-wide { --cb-width: 720px; }
+/* In a split view the card opens beside the middle of the window, its corner at the centre; a wide card (a large size) is moved left to stay in the window, never beyond its edge. */
+body:is(.overlay, .little) .palette.cb-split:not(.cb-little) { left: max(8px, min(calc(50% - 6px), calc(100% - min(var(--cb-width), calc(100% - 16px)) - 8px))); }
+body:is(.overlay, .little) .palette:not(.cb-little) :focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+/* The field is the one thing that always has the focus: it has no ring (the caret and the highlighted line say where the keys go). */
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-input:focus-visible { outline: 0; }
+body:is(.overlay, .little) .palette:not(.cb-little) kbd {
+  display: inline-block; min-width: 18px; margin: 0; padding: 1px 5px; border: 1px solid var(--line-strong); border-radius: 5px;
+  background: var(--surface-2); color: var(--text-2); font: var(--w-semibold) var(--t-xs)/1.4 var(--font); text-align: center;
+}
+
+/* ---- the strip (split view: where the page will open; "Onglets" mode: the mode and its counts) ---- */
+body:is(.overlay, .little) .palette .cb-strip {
+  display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3) 0 var(--sp-4);
+  font-size: var(--t-xs); font-weight: var(--w-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3);
+}
+body:is(.overlay, .little) .palette .cb-strip-spacer { flex: 1; }
+body:is(.overlay, .little) .palette .cb-strip-close {
+  display: grid; place-items: center; width: var(--target); height: var(--target); margin-left: auto; border: 0; border-radius: var(--r-s);
+  background: var(--tile); color: var(--text-2);
+}
+body:is(.overlay, .little) .palette .cb-strip-close:hover { background: var(--tile-hover); color: var(--text); }
+
+/* ---- the field ---- */
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-head { position: static; display: flex; align-items: center; gap: 10px; height: auto; padding: 10px var(--sp-3) var(--sp-2) var(--sp-4); border: 0; }
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-search { flex: none; width: 18px; height: 18px; color: var(--text-3); }
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-search svg { width: 18px; height: 18px; }
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-input {
+  flex: 1; min-width: 0; height: auto; min-height: var(--target); padding: 0; font-size: var(--t-xl); font-weight: var(--w-regular); line-height: 1.3; letter-spacing: 0;
+  color: var(--text); caret-color: var(--accent);
+}
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-input::placeholder { color: var(--text-3); opacity: 1; }
+/* The button that was a round "i" with no word: it says "Raccourcis" and the key of the sheet when there is one. */
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-info {
+  display: inline-flex; align-items: center; gap: 6px; flex: none; width: auto; height: auto; min-height: var(--target); margin: 0; padding: 0 var(--sp-2);
+  border: 0; border-radius: var(--r-s); background: transparent; color: var(--text-2); font-size: var(--t-s); font-weight: var(--w-semibold);
+}
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-info:hover, body:is(.overlay, .little) .palette:not(.cb-little) .palette-info.on { background: var(--tile); color: var(--text); }
+body:is(.overlay, .little) .scope-pill { height: var(--target); border-radius: var(--r-s); font-size: var(--t-m); font-weight: var(--w-semibold); }
+
+/* ---- the row under the field: the genres (chips) on the left, "Copier" and "Coller" on the right ---- */
+body:is(.overlay, .little) .palette .cb-chips { display: flex; align-items: center; justify-content: space-between; gap: 6px 10px; padding: 0 14px 10px var(--sp-4); }
+body:is(.overlay, .little) .palette .cb-genres { display: flex; flex: 0 1 auto; flex-wrap: wrap; min-width: 0; gap: 6px; }
+body:is(.overlay, .little) .palette .cb-genres button,
+body:is(.overlay, .little) .palette .ts-filters button {
+  display: inline-flex; align-items: center; gap: 5px; min-height: var(--target); padding: 0 10px; border: 1px solid var(--line); border-radius: 999px;
+  background: transparent; color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold);
+}
+body:is(.overlay, .little) .palette .cb-genres button:hover,
+body:is(.overlay, .little) .palette .ts-filters button:hover:not(:disabled) { background: var(--tile); color: var(--text); }
+body:is(.overlay, .little) .palette .cb-genres button[aria-pressed='true'],
+body:is(.overlay, .little) .palette .ts-filters button[aria-pressed='true'] { border-color: transparent; background: var(--accent-soft); color: var(--text); }
+body:is(.overlay, .little) .palette .cb-genres kbd { min-width: 0; padding: 0 4px; }
+/* "Copier" / "Coller": plain buttons (not chips, which switch a genre on). The sentence of a problem is shown before them, and is the part that gives way when the
+   row is short (the row never wraps, so the list does not jump); a confirmation is only said to a screen reader. */
+body:is(.overlay, .little) .palette .cb-clip { display: flex; flex: 0 100 auto; align-items: center; gap: 6px; margin-left: auto; }
+/* « Notifications » (the recent notifications), before "Copier" / "Coller": the same plain button; it takes the push to the right. */
+body:is(.overlay, .little) .palette .cb-quick {
+  flex: none; margin-left: auto; min-width: 56px; min-height: var(--target); padding: 0 var(--sp-2); border: 0; border-radius: var(--r-s);
+  background: var(--tile); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold);
+}
+body:is(.overlay, .little) .palette .cb-quick:hover { background: var(--tile-hover); color: var(--text); }
+body:is(.overlay, .little) .palette .cb-quick + .cb-clip { margin-left: 6px; }
+body:is(.overlay, .little) .palette .cb-clip button {
+  flex: none; min-width: 56px; min-height: var(--target); padding: 0 var(--sp-2); border: 0; border-radius: var(--r-s);
+  background: var(--tile); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold);
+}
+body:is(.overlay, .little) .palette .cb-clip button:hover { background: var(--tile-hover); color: var(--text); }
+body:is(.overlay, .little) .palette .cb-clip button.done { color: var(--ok-ink); }
+body:is(.overlay, .little) .palette .cb-clip-note { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-xs); color: var(--text-3); }
+body:is(.overlay, .little) .palette .cb-clip-note.problem { color: var(--warn-ink); }
+body:is(.overlay, .little) .palette .cb-clip-note:not(.problem) { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---- the body: the lines, and the preview of the highlighted one ---- */
+/* The count of the results, for a screen reader only: in the page, off the screen and out of the grid of the body. */
+.cb-count { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
+body:is(.overlay, .little) .palette:not(.cb-little) .cb-body { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1 1 auto; min-height: 0; }
+body:is(.overlay, .little) .palette.cb-wide:not(.cb-tabs) .cb-body { grid-template-columns: minmax(0, 1fr) var(--cb-preview); }
+body:is(.overlay, .little) .palette:not(.cb-little) .results {
+  display: block; min-height: 0; max-height: min(var(--cb-list), calc(100vh - var(--cb-top) - 210px)); margin: 0; padding: 0 var(--sp-2) var(--sp-2);
+  border-top: 1px solid var(--line); overflow-y: auto; list-style: none;
+}
+body:is(.overlay, .little) .palette:not(.cb-little) .results li {
+  display: flex; align-items: center; gap: 10px; flex: none; height: auto; min-height: 38px; margin: 0; padding: 0 10px; border-radius: var(--r-s);
+  font-size: var(--t-m); font-weight: var(--w-regular); color: var(--text); cursor: default;
+}
+/* The highlight is a tint of the space's accent with a bar, never white on the accent: the text keeps its contrast whatever the hue. */
+body:is(.overlay, .little) .palette:not(.cb-little) .results li.selected { background: var(--accent-soft); color: var(--text); box-shadow: inset 3px 0 0 var(--accent); }
+body:is(.overlay, .little) .palette:not(.cb-little) .results li.group-title {
+  display: block; min-height: 0; padding: 10px 10px 4px; border-radius: 0; background: none; box-shadow: none; pointer-events: none;
+  font-size: var(--t-xs); font-weight: var(--w-semibold); text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3);
+}
+body:is(.overlay, .little) .palette:not(.cb-little) .results li.group-title .ts-n { margin-left: 6px; text-transform: none; letter-spacing: 0; font-weight: var(--w-regular); font-variant-numeric: tabular-nums; }
+body:is(.overlay, .little) .palette:not(.cb-little) .results .kind { display: flex; flex: none; align-items: center; justify-content: center; width: 22px; height: 20px; color: var(--text-3); }
+body:is(.overlay, .little) .palette:not(.cb-little) .results li.selected .kind { color: var(--accent-text); }
+body:is(.overlay, .little) .palette:not(.cb-little) .results .kind svg, body:is(.overlay, .little) .palette:not(.cb-little) .results .result-icon { width: 16px; height: 16px; }
+body:is(.overlay, .little) .palette:not(.cb-little) .results .result-favicon { width: 18px; height: 18px; padding: 0; border-radius: 5px; background: transparent; }
+body:is(.overlay, .little) .palette:not(.cb-little) .results .label { flex: 0 1 auto; max-width: 70%; font-weight: var(--w-semibold); }
+body:is(.overlay, .little) .palette:not(.cb-little) .results .detail { flex: 1 1 0; min-width: 0; font-weight: var(--w-regular); color: var(--text-3); }
+body:is(.overlay, .little) .palette:not(.cb-little) .results li.selected .detail { color: var(--text-2); }
+body:is(.overlay, .little) .palette:not(.cb-little) .results .where { flex: none; font-size: var(--t-xs); color: var(--text-3); }
+/* On the tint of the chosen row the grey of a help text is under 4.5:1 at most hues: the place takes the secondary text, as the detail does. */
+body:is(.overlay, .little) .palette:not(.cb-little) .results li.selected .where { color: var(--text-2); }
+body:is(.overlay, .little) .palette:not(.cb-little) .results .chip,
+body:is(.overlay, .little) .palette:not(.cb-little) .results .hint {
+  flex: none; margin-left: auto; padding: 2px 7px; border-radius: 6px; background: var(--tile); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); white-space: nowrap;
+}
+body:is(.overlay, .little) .palette:not(.cb-little) .results .detail + .chip, body:is(.overlay, .little) .palette:not(.cb-little) .results .detail + .hint,
+body:is(.overlay, .little) .palette:not(.cb-little) .results .where + .chip, body:is(.overlay, .little) .palette:not(.cb-little) .results .ts-states + .chip { margin-left: 0; }
+body:is(.overlay, .little) .palette:not(.cb-little) .results li.selected :is(.chip, .hint) { background: var(--surface); color: var(--text); box-shadow: 0 0 0 1px var(--line-strong); }
+body:is(.overlay, .little) .palette:not(.cb-little) .results .keycap {
+  display: grid; place-items: center; flex: none; width: auto; min-width: 22px; height: 22px; margin-left: 0; border: 1px solid var(--line-strong); border-radius: 5px;
+  background: var(--surface-2); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold);
+}
+body:is(.overlay, .little) .palette:not(.cb-little) .results .keycap svg { width: 14px; height: 14px; }
+/* The emoji of a space in a rounded tile, as large as the line icons so rows keep their alignment. */
+body:is(.overlay, .little) .palette:not(.cb-little) .space-tile { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; background: var(--tile-hover); font-size: 12px; line-height: 1; }
+
+/* the preview */
+body:is(.overlay, .little) .palette .cb-preview {
+  display: grid; align-content: start; gap: 10px; padding: var(--sp-3) 14px 14px; overflow-y: auto; border-top: 1px solid var(--line); border-left: 1px solid var(--line);
+  background: color-mix(in srgb, var(--surface-2) 60%, transparent); font-size: var(--t-s); color: var(--text-2);
+}
+body:is(.overlay, .little) .palette .cb-thumb { display: grid; place-items: center; height: 120px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); color: var(--text-3); }
+body:is(.overlay, .little) .palette .cb-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+body:is(.overlay, .little) .palette .cb-thumb .cb-glyph { color: var(--accent); }
+body:is(.overlay, .little) .palette .cb-thumb .cb-glyph svg, body:is(.overlay, .little) .palette .cb-thumb .cb-glyph img { width: 34px; height: 34px; }
+body:is(.overlay, .little) .palette .cb-thumb .cb-emoji { font-size: 40px; line-height: 1; }
+body:is(.overlay, .little) .palette .cb-thumb .cb-big { max-width: 100%; padding: 0 var(--sp-2); overflow-wrap: anywhere; text-align: center; font-size: 28px; font-weight: var(--w-semibold); letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--text); }
+body:is(.overlay, .little) .palette .cb-p-title { margin: 0; font-size: var(--t-l); font-weight: var(--w-semibold); color: var(--text); overflow-wrap: anywhere; }
+body:is(.overlay, .little) .palette .cb-p-url { font: var(--t-xs) var(--mono); color: var(--text-3); word-break: break-all; }
+body:is(.overlay, .little) .palette .cb-p-note { margin: 0; overflow-wrap: anywhere; }
+body:is(.overlay, .little) .palette .cb-p-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+body:is(.overlay, .little) .palette .cb-p-chips li { padding: 2px 8px; border-radius: 999px; background: var(--tile); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); }
+body:is(.overlay, .little) .palette .cb-p-keys { display: grid; gap: 5px; margin: 2px 0 0; }
+body:is(.overlay, .little) .palette .cb-p-keys div { display: flex; align-items: center; gap: var(--sp-2); }
+body:is(.overlay, .little) .palette .cb-p-keys dt { flex: none; }
+body:is(.overlay, .little) .palette .cb-p-keys kbd { min-width: 28px; }
+body:is(.overlay, .little) .palette .cb-p-keys dd { margin: 0; }
+@media (max-width: 760px) {
+  body:is(.overlay, .little) .palette.cb-wide:not(.cb-tabs) .cb-body { grid-template-columns: minmax(0, 1fr); }
+  body:is(.overlay, .little) .palette .cb-preview { display: none; }
+}
+
+/* ---- the foot: the keys, and the way to all of them ---- */
+body:is(.overlay, .little) .palette .cb-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: var(--sp-2) var(--sp-4); border-top: 1px solid var(--line); font-size: var(--t-xs); color: var(--text-3); }
+body:is(.overlay, .little) .palette .cb-foot kbd { margin-right: 2px; }
+body:is(.overlay, .little) .palette .cb-foot-spacer { flex: 1; }
+body:is(.overlay, .little) .palette .cb-foot-link { min-height: var(--target); padding: 0 var(--sp-2); border: 0; border-radius: var(--r-s); background: none; color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); }
+body:is(.overlay, .little) .palette .cb-foot-link:hover { background: var(--tile); color: var(--text); }
+
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-help { padding: var(--sp-2) var(--sp-4); border-bottom: 0; border-top: 1px solid var(--line); font-size: var(--t-s); }
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-note { padding: var(--sp-2) var(--sp-4); border-top: 1px solid var(--line); font-size: var(--t-s); }
+body:is(.overlay, .little) .palette:not(.cb-little) .palette-note button { min-height: var(--target); }
+
+/* ---- the "Onglets" mode ---- */
+body:is(.overlay, .little) .palette .ts-mode { display: inline-flex; align-items: center; gap: 6px; color: var(--text); }
+body:is(.overlay, .little) .palette .ts-mode svg { width: 16px; height: 16px; color: var(--accent); }
+body:is(.overlay, .little) .palette .ts-count { text-transform: none; letter-spacing: 0; font-weight: var(--w-regular); font-variant-numeric: tabular-nums; }
+body:is(.overlay, .little) .palette .ts-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 0 14px 10px var(--sp-4); }
+body:is(.overlay, .little) .palette .ts-group { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+body:is(.overlay, .little) .palette .ts-lab { margin-right: 2px; font-size: var(--t-xs); font-weight: var(--w-semibold); color: var(--text-3); }
+body:is(.overlay, .little) .palette .ts-n { font-weight: var(--w-regular); color: var(--text-3); font-variant-numeric: tabular-nums; }
+body:is(.overlay, .little) .palette .ts-filters [aria-pressed='true'] .ts-n { color: var(--text-2); }
+body:is(.overlay, .little) .palette .ts-filters .ts-dup { margin-left: auto; border-color: transparent; background: var(--tile); color: var(--text); }
+body:is(.overlay, .little) .palette .ts-filters .ts-dup:disabled { opacity: 0.5; }
+body:is(.overlay, .little) .palette .results li.asleep .kind, body:is(.overlay, .little) .palette .results li.asleep .label { opacity: 0.7; }
+body:is(.overlay, .little) .palette .ts-states { display: flex; flex: none; gap: 4px; }
+body:is(.overlay, .little) .palette .ts-st { display: inline-flex; align-items: center; padding: 2px 6px; border-radius: 6px; background: var(--tile); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); white-space: nowrap; }
+body:is(.overlay, .little) .palette .ts-st.dup { background: color-mix(in srgb, var(--warn) 16%, transparent); color: var(--warn-ink); }
+/* "Fermer les doublons": what would close is shown first, in the list, before anything is done. */
+body:is(.overlay, .little) .palette:not(.cb-little) .results li.ts-dupbox { display: block; height: auto; margin: var(--sp-2) 2px 4px; padding: 10px var(--sp-3) var(--sp-3); border: 1px solid var(--line-strong); border-radius: var(--r-l); background: var(--surface); }
+body:is(.overlay, .little) .palette .ts-dupbox h3 { margin: 0 0 2px; font-size: var(--t-m); font-weight: var(--w-semibold); }
+body:is(.overlay, .little) .palette .ts-dupbox p { margin: 0 0 var(--sp-2); font-size: var(--t-s); color: var(--text-2); }
+body:is(.overlay, .little) .palette .ts-dupbox ul { display: grid; margin: 0; padding: 0; list-style: none; }
+body:is(.overlay, .little) .palette:not(.cb-little) .results .ts-dupbox li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: var(--sp-2); align-items: center; min-height: 30px; padding: 0; font-size: var(--t-s); }
+body:is(.overlay, .little) .palette .ts-d-title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: var(--w-semibold); }
+body:is(.overlay, .little) .palette .ts-d-where, body:is(.overlay, .little) .palette .ts-d-keep { color: var(--text-3); white-space: nowrap; }
+body:is(.overlay, .little) .palette .ts-d-actions { display: flex; gap: var(--sp-2); margin-top: 10px; }
+body:is(.overlay, .little) .palette .ts-d-actions button, body:is(.overlay, .little) .palette .ts-undo button, body:is(.overlay, .little) .palette .ts-empty button {
+  min-height: var(--target); padding: 0 var(--sp-3); border: 1px solid var(--line-strong); border-radius: var(--r-s); background: var(--surface); color: var(--text); font-size: var(--t-s); font-weight: var(--w-semibold);
+}
+body:is(.overlay, .little) .palette .ts-d-actions .ts-primary { border-color: transparent; background: var(--accent); color: var(--on-accent); }
+/* "Annuler": ACTION_NOTICE_MS (`--notice-ms`, set by the notice), the bar of time is CSS, stopped while the pointer or the focus is on it, as the timer is (and still when motion is reduced). */
+body:is(.overlay, .little) .palette .ts-undo { position: relative; display: flex; align-items: center; gap: 10px; padding: var(--sp-2) var(--sp-3) var(--sp-2) var(--sp-4); overflow: hidden; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--ok) 10%, transparent); font-size: var(--t-s); }
+body:is(.overlay, .little) .palette .ts-undo-spacer { flex: 1; }
+body:is(.overlay, .little) .palette .ts-undo::after { content: ''; position: absolute; left: 0; bottom: 0; width: 100%; height: 2px; background: var(--ok); transform-origin: left; animation: ts-shrink var(--notice-ms) linear forwards; }
+body:is(.overlay, .little) .palette .ts-undo:is(:hover, :focus-within)::after { animation-play-state: paused; }
+@keyframes ts-shrink { to { transform: scaleX(0); } }
+@media (prefers-reduced-motion: reduce) { body:is(.overlay, .little) .palette .ts-undo::after { width: 40%; animation: none; } }
+body:is(.overlay, .little) .palette:not(.cb-little) .results li.ts-empty { display: grid; justify-items: center; gap: 4px; height: auto; padding: 26px var(--sp-4) 22px; color: var(--text-2); text-align: center; }
+body:is(.overlay, .little) .palette .ts-empty b { color: var(--text); }
+
+@media (prefers-contrast: more) {
+  body:is(.overlay, .little) .palette:not(.cb-little) { border-color: var(--line-strong); }
+  body:is(.overlay, .little) .palette:not(.cb-little) .results li.selected { box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px var(--line-strong); }
+}
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] body:is(.overlay, .little) .palette:not(.cb-little) { border-color: var(--line-strong); }
+:root[data-contrast='more'] body:is(.overlay, .little) .palette:not(.cb-little) .results li.selected { box-shadow: inset 3px 0 0 var(--accent), inset 0 0 0 1px var(--line-strong); }
+
+/* ---- the bar of a Mini-fenêtre: its own look, in its own window ---- */
+/*
+ * The first state of a mini window: the same card as the window itself, 490 x 329, with a close
+ * button where the main bar has its "i", a 16 px field and the colours of that window. The generic rules of the card above leave it alone
+ * (`:not(.cb-little)`); the rules below are the ones it always had.
+ */
+
+body:is(.overlay, .little) .palette.cb-little {
+  --cb-fill: var(--surface);
+  --cb-edge: var(--line-strong);
+  --cb-ring: var(--line);
+  position: absolute;
+  left: max(8px, calc(50% - 383px));
+  top: calc(50% - 169px);
+  width: min(766px, calc(100% - 16px));
+  margin: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--cb-fill);
+  border: 1px solid var(--cb-edge);
+  box-shadow: 0 0 0 1px var(--cb-ring), var(--shadow);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* The field and its rule: 63 px, then the 1 px rule (#303030 over a dark page). */
+body:is(.overlay, .little) .palette.cb-little .palette-head { position: relative; height: 64px; padding: 0 20px 0 22px; gap: 12px; align-items: center; border-bottom: 0; }
+/* The rule under the field stops 12 px short of the card's edges (x 469 to 1210 in a card from 457 to 1222). */
+body:is(.overlay, .little) .palette.cb-little .palette-head::after {
+  content: ''; position: absolute; left: 11px; right: 11px; bottom: 0; height: 1px;
+  background: color-mix(in srgb, var(--cb-fill), white 10%);
+}
+body:is(.overlay, .little) .palette.cb-little .palette-search { width: 18px; height: 18px; color: var(--text); }
+body:is(.overlay, .little) .palette.cb-little .palette-search svg { width: 18px; height: 18px; }
+body:is(.overlay, .little) .palette.cb-little .palette-input {
+  height: 23px; padding: 0; font-size: 18px; line-height: 23px; font-weight: 600; letter-spacing: 0;
+  color: var(--text); caret-color: var(--accent);
+}
+body:is(.overlay, .little) .palette.cb-little .palette-input::placeholder { color: var(--text-3); opacity: 1; }
+
+/* The round "i": a 24 px navy disc in a 26 px hit area, which does not react to the pointer. */
+body:is(.overlay, .little) .palette.cb-little .palette-info {
+  position: relative; width: 26px; height: 26px; margin-left: -2px; border-radius: 50%;
+  background: transparent; color: var(--accent-text);
+}
+body:is(.overlay, .little) .palette.cb-little .palette-info::before { content: ''; position: absolute; inset: 1px; border-radius: 50%; background: var(--accent-soft); }
+body:is(.overlay, .little) .palette.cb-little .palette-info svg { position: relative; width: 16px; height: 16px; }
+body:is(.overlay, .little) .palette.cb-little .palette-info:hover, body:is(.overlay, .little) .palette.cb-little .palette-info.on { background: transparent; color: var(--accent-text); }
+
+/* The rows: a 5-row window on the list, every row 50 px apart (46 px highlight + 2 px around). */
+/* A flex column keeps the 2 px margins of two rows apart (in a block list they would collapse into 2 and the pitch would be 48). */
+body:is(.overlay, .little) .palette.cb-little .results { display: flex; flex-direction: column; margin: 4px 7px 9px; padding: 0; max-height: 250px; overflow-y: auto; scrollbar-width: none; }
+body:is(.overlay, .little) .palette.cb-little .results::-webkit-scrollbar { display: none; }
+:root[data-scrollbars='always'] body:is(.overlay, .little) .palette.cb-little .results { scrollbar-width: thin; scrollbar-color: var(--text-3) transparent; }
+body:is(.overlay, .little) .palette.cb-little .results li {
+  flex: none; height: 46px; margin: 2px; padding: 0 14px; gap: 11px; border-radius: 7px;
+  font-size: 13px; font-weight: 700; color: var(--text); cursor: default;
+}
+/* The highlight is a blue at 84 % over the card (#4148d7 over a dark page, #454ddb over a white one). */
+body:is(.overlay, .little) .palette.cb-little .results li.selected { background: var(--accent); color: var(--on-accent); }
+body:is(.overlay, .little) .palette.cb-little .results .kind { width: 16px; height: 16px; justify-content: center; align-items: center; color: var(--text-2); }
+body:is(.overlay, .little) .palette.cb-little .results li.selected .kind { color: var(--on-accent); }
+body:is(.overlay, .little) .palette.cb-little .results .kind svg, body:is(.overlay, .little) .palette.cb-little .results .result-icon { width: 16px; height: 16px; }
+body:is(.overlay, .little) .palette.cb-little .results .label { flex: none; max-width: 60%; }
+body:is(.overlay, .little) .palette.cb-little .results .detail { font-weight: 600; color: var(--text-3); }
+/* The whole ink of the highlight: at 75 % the detail fell to 3.2:1 on some accents, and to 3.85:1 on the default one in the dark scheme. */
+body:is(.overlay, .little) .palette.cb-little .results li.selected .detail { color: var(--on-accent); }
+body:is(.overlay, .little) .palette.cb-little .result-favicon { width: 16px; height: 16px; padding: 0; border-radius: 3px; background: transparent; }
+
+/* The legend and the key of the highlighted row: "Switch to Tab" and a white 24 px square holding a blue arrow. */
+body:is(.overlay, .little) .palette.cb-little .results .hint { padding-left: 0; font-size: 13px; font-weight: 700; color: var(--on-accent); }
+body:is(.overlay, .little) .palette.cb-little .results .keycap {
+  width: 24px; min-width: 24px; height: 24px; margin-left: auto; border-radius: 6px; background: var(--on-accent); box-shadow: none; color: var(--accent);
+}
+body:is(.overlay, .little) .palette.cb-little .results .hint + .keycap { margin-left: 9px; }
+body:is(.overlay, .little) .palette.cb-little .results .keycap svg { width: 14px; height: 14px; }
+
+/* The emoji of a space in a rounded tile, as large as the line icons (16 px) so rows keep their alignment. */
+body:is(.overlay, .little) .palette.cb-little .space-tile {
+  width: 16px; height: 16px; border-radius: 5px; display: grid; place-items: center; font-size: 11px; line-height: 1;
+  background: var(--tile-hover);
+}
+body:is(.overlay, .little) .palette.cb-little .results li.selected .space-tile { background: var(--tile-active); }
+
+body:is(.overlay, .little) .palette.cb-little .scope-pill { height: 26px; border-radius: 6px; font-size: 13px; font-weight: 700; }
+body:is(.overlay, .little) .palette.cb-little .palette-help { padding: 8px 22px; border-bottom: 1px solid var(--line); font-size: 12px; }
+body:is(.overlay, .little) .palette.cb-little .palette-note { padding: 10px 22px; border-top: 1px solid var(--line); font-size: 12px; }
+/* The window of a Mini-fenêtre has a fixed height: the row that offers « Annuler » lies over the foot of the list instead of pushing it out. */
+body:is(.overlay, .little) .palette.cb-little .cb-undo { position: absolute; left: 0; right: 0; bottom: 0; padding: 8px 22px; background: color-mix(in srgb, var(--ok) 10%, var(--surface)); }
+
+/*
+ * The first state of a mini window: the same card as the window itself, 490 x 329, with a close
+ * button where the main bar has its "i", a 16 px field and the colours of that window (#18171b, rule #2e2e32, edge #3c3c3d).
+ */
+body:is(.overlay, .little) .palette.cb-little {
+  --cb-fill: var(--surface);
+  position: fixed; inset: 0; left: 0; top: 0; width: auto; border-radius: 12px; border-color: var(--line-strong);
+  box-shadow: none; color: var(--text);
+}
+body .palette.cb-little .palette-head { -webkit-app-region: drag; }
+/* The title of the window ("Mini-fenêtre · 💼 Travail"), the groups of the list, and the badge of an open tab. The list gives the title its 30 px. */
+body .palette.cb-little .palette-title { height: 30px; display: flex; align-items: center; justify-content: center; font: 600 12px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; color: var(--text-3); -webkit-app-region: drag; }
+body .palette.cb-little .results { max-height: 218px; }
+body .palette.cb-little .results li.group-title { height: 22px; margin: 6px 2px 0; padding: 0 14px; display: flex; align-items: center; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); pointer-events: none; }
+body .palette.cb-little .results .chip { flex: none; margin-left: auto; padding: 2px 8px; border-radius: 999px; background: var(--tile-hover); color: var(--text-2); font-size: 11px; font-weight: 600; line-height: 1.3; white-space: nowrap; }
+body .palette.cb-little .results li.selected .chip { background: color-mix(in srgb, var(--on-accent) 20%, transparent); color: var(--on-accent); }
+body .palette.cb-little .results .chip + .keycap { margin-left: 9px; }
+body .palette.cb-little .palette-head::after { background: var(--line); }
+body .palette.cb-little .palette-input { font-size: 16px; color: var(--text); -webkit-app-region: no-drag; }
+body .palette.cb-little .palette-input::placeholder { color: var(--text-3); }
+body .palette.cb-little .results li.selected { background: var(--accent); }
+body .palette.cb-little .palette-close {
+  position: relative; flex: none; width: 26px; height: 26px; margin-left: -2px; display: grid; place-items: center; color: var(--text-2); -webkit-app-region: no-drag;
+}
+body .palette.cb-little .palette-close::before { content: ''; position: absolute; inset: 1px; border-radius: 6px; background: var(--tile); }
+body .palette.cb-little .palette-close svg { position: relative; }

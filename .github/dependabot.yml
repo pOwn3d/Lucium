@@ -1,0 +1,70 @@
+version: 2
+
+# Version updates, once a week. Security advisories do not wait for them: Dependabot alerts and security updates are settings of the
+# repository (Settings > Advanced Security), and the waiting time below does not apply to a security update.
+#
+# `cooldown`: a version is proposed only once it has been out for some days. A release that is withdrawn or found compromised in its
+# first days never reaches a pull request here.
+updates:
+  # Electron bumps are how Chromium gets updated: one PR per release. The checks of a pull request (ci.yml) open no window: before merging,
+  # run the "Smoke (macOS)" workflow on the PR branch (or `pnpm test:engine` then `pnpm compat:compare` locally): it compares with compat/baseline-*.json.
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 8
+    cooldown:
+      default-days: 7
+      semver-major-days: 21
+      semver-minor-days: 7
+      semver-patch-days: 5
+    commit-message:
+      prefix: 'chore(deps)'
+      prefix-development: 'chore(deps-dev)'
+    ignore:
+      # A new major of Electron is a new Chromium: it comes through `pnpm electron:upgrade` (docs/mise-a-jour-chromium.md), never
+      # through a pull request of Dependabot.
+      - dependency-name: electron
+        update-types: ['version-update:semver-major']
+    groups:
+      # Electron is how Chromium gets updated, and it is apart from everything else: one pull request per release, alone in its group.
+      # The downloads are built with the Electron of castLabs (the Widevine variant), which comes out some days after Electron's own:
+      # merge this pull request only once the issue opened by chromium-watch.yml says that the castLabs build of that very version
+      # exists, so that the `electron` of package.json stays the version of the engine people run. The checks of a pull request open
+      # no window; before merging, run the "Smoke (macOS)" workflow on the branch (or `pnpm test:engine` then `pnpm compat:compare`
+      # locally) and read the comparison with compat/baseline-*.json.
+      electron:
+        patterns: [electron]
+      # The two packages that carry the extensions. electron-chrome-extensions is patched (patches/): a new version needs its patch
+      # written again, so it never hides in a larger group.
+      extensions:
+        patterns: [electron-chrome-extensions, electron-chrome-web-store]
+      react:
+        patterns: [react, react-dom, '@types/react', '@types/react-dom']
+      build-tools:
+        patterns: [vite, electron-vite, '@vitejs/*', typescript, electron-builder, '@types/node']
+      # The coverage provider (@vitest/coverage-v8) must stay at the version of vitest: a test checks it, so the two move in one pull request.
+      test-tools:
+        patterns: [vitest, '@vitest/*', '@playwright/test']
+      # The linter and the package that reads the types for it: they move together (oxlint names the oldest oxlint-tsgolint it accepts).
+      lint-tools:
+        patterns: [oxlint, oxlint-tsgolint]
+      # What is left (the blocker, the reader, koffi, the domain list) runs in the browser: one pull request each, read one by one.
+
+  # The workflows pin every action to a commit; this keeps the pins and the version comments current. The image of the secret scanner
+  # (secret-scanning.yml) is pinned by digest in the workflow itself: Dependabot does not move it, a test fails until it follows the action.
+  # `/` reads the workflows; a local action is read only when its own folder is named, so the pin of pnpm/setup in .github/actions/setup is
+  # followed through the second line (a new folder under .github/actions is added here).
+  - package-ecosystem: github-actions
+    directories:
+      - /
+      - /.github/actions/setup
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: 'ci(deps)'
+    groups:
+      actions:
+        patterns: ['*']

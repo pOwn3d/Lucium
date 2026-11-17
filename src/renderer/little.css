@@ -1,0 +1,135 @@
+@import './palette.css';
+/*
+ * The header of the mini window: 40 px tall, with the page's icon, title and
+ * address, and a 28 px banner for the archiving delay under it (shared/ipc.ts: LITTLE_HEADER_HEIGHT, LITTLE_STRIP_HEIGHT).
+ * Loaded after styles.css, which still holds the older `.little-*` rules: the la- prefix keeps them out of the way.
+ */
+body.little { background: var(--fixed-17171c); }
+.la {
+  position: fixed; inset: 0; background: var(--bg-gradient, linear-gradient(155deg, var(--fixed-282150), var(--fixed-28112d)));
+  /* --la-host: the address of the page, 12 px, on the ground: 4.5:1 or more on the darkest and the lightest of the gradient (stylesheets.test.ts). */
+  --la-fg: var(--fixed-d9d8dc); --la-glyph: var(--fixed-787681); --la-host: var(--fixed-9a98a4); --la-field: var(--fixed-ffffff-08); --la-hover: var(--fixed-ffffff-08);
+  color: var(--la-fg); font: 500 13px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing: antialiased; user-select: none;
+}
+.la.light { --la-fg: var(--fixed-2a2a31); --la-glyph: var(--fixed-6a6a74); --la-host: var(--fixed-6a6a74); --la-field: var(--fixed-000000-07); --la-hover: var(--fixed-000000-08); }
+/* Over the gradient of the space the page will open in, the header is written with the inks of that space, measured on its colours (shared/theme.ts,
+   spaceInks): the fixed greys above are for the ground of the window before a space is known, and are under 4.5:1 on most colours of a space. */
+.la.themed { --la-fg: var(--text-on-space); --la-glyph: var(--glyph-on-space); --la-host: var(--text-on-tile-2); }
+@media (prefers-contrast: more) {
+  .la.themed { --la-glyph: var(--text-on-space); --la-host: var(--text-on-space); }
+}
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .la.themed { --la-glyph: var(--text-on-space); --la-host: var(--text-on-space); }
+
+/* The header of the mini window: 40 px, the page's icon, title and address, "Ouvrir dans <espace>" and the pin "Garder ouvert". The
+   room on the left is the traffic lights'. The whole header drags the window; what can be clicked does not. */
+.la-header { position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 80px; -webkit-app-region: drag; }
+.la-header button { -webkit-app-region: no-drag; color: inherit; }
+
+.la-field { position: relative; flex: 1; min-width: 96px; height: 32px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 3px 0 8px; border-radius: 10px; background: var(--la-field); }
+.la-field .wa-icon { width: 16px; height: 16px; border-radius: 4px; }
+.la-field .wa-icon.fallback { font-size: 9px; }
+/* Back, forward and reload close the field, before the copy button; reload only shows while the pointer is on the field (its place is kept, so that nothing moves). */
+.la-nav { display: flex; gap: 2px; flex: none; margin-left: auto; }
+.la-sq { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 6px; color: var(--la-glyph); flex: none; }
+.la-sq:hover { background: var(--la-hover); color: var(--la-fg); }
+.la-sq:focus-visible { outline: 2px solid var(--fixed-ffffff-60); outline-offset: -2px; }
+.la-reload { opacity: 0; }
+.la-field:hover .la-reload, .la-reload:focus-visible { opacity: 1; }
+/* The title leads and gives way first; the address (when the page has a title of its own) is a quieter word after it. A long host gives way by its
+   subdomains, never by its domain (host-text.css). */
+.la-title { min-width: 24px; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.la-host { min-width: 0; max-width: 40%; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; color: var(--la-host); }
+
+/* "Open in <space>": the main button and the "other spaces" chevron hover on their own. The pill is as wide as its words (the name of the space gives way). */
+.la-open { flex: none; max-width: 240px; min-width: 0; height: 32px; display: grid; grid-template-columns: minmax(0, 1fr) 1px 29px; border-radius: 10px; overflow: hidden; background: var(--fixed-060627); color: var(--fixed-828394); }
+.la-open button { height: 32px; }
+.la-open-main { display: flex; align-items: center; gap: 4px; padding: 0 8px 0 12px; min-width: 0; text-align: left; font-size: 13px; }
+.la-open-main:hover { background: var(--fixed-ffffff-06); }
+.la-open-label { flex: none; font-weight: 400; color: var(--fixed-828394); }
+.la-open-space { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--fixed-e8f2e4); }
+.la-open-main kbd { flex: none; margin-left: auto; padding: 0 5px; height: 18px; display: grid; place-items: center; border-radius: 4px; background: var(--fixed-1d1d3b); color: var(--fixed-8b8c9a); font: 500 12px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+.la-open-sep { background: var(--fixed-1d1f39); }
+.la-open-more { display: grid; place-items: center; color: var(--fixed-9a9bb0); }
+.la-open-more:hover { background: var(--fixed-000000-30); color: var(--fixed-e8f2e4); }
+.la-open button:focus-visible { outline: 2px solid var(--fixed-ffffff-60); outline-offset: -2px; }
+
+/* A narrow window (the minimum is 480 px) gives the title the room of the words "Ouvrir dans": the button keeps the name of the space and the key. The address
+   stays at every width: this header is the only place of the window that says whose page it is, and the title is the page's own words. */
+.la { container-type: inline-size; container-name: la; }
+@container la (max-width: 560px) { .la-open-label { display: none; } }
+
+/* The pin "Garder ouvert": a 32 px square; pressed, it takes the navy of the "Open in" pill and its green. */
+.la-pin { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 10px; background: var(--la-field); color: var(--la-glyph); }
+.la-pin:hover { background: var(--la-hover); color: var(--la-fg); }
+.la-pin[aria-pressed='true'] { background: var(--fixed-060627); color: var(--fixed-e8f2e4); }
+.la-pin:focus-visible { outline: 2px solid var(--fixed-ffffff-60); outline-offset: -2px; }
+
+/* The banner under the header: what becomes of a window that is forgotten, and the link to the delay. The page starts under it (28 px). */
+.la-strip { box-sizing: border-box; display: flex; align-items: center; gap: 8px; padding: 0 4px 0 12px; font-size: 12px; font-weight: 500; color: var(--la-fg); background: var(--fixed-000000-14); border-top: 1px solid var(--fixed-ffffff-08); border-bottom: 1px solid var(--fixed-000000-20); }
+.la.light .la-strip { background: var(--fixed-ffffff-40); border-top-color: var(--fixed-ffffff-50); border-bottom-color: var(--fixed-000000-10); }
+.la-strip-icon { flex: none; color: var(--la-glyph); }
+.la-strip.kept .la-strip-icon { color: var(--fixed-4fc47f); }
+.la.light .la-strip.kept .la-strip-icon { color: var(--fixed-166e3c); }
+.la-strip-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.la-strip-link { flex: none; margin-left: auto; min-height: 22px; padding: 0 8px; border-radius: 6px; font: inherit; font-weight: 700; color: var(--la-fg); text-decoration: underline; text-underline-offset: 2px; }
+.la-strip-link:hover { background: var(--la-hover); }
+.la-strip-link:focus-visible { outline: 2px solid var(--fixed-ffffff-60); outline-offset: -2px; }
+
+/* ---- Space picker: a 244 x 230 popover in the top right corner of a transparent layer ---- */
+body.little-picker { background: transparent; }
+.lp-layer { position: fixed; inset: 0; background: transparent; user-select: none; -webkit-font-smoothing: antialiased; font: 600 14px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+.lp { position: absolute; box-sizing: border-box; display: flex; flex-direction: column; overflow: hidden; border-radius: 12px; background: var(--fixed-060627); border: 1px solid var(--fixed-111330); color: var(--fixed-e0e0f0); box-shadow: 0 12px 40px var(--fixed-000000-50); }
+.lp-search { position: relative; flex: none; display: flex; align-items: center; box-sizing: border-box; padding-left: 15px; }
+.lp-lens { flex: none; color: var(--fixed-8b8c9a); }
+.lp-input { width: 160px; height: 16px; margin-left: 16px; padding: 0; border: 0; outline: 0; background: transparent; color: var(--fixed-e0e0f0); font: 500 13px/16px -apple-system, BlinkMacSystemFont, system-ui, sans-serif; caret-color: var(--fixed-5d78ff); user-select: text; }
+.lp-input::placeholder { color: var(--fixed-7f8095); }
+.lp-fold { position: absolute; right: 7px; top: 7px; width: 28px; height: 30px; display: grid; place-items: center; border-radius: 8px; background: var(--fixed-171635); color: var(--fixed-9a9bb0); }
+.lp-fold:hover { color: var(--fixed-e8f2e4); }
+.lp-list { flex: 1; min-height: 0; margin: 0; padding: 0; list-style: none; overflow-y: auto; }
+.lp-list li { display: flex; align-items: center; gap: 10px; box-sizing: border-box; padding: 0 10px; cursor: default; }
+.lp-list li.on { background: var(--fixed-161736); }
+.lp-icon { flex: none; width: 28px; height: 28px; display: grid; place-items: center; border-radius: 7px; font-size: 15px; }
+.lp-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.lp-list li.lp-empty { display: block; padding: 14px 16px; color: var(--fixed-7f8095); font-weight: 400; font-size: 13px; }
+
+/* ---- Downloads tray: a card of the window's own colours at the bottom of the window, over the page ---- */
+body.little-tray { background: transparent; }
+.lt { position: fixed; inset: 0; box-sizing: border-box; padding: 6px; border-radius: 12px; background: var(--fixed-18171b); border: 1px solid var(--fixed-ffffff-16); box-shadow: 0 8px 28px var(--fixed-000000-40); color: var(--fixed-d9d8dc); font: 500 13px/1.25 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing: antialiased; user-select: none; overflow: hidden; }
+.lt-row { display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 6px 0 10px; border-radius: 8px; }
+.lt-row + .lt-row { border-top: 1px solid var(--fixed-2e2e32); border-radius: 0; }
+.lt-icon { position: relative; flex: none; width: 24px; height: 30px; color: var(--fixed-8b8c9a); }
+.lt-ext { position: absolute; left: 2px; right: 2px; bottom: 6px; font-size: 7px; font-weight: 700; text-align: center; color: var(--fixed-d9d8dc); }
+.lt-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.lt-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; color: var(--fixed-e8e8ee); }
+.lt-status { color: var(--fixed-969698); font-size: 12px; }
+.lt-row.cancelled .lt-name, .lt-row.interrupted .lt-name { color: var(--fixed-969698); text-decoration: line-through; }
+.lt progress { display: block; width: 100%; height: 4px; border: 0; border-radius: 2px; overflow: hidden; background: var(--fixed-ffffff-14); }
+.lt progress::-webkit-progress-bar { background: var(--fixed-ffffff-14); }
+.lt progress::-webkit-progress-value { background: var(--fixed-ecedff); border-radius: 2px; }
+.lt-btn { flex: none; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 6px; color: var(--fixed-9f9ea0); }
+.lt-btn:hover { background: var(--fixed-2c292d); color: var(--fixed-e8e8ee); }
+.lt-btn:focus-visible { outline: 2px solid var(--fixed-ffffff-60); outline-offset: -2px; }
+
+/* The action bubble above the rows of the tray (Settings › Navigation › Plus de réglages): the navy of the window's "Open in" pill, the blue of its command bar. 44 px + 6 px of gap, as in shared/little-bubble.ts. */
+.lt-bubble { display: flex; align-items: center; gap: 8px; height: 44px; margin-bottom: 6px; box-sizing: border-box; padding: 0 6px 0 12px; border-radius: 8px; background: var(--fixed-060627); color: var(--fixed-e8f2e4); }
+.lt-bubble-done { flex: none; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: var(--fixed-4049d7); color: var(--fixed-ffffff); }
+.lt-bubble-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.lt-bubble-btn { flex: none; height: 28px; padding: 0 10px; border-radius: 6px; background: var(--fixed-1d1d3b); color: var(--fixed-e8f2e4); font: 600 12px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+.lt-bubble-btn:hover { background: var(--fixed-2a2a52); }
+.lt-bubble-btn.primary { background: var(--fixed-4049d7); color: var(--fixed-ffffff); }
+.lt-bubble-btn.primary:hover { background: var(--fixed-4d57e6); }
+.lt-bubble button:focus-visible { outline: 2px solid var(--fixed-ffffff-60); outline-offset: -2px; }
+
+/* ---- Application window (setting webAppWindows): a thin header with the icon and the name of the site, above its page ---- */
+.wa { position: fixed; inset: 0; background: var(--fixed-17171c); color: var(--fixed-d9d8dc); --la-glyph: var(--fixed-787681); --la-hover: var(--fixed-ffffff-08); --la-fg: var(--fixed-d9d8dc); font: 500 13px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing: antialiased; user-select: none; }
+@media (prefers-color-scheme: light) { .wa { background: var(--fixed-f1f1f4); color: var(--fixed-2a2a31); --la-glyph: var(--fixed-6a6a74); --la-hover: var(--fixed-000000-08); --la-fg: var(--fixed-2a2a31); } }
+/* The room on the left is the traffic lights'. The header drags the window; what can be clicked does not. */
+.wa-header { box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 78px; -webkit-app-region: drag; }
+.wa-header button { -webkit-app-region: no-drag; color: inherit; }
+.wa-id { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+.wa-icon { flex: none; width: 18px; height: 18px; border-radius: 4px; object-fit: contain; }
+.wa-icon.fallback { display: grid; place-items: center; background: var(--fixed-80808c-30); font-size: 11px; font-weight: 700; }
+.wa-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 700; }
+.wa-nav { flex: none; display: flex; gap: 2px; }
+.wa-nav .la-sq:disabled { opacity: 0.35; pointer-events: none; }

@@ -1,0 +1,2513 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`the context menus of the sidebar, as built > of a favourite, of the history of back and forward, of the hidden extensions, of the readable button 1`] = `
+"- label="Ouvrir" type="header"
+- enabled=true label="Ouvrir en vue scindée" icon=split(template) click
+- label="Ouvrir dans une mini-fenêtre" icon=mini(template) click
+- label="Copier le lien" icon=copy(template) click
+- label="Partager" role="shareMenu" sharingItem={"urls":["https://fav.example.org/"]} icon=share(template)
+- label="Personnaliser" type="header"
+- enabled=true label="Renommer…" icon=rename(template) click
+- label="Modifier la page épinglée" icon=link(template)
+  - enabled=true label="Revenir à l’adresse épinglée" click
+  - enabled=true label="Remplacer l’adresse épinglée par la page actuelle" click
+- enabled=false label="Couper le son" icon=mute(template)
+- label="Organiser" type="header"
+- enabled=false label="Déplacer vers le haut" icon=up(template) click
+- enabled=false label="Déplacer vers le bas" icon=down(template) click
+- enabled=true label="Déplacer vers" icon=move(template)
+  - label="🏠 Perso" click
+  - label="🎨 Autre" click
+- label="Retirer" type="header"
+- label="Retirer des favoris" icon=red:star click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a favourite, of the history of back and forward, of the hidden extensions, of the readable button 2`] = `
+"- label="Ouvrir" type="header"
+- enabled=true label="Ouvrir en vue scindée" icon=split(template) click
+- label="Ouvrir dans une mini-fenêtre" icon=mini(template) click
+- label="Copier le lien" icon=copy(template) click
+- label="Partager" role="shareMenu" sharingItem={"urls":["https://fav.example.org/"]} icon=share(template)
+- label="Personnaliser" type="header"
+- enabled=false label="Renommer…" icon=rename(template) click
+- label="Modifier la page épinglée" icon=link(template)
+  - enabled=true label="Revenir à l’adresse épinglée" click
+  - enabled=true label="Remplacer l’adresse épinglée par la page actuelle" click
+- enabled=false label="Couper le son" icon=mute(template)
+- label="Organiser" type="header"
+- enabled=false label="Déplacer vers le haut" icon=up(template) click
+- enabled=false label="Déplacer vers le bas" icon=down(template) click
+- enabled=true label="Déplacer vers" icon=move(template)
+  - label="🏠 Perso" click
+  - label="🎨 Autre" click
+- label="Retirer" type="header"
+- label="Retirer des favoris" icon=red:star click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a favourite, of the history of back and forward, of the hidden extensions, of the readable button 3`] = `
+"- label="Premier" sublabel="one.example.org/" click
+- label="https://two.example.org/path" sublabel=undefined click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a favourite, of the history of back and forward, of the hidden extensions, of the readable button 4`] = `"- enabled=false label="Aucune page suivante""`;
+
+exports[`the context menus of the sidebar, as built > of a favourite, of the history of back and forward, of the hidden extensions, of the readable button 5`] = `
+"- label="Alpha" click
+- type="separator"
+- enabled=true label="Épingler à la barre d’outils"
+  - checked=true label="Alpha" type="checkbox" click
+  - checked=true label="Beta" type="checkbox" click
+- label="Gérer les extensions…" click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a favourite, of the history of back and forward, of the hidden extensions, of the readable button 6`] = `
+"- checked=true label="Original" type="radio" click
+- checked=false label="Sombre" type="radio" click
+- checked=false label="Clair" type="radio" click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a favourite, of the history of back and forward, of the hidden extensions, of the readable button 7`] = `""`;
+
+exports[`the context menus of the sidebar, as built > of a folder and of a live folder 1`] = `
+"- label="Créer et copier" type="header"
+- enabled=true label="Nouveau sous-dossier" icon=folder(template) click
+- enabled=true label="Transformer « Dossier » en espace" icon=space(template) click
+- enabled=true label="Copier tous les liens" icon=copy(template) click
+- enabled=true label="Copier tous les liens en Markdown" icon=copy(template) click
+- label="Personnaliser" type="header"
+- label="Renommer…" icon=rename(template) click
+- label="Organiser" type="header"
+- label="Dupliquer" icon=dup(template) click
+- label="Mettre au début d’Aujourd’hui" icon=up(template) click
+- label="Mettre en bas de la liste" icon=down(template) click
+- checked=false label="Ne jamais réveiller automatiquement" type="checkbox" icon=sleep(template) click
+- label="Archiver le dossier" icon=archive(template) click
+- label="Supprimer" type="header"
+- label="Supprimer le dossier (garder les onglets)" icon=red:trash click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a folder and of a live folder 2`] = `
+"- label="Créer et copier" type="header"
+- enabled=true label="Nouveau sous-dossier" icon=folder(template) click
+- enabled=true label="Transformer « Live » en espace" icon=space(template) click
+- enabled=false label="Copier tous les liens" icon=copy(template) click
+- enabled=false label="Copier tous les liens en Markdown" icon=copy(template) click
+- label="Dossier en direct" type="header"
+- label="Actualiser le dossier en direct" icon=reload(template) click
+- label="Modifier la source…" icon=link(template) click
+- label="Personnaliser" type="header"
+- label="Renommer…" icon=rename(template) click
+- label="Organiser" type="header"
+- label="Dupliquer" icon=dup(template) click
+- label="Mettre au début d’Aujourd’hui" icon=up(template) click
+- label="Mettre en bas de la liste" icon=down(template) click
+- checked=false label="Ne jamais réveiller automatiquement" type="checkbox" icon=sleep(template) click
+- label="Archiver le dossier" icon=archive(template) click
+- label="Supprimer" type="header"
+- label="Supprimer le dossier (garder les onglets)" icon=red:trash click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a folder and of a live folder 3`] = `
+"- label="Créer et copier" type="header"
+- enabled=true label="Nouveau sous-dossier" icon=folder(template) click
+- enabled=false label="Transformer « Live » en espace" icon=space(template) click
+- enabled=false label="Copier tous les liens" icon=copy(template) click
+- enabled=false label="Copier tous les liens en Markdown" icon=copy(template) click
+- label="Personnaliser" type="header"
+- label="Renommer…" icon=rename(template) click
+- label="Organiser" type="header"
+- label="Dupliquer" icon=dup(template) click
+- label="Mettre au début d’Aujourd’hui" icon=up(template) click
+- label="Mettre en bas de la liste" icon=down(template) click
+- checked=false label="Ne jamais réveiller automatiquement" type="checkbox" icon=sleep(template) click
+- label="Archiver le dossier" icon=archive(template) click
+- label="Supprimer" type="header"
+- label="Supprimer le dossier (garder les onglets)" icon=red:trash click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a pane of a split view 1`] = `
+"- label="Ouvrir" type="header"
+- label="Copier le lien" icon=copy(template) click
+- label="Organiser" type="header"
+- enabled=false label="Déplacer le volet vers la gauche" icon=left(template) click
+- enabled=true label="Déplacer le volet vers la droite" icon=right(template) click
+- enabled=true label="Ajouter une vue scindée" icon=split(template) click
+- label="Disposition" icon=stack(template)
+  - checked=true enabled=true label="Côte à côte" type="radio" click
+  - checked=false enabled=true label="En colonne" type="radio" click
+  - checked=false enabled=false label="Grille" type="radio" click
+- enabled=true label="Enregistrer comme vue de travail…" icon=sparkle(template) click
+- checked=true label="Défilement synchronisé" type="checkbox" click
+- label="Retirer" type="header"
+- label="Séparer cet onglet de la vue scindée" icon=close(template) click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a pane of a split view 2`] = `""`;
+
+exports[`the context menus of the sidebar, as built > of a space: on screen with a theme on the clipboard, from the sidebar itself, another one locked, in a private window 1`] = `
+"- label="Personnaliser" type="header"
+- enabled=true label="Personnaliser l’espace…" icon=palette(template) click
+- enabled=true label="Renommer l’espace…" icon=rename(template) click
+- enabled=true label="Définir le profil" icon=profile(template)
+  - checked=true label="Profil par défaut" type="radio" click
+  - checked=false label="Travail" type="radio" click
+  - type="separator"
+  - label="Nouveau profil…" click
+- label="Thème" type="header"
+- label="Copier le thème" icon=copy(template) click
+- enabled=true label="Coller le thème" icon=import(template) click
+- enabled=true label="Appliquer ce thème à tous les espaces" icon=sparkle(template) click
+- label="Exporter le thème dans un fichier…" icon=export(template) click
+- enabled=true label="Importer un thème depuis un fichier…" icon=import(template) click
+- label="Organiser" type="header"
+- enabled=true label="Nouveau dossier" icon=folder(template) click
+- enabled=true label="Masquer l’en-tête de l’espace" icon=header(template) click
+- checked=true label="Aperçu dans la carte de survol" type="checkbox" click
+- label="Volets web" icon=panel(template)
+  - label="Ouvrir « Volet » en volet" click
+  - type="separator"
+  - enabled=true label="Ajouter la page en volet web" click
+  - enabled=true label="Retirer un volet web"
+    - label="Volet" click
+  - label="Fermer le volet web" click
+- enabled=true label="Mettre l’espace de côté…" icon=aside(template) click
+- label="Verrouiller l’espace…" icon=lock(template) click
+- label="Gérer les espaces…" icon=grid(template) click
+- label="Supprimer" type="header"
+- accelerator="CmdOrCtrl+Shift+K" label="Vider les onglets du jour" registerAccelerator=false icon=red:broom click
+- enabled=true label="Supprimer l’espace…" icon=red:trash click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a space: on screen with a theme on the clipboard, from the sidebar itself, another one locked, in a private window 2`] = `
+"- label="Barre de cette fenêtre" type="header"
+- accelerator="Ctrl+CmdOrCtrl+S" label="Déplier la barre" registerAccelerator=false icon=panel(template) click
+- checked=false label="À gauche" type="checkbox" click
+- checked=true label="À droite" type="checkbox" click
+- checked=false label="Comme les nouvelles fenêtres" type="checkbox" click
+- label="Personnaliser" type="header"
+- enabled=true label="Personnaliser l’espace…" icon=palette(template) click
+- enabled=true label="Renommer l’espace…" icon=rename(template) click
+- enabled=true label="Définir le profil" icon=profile(template)
+  - checked=true label="Profil par défaut" type="radio" click
+  - checked=false label="Travail" type="radio" click
+  - type="separator"
+  - label="Nouveau profil…" click
+- label="Thème" type="header"
+- label="Copier le thème" icon=copy(template) click
+- enabled=false label="Coller le thème" icon=import(template) click
+- enabled=true label="Appliquer ce thème à tous les espaces" icon=sparkle(template) click
+- label="Exporter le thème dans un fichier…" icon=export(template) click
+- enabled=true label="Importer un thème depuis un fichier…" icon=import(template) click
+- label="Organiser" type="header"
+- enabled=true label="Nouveau dossier" icon=folder(template) click
+- enabled=true label="Masquer l’en-tête de l’espace" icon=header(template) click
+- checked=true label="Aperçu dans la carte de survol" type="checkbox" click
+- label="Volets web" icon=panel(template)
+  - label="Ouvrir « Volet » en volet" click
+  - type="separator"
+  - enabled=true label="Ajouter la page en volet web" click
+  - enabled=true label="Retirer un volet web"
+    - label="Volet" click
+  - label="Fermer le volet web" click
+- enabled=true label="Mettre l’espace de côté…" icon=aside(template) click
+- label="Verrouiller l’espace…" icon=lock(template) click
+- label="Gérer les espaces…" icon=grid(template) click
+- label="Supprimer" type="header"
+- accelerator="CmdOrCtrl+Shift+K" label="Vider les onglets du jour" registerAccelerator=false icon=red:broom click
+- enabled=true label="Supprimer l’espace…" icon=red:trash click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a space: on screen with a theme on the clipboard, from the sidebar itself, another one locked, in a private window 3`] = `
+"- label="Personnaliser" type="header"
+- enabled=false label="Personnaliser l’espace…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." icon=palette(template) click
+- enabled=false label="Renommer l’espace…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." icon=rename(template) click
+- enabled=false label="Définir le profil" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." icon=profile(template)
+  - checked=false label="Profil par défaut" type="radio" click
+  - checked=true label="Travail" type="radio" click
+  - type="separator"
+  - label="Nouveau profil…" click
+- label="Thème" type="header"
+- label="Copier le thème" icon=copy(template) click
+- enabled=false label="Coller le thème" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." icon=import(template) click
+- enabled=true label="Appliquer ce thème à tous les espaces" icon=sparkle(template) click
+- label="Exporter le thème dans un fichier…" icon=export(template) click
+- enabled=false label="Importer un thème depuis un fichier…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." icon=import(template) click
+- label="Organiser" type="header"
+- enabled=false label="Nouveau dossier" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." icon=folder(template) click
+- enabled=false label="Masquer l’en-tête de l’espace" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." icon=header(template) click
+- checked=true label="Aperçu dans la carte de survol" type="checkbox" click
+- label="Volets web" icon=panel(template)
+  - enabled=false label="Ajouter la page en volet web" click
+  - enabled=false label="Retirer un volet web"
+  - label="Fermer le volet web" click
+- enabled=true label="Mettre l’espace de côté…" icon=aside(template) click
+- enabled=false label="Retirer le verrou de l’espace" icon=lock(template) click
+- label="Gérer les espaces…" icon=grid(template) click
+- label="Supprimer" type="header"
+- label="Vider les onglets du jour" icon=red:broom click
+- enabled=true label="Supprimer l’espace…" icon=red:trash click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a space: on screen with a theme on the clipboard, from the sidebar itself, another one locked, in a private window 4`] = `
+"- label="Barre de cette fenêtre" type="header"
+- accelerator="Ctrl+CmdOrCtrl+S" label="Déplier la barre" registerAccelerator=false icon=panel(template) click
+- checked=false label="À gauche" type="checkbox" click
+- checked=true label="À droite" type="checkbox" click
+- checked=false label="Comme les nouvelles fenêtres" type="checkbox" click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a space: on screen with a theme on the clipboard, from the sidebar itself, another one locked, in a private window 5`] = `""`;
+
+exports[`the context menus of the sidebar, as built > of a tab in a private window, and with every optional setting off 1`] = `
+"- label="Ouvrir" type="header"
+- accelerator="Ctrl+Shift+=" enabled=true label="Ajouter une vue scindée" registerAccelerator=false icon=split(template) click
+- label="Vue scindée avec…" icon=split(template)
+  - label="child.example.org" click
+  - label="d.example.org" click
+- label="Dupliquer" icon=dup(template) click
+- accelerator="CmdOrCtrl+Shift+C" label="Copier le lien" registerAccelerator=false icon=copy(template) click
+- label="Partager" role="shareMenu" sharingItem={"urls":["https://a.example.org/"]} icon=share(template)
+- label="Personnaliser" type="header"
+- label="Changer l’icône…" icon=icon(template) click
+- label="Renommer…" icon=rename(template) click
+- enabled=true label="Couper le son" icon=mute(template) click
+- enabled=true label="Recharger automatiquement" icon=reload(template)
+  - checked=false label="Désactivé" type="radio" click
+  - type="separator"
+  - checked=false label="5 s" type="radio" click
+  - checked=false label="10 s" type="radio" click
+  - checked=true label="30 s" type="radio" click
+  - checked=false label="1 min" type="radio" click
+  - checked=false label="2 min" type="radio" click
+  - checked=false label="5 min" type="radio" click
+  - checked=false label="10 min" type="radio" click
+  - type="separator"
+  - checked=false label="Personnalisé…" type="radio" click
+- label="Organiser" type="header"
+- accelerator="CmdOrCtrl+D" label="Épingler" registerAccelerator=false icon=pin(template) click
+- label="Ajouter aux favoris" icon=star(template) click
+- accelerator="CmdOrCtrl+Alt+Shift+Up" enabled=false label="Déplacer vers le haut" registerAccelerator=false icon=up(template) click
+- accelerator="CmdOrCtrl+Alt+Shift+Down" enabled=true label="Déplacer vers le bas" registerAccelerator=false icon=down(template) click
+- label="Déplacer vers l’espace" icon=move(template)
+  - label="🎨 Autre" click
+- label="Replier les onglets enfants" icon=branch(template) click
+- label="Veille" type="header"
+- enabled=false label="Mettre en veille" icon=sleep(template) click
+- enabled=false label="Geler (garde la page en mémoire)" icon=freeze(template) click
+- label="Archiver et fermer" type="header"
+- accelerator="CmdOrCtrl+W" label="Archiver l’onglet" registerAccelerator=false icon=archive(template) click
+- label="Archiver les autres onglets" icon=archive(template) click
+- enabled=true label="Archiver les onglets en dessous" icon=archive(template) click
+- label="Archiver l’onglet et ses onglets enfants" icon=archive(template) click
+- label="Fermer l’onglet" icon=red:close click
+- label="Fermer les autres onglets du jour" icon=red:close click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a tab in a private window, and with every optional setting off 2`] = `
+"- label="Ouvrir" type="header"
+- accelerator="Ctrl+Shift+=" enabled=true label="Ajouter une vue scindée" registerAccelerator=false icon=split(template) click
+- label="Vue scindée avec…" icon=split(template)
+  - label="d.example.org" click
+  - label="child.example.org" click
+- label="Dupliquer" icon=dup(template) click
+- accelerator="CmdOrCtrl+Shift+C" label="Copier le lien" registerAccelerator=false icon=copy(template) click
+- label="Partager" role="shareMenu" sharingItem={"urls":["https://a.example.org/"]} icon=share(template)
+- label="Personnaliser" type="header"
+- label="Changer l’icône…" icon=icon(template) click
+- label="Renommer…" icon=rename(template) click
+- enabled=true label="Couper le son" icon=mute(template) click
+- enabled=true label="Recharger automatiquement" icon=reload(template)
+  - checked=false label="Désactivé" type="radio" click
+  - type="separator"
+  - checked=false label="5 s" type="radio" click
+  - checked=false label="10 s" type="radio" click
+  - checked=true label="30 s" type="radio" click
+  - checked=false label="1 min" type="radio" click
+  - checked=false label="2 min" type="radio" click
+  - checked=false label="5 min" type="radio" click
+  - checked=false label="10 min" type="radio" click
+  - type="separator"
+  - checked=false label="Personnalisé…" type="radio" click
+- label="Organiser" type="header"
+- accelerator="CmdOrCtrl+D" label="Épingler" registerAccelerator=false icon=pin(template) click
+- label="Ajouter aux favoris" icon=star(template) click
+- accelerator="CmdOrCtrl+Alt+Shift+Up" enabled=false label="Déplacer vers le haut" registerAccelerator=false icon=up(template) click
+- accelerator="CmdOrCtrl+Alt+Shift+Down" enabled=true label="Déplacer vers le bas" registerAccelerator=false icon=down(template) click
+- label="Déplacer vers l’espace" icon=move(template)
+  - label="🎨 Autre" click
+- label="Déplacer vers la fenêtre" icon=move(template)
+  - label="Fenêtre 2" sublabel="Une page" click
+  - type="separator"
+  - label="Nouvelle fenêtre" click
+- enabled=true label="Lire plus tard" icon=clock(template) click
+- label="Veille" type="header"
+- enabled=false label="Mettre en veille" icon=sleep(template) click
+- enabled=false label="Geler (garde la page en mémoire)" icon=freeze(template) click
+- checked=false label="Ne jamais mettre cet onglet en veille" type="checkbox" click
+- checked=false enabled=true label="Garder un onglet de ce site éveillé" type="checkbox" click
+- label="Archiver et fermer" type="header"
+- accelerator="CmdOrCtrl+W" label="Archiver l’onglet" registerAccelerator=false icon=archive(template) click
+- label="Archiver les autres onglets" icon=archive(template) click
+- enabled=true label="Archiver les onglets en dessous" icon=archive(template) click
+- checked=false label="Effacer les données du site à la fermeture" type="checkbox" click
+- label="Fermer l’onglet" icon=red:close click
+- label="Fermer les autres onglets du jour" icon=red:close click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a tab: on screen with a child, its child, a pinned one, one of a split view, a selection 1`] = `
+"- label="Ouvrir" type="header"
+- accelerator="Ctrl+Shift+=" enabled=true label="Ajouter une vue scindée" registerAccelerator=false icon=split(template) click
+- label="Vue scindée avec…" icon=split(template)
+  - label="child.example.org" click
+  - label="d.example.org" click
+- label="Dupliquer" icon=dup(template) click
+- accelerator="CmdOrCtrl+Shift+C" label="Copier le lien" registerAccelerator=false icon=copy(template) click
+- label="Partager" role="shareMenu" sharingItem={"urls":["https://a.example.org/"]} icon=share(template)
+- label="Personnaliser" type="header"
+- label="Changer l’icône…" icon=icon(template) click
+- label="Renommer…" icon=rename(template) click
+- enabled=true label="Couper le son" icon=mute(template) click
+- enabled=true label="Recharger automatiquement" icon=reload(template)
+  - checked=false label="Désactivé" type="radio" click
+  - type="separator"
+  - checked=false label="5 s" type="radio" click
+  - checked=false label="10 s" type="radio" click
+  - checked=true label="30 s" type="radio" click
+  - checked=false label="1 min" type="radio" click
+  - checked=false label="2 min" type="radio" click
+  - checked=false label="5 min" type="radio" click
+  - checked=false label="10 min" type="radio" click
+  - type="separator"
+  - checked=false label="Personnalisé…" type="radio" click
+- label="Organiser" type="header"
+- accelerator="CmdOrCtrl+D" label="Épingler" registerAccelerator=false icon=pin(template) click
+- label="Ajouter aux favoris" icon=star(template) click
+- accelerator="CmdOrCtrl+Alt+Shift+Up" enabled=false label="Déplacer vers le haut" registerAccelerator=false icon=up(template) click
+- accelerator="CmdOrCtrl+Alt+Shift+Down" enabled=true label="Déplacer vers le bas" registerAccelerator=false icon=down(template) click
+- label="Déplacer vers l’espace" icon=move(template)
+  - label="🎨 Autre" click
+- label="Déplacer vers la fenêtre" icon=move(template)
+  - label="Fenêtre 2" sublabel="Une page" click
+  - type="separator"
+  - label="Nouvelle fenêtre" click
+- label="Replier les onglets enfants" icon=branch(template) click
+- enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Ajouter aux signets" icon=bookmark(template) click
+- enabled=true label="Ouvrir comme application" icon=app(template) click
+- label="Ouvrir dans un conteneur" icon=container(template)
+  - checked=false label="Banque" type="checkbox" click
+  - type="separator"
+  - enabled=false label="Sans conteneur" click
+- label="Toujours ouvrir a.example.org dans" icon=container(template)
+  - checked=false label="Banque" type="checkbox" click
+  - type="separator"
+  - enabled=false label="Aucun conteneur (retirer la règle)" click
+- label="Veille" type="header"
+- enabled=false label="Mettre en veille" icon=sleep(template) click
+- enabled=false label="Geler (garde la page en mémoire)" icon=freeze(template) click
+- checked=false label="Ne jamais mettre cet onglet en veille" type="checkbox" click
+- checked=false enabled=true label="Garder tous les onglets de ce site éveillés" type="checkbox" click
+- label="Archiver et fermer" type="header"
+- accelerator="CmdOrCtrl+W" label="Archiver l’onglet" registerAccelerator=false icon=archive(template) click
+- label="Archiver les autres onglets" icon=archive(template) click
+- enabled=true label="Archiver les onglets en dessous" icon=archive(template) click
+- label="Archiver l’onglet et ses onglets enfants" icon=archive(template) click
+- checked=false label="Effacer les données du site à la fermeture" type="checkbox" click
+- label="Fermer l’onglet" icon=red:close click
+- label="Fermer les autres onglets du jour" icon=red:close click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a tab: on screen with a child, its child, a pinned one, one of a split view, a selection 2`] = `
+"- enabled=true label="Ajouter une vue scindée" icon=split(template) click
+- label="Vue scindée avec…" icon=split(template)
+  - label="a.example.org" click
+  - label="d.example.org" click
+- label="Dupliquer" icon=dup(template) click
+- accelerator="CmdOrCtrl+Shift+C" label="Copier le lien" registerAccelerator=false icon=copy(template) click
+- label="Partager" role="shareMenu" sharingItem={"urls":["https://child.example.org/"]} icon=share(template)
+- type="separator"
+- label="Changer l’icône…" icon=icon(template) click
+- label="Renommer…" icon=rename(template) click
+- enabled=false label="Couper le son" icon=mute(template) click
+- enabled=true label="Recharger automatiquement" icon=reload(template)
+  - checked=true label="Désactivé" type="radio" click
+  - type="separator"
+  - checked=false label="5 s" type="radio" click
+  - checked=false label="10 s" type="radio" click
+  - checked=false label="30 s" type="radio" click
+  - checked=false label="1 min" type="radio" click
+  - checked=false label="2 min" type="radio" click
+  - checked=false label="5 min" type="radio" click
+  - checked=false label="10 min" type="radio" click
+  - type="separator"
+  - checked=false label="Personnalisé…" type="radio" click
+- type="separator"
+- label="Épingler" icon=pin(template) click
+- label="Ajouter aux favoris" icon=star(template) click
+- enabled=false label="Déplacer vers le haut" icon=up(template) click
+- enabled=true label="Déplacer vers le bas" icon=down(template) click
+- label="Déplacer vers l’espace" icon=move(template)
+  - label="🎨 Autre" click
+- label="Déplacer vers la fenêtre" icon=move(template)
+  - label="Fenêtre 2" sublabel="Une page" click
+  - type="separator"
+  - label="Nouvelle fenêtre" click
+- label="Sortir l’onglet de son parent" icon=branch(template) click
+- enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Ajouter aux signets" icon=bookmark(template) click
+- enabled=true label="Ouvrir comme application" icon=app(template) click
+- label="Ouvrir dans un conteneur" icon=container(template)
+  - checked=false label="Banque" type="checkbox" click
+  - type="separator"
+  - enabled=false label="Sans conteneur" click
+- label="Toujours ouvrir child.example.org dans" icon=container(template)
+  - checked=false label="Banque" type="checkbox" click
+  - type="separator"
+  - enabled=false label="Aucun conteneur (retirer la règle)" click
+- type="separator"
+- enabled=false label="Mettre en veille" icon=sleep(template) click
+- enabled=false label="Geler (garde la page en mémoire)" icon=freeze(template) click
+- checked=false label="Ne jamais mettre cet onglet en veille" type="checkbox" click
+- checked=false enabled=true label="Garder tous les onglets de ce site éveillés" type="checkbox" click
+- type="separator"
+- label="Archiver l’onglet" icon=archive(template) click
+- label="Archiver les autres onglets" icon=archive(template) click
+- enabled=true label="Archiver les onglets en dessous" icon=archive(template) click
+- label="Archiver les onglets au-dessus" icon=archive(template) click
+- checked=false label="Effacer les données du site à la fermeture" type="checkbox" click
+- label="Fermer l’onglet" icon=red:close click
+- label="Fermer les autres onglets du jour" icon=red:close click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a tab: on screen with a child, its child, a pinned one, one of a split view, a selection 3`] = `
+"- label="Ouvrir" type="header"
+- enabled=true label="Ajouter une vue scindée" icon=split(template) click
+- label="Vue scindée avec…" icon=split(template)
+  - label="a.example.org" click
+  - label="child.example.org" click
+- label="Dupliquer" icon=dup(template) click
+- accelerator="CmdOrCtrl+Shift+C" label="Copier le lien" registerAccelerator=false icon=copy(template) click
+- label="Partager" role="shareMenu" sharingItem={"urls":["https://d.example.org/elsewhere"]} icon=share(template)
+- label="Personnaliser" type="header"
+- label="Changer l’icône…" icon=icon(template) click
+- label="Renommer…" icon=rename(template) click
+- enabled=false label="Couper le son" icon=mute(template) click
+- enabled=true label="Recharger automatiquement" icon=reload(template)
+  - checked=true label="Désactivé" type="radio" click
+  - type="separator"
+  - checked=false label="5 s" type="radio" click
+  - checked=false label="10 s" type="radio" click
+  - checked=false label="30 s" type="radio" click
+  - checked=false label="1 min" type="radio" click
+  - checked=false label="2 min" type="radio" click
+  - checked=false label="5 min" type="radio" click
+  - checked=false label="10 min" type="radio" click
+  - type="separator"
+  - checked=false label="Personnalisé…" type="radio" click
+- label="Organiser" type="header"
+- label="Désépingler" icon=pin(template) click
+- label="Revenir à l’adresse épinglée" icon=reload(template) click
+- label="Remplacer l’adresse épinglée par la page actuelle" icon=pin(template) click
+- label="Séparer de l’onglet épinglé" icon=pin(template) click
+- label="Ajouter aux favoris" icon=star(template) click
+- enabled=false label="Déplacer vers le haut" icon=up(template) click
+- enabled=false label="Déplacer vers le bas" icon=down(template) click
+- label="Déplacer vers l’espace" icon=move(template)
+  - label="🎨 Autre" click
+- label="Déplacer vers la fenêtre" icon=move(template)
+  - label="Fenêtre 2" sublabel="Une page" click
+  - type="separator"
+  - label="Nouvelle fenêtre" click
+- enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Ajouter aux signets" icon=bookmark(template) click
+- enabled=true label="Ouvrir comme application" icon=app(template) click
+- label="Ouvrir dans un conteneur" icon=container(template)
+  - checked=false label="Banque" type="checkbox" click
+  - type="separator"
+  - enabled=false label="Sans conteneur" click
+- label="Toujours ouvrir d.example.org dans" icon=container(template)
+  - checked=false label="Banque" type="checkbox" click
+  - type="separator"
+  - enabled=false label="Aucun conteneur (retirer la règle)" click
+- label="Veille" type="header"
+- label="Mettre en veille" icon=sleep(template) click
+- enabled=false label="Geler (garde la page en mémoire)" icon=freeze(template) click
+- checked=false label="Ne jamais mettre cet onglet en veille" type="checkbox" click
+- checked=false enabled=true label="Garder tous les onglets de ce site éveillés" type="checkbox" click
+- label="Archiver et fermer" type="header"
+- checked=false label="Effacer les données du site à la fermeture" type="checkbox" click
+- label="Fermer l’onglet" icon=red:close click
+- label="Fermer les autres onglets du jour" icon=red:close click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a tab: on screen with a child, its child, a pinned one, one of a split view, a selection 4`] = `
+"- label="Ouvrir" type="header"
+- enabled=true label="Ajouter une vue scindée" icon=split(template) click
+- label="Ajouter un onglet à la vue scindée" icon=split(template)
+  - label="a.example.org" click
+  - label="child.example.org" click
+  - label="d.example.org" click
+- label="Retirer de la vue scindée" icon=split(template) click
+- label="Empiler les volets (vertical)" icon=stack(template) click
+- enabled=true label="Enregistrer comme vue de travail…" icon=sparkle(template) click
+- label="Dupliquer" icon=dup(template) click
+- accelerator="CmdOrCtrl+Shift+C" label="Copier le lien" registerAccelerator=false icon=copy(template) click
+- label="Partager" role="shareMenu" sharingItem={"urls":["https://b.example.org/"]} icon=share(template)
+- label="Personnaliser" type="header"
+- label="Changer l’icône…" icon=icon(template) click
+- label="Renommer…" icon=rename(template) click
+- enabled=false label="Couper le son" icon=mute(template) click
+- enabled=true label="Recharger automatiquement" icon=reload(template)
+  - checked=true label="Désactivé" type="radio" click
+  - type="separator"
+  - checked=false label="5 s" type="radio" click
+  - checked=false label="10 s" type="radio" click
+  - checked=false label="30 s" type="radio" click
+  - checked=false label="1 min" type="radio" click
+  - checked=false label="2 min" type="radio" click
+  - checked=false label="5 min" type="radio" click
+  - checked=false label="10 min" type="radio" click
+  - type="separator"
+  - checked=false label="Personnalisé…" type="radio" click
+- label="Organiser" type="header"
+- label="Épingler" icon=pin(template) click
+- label="Ajouter aux favoris" icon=star(template) click
+- enabled=true label="Déplacer vers le haut" icon=up(template) click
+- enabled=true label="Déplacer vers le bas" icon=down(template) click
+- label="Déplacer vers l’espace" icon=move(template)
+  - label="🎨 Autre" click
+- label="Déplacer vers la fenêtre" icon=move(template)
+  - label="Fenêtre 2" sublabel="Une page" click
+  - type="separator"
+  - label="Nouvelle fenêtre" click
+- enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Ajouter aux signets" icon=bookmark(template) click
+- enabled=true label="Ouvrir comme application" icon=app(template) click
+- label="Ouvrir dans un conteneur" icon=container(template)
+  - checked=false label="Banque" type="checkbox" click
+  - type="separator"
+  - enabled=false label="Sans conteneur" click
+- label="Toujours ouvrir b.example.org dans" icon=container(template)
+  - checked=false label="Banque" type="checkbox" click
+  - type="separator"
+  - enabled=false label="Aucun conteneur (retirer la règle)" click
+- label="Veille" type="header"
+- enabled=true label="Mettre en veille" icon=sleep(template) click
+- label="Dégeler l’onglet" icon=freeze(template) click
+- checked=false label="Ne jamais mettre cet onglet en veille" type="checkbox" click
+- checked=false enabled=true label="Garder tous les onglets de ce site éveillés" type="checkbox" click
+- label="Archiver et fermer" type="header"
+- label="Archiver l’onglet" icon=archive(template) click
+- label="Archiver les autres onglets" icon=archive(template) click
+- enabled=true label="Archiver les onglets en dessous" icon=archive(template) click
+- label="Archiver les onglets au-dessus" icon=archive(template) click
+- checked=false label="Effacer les données du site à la fermeture" type="checkbox" click
+- label="Fermer l’onglet" icon=red:close click
+- label="Fermer les autres onglets du jour" icon=red:close click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a tab: on screen with a child, its child, a pinned one, one of a split view, a selection 5`] = `
+"- label="Organiser" type="header"
+- label="Nouveau dossier avec la sélection" icon=folder(template) click
+- label="Copier les liens en Markdown" icon=copy(template) click
+- label="Enregistrer comme session…" icon=save(template) click
+- label="Épingler 2 onglets" icon=pin(template) click
+- label="Déplacer vers l’espace" icon=move(template)
+  - label="🎨 Autre" click
+- label="Archiver et fermer" type="header"
+- enabled=true label="Archiver 2 onglets" icon=archive(template) click
+- label="Fermer 2 onglets" icon=red:close click"
+`;
+
+exports[`the context menus of the sidebar, as built > of a tab: on screen with a child, its child, a pinned one, one of a split view, a selection 6`] = `""`;
+
+exports[`the context menus of the sidebar, as built > of each kind of download 1`] = `
+"- enabled=true label="Ouvrir « rapport.pdf »" click
+- enabled=true label="Ouvrir avec…" click
+- label="Ne plus ouvrir les fichiers .pdf avec Preview" click
+- enabled=true label="Copier le lien de téléchargement" click
+- enabled=true label="Afficher dans le Finder" click
+- type="separator"
+- enabled=true label="Retirer de la liste" click
+- enabled=true label="Mettre à la corbeille" click
+- enabled=false label="Annuler le téléchargement" click"
+`;
+
+exports[`the context menus of the sidebar, as built > of each kind of download 2`] = `
+"- enabled=false label="Ouvrir « film.mp4 »" click
+- enabled=false label="Ouvrir avec…" click
+- enabled=true label="Copier le lien de téléchargement" click
+- enabled=false label="Afficher dans le Finder" click
+- type="separator"
+- label="Mettre en pause" click
+- enabled=false label="Retirer de la liste" click
+- enabled=false label="Mettre à la corbeille" click
+- enabled=true label="Annuler le téléchargement" click"
+`;
+
+exports[`the context menus of the sidebar, as built > of each kind of download 3`] = `
+"- enabled=false label="Ouvrir « image.iso »" click
+- enabled=false label="Ouvrir avec…" click
+- enabled=true label="Copier le lien de téléchargement" click
+- enabled=false label="Afficher dans le Finder" click
+- type="separator"
+- label="Reprendre le téléchargement" click
+- enabled=false label="Retirer de la liste" click
+- enabled=false label="Mettre à la corbeille" click
+- enabled=true label="Annuler le téléchargement" click"
+`;
+
+exports[`the context menus of the sidebar, as built > of each kind of download 4`] = `
+"- enabled=false label="Ouvrir « archive.zip »" click
+- enabled=false label="Ouvrir avec…" click
+- enabled=false label="Copier le lien de téléchargement" click
+- enabled=false label="Afficher dans le Finder" click
+- type="separator"
+- label="Reprendre le téléchargement" click
+- enabled=true label="Retirer de la liste" click
+- enabled=false label="Mettre à la corbeille" click
+- enabled=false label="Annuler le téléchargement" click"
+`;
+
+exports[`the context menus of the sidebar, as built > of each kind of download 5`] = `
+"- enabled=true label="Ouvrir « installer.pkg »" click
+- enabled=false label="Ouvrir avec…" click
+- enabled=true label="Copier le lien de téléchargement" click
+- enabled=true label="Afficher dans le Finder" click
+- type="separator"
+- enabled=true label="Retirer de la liste" click
+- enabled=true label="Mettre à la corbeille" click
+- enabled=false label="Annuler le téléchargement" click"
+`;
+
+exports[`the context menus of the sidebar, as built > of each kind of download 6`] = `
+"- enabled=true label="Ouvrir « rapport.pdf »" click
+- enabled=true label="Copier le lien de téléchargement" click
+- enabled=true label="Afficher dans le Finder" click
+- type="separator"
+- enabled=true label="Retirer de la liste" click
+- enabled=true label="Mettre à la corbeille" click
+- enabled=false label="Annuler le téléchargement" click"
+`;
+
+exports[`the menu bar, as built > for a first launch: one space, no tab, every optional setting off 1`] = `
+"- label="Lucium"
+  - label="À propos de Lucium" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+," label="Réglages…" click
+  - label="Partager Lucium" click
+  - enabled=true label="Définir comme navigateur par défaut" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Importer depuis un autre navigateur…" click
+  - enabled=true label="Exporter les signets (HTML)…" click
+  - label="Rechercher les mises à jour…" click
+  - type="separator"
+  - label="Services" role="services"
+  - label="Politique de confidentialité" click
+  - type="separator"
+  - label="Masquer Lucium" role="hide"
+  - label="Masquer les autres" role="hideOthers"
+  - label="Tout afficher" role="unhide"
+  - type="separator"
+  - label="Quitter Lucium" role="quit"
+- label="Fichier"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" click
+  - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
+  - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
+  - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - accelerator=undefined label="Nouvelle fenêtre invité" visible=false click
+  - accelerator=undefined label="Nouvel onglet privé" visible=true click
+  - label="Nouvel onglet dans un conteneur" visible=false
+  - accelerator="CmdOrCtrl+Alt+N" enabled=true label="Nouvelle mini-fenêtre" click
+  - accelerator="CmdOrCtrl+Shift+T" enabled=false label="Rouvrir le dernier onglet fermé" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+L" label="Ouvrir la barre de commandes" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Nouveau profil…" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Sessions…" click
+  - accelerator=undefined enabled=true label="Enregistrer la session…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+W" label="Fermer la fenêtre" click
+  - accelerator=undefined enabled=false label="Nommer la fenêtre…" visible=false click
+  - accelerator="CmdOrCtrl+W" enabled=false label="Archiver l’onglet" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Partager…" click
+  - accelerator=undefined enabled=false label="Traduire cette page…" click
+  - enabled=false label="Image dans l’image" click
+  - accelerator="CmdOrCtrl+Shift+2" enabled=false label="Capturer…" click
+  - enabled=false label="Résumer la page" visible=false click
+  - enabled=false label="Résumé court de la page" visible=false click
+  - enabled=false label="Résumé détaillé de la page" visible=false click
+  - accelerator="CmdOrCtrl+Alt+Shift+S" enabled=false label="Capturer la page entière" click
+  - accelerator="CmdOrCtrl+Alt+S" enabled=false label="Capturer la partie visible" click
+  - accelerator=undefined enabled=false label="Capturer en mode portrait" click
+  - accelerator="CmdOrCtrl+Shift+S" enabled=false label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=false label="Exporter la page en Markdown…" click
+  - accelerator="CmdOrCtrl+P" enabled=false label="Imprimer…" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Lire plus tard" click
+  - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - accelerator=undefined enabled=false label="Mots de passe…" visible=false click
+  - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=false click
+  - accelerator=undefined enabled=false label="Ajouter aux signets" visible=false click
+  - accelerator=undefined enabled=false label="Signets…" visible=false click
+  - accelerator=undefined enabled=false label="Ouvrir comme application" visible=false click
+  - accelerator="CmdOrCtrl+Shift+E" enabled=true label="Notes…" visible=true click
+  - accelerator="CmdOrCtrl+Alt+E" enabled=true label="Nouvelle note" visible=true click
+- label="Édition"
+  - accelerator="CmdOrCtrl+Z" label="Annuler" click
+  - label="Rétablir" role="redo"
+  - type="separator"
+  - label="Couper" role="cut"
+  - label="Copier" role="copy"
+  - accelerator="CmdOrCtrl+Shift+C" enabled=false label="Copier l’adresse" click
+  - accelerator="CmdOrCtrl+Alt+Shift+C" enabled=false label="Copier l’adresse en Markdown" click
+  - accelerator="Ctrl+CmdOrCtrl+Shift+C" enabled=false label="Copier l’adresse en citation" click
+  - label="Coller" role="paste"
+  - label="Coller et adapter le style" role="pasteAndMatchStyle"
+  - label="Supprimer" role="delete"
+  - label="Tout sélectionner" role="selectAll"
+  - type="separator"
+  - label="Rechercher"
+    - accelerator="CmdOrCtrl+F" enabled=false label="Rechercher…" click
+    - accelerator="CmdOrCtrl+Alt+F" enabled=false label="Trouver et remplacer" click
+    - accelerator="CmdOrCtrl+G" enabled=false label="Occurrence suivante" click
+    - accelerator="CmdOrCtrl+Shift+G" enabled=false label="Occurrence précédente" click
+    - accelerator=undefined enabled=false label="Utiliser la sélection pour rechercher" click
+    - accelerator="CmdOrCtrl+J" enabled=false label="Aller à la sélection" click
+  - label="Orthographe et grammaire"
+    - enabled=false label="Afficher l’orthographe et la grammaire"
+    - enabled=false label="Vérifier le document maintenant"
+    - type="separator"
+    - checked=true label="Vérifier l’orthographe lors de la saisie" type="checkbox" click
+    - enabled=false label="Vérifier la grammaire avec l’orthographe"
+    - enabled=false label="Corriger l’orthographe automatiquement"
+  - label="Substitutions"
+    - label="Afficher les substitutions" role="showSubstitutions"
+    - type="separator"
+    - enabled=false label="Copier/coller intelligent"
+    - enabled=false label="Guillemets intelligents"
+    - enabled=false label="Tirets intelligents"
+    - enabled=false label="Liens intelligents"
+    - enabled=false label="Détecteurs de données"
+    - enabled=false label="Remplacement du texte"
+  - label="Transformations"
+    - label="Mettre en majuscules" click
+    - label="Mettre en minuscules" click
+    - label="Mettre une majuscule à chaque mot" click
+  - label="Parole"
+    - label="Commencer la lecture à voix haute" role="startSpeaking"
+    - label="Arrêter la lecture à voix haute" role="stopSpeaking"
+  - label="Format"
+    - label="Police"
+      - accelerator="CmdOrCtrl+B" label="Gras" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+I" label="Italique" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+U" label="Souligné" registerAccelerator=false click
+- label="Affichage"
+  - label="Apparence"
+    - enabled=false label="Apparence de Lucium"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=false label="Apparence demandée aux sites :"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=false label="Contraste de la page pour ce site"
+      - checked=true label="Comme les autres sites" type="radio" click
+      - checked=false label="Original" type="radio" click
+      - checked=false label="Sombre" type="radio" click
+      - checked=false label="Clair" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+S" label="Masquer la barre latérale" click
+  - accelerator="Ctrl+CmdOrCtrl+S" checked=false label="Replier la barre dans cette fenêtre" type="checkbox" click
+  - checked=false label="Barre à droite dans cette fenêtre" type="checkbox" click
+  - label="Pour les nouvelles fenêtres"
+    - checked=true label="Barre à gauche" type="radio" click
+    - checked=false label="Barre à droite" type="radio" click
+  - accelerator="CmdOrCtrl+Shift+D" label="Masquer la barre d’outils" click
+  - accelerator=undefined enabled=false label="Passer en mode compact" visible=false click
+  - accelerator=undefined enabled=true label="Replier les dossiers épinglés" click
+  - label="Notifications récentes" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+;" enabled=false label="Arrêter le chargement" click
+  - accelerator="CmdOrCtrl+R" enabled=false label="Actualiser la page" click
+  - accelerator=undefined label="Actualiser tous les onglets" click
+  - accelerator="CmdOrCtrl+Shift+R" enabled=false label="Actualisation forcée" click
+  - accelerator=undefined enabled=false label="Effacer les cookies et actualiser" click
+  - accelerator=undefined enabled=false label="Effacer le cache et actualiser" click
+  - accelerator=undefined label="Cookies par site…" visible=true click
+  - enabled=false label="Recharger automatiquement"
+    - checked=true label="Désactivé" type="radio" click
+    - type="separator"
+    - checked=false label="5 s" type="radio" click
+    - checked=false label="10 s" type="radio" click
+    - checked=false label="30 s" type="radio" click
+    - checked=false label="1 min" type="radio" click
+    - checked=false label="2 min" type="radio" click
+    - checked=false label="5 min" type="radio" click
+    - checked=false label="10 min" type="radio" click
+    - type="separator"
+    - checked=false label="Personnalisé…" type="radio" click
+  - type="separator"
+  - accelerator="Ctrl+Shift+=" enabled=false label="Ajouter une vue scindée" click
+  - accelerator="Ctrl+Shift+-" enabled=false label="Fermer ce volet scindé" click
+  - accelerator=undefined enabled=false label="Séparer la page de la vue scindée" click
+  - accelerator=undefined enabled=false label="Agrandir la vue scindée actuelle" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+0" enabled=false label="Taille réelle" click
+  - accelerator="CmdOrCtrl+Plus" enabled=false label="Zoom avant" click
+  - accelerator="CmdOrCtrl+-" enabled=false label="Zoom arrière" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Mode lecture" click
+  - type="separator"
+  - label="Développeur"
+    - accelerator="CmdOrCtrl+Alt+U" enabled=false label="Afficher la source" click
+    - accelerator="CmdOrCtrl+Alt+I" enabled=false label="Outils de développement" click
+    - accelerator="F12" enabled=false label="Outils de développement" visible=false click
+    - accelerator="CmdOrCtrl+Alt+C" enabled=false label="Inspecter les éléments" click
+    - accelerator="CmdOrCtrl+Alt+J" enabled=false label="Console JavaScript" click
+    - accelerator=undefined enabled=false label="Inspecteur réseau" click
+    - accelerator="Ctrl+D" enabled=false label="Activer le mode développeur pour ce site" click
+    - label="Outils d’extension…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+I" enabled=false label="Infos et réglages du site" click
+  - accelerator="CmdOrCtrl+Shift+B" enabled=false label="Retoucher ce site…" click
+  - type="separator"
+  - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+- label="Espaces"
+  - accelerator=undefined enabled=true label="Nouvel espace…" click
+  - accelerator=undefined enabled=true label="Modifier le thème…" click
+  - accelerator=undefined enabled=true label="Renommer l’espace…" click
+  - enabled=true label="Changer de profil"
+    - checked=true label="Profil par défaut" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Right" label="Espace suivant" click
+  - accelerator="CmdOrCtrl+Alt+Left" label="Espace précédent" click
+  - type="separator"
+  - accelerator="Ctrl+1" checked=true label="🏠 Perso" type="checkbox" click
+  - accelerator="Ctrl+CmdOrCtrl+1" checked=true label="🏠 Perso" type="checkbox" visible=false click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Gérer les espaces…" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Mettre l’espace de côté…" click
+  - enabled=false label="Rouvrir un espace mis de côté"
+    - enabled=false label="Aucun espace mis de côté"
+- label="Onglets"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
+  - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+D" enabled=false label="Épingler l’onglet" click
+  - accelerator=undefined enabled=true label="Nouveau dossier…" click
+  - accelerator=undefined enabled=false label="Nouveau dossier en direct…" visible=false click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Down" label="Onglet suivant" click
+  - accelerator="CmdOrCtrl+Alt+Up" label="Onglet précédent" click
+  - accelerator=undefined enabled=false label="Révéler l’onglet dans la barre latérale" click
+  - accelerator=undefined enabled=false label="Dupliquer l’onglet" click
+  - accelerator=undefined enabled=false label="Couper le son de l’onglet" click
+  - accelerator=undefined enabled=false label="Replier le dossier de l’onglet" click
+  - accelerator=undefined enabled=false label="Replier les onglets enfants" visible=false click
+  - accelerator=undefined enabled=false label="Sortir l’onglet de son parent" visible=false click
+  - accelerator=undefined enabled=false label="Déplacer l’onglet vers l’espace suivant" click
+  - accelerator=undefined enabled=false label="Déplacer l’onglet vers l’espace précédent" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Up" enabled=false label="Déplacer l’onglet vers le haut" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Down" enabled=false label="Déplacer l’onglet vers le bas" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+1" label="Aller à l’élément 1 de la barre latérale" click
+  - accelerator="CmdOrCtrl+2" label="Aller à l’élément 2 de la barre latérale" click
+  - accelerator="CmdOrCtrl+3" label="Aller à l’élément 3 de la barre latérale" click
+  - accelerator="CmdOrCtrl+4" label="Aller à l’élément 4 de la barre latérale" click
+  - accelerator="CmdOrCtrl+5" label="Aller à l’élément 5 de la barre latérale" click
+  - accelerator="CmdOrCtrl+6" label="Aller à l’élément 6 de la barre latérale" click
+  - accelerator="CmdOrCtrl+7" label="Aller à l’élément 7 de la barre latérale" click
+  - accelerator="CmdOrCtrl+8" label="Aller à l’élément 8 de la barre latérale" click
+  - accelerator="CmdOrCtrl+9" label="Aller à l’élément 9 de la barre latérale" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+K" label="Vider les onglets du jour" click
+  - accelerator=undefined enabled=true label="Réinitialiser tous les onglets épinglés de cet espace" click
+- label="Archive"
+  - accelerator="CmdOrCtrl+[" enabled=false label="Page précédente" click
+  - accelerator="Ctrl+CmdOrCtrl+Left" enabled=false label="Page précédente" visible=false click
+  - accelerator="CmdOrCtrl+]" enabled=false label="Page suivante" click
+  - accelerator="Ctrl+CmdOrCtrl+Right" enabled=false label="Page suivante" visible=false click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Y" enabled=true label="Afficher l’historique" click
+  - accelerator="CmdOrCtrl+Alt+A" enabled=true label="Afficher l’archive…" click
+  - accelerator="CmdOrCtrl+Shift+J" label="Afficher les téléchargements" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Vider l’archive" click
+  - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click
+  - accelerator="CmdOrCtrl+Shift+X" enabled=false label="Effacer les données du site…" click
+  - accelerator="Ctrl+CmdOrCtrl+X" enabled=false label="Effacer les données du site…" visible=false click
+  - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=false label="Effacer les données du site maintenant" click
+- label="Extensions"
+  - enabled=false label="Aucune extension chargée"
+  - type="separator"
+  - enabled=true label="Ouvrir le Chrome Web Store" click
+  - accelerator=undefined enabled=true label="Ajouter une extension…" click
+  - accelerator=undefined enabled=true label="Gérer les extensions…" click
+- label="Fenêtre" role="windowMenu"
+- label="Aide" role="help"
+  - label="Premiers pas" click
+  - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
+  - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
+  - label="Raccourcis clavier essentiels" click
+  - label="Documentation de Lucium" click
+  - label="Nouveautés" click
+  - label="Premier lancement…" click
+  - label="Régler en quelques questions…" click
+  - label="Vous venez d’Arc ?" click
+  - enabled=true label="Restaurer les données…" click
+  - type="separator"
+  - label="État de Lucium…" click
+  - enabled=true label="Signaler un problème…" click
+  - label="Dépannage"
+    - label="Enregistrer une trace" click
+    - accelerator=undefined label="Ouvrir le gestionnaire de tâches" click
+    - type="separator"
+    - label="Afficher les données de Lucium" click
+    - label="Copier les infos de Lucium" click"
+`;
+
+exports[`the menu bar, as built > for a main window put away, with the space on screen locked 1`] = `
+"- label="Lucium"
+  - label="À propos de Lucium" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+," label="Réglages…" click
+  - label="Partager Lucium" click(brings back)
+  - enabled=false label="Définir comme navigateur par défaut" click(brings back)
+  - type="separator"
+  - accelerator=undefined enabled=true label="Importer depuis un autre navigateur…" click(brings back)
+  - enabled=true label="Exporter les signets (HTML)…" click(brings back)
+  - label="Rechercher les mises à jour…" click(brings back)
+  - type="separator"
+  - label="Services" role="services"
+  - label="Politique de confidentialité" click(brings back)
+  - type="separator"
+  - label="Masquer Lucium" role="hide"
+  - label="Masquer les autres" role="hideOthers"
+  - label="Tout afficher" role="unhide"
+  - type="separator"
+  - label="Quitter Lucium" role="quit"
+- label="Fichier"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" click(brings back)
+  - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
+  - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
+  - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - label="Partager une fenêtre annotée…" click
+  - accelerator="Alt+CmdOrCtrl+M" checked=true label="Annoter cette page" registerAccelerator=true type="checkbox" click(brings back)
+  - accelerator=undefined label="Nouvelle fenêtre invité" visible=true click
+  - accelerator=undefined label="Nouvel onglet privé" visible=true click(brings back)
+  - label="Nouvel onglet dans un conteneur" visible=true
+    - label="Banque" click(brings back)
+  - accelerator="CmdOrCtrl+Alt+N" enabled=true label="Nouvelle mini-fenêtre" click
+  - accelerator="CmdOrCtrl+Shift+T" enabled=true label="Rouvrir le dernier onglet fermé" click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+L" label="Ouvrir la barre de commandes" click(brings back)
+  - type="separator"
+  - accelerator=undefined enabled=true label="Nouveau profil…" click(brings back)
+  - type="separator"
+  - accelerator=undefined enabled=true label="Sessions…" click(brings back)
+  - accelerator=undefined enabled=true label="Enregistrer la session…" click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+W" label="Fermer la fenêtre" click
+  - accelerator=undefined enabled=true label="Nommer la fenêtre…" visible=true click(brings back)
+  - accelerator="CmdOrCtrl+W" enabled=false label="Archiver l’onglet" click(brings back)
+  - type="separator"
+  - accelerator=undefined enabled=true label="Partager…" click(brings back)
+  - accelerator=undefined enabled=true label="Code QR de cette page" click(brings back)
+  - accelerator=undefined label="Traduire en anglais" click(brings back)
+  - enabled=true label="Image dans l’image" click(brings back)
+  - accelerator=undefined enabled=true label="Surveiller cette page" click(brings back)
+  - enabled=true label="Surveiller une zone de la page…" click(brings back)
+  - accelerator="CmdOrCtrl+Shift+2" enabled=false label="Capturer…" click(brings back)
+  - enabled=false label="Résumer la page" visible=true click(brings back)
+  - enabled=false label="Résumé court de la page" visible=true click(brings back)
+  - enabled=false label="Résumé détaillé de la page" visible=true click(brings back)
+  - accelerator="CmdOrCtrl+Alt+Shift+S" enabled=false label="Capturer la page entière" click(brings back)
+  - accelerator="CmdOrCtrl+Alt+S" enabled=false label="Capturer la partie visible" click(brings back)
+  - accelerator=undefined enabled=false label="Capturer en mode portrait" click(brings back)
+  - accelerator="CmdOrCtrl+Shift+S" enabled=false label="Enregistrer la page sous…" click(brings back)
+  - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click(brings back)
+  - accelerator="CmdOrCtrl+P" enabled=false label="Imprimer…" click(brings back)
+  - accelerator=undefined enabled=false label="Enregistrer en PDF avec l’adresse…" click(brings back)
+  - type="separator"
+  - accelerator=undefined enabled=false label="Lire plus tard" click(brings back)
+  - accelerator=undefined enabled=true label="Liste de lecture…" click(brings back)
+  - accelerator=undefined enabled=true label="Mots de passe…" visible=true click(brings back)
+  - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=true click(brings back)
+  - accelerator=undefined enabled=false label="Ajouter aux signets" visible=true click(brings back)
+  - accelerator=undefined enabled=true label="Signets…" visible=true click(brings back)
+  - accelerator=undefined enabled=false label="Ouvrir comme application" visible=true click(brings back)
+  - accelerator="CmdOrCtrl+Shift+E" enabled=true label="Notes…" visible=true click(brings back)
+  - accelerator="CmdOrCtrl+Alt+E" enabled=true label="Nouvelle note" visible=true click(brings back)
+- label="Édition"
+  - accelerator="CmdOrCtrl+Z" label="Annuler l’archivage de l’onglet" click(brings back)
+  - label="Rétablir" role="redo"
+  - type="separator"
+  - label="Couper" role="cut"
+  - label="Copier" role="copy"
+  - accelerator="CmdOrCtrl+Shift+C" enabled=false label="Copier l’adresse" click(brings back)
+  - accelerator="CmdOrCtrl+Alt+Shift+C" enabled=false label="Copier l’adresse en Markdown" click(brings back)
+  - accelerator="Ctrl+CmdOrCtrl+Shift+C" enabled=false label="Copier l’adresse en citation" click(brings back)
+  - label="Coller" role="paste"
+  - label="Coller et adapter le style" role="pasteAndMatchStyle"
+  - label="Supprimer" role="delete"
+  - label="Tout sélectionner" role="selectAll"
+  - type="separator"
+  - label="Rechercher"
+    - accelerator="CmdOrCtrl+F" enabled=false label="Rechercher…" click(brings back)
+    - accelerator="CmdOrCtrl+Alt+F" enabled=false label="Trouver et remplacer" click(brings back)
+    - accelerator="CmdOrCtrl+G" enabled=true label="Occurrence suivante" click(brings back)
+    - accelerator="CmdOrCtrl+Shift+G" enabled=true label="Occurrence précédente" click(brings back)
+    - accelerator=undefined enabled=false label="Utiliser la sélection pour rechercher" click(brings back)
+    - accelerator="CmdOrCtrl+J" enabled=false label="Aller à la sélection" click(brings back)
+  - label="Orthographe et grammaire"
+    - enabled=false label="Afficher l’orthographe et la grammaire"
+    - enabled=false label="Vérifier le document maintenant"
+    - type="separator"
+    - checked=true label="Vérifier l’orthographe lors de la saisie" type="checkbox" click(brings back)
+    - enabled=false label="Vérifier la grammaire avec l’orthographe"
+    - enabled=false label="Corriger l’orthographe automatiquement"
+  - label="Substitutions"
+    - label="Afficher les substitutions" role="showSubstitutions"
+    - type="separator"
+    - enabled=false label="Copier/coller intelligent"
+    - enabled=false label="Guillemets intelligents"
+    - enabled=false label="Tirets intelligents"
+    - enabled=false label="Liens intelligents"
+    - enabled=false label="Détecteurs de données"
+    - enabled=false label="Remplacement du texte"
+  - label="Transformations"
+    - label="Mettre en majuscules" click(brings back)
+    - label="Mettre en minuscules" click(brings back)
+    - label="Mettre une majuscule à chaque mot" click(brings back)
+  - label="Parole"
+    - label="Commencer la lecture à voix haute" role="startSpeaking"
+    - label="Arrêter la lecture à voix haute" role="stopSpeaking"
+  - label="Format"
+    - label="Police"
+      - accelerator="CmdOrCtrl+B" label="Gras" registerAccelerator=false click(brings back)
+      - accelerator="CmdOrCtrl+I" label="Italique" registerAccelerator=false click(brings back)
+      - accelerator="CmdOrCtrl+U" label="Souligné" registerAccelerator=false click(brings back)
+- label="Affichage"
+  - label="Apparence"
+    - enabled=false label="Apparence de Lucium"
+    - checked=true label="Automatique" type="radio" click(brings back)
+    - checked=false label="Clair" type="radio" click(brings back)
+    - checked=false label="Sombre" type="radio" click(brings back)
+    - type="separator"
+    - enabled=false label="Apparence demandée aux sites :"
+    - checked=true label="Automatique" type="radio" click(brings back)
+    - checked=false label="Clair" type="radio" click(brings back)
+    - checked=false label="Sombre" type="radio" click(brings back)
+    - type="separator"
+    - enabled=true label="Contraste de la page pour ce site"
+      - checked=true label="Comme les autres sites" type="radio" click(brings back)
+      - checked=false label="Original" type="radio" click(brings back)
+      - checked=false label="Sombre" type="radio" click(brings back)
+      - checked=false label="Clair" type="radio" click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+S" label="Masquer la barre latérale" click(brings back)
+  - accelerator="Ctrl+CmdOrCtrl+S" checked=true label="Replier la barre dans cette fenêtre" type="checkbox" click(brings back)
+  - checked=true label="Barre à droite dans cette fenêtre" type="checkbox" click(brings back)
+  - label="Pour les nouvelles fenêtres"
+    - checked=true label="Barre à gauche" type="radio" click(brings back)
+    - checked=false label="Barre à droite" type="radio" click(brings back)
+  - accelerator="CmdOrCtrl+Shift+D" label="Masquer la barre d’outils" click(brings back)
+  - accelerator=undefined enabled=true label="Passer en mode compact" visible=true click(brings back)
+  - accelerator=undefined enabled=true label="Replier les dossiers épinglés" click(brings back)
+  - label="Notifications récentes" click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+;" enabled=true label="Arrêter le chargement" click(brings back)
+  - accelerator="CmdOrCtrl+R" enabled=false label="Actualiser la page" click(brings back)
+  - accelerator=undefined label="Actualiser tous les onglets" click(brings back)
+  - accelerator="CmdOrCtrl+Shift+R" enabled=false label="Actualisation forcée" click(brings back)
+  - accelerator=undefined enabled=false label="Effacer les cookies et actualiser" click(brings back)
+  - accelerator=undefined enabled=false label="Effacer le cache et actualiser" click(brings back)
+  - accelerator=undefined label="Cookies par site…" visible=true click(brings back)
+  - enabled=false label="Recharger automatiquement"
+    - checked=true label="Désactivé" type="radio" click(brings back)
+    - type="separator"
+    - checked=false label="5 s" type="radio" click(brings back)
+    - checked=false label="10 s" type="radio" click(brings back)
+    - checked=false label="30 s" type="radio" click(brings back)
+    - checked=false label="1 min" type="radio" click(brings back)
+    - checked=false label="2 min" type="radio" click(brings back)
+    - checked=false label="5 min" type="radio" click(brings back)
+    - checked=false label="10 min" type="radio" click(brings back)
+    - type="separator"
+    - checked=false label="Personnalisé…" type="radio" click(brings back)
+  - type="separator"
+  - accelerator="Ctrl+Shift+=" enabled=true label="Ajouter une vue scindée" click(brings back)
+  - accelerator="Ctrl+Shift+-" enabled=false label="Fermer ce volet scindé" click(brings back)
+  - accelerator=undefined enabled=false label="Séparer la page de la vue scindée" click(brings back)
+  - accelerator=undefined enabled=false label="Agrandir la vue scindée actuelle" click(brings back)
+  - accelerator=undefined checked=true enabled=false label="Défilement synchronisé des volets" type="checkbox" click(brings back)
+  - accelerator=undefined checked=true label="Mode économie de batterie" type="checkbox" click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+0" enabled=false label="Taille réelle" click(brings back)
+  - accelerator="CmdOrCtrl+Plus" enabled=false label="Zoom avant" click(brings back)
+  - accelerator="CmdOrCtrl+-" enabled=false label="Zoom arrière" click(brings back)
+  - type="separator"
+  - accelerator=undefined enabled=true label="Mode lecture" click(brings back)
+  - type="separator"
+  - label="Développeur"
+    - accelerator="CmdOrCtrl+Alt+U" enabled=true label="Afficher la source" click(brings back)
+    - accelerator="CmdOrCtrl+Alt+I" enabled=false label="Outils de développement" click(brings back)
+    - accelerator="F12" enabled=false label="Outils de développement" visible=false click(brings back)
+    - accelerator="CmdOrCtrl+Alt+C" enabled=false label="Inspecter les éléments" click(brings back)
+    - accelerator="CmdOrCtrl+Alt+J" enabled=false label="Console JavaScript" click(brings back)
+    - accelerator=undefined enabled=false label="Inspecteur réseau" click(brings back)
+    - accelerator="Ctrl+D" enabled=true label="Désactiver le mode développeur pour ce site" click(brings back)
+    - label="Outils d’extension…" click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+I" enabled=false label="Infos et réglages du site" click(brings back)
+  - accelerator="CmdOrCtrl+Shift+B" enabled=false label="Retoucher ce site…" click(brings back)
+  - type="separator"
+  - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+- label="Espaces"
+  - accelerator=undefined enabled=true label="Nouvel espace…" click(brings back)
+  - accelerator=undefined enabled=true label="Modifier le thème…" click(brings back)
+  - accelerator=undefined enabled=true label="Renommer l’espace…" click(brings back)
+  - enabled=true label="Changer de profil"
+    - checked=true label="Profil par défaut" type="radio" click(brings back)
+    - checked=false label="Travail" type="radio" click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Right" label="Espace suivant" click(brings back)
+  - accelerator="CmdOrCtrl+Alt+Left" label="Espace précédent" click(brings back)
+  - type="separator"
+  - accelerator="Ctrl+1" checked=true label="🏠 Perso" type="checkbox" click(brings back)
+  - accelerator="Ctrl+CmdOrCtrl+1" checked=true label="🏠 Perso" type="checkbox" visible=false click(brings back)
+  - accelerator="Ctrl+2" checked=false label="🎨 Autre" type="checkbox" click(brings back)
+  - accelerator="Ctrl+CmdOrCtrl+2" checked=false label="🎨 Autre" type="checkbox" visible=false click(brings back)
+  - type="separator"
+  - accelerator=undefined enabled=true label="Gérer les espaces…" click(brings back)
+  - type="separator"
+  - label="Volets web"
+    - label="Ouvrir « Volet » en volet" click(brings back)
+    - type="separator"
+    - enabled=true label="Ajouter la page en volet web" click(brings back)
+    - enabled=true label="Retirer un volet web"
+      - label="Volet" click(brings back)
+    - label="Fermer le volet web" click(brings back)
+  - type="separator"
+  - accelerator=undefined enabled=true label="Mettre l’espace de côté…" click(brings back)
+  - enabled=true label="Rouvrir un espace mis de côté"
+    - label="📚 Lecture" click(brings back)
+  - type="separator"
+  - accelerator=undefined label="Verrouiller maintenant" click
+- label="Onglets"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click(brings back)
+  - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click(brings back)
+  - accelerator="CmdOrCtrl+D" enabled=false label="Épingler l’onglet" click(brings back)
+  - accelerator=undefined enabled=false label="Nouveau dossier…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." click(brings back)
+  - accelerator=undefined enabled=false label="Nouveau dossier en direct…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." visible=true click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Down" label="Onglet suivant" click(brings back)
+  - accelerator="CmdOrCtrl+Alt+Up" label="Onglet précédent" click(brings back)
+  - accelerator=undefined enabled=false label="Révéler l’onglet dans la barre latérale" click(brings back)
+  - accelerator=undefined enabled=false label="Dupliquer l’onglet" click(brings back)
+  - accelerator=undefined enabled=true label="Rétablir le son de l’onglet" click(brings back)
+  - accelerator=undefined enabled=false label="Replier le dossier de l’onglet" click(brings back)
+  - accelerator=undefined enabled=false label="Replier les onglets enfants" visible=true click(brings back)
+  - accelerator=undefined enabled=false label="Sortir l’onglet de son parent" visible=true click(brings back)
+  - accelerator=undefined enabled=false label="Déplacer l’onglet vers l’espace suivant" click(brings back)
+  - accelerator=undefined enabled=false label="Déplacer l’onglet vers l’espace précédent" click(brings back)
+  - accelerator="CmdOrCtrl+Alt+Shift+Up" enabled=false label="Déplacer l’onglet vers le haut" click(brings back)
+  - accelerator="CmdOrCtrl+Alt+Shift+Down" enabled=false label="Déplacer l’onglet vers le bas" click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+1" label="Aller à l’élément 1 de la barre latérale" click(brings back)
+  - accelerator="CmdOrCtrl+2" label="Aller à l’élément 2 de la barre latérale" click(brings back)
+  - accelerator="CmdOrCtrl+3" label="Aller à l’élément 3 de la barre latérale" click(brings back)
+  - accelerator="CmdOrCtrl+4" label="Aller à l’élément 4 de la barre latérale" click(brings back)
+  - accelerator="CmdOrCtrl+5" label="Aller à l’élément 5 de la barre latérale" click(brings back)
+  - accelerator="CmdOrCtrl+6" label="Aller à l’élément 6 de la barre latérale" click(brings back)
+  - accelerator="CmdOrCtrl+7" label="Aller à l’élément 7 de la barre latérale" click(brings back)
+  - accelerator="CmdOrCtrl+8" label="Aller à l’élément 8 de la barre latérale" click(brings back)
+  - accelerator="CmdOrCtrl+9" label="Aller à l’élément 9 de la barre latérale" click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+K" label="Vider les onglets du jour" click(brings back)
+  - accelerator=undefined enabled=true label="Réinitialiser tous les onglets épinglés de cet espace" click(brings back)
+- label="Archive"
+  - accelerator="CmdOrCtrl+[" enabled=true label="Page précédente" click(brings back)
+  - accelerator="Ctrl+CmdOrCtrl+Left" enabled=true label="Page précédente" visible=false click(brings back)
+  - accelerator="CmdOrCtrl+]" enabled=false label="Page suivante" click(brings back)
+  - accelerator="Ctrl+CmdOrCtrl+Right" enabled=false label="Page suivante" visible=false click(brings back)
+  - type="separator"
+  - accelerator="CmdOrCtrl+Y" enabled=true label="Afficher l’historique" click(brings back)
+  - accelerator="CmdOrCtrl+Alt+A" enabled=true label="Afficher l’archive…" click(brings back)
+  - accelerator="CmdOrCtrl+Shift+J" label="Afficher les téléchargements" click(brings back)
+  - type="separator"
+  - accelerator=undefined enabled=true label="Vider l’archive" click(brings back)
+  - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click(brings back)
+  - accelerator="CmdOrCtrl+Shift+X" enabled=false label="Effacer les données du site…" click(brings back)
+  - accelerator="Ctrl+CmdOrCtrl+X" enabled=false label="Effacer les données du site…" visible=false click(brings back)
+  - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=false label="Effacer les données du site maintenant" click(brings back)
+- label="Extensions"
+  - label="Alpha" click(brings back)
+  - accelerator="Alt+Shift+K" label="Lancer Alpha (Alpha)" click(brings back)
+  - label="Beta" click(brings back)
+  - type="separator"
+  - enabled=true label="Ouvrir le Chrome Web Store" click(brings back)
+  - accelerator=undefined enabled=true label="Ajouter une extension…" click(brings back)
+  - accelerator=undefined enabled=true label="Gérer les extensions…" click
+- label="Fenêtre"
+  - label="Réduire" role="minimize"
+  - label="Zoom" role="zoom"
+  - type="separator"
+  - accelerator=undefined label="Nommer la fenêtre…" registerAccelerator=false click(brings back)
+  - label="Retirer le nom de la fenêtre" visible=true click(brings back)
+  - type="separator"
+  - label="Tout ramener au premier plan" role="front"
+  - type="separator"
+  - checked=true label="Travail" type="checkbox" click
+  - checked=false label="Fenêtre 2" type="checkbox" click
+  - checked=false label="Fenêtre privée" type="checkbox" click
+- label="Aide" role="help"
+  - label="Premiers pas" click
+  - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click(brings back)
+  - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click(brings back)
+  - label="Raccourcis clavier essentiels" click
+  - label="Documentation de Lucium" click
+  - label="Nouveautés" click(brings back)
+  - label="Premier lancement…" click(brings back)
+  - label="Régler en quelques questions…" click(brings back)
+  - label="Vous venez d’Arc ?" click(brings back)
+  - enabled=true label="Restaurer les données…" click(brings back)
+  - type="separator"
+  - label="État de Lucium…" click
+  - enabled=true label="Signaler un problème…" click(brings back)
+  - label="Dépannage"
+    - label="Arrêter et enregistrer la trace…" click
+    - accelerator=undefined label="Ouvrir le gestionnaire de tâches" click
+    - type="separator"
+    - label="Afficher les données de Lucium" click
+    - label="Copier les infos de Lucium" click"
+`;
+
+exports[`the menu bar, as built > in a private window 1`] = `
+"- label="Lucium"
+  - label="À propos de Lucium" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+," label="Réglages…" click
+  - label="Partager Lucium" click
+  - enabled=false label="Définir comme navigateur par défaut" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Importer depuis un autre navigateur…" click
+  - enabled=false label="Exporter les signets (HTML)…" click
+  - label="Rechercher les mises à jour…" click
+  - type="separator"
+  - label="Services" role="services"
+  - label="Politique de confidentialité" click
+  - type="separator"
+  - label="Masquer Lucium" role="hide"
+  - label="Masquer les autres" role="hideOthers"
+  - label="Tout afficher" role="unhide"
+  - type="separator"
+  - label="Quitter Lucium" role="quit"
+- label="Fichier"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" click
+  - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
+  - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
+  - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - label="Partager une fenêtre annotée…" click
+  - accelerator="Alt+CmdOrCtrl+M" checked=true label="Annoter cette page" registerAccelerator=true type="checkbox" click
+  - accelerator=undefined label="Nouvelle fenêtre invité" visible=false click
+  - accelerator=undefined label="Nouvel onglet privé" visible=false click
+  - label="Nouvel onglet dans un conteneur" visible=false
+    - label="Banque" click
+  - accelerator="CmdOrCtrl+Alt+N" enabled=false label="Nouvelle mini-fenêtre" click
+  - accelerator="CmdOrCtrl+Shift+T" enabled=true label="Rouvrir le dernier onglet fermé" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+L" label="Ouvrir la barre de commandes" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Nouveau profil…" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Sessions…" click
+  - accelerator=undefined enabled=false label="Enregistrer la session…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+W" label="Fermer la fenêtre" click
+  - accelerator=undefined enabled=true label="Nommer la fenêtre…" visible=true click
+  - accelerator="CmdOrCtrl+W" enabled=true label="Archiver l’onglet" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Partager…" click
+  - accelerator=undefined enabled=true label="Code QR de cette page" click
+  - accelerator=undefined label="Traduire en anglais" click
+  - accelerator="CmdOrCtrl+Shift+2" enabled=true label="Capturer…" click
+  - enabled=true label="Résumer la page" visible=true click
+  - enabled=true label="Résumé court de la page" visible=true click
+  - enabled=true label="Résumé détaillé de la page" visible=true click
+  - accelerator="CmdOrCtrl+Alt+Shift+S" enabled=true label="Capturer la page entière" click
+  - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
+  - accelerator=undefined enabled=true label="Capturer en mode portrait" click
+  - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
+  - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
+  - accelerator=undefined enabled=true label="Enregistrer en PDF avec l’adresse…" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Lire plus tard" click
+  - accelerator=undefined enabled=false label="Liste de lecture…" click
+  - accelerator=undefined enabled=false label="Mots de passe…" visible=false click
+  - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=false click
+  - accelerator=undefined enabled=false label="Ajouter aux signets" visible=false click
+  - accelerator=undefined enabled=false label="Signets…" visible=false click
+  - accelerator=undefined enabled=false label="Ouvrir comme application" visible=false click
+  - accelerator="CmdOrCtrl+Shift+E" enabled=false label="Notes…" visible=false click
+  - accelerator="CmdOrCtrl+Alt+E" enabled=false label="Nouvelle note" visible=false click
+- label="Édition"
+  - accelerator="CmdOrCtrl+Z" label="Annuler l’archivage de l’onglet" click
+  - label="Rétablir" role="redo"
+  - type="separator"
+  - label="Couper" role="cut"
+  - label="Copier" role="copy"
+  - accelerator="CmdOrCtrl+Shift+C" enabled=true label="Copier l’adresse" click
+  - accelerator="CmdOrCtrl+Alt+Shift+C" enabled=true label="Copier l’adresse en Markdown" click
+  - accelerator="Ctrl+CmdOrCtrl+Shift+C" enabled=true label="Copier l’adresse en citation" click
+  - label="Coller" role="paste"
+  - label="Coller et adapter le style" role="pasteAndMatchStyle"
+  - label="Supprimer" role="delete"
+  - label="Tout sélectionner" role="selectAll"
+  - type="separator"
+  - label="Rechercher"
+    - accelerator="CmdOrCtrl+F" enabled=true label="Rechercher…" click
+    - accelerator="CmdOrCtrl+Alt+F" enabled=true label="Trouver et remplacer" click
+    - accelerator="CmdOrCtrl+G" enabled=true label="Occurrence suivante" click
+    - accelerator="CmdOrCtrl+Shift+G" enabled=true label="Occurrence précédente" click
+    - accelerator=undefined enabled=true label="Utiliser la sélection pour rechercher" click
+    - accelerator="CmdOrCtrl+J" enabled=true label="Aller à la sélection" click
+  - label="Orthographe et grammaire"
+    - enabled=false label="Afficher l’orthographe et la grammaire"
+    - enabled=false label="Vérifier le document maintenant"
+    - type="separator"
+    - checked=true label="Vérifier l’orthographe lors de la saisie" type="checkbox" click
+    - enabled=false label="Vérifier la grammaire avec l’orthographe"
+    - enabled=false label="Corriger l’orthographe automatiquement"
+  - label="Substitutions"
+    - label="Afficher les substitutions" role="showSubstitutions"
+    - type="separator"
+    - enabled=false label="Copier/coller intelligent"
+    - enabled=false label="Guillemets intelligents"
+    - enabled=false label="Tirets intelligents"
+    - enabled=false label="Liens intelligents"
+    - enabled=false label="Détecteurs de données"
+    - enabled=false label="Remplacement du texte"
+  - label="Transformations"
+    - label="Mettre en majuscules" click
+    - label="Mettre en minuscules" click
+    - label="Mettre une majuscule à chaque mot" click
+  - label="Parole"
+    - label="Commencer la lecture à voix haute" role="startSpeaking"
+    - label="Arrêter la lecture à voix haute" role="stopSpeaking"
+  - label="Format"
+    - label="Police"
+      - accelerator="CmdOrCtrl+B" label="Gras" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+I" label="Italique" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+U" label="Souligné" registerAccelerator=false click
+- label="Affichage"
+  - label="Apparence"
+    - enabled=false label="Apparence de Lucium"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=false label="Apparence demandée aux sites :"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=false label="Contraste de la page pour ce site"
+      - checked=true label="Comme les autres sites" type="radio" click
+      - checked=false label="Original" type="radio" click
+      - checked=false label="Sombre" type="radio" click
+      - checked=false label="Clair" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+S" label="Masquer la barre latérale" click
+  - accelerator="Ctrl+CmdOrCtrl+S" checked=true label="Replier la barre dans cette fenêtre" type="checkbox" click
+  - checked=true label="Barre à droite dans cette fenêtre" type="checkbox" click
+  - label="Pour les nouvelles fenêtres"
+    - checked=true label="Barre à gauche" type="radio" click
+    - checked=false label="Barre à droite" type="radio" click
+  - accelerator="CmdOrCtrl+Shift+D" label="Masquer la barre d’outils" click
+  - accelerator=undefined enabled=true label="Passer en mode compact" visible=true click
+  - accelerator=undefined enabled=false label="Replier les dossiers épinglés" click
+  - label="Notifications récentes" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+;" enabled=true label="Arrêter le chargement" click
+  - accelerator="CmdOrCtrl+R" enabled=true label="Actualiser la page" click
+  - accelerator=undefined label="Actualiser tous les onglets" click
+  - accelerator="CmdOrCtrl+Shift+R" enabled=true label="Actualisation forcée" click
+  - accelerator=undefined enabled=true label="Effacer les cookies et actualiser" click
+  - accelerator=undefined enabled=true label="Effacer le cache et actualiser" click
+  - accelerator=undefined label="Cookies par site…" visible=false click
+  - enabled=true label="Recharger automatiquement"
+    - checked=false label="Désactivé" type="radio" click
+    - type="separator"
+    - checked=false label="5 s" type="radio" click
+    - checked=false label="10 s" type="radio" click
+    - checked=true label="30 s" type="radio" click
+    - checked=false label="1 min" type="radio" click
+    - checked=false label="2 min" type="radio" click
+    - checked=false label="5 min" type="radio" click
+    - checked=false label="10 min" type="radio" click
+    - type="separator"
+    - checked=false label="Personnalisé…" type="radio" click
+  - type="separator"
+  - accelerator="Ctrl+Shift+=" enabled=true label="Ajouter une vue scindée" click
+  - accelerator="Ctrl+Shift+-" enabled=false label="Fermer ce volet scindé" click
+  - accelerator=undefined enabled=false label="Séparer la page de la vue scindée" click
+  - accelerator=undefined enabled=false label="Agrandir la vue scindée actuelle" click
+  - accelerator=undefined checked=true enabled=false label="Défilement synchronisé des volets" type="checkbox" click
+  - accelerator=undefined checked=true label="Mode économie de batterie" type="checkbox" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+0" enabled=true label="Taille réelle" click
+  - accelerator="CmdOrCtrl+Plus" enabled=true label="Zoom avant" click
+  - accelerator="CmdOrCtrl+-" enabled=true label="Zoom arrière" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Mode lecture" click
+  - type="separator"
+  - label="Développeur"
+    - accelerator="CmdOrCtrl+Alt+U" enabled=true label="Afficher la source" click
+    - accelerator="CmdOrCtrl+Alt+I" enabled=true label="Outils de développement" click
+    - accelerator="F12" enabled=true label="Outils de développement" visible=false click
+    - accelerator="CmdOrCtrl+Alt+C" enabled=true label="Inspecter les éléments" click
+    - accelerator="CmdOrCtrl+Alt+J" enabled=true label="Console JavaScript" click
+    - accelerator=undefined enabled=true label="Inspecteur réseau" click
+    - accelerator="Ctrl+D" enabled=false label="Désactiver le mode développeur pour ce site" click
+    - label="Outils d’extension…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+I" enabled=true label="Infos et réglages du site" click
+  - accelerator="CmdOrCtrl+Shift+B" enabled=false label="Retoucher ce site…" click
+  - type="separator"
+  - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+- label="Espaces"
+  - accelerator=undefined enabled=false label="Nouvel espace…" click
+  - accelerator=undefined enabled=false label="Modifier le thème…" click
+  - accelerator=undefined enabled=false label="Renommer l’espace…" click
+  - enabled=false label="Changer de profil"
+    - checked=true label="Profil par défaut" type="radio" click
+    - checked=false label="Travail" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Right" label="Espace suivant" click
+  - accelerator="CmdOrCtrl+Alt+Left" label="Espace précédent" click
+  - type="separator"
+  - accelerator="Ctrl+1" checked=true label="🏠 Perso" type="checkbox" click
+  - accelerator="Ctrl+CmdOrCtrl+1" checked=true label="🏠 Perso" type="checkbox" visible=false click
+  - accelerator="Ctrl+2" checked=false label="🎨 Autre" type="checkbox" click
+  - accelerator="Ctrl+CmdOrCtrl+2" checked=false label="🎨 Autre" type="checkbox" visible=false click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Gérer les espaces…" click
+  - type="separator"
+  - accelerator=undefined enabled=false label="Mettre l’espace de côté…" click
+  - enabled=false label="Rouvrir un espace mis de côté"
+    - label="📚 Lecture" click
+- label="Onglets"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
+  - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+D" enabled=false label="Épingler l’onglet" click
+  - accelerator=undefined enabled=false label="Nouveau dossier…" click
+  - accelerator=undefined enabled=false label="Nouveau dossier en direct…" visible=false click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Down" label="Onglet suivant" click
+  - accelerator="CmdOrCtrl+Alt+Up" label="Onglet précédent" click
+  - accelerator=undefined enabled=true label="Révéler l’onglet dans la barre latérale" click
+  - accelerator=undefined enabled=true label="Dupliquer l’onglet" click
+  - accelerator=undefined enabled=true label="Rétablir le son de l’onglet" click
+  - accelerator=undefined enabled=false label="Replier le dossier de l’onglet" click
+  - accelerator=undefined enabled=true label="Replier les onglets enfants" visible=true click
+  - accelerator=undefined enabled=false label="Sortir l’onglet de son parent" visible=true click
+  - accelerator=undefined enabled=true label="Déplacer l’onglet vers l’espace suivant" click
+  - accelerator=undefined enabled=true label="Déplacer l’onglet vers l’espace précédent" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Up" enabled=true label="Déplacer l’onglet vers le haut" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Down" enabled=true label="Déplacer l’onglet vers le bas" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+1" label="Aller à l’élément 1 de la barre latérale" click
+  - accelerator="CmdOrCtrl+2" label="Aller à l’élément 2 de la barre latérale" click
+  - accelerator="CmdOrCtrl+3" label="Aller à l’élément 3 de la barre latérale" click
+  - accelerator="CmdOrCtrl+4" label="Aller à l’élément 4 de la barre latérale" click
+  - accelerator="CmdOrCtrl+5" label="Aller à l’élément 5 de la barre latérale" click
+  - accelerator="CmdOrCtrl+6" label="Aller à l’élément 6 de la barre latérale" click
+  - accelerator="CmdOrCtrl+7" label="Aller à l’élément 7 de la barre latérale" click
+  - accelerator="CmdOrCtrl+8" label="Aller à l’élément 8 de la barre latérale" click
+  - accelerator="CmdOrCtrl+9" label="Aller à l’élément 9 de la barre latérale" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+K" label="Vider les onglets du jour" click
+  - accelerator=undefined enabled=false label="Réinitialiser tous les onglets épinglés de cet espace" click
+- label="Archive"
+  - accelerator="CmdOrCtrl+[" enabled=true label="Page précédente" click
+  - accelerator="Ctrl+CmdOrCtrl+Left" enabled=true label="Page précédente" visible=false click
+  - accelerator="CmdOrCtrl+]" enabled=false label="Page suivante" click
+  - accelerator="Ctrl+CmdOrCtrl+Right" enabled=false label="Page suivante" visible=false click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Y" enabled=false label="Afficher l’historique" click
+  - accelerator="CmdOrCtrl+Alt+A" enabled=false label="Afficher l’archive…" click
+  - accelerator="CmdOrCtrl+Shift+J" label="Afficher les téléchargements" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Vider l’archive" click
+  - accelerator=undefined enabled=false label="Effacer l’historique de navigation…" click
+  - accelerator="CmdOrCtrl+Shift+X" enabled=true label="Effacer les données du site…" click
+  - accelerator="Ctrl+CmdOrCtrl+X" enabled=true label="Effacer les données du site…" visible=false click
+  - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=true label="Effacer les données du site maintenant" click
+- label="Extensions"
+  - label="Alpha" click
+  - accelerator="Alt+Shift+K" label="Lancer Alpha (Alpha)" click
+  - label="Beta" click
+  - type="separator"
+  - enabled=false label="Ouvrir le Chrome Web Store" click
+  - accelerator=undefined enabled=false label="Ajouter une extension…" click
+  - accelerator=undefined enabled=false label="Gérer les extensions…" click
+- label="Fenêtre"
+  - label="Réduire" role="minimize"
+  - label="Zoom" role="zoom"
+  - type="separator"
+  - accelerator=undefined label="Nommer la fenêtre…" registerAccelerator=false click
+  - label="Retirer le nom de la fenêtre" visible=true click
+  - type="separator"
+  - label="Tout ramener au premier plan" role="front"
+  - type="separator"
+  - checked=true label="Travail" type="checkbox" click
+  - checked=false label="Fenêtre 2" type="checkbox" click
+  - checked=false label="Fenêtre privée" type="checkbox" click
+- label="Aide" role="help"
+  - label="Premiers pas" click
+  - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
+  - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
+  - label="Raccourcis clavier essentiels" click
+  - label="Documentation de Lucium" click
+  - label="Nouveautés" click
+  - label="Premier lancement…" click
+  - label="Régler en quelques questions…" click
+  - label="Vous venez d’Arc ?" click
+  - enabled=false label="Restaurer les données…" click
+  - type="separator"
+  - label="État de Lucium…" click
+  - enabled=false label="Signaler un problème…" click
+  - label="Dépannage"
+    - label="Arrêter et enregistrer la trace…" click
+    - accelerator=undefined label="Ouvrir le gestionnaire de tâches" click
+    - type="separator"
+    - label="Afficher les données de Lucium" click
+    - label="Copier les infos de Lucium" click"
+`;
+
+exports[`the menu bar, as built > with every optional entry, a Today tab on screen 1`] = `
+"- label="Lucium"
+  - label="À propos de Lucium" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+," label="Réglages…" click
+  - label="Partager Lucium" click
+  - enabled=false label="Définir comme navigateur par défaut" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Importer depuis un autre navigateur…" click
+  - enabled=true label="Exporter les signets (HTML)…" click
+  - label="Rechercher les mises à jour…" click
+  - type="separator"
+  - label="Services" role="services"
+  - label="Politique de confidentialité" click
+  - type="separator"
+  - label="Masquer Lucium" role="hide"
+  - label="Masquer les autres" role="hideOthers"
+  - label="Tout afficher" role="unhide"
+  - type="separator"
+  - label="Quitter Lucium" role="quit"
+- label="Fichier"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" click
+  - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
+  - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
+  - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - label="Partager une fenêtre annotée…" click
+  - accelerator="Alt+CmdOrCtrl+M" checked=true label="Annoter cette page" registerAccelerator=true type="checkbox" click
+  - accelerator=undefined label="Nouvelle fenêtre invité" visible=true click
+  - accelerator=undefined label="Nouvel onglet privé" visible=true click
+  - label="Nouvel onglet dans un conteneur" visible=true
+    - label="Banque" click
+  - accelerator="CmdOrCtrl+Alt+N" enabled=true label="Nouvelle mini-fenêtre" click
+  - accelerator="CmdOrCtrl+Shift+T" enabled=true label="Rouvrir le dernier onglet fermé" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+L" label="Ouvrir la barre de commandes" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Nouveau profil…" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Sessions…" click
+  - accelerator=undefined enabled=true label="Enregistrer la session…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+W" label="Fermer la fenêtre" click
+  - accelerator=undefined enabled=true label="Nommer la fenêtre…" visible=true click
+  - accelerator="CmdOrCtrl+W" enabled=true label="Archiver l’onglet" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Partager…" click
+  - accelerator=undefined enabled=true label="Code QR de cette page" click
+  - accelerator=undefined label="Traduire en anglais" click
+  - enabled=true label="Image dans l’image" click
+  - accelerator=undefined enabled=true label="Surveiller cette page" click
+  - enabled=true label="Surveiller une zone de la page…" click
+  - accelerator="CmdOrCtrl+Shift+2" enabled=true label="Capturer…" click
+  - enabled=true label="Résumer la page" visible=true click
+  - enabled=true label="Résumé court de la page" visible=true click
+  - enabled=true label="Résumé détaillé de la page" visible=true click
+  - accelerator="CmdOrCtrl+Alt+Shift+S" enabled=true label="Capturer la page entière" click
+  - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
+  - accelerator=undefined enabled=true label="Capturer en mode portrait" click
+  - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
+  - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
+  - accelerator=undefined enabled=true label="Enregistrer en PDF avec l’adresse…" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Lire plus tard" click
+  - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - accelerator=undefined enabled=true label="Mots de passe…" visible=true click
+  - accelerator=undefined enabled=true label="Remplir l’identifiant et le mot de passe" visible=true click
+  - accelerator=undefined enabled=true label="Ajouter aux signets" visible=true click
+  - accelerator=undefined enabled=true label="Signets…" visible=true click
+  - accelerator=undefined enabled=true label="Ouvrir comme application" visible=true click
+  - accelerator="CmdOrCtrl+Shift+E" enabled=true label="Notes…" visible=true click
+  - accelerator="CmdOrCtrl+Alt+E" enabled=true label="Nouvelle note" visible=true click
+- label="Édition"
+  - accelerator="CmdOrCtrl+Z" label="Annuler l’archivage de l’onglet" click
+  - label="Rétablir" role="redo"
+  - type="separator"
+  - label="Couper" role="cut"
+  - label="Copier" role="copy"
+  - accelerator="CmdOrCtrl+Shift+C" enabled=true label="Copier l’adresse" click
+  - accelerator="CmdOrCtrl+Alt+Shift+C" enabled=true label="Copier l’adresse en Markdown" click
+  - accelerator="Ctrl+CmdOrCtrl+Shift+C" enabled=true label="Copier l’adresse en citation" click
+  - label="Coller" role="paste"
+  - label="Coller et adapter le style" role="pasteAndMatchStyle"
+  - label="Supprimer" role="delete"
+  - label="Tout sélectionner" role="selectAll"
+  - type="separator"
+  - label="Rechercher"
+    - accelerator="CmdOrCtrl+F" enabled=true label="Rechercher…" click
+    - accelerator="CmdOrCtrl+Alt+F" enabled=true label="Trouver et remplacer" click
+    - accelerator="CmdOrCtrl+G" enabled=true label="Occurrence suivante" click
+    - accelerator="CmdOrCtrl+Shift+G" enabled=true label="Occurrence précédente" click
+    - accelerator=undefined enabled=true label="Utiliser la sélection pour rechercher" click
+    - accelerator="CmdOrCtrl+J" enabled=true label="Aller à la sélection" click
+  - label="Orthographe et grammaire"
+    - enabled=false label="Afficher l’orthographe et la grammaire"
+    - enabled=false label="Vérifier le document maintenant"
+    - type="separator"
+    - checked=true label="Vérifier l’orthographe lors de la saisie" type="checkbox" click
+    - enabled=false label="Vérifier la grammaire avec l’orthographe"
+    - enabled=false label="Corriger l’orthographe automatiquement"
+  - label="Substitutions"
+    - label="Afficher les substitutions" role="showSubstitutions"
+    - type="separator"
+    - enabled=false label="Copier/coller intelligent"
+    - enabled=false label="Guillemets intelligents"
+    - enabled=false label="Tirets intelligents"
+    - enabled=false label="Liens intelligents"
+    - enabled=false label="Détecteurs de données"
+    - enabled=false label="Remplacement du texte"
+  - label="Transformations"
+    - label="Mettre en majuscules" click
+    - label="Mettre en minuscules" click
+    - label="Mettre une majuscule à chaque mot" click
+  - label="Parole"
+    - label="Commencer la lecture à voix haute" role="startSpeaking"
+    - label="Arrêter la lecture à voix haute" role="stopSpeaking"
+  - label="Format"
+    - label="Police"
+      - accelerator="CmdOrCtrl+B" label="Gras" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+I" label="Italique" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+U" label="Souligné" registerAccelerator=false click
+- label="Affichage"
+  - label="Apparence"
+    - enabled=false label="Apparence de Lucium"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=false label="Apparence demandée aux sites :"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=true label="Contraste de la page pour ce site"
+      - checked=true label="Comme les autres sites" type="radio" click
+      - checked=false label="Original" type="radio" click
+      - checked=false label="Sombre" type="radio" click
+      - checked=false label="Clair" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+S" label="Masquer la barre latérale" click
+  - accelerator="Ctrl+CmdOrCtrl+S" checked=true label="Replier la barre dans cette fenêtre" type="checkbox" click
+  - checked=true label="Barre à droite dans cette fenêtre" type="checkbox" click
+  - label="Pour les nouvelles fenêtres"
+    - checked=true label="Barre à gauche" type="radio" click
+    - checked=false label="Barre à droite" type="radio" click
+  - accelerator="CmdOrCtrl+Shift+D" label="Masquer la barre d’outils" click
+  - accelerator=undefined enabled=true label="Passer en mode compact" visible=true click
+  - accelerator=undefined enabled=true label="Replier les dossiers épinglés" click
+  - label="Notifications récentes" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+;" enabled=true label="Arrêter le chargement" click
+  - accelerator="CmdOrCtrl+R" enabled=true label="Actualiser la page" click
+  - accelerator=undefined label="Actualiser tous les onglets" click
+  - accelerator="CmdOrCtrl+Shift+R" enabled=true label="Actualisation forcée" click
+  - accelerator=undefined enabled=true label="Effacer les cookies et actualiser" click
+  - accelerator=undefined enabled=true label="Effacer le cache et actualiser" click
+  - accelerator=undefined label="Cookies par site…" visible=true click
+  - enabled=true label="Recharger automatiquement"
+    - checked=false label="Désactivé" type="radio" click
+    - type="separator"
+    - checked=false label="5 s" type="radio" click
+    - checked=false label="10 s" type="radio" click
+    - checked=true label="30 s" type="radio" click
+    - checked=false label="1 min" type="radio" click
+    - checked=false label="2 min" type="radio" click
+    - checked=false label="5 min" type="radio" click
+    - checked=false label="10 min" type="radio" click
+    - type="separator"
+    - checked=false label="Personnalisé…" type="radio" click
+  - type="separator"
+  - accelerator="Ctrl+Shift+=" enabled=true label="Ajouter une vue scindée" click
+  - accelerator="Ctrl+Shift+-" enabled=false label="Fermer ce volet scindé" click
+  - accelerator=undefined enabled=false label="Séparer la page de la vue scindée" click
+  - accelerator=undefined enabled=false label="Agrandir la vue scindée actuelle" click
+  - accelerator=undefined checked=true enabled=false label="Défilement synchronisé des volets" type="checkbox" click
+  - accelerator=undefined checked=true label="Mode économie de batterie" type="checkbox" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+0" enabled=true label="Taille réelle" click
+  - accelerator="CmdOrCtrl+Plus" enabled=true label="Zoom avant" click
+  - accelerator="CmdOrCtrl+-" enabled=true label="Zoom arrière" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Mode lecture" click
+  - type="separator"
+  - label="Développeur"
+    - accelerator="CmdOrCtrl+Alt+U" enabled=true label="Afficher la source" click
+    - accelerator="CmdOrCtrl+Alt+I" enabled=true label="Outils de développement" click
+    - accelerator="F12" enabled=true label="Outils de développement" visible=false click
+    - accelerator="CmdOrCtrl+Alt+C" enabled=true label="Inspecter les éléments" click
+    - accelerator="CmdOrCtrl+Alt+J" enabled=true label="Console JavaScript" click
+    - accelerator=undefined enabled=true label="Inspecteur réseau" click
+    - accelerator="Ctrl+D" enabled=true label="Désactiver le mode développeur pour ce site" click
+    - label="Outils d’extension…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+I" enabled=true label="Infos et réglages du site" click
+  - accelerator="CmdOrCtrl+Shift+B" enabled=true label="Retoucher ce site…" click
+  - type="separator"
+  - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+- label="Espaces"
+  - accelerator=undefined enabled=true label="Nouvel espace…" click
+  - accelerator=undefined enabled=true label="Modifier le thème…" click
+  - accelerator=undefined enabled=true label="Renommer l’espace…" click
+  - enabled=true label="Changer de profil"
+    - checked=true label="Profil par défaut" type="radio" click
+    - checked=false label="Travail" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Right" label="Espace suivant" click
+  - accelerator="CmdOrCtrl+Alt+Left" label="Espace précédent" click
+  - type="separator"
+  - accelerator="Ctrl+1" checked=true label="🏠 Perso" type="checkbox" click
+  - accelerator="Ctrl+CmdOrCtrl+1" checked=true label="🏠 Perso" type="checkbox" visible=false click
+  - accelerator="Ctrl+2" checked=false label="🎨 Autre" type="checkbox" click
+  - accelerator="Ctrl+CmdOrCtrl+2" checked=false label="🎨 Autre" type="checkbox" visible=false click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Gérer les espaces…" click
+  - type="separator"
+  - label="Volets web"
+    - label="Ouvrir « Volet » en volet" click
+    - type="separator"
+    - enabled=true label="Ajouter la page en volet web" click
+    - enabled=true label="Retirer un volet web"
+      - label="Volet" click
+    - label="Fermer le volet web" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Mettre l’espace de côté…" click
+  - enabled=true label="Rouvrir un espace mis de côté"
+    - label="📚 Lecture" click
+  - type="separator"
+  - accelerator=undefined label="Verrouiller maintenant" click
+- label="Onglets"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
+  - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+D" enabled=true label="Épingler l’onglet" click
+  - accelerator=undefined enabled=true label="Nouveau dossier…" click
+  - accelerator=undefined enabled=true label="Nouveau dossier en direct…" visible=true click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Down" label="Onglet suivant" click
+  - accelerator="CmdOrCtrl+Alt+Up" label="Onglet précédent" click
+  - accelerator=undefined enabled=true label="Révéler l’onglet dans la barre latérale" click
+  - accelerator=undefined enabled=true label="Dupliquer l’onglet" click
+  - accelerator=undefined enabled=true label="Rétablir le son de l’onglet" click
+  - accelerator=undefined enabled=false label="Replier le dossier de l’onglet" click
+  - accelerator=undefined enabled=true label="Replier les onglets enfants" visible=true click
+  - accelerator=undefined enabled=false label="Sortir l’onglet de son parent" visible=true click
+  - accelerator=undefined enabled=true label="Déplacer l’onglet vers l’espace suivant" click
+  - accelerator=undefined enabled=true label="Déplacer l’onglet vers l’espace précédent" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Up" enabled=true label="Déplacer l’onglet vers le haut" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Down" enabled=true label="Déplacer l’onglet vers le bas" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+1" label="Aller à l’élément 1 de la barre latérale" click
+  - accelerator="CmdOrCtrl+2" label="Aller à l’élément 2 de la barre latérale" click
+  - accelerator="CmdOrCtrl+3" label="Aller à l’élément 3 de la barre latérale" click
+  - accelerator="CmdOrCtrl+4" label="Aller à l’élément 4 de la barre latérale" click
+  - accelerator="CmdOrCtrl+5" label="Aller à l’élément 5 de la barre latérale" click
+  - accelerator="CmdOrCtrl+6" label="Aller à l’élément 6 de la barre latérale" click
+  - accelerator="CmdOrCtrl+7" label="Aller à l’élément 7 de la barre latérale" click
+  - accelerator="CmdOrCtrl+8" label="Aller à l’élément 8 de la barre latérale" click
+  - accelerator="CmdOrCtrl+9" label="Aller à l’élément 9 de la barre latérale" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+K" label="Vider les onglets du jour" click
+  - accelerator=undefined enabled=true label="Réinitialiser tous les onglets épinglés de cet espace" click
+- label="Archive"
+  - accelerator="CmdOrCtrl+[" enabled=true label="Page précédente" click
+  - accelerator="Ctrl+CmdOrCtrl+Left" enabled=true label="Page précédente" visible=false click
+  - accelerator="CmdOrCtrl+]" enabled=false label="Page suivante" click
+  - accelerator="Ctrl+CmdOrCtrl+Right" enabled=false label="Page suivante" visible=false click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Y" enabled=true label="Afficher l’historique" click
+  - accelerator="CmdOrCtrl+Alt+A" enabled=true label="Afficher l’archive…" click
+  - accelerator="CmdOrCtrl+Shift+J" label="Afficher les téléchargements" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Vider l’archive" click
+  - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click
+  - accelerator="CmdOrCtrl+Shift+X" enabled=true label="Effacer les données du site…" click
+  - accelerator="Ctrl+CmdOrCtrl+X" enabled=true label="Effacer les données du site…" visible=false click
+  - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=true label="Effacer les données du site maintenant" click
+- label="Extensions"
+  - label="Alpha" click
+  - accelerator="Alt+Shift+K" label="Lancer Alpha (Alpha)" click
+  - label="Beta" click
+  - type="separator"
+  - enabled=true label="Ouvrir le Chrome Web Store" click
+  - accelerator=undefined enabled=true label="Ajouter une extension…" click
+  - accelerator=undefined enabled=true label="Gérer les extensions…" click
+- label="Fenêtre"
+  - label="Réduire" role="minimize"
+  - label="Zoom" role="zoom"
+  - type="separator"
+  - accelerator=undefined label="Nommer la fenêtre…" registerAccelerator=false click
+  - label="Retirer le nom de la fenêtre" visible=true click
+  - type="separator"
+  - label="Tout ramener au premier plan" role="front"
+  - type="separator"
+  - checked=true label="Travail" type="checkbox" click
+  - checked=false label="Fenêtre 2" type="checkbox" click
+  - checked=false label="Fenêtre privée" type="checkbox" click
+- label="Aide" role="help"
+  - label="Premiers pas" click
+  - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
+  - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
+  - label="Raccourcis clavier essentiels" click
+  - label="Documentation de Lucium" click
+  - label="Nouveautés" click
+  - label="Premier lancement…" click
+  - label="Régler en quelques questions…" click
+  - label="Vous venez d’Arc ?" click
+  - enabled=true label="Restaurer les données…" click
+  - type="separator"
+  - label="État de Lucium…" click
+  - enabled=true label="Signaler un problème…" click
+  - label="Dépannage"
+    - label="Arrêter et enregistrer la trace…" click
+    - accelerator=undefined label="Ouvrir le gestionnaire de tâches" click
+    - type="separator"
+    - label="Afficher les données de Lucium" click
+    - label="Copier les infos de Lucium" click"
+`;
+
+exports[`the menu bar, as built > with every optional entry, a pinned tab of a folder on screen 1`] = `
+"- label="Lucium"
+  - label="À propos de Lucium" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+," label="Réglages…" click
+  - label="Partager Lucium" click
+  - enabled=false label="Définir comme navigateur par défaut" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Importer depuis un autre navigateur…" click
+  - enabled=true label="Exporter les signets (HTML)…" click
+  - label="Rechercher les mises à jour…" click
+  - type="separator"
+  - label="Services" role="services"
+  - label="Politique de confidentialité" click
+  - type="separator"
+  - label="Masquer Lucium" role="hide"
+  - label="Masquer les autres" role="hideOthers"
+  - label="Tout afficher" role="unhide"
+  - type="separator"
+  - label="Quitter Lucium" role="quit"
+- label="Fichier"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" click
+  - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
+  - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
+  - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - label="Partager une fenêtre annotée…" click
+  - accelerator="Alt+CmdOrCtrl+M" checked=true label="Annoter cette page" registerAccelerator=true type="checkbox" click
+  - accelerator=undefined label="Nouvelle fenêtre invité" visible=true click
+  - accelerator=undefined label="Nouvel onglet privé" visible=true click
+  - label="Nouvel onglet dans un conteneur" visible=true
+    - label="Banque" click
+  - accelerator="CmdOrCtrl+Alt+N" enabled=true label="Nouvelle mini-fenêtre" click
+  - accelerator="CmdOrCtrl+Shift+T" enabled=true label="Rouvrir le dernier onglet fermé" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+L" label="Ouvrir la barre de commandes" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Nouveau profil…" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Sessions…" click
+  - accelerator=undefined enabled=true label="Enregistrer la session…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+W" label="Fermer la fenêtre" click
+  - accelerator=undefined enabled=true label="Nommer la fenêtre…" visible=true click
+  - accelerator="CmdOrCtrl+W" enabled=true label="Archiver l’onglet" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Partager…" click
+  - accelerator=undefined enabled=true label="Code QR de cette page" click
+  - accelerator=undefined label="Traduire en anglais" click
+  - enabled=true label="Image dans l’image" click
+  - accelerator=undefined enabled=true label="Surveiller cette page" click
+  - enabled=true label="Surveiller une zone de la page…" click
+  - accelerator="CmdOrCtrl+Shift+2" enabled=true label="Capturer…" click
+  - enabled=true label="Résumer la page" visible=true click
+  - enabled=true label="Résumé court de la page" visible=true click
+  - enabled=true label="Résumé détaillé de la page" visible=true click
+  - accelerator="CmdOrCtrl+Alt+Shift+S" enabled=true label="Capturer la page entière" click
+  - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
+  - accelerator=undefined enabled=true label="Capturer en mode portrait" click
+  - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
+  - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
+  - accelerator=undefined enabled=true label="Enregistrer en PDF avec l’adresse…" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Lire plus tard" click
+  - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - accelerator=undefined enabled=true label="Mots de passe…" visible=true click
+  - accelerator=undefined enabled=true label="Remplir l’identifiant et le mot de passe" visible=true click
+  - accelerator=undefined enabled=true label="Ajouter aux signets" visible=true click
+  - accelerator=undefined enabled=true label="Signets…" visible=true click
+  - accelerator=undefined enabled=true label="Ouvrir comme application" visible=true click
+  - accelerator="CmdOrCtrl+Shift+E" enabled=true label="Notes…" visible=true click
+  - accelerator="CmdOrCtrl+Alt+E" enabled=true label="Nouvelle note" visible=true click
+- label="Édition"
+  - accelerator="CmdOrCtrl+Z" label="Annuler l’archivage de l’onglet" click
+  - label="Rétablir" role="redo"
+  - type="separator"
+  - label="Couper" role="cut"
+  - label="Copier" role="copy"
+  - accelerator="CmdOrCtrl+Shift+C" enabled=true label="Copier l’adresse" click
+  - accelerator="CmdOrCtrl+Alt+Shift+C" enabled=true label="Copier l’adresse en Markdown" click
+  - accelerator="Ctrl+CmdOrCtrl+Shift+C" enabled=true label="Copier l’adresse en citation" click
+  - label="Coller" role="paste"
+  - label="Coller et adapter le style" role="pasteAndMatchStyle"
+  - label="Supprimer" role="delete"
+  - label="Tout sélectionner" role="selectAll"
+  - type="separator"
+  - label="Rechercher"
+    - accelerator="CmdOrCtrl+F" enabled=true label="Rechercher…" click
+    - accelerator="CmdOrCtrl+Alt+F" enabled=true label="Trouver et remplacer" click
+    - accelerator="CmdOrCtrl+G" enabled=true label="Occurrence suivante" click
+    - accelerator="CmdOrCtrl+Shift+G" enabled=true label="Occurrence précédente" click
+    - accelerator=undefined enabled=true label="Utiliser la sélection pour rechercher" click
+    - accelerator="CmdOrCtrl+J" enabled=true label="Aller à la sélection" click
+  - label="Orthographe et grammaire"
+    - enabled=false label="Afficher l’orthographe et la grammaire"
+    - enabled=false label="Vérifier le document maintenant"
+    - type="separator"
+    - checked=true label="Vérifier l’orthographe lors de la saisie" type="checkbox" click
+    - enabled=false label="Vérifier la grammaire avec l’orthographe"
+    - enabled=false label="Corriger l’orthographe automatiquement"
+  - label="Substitutions"
+    - label="Afficher les substitutions" role="showSubstitutions"
+    - type="separator"
+    - enabled=false label="Copier/coller intelligent"
+    - enabled=false label="Guillemets intelligents"
+    - enabled=false label="Tirets intelligents"
+    - enabled=false label="Liens intelligents"
+    - enabled=false label="Détecteurs de données"
+    - enabled=false label="Remplacement du texte"
+  - label="Transformations"
+    - label="Mettre en majuscules" click
+    - label="Mettre en minuscules" click
+    - label="Mettre une majuscule à chaque mot" click
+  - label="Parole"
+    - label="Commencer la lecture à voix haute" role="startSpeaking"
+    - label="Arrêter la lecture à voix haute" role="stopSpeaking"
+  - label="Format"
+    - label="Police"
+      - accelerator="CmdOrCtrl+B" label="Gras" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+I" label="Italique" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+U" label="Souligné" registerAccelerator=false click
+- label="Affichage"
+  - label="Apparence"
+    - enabled=false label="Apparence de Lucium"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=false label="Apparence demandée aux sites :"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=true label="Contraste de la page pour ce site"
+      - checked=true label="Comme les autres sites" type="radio" click
+      - checked=false label="Original" type="radio" click
+      - checked=false label="Sombre" type="radio" click
+      - checked=false label="Clair" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+S" label="Masquer la barre latérale" click
+  - accelerator="Ctrl+CmdOrCtrl+S" checked=true label="Replier la barre dans cette fenêtre" type="checkbox" click
+  - checked=true label="Barre à droite dans cette fenêtre" type="checkbox" click
+  - label="Pour les nouvelles fenêtres"
+    - checked=true label="Barre à gauche" type="radio" click
+    - checked=false label="Barre à droite" type="radio" click
+  - accelerator="CmdOrCtrl+Shift+D" label="Masquer la barre d’outils" click
+  - accelerator=undefined enabled=true label="Passer en mode compact" visible=true click
+  - accelerator=undefined enabled=true label="Replier les dossiers épinglés" click
+  - label="Notifications récentes" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+;" enabled=true label="Arrêter le chargement" click
+  - accelerator="CmdOrCtrl+R" enabled=true label="Actualiser la page" click
+  - accelerator=undefined label="Actualiser tous les onglets" click
+  - accelerator="CmdOrCtrl+Shift+R" enabled=true label="Actualisation forcée" click
+  - accelerator=undefined enabled=true label="Effacer les cookies et actualiser" click
+  - accelerator=undefined enabled=true label="Effacer le cache et actualiser" click
+  - accelerator=undefined label="Cookies par site…" visible=true click
+  - enabled=true label="Recharger automatiquement"
+    - checked=true label="Désactivé" type="radio" click
+    - type="separator"
+    - checked=false label="5 s" type="radio" click
+    - checked=false label="10 s" type="radio" click
+    - checked=false label="30 s" type="radio" click
+    - checked=false label="1 min" type="radio" click
+    - checked=false label="2 min" type="radio" click
+    - checked=false label="5 min" type="radio" click
+    - checked=false label="10 min" type="radio" click
+    - type="separator"
+    - checked=false label="Personnalisé…" type="radio" click
+  - type="separator"
+  - accelerator="Ctrl+Shift+=" enabled=true label="Ajouter une vue scindée" click
+  - accelerator="Ctrl+Shift+-" enabled=false label="Fermer ce volet scindé" click
+  - accelerator=undefined enabled=false label="Séparer la page de la vue scindée" click
+  - accelerator=undefined enabled=false label="Agrandir la vue scindée actuelle" click
+  - accelerator=undefined checked=true enabled=false label="Défilement synchronisé des volets" type="checkbox" click
+  - accelerator=undefined checked=true label="Mode économie de batterie" type="checkbox" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+0" enabled=true label="Taille réelle" click
+  - accelerator="CmdOrCtrl+Plus" enabled=true label="Zoom avant" click
+  - accelerator="CmdOrCtrl+-" enabled=true label="Zoom arrière" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Mode lecture" click
+  - type="separator"
+  - label="Développeur"
+    - accelerator="CmdOrCtrl+Alt+U" enabled=true label="Afficher la source" click
+    - accelerator="CmdOrCtrl+Alt+I" enabled=true label="Outils de développement" click
+    - accelerator="F12" enabled=true label="Outils de développement" visible=false click
+    - accelerator="CmdOrCtrl+Alt+C" enabled=true label="Inspecter les éléments" click
+    - accelerator="CmdOrCtrl+Alt+J" enabled=true label="Console JavaScript" click
+    - accelerator=undefined enabled=true label="Inspecteur réseau" click
+    - accelerator="Ctrl+D" enabled=true label="Désactiver le mode développeur pour ce site" click
+    - label="Outils d’extension…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+I" enabled=true label="Infos et réglages du site" click
+  - accelerator="CmdOrCtrl+Shift+B" enabled=true label="Retoucher ce site…" click
+  - type="separator"
+  - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+- label="Espaces"
+  - accelerator=undefined enabled=true label="Nouvel espace…" click
+  - accelerator=undefined enabled=true label="Modifier le thème…" click
+  - accelerator=undefined enabled=true label="Renommer l’espace…" click
+  - enabled=true label="Changer de profil"
+    - checked=true label="Profil par défaut" type="radio" click
+    - checked=false label="Travail" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Right" label="Espace suivant" click
+  - accelerator="CmdOrCtrl+Alt+Left" label="Espace précédent" click
+  - type="separator"
+  - accelerator="Ctrl+1" checked=true label="🏠 Perso" type="checkbox" click
+  - accelerator="Ctrl+CmdOrCtrl+1" checked=true label="🏠 Perso" type="checkbox" visible=false click
+  - accelerator="Ctrl+2" checked=false label="🎨 Autre" type="checkbox" click
+  - accelerator="Ctrl+CmdOrCtrl+2" checked=false label="🎨 Autre" type="checkbox" visible=false click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Gérer les espaces…" click
+  - type="separator"
+  - label="Volets web"
+    - label="Ouvrir « Volet » en volet" click
+    - type="separator"
+    - enabled=true label="Ajouter la page en volet web" click
+    - enabled=true label="Retirer un volet web"
+      - label="Volet" click
+    - label="Fermer le volet web" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Mettre l’espace de côté…" click
+  - enabled=true label="Rouvrir un espace mis de côté"
+    - label="📚 Lecture" click
+  - type="separator"
+  - accelerator=undefined label="Verrouiller maintenant" click
+- label="Onglets"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
+  - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+D" enabled=true label="Désépingler l’onglet" click
+  - accelerator=undefined enabled=true label="Nouveau dossier…" click
+  - accelerator=undefined enabled=true label="Nouveau dossier en direct…" visible=true click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Down" label="Onglet suivant" click
+  - accelerator="CmdOrCtrl+Alt+Up" label="Onglet précédent" click
+  - accelerator=undefined enabled=true label="Révéler l’onglet dans la barre latérale" click
+  - accelerator=undefined enabled=true label="Dupliquer l’onglet" click
+  - accelerator=undefined enabled=true label="Rétablir le son de l’onglet" click
+  - accelerator=undefined enabled=true label="Replier le dossier de l’onglet" click
+  - accelerator=undefined enabled=false label="Replier les onglets enfants" visible=true click
+  - accelerator=undefined enabled=false label="Sortir l’onglet de son parent" visible=true click
+  - accelerator=undefined enabled=true label="Déplacer l’onglet vers l’espace suivant" click
+  - accelerator=undefined enabled=true label="Déplacer l’onglet vers l’espace précédent" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Up" enabled=true label="Déplacer l’onglet vers le haut" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Down" enabled=true label="Déplacer l’onglet vers le bas" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+1" label="Aller à l’élément 1 de la barre latérale" click
+  - accelerator="CmdOrCtrl+2" label="Aller à l’élément 2 de la barre latérale" click
+  - accelerator="CmdOrCtrl+3" label="Aller à l’élément 3 de la barre latérale" click
+  - accelerator="CmdOrCtrl+4" label="Aller à l’élément 4 de la barre latérale" click
+  - accelerator="CmdOrCtrl+5" label="Aller à l’élément 5 de la barre latérale" click
+  - accelerator="CmdOrCtrl+6" label="Aller à l’élément 6 de la barre latérale" click
+  - accelerator="CmdOrCtrl+7" label="Aller à l’élément 7 de la barre latérale" click
+  - accelerator="CmdOrCtrl+8" label="Aller à l’élément 8 de la barre latérale" click
+  - accelerator="CmdOrCtrl+9" label="Aller à l’élément 9 de la barre latérale" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+K" label="Vider les onglets du jour" click
+  - accelerator=undefined enabled=true label="Réinitialiser tous les onglets épinglés de cet espace" click
+- label="Archive"
+  - accelerator="CmdOrCtrl+[" enabled=true label="Page précédente" click
+  - accelerator="Ctrl+CmdOrCtrl+Left" enabled=true label="Page précédente" visible=false click
+  - accelerator="CmdOrCtrl+]" enabled=false label="Page suivante" click
+  - accelerator="Ctrl+CmdOrCtrl+Right" enabled=false label="Page suivante" visible=false click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Y" enabled=true label="Afficher l’historique" click
+  - accelerator="CmdOrCtrl+Alt+A" enabled=true label="Afficher l’archive…" click
+  - accelerator="CmdOrCtrl+Shift+J" label="Afficher les téléchargements" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Vider l’archive" click
+  - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click
+  - accelerator="CmdOrCtrl+Shift+X" enabled=true label="Effacer les données du site…" click
+  - accelerator="Ctrl+CmdOrCtrl+X" enabled=true label="Effacer les données du site…" visible=false click
+  - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=true label="Effacer les données du site maintenant" click
+- label="Extensions"
+  - label="Alpha" click
+  - accelerator="Alt+Shift+K" label="Lancer Alpha (Alpha)" click
+  - label="Beta" click
+  - type="separator"
+  - enabled=true label="Ouvrir le Chrome Web Store" click
+  - accelerator=undefined enabled=true label="Ajouter une extension…" click
+  - accelerator=undefined enabled=true label="Gérer les extensions…" click
+- label="Fenêtre"
+  - label="Réduire" role="minimize"
+  - label="Zoom" role="zoom"
+  - type="separator"
+  - accelerator=undefined label="Nommer la fenêtre…" registerAccelerator=false click
+  - label="Retirer le nom de la fenêtre" visible=true click
+  - type="separator"
+  - label="Tout ramener au premier plan" role="front"
+  - type="separator"
+  - checked=true label="Travail" type="checkbox" click
+  - checked=false label="Fenêtre 2" type="checkbox" click
+  - checked=false label="Fenêtre privée" type="checkbox" click
+- label="Aide" role="help"
+  - label="Premiers pas" click
+  - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
+  - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
+  - label="Raccourcis clavier essentiels" click
+  - label="Documentation de Lucium" click
+  - label="Nouveautés" click
+  - label="Premier lancement…" click
+  - label="Régler en quelques questions…" click
+  - label="Vous venez d’Arc ?" click
+  - enabled=true label="Restaurer les données…" click
+  - type="separator"
+  - label="État de Lucium…" click
+  - enabled=true label="Signaler un problème…" click
+  - label="Dépannage"
+    - label="Arrêter et enregistrer la trace…" click
+    - accelerator=undefined label="Ouvrir le gestionnaire de tâches" click
+    - type="separator"
+    - label="Afficher les données de Lucium" click
+    - label="Copier les infos de Lucium" click"
+`;
+
+exports[`the menu bar, as built > with every optional setting off and windows that cannot be named 1`] = `
+"- label="Lucium"
+  - label="À propos de Lucium" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+," label="Réglages…" click
+  - label="Partager Lucium" click
+  - enabled=true label="Définir comme navigateur par défaut" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Importer depuis un autre navigateur…" click
+  - enabled=true label="Exporter les signets (HTML)…" click
+  - label="Rechercher les mises à jour…" click
+  - type="separator"
+  - label="Services" role="services"
+  - label="Politique de confidentialité" click
+  - type="separator"
+  - label="Masquer Lucium" role="hide"
+  - label="Masquer les autres" role="hideOthers"
+  - label="Tout afficher" role="unhide"
+  - type="separator"
+  - label="Quitter Lucium" role="quit"
+- label="Fichier"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" click
+  - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
+  - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
+  - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - accelerator=undefined label="Nouvelle fenêtre invité" visible=false click
+  - accelerator=undefined label="Nouvel onglet privé" visible=true click
+  - label="Nouvel onglet dans un conteneur" visible=false
+  - accelerator="CmdOrCtrl+Alt+N" enabled=true label="Nouvelle mini-fenêtre" click
+  - accelerator="CmdOrCtrl+Shift+T" enabled=true label="Rouvrir le dernier onglet fermé" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+L" label="Ouvrir la barre de commandes" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Nouveau profil…" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Sessions…" click
+  - accelerator=undefined enabled=true label="Enregistrer la session…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+W" label="Fermer la fenêtre" click
+  - accelerator=undefined enabled=false label="Nommer la fenêtre…" visible=false click
+  - accelerator="CmdOrCtrl+W" enabled=true label="Archiver l’onglet" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Partager…" click
+  - accelerator=undefined label="Traduire en anglais" click
+  - enabled=true label="Image dans l’image" click
+  - accelerator="CmdOrCtrl+Shift+2" enabled=true label="Capturer…" click
+  - enabled=true label="Résumer la page" visible=false click
+  - enabled=true label="Résumé court de la page" visible=false click
+  - enabled=true label="Résumé détaillé de la page" visible=false click
+  - accelerator="CmdOrCtrl+Alt+Shift+S" enabled=true label="Capturer la page entière" click
+  - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
+  - accelerator=undefined enabled=true label="Capturer en mode portrait" click
+  - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
+  - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Lire plus tard" click
+  - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - accelerator=undefined enabled=false label="Mots de passe…" visible=false click
+  - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=false click
+  - accelerator=undefined enabled=false label="Ajouter aux signets" visible=false click
+  - accelerator=undefined enabled=false label="Signets…" visible=false click
+  - accelerator=undefined enabled=false label="Ouvrir comme application" visible=false click
+  - accelerator="CmdOrCtrl+Shift+E" enabled=true label="Notes…" visible=true click
+  - accelerator="CmdOrCtrl+Alt+E" enabled=true label="Nouvelle note" visible=true click
+- label="Édition"
+  - accelerator="CmdOrCtrl+Z" label="Annuler l’archivage de l’onglet" click
+  - label="Rétablir" role="redo"
+  - type="separator"
+  - label="Couper" role="cut"
+  - label="Copier" role="copy"
+  - accelerator="CmdOrCtrl+Shift+C" enabled=true label="Copier l’adresse" click
+  - accelerator="CmdOrCtrl+Alt+Shift+C" enabled=true label="Copier l’adresse en Markdown" click
+  - accelerator="Ctrl+CmdOrCtrl+Shift+C" enabled=true label="Copier l’adresse en citation" click
+  - label="Coller" role="paste"
+  - label="Coller et adapter le style" role="pasteAndMatchStyle"
+  - label="Supprimer" role="delete"
+  - label="Tout sélectionner" role="selectAll"
+  - type="separator"
+  - label="Rechercher"
+    - accelerator="CmdOrCtrl+F" enabled=true label="Rechercher…" click
+    - accelerator="CmdOrCtrl+Alt+F" enabled=true label="Trouver et remplacer" click
+    - accelerator="CmdOrCtrl+G" enabled=true label="Occurrence suivante" click
+    - accelerator="CmdOrCtrl+Shift+G" enabled=true label="Occurrence précédente" click
+    - accelerator=undefined enabled=true label="Utiliser la sélection pour rechercher" click
+    - accelerator="CmdOrCtrl+J" enabled=true label="Aller à la sélection" click
+  - label="Orthographe et grammaire"
+    - enabled=false label="Afficher l’orthographe et la grammaire"
+    - enabled=false label="Vérifier le document maintenant"
+    - type="separator"
+    - checked=true label="Vérifier l’orthographe lors de la saisie" type="checkbox" click
+    - enabled=false label="Vérifier la grammaire avec l’orthographe"
+    - enabled=false label="Corriger l’orthographe automatiquement"
+  - label="Substitutions"
+    - label="Afficher les substitutions" role="showSubstitutions"
+    - type="separator"
+    - enabled=false label="Copier/coller intelligent"
+    - enabled=false label="Guillemets intelligents"
+    - enabled=false label="Tirets intelligents"
+    - enabled=false label="Liens intelligents"
+    - enabled=false label="Détecteurs de données"
+    - enabled=false label="Remplacement du texte"
+  - label="Transformations"
+    - label="Mettre en majuscules" click
+    - label="Mettre en minuscules" click
+    - label="Mettre une majuscule à chaque mot" click
+  - label="Parole"
+    - label="Commencer la lecture à voix haute" role="startSpeaking"
+    - label="Arrêter la lecture à voix haute" role="stopSpeaking"
+  - label="Format"
+    - label="Police"
+      - accelerator="CmdOrCtrl+B" label="Gras" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+I" label="Italique" registerAccelerator=false click
+      - accelerator="CmdOrCtrl+U" label="Souligné" registerAccelerator=false click
+- label="Affichage"
+  - label="Apparence"
+    - enabled=false label="Apparence de Lucium"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=false label="Apparence demandée aux sites :"
+    - checked=true label="Automatique" type="radio" click
+    - checked=false label="Clair" type="radio" click
+    - checked=false label="Sombre" type="radio" click
+    - type="separator"
+    - enabled=true label="Contraste de la page pour ce site"
+      - checked=true label="Comme les autres sites" type="radio" click
+      - checked=false label="Original" type="radio" click
+      - checked=false label="Sombre" type="radio" click
+      - checked=false label="Clair" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+S" label="Masquer la barre latérale" click
+  - accelerator="Ctrl+CmdOrCtrl+S" checked=true label="Replier la barre dans cette fenêtre" type="checkbox" click
+  - checked=true label="Barre à droite dans cette fenêtre" type="checkbox" click
+  - label="Pour les nouvelles fenêtres"
+    - checked=true label="Barre à gauche" type="radio" click
+    - checked=false label="Barre à droite" type="radio" click
+  - accelerator="CmdOrCtrl+Shift+D" label="Masquer la barre d’outils" click
+  - accelerator=undefined enabled=false label="Passer en mode compact" visible=false click
+  - accelerator=undefined enabled=true label="Replier les dossiers épinglés" click
+  - label="Notifications récentes" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+;" enabled=true label="Arrêter le chargement" click
+  - accelerator="CmdOrCtrl+R" enabled=true label="Actualiser la page" click
+  - accelerator=undefined label="Actualiser tous les onglets" click
+  - accelerator="CmdOrCtrl+Shift+R" enabled=true label="Actualisation forcée" click
+  - accelerator=undefined enabled=true label="Effacer les cookies et actualiser" click
+  - accelerator=undefined enabled=true label="Effacer le cache et actualiser" click
+  - accelerator=undefined label="Cookies par site…" visible=true click
+  - enabled=true label="Recharger automatiquement"
+    - checked=false label="Désactivé" type="radio" click
+    - type="separator"
+    - checked=false label="5 s" type="radio" click
+    - checked=false label="10 s" type="radio" click
+    - checked=true label="30 s" type="radio" click
+    - checked=false label="1 min" type="radio" click
+    - checked=false label="2 min" type="radio" click
+    - checked=false label="5 min" type="radio" click
+    - checked=false label="10 min" type="radio" click
+    - type="separator"
+    - checked=false label="Personnalisé…" type="radio" click
+  - type="separator"
+  - accelerator="Ctrl+Shift+=" enabled=true label="Ajouter une vue scindée" click
+  - accelerator="Ctrl+Shift+-" enabled=false label="Fermer ce volet scindé" click
+  - accelerator=undefined enabled=false label="Séparer la page de la vue scindée" click
+  - accelerator=undefined enabled=false label="Agrandir la vue scindée actuelle" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+0" enabled=true label="Taille réelle" click
+  - accelerator="CmdOrCtrl+Plus" enabled=true label="Zoom avant" click
+  - accelerator="CmdOrCtrl+-" enabled=true label="Zoom arrière" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Mode lecture" click
+  - type="separator"
+  - label="Développeur"
+    - accelerator="CmdOrCtrl+Alt+U" enabled=true label="Afficher la source" click
+    - accelerator="CmdOrCtrl+Alt+I" enabled=true label="Outils de développement" click
+    - accelerator="F12" enabled=true label="Outils de développement" visible=false click
+    - accelerator="CmdOrCtrl+Alt+C" enabled=true label="Inspecter les éléments" click
+    - accelerator="CmdOrCtrl+Alt+J" enabled=true label="Console JavaScript" click
+    - accelerator=undefined enabled=true label="Inspecteur réseau" click
+    - accelerator="Ctrl+D" enabled=true label="Désactiver le mode développeur pour ce site" click
+    - label="Outils d’extension…" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+I" enabled=true label="Infos et réglages du site" click
+  - accelerator="CmdOrCtrl+Shift+B" enabled=true label="Retoucher ce site…" click
+  - type="separator"
+  - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+- label="Espaces"
+  - accelerator=undefined enabled=true label="Nouvel espace…" click
+  - accelerator=undefined enabled=true label="Modifier le thème…" click
+  - accelerator=undefined enabled=true label="Renommer l’espace…" click
+  - enabled=true label="Changer de profil"
+    - checked=true label="Profil par défaut" type="radio" click
+    - checked=false label="work" type="radio" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Right" label="Espace suivant" click
+  - accelerator="CmdOrCtrl+Alt+Left" label="Espace précédent" click
+  - type="separator"
+  - accelerator="Ctrl+1" checked=true label="🏠 Perso" type="checkbox" click
+  - accelerator="Ctrl+CmdOrCtrl+1" checked=true label="🏠 Perso" type="checkbox" visible=false click
+  - accelerator="Ctrl+2" checked=false label="🎨 Autre" type="checkbox" click
+  - accelerator="Ctrl+CmdOrCtrl+2" checked=false label="🎨 Autre" type="checkbox" visible=false click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Gérer les espaces…" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Mettre l’espace de côté…" click
+  - enabled=true label="Rouvrir un espace mis de côté"
+    - label="📚 Lecture" click
+- label="Onglets"
+  - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
+  - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+D" enabled=true label="Épingler l’onglet" click
+  - accelerator=undefined enabled=true label="Nouveau dossier…" click
+  - accelerator=undefined enabled=false label="Nouveau dossier en direct…" visible=false click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Alt+Down" label="Onglet suivant" click
+  - accelerator="CmdOrCtrl+Alt+Up" label="Onglet précédent" click
+  - accelerator=undefined enabled=true label="Révéler l’onglet dans la barre latérale" click
+  - accelerator=undefined enabled=true label="Dupliquer l’onglet" click
+  - accelerator=undefined enabled=true label="Rétablir le son de l’onglet" click
+  - accelerator=undefined enabled=false label="Replier le dossier de l’onglet" click
+  - accelerator=undefined enabled=false label="Replier les onglets enfants" visible=false click
+  - accelerator=undefined enabled=false label="Sortir l’onglet de son parent" visible=false click
+  - accelerator=undefined enabled=true label="Déplacer l’onglet vers l’espace suivant" click
+  - accelerator=undefined enabled=true label="Déplacer l’onglet vers l’espace précédent" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Up" enabled=true label="Déplacer l’onglet vers le haut" click
+  - accelerator="CmdOrCtrl+Alt+Shift+Down" enabled=true label="Déplacer l’onglet vers le bas" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+1" label="Aller à l’élément 1 de la barre latérale" click
+  - accelerator="CmdOrCtrl+2" label="Aller à l’élément 2 de la barre latérale" click
+  - accelerator="CmdOrCtrl+3" label="Aller à l’élément 3 de la barre latérale" click
+  - accelerator="CmdOrCtrl+4" label="Aller à l’élément 4 de la barre latérale" click
+  - accelerator="CmdOrCtrl+5" label="Aller à l’élément 5 de la barre latérale" click
+  - accelerator="CmdOrCtrl+6" label="Aller à l’élément 6 de la barre latérale" click
+  - accelerator="CmdOrCtrl+7" label="Aller à l’élément 7 de la barre latérale" click
+  - accelerator="CmdOrCtrl+8" label="Aller à l’élément 8 de la barre latérale" click
+  - accelerator="CmdOrCtrl+9" label="Aller à l’élément 9 de la barre latérale" click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Shift+K" label="Vider les onglets du jour" click
+  - accelerator=undefined enabled=true label="Réinitialiser tous les onglets épinglés de cet espace" click
+- label="Archive"
+  - accelerator="CmdOrCtrl+[" enabled=true label="Page précédente" click
+  - accelerator="Ctrl+CmdOrCtrl+Left" enabled=true label="Page précédente" visible=false click
+  - accelerator="CmdOrCtrl+]" enabled=false label="Page suivante" click
+  - accelerator="Ctrl+CmdOrCtrl+Right" enabled=false label="Page suivante" visible=false click
+  - type="separator"
+  - accelerator="CmdOrCtrl+Y" enabled=true label="Afficher l’historique" click
+  - accelerator="CmdOrCtrl+Alt+A" enabled=true label="Afficher l’archive…" click
+  - accelerator="CmdOrCtrl+Shift+J" label="Afficher les téléchargements" click
+  - type="separator"
+  - accelerator=undefined enabled=true label="Vider l’archive" click
+  - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click
+  - accelerator="CmdOrCtrl+Shift+X" enabled=true label="Effacer les données du site…" click
+  - accelerator="Ctrl+CmdOrCtrl+X" enabled=true label="Effacer les données du site…" visible=false click
+  - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=true label="Effacer les données du site maintenant" click
+- label="Extensions"
+  - enabled=false label="Aucune extension chargée"
+  - type="separator"
+  - enabled=true label="Ouvrir le Chrome Web Store" click
+  - accelerator=undefined enabled=true label="Ajouter une extension…" click
+  - accelerator=undefined enabled=true label="Gérer les extensions…" click
+- label="Fenêtre" role="windowMenu"
+- label="Aide" role="help"
+  - label="Premiers pas" click
+  - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
+  - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
+  - label="Raccourcis clavier essentiels" click
+  - label="Documentation de Lucium" click
+  - label="Nouveautés" click
+  - label="Premier lancement…" click
+  - label="Régler en quelques questions…" click
+  - label="Vous venez d’Arc ?" click
+  - enabled=true label="Restaurer les données…" click
+  - type="separator"
+  - label="État de Lucium…" click
+  - enabled=true label="Signaler un problème…" click
+  - label="Dépannage"
+    - label="Enregistrer une trace" click
+    - accelerator=undefined label="Ouvrir le gestionnaire de tâches" click
+    - type="separator"
+    - label="Afficher les données de Lucium" click
+    - label="Copier les infos de Lucium" click"
+`;

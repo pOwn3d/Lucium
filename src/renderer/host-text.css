@@ -1,0 +1,5 @@
+/* A host in two parts (HostText.tsx): the subdomains shrink first and end with an ellipsis, the registrable domain keeps its width. It is cut, by its
+   end, only when it does not fit alone. */
+.host-split { display: flex; min-width: 0; overflow: hidden; white-space: nowrap; }
+.host-sub { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.host-domain { flex: none; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

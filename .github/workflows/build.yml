@@ -1,0 +1,128 @@
+name: Build (draft)
+
+# DRAFT, never run. What it does: on macOS, Windows and Linux, type-check, run the unit tests and build the application (`electron-vite build`);
+# on macOS, also package the application as a folder, unsigned, to prove that it packages (nothing of it is kept); on request, also make the
+# unsigned packages of electron-builder.yml and keep them as an artifact for three days. What it never does: publish anything (no release, no
+# upload to a store, `--publish never`), sign anything, or read a secret (no repository secret is referenced anywhere in this file, and the
+# token has read access only).
+#
+# The packages it keeps are CHECK BUILDS, and their names say so: every file is renamed `…-UNSIGNED-check-build.<ext>` before it is uploaded,
+# and the artifacts are named the same way. Nobody must take one for a download of Lucium: unsigned, nothing seals app.asar, the keychain
+# helper refuses the app, Gatekeeper warns, and it is not the variant that plays protected videos. The downloads are made and published by the
+# maintainer (docs/community/release-process.md); the artifact of a run on a public repository can be fetched by any signed-in GitHub user.
+#
+# When it runs: by hand (workflow_dispatch), and on a pushed tag `v*`, where it is the check that the tagged commit type-checks, passes the
+# unit tests and packages (release.yml builds nothing). Not on pull requests: the macOS build of a pull request is the job "Build (macOS,
+# unsigned)" of ci.yml, and the Windows and Linux legs prove nothing yet. This file must be on the default branch for the "Run workflow"
+# button to appear.
+#
+# Windows and Linux are EXPERIMENTAL legs: nothing of Lucium was ever run there (docs/plateformes.md). A failing leg does not fail the run
+# (`continue-on-error`) and the unit tests do not stop the build step: the first runs are there to tell what breaks, not to be green. When a
+# leg has been green for a while, set its `experimental` to false.
+#
+# What these two legs download outside pnpm-lock.yaml: to package for Windows and Linux, electron-builder fetches its tools (NSIS, winCodeSign,
+# fpm, AppImage) from the releases of electron-userland/electron-builder-binaries, and compares a checksum only for those it knows one for.
+# The runner has a read-only token and no secret, and what it makes is a check build nobody is given as a release. The address of these tools
+# must stay the default one: no step sets a mirror (ELECTRON_BUILDER_BINARIES_MIRROR, ELECTRON_MIRROR), which a test checks.
+#
+# Not covered here, on purpose: `pnpm test:engine` (a real Electron with real windows: macOS only, the workflow "Smoke (macOS)",
+# smoke-macos.yml), signing, notarization, Windows code signing, auto-update feeds.
+
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Also make the unsigned packages (dmg and zip, NSIS installer, AppImage and deb) and keep them for three days
+        type: boolean
+        default: false
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    continue-on-error: ${{ matrix.experimental }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: macOS (Apple silicon)
+            os: macos-latest
+            experimental: false
+            # electron-builder.yml: dmg and zip for the two processors. The Intel one is built here (Electron downloads its x64 binary) and
+            # cannot be run on this runner.
+            targets: --mac dmg zip --x64 --arm64
+            artifact: lucium-mac-UNSIGNED-check-build
+          - name: Windows
+            os: windows-latest
+            experimental: true
+            targets: --win nsis --x64
+            artifact: lucium-win-UNSIGNED-check-build
+          - name: Linux
+            os: ubuntu-latest
+            experimental: true
+            targets: --linux AppImage deb --x64
+            artifact: lucium-linux-UNSIGNED-check-build
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The setup of ci.yml (see the comment there).
+      - uses: ./.github/actions/setup
+      - name: Machine
+        run: |
+          uname -a
+          node --version
+          pnpm --version
+      # The install script of the electron package normally runs during `pnpm install` (allowBuilds in pnpm-workspace.yaml); a safety net.
+      - run: node node_modules/electron/install.js
+      - name: Type-check
+        run: pnpm typecheck
+      # The macOS-only and Unix-path tests are expected to fail on Windows until they are adapted: the build below still runs.
+      - name: Unit tests
+        continue-on-error: ${{ matrix.experimental }}
+        run: pnpm test
+      - name: Build
+        run: pnpm build
+      # What `pnpm package` does after the build above: the helpers of native/, then the .app as a folder. It is what proves that a commit
+      # packages; the folder stays on the runner.
+      - name: Package the application as a folder (macOS, unsigned, nothing kept)
+        if: ${{ runner.os == 'macOS' }}
+        env:
+          # Never look for a signing identity in the keychain of the runner; no certificate is configured anywhere.
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: pnpm build:native && pnpm exec electron-builder --mac --dir --arm64 --publish never
+      - name: Package (unsigned, nothing published)
+        if: ${{ inputs.package }}
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: |
+          set -euo pipefail
+          pnpm exec electron-builder ${{ matrix.targets }} --publish never
+          # The name says what each file is before it leaves the runner (the test of this step runs these lines on files made for it).
+          shopt -s nullglob
+          for file in dist/*.dmg dist/*.zip dist/*.exe dist/*.AppImage dist/*.deb; do
+            mv "$file" "${file%.*}-UNSIGNED-check-build.${file##*.}"
+          done
+          ls -l dist/*-UNSIGNED-check-build.*
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: ${{ inputs.package }}
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/*-UNSIGNED-check-build.*
+          if-no-files-found: error
+          retention-days: 3

@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- The bundle of the translation helper (build.sh). The Translation framework knows the program by this identifier. -->
+    <key>CFBundleIdentifier</key>
+    <string>app.lucium.browser.translate</string>
+    <key>CFBundleExecutable</key>
+    <string>lucium-translate</string>
+    <key>CFBundleName</key>
+    <string>Lucium</string>
+    <key>CFBundleDisplayName</key>
+    <string>Lucium</string>
+    <key>CFBundlePackageType</key>
+    <string>APPL</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0</string>
+    <key>CFBundleVersion</key>
+    <string>2</string>
+    <!-- The protocol the program speaks (main.swift `protocolVersion`): 2, a page per run, lines of JSON with ids. The main process reads it here
+         (system.ts `helperProtocol`) to know how to run it; a bundle without it is run once per request. -->
+    <key>LuciumTranslateProtocol</key>
+    <integer>2</integer>
+    <!-- It starts on the systems Lucium starts on, and answers "unavailable" before macOS 26 (the framework is weakly linked). -->
+    <key>LSMinimumSystemVersion</key>
+    <string>12.0</string>
+    <!-- Run by the main process for a page (and quits once idle): no Dock icon, no menu. -->
+    <key>LSUIElement</key>
+    <true/>
+  </dict>
+</plist>

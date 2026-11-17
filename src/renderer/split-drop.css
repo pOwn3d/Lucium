@@ -1,0 +1,29 @@
+@import './palette.css';
+/* The veil of a tab dragged onto the page. The reduced page and the box move 0.2 s, ease-out; the ring appears at once. */
+.split-drop {
+  --sd-ms: 200ms;
+  --sd-ease: cubic-bezier(0.25, 1, 0.5, 1);
+  position: fixed; inset: 0; overflow: hidden;
+}
+.sd-page, .sd-box { position: absolute; box-sizing: border-box; transition: left var(--sd-ms) var(--sd-ease), top var(--sd-ms) var(--sd-ease), width var(--sd-ms) var(--sd-ease), height var(--sd-ms) var(--sd-ease); }
+.sd-page { overflow: hidden; background: var(--fixed-26272b); }
+/* The picture keeps its size and its top left corner: a narrower page shows the same page cut short, as a page reflowed to that width starts the same way. */
+.sd-page img { display: block; max-width: none; pointer-events: none; }
+/* #0e0f14 with a 2 px outline #7d7e89 and 5 px corners. It is invisible until a side is chosen; closing, it first folds up against its edge. */
+.sd-box { background: var(--fixed-0e0f14); border: 2px solid var(--fixed-7d7e89); border-radius: 5px; opacity: 0; transition-property: left, top, width, height, opacity; transition-duration: var(--sd-ms), var(--sd-ms), var(--sd-ms), var(--sd-ms), 0s; transition-timing-function: var(--sd-ease); transition-delay: 0s, 0s, 0s, 0s, var(--sd-ms); }
+.sd-box.open { opacity: 1; transition-delay: 0s; }
+/* Over a split view the box is the cell of the future pane (a side or a corner): outlined as the focused pane it will be, 2 px of #2f39ff with the
+   8 px corners of a page (a deliberate addition: Arc has no grid to measure). */
+.sd-box.cell { border-color: var(--fixed-2f39ff); border-radius: 8px; }
+.sd-ring { position: absolute; inset: 0; box-sizing: border-box; border: 3px solid var(--fixed-2f39ff); border-radius: 8px; pointer-events: none; }
+/* Over a split view of four panes: its pages stay under a light shade, a word in the middle says that it takes no more, and the pointer that the drop is refused. */
+.split-drop.full { background: var(--fixed-000000-20); }
+.sd-full {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); box-sizing: border-box; max-width: calc(100% - 32px);
+  padding: 10px 16px; border: 2px solid var(--fixed-7d7e89); border-radius: 8px; background: var(--fixed-0e0f14); color: var(--fixed-ffffff);
+  font-size: 13px; font-weight: 600; line-height: 1.35; text-align: center; pointer-events: none; user-select: none;
+}
+/* "Reduce motion": the page and the box take their place at once (the ring already appears at once). */
+@media (prefers-reduced-motion: reduce) {
+  .split-drop { --sd-ms: 0ms; }
+}

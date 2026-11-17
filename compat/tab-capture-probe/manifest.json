@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Tab Capture Probe",
+  "version": "0.1.0",
+  "description": "Asks for the sound of a tab the way a captions extension does (getMediaStreamId in its worker, getUserMedia in an offscreen document) and reports what it got, for the engine check of the capture of a tab's sound.",
+  "background": { "service_worker": "background.js" },
+  "permissions": ["tabCapture", "activeTab", "offscreen"],
+  "commands": { "probe-capture": { "description": "Invoke the tab capture probe", "suggested_key": { "default": "Ctrl+Shift+9", "mac": "Command+Shift+9" } } },
+  "externally_connectable": { "matches": ["http://127.0.0.1/*"] }
+}

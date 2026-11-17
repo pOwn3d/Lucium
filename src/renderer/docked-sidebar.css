@@ -1,0 +1,64 @@
+/*
+ * The docked sidebar (« barre collée », DockedSidebar.tsx): a column of 56 px (DOCK_WIDTH, shared/frame-layout.ts, given as --sidebar-width) of 40 px tiles,
+ * the pinned tabs (the favourites when the space has none); « Nouvel onglet » and « Déplier » at its foot. The traffic lights stay at the window's top left corner, whatever
+ * the side of the column: the tiles start under the row of the toolbar. Colours: the roles of the tokens, light or dark with the shell, and the accent of
+ * the space. The column carries `.sidebar` too: it slides like the sidebar when it is hidden or shown, and its icons are drawn as the sidebar's.
+ */
+
+.sidebar.docked-sidebar { align-items: center; padding: calc(var(--window-border, 10px) + 34px) 0 var(--window-border, 10px); }
+
+.sidebar .dock-tiles {
+  position: relative; z-index: 1; flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-1) 0; overflow-y: auto; scrollbar-width: none; -webkit-app-region: no-drag;
+}
+.sidebar .dock-tiles::-webkit-scrollbar { display: none; }
+:root[data-scrollbars='always'] .sidebar .dock-tiles { scrollbar-width: thin; scrollbar-color: var(--text-3) transparent; }
+
+/* A tile: the site's icon on a soft tile of the space. */
+.sidebar .dock-tile {
+  position: relative; flex: none; width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center;
+  background: var(--sb-tile); color: var(--sb-text); transition: background var(--dur), box-shadow var(--dur);
+}
+.sidebar .dock-tile:hover { background: var(--tile-hover); }
+.sidebar .dock-tile .favicon { width: 20px; height: 20px; border-radius: 5px; }
+.sidebar .dock-tile .favicon.monogram { width: 20px; height: 20px; border-radius: 5px; font-size: var(--t-xs); }
+.sidebar .dock-tile .favicon.emoji-icon { width: 22px; font-size: 18px; line-height: 22px; }
+.sidebar .dock-tile:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+
+/* The site on screen: a white tile (a lighter one in dark) ringed with the accent, and a bar on the edge that faces the page. */
+.sidebar .dock-tile.active { background: light-dark(var(--surface), var(--tile-active)); box-shadow: 0 0 0 2px var(--accent), var(--shadow-s); }
+.sidebar .dock-tile.active::before { content: ''; position: absolute; top: 12px; width: 3px; height: 16px; border-radius: 2px; background: var(--accent); }
+.sidebar.at-left .dock-tile.active::before { right: -8px; }
+.sidebar.at-right .dock-tile.active::before { left: -8px; }
+
+/* The unread count, as the rows of the full sidebar show it (the accent of the space), and the dot of an icon that changed. */
+.sidebar .dock-badge {
+  position: absolute; top: -5px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--accent); color: var(--on-accent); font: var(--w-semibold) var(--t-xs) / 1 var(--font); font-variant-numeric: tabular-nums; pointer-events: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+.sidebar .dock-dot { position: absolute; bottom: -2px; right: -2px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 2px var(--surface); pointer-events: none; }
+
+/* « Nouvel onglet » and « Déplier », at the foot. */
+.sidebar .dock-tools { position: relative; z-index: 1; flex: none; display: flex; flex-direction: column; align-items: center; gap: var(--sp-1); padding-top: var(--sp-2); }
+.sidebar .dock-tool { width: 32px; height: 28px; border-radius: 7px; display: grid; place-items: center; color: var(--sb-glyph); }
+.sidebar .dock-tool:hover { color: var(--text-on-space); background: var(--tile-hover); }
+.sidebar .dock-tool:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
+.sidebar.at-right .dock-unfold svg { transform: scaleX(-1); }
+
+/* The edge that faces the page: a double-click there gives the full sidebar back. */
+.sidebar .dock-edge { position: absolute; top: 0; width: 6px; height: 100%; -webkit-app-region: no-drag; }
+.sidebar.at-left .dock-edge { right: 0; }
+.sidebar.at-right .dock-edge { left: 0; }
+
+/* « Plier la barre », at the top corner of the full sidebar that faces the page (its chevron folds towards the sidebar's edge). */
+.sidebar .toolbar .sidebar-dock { width: 32px; height: 32px; margin-top: 7px; margin-left: auto; color: var(--sb-glyph); }
+.sidebar .toolbar .sidebar-dock:hover { color: var(--text-on-space); }
+.sidebar .toolbar .nav-buttons ~ .sidebar-dock { margin-left: 0; }
+.shell.sidebar-right .sidebar .toolbar .sidebar-dock { margin-left: 0; margin-right: auto; }
+.shell.sidebar-right .sidebar .toolbar .nav-buttons ~ .sidebar-dock { margin-right: 0; }
+.shell.sidebar-right .sidebar .sidebar-dock svg { transform: scaleX(-1); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar .dock-tile { transition: none; }
+}

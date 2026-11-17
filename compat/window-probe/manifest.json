@@ -1,0 +1,14 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Window Probe",
+  "version": "0.1.0",
+  "description": "An extension of the toolbar (popup, side panel, menu entry, badge, notifications, content script) driven by a local page, to see in which profile and window each of its surfaces lands (smokeExtWindows).",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["tabs", "contextMenus", "notifications", "sidePanel", "storage", "activeTab"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "action": { "default_title": "Window probe", "default_popup": "popup.html" },
+  "side_panel": { "default_path": "panel.html" },
+  "options_page": "options.html",
+  "content_scripts": [{ "matches": ["http://127.0.0.1/*"], "js": ["content.js"], "run_at": "document_start" }],
+  "externally_connectable": { "matches": ["http://127.0.0.1/*"] }
+}

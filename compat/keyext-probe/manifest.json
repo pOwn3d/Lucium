@@ -1,0 +1,11 @@
+{
+  "manifest_version": 3,
+  "name": "Keyext Probe",
+  "version": "0.1.0",
+  "description": "Declares the omnibox keyword \"kxp\" and writes down what the command bar tells it (input started, text entered and where); has a content script on one test page and tries to take its own host permission back, for the engine test of the extension keywords and of the site access of extensions.",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "omnibox": { "keyword": "kxp" },
+  "host_permissions": ["http://127.0.0.1/*"],
+  "content_scripts": [{ "matches": ["http://127.0.0.1/s/keyext-site*"], "js": ["content.js"], "run_at": "document_idle", "all_frames": false }],
+  "externally_connectable": { "matches": ["http://127.0.0.1/*"] }
+}

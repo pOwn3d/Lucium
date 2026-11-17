@@ -1,0 +1,16 @@
+/* "Quitter ce site ?" (LeaveSheet.tsx): a sheet hung under the toolbar over the page, which stays visible behind it. Tokens only. */
+.leave-scrim { position: fixed; inset: 0; z-index: 50; display: flex; justify-content: center; align-items: flex-start; padding: 56px var(--sp-4) 0; background: transparent; }
+.leave {
+  box-sizing: border-box; width: min(400px, 100%); padding: var(--sp-4) var(--sp-5) var(--sp-4); border-radius: var(--r-l);
+  background: var(--surface); color: var(--text); border: 1px solid var(--line-strong); box-shadow: var(--shadow); font: var(--t-m)/1.45 var(--font);
+}
+.leave-site { display: flex; align-items: center; gap: var(--sp-2); margin: 0 0 var(--sp-3); color: var(--text-2); font-size: var(--t-s); }
+.leave-fav { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: var(--r-s); background: var(--accent-soft); color: var(--accent-text); font-size: var(--t-xs); font-weight: var(--w-semibold); }
+.leave-host { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.leave h2 { margin: 0 0 var(--sp-2); font-size: var(--t-l); font-weight: var(--w-semibold); }
+.leave p { margin: 0; color: var(--text-2); }
+.leave-actions { display: flex; justify-content: flex-end; gap: var(--sp-2); margin-top: var(--sp-4); }
+.leave-actions .button { display: inline-flex; align-items: center; gap: var(--sp-2); min-height: var(--target); }
+.leave-actions .button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.leave-actions kbd { font: var(--t-xs)/1 var(--font); padding: 2px 5px; border-radius: 4px; background: var(--tile-hover); color: inherit; }
+.leave-actions .primary kbd { background: color-mix(in srgb, var(--on-accent) 22%, transparent); }

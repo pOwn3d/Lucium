@@ -1,0 +1,50 @@
+/*
+ * The sidebar at the right of the window (Réglages › Apparence, the side of the sidebar). Nothing here applies to the default layout: every rule
+ * hangs on `.sidebar-right`, which only a window with the setting on carries. The numbers (323 px, the 5 px inset of the floating copy…) are
+ * those of the default layout, mirrored; the native views are placed by shared/frame-layout.ts from the same geometry.
+ */
+
+/* The sidebar comes last in the row, so it ends at the right edge and the page card is on its left. */
+.shell.sidebar-right { flex-direction: row-reverse; }
+
+/* It slides out to the right when it is hidden (the slot gives its width to the card on the other side). */
+.shell.sidebar-right .sidebar-slot > .sidebar { transform: translateX(calc(var(--sidebar-width, 323px) + 10px)); }
+.shell.sidebar-right .sidebar-slot.open > .sidebar { transform: none; }
+.shell.sidebar-right:has(.sidebar-slot.sliding) .stage { transition: margin-right 0.11s cubic-bezier(0.25, 1, 0.5, 1); }
+@media (prefers-reduced-motion: reduce) {
+  .shell.sidebar-right:has(.sidebar-slot) .stage { transition: none !important; }
+}
+
+/* No traffic lights in the sidebar (macOS keeps them at the window's left edge, over the page): its button ends the row, the arrows start it. */
+.shell.sidebar-right .sidebar .toolbar { flex-direction: row-reverse; padding: 0 9px; }
+.shell.sidebar-right .sidebar .nav-buttons { margin-left: 0; margin-right: auto; }
+.shell.sidebar-right .sidebar .sidebar-toggle svg, .shell.sidebar-right .tb-button.show-sidebar svg { transform: scaleX(-1); }
+
+/* The edge that resizes the sidebar and the strip that opens the floating copy are on its left now. */
+.shell.sidebar-right .sidebar .resize-handle { right: auto; left: 0; }
+.shell.sidebar-right .hot-edge { left: auto; right: 0; }
+
+/* The panel docked beside the page is at the left. */
+.shell.sidebar-right .side-panel-header { right: auto; left: 8px; }
+
+/* The floating copy: inset 5 px from the right edge, its shadow falling to the left; it slides in from the right. */
+.shell.sidebar-right.floating-shell .sidebar { left: auto; right: 5px; box-shadow: -9px 0 18px color-mix(in srgb, var(--scrim) 25%, transparent); }
+.shell.sidebar-right.floating-shell.in .sidebar { animation-name: float-in-right; }
+.shell.sidebar-right.floating-shell.out .sidebar { animation-name: float-out-right; }
+@keyframes float-in-right {
+  0% { transform: translateX(calc(var(--sidebar-width) * 0.9876)); }
+  7.7% { transform: translateX(calc(var(--sidebar-width) * 0.7740)); }
+  15.4% { transform: translateX(calc(var(--sidebar-width) * 0.5201)); }
+  23.1% { transform: translateX(calc(var(--sidebar-width) * 0.3096)); }
+  30.8% { transform: translateX(calc(var(--sidebar-width) * 0.1610)); }
+  38.5% { transform: translateX(calc(var(--sidebar-width) * 0.0681)); }
+  46.2% { transform: translateX(calc(var(--sidebar-width) * 0.0186)); }
+  53.8% { transform: translateX(calc(var(--sidebar-width) * -0.0062)); }
+  61.5% { transform: translateX(calc(var(--sidebar-width) * -0.0155)); }
+  69.2% { transform: translateX(calc(var(--sidebar-width) * -0.0155)); }
+  76.9% { transform: translateX(calc(var(--sidebar-width) * -0.0093)); }
+  84.6% { transform: translateX(calc(var(--sidebar-width) * -0.0062)); }
+  92.3% { transform: translateX(calc(var(--sidebar-width) * -0.0031)); }
+  100% { transform: translateX(calc(var(--sidebar-width) * 0)); }
+}
+@keyframes float-out-right { to { transform: translateX(calc(var(--sidebar-width) * 0.9814)); } }

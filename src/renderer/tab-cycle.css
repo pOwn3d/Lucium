@@ -1,0 +1,40 @@
+/* The panel of ⌃Tab, in the tokens: it follows the system and the accent of the space. The sizes are the ones of CYCLE_PANEL
+   (src/shared/tab-cycle.ts): head 36 + cards (176 + 2 x 8) + foot 37 = 265. The panel fills its layer, which leaves a margin for the shadow. */
+.tc-panel {
+  position: fixed; left: 60px; right: 60px; top: 60px; bottom: 60px; box-sizing: border-box;
+  display: grid; grid-template-rows: 36px minmax(0, 1fr) 37px; overflow: hidden;
+  background: var(--overlay); border: 1px solid var(--line); border-radius: var(--r-xl); color: var(--text); box-shadow: var(--shadow); backdrop-filter: blur(24px);
+}
+.tc-head { display: flex; align-items: center; gap: 10px; padding: 0 16px; font-size: var(--t-s); color: var(--text-2); }
+.tc-head b { color: var(--text); font-size: var(--t-m); font-weight: var(--w-semibold); }
+.tc-count { font-variant-numeric: tabular-nums; }
+.tc-cards { display: flex; align-items: flex-start; gap: 8px; padding: 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tc-cards::-webkit-scrollbar { display: none; }
+:root[data-scrollbars='always'] .tc-cards { scrollbar-width: thin; scrollbar-color: var(--text-3) transparent; }
+/* Concentric corners: the panel 18 - the 8 px of margin = 10. */
+.tc-card { flex: none; width: 200px; height: 176px; box-sizing: border-box; padding: 8px; display: grid; grid-template-rows: 100px 32px 16px; gap: 6px; border: 1.5px solid transparent; border-radius: var(--r-m); }
+.tc-card.selected { background: var(--accent-soft); border-color: var(--accent); }
+.tc-thumb { height: 100px; overflow: hidden; border-radius: var(--r-s); border: 1px solid var(--line); background: var(--surface); display: flex; }
+.tc-thumb.pair.horizontal { gap: 2px; }
+.tc-thumb.pair.vertical { flex-direction: column; gap: 2px; }
+/* A grid: two columns and two rows, the member along a whole side (three panes) taking both of its cells. */
+.tc-thumb.pair.grid { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 2px; }
+.tc-thumb.grid.span-top > :first-child, .tc-thumb.grid.span-bottom > :last-child { grid-column: span 2; }
+.tc-thumb.grid.span-left > :first-child, .tc-thumb.grid.span-right > :nth-child(2) { grid-row: span 2; }
+.tc-thumb > * { flex: 1 1 0; min-width: 0; min-height: 0; }
+.tc-img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top center; }
+/* A page that was never shown: a ground tinted with the accent and a crossed eye. */
+.tc-none { display: grid; place-items: center; background: linear-gradient(155deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface-3)); color: var(--text-2); }
+/* One title on up to two lines, or the titles of a split view one line each. */
+.tc-titles { display: flex; flex-direction: column; gap: 0; min-width: 0; font-size: var(--t-s); font-weight: var(--w-semibold); line-height: 16px; overflow: hidden; }
+.tc-ttl { display: flex; align-items: flex-start; gap: 6px; min-width: 0; }
+.tc-ttl .tc-icon { margin-top: 1px; }
+.tc-title { min-width: 0; overflow: hidden; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
+.tc-titles:has(.tc-ttl + .tc-ttl) .tc-title { -webkit-line-clamp: 1; }
+.tc-meta { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: var(--t-xs); line-height: 16px; color: var(--text-3); }
+.tc-card.selected .tc-meta { color: var(--text-2); }
+.tc-icon { flex: none; width: 14px; height: 14px; border-radius: 3px; }
+.tc-blank { background: var(--tile-active); }
+.tc-emoji { font-size: 12px; line-height: 14px; text-align: center; }
+.tc-bar { display: flex; align-items: center; gap: 14px; padding: 0 16px; border-top: 1px solid var(--line); font-size: var(--t-xs); color: var(--text-3); }
+.tc-pos { font-variant-numeric: tabular-nums; font-weight: var(--w-semibold); color: var(--text); }

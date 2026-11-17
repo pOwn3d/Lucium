@@ -1,0 +1,212 @@
+/* "Effacer les données du site" (SiteData.tsx): the layout, the spacing and the shapes of the popup of the extension « Clear Domain Data » it comes
+   from (360 px wide, sections 14 px apart, tags and chips in monospace, tiles of 36 px, switches of 28 x 16, a button of 44 px), on the tokens of
+   Lucium instead of the extension's coral palette: it is light in light and dark in dark like the other sheets. Every rule of the sheet is under
+   `.sd-sheet`. The rules at the end, under `.sitedata`, are those of the cards built on the same model: "Cookies par site" (CookieManager.tsx)
+   and the passwords (PasswordsPanel.tsx). */
+
+.card.sitedata.sd-sheet {
+  position: relative; display: flex; flex-direction: column; width: min(380px, calc(100% - 48px)); padding: 0; overflow: hidden;
+  font-size: var(--t-m);
+}
+.sd-sheet button:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+
+/* Header: the mark, the title, the button of the settings. */
+.sd-sheet .sd-header { display: flex; flex: none; align-items: center; gap: 10px; height: 52px; padding: 0 10px 0 16px; border-bottom: 1px solid var(--line); }
+.sd-sheet .sd-logo { display: grid; flex: none; place-items: center; width: 24px; height: 24px; border-radius: 6px; background: var(--danger); color: var(--on-accent); }
+.sd-sheet .sd-header h2 { flex: 1; min-width: 0; margin: 0; overflow: hidden; font-size: 14px; font-weight: var(--w-semibold); letter-spacing: -0.01em; text-overflow: ellipsis; white-space: nowrap; }
+.sd-sheet .sd-icon-button { display: grid; flex: none; place-items: center; width: 32px; height: 32px; border-radius: var(--r-s); color: var(--text-2); transition: background var(--dur), color var(--dur); }
+.sd-sheet .sd-icon-button:hover:not(:disabled) { background: var(--tile); color: var(--text); }
+
+/* The views and their sections. */
+.sd-sheet .sd-body { display: flex; flex: 1 1 auto; flex-direction: column; gap: 14px; min-height: 0; overflow-y: auto; padding: 14px 16px 16px; }
+.sd-sheet .sd-section { display: flex; flex-direction: column; gap: 8px; }
+.sd-sheet .sd-section-header { display: flex; align-items: center; gap: 8px; }
+.sd-sheet .sd-label { margin: 0; color: var(--text-3); font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.06em; text-transform: uppercase; white-space: nowrap; }
+.sd-sheet .sd-meta { margin-left: auto; color: var(--text-3); font-size: 11.5px; }
+.sd-sheet .sd-count { color: var(--text-3); font-family: var(--mono); font-size: var(--t-xs); }
+.sd-sheet .sd-count.is-empty { color: var(--danger); }
+.sd-sheet .sd-text-button { flex: none; height: 24px; margin: 0; padding: 0 8px; border-radius: 6px; color: var(--text-2); font-size: 11.5px; transition: background var(--dur), color var(--dur); }
+.sd-sheet .sd-text-button:hover:not(:disabled) { background: var(--tile); color: var(--text); }
+.sd-sheet .sd-text-button:disabled { opacity: 0.5; }
+
+/* The domains: the tags and the field they are typed in, in one box. */
+.sd-sheet .sd-field {
+  display: flex; flex-direction: column; gap: 6px; padding: 6px; border: 1px solid var(--line-strong); border-radius: var(--r-m); background: var(--surface-2);
+  transition: border-color var(--dur), box-shadow var(--dur);
+}
+.sd-sheet .sd-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sd-sheet .sd-field.is-invalid { border-color: var(--danger); }
+.sd-sheet .sd-field.is-invalid:focus-within { box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 18%, transparent); }
+.sd-sheet .sd-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.sd-sheet .sd-tag {
+  display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 26px; padding: 0 2px 0 8px; border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  border-radius: 7px; background: var(--accent-soft); color: var(--text); font-family: var(--mono); font-size: 11.5px; animation: sd-tag-in 0.15s ease;
+}
+.sd-sheet .sd-tag::before { content: ''; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.sd-sheet .sd-tag-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: text; }
+.sd-sheet .sd-tag-remove { display: grid; flex: none; place-items: center; width: 20px; height: 20px; border-radius: 5px; color: var(--text-2); }
+.sd-sheet .sd-tag-remove:hover:not(:disabled) { background: var(--tile-hover); color: var(--text); }
+.sd-sheet .sd-input-row { display: flex; align-items: center; gap: 6px; }
+.sd-sheet .field.sd-input { flex: 1; width: auto; min-width: 0; height: 32px; padding: 0 8px; border: 0; background: transparent; outline: none; font-family: var(--mono); font-size: 12.5px; }
+.sd-sheet .field.sd-input::placeholder { color: var(--text-3); }
+.sd-sheet .sd-add { border: 1px solid var(--line-strong); border-radius: 7px; }
+
+/* The scopes: « Inclure HTTP » and « Sous-domaines », check boxes drawn as pills (the box itself is hidden, still focusable and read). */
+.sd-sheet .sd-scopes { display: flex; flex-wrap: wrap; gap: 6px; }
+.sd-sheet label.sd-scope {
+  position: relative; display: inline-flex; align-items: center; gap: 6px; height: 28px; margin: 0; padding: 0 11px 0 9px; border: 1px solid var(--line-strong);
+  border-radius: 999px; color: var(--text-2); font-size: var(--t-s); font-weight: 500; cursor: pointer; user-select: none;
+  transition: background var(--dur), border-color var(--dur), color var(--dur);
+}
+.sd-sheet label.sd-scope:hover { border-color: var(--text-3); color: var(--text); }
+.sd-sheet .sd-scope input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
+.sd-sheet .sd-scope:has(input:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.sd-sheet .sd-scope:has(input:checked) { border-color: color-mix(in srgb, var(--accent) 45%, transparent); background: var(--accent-soft); color: var(--accent-text); }
+.sd-sheet .sd-scope:has(input:disabled) { opacity: 0.5; cursor: default; }
+
+/* The domains erased before, on one row that scrolls sideways. */
+.sd-sheet .sd-recents { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.sd-sheet .sd-recents-list { display: flex; flex: 1; gap: 6px; min-width: 0; margin: 0; padding: 0; overflow-x: auto; list-style: none; scrollbar-width: none; }
+:root[data-scrollbars='always'] .sd-sheet .sd-recents-list { scrollbar-width: thin; scrollbar-color: var(--text-3) transparent; }
+.sd-sheet .sd-recent {
+  flex: none; max-width: 180px; height: 26px; padding: 0 9px; overflow: hidden; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface);
+  color: var(--text-2); font-family: var(--mono); font-size: 11.5px; text-overflow: ellipsis; white-space: nowrap; transition: border-color var(--dur), color var(--dur);
+}
+.sd-sheet .sd-recent:hover:not(:disabled) { border-color: var(--accent); color: var(--accent-text); }
+.sd-sheet .sd-recent:focus-visible { outline-offset: -2px; }
+.sd-sheet .sd-recents .sd-text-button { color: var(--text-3); }
+.sd-sheet .sd-recents .sd-text-button:hover { color: var(--danger); }
+
+/* The types: two columns of tiles with a box each, « Tout » and « Aucun » beside the count. */
+.sd-sheet .sd-select { display: flex; gap: 2px; margin-left: auto; }
+.sd-sheet .sd-types { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sd-sheet label.sd-tile {
+  display: flex; align-items: center; gap: 9px; min-width: 0; height: 36px; margin: 0; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-s);
+  color: var(--text-3); font-size: 12.5px; font-weight: 500; cursor: pointer; user-select: none; transition: background var(--dur), border-color var(--dur), color var(--dur);
+}
+.sd-sheet label.sd-tile:hover { border-color: var(--line-strong); color: var(--text-2); }
+.sd-sheet label.sd-tile:has(input:checked) { border-color: var(--line-strong); background: var(--surface-2); color: var(--text); }
+.sd-sheet label.sd-tile:has(input:focus-visible) { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.sd-sheet .sd-tile-label { flex: 1; min-width: 0; overflow: hidden; font-weight: inherit; text-overflow: ellipsis; white-space: nowrap; }
+.sd-sheet .sd-badge { flex: none; padding: 1px 6px; border-radius: 999px; background: var(--tile); color: var(--text-2); font-family: var(--mono); font-size: 10.5px; }
+.sd-sheet input.sd-check {
+  position: relative; flex: none; width: 16px; height: 16px; margin: 0; border: 1.5px solid var(--text-3); border-radius: 4px; background: transparent; cursor: pointer;
+  appearance: none; transition: background var(--dur), border-color var(--dur);
+}
+.sd-sheet input.sd-check:checked { border-color: var(--accent); background: var(--accent); }
+.sd-sheet input.sd-check:checked::after {
+  content: ''; position: absolute; top: 1px; left: 3.75px; width: 3.5px; height: 7px; border: solid var(--on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg);
+}
+.sd-sheet input.sd-check:focus-visible { outline: none; }
+
+/* The switches, the note, the line that says what is missing, and the button. */
+.sd-sheet .sd-action { display: flex; flex-direction: column; gap: 12px; }
+.sd-sheet .sd-switches { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 18px; }
+.sd-sheet label.sd-switch { display: inline-flex; align-items: center; gap: 8px; min-height: 28px; margin: 0; color: var(--text-2); font-size: var(--t-s); cursor: pointer; user-select: none; transition: color var(--dur); }
+.sd-sheet label.sd-switch:hover { color: var(--text); }
+.sd-sheet input.sd-toggle {
+  position: relative; flex: none; width: 28px; height: 16px; margin: 0; border-radius: 999px; background: var(--tile-active); box-shadow: inset 0 0 0 1px var(--line-strong);
+  cursor: pointer; appearance: none; transition: background var(--dur), box-shadow var(--dur);
+}
+.sd-sheet input.sd-toggle::before { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-3); transition: transform var(--dur), background var(--dur); }
+.sd-sheet input.sd-toggle:checked { background: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.sd-sheet input.sd-toggle:checked::before { background: var(--on-accent); transform: translateX(12px); }
+.sd-sheet input.sd-toggle:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.sd-sheet .sd-note { margin: -4px 0 0; color: var(--text-3); font-size: var(--t-xs); line-height: 1.4; }
+.sd-sheet .sd-error { margin: 0; color: var(--danger); font-size: var(--t-s); }
+.sd-sheet .sd-cta {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 10px 0 16px; border-radius: var(--r-m); background: var(--danger); color: var(--on-accent);
+  font-size: 13.5px; font-weight: var(--w-semibold); transition: filter var(--dur), box-shadow var(--dur), transform 0.1s;
+}
+.sd-sheet .sd-cta:hover:not(:disabled) { box-shadow: 0 6px 20px color-mix(in srgb, var(--danger) 35%, transparent); filter: brightness(1.08); }
+.sd-sheet .sd-cta:active:not(:disabled) { transform: scale(0.99); }
+.sd-sheet .sd-cta:disabled { cursor: progress; opacity: 0.85; }
+.sd-sheet .sd-cta[aria-busy='true'] svg { animation: sd-spin 0.8s linear infinite; }
+.sd-sheet .sd-cta-label { flex: 1; min-width: 0; overflow: hidden; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.sd-sheet .sd-keys { display: flex; gap: 3px; }
+.sd-sheet .sd-keys kbd {
+  display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 5px;
+  background: color-mix(in srgb, var(--on-accent) 18%, transparent); color: var(--on-accent); font: var(--w-semibold) var(--t-xs) / 1 var(--font);
+}
+
+/* The answer: a banner, one card per domain with a chip per type, then « Retour ». */
+.sd-sheet .sd-banner {
+  display: flex; align-items: center; gap: 12px; padding: 12px; border: 1px solid color-mix(in srgb, var(--ok) 30%, transparent); border-radius: var(--r-m);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+.sd-sheet .sd-banner.is-error { border-color: color-mix(in srgb, var(--danger) 38%, transparent); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+.sd-sheet .sd-banner-icon { display: grid; flex: none; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--surface); color: var(--ok); }
+.sd-sheet .sd-banner.is-error .sd-banner-icon { color: var(--danger); }
+.sd-sheet .sd-banner-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sd-sheet .sd-banner-text strong { font-size: 13.5px; font-weight: var(--w-semibold); }
+.sd-sheet .sd-banner-text span { color: var(--text-2); font-size: 11.5px; }
+.sd-sheet .sd-cards { display: flex; flex-direction: column; gap: 8px; }
+.sd-sheet .sd-card { display: flex; flex-direction: column; gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface-2); animation: sd-fade-up 0.2s ease both; }
+.sd-sheet .sd-card header { display: flex; align-items: center; gap: 8px; }
+.sd-sheet .sd-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ok); }
+.sd-sheet .sd-card-host { flex: 1; min-width: 0; overflow: hidden; font-family: var(--mono); font-size: 12.5px; font-weight: var(--w-regular); text-overflow: ellipsis; white-space: nowrap; user-select: text; }
+.sd-sheet .sd-score { color: var(--ok); font-family: var(--mono); font-size: var(--t-xs); }
+.sd-sheet .sd-card.has-error .sd-dot { background: var(--danger); }
+.sd-sheet .sd-card.has-error .sd-score { color: var(--danger); }
+.sd-sheet .sd-chips { display: flex; flex-wrap: wrap; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.sd-sheet .sd-result { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px; border-radius: 5px; font-size: var(--t-xs); font-weight: 500; }
+.sd-sheet .sd-result.is-ok { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok-ink); }
+.sd-sheet .sd-result.is-err { background: color-mix(in srgb, var(--danger) 16%, transparent); color: var(--danger-ink); }
+.sd-sheet .sd-result-count { margin-left: 2px; font-family: var(--mono); opacity: 0.8; }
+.sd-sheet .sd-result-error { margin: 0; color: var(--danger); font-family: var(--mono); font-size: 11.5px; line-height: 1.45; overflow-wrap: anywhere; user-select: text; }
+.sd-sheet .sd-secondary {
+  flex: none; height: 40px; border: 1px solid var(--line-strong); border-radius: var(--r-m); background: var(--surface); color: var(--text); font-size: var(--t-m);
+  font-weight: var(--w-semibold); transition: border-color var(--dur);
+}
+.sd-sheet .sd-secondary:hover { border-color: var(--text-3); }
+
+/* « Effacer les données ? »: over the sheet only. */
+.sd-sheet .sd-modal { position: absolute; inset: 0; z-index: 2; display: flex; align-items: center; justify-content: center; padding: 24px; background: var(--scrim); animation: sd-fade-in 0.15s ease; }
+.sd-sheet .sd-dialog {
+  display: flex; flex-direction: column; gap: 14px; width: 100%; max-height: 100%; padding: 20px; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--r-l);
+  background: var(--surface); box-shadow: var(--shadow); animation: sd-dialog-in 0.16s ease-out;
+}
+.sd-sheet .sd-dialog-icon { display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-m); background: color-mix(in srgb, var(--danger) 12%, transparent); color: var(--danger); }
+.sd-sheet .sd-dialog-copy { display: flex; flex-direction: column; gap: 6px; }
+.sd-sheet .sd-dialog h3 { margin: 0; font-size: var(--t-l); font-weight: var(--w-semibold); }
+.sd-sheet .sd-dialog p { margin: 0; color: var(--text-2); font-size: 12.5px; line-height: 1.5; }
+.sd-sheet .sd-dialog-domains { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.sd-sheet .sd-chip { max-width: 100%; height: 24px; padding: 0 8px; overflow: hidden; border-radius: 6px; background: var(--tile); font-family: var(--mono); font-size: 11.5px; line-height: 24px; text-overflow: ellipsis; white-space: nowrap; }
+.sd-sheet .sd-dialog-actions { display: flex; gap: 8px; margin-top: 2px; }
+.sd-sheet .sd-dialog-actions button { flex: 1; height: 38px; border-radius: 9px; font-size: var(--t-m); font-weight: var(--w-semibold); }
+.sd-sheet .sd-no { border: 1px solid var(--line-strong); background: var(--tile); color: var(--text); }
+.sd-sheet .sd-no:hover { border-color: var(--text-3); }
+.sd-sheet .sd-yes { background: var(--danger); color: var(--on-accent); }
+.sd-sheet .sd-yes:hover { filter: brightness(1.08); }
+
+@keyframes sd-tag-in { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+@keyframes sd-spin { to { transform: rotate(360deg); } }
+@keyframes sd-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes sd-dialog-in { from { opacity: 0; transform: translateY(6px) scale(0.98); } to { opacity: 1; transform: none; } }
+@keyframes sd-fade-up { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .sd-sheet *, .sd-sheet *::before, .sd-sheet *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ---- The cards built on the old model of this sheet: "Cookies par site" and the passwords. ---- */
+.card.sitedata { width: min(460px, calc(100% - 48px)); }
+.sitedata .sitedata-intro { margin: -4px 0 4px; }
+
+/* A label with something on its right (a count). */
+.sitedata .sitedata-label { display: flex; align-items: baseline; justify-content: space-between; }
+
+/* Tags: a site and its ×. */
+.sitedata .sitedata-tag { display: inline-flex; align-items: center; max-width: 100%; border-radius: 7px; background: var(--active); font-size: 12px; }
+.sitedata .sitedata-tag-label { padding: 3px 2px 3px 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; user-select: text; }
+.sitedata .sitedata-tag-remove { padding: 0 7px 1px 5px; color: var(--muted); font-size: 14px; line-height: 1; }
+.sitedata .sitedata-tag-remove:hover:not(:disabled) { color: var(--text); }
+
+/* Chips: the sites a confirmation names. */
+.sitedata .sitedata-chips { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px; }
+.sitedata .sitedata-chip { max-width: 220px; padding: 2px 9px; border-radius: 10px; background: var(--hover); color: var(--text); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Confirmation, in place of the form, and the red button that erases. */
+.sitedata .sitedata-confirm p { margin: 0 0 10px; font-size: 13px; }
+.sitedata .button.primary.sitedata-clear { background: var(--danger); }
+.sitedata .button.primary.sitedata-clear:disabled { background: var(--active); }

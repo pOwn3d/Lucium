@@ -1,0 +1,10 @@
+{
+  "manifest_version": 3,
+  "name": "Lucium Side Panel Probe",
+  "version": "0.1.0",
+  "description": "Exercises chrome.sidePanel, chrome.tabGroups and chrome.debugger as shimmed by the engine.",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["sidePanel", "tabs", "debugger", "tabGroups", "storage"],
+  "host_permissions": ["<all_urls>"],
+  "action": { "default_title": "Probe" }
+}

@@ -1,0 +1,39 @@
+/* The panel "Traduire cette page" (TranslatePanel.tsx). */
+.card.translate-panel { width: min(460px, calc(100% - 48px)); max-height: calc(100% - 48px); overflow-y: auto; background: var(--surface); border-color: var(--line-strong); }
+.translate-panel h3 { margin: 16px 0 6px; font-size: 13px; font-weight: 600; }
+.translate-panel select.field { width: 100%; }
+.translate-panel .translate-note { margin: 4px 0 0; font-size: 12px; }
+.translate-panel .translate-message { min-height: 1.2em; margin: 10px 0 0; }
+.translate-panel .translate-packs, .translate-panel .translate-files { margin: 4px 0; padding: 0; list-style: none; font-size: 12.5px; }
+.translate-panel .translate-packs li { display: flex; gap: 8px; align-items: center; justify-content: space-between; padding: 3px 0; }
+.translate-panel .translate-files li { padding: 2px 0; overflow-wrap: anywhere; }
+.translate-panel .translate-step { margin-top: 10px; padding-top: 6px; border-top: 1px solid var(--line-strong); }
+.translate-panel .button.primary { background: var(--accent); color: var(--on-accent); }
+.translate-panel .button.primary:hover:not(:disabled) { background: var(--accent-strong); }
+.translate-panel code { user-select: text; }
+
+/* The popover of the toolbar button « Traduction de la page » (TranslatePopover.tsx), hung from the button: a sentence, one main button, the two switches,
+   another language, the full panel. Tokens only. */
+.translate-pop { display: grid; gap: var(--sp-2); width: 300px; max-width: 100%; padding: var(--sp-3) var(--sp-4) var(--sp-3); }
+.translate-pop .tp-head { display: flex; align-items: center; gap: 10px; }
+.translate-pop .tp-head h2 { flex: 1; min-width: 0; margin: 0; font-size: var(--t-m); font-weight: var(--w-semibold); line-height: 1.35; }
+.translate-pop .tp-main { justify-self: start; }
+.translate-pop .tp-problem { margin: 0; font-size: var(--t-s); color: var(--text-2); }
+.translate-pop .tp-problem:empty { display: none; }
+.translate-pop .tp-switch { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); min-height: var(--target); font-size: var(--t-s); color: var(--text); cursor: pointer; }
+.translate-pop .tp-switch small { display: block; color: var(--text-3); font-size: var(--t-xs); overflow-wrap: anywhere; }
+/* The switch: a track and its thumb, from the tokens (the Settings window's own look, which writes its colours itself, is not loaded here). */
+.translate-pop input[type='checkbox'][role='switch'] {
+  -webkit-appearance: none; appearance: none; flex: none; position: relative; width: 36px; height: 16px; margin: 0; border-radius: 8px;
+  background: var(--tile-active); cursor: pointer; transition: background 0.12s;
+}
+.translate-pop input[type='checkbox'][role='switch']::after {
+  content: ''; position: absolute; top: 1px; left: 1px; width: 21px; height: 14px; border-radius: 7px; background: var(--surface); transition: transform 0.12s;
+}
+.translate-pop input[type='checkbox'][role='switch']:checked { background: var(--accent); }
+.translate-pop input[type='checkbox'][role='switch']:checked::after { background: var(--on-accent); transform: translateX(13px); }
+.translate-pop .tp-other { width: 100%; }
+.translate-pop .tp-more { justify-self: start; padding: 0 var(--sp-2); }
+@media (prefers-reduced-motion: reduce) {
+  .translate-pop input[type='checkbox'][role='switch'], .translate-pop input[type='checkbox'][role='switch']::after { transition: none; }
+}

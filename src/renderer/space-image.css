@@ -1,0 +1,13 @@
+@import './palette.css';
+/* What stands for a space in place of its emoji: its picture, or its coloured letters (SpaceMark.tsx). The boxes it sits in are the emoji's own and keep
+   their size: header 26 x 26 (emoji 20 px), footer button 34 x 32 (emoji 15 px). The picture is round, cut from the middle. */
+.sidebar .space-image { display: block; object-fit: cover; border-radius: 50%; pointer-events: none; }
+.sidebar .space-header-emoji .space-image { width: 22px; height: 22px; margin: 2px; }
+.sidebar .space .space-image { width: 18px; height: 18px; }
+
+/* The letters: white on the colour the user chose (the colours of the picker hold 4.5:1 with white), a rounded square or a circle. The type is the smallest of
+   the interface's scale (11 px) in both places; two letters fit the 20 px of the footer. */
+.space-letter { display: inline-grid; place-items: center; flex: none; box-sizing: border-box; border-radius: 6px; color: var(--fixed-ffffff); font-size: 11px; font-weight: 600; line-height: 1; letter-spacing: 0.02em; pointer-events: none; user-select: none; }
+.space-letter.round { border-radius: 50%; }
+.sidebar .space-header-emoji .space-letter { width: 22px; height: 22px; margin: 2px; }
+.sidebar .space .space-letter { width: 20px; height: 20px; }

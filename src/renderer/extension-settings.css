@@ -1,0 +1,5 @@
+/* Settings › Extensions et outils › Extensions: the profiles an extension runs in, one choice each. */
+.settings-window .ext-row { align-items: flex-start; padding-top: 6px; padding-bottom: 6px; }
+.settings-window .ext-profiles { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+.settings-window .ext-profile { display: inline-flex; gap: 10px; align-items: baseline; font-size: 12px; }
+.settings-window .ext-profile label { display: inline-flex; gap: 4px; align-items: center; cursor: default; }

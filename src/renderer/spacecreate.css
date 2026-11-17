@@ -1,0 +1,50 @@
+/*
+ * The new space sheet (SpaceCreate.tsx): it is the small editor of the templates (Sheet), 480 px wide, with a preview that wears the theme being
+ * chosen, an icon row, named colours and the profile. Tokens only; the preview's own colours come from the theme (inline, see SidebarThumb.thumbStyle).
+ */
+.sh.spacecreate { width: min(480px, calc(100% - 2 * var(--sp-4))); }
+.sh.spacecreate-icons { width: min(520px, calc(100% - 2 * var(--sp-4))); }
+.spacecreate .sc-desc { margin: 0; font-size: var(--t-s); color: var(--text-3); }
+.spacecreate .sc-hint { display: flex; align-items: center; gap: 6px; font-size: var(--t-xs); color: var(--text-3); }
+.spacecreate .sc-hint .tk-kbd { margin-left: 2px; }
+
+/* preview: a slice of the sidebar painted with the theme being chosen */
+.spacecreate .spacecreate-preview {
+  --th-bg: linear-gradient(155deg, var(--space-a), var(--space-b));
+  --th-ink: var(--text-on-space);
+  --th-tile: var(--tile);
+  display: flex; flex-direction: column; gap: 8px; min-height: 78px; padding: 12px 14px; border-radius: var(--r-m); overflow: hidden;
+  background: var(--th-bg); color: var(--th-ink); box-shadow: inset 0 0 0 1px var(--line);
+}
+.spacecreate .spacecreate-header { display: flex; align-items: center; gap: 8px; padding-bottom: 6px; border-bottom: 1px solid var(--th-tile); font-size: var(--t-l); font-weight: var(--w-semibold); }
+.spacecreate .spacecreate-icon { display: inline-grid; place-items: center; min-width: 26px; height: 26px; font-size: 20px; line-height: 1; }
+.spacecreate .spacecreate-icon .space-letter { width: 24px; height: 24px; }
+.spacecreate .spacecreate-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spacecreate .spacecreate-title.placeholder { opacity: 0.75; font-weight: var(--w-regular); }
+.spacecreate .spacecreate-ghost { height: 9px; border-radius: 4px; background: var(--th-tile); }
+.spacecreate .spacecreate-ghost.short { width: 55%; }
+
+/* groups of the form: a small capital title, a help line */
+.spacecreate .sc-group { display: grid; gap: 6px; }
+.spacecreate .sc-label { display: flex; align-items: center; gap: var(--sp-2); min-height: 20px; font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
+.spacecreate .sc-val { font-weight: var(--w-regular); letter-spacing: 0; text-transform: none; color: var(--text-2); }
+.spacecreate .sc-link { margin: 0 -6px 0 auto; min-height: var(--target); padding: 0 6px; border: 0; border-radius: var(--r-s); background: none; color: var(--link); font: inherit; font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0; text-transform: none; cursor: pointer; }
+.spacecreate .sc-link:hover { background: var(--tile); }
+.spacecreate .sc-help { margin: 0; font-size: var(--t-xs); color: var(--text-3); }
+
+/* the icon row: 36 px cells, the chosen one ringed */
+.spacecreate .sc-emoji { display: flex; flex-wrap: wrap; gap: 4px; }
+.spacecreate .sc-emoji button { display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 2px solid transparent; border-radius: var(--r-m); background: var(--tile); font-size: 20px; line-height: 1; cursor: pointer; }
+.spacecreate .sc-emoji button:hover { background: var(--tile-hover); }
+.spacecreate .sc-emoji button[aria-pressed='true'] { border-color: var(--accent); background: var(--accent-soft); }
+.spacecreate .sc-emoji .space-letter { width: 24px; height: 24px; }
+
+/* the named colours: a ring in the text colour for the chosen one, whatever the colour */
+.spacecreate .sc-swatches { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.spacecreate .spacecreate-swatch { width: var(--target); height: var(--target); padding: 0; border: 0; border-radius: 50%; background: var(--c); box-shadow: inset 0 0 0 1px var(--line-strong); cursor: pointer; }
+.spacecreate .spacecreate-swatch:hover { box-shadow: inset 0 0 0 1px var(--line-strong), 0 0 0 2px var(--surface), 0 0 0 3px var(--line-strong); }
+.spacecreate .spacecreate-swatch[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--line-strong), 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+.spacecreate .spacecreate-swatch:focus-visible { border-radius: 50%; outline-offset: 3px; }
+.spacecreate select.tk-field { width: auto; min-width: 220px; justify-self: start; }
+/* the labels of the fields are the small capitals of the groups: one voice in the whole sheet */
+.spacecreate .sh-field > label { font-size: var(--t-xs); font-weight: var(--w-semibold); letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); }
