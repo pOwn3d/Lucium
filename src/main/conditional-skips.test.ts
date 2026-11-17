@@ -28,7 +28,8 @@ const CONDITIONAL: Readonly<Record<string, { count: number; waitsFor: string }>>
   'src/main/translate/translate.test.ts': { count: 1, waitsFor: 'a user who is not root' },
   'src/main/vault-keychain.test.ts': { count: 1, waitsFor: 'macOS on Apple silicon, and the addon built (pnpm build:keychain)' },
   'src/main/verify-app.test.ts': { count: 1, waitsFor: 'macOS and its /usr/bin/plutil, which the script calls by that path (the whole run of scripts/verify-app.mjs on a package)' },
-  'src/main/workflow-hygiene.test.ts': { count: 1, waitsFor: 'a system with a POSIX shell' }
+  'src/main/workflow-hygiene.test.ts': { count: 1, waitsFor: 'a system with a POSIX shell' },
+  'tests/e2e/settings.spec.ts': { count: 1, waitsFor: 'macOS: the reference pictures of the Settings are those of the macOS runner, none is kept for Linux or Windows' }
 }
 
 const CONDITION = /\.(?:skipIf|runIf)\(|\btest\.skip\(\s*[^'"`\s)]/g

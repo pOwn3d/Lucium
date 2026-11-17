@@ -92,6 +92,9 @@ const MOST_DIFFERENT_PIXELS = 1200
 // The window is drawn at 100 %: « Automatique » would size it by the screen of the run, and the picture would hold only part of it (pinPanelSize).
 // Each picture holds the whole category, not only the top of it (see WHOLE_PAGE).
 test('each category looks as expected (visual)', async ({}, testInfo) => {
+  // Skipped, and said so in the report, anywhere but on macOS: the references are the pictures of a macOS runner (`-darwin-ci.png`), and none was drawn
+  // for Linux or Windows. A Linux set would be drawn by the Linux workflow and compared by it, like the macOS one (docs/plateformes.md, section 8).
+  test.skip(process.platform !== 'darwin', `no reference picture of the Settings is kept for ${process.platform}: they are drawn and compared on macOS only`)
   const missing = CATEGORIES.filter((id) => !existsSync(testInfo.snapshotPath(`settings-${id}.png`, { kind: 'screenshot' })))
   if (testInfo.config.updateSnapshots === 'none') {
     expect(missing, 'reference pictures of the Settings missing on this runner: run the E2E workflow by hand with "Draw the reference pictures", look at the pictures of its artefact "e2e-results", and commit them under tests/e2e/settings.spec.ts-snapshots/').toEqual([])
