@@ -7,6 +7,7 @@ import { LOCKED_SPACES_MAX } from './lock'
 import { isProfileId, newProfileId, PRIVATE_PROFILE_ID } from './profiles'
 import { themeFromHue, themeHue } from './theme'
 import { hostOf, resolveInput } from './url'
+import { isYouTubePage } from './youtube-rules'
 
 interface Vectors {
   searchTemplate: string
@@ -60,6 +61,23 @@ describe('iOS contract: spaces and profiles', () => {
 
   it.each(themeVectors.profileId)('isProfileId($id) is $valid', ({ id, valid }) => {
     expect(isProfileId(id)).toBe(valid)
+  })
+})
+
+interface GuardVectors {
+  youtube: { input: string | null; expect: boolean }[]
+}
+
+const guardVectors = JSON.parse(readFileSync(join(__dirname, '../../ios/Contracts/guard-vectors.json'), 'utf8')) as GuardVectors
+
+describe('iOS contract: the pages the YouTube rules apply to', () => {
+  it('has vectors to run, of both answers', () => {
+    expect(guardVectors.youtube.filter((vector) => vector.expect).length).toBeGreaterThan(5)
+    expect(guardVectors.youtube.filter((vector) => !vector.expect).length).toBeGreaterThan(5)
+  })
+
+  it.each(guardVectors.youtube)('isYouTubePage($input)', ({ input, expect: expected }) => {
+    expect(isYouTubePage(input)).toBe(expected)
   })
 })
 

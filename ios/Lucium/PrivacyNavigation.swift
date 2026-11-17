@@ -59,7 +59,10 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
     /// The scripts every web view carries. They are put back whole when a setting changes: `WKUserContentController` can only remove all of
     /// its scripts, so whatever else wants one (the YouTube and cookie-banner scripts, later) is added here too.
     static func installScripts(on controller: WKUserContentController, options: PrivacyOptions) {
+        // The page guard's script (`PageGuard`) is the plan of the page that is on its way: it stays, the others are put back.
+        let pageGuard = controller.userScripts.filter { $0.source.hasPrefix(PageGuard.marker) }
         controller.removeAllUserScripts()
+        for script in pageGuard { controller.addUserScript(script) }
         if options.globalPrivacyControl {
             controller.addUserScript(WKUserScript(source: gpcScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         }
@@ -112,6 +115,14 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
     // MARK: Deciding
 
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
+        let policy = await decide(webView, action)
+        // A page that is let through is given what the page guard runs in it (the scriptlets and the style sheet of its site, `PageGuard`). One that
+        // was cancelled is replaced by the load the rules made, which comes through here again: the address that decides is the final one.
+        if policy == .allow, action.targetFrame?.isMainFrame == true { model?.pageGuard?.prepare(webView, for: action.request.url) }
+        return policy
+    }
+
+    private func decide(_ webView: WKWebView, _ action: WKNavigationAction) async -> WKNavigationActionPolicy {
         guard let tab = tabId(of: webView), action.targetFrame?.isMainFrame == true, let url = action.request.url,
               let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return .allow }
         let address = url.absoluteString

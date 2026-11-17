@@ -56,6 +56,13 @@ final class BrowserModel {
     @ObservationIgnored var blockers: [WKContentRuleList] = []
     /// The embedded lists that did not compile; the others still block.
     private(set) var listFailures: [EmbeddedLists.Failure] = []
+    /// What a page is given when it starts (scriptlets, consent-wall style sheet, `PageGuard`), and the rules WebKit reads that go with it (YouTube's ad paths).
+    /// Nil when this copy carries no runtime; the application then browses with the blocker's rules alone.
+    @ObservationIgnored let makePageGuard: @MainActor (ScriptletTable) throws -> PageGuard?
+    @ObservationIgnored var pageGuard: PageGuard?
+    @ObservationIgnored var guardList: WKContentRuleList?
+    /// Why the page guard (or its table of scriptlets) is missing or incomplete, when it is.
+    private(set) var guardFailure: Error?
     @ObservationIgnored var stateFile: StateFile?
     @ObservationIgnored let sideStore: TabSideStore?
     @ObservationIgnored let awakeCap: Int
@@ -72,6 +79,7 @@ final class BrowserModel {
          clock: @escaping @MainActor () -> Double = { (Date().timeIntervalSince1970 * 1000).rounded() },
          rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
          embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
+         pageGuard makePageGuard: @escaping @MainActor (ScriptletTable) throws -> PageGuard? = { table in try PageGuard.load(table: table) },
          store: WKContentRuleListStore = .default()) {
         self.state = state.consistent() ?? Self.defaultState()
         self.stateFile = stateFile
@@ -81,6 +89,7 @@ final class BrowserModel {
         self.clock = clock
         self.rules = rules
         self.embeddedLists = embeddedLists
+        self.makePageGuard = makePageGuard
         self.store = store
         switch startup {
         case .setAside, .held: startupNoticeShown = true
@@ -105,6 +114,7 @@ final class BrowserModel {
     /// Compiles the blocker, wakes the tab on screen, and only then says it is ready. Called once, before the first page load.
     func prepare() async {
         guard !isReady else { return }
+        var scriptlets = ScriptletTable()
         if blockers.isEmpty {
             do {
                 if let embedded = try embeddedLists() {
@@ -112,6 +122,13 @@ final class BrowserModel {
                     let outcome = await embedded.compile(in: store)
                     blockers = outcome.lists
                     listFailures = outcome.failures
+                    do {
+                        scriptlets = try embedded.scriptletTable()
+                    } catch {
+                        // The rules still block; only the scriptlets of the lists are missing, and the page guard keeps our own rules.
+                        guardFailure = error
+                        print("[guard] the scriptlets of the lists could not be read, the page guard runs without them: \(error)")
+                    }
                     if blockers.isEmpty { throw ContentBlocker.BlockerError.missingResource }
                 } else {
                     // A copy with no embedded list (a checkout where the build step was not run): the short built-in list stands in.
@@ -124,9 +141,21 @@ final class BrowserModel {
                 print("[blocker] rules not compiled, pages load unfiltered: \(error)")
             }
         }
+        await preparePageGuard(scriptlets: scriptlets)
         sideStore?.prune(keeping: state.tabs.map(\.id))
         isReady = true
         if let tab = activeTab { syncFrom(wake(tab)) }
+    }
+
+    /// The page guard and its rules, made before the first web view like the blocker is: a page that starts before it would run without it.
+    private func preparePageGuard(scriptlets: ScriptletTable) async {
+        do {
+            pageGuard = try makePageGuard(scriptlets)
+            guardList = try await pageGuard?.compileNetworkRules(in: store)
+        } catch {
+            guardFailure = error
+            print("[guard] the page guard is not complete, pages load with what could be made: \(error)")
+        }
     }
 
     // MARK: Navigation
@@ -321,6 +350,7 @@ extension BrowserModel {
     static func launch(directory: URL = supportDirectory(), awakeCap: Int = SleepPlanner.defaultCap, lock: LockController? = nil,
                        rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
                        embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
+                       pageGuard: @escaping @MainActor (ScriptletTable) throws -> PageGuard? = { table in try PageGuard.load(table: table) },
                        store: WKContentRuleListStore = .default()) -> BrowserModel {
         var file = StateFile(url: directory.appending(path: StateFile.fileName))
         let load = file.load()
@@ -328,7 +358,7 @@ extension BrowserModel {
         if case .loaded(let loaded) = load { state = loaded }
         let model = BrowserModel(state: state, stateFile: file,
                                  sideStore: TabSideStore(directory: directory.appending(path: TabSideStore.directoryName, directoryHint: .isDirectory)), startup: load,
-                                 awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, store: store)
+                                 awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, pageGuard: pageGuard, store: store)
         if let lock { model.attach(lock) }
         return model
     }

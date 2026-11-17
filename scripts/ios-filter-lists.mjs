@@ -19,7 +19,8 @@ process.removeAllListeners('warning')
 process.on('warning', (warning) => {
   if (/** @type {NodeJS.ErrnoException} */ (warning).code !== 'MODULE_TYPELESS_PACKAGE_JSON' && warning.name !== 'ExperimentalWarning') console.error(`${warning.name}: ${warning.message}`)
 })
-const { convertList, WEBKIT_RULE_LIMIT } = await import('./ios-filter-lists/abp-to-webkit.ts')
+const { convertList, toAsciiDomain, WEBKIT_RULE_LIMIT } = await import('./ios-filter-lists/abp-to-webkit.ts')
+const { ScriptletCollector } = await import('./ios-filter-lists/scriptlets.ts')
 const { buildEmbedded, EMBEDDED_LIST_IDS, fixtureFiles } = await import('./ios-filter-lists/embedded-lists.ts')
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -49,11 +50,14 @@ let catalogue
 let catalogueMentions
 let setLanguage
 let validateFilterList
+let parseScriptletCall
 try {
   const lists = await server.ssrLoadModule('/src/shared/filter-lists.ts')
   const i18n = await server.ssrLoadModule('/src/shared/i18n.ts')
   catalogue = lists.FILTER_LISTS
   validateFilterList = lists.validateFilterList
+  // The Mac's own check of a scriptlet rule (the names of its library, the grammar of each one's arguments): the table keeps nothing it refuses.
+  parseScriptletCall = (await server.ssrLoadModule('/src/shared/scriptlets.ts')).parseScriptletCall
   setLanguage = i18n.setLanguage
   // The mentions are read in both languages, from the same getters the Mac's settings print.
   const read = (list, field) => {
@@ -98,7 +102,7 @@ for (const id of ids) {
       source: { id, ...catalogueMentions.get(id), category: spec.category, licenseUrl: spec.licenseUrl, homepage: spec.homepage, sourceUrl: spec.url },
       text,
       fetchedAt: (file ? statSync(file).mtime : new Date()).toISOString().replace(/\.\d+Z$/, 'Z'),
-      converted: convertList(text)
+      converted: convertList(text, { scriptlets: new ScriptletCollector(parseScriptletCall, toAsciiDomain) })
     })
   } catch (error) {
     failures.push(`${id}: ${error instanceof Error ? error.message : String(error)}`)
@@ -127,7 +131,8 @@ try {
 const rows = embedded.registry.lists.map((list) => {
   const network = list.files.find((file) => file.kind === 'network')?.rules ?? 0
   const cosmetic = list.files.find((file) => file.kind === 'cosmetic')?.rules ?? 0
+  const scriptlets = list.files.find((file) => file.kind === 'scriptlets')?.rules ?? 0
   const left = Object.values(list.dropped).reduce((sum, count) => sum + count, 0)
-  return `${list.id.padEnd(20)} ${String(list.filters).padStart(7)} filters → ${String(network).padStart(7)} network + ${String(cosmetic).padStart(6)} cosmetic rules, ${String(left).padStart(6)} filters left out`
+  return `${list.id.padEnd(20)} ${String(list.filters).padStart(7)} filters → ${String(network).padStart(7)} network + ${String(cosmetic).padStart(6)} cosmetic rules + ${String(scriptlets).padStart(5)} scriptlet calls, ${String(left).padStart(6)} filters left out`
 })
 console.log(`ios-filter-lists: ${embedded.registry.lists.length} lists written in ${out}\n${rows.join('\n')}`)

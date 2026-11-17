@@ -5,7 +5,8 @@
 import { hostIn } from './blocker'
 import type { ScriptletCall } from './scriptlets'
 
-const YOUTUBE = 'youtube.com'
+/** The site the rules below are for; its subdomains follow. */
+export const YOUTUBE = 'youtube.com'
 
 /** A page of youtube.com or one of its subdomains (http or https). */
 export function isYouTubePage(pageUrl: string | null): boolean {
@@ -14,8 +15,8 @@ export function isYouTubePage(pageUrl: string | null): boolean {
   return (url.protocol === 'https:' || url.protocol === 'http:') && hostIn(url.hostname, [YOUTUBE])
 }
 
-/** Paths of youtube.com that serve advertising: the ad requests of the player, and the ad statistics. */
-const AD_PATHS = ['/pagead/', '/api/stats/ads']
+/** Paths of youtube.com that serve advertising: the ad requests of the player, and the ad statistics. Exported for the iOS application's rules (scripts/ios-guard.mjs). */
+export const AD_PATHS = ['/pagead/', '/api/stats/ads']
 
 /**
  * An advertising request of youtube.com itself. The hosts of the ad networks are already in the built-in list; this covers the paths that

@@ -48,7 +48,11 @@ export interface ListSource {
   sourceUrl: string
 }
 
-export type FileKind = 'network' | 'cosmetic'
+/**
+ * `network` and `cosmetic` are files of WebKit rules (compiled by the application); `scriptlets` is the table of the calls the list names for
+ * sites (scriptlets.ts), read by the application's page guard: its `rules` are calls, and WebKit never sees it.
+ */
+export type FileKind = 'network' | 'cosmetic' | 'scriptlets'
 
 export interface RegistryFile {
   /** The file name in the application, `<id>.<kind>.json`. */
@@ -157,6 +161,13 @@ export function buildEmbedded(inputs: readonly ListInput[], generatedAt: string,
       const json = JSON.stringify(rules)
       files[name] = json
       entries.push({ name, kind, rules: rules.length, sha256: sha256(json) })
+    }
+    if (converted.scriptlets.calls > 0) {
+      const name = `${source.id}.scriptlets.json`
+      // The format the application reads (ScriptletTable.swift): a schema, then site → calls, each `[id, args]` or `[id, args, unlessSites]`.
+      const json = JSON.stringify({ schema: 1, domains: converted.scriptlets.domains })
+      files[name] = json
+      entries.push({ name, kind: 'scriptlets', rules: converted.scriptlets.calls, sha256: sha256(json) })
     }
     const stats: ListStats = converted.stats
     return { ...source, fetchedAt, sourceVersion: sourceVersionOf(text), sourceSha256: sha256(text), filters: stats.filters, dropped: stats.dropped, files: entries }

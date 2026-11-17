@@ -1,0 +1,26 @@
+{
+  "comment": "Which pages the YouTube rules apply to: `isYouTubePage` of src/shared/youtube-rules.ts (the Mac) and PagePlanner.isYouTubePage of LuciumKit (the iPhone) must answer the same. Read by src/shared/ios-contract.test.ts and by GuardContractTests.",
+  "youtube": [
+    { "input": "https://www.youtube.com/watch?v=abc", "expect": true },
+    { "input": "https://youtube.com/", "expect": true },
+    { "input": "http://youtube.com/", "expect": true },
+    { "input": "https://m.youtube.com/watch?v=abc", "expect": true },
+    { "input": "https://music.youtube.com/", "expect": true },
+    { "input": "https://studio.youtube.com/channel/x", "expect": true },
+    { "input": "https://WWW.YouTube.COM/watch?v=abc", "expect": true },
+    { "input": "https://www.youtube.com:8443/watch", "expect": true },
+    { "input": "https://user@www.youtube.com/watch", "expect": true },
+    { "input": "https://notyoutube.com/", "expect": false },
+    { "input": "https://youtube.com.evil.example/", "expect": false },
+    { "input": "https://example.com/youtube.com", "expect": false },
+    { "input": "https://example.com/?u=https://www.youtube.com/", "expect": false },
+    { "input": "https://www.youtube-nocookie.com/embed/abc", "expect": false },
+    { "input": "https://youtu.be/abc", "expect": false },
+    { "input": "ftp://youtube.com/", "expect": false },
+    { "input": "file:///youtube.com/index.html", "expect": false },
+    { "input": "about:blank", "expect": false },
+    { "input": "not an address", "expect": false },
+    { "input": "", "expect": false },
+    { "input": null, "expect": false }
+  ]
+}

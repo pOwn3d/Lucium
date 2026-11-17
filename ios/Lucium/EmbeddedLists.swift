@@ -42,7 +42,8 @@ struct EmbeddedLists {
     /// its own threads); a file that fails is reported and does not stop the others. Lists of an older copy that the registry no longer names
     /// are removed from the store.
     func compile(in store: WKContentRuleListStore = .default()) async -> Outcome {
-        let files = registry.lists.flatMap(\.files)
+        // The scriptlet tables are not rules: WebKit never sees them (`scriptletTable()`).
+        let files = registry.lists.flatMap(\.files).filter { $0.kind.isWebKitRules }
         let collector = Collector()
         // One task per file, all started before any is waited for: while one awaits WebKit, the next one starts.
         let tasks = files.map { file in
@@ -59,6 +60,18 @@ struct EmbeddedLists {
         await removeStaleLists(in: store, keeping: Set(files.map(\.storeIdentifier)))
         // In the order of the registry, whatever order the compilations finished in: exceptions of a list never depend on a race.
         return Outcome(lists: files.compactMap { collector.lists[$0.name] }, failures: collector.failures.sorted { $0.file < $1.file })
+    }
+
+    /// The calls the lists name for sites, merged, each with the category of its list (the page guard asks the ads lists and the cookie lists apart).
+    /// A table that cannot be read is an error: the page guard would run with calls nobody can account for, or without any, and say nothing.
+    func scriptletTable() throws -> ScriptletTable {
+        var table = ScriptletTable()
+        for list in registry.lists {
+            for file in list.files where file.kind == .scriptlets {
+                try table.merge(Data(readRules(file).utf8), category: list.category)
+            }
+        }
+        return table
     }
 
     @MainActor private final class Collector {

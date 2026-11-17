@@ -14,6 +14,7 @@ LuciumKit/       Swift package: pure logic (state format and file, tab operation
 Lucium/          the application (SwiftUI, WebKit, Localizable.xcstrings, blocker rules): one web view per awake tab, sleeping tabs, saved state, spaces and profiles, private tabs, the privacy rules on every navigation
                  (PrivacyNavigation.swift) and their settings sheet (PrivacyScreen.swift); Info.plist holds the one key a build setting cannot (App Transport Security for web content)
 Lucium/FilterLists/   the filter lists converted for WebKit, and their registry: generated, not committed (see below)
+Lucium/Guard/    the page guard's runtime and rules: generated from the Mac's sources and committed (see below)
 LuciumTests/     XCTest bundle hosted by the application (runs on a simulator); Fixtures/ is the converted proof list
 ```
 
@@ -24,6 +25,10 @@ The blocker carries the lists of the Mac (EasyList, EasyPrivacy, uBlock filtersâ
 ## The lock
 
 Spaces and the application can be locked with Face ID, Touch ID or the passcode of the device (`LocalAuthentication`; Lucium keeps no secret of its own). It locks the interface, not the disk: a locked space has no tab on screen and its pages are asleep, the application is covered at launch and every time it is left, and a window above everything hides the screen from the system's picture for the app switcher. Turning a lock on or off asks the owner, a refusal or a change that cannot be saved changes nothing, and a device with no passcode cannot use the lock. The choices are in `lock.json` next to the state, never in `state.json`. The rules and the controller are in `LuciumKit` (`LockSettings.swift`, `LockController.swift`) and are proved there with an owner that agrees and one that refuses; details in [docs/ios.md](../docs/ios.md), section 4.5 (in French).
+
+## The page guard
+
+What runs **in** a page before its own scripts (docs/ios.md, section 6.4): the scriptlets that the filter lists name for a site, our own YouTube rules, and the style sheet of the consent walls. The code is the Mac's own (`src/preload/guard-world.ts`, the scriptlet library of `src/shared/scriptlets.ts`): `node scripts/ios-guard.mjs` writes `Lucium/Guard/guard-runtime.js` and `guard-rules.json` from it. They are ours and small, so they are committed, and a test (`scripts/ios-filter-lists/guard-files.test.ts`) keeps them equal to what the Mac's sources give: after a change of those sources, run the script and commit the result. The scriptlets of the lists are a table written by `scripts/ios-filter-lists.mjs` next to the rules (`<list>.scriptlets.json`, not committed); `PageGuard` looks up the plan of each page as it is about to load and swaps the one user script of the guard on the web view. Nothing is downloaded: the runtime and the table are in the application. Only the main frame is covered.
 
 ## Check it
 

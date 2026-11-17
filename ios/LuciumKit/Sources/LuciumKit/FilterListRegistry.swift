@@ -15,7 +15,14 @@ public struct LocalizedText: Codable, Equatable, Sendable {
 
 /// One file of rules of an embedded list.
 public struct FilterListFile: Codable, Equatable, Sendable {
-    public enum Kind: String, Codable, Sendable { case network, cosmetic }
+    /// `network` and `cosmetic` are files of WebKit rules; `scriptlets` is the table of calls the list names for sites (`ScriptletTable`), which
+    /// WebKit never reads: its `rules` are calls.
+    public enum Kind: String, Codable, Sendable {
+        case network, cosmetic, scriptlets
+
+        /// Whether the file is compiled by WebKit.
+        public var isWebKitRules: Bool { self != .scriptlets }
+    }
 
     public let name: String
     public let kind: Kind
@@ -51,7 +58,9 @@ public struct FilterListEntry: Codable, Equatable, Sendable, Identifiable {
     public let dropped: [String: Int]
     public let files: [FilterListFile]
 
-    public var rules: Int { files.reduce(0) { $0 + $1.rules } }
+    /// The rules WebKit reads, and the scriptlet calls the page guard runs, apart.
+    public var rules: Int { files.filter { $0.kind.isWebKitRules }.reduce(0) { $0 + $1.rules } }
+    public var scriptletCalls: Int { files.filter { !$0.kind.isWebKitRules }.reduce(0) { $0 + $1.rules } }
 
     /// The date of the copy, or nil if the registry carries a text that is not a date.
     public var fetchedDate: Date? { ISO8601DateFormatter().date(from: fetchedAt) }

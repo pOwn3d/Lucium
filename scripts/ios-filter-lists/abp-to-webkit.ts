@@ -11,6 +11,9 @@
 // domains, a selector with an extension (`:has-text(`). Loaded by Node with type stripping (scripts/ios-filter-lists.mjs): no enum, no
 // parameter property.
 
+// Types only: a module Node loads by itself cannot import a sibling without its extension, and the checker does not accept the extension.
+import type { ScriptletCollector, ScriptletTable } from './scriptlets'
+
 /** The most rules one WebKit list accepts: 150 000 pass, 150 001 are refused (measured in the iOS simulator, docs/ios.md section 6.2). */
 export const WEBKIT_RULE_LIMIT = 150_000
 
@@ -67,6 +70,8 @@ export interface ConvertedList {
   network: Rule[]
   /** Element hiding and its exceptions (the file `<id>.cosmetic.json`). */
   cosmetic: Rule[]
+  /** The scriptlet calls the list names for sites (the file `<id>.scriptlets.json`), when the caller gave a collector; empty otherwise. */
+  scriptlets: ScriptletTable
   stats: ListStats
 }
 
@@ -515,6 +520,11 @@ const SAMPLE_CHARS = 120
 export interface ConvertOptions {
   /** Rules a file may hold; the default is WebKit's limit. */
   limit?: number
+  /**
+   * Where the scriptlet filters (`site##+js(…)`) go. WebKit has no such rule: without a collector they are left out and counted
+   * (`cosmetic:scriptlet`); with one they are kept in a table apart from the rules (scriptlets.ts), and the ones it refuses are counted under its reason.
+   */
+  scriptlets?: Pick<ScriptletCollector, 'read' | 'table'>
 }
 
 export function convertList(text: string, convertOptions: ConvertOptions = {}): ConvertedList {
@@ -550,7 +560,7 @@ export function convertList(text: string, convertOptions: ConvertOptions = {}): 
 
     const cosmetic = COSMETIC_FILTER.exec(line)
     if (cosmetic) {
-      readCosmetic(line, cosmetic, { genericHides, domainHides, hideExceptions }, drop)
+      readCosmetic(line, cosmetic, { genericHides, domainHides, hideExceptions }, drop, convertOptions.scriptlets)
       continue
     }
 
@@ -623,7 +633,7 @@ export function convertList(text: string, convertOptions: ConvertOptions = {}): 
   stats.networkRules = networkFile.length
   stats.cosmeticRules = cosmeticFile.length
   stats.rules = networkFile.length + cosmeticFile.length
-  return { network: networkFile, cosmetic: cosmeticFile, stats }
+  return { network: networkFile, cosmetic: cosmeticFile, scriptlets: convertOptions.scriptlets?.table() ?? { domains: {}, calls: 0 }, stats }
 }
 
 /** The filter without its `badfilter` option, to find the filter it takes out. */
@@ -653,10 +663,15 @@ interface CosmeticState {
   hideExceptions: Map<string, Set<string>>
 }
 
-function readCosmetic(line: string, match: RegExpExecArray, state: CosmeticState, drop: (reason: string, line: string) => void): void {
+function readCosmetic(line: string, match: RegExpExecArray, state: CosmeticState, drop: (reason: string, line: string) => void, scriptlets: ConvertOptions['scriptlets']): void {
   const [, domainText, exceptionMark, kind, selectorText] = match as unknown as [string, string, string, string, string]
   if (kind !== '') return drop('cosmetic:procedural', line)
-  if (selectorText.startsWith('+js(')) return drop('cosmetic:scriptlet', line)
+  if (selectorText.startsWith('+js(')) {
+    if (scriptlets === undefined) return drop('cosmetic:scriptlet', line)
+    const reason = scriptlets.read(domainText, exceptionMark === '@', selectorText)
+    if (reason !== null) drop(reason, line)
+    return
+  }
   if (selectorText.startsWith('^')) return drop('cosmetic:html-filter', line)
   const include: string[] = []
   const exclude: string[] = []
