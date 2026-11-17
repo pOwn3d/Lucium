@@ -266,7 +266,7 @@ Lucium est publié sous **GPL-3.0-or-later**. Les conditions d'utilisation de l'
 - **qui la donne** : le fichier de Widevine nomme « ConsilioWeb and contributors » (aucun nom de personne) et parle du mainteneur ; celui-ci fait de même. Au 17 novembre 2026, tous les commits du dépôt sont du mainteneur (compte `pOwn3d`) et le code d'`ios/` est écrit pour ce projet, sans code d'un tiers : ConsilioWeb est le seul titulaire, et la permission est donc complète pour tout le code d'aujourd'hui. Une contribution future la donne avec sa signature DCO ;
 - **ce qui entre dans l'application ne doit contenir que du code dont chacun a donné cette permission**, ou d'une licence sans cette difficulté (MIT, Apache-2.0 : à lire pour chaque composant) ; **les listes de filtres** (§6.5) sont le cas à regarder, XcodeGen n'est pas distribué.
 
-**Lecture retenue pour `GOVERNANCE.md`** (*hypothèse, à confirmer par le chef de projet : le texte de la décision ne la dit pas*) : la permission **ne touche pas le principe 1** (« Free software, for good… no relicensing to a proprietary license »), qui demande 30 jours et l'accord de tous les mainteneurs : le code reste sous GPL pour tous, la permission ne retire aucun droit à personne, et la règle de l'article 7 permet de la retirer d'une copie. **Non faite** : l'*issue* publique de 7 jours de commentaire que `GOVERNANCE.md` demande pour une modification significative (§15, point 8).
+**Lecture retenue pour `GOVERNANCE.md`** (*hypothèse, à confirmer par le chef de projet : le texte de la décision ne la dit pas*) : la permission **ne touche pas le principe 1** (« Free software, for good… no relicensing to a proprietary license »), qui demande 30 jours et l'accord de tous les mainteneurs : le code reste sous GPL pour tous, la permission ne retire aucun droit à personne, et la règle de l'article 7 permet de la retirer d'une copie. **L'*issue* publique** de 7 jours de commentaire que `GOVERNANCE.md` demande pour une modification significative a été ouverte **après** la fusion de la pull request #28 : [#42](https://github.com/pOwn3d/Lucium/issues/42), ouverte le 17 novembre 2026, commentaires jusqu'au 24 novembre 2026 (§15, point 8).
 
 ### 9.4 Navigateur par défaut
 
@@ -406,7 +406,7 @@ Un module `src/main/sync/` (écoute TLS, appairage, fusion), une page de Réglag
 
 ## 15. Décisions du chef de projet (17 novembre 2026)
 
-Les sept questions de décision de l'étude ont reçu leur réponse le 17 novembre 2026 (carte « iOS 1 : décisions ») ; les deux points suivants (8 et 9) restent à faire. **Ces décisions valent accord sur l'étude** : la pull request qui porte ce document est fusionnée avec elles. Une *hypothèse* est une lecture que le texte de la décision ne dit pas : elle est écrite pour être corrigée.
+Les sept questions de décision de l'étude ont reçu leur réponse le 17 novembre 2026 ; le point 8 (l'issue publique) est fait, le point 9 reste à faire. **Ces décisions valent accord sur l'étude** : la pull request qui porte ce document est fusionnée avec elles. Une *hypothèse* est une lecture que le texte de la décision ne dit pas : elle est écrite pour être corrigée.
 
 | # | Question | Décision | Ce qui en découle |
 |---|---|---|---|
@@ -418,9 +418,9 @@ Les sept questions de décision de l'étude ont reçu leur réponse le 17 novemb
 | 6 | **Icônes** | **Celles du projet**, pas les symboles du système. | *Hypothèse :* cela vaut pour l'icône de l'application (le logo : `resources/app-icons/` et `scripts/logo/fan-logo.ts`, tous droits réservés, `NOTICE`, à placer en 1024 × 1024 dans `AppIcon.appiconset`) et pour les icônes de l'interface (celles des maquettes, code du projet sous GPL, importées comme images vectorielles). Les symboles du système de `BottomBar.swift` sont à remplacer (carte). |
 | 7 | **Maquette `Synchronisation`** | **Pas d'iCloud, pas de « Mots de passe ».** | Une seule voie, « Réseau local » (§3, §13). L'artefact est à redessiner avant d'implémenter la phase 2. |
 
-**Pas encore fait, et ce n'est pas une décision à prendre ici :**
+**Ce qui suit n'est pas une décision à prendre ici :**
 
-8. **L'*issue* publique** (modification significative, `GOVERNANCE.md` : 7 jours de commentaire) n'est **pas ouverte**. Le chef de projet est le seul mainteneur et décide seul (`GOVERNANCE.md`, « Today there is one maintainer »), mais la fenêtre publique de commentaire n'a pas eu lieu : à ouvrir, ou à écarter par une décision écrite.
+8. **L'*issue* publique** (modification significative, `GOVERNANCE.md` : 7 jours de commentaire) : **ouverte le 17 novembre 2026, [#42](https://github.com/pOwn3d/Lucium/issues/42), commentaires jusqu'au 24 novembre 2026**. Le chef de projet est le seul mainteneur et décide seul (`GOVERNANCE.md`, « Today there is one maintainer ») : la pull request #28 a été fusionnée **avant** cette période, et l'issue le dit ; toute remarque peut rouvrir la décision (changement des documents ou du code, retour en arrière).
 9. **Compte** : créer l'App ID et la fiche, remplir le formulaire de l'entitlement de navigateur par défaut, héberger la politique de confidentialité, vérifier que le nom « Lucium » est libre (§10.2). C'est le chef de projet, avec son compte Apple Developer.
 
 **Cartes à écrire à la suite** (non créées par cette modification) : écran des licences et registre des listes (§6.5) ; remplacement des symboles du système par les icônes du projet et import de l'icône de l'application ; textes de la fiche en anglais et en français ; création de l'App ID.
