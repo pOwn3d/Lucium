@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { setLanguage } from './i18n'
-import { FEED_MAX_BYTES, feedAnswer, feedFetchInit, parseFeed, updateOutcome, withdrawnVersions } from './update-check'
+import { FEED_MAX_BYTES, downloadedVersion, feedAnswer, feedFetchInit, parseFeed, updateOutcome, withdrawnVersions } from './update-check'
 
 // The order of the versions is tested in versions.test.ts.
 
@@ -250,6 +250,20 @@ describe('feedAnswer and the signature of the feed', () => {
       expect(await feedAnswer(FEED, response(), () => null)).toEqual({ ok: false, reason: 'The update feed has no valid signature: no update is offered.' })
     } finally {
       setLanguage('fr')
+    }
+  })
+})
+
+describe('downloadedVersion: the version in the release name Squirrel gives', () => {
+  it('reads the version of « Lucium X.Y.Z » (the name of the release file), up to four numbers', () => {
+    expect(downloadedVersion('Lucium 1.1.3')).toBe('1.1.3')
+    expect(downloadedVersion('Lucium 0.2')).toBe('0.2')
+    expect(downloadedVersion('Lucium 1.2.3.4')).toBe('1.2.3.4')
+  })
+
+  it('reads nothing that is not exactly that: no name, a "v", a suffix, a blank, five numbers, another name, not a text', () => {
+    for (const name of [undefined, null, 42, {}, '', 'Lucium', 'Lucium ', '1.1.3', 'lucium 1.1.3', 'Other 1.1.3', 'Lucium v1.1.3', 'Lucium 1.1.3-beta', 'Lucium 1.1.3+wvcus', 'Lucium 1.1.3 ', ' Lucium 1.1.3', 'Lucium  1.1.3', 'Lucium 1.1.3\n', 'Lucium 1.2.3.4.5', 'Lucium 1..3', 'Lucium 1.1.3 beta']) {
+      expect(downloadedVersion(name)).toBeNull()
     }
   })
 })

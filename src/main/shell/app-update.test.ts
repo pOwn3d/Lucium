@@ -179,7 +179,7 @@ describe('UpdateInstaller: what must be done before Squirrel replaces the applic
     const reported: string[] = []
     const installer = new UpdateInstaller({ feed: () => FEED, updater: () => updater, prepareQuit: vi.fn(), report: (reason) => void reported.push(reason), log: (line) => void logs.push(line), beforeInstall })
     const download = installer.download('1.0.2')
-    updater.emit('update-downloaded')
+    updater.emit('update-downloaded', {}, 'notes', 'Lucium 1.0.2', new Date(), 'https://…')
     await download
     return { updater, installer, logs, reported }
   }
@@ -224,7 +224,7 @@ describe('UpdateInstaller.dropWithdrawn: a downloaded update the feed then withd
     const logs: string[] = []
     const installer = new UpdateInstaller({ feed: () => FEED, updater: () => updater, prepareQuit: vi.fn(), report: () => {}, log: (line) => void logs.push(line), ...(discard ? { discard } : {}) })
     const download = installer.download('0.2.2')
-    updater.emit('update-downloaded')
+    updater.emit('update-downloaded', {}, 'notes', 'Lucium 0.2.2', new Date(), 'https://…')
     await download
     return { updater, installer, logs }
   }
@@ -259,6 +259,71 @@ describe('UpdateInstaller.dropWithdrawn: a downloaded update the feed then withd
     const without = await ready()
     expect(await without.installer.dropWithdrawn(['0.2.2'])).toEqual({ kind: 'failed', version: '0.2.2' })
     expect(without.logs).toEqual([expect.stringContaining('this run has no way to take back what Squirrel staged')])
+  })
+})
+
+describe('UpdateInstaller: the version that was downloaded is the one Squirrel names, not the one that was offered', () => {
+  const offer: UpdateOffer = { version: '1.1.2', url: 'https://test.lucium.app/telecharger/', notes: '', archive: 'https://test.lucium.app/updates/darwin-arm64/Lucium-1.1.2-arm64.zip', size: 128172732 }
+  const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
+
+  beforeEach(() => {
+    electron.showMessageBox.mockReset()
+  })
+
+  // 1.1.2 was offered at 10:00, 1.1.3 was published at 11:00, « Installer » was clicked at 12:00: Squirrel read the feed again and downloaded 1.1.3.
+  it('names the downloaded version in the box, and drops it when the feed then withdraws it (and keeps it when the feed withdraws the offered one)', async () => {
+    const updater = new FakeUpdater()
+    const logs: string[] = []
+    const discard = vi.fn(async () => {})
+    const installer = new UpdateInstaller({ feed: () => FEED, updater: () => updater, prepareQuit: vi.fn(), report: () => {}, log: (line) => void logs.push(line), discard })
+    electron.showMessageBox.mockResolvedValueOnce({ response: 0 }).mockResolvedValueOnce({ response: 1 })
+    await offerInstall({ win: { isDestroyed: () => false } as never }, offer, '1.1.1', installer)
+    updater.emit('update-downloaded', {}, 'notes', 'Lucium 1.1.3', new Date(), 'https://…')
+    await flush()
+    expect((electron.showMessageBox.mock.calls[1]![1] as { message: string }).message).toBe('Lucium 1.1.3 est prêt')
+    expect(installer.readyVersion()).toBe('1.1.3')
+    // The offered version is not what waits: its withdrawal changes nothing.
+    expect(await installer.dropWithdrawn(['1.1.2'])).toEqual({ kind: 'kept' })
+    expect(installer.isReady()).toBe(true)
+    expect(await installer.dropWithdrawn(['1.1.3'])).toEqual({ kind: 'dropped', version: '1.1.3' })
+    expect(discard).toHaveBeenCalledOnce()
+    expect(installer.isReady()).toBe(false)
+    expect(logs).toEqual([expect.stringContaining('1.1.3 was withdrawn from the feed: the downloaded update was dropped')])
+  })
+
+  it.each([
+    ['no release name', undefined],
+    ['an empty one', ''],
+    ['a name with no version', 'Lucium'],
+    ['a "v" before the version', 'Lucium v1.1.3'],
+    ['a suffix after the version', 'Lucium 1.1.3-beta.1'],
+    ['a version of five numbers', 'Lucium 1.1.3.4.5'],
+    ['a blank after the version', 'Lucium 1.1.3 '],
+    ['a version with no name', '1.1.3'],
+    ['a name of another product', 'Other 1.1.3'],
+    ['a name that is not a text', 42]
+  ])('falls back on the offered version, and says why in the log, when Squirrel gives %s', async (_what, releaseName) => {
+    const updater = new FakeUpdater()
+    const logs: string[] = []
+    const installer = new UpdateInstaller({ feed: () => FEED, updater: () => updater, prepareQuit: vi.fn(), report: () => {}, log: (line) => void logs.push(line) })
+    const download = installer.download('1.1.2')
+    updater.emit('update-downloaded', {}, 'notes', releaseName, new Date(), 'https://…')
+    expect(await download).toEqual({ kind: 'downloaded' })
+    expect(installer.isReady()).toBe(true)
+    expect(installer.readyVersion()).toBe('1.1.2')
+    expect(logs).toEqual([expect.stringContaining('[update] the downloaded update names no readable version')])
+    expect(logs[0]).toContain('(1.1.2) stands for it')
+  })
+
+  it('says nothing, and does not fall back, when the release name is readable', async () => {
+    const updater = new FakeUpdater()
+    const logs: string[] = []
+    const installer = new UpdateInstaller({ feed: () => FEED, updater: () => updater, prepareQuit: vi.fn(), report: () => {}, log: (line) => void logs.push(line) })
+    const download = installer.download('1.1.2')
+    updater.emit('update-downloaded', {}, 'notes', 'Lucium 1.1.2', new Date(), 'https://…')
+    await download
+    expect(installer.readyVersion()).toBe('1.1.2')
+    expect(logs).toEqual([])
   })
 })
 

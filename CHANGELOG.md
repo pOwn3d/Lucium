@@ -25,6 +25,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **Site icons**: a crafted icon file, a kilobyte of comments in a row, could freeze Lucium: the check that tells a vector icon from an error page took exponential time on it. It now reads the start of the file in linear time.
 - **Guest window, language**: a guest window now uses the language of the interface chosen in the main window, not the language of the system. On a Mac in English with the interface set to French, a guest window turned the menu bar and its own notices English as soon as it took the focus.
 - **App icon, other profiles**: a second Lucium on another profile (a test, a capture, a measure) no longer takes the icon chosen in your profile off the application. Only the profile that put an icon takes it off, when it goes back to the default one.
+- **Update, version shown and withdrawn**: after “Install”, the box and the withdrawal of a version follow the version Squirrel really downloaded, read from its release name, not the one offered earlier. A version published between the offer and the click was announced as the old one.
 
 ## [1.1.2] - 2026-11-17
 
