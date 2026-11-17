@@ -6,6 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Corrections
 
+- **Windows, liens sous un nom de fichier** : les fichiers que Lucium écrit en entier (état, historique, coffre de mots de passe, enregistrements de téléchargement…) et le fichier partiel d'un téléchargement qui reprend ne sont plus ouverts à travers un lien laissé sous leur nom. Windows n'a pas d'`O_NOFOLLOW` pour le refuser : le nom est maintenant regardé (`lstat`) avant chaque ouverture, sur tous les systèmes.
 - **Dictionnaires du correcteur, Windows et Linux** : Chromium ne télécharge plus, au premier lancement et correcteur éteint, le dictionnaire de la langue du système depuis son CDN. Une session démarre sans langue : rien n’est téléchargé avant que vous activiez l’orthographe dans le menu Édition.
 
 ## [1.1.3] - 2026-11-17

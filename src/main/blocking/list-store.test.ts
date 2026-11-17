@@ -31,8 +31,8 @@ describe('the compiled engine on disk', () => {
     expect(warn).not.toHaveBeenCalled()
   })
 
-  // Windows: there is no O_NOFOLLOW there, so a link under the temporary name is followed (durable-write.ts).
-  it.skipIf(onWindows)('is never written through a link left under its temporary name: what the link points at is not ours', () => {
+  // Windows has no O_NOFOLLOW: the look for a link before the open (durable-write.ts) refuses it there.
+  it('is never written through a link left under its temporary name: what the link points at is not ours', () => {
     const elsewhere = join(dir, 'elsewhere.txt')
     writeFileSync(elsewhere, 'not ours')
     symlinkSync(elsewhere, `${enginePath()}.tmp`)

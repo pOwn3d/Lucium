@@ -1,8 +1,41 @@
 // The one way the application writes the file it is about to rename into place (state, history, vault, windows, download records…): owner-only,
 // complete, and on the disk before the rename. Only node:fs here, so that the rules can be tested against real files.
 
-import { closeSync, constants, fchmodSync, fstatSync, fsyncSync, lstatSync, openSync, renameSync, rmSync, writeSync } from 'node:fs'
-import { open } from 'node:fs/promises'
+import { closeSync, constants, fchmodSync, fstatSync, fsyncSync, lstatSync, openSync, renameSync, rmSync, writeSync, type Stats } from 'node:fs'
+import { lstat, open } from 'node:fs/promises'
+
+/** The error `open(2)` gives for a link met with `O_NOFOLLOW`, made by hand where that flag does not exist (Windows). */
+const linkInTheWay = (path: string): NodeJS.ErrnoException =>
+  Object.assign(new Error(`ELOOP: a link stands where the file is written, open '${path}'`), { code: 'ELOOP', syscall: 'open', path })
+
+const isNothingThere = (error: unknown): boolean => ['ENOENT', 'ENOTDIR'].includes((error as NodeJS.ErrnoException | null)?.code ?? '')
+
+/**
+ * Refuses (ELOOP, as `open` does with `O_NOFOLLOW`) a link under the name that is about to be opened: a link left there, in the user's profile,
+ * would send the write to whatever it points at. `O_NOFOLLOW` does not exist on Windows (`constants.O_NOFOLLOW` is undefined and adds no flag), so
+ * this look is the guard there; it runs on every system, where it only repeats what the flag does. It leaves a short window between the look and the
+ * open, which on macOS and Linux the flag closes; the data folder is the user's own, so only their account can put a link there. Nothing there (or a
+ * file) is no reason to refuse: the open reports what it finds.
+ */
+export function refuseLinkSync(path: string): void {
+  let found: Stats | undefined
+  try {
+    found = lstatSync(path)
+  } catch (error) {
+    // Nothing at the name, or a file where a folder should be: no link to refuse, and the open that follows reports the same error itself.
+    if (!isNothingThere(error)) throw error
+  }
+  if (found?.isSymbolicLink() === true) throw linkInTheWay(path)
+}
+
+/** `refuseLinkSync` without holding the process. */
+export async function refuseLink(path: string): Promise<void> {
+  const found = await lstat(path).catch((error: unknown) => {
+    if (isNothingThere(error)) return null
+    throw error
+  })
+  if (found?.isSymbolicLink() === true) throw linkInTheWay(path)
+}
 
 /**
  * Writes every byte of `data` to `fd`. `fs.writeSync` may stop short (a full disk, a quota, a signal) and says so only by what it returns: the
@@ -23,6 +56,7 @@ export function writeAllSync(fd: number, data: Uint8Array): void {
  */
 export function writeDurableFile(path: string, data: string | Uint8Array): void {
   const bytes = typeof data === 'string' ? Buffer.from(data, 'utf8') : data
+  refuseLinkSync(path)
   const fd = openSync(path, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, 0o600)
   try {
     // A file that already existed keeps its own mode when opened: it is set again, not trusted.
@@ -62,6 +96,7 @@ export function replaceFileDurably(path: string, data: string | Uint8Array): voi
  */
 export async function writeDurableFileAsync(path: string, data: string | Uint8Array): Promise<void> {
   const bytes = typeof data === 'string' ? Buffer.from(data, 'utf8') : data
+  await refuseLink(path)
   const file = await open(path, constants.O_WRONLY | constants.O_CREAT | constants.O_TRUNC | constants.O_NOFOLLOW, 0o600)
   try {
     await file.chmod(0o600)
