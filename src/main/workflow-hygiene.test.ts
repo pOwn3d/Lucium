@@ -422,6 +422,40 @@ describe('.github/workflows/codeql.yml', () => {
   })
 })
 
+describe('.github/codeql/codeql-config.yml', () => {
+  const config = code(read('.github/codeql/codeql-config.yml'))
+  const ignored = [...config.matchAll(/^ {2}- '(.+)'$/gm)].map((match) => match[1]!)
+
+  it('is the one every job of the analysis starts with', () => {
+    expect(code(read('.github/workflows/codeql.yml')).match(/config-file: \.\/\.github\/codeql\/codeql-config\.yml/g) ?? []).toHaveLength(1)
+  })
+
+  it('leaves out the three kinds of test harness and nothing else, each of them a file the package does not carry', () => {
+    // A path added here hides its alerts: it needs the same proof, that the application never carries the file.
+    expect(ignored).toEqual(['**/*.test.*', 'src/main/smoke*.ts', '**/*test-support*.ts'])
+    const builder = read('electron-builder.yml')
+    expect(builder).toContain("- '!out/main/smoke*.js'")
+    expect(builder).toContain("- '!out/main/*test-support*.js'")
+  })
+
+  it('hides nothing a file that is read depends on: no file CodeQL reads imports a file it leaves out, but the lazy load of the engine test', () => {
+    const files = ['src', 'scripts', 'tests'].flatMap((dir) => readdirSync(here(dir), { recursive: true, encoding: 'utf8' }).map((file) => `${dir}/${file}`)).filter((file) => /\.(?:tsx?|mjs|cjs|js)$/.test(file))
+    const known = new Set(files)
+    const isIgnored = (file: string) => ignored.some((pattern) => matchesGlob(file, pattern))
+    const offenders: string[] = []
+    for (const file of files.filter((f) => !isIgnored(f))) {
+      for (const [, specifier] of read(file).matchAll(/(?:\bfrom|\bimport\(|\brequire\(|^import)\s*['"]([^'"]+)['"]/gm)) {
+        const target = specifier!.startsWith('@shared/') ? `src/shared/${specifier!.slice(8)}` : specifier!.startsWith('.') ? join(dirname(file), specifier!) : null
+        if (target === null) continue
+        const found = ['', '.ts', '.tsx', '.mjs', '.js', '/index.ts', '/index.tsx'].map((suffix) => `${target}${suffix}`).find((candidate) => known.has(candidate))
+        if (found !== undefined && isIgnored(found)) offenders.push(`${file} -> ${found}`)
+      }
+    }
+    // main/index.ts runs the engine test through import('./smoke-run'), only when --smoke is passed, which the built application refuses (runtime.ts).
+    expect(offenders).toEqual(['src/main/index.ts -> src/main/smoke-run.ts'])
+  })
+})
+
 describe('the scheduled watch on the dependencies', () => {
   it('audit.yml asks pnpm every day, about what is shipped then about the whole tree, with nothing installed', () => {
     const workflow = code(read('.github/workflows/audit.yml'))
