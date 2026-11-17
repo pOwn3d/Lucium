@@ -29,7 +29,7 @@ name: Smoke (macOS)
 # tall (the checks were written and run on a Retina screen), and its image has "Reduce motion" and "Reduce transparency" on. The animations are put back on by a step
 # below; the screen cannot be changed, and the suites that cannot pass on it are named, each with its reason, in compat/runner-limits.json. In this workflow only, those
 # suites are not run (LUCIUM_SMOKE_SKIP): a suite that fails there leaves open what the suites after it are sensitive to, and the first run on a tag showed that
-# (suites that pass alone failed in the chain). Any other suite that fails stops the run (scripts/smoke-runner-verdict.mjs), and the comparison with the reference,
+# (suites that pass alone failed in the chain). Any other suite that fails stops the run, unless it passes when run again alone (a step below; scripts/smoke-runner-verdict.mjs), and the comparison with the reference,
 # whose names carry the scale of a Retina screen, is printed and does not decide. `pnpm test:engine` and `pnpm compat:compare` on the Mac read no list, run every suite and
 # judge every check: what the runner cannot show is shown there, before a release (docs/community/release-process.md).
 #
@@ -103,13 +103,27 @@ jobs:
           set +e
           pnpm test:engine 2>&1 | tee out-engine/engine.log
           echo "code=${PIPESTATUS[0]}" >> "$GITHUB_OUTPUT"
-      # The suites that failed: any that is not named in compat/runner-limits.json stops the run, and so does a chain that ended badly with no suite to show for it.
-      # The named ones were not run: the step lists them with their reason. The Mac reads no such list.
+      # On a runner the chain is not steady: windows do not have the focus of the system, the virtual machine is slow, and the suites before one leave open what it
+      # is sensitive to (a suite that passes alone failed in the chain, and the set of the failed ones differed from one run to the next). So each suite that failed and is not
+      # named in compat/runner-limits.json is run again, alone, once. A defect fails alone as well; what passes alone is said as flaky and does not stop the run.
+      - name: Failed suites, once more alone
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          LUCIUM_SMOKE_SKIP="$(node -p "Object.keys(require('./compat/runner-limits.json')).join(',')")"
+          export LUCIUM_SMOKE_SKIP
+          set +e
+          for suite in $(node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-runner-verdict.mjs --print-unexpected); do
+            echo "##### $suite, once more alone"
+            LUCIUM_SMOKE_ONLY="$suite" LUCIUM_SMOKE_REPORT="$PWD/out-engine/again-$suite.json" pnpm test:engine 2>&1 | tee "out-engine/again-$suite.log"
+          done
+      # The suites that failed: any that is not named in compat/runner-limits.json and failed alone again stops the run, and so does a chain that ended badly with no suite
+      # to show for it. The named ones were not run: the step lists them with their reason. The Mac reads no such list.
       - name: Verdict of the chain
         if: ${{ !cancelled() }}
         env:
           CHAIN_CODE: ${{ steps.chain.outputs.code }}
-        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-runner-verdict.mjs --chain-code "$CHAIN_CODE"
+        run: node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/smoke-runner-verdict.mjs --chain-code "$CHAIN_CODE" --again out-engine
       # What the run lost against the reference of the engine, the suites of the limits of the runner left out. It is printed, and it does not decide: the reference
       # was recorded on a Retina Mac (some names carry the scale of the screen, 2 there and 1 here; the voice of the system reads aloud there only). Run even when
       # a suite failed. After an Electron bump, this is the step to read.
