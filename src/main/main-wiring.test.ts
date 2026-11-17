@@ -401,4 +401,26 @@ describe('the main window put away on macOS (shell/windows.ts)', () => {
   })
 })
 
+describe('the shortcut of the mini window, held for every application (index.ts, shell/little-shortcut.ts)', () => {
+  const realPlatform = process.platform
+  afterEach(() => Object.defineProperty(process, 'platform', { value: realPlatform }))
+
+  /** What a run as `system` asks the system to hold for every application: the setting is on by default (model-defaults.ts). */
+  async function heldOn(system: NodeJS.Platform): Promise<string[]> {
+    Object.defineProperty(process, 'platform', { value: system })
+    const main = await run()
+    await vi.waitFor(() => expect(main.world.shortcuts.length).toBeGreaterThan(0))
+    return main.world.shortcuts
+  }
+
+  // Ctrl+Alt+N is AltGr+N on a Windows keyboard that has an AltGr key: the shortcut held for every application would steal the keystroke (shared/platform.ts).
+  it.each([
+    ['darwin', 'CmdOrCtrl+Alt+N'],
+    ['win32', 'CmdOrCtrl+Alt+Shift+N'],
+    ['linux', 'CmdOrCtrl+Alt+N']
+  ] as const)('is the default of the system it runs on (%s: %s)', async (system, accelerator) => {
+    expect(await heldOn(system)).toEqual([accelerator])
+  })
+})
+
 afterEach(() => rmSync(own, { recursive: true, force: true }))

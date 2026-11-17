@@ -10,7 +10,9 @@ import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, type ElectronApplication, type Page } from '@playwright/test'
+import { effectiveAccelerator } from '../../src/shared/keybindings'
 import { screenOf, type PanelSizes, type ScreenInfo } from '../../src/shared/panel-scale'
+import { platformOf } from '../../src/shared/platform'
 
 /** The part of the state the tests read (the fields of `SidebarState`, `TabItem`, `Space`… of src/shared/model.ts). */
 export interface TabSnapshot {
@@ -52,6 +54,17 @@ interface Bridge {
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
 
 // ---------- the menu ----------
+
+/**
+ * The default shortcut of a command on the system the test runs on, as the menu carries it: the defaults differ by system (src/shared/platform.ts:
+ * Windows adds Shift to the Ctrl+Alt+letter ones, which are AltGr there), so a test that picks an entry by its default asks for it here instead of
+ * writing the macOS spelling.
+ */
+export function defaultShortcut(commandId: string): string {
+  const accelerator = effectiveAccelerator(commandId, undefined, platformOf(process.platform))
+  if (!accelerator) throw new Error(`${commandId} has no default shortcut on ${process.platform}`)
+  return accelerator
+}
 
 /**
  * Chooses the entry of the application menu that has this accelerator (written as in src/shared/keybindings.ts, for example `CmdOrCtrl+T`), as

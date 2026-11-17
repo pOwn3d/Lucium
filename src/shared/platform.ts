@@ -236,7 +236,7 @@ export const NON_MAC_DEFAULTS: Readonly<Record<string, string>> = {
  *    Chrome and Firefox; the tabs are a list down the sidebar, so « down » is the tab after.
  *  - Spaces: Alt is already what picks a space off macOS (Alt+1…9, above), so Alt+Page Down / Alt+Page Up go to the next and previous one. Not
  *    Alt+arrows: those are Back and Forward in the browsers.
- * Windows keeps the macOS shortcuts for these six: its Ctrl+Alt question (the AltGr key) is open, docs/plateformes.md §9.
+ * Windows keeps the macOS shortcuts for these six: AltGr types nothing with an arrow (`WINDOWS_DEFAULTS` explains the letters).
  */
 export const LINUX_DEFAULTS: Readonly<Record<string, string>> = {
   nextTab: 'CmdOrCtrl+PageDown',
@@ -247,10 +247,35 @@ export const LINUX_DEFAULTS: Readonly<Record<string, string>> = {
   previousSpace: 'Alt+PageUp'
 }
 
+/**
+ * What the default shortcut of a command becomes on Windows, over `NON_MAC_DEFAULTS`. Ctrl+Alt is the AltGr key of many layouts (French, German,
+ * Spanish…): Windows reports AltGr+N as Ctrl+Alt+N, so a Ctrl+Alt+letter shortcut fires while a character is typed (decision of the project lead,
+ * 17 November 2026; docs/plateformes.md §9). Ctrl+Shift+Alt+letter is the same press with Shift added, which AltGr does not carry. macOS and
+ * Linux keep Ctrl+Alt (⌥⌘ is not AltGr there).
+ *  - The three commands that were already Ctrl+Shift+Alt+letter (`captureFull`, `copyUrlMarkdown`, `clearSiteDataNow`) are not listed: they stand.
+ *  - `captureVisible` and `inspectElement` would become Ctrl+Shift+Alt+S and Ctrl+Shift+Alt+C, which `captureFull` and `copyUrlMarkdown` already
+ *    hold: a press runs one command, so these two have no default on Windows ('' = the user can give one in Settings) and the others keep theirs.
+ *  - The four commands on the arrows (`nextTab`, `previousTab`, `nextSpace`, `previousSpace`) are not listed: AltGr types nothing with an arrow, and
+ *    Ctrl+Shift+Alt+arrows already move the tab (`moveTabUp`, `moveTabDown`).
+ * These are proposals, as the rest of this file: no Windows keyboard was available. `platform.test.ts` holds what can be checked here, that no
+ * default is Ctrl+Alt without Shift on a key that types a character, and that no two commands share a press.
+ */
+export const WINDOWS_DEFAULTS: Readonly<Record<string, string>> = {
+  newLittleArc: 'CmdOrCtrl+Alt+Shift+N',
+  captureVisible: '',
+  findReplace: 'CmdOrCtrl+Alt+Shift+F',
+  viewSource: 'CmdOrCtrl+Alt+Shift+U',
+  devTools: 'CmdOrCtrl+Alt+Shift+I',
+  inspectElement: '',
+  jsConsole: 'CmdOrCtrl+Alt+Shift+J',
+  archive: 'CmdOrCtrl+Alt+Shift+A'
+}
+
 /** The default shortcut of a command on this system, given the macOS one (`standard`, '' for none). */
 export function defaultAcceleratorFor(platform: PlatformId, commandId: string, standard: string): string {
   if (platform === 'darwin') return standard
   if (platform === 'linux' && Object.hasOwn(LINUX_DEFAULTS, commandId)) return LINUX_DEFAULTS[commandId]!
+  if (platform === 'win32' && Object.hasOwn(WINDOWS_DEFAULTS, commandId)) return WINDOWS_DEFAULTS[commandId]!
   return Object.hasOwn(NON_MAC_DEFAULTS, commandId) ? NON_MAC_DEFAULTS[commandId]! : standard
 }
 

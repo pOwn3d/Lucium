@@ -23,7 +23,6 @@ import { createAutoUpdater, gateAutoUpdate, withdrawnInFeed } from './shell/auto
 import { cleanUpdateNotices, noticeWindowAllowed } from '@shared/auto-update'
 import { FeatureGates } from './shell/feature-gate'
 import { LittleShortcut, gateLittleShortcut } from './shell/little-shortcut'
-import { effectiveAccelerator } from '@shared/keybindings'
 import { PRIVILEGED_SCHEMES } from '@shared/privileged-schemes'
 import { persistableState } from '@shared/sidebar'
 import { profileRecordsHistory } from '@shared/profiles'
@@ -384,7 +383,7 @@ async function main(): Promise<void> {
       browser.openOverlay({ panel: 'commandbar', mode: 'little', initial: '' })
     })
     // Held, and the state followed for a change of its keys, only while the setting is on.
-    gateLittleShortcut(gates, littleShortcut, store, () => effectiveAccelerator('newLittleArc', store.get().settings.keyBindings))
+    gateLittleShortcut(gates, littleShortcut, store, () => platform.accelerator('newLittleArc', store.get().settings.keyBindings))
     app.on('will-quit', () => littleShortcut.stop())
   }
   // chrome.windows.create: a popup is a small window of one page (the mini window's), anything else is a window of the browser (shell/windows-wiring.ts).
