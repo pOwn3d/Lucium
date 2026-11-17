@@ -1,0 +1,37 @@
+{
+  "description": "Shared by src/shared/ios-contract.test.ts (the Mac's resolveInput and hostOf) and by ios/LuciumKit (AddressResolver). One file, two implementations: when a rule changes on one side, the other side's tests fail until the vectors say the same on both.",
+  "searchTemplate": "https://duckduckgo.com/?q=%s",
+  "resolve": [
+    { "input": "", "expect": null },
+    { "input": "   ", "expect": null },
+    { "input": "about:blank", "expect": { "kind": "url", "url": "about:blank" } },
+    { "input": "example.com", "expect": { "kind": "url", "url": "https://example.com" } },
+    { "input": "  example.com/path?q=1  ", "expect": { "kind": "url", "url": "https://example.com/path?q=1" } },
+    { "input": "https://example.com/a?b=1", "expect": { "kind": "url", "url": "https://example.com/a?b=1" } },
+    { "input": "HTTPS://EXAMPLE.COM", "expect": { "kind": "url", "url": "HTTPS://EXAMPLE.COM" } },
+    { "input": "http://localhost:3000", "expect": { "kind": "url", "url": "http://localhost:3000" } },
+    { "input": "localhost:3000", "expect": { "kind": "url", "url": "http://localhost:3000" } },
+    { "input": "192.168.1.10:8080/x", "expect": { "kind": "url", "url": "http://192.168.1.10:8080/x" } },
+    { "input": "[::1]:8080", "expect": { "kind": "url", "url": "http://[::1]:8080" } },
+    { "input": "file:///tmp/a.html", "expect": { "kind": "url", "url": "file:///tmp/a.html" } },
+    { "input": "http://exa mple.com", "expect": { "kind": "url", "url": "http://exa mple.com" } },
+    { "input": "hello world", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=hello%20world" } },
+    { "input": "what is 2+2?", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=what%20is%202%2B2%3F" } },
+    { "input": "ÉTÉ", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=%C3%89T%C3%89" } },
+    { "input": "javascript:alert(1)", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=javascript%3Aalert(1)" } },
+    { "input": "javascript:x.com", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=javascript%3Ax.com" } },
+    { "input": "ftp://example.com", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=ftp%3A%2F%2Fexample.com" } },
+    { "input": "mailto:me@x.com", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=mailto%3Ame%40x.com" } },
+    { "input": "a@b.com", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=a%40b.com" } },
+    { "input": "exa mple.com", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=exa%20mple.com" } },
+    { "input": "example.com:99999", "expect": { "kind": "search", "url": "https://duckduckgo.com/?q=example.com%3A99999" } }
+  ],
+  "host": [
+    { "input": "https://www.example.com/x", "expect": "example.com" },
+    { "input": "https://example.com:8443/x", "expect": "example.com:8443" },
+    { "input": "https://example.com:443/x", "expect": "example.com" },
+    { "input": "http://[::1]:8080/", "expect": "[::1]:8080" },
+    { "input": "about:blank", "expect": "" },
+    { "input": "not a url", "expect": "" }
+  ]
+}

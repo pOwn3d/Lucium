@@ -84,3 +84,11 @@ CLAUDE.local.md
 .aider*
 .agents/
 .worktrees/
+
+# The iOS application (ios/, docs/ios.md): the Xcode project is generated from ios/project.yml; the rest is build output
+ios/Lucium.xcodeproj/
+ios/LuciumKit/.build/
+ios/LuciumKit/.swiftpm/
+ios/.build/
+ios/DerivedData/
+*.xcresult
