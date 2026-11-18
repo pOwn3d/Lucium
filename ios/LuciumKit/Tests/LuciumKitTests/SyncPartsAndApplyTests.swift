@@ -146,7 +146,7 @@ struct SyncPartsTests {
         #expect(throws: SyncFailure(.truncated, "the count of entities is not the one announced")) { try complete.finish(entityCount: 2, digest: source.digest) }
         #expect(throws: SyncFailure(.truncated, "the digest of the snapshot is not the one announced")) { try complete.finish(entityCount: 3, digest: String(repeating: "0", count: 64)) }
         #expect(throws: Never.self) { try complete.finish(entityCount: 3, digest: source.digest) }
-        var none = SyncSnapshotParts.Assembler()
+        let none = SyncSnapshotParts.Assembler()
         #expect(throws: SyncFailure(.truncated, "the parts announced did not all come")) { try none.finish(entityCount: 0, digest: SyncSnapshot.empty.digest) }
         var half = SyncSnapshotParts.Assembler()
         try half.add(part(0, of: 2))

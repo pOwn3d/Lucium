@@ -130,10 +130,53 @@ public enum SyncMessageCodec {
         return decode(content, valuesLeft: &unlimited)
     }
 
+    /// Whether the JSON text holds a `\uD800` to `\uDFFF` escape that is not half of a pair: a text with a lone UTF-16 surrogate. A Swift string cannot hold one, so
+    /// the phone refuses it (`bad-message`), on purpose and not because of what a decoder happens to do: a decoder that put the replacement character in its place would
+    /// make the digest of the phone differ from the Mac's, which writes the surrogate as it was (docs/synchronisation.md §7.1; review n° 15).
+    static func hasLoneSurrogate(_ content: Data) -> Bool {
+        let bytes = [UInt8](content)
+        func hex(at start: Int) -> Int? {
+            guard start + 4 <= bytes.count else { return nil }
+            var value = 0
+            for index in start..<(start + 4) {
+                let byte = bytes[index]
+                let digit: Int
+                switch byte {
+                case 0x30...0x39: digit = Int(byte) - 0x30
+                case 0x41...0x46: digit = Int(byte) - 0x41 + 10
+                case 0x61...0x66: digit = Int(byte) - 0x61 + 10
+                default: return nil
+                }
+                value = value * 16 + digit
+            }
+            return value
+        }
+        var index = 0
+        while index < bytes.count {
+            guard bytes[index] == 0x5C else { index += 1; continue }  // a backslash
+            guard index + 1 < bytes.count else { return false }
+            if bytes[index + 1] != 0x75 {  // `\\`, `\"`, `\n`…: the escape is two bytes, and the next one is not the start of another
+                index += 2
+                continue
+            }
+            guard let unit = hex(at: index + 2) else { return false }
+            index += 6
+            if (0xD800...0xDBFF).contains(unit) {
+                // A high half must be followed at once by a low half.
+                guard index + 5 < bytes.count, bytes[index] == 0x5C, bytes[index + 1] == 0x75, let next = hex(at: index + 2), (0xDC00...0xDFFF).contains(next) else { return true }
+                index += 6
+            } else if (0xDC00...0xDFFF).contains(unit) {
+                return true
+            }
+        }
+        return false
+    }
+
     /// `valuesLeft` is what a connection may still hold in values (`SyncLimits.maxSessionValues`): each message read spends its own, and one that goes over what is
     /// left, or over a frame's bound, is `too-large` (nothing is spent for it).
     public static func decode(_ content: Data, valuesLeft: inout Int) -> Result<SyncEnvelope, SyncFailure> {
         let bad = { (why: String) in Result<SyncEnvelope, SyncFailure>.failure(SyncFailure(.badMessage, why)) }
+        guard !hasLoneSurrogate(content) else { return bad("a text with a lone UTF-16 surrogate") }
         guard let value = try? JSONDecoder().decode(JSONValue.self, from: content) else { return bad("not JSON") }
         guard case .object(let fields) = value, !hasProblem(value, depth: 1) else { return bad("not an object, or a value the rules refuse") }
         let count = valueCount(value, stopAbove: min(SyncLimits.maxFrameValues, valuesLeft))
