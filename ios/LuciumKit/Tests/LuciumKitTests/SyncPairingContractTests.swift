@@ -36,6 +36,10 @@ struct SyncPairingContractTests {
 
     @Test func anAddressWithAZoneIsNotAnAddressHere() {
         #expect(!SyncAddress.isLocal("fe80::1%en0"))
+        // A zero byte ends a C string: `inet_pton` read `fd00::1` in each of these.
+        for host in ["fd00::1\u{0}.evil.com", "fd00::1\u{0}", "\u{0}fd00::1", "fd00::1 ", "fd00::1\n", "mac.local\u{0}.evil.com", "192.168.1.1\u{0}"] {
+            #expect(!SyncAddress.isLocal(host), "\(host.debugDescription)")
+        }
         #expect(!SyncAddress.isLocal("[fe80::1]"))
     }
 

@@ -17,6 +17,10 @@ public enum SyncPairingClient {
                             handshakeTimeout: Duration = SyncLimits.handshakeTimeout, confirmationTimeout: Duration = SyncLimits.pairingConfirmationWait,
                             onRequestSent: @Sendable () -> Void = {}, log: @escaping @Sendable (String) -> Void = { print("[sync] \($0)") }) async throws -> SyncPairingOutcome {
         let transport = connection.transport
+        // Whatever ends the pairing but a success leaves no connection open: a Mac that answers `bye` for a challenge, a send that fails or a silence that times out
+        // threw out of here with the transport still up, and nothing else closed it.
+        var done = false
+        defer { if !done { transport.close() } }
         // The comparison of §4.1 step 3. The TLS layer already refuses a different certificate when the QR named one; this is the second lock, and the only one
         // a test of the logic can reach.
         if let expected = code.fingerprint, expected != connection.presentedFingerprint {
@@ -50,6 +54,7 @@ public enum SyncPairingClient {
         }
         await channel.sendBestEffort(.bye, why: "the pairing is done")
         await channel.close()
+        done = true
         return SyncPairingOutcome(mac: mac, fingerprint: connection.presentedFingerprint, hosts: SyncCandidates.ordered(hosts))
     }
 

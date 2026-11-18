@@ -24,15 +24,25 @@ public enum SyncEncoding {
         data.map { String(format: "%02x", $0) }.joined()
     }
 
+    /// Lower-case hexadecimal, two digits to a byte, nothing else. Read on the bytes of the text: a character of more than one byte (`é`) makes an even count of bytes
+    /// and an odd count of characters, and walking the characters two by two then ran past the end of the string and stopped the application, on each launch, when
+    /// a settings file held it. `UInt8(_:radix:)` also takes a sign (`+f`, `-0`), which no writer of ours ever makes.
     public static func data(hex text: String) -> Data? {
-        guard text.utf8.count % 2 == 0 else { return nil }
-        var bytes = Data()
-        var index = text.startIndex
-        while index < text.endIndex {
-            let next = text.index(index, offsetBy: 2)
-            guard let byte = UInt8(text[index..<next], radix: 16), text[index..<next].allSatisfy({ $0.isASCII }) else { return nil }
-            bytes.append(byte)
-            index = next
+        let digits = Array(text.utf8)
+        guard digits.count % 2 == 0 else { return nil }
+        func value(_ digit: UInt8) -> UInt8? {
+            switch digit {
+            case 0x30...0x39: digit - 0x30
+            case 0x61...0x66: digit - 0x61 + 10
+            default: nil
+            }
+        }
+        var bytes = Data(capacity: digits.count / 2)
+        var index = 0
+        while index < digits.count {
+            guard let high = value(digits[index]), let low = value(digits[index + 1]) else { return nil }
+            bytes.append(high << 4 | low)
+            index += 2
         }
         return bytes
     }
