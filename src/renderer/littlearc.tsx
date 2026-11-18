@@ -20,6 +20,8 @@ import { InLanguage } from './InLanguage'
 import { labelWithShortcut } from '@shared/keybindings'
 import { commandPress, platformOf } from '@shared/platform'
 import { useSystemDark } from './system-dark'
+import { markPlatform, useControlsOverlay } from './window-controls'
+import './window-controls.css'
 import { iconSource } from '@shared/site-icon'
 
 lockDocumentDrops()
@@ -67,6 +69,7 @@ function LittleArc() {
   if (snapshot) {
     followLanguage(document.documentElement, snapshot.state.settings, navigator.language)
     setKeyPlatform(platformOf(snapshot.platform))
+    markPlatform(document.documentElement, platformOf(snapshot.platform))
   }
   const space = targetSpace(state, snapshot)
   // The keys of this window are those of the menu bar as the user set them (shared/little-bar.ts): its tooltips say the same.
@@ -198,6 +201,8 @@ function WebAppHeader() {
   const id = new URLSearchParams(location.search).get('id') ?? ''
   const [state, setState] = useState<LittleState | null>(null)
   const act = api()
+  // Windows: the system's three buttons lie over the right end of this header (and there are no traffic lights): the stylesheet leaves them room.
+  useControlsOverlay(true)
   useEffect(() => {
     const off = api().onLittleState(setState)
     // Listening now: the window sends its state again (what it sent as this page loaded may have come too early).

@@ -9,17 +9,18 @@ import { shutByLock } from './lock-gate'
 import { WEB_APPS_MAX, isWebAppUrl, staysInApp, type WebAppRequest } from '@shared/web-apps'
 import { isPageOpenUrl } from '@shared/external-links'
 import type { Engine, Page, PageUpdate } from '../engine/types'
-import type { Platform, WindowFrame } from '../platform'
+import type { ControlsOverlay, Platform, WindowFrame } from '../platform'
 import type { StateStore } from '../store'
 import type { Browser } from './browser'
 import { t } from '@shared/i18n'
 
 /**
- * The title-bar options of an application window. macOS hides the bar and keeps the three lights centred on the header; elsewhere the system's own bar
- * stays, because a hidden bar without the lights has no button at all (the page draws none): a window that could not be closed or minimised.
+ * The title-bar options of an application window. macOS hides the bar and keeps the three lights centred on the header; Windows hides it too and lays the
+ * system's three buttons over the right end of the header (`overlay`: the header is as high as they are); elsewhere the system's own bar stays, because a hidden
+ * bar without buttons has none at all (the page draws none): a window that could not be closed or minimised.
  */
-export function webAppWindowFrame(platform: Pick<Platform, 'windowFrame'>): WindowFrame {
-  return platform.windowFrame({ x: 12, y: Math.round((WEB_APP_HEADER_HEIGHT - 14) / 2) })
+export function webAppWindowFrame(platform: Pick<Platform, 'windowFrame'>, overlay?: ControlsOverlay): WindowFrame {
+  return platform.windowFrame({ x: 12, y: Math.round((WEB_APP_HEADER_HEIGHT - 14) / 2) }, overlay)
 }
 
 interface AppWindow {

@@ -34,6 +34,7 @@ export const Channel = {
   forgetHistoryDay: 'lucium:forget-history-day',
   putBackHistory: 'lucium:put-back-history',
   showMenu: 'lucium:show-menu',
+  showAppMenu: 'lucium:show-app-menu',
   toggleReadable: 'lucium:toggle-readable',
   downloadAction: 'lucium:download-action',
   answerPermission: 'lucium:answer-permission',

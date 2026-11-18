@@ -72,6 +72,11 @@ export interface LuciumApi {
   /** Removes from the history of `profileId` every page last visited from `from` (included) to `to` (excluded), the bounds of one day. Answers how many went. */
   forgetHistoryDay(from: number, to: number, profileId: string): Promise<number>
   showMenu(target: MenuTarget): void
+  /**
+   * The button ☰ of the toolbar (Windows, where the window has no menu bar): opens the menu of the application, at `anchor` (the lower left corner of the button,
+   * in CSS pixels of the window). The main process reads the point again and opens nothing for one outside the window.
+   */
+  showAppMenu(anchor: { x: number; y: number }): void
   /** A click on the toolbar's button « Contraste de la page »: the page of tab `id` goes dark or light, or back to Original (the main process looks at the page and decides). */
   toggleReadable(id: string): void
   downloadAction(id: string, command: DownloadCommand): void

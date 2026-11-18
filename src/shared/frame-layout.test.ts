@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { FLOATING_INSET, PAGE_MARGIN, SIDE_PANEL_HEADER_HEIGHT, TOOLBAR_BAR_HEIGHT, TOOLBAR_HEIGHT, TRAFFIC_LIGHTS } from './ipc'
-import { DOCK_WIDTH, FLOAT_SHADOW, LIGHTS_CLEARANCE, cardLeftUnderLights, floatingBox, frameLayout, lightsRoom, popoverRightInset, shownSidebarWidth, sidebarLeft, stageTop, toolbarLeading, trafficLightsAt } from './frame-layout'
+import { DOCK_WIDTH, FLOAT_SHADOW, LIGHTS_CLEARANCE, cardLeftUnderLights, cardRightGap, floatingBox, frameLayout, lightsRoom, popoverRightInset, shownSidebarWidth, sidebarLeft, stageTop, toolbarLeading, trafficLightsAt } from './frame-layout'
 
 /** The formulas the shell used before the layout was shared (browser.ts, `stageRect` and `layout`): the left layout must keep giving exactly these. */
 function arcStage(width: number, height: number, sidebarInset: number, panelWidth: number | null, top: number) {
@@ -185,5 +185,52 @@ describe('a sidebar docked to a column of icons (« barre collée »)', () => {
     expect(shownSidebarWidth({ docked: true, sidebarWidth: 323 })).toBe(DOCK_WIDTH)
     expect(shownSidebarWidth({ docked: false, sidebarWidth: 323 })).toBe(323)
     expect(popoverRightInset({ sidebarRight: true, sidebarVisible: true, sidebarWidth: shownSidebarWidth({ docked: true, sidebarWidth: 323 }) })).toBe(DOCK_WIDTH + 3)
+  })
+})
+
+describe('the buttons of the system over the right end of the window (Windows)', () => {
+  it('keep a bare strip above the page card when the toolbar is hidden, on either side of the sidebar and docked or not', () => {
+    for (const sidebarRight of [false, true]) {
+      for (const docked of [false, true]) {
+        expect(stageTop({ showToolbar: false, toolbarLine: false, sidebarRight, docked, controls: true }), `${sidebarRight} ${docked}`).toBe(PAGE_MARGIN + TOOLBAR_BAR_HEIGHT)
+      }
+    }
+    // Without them (every other window) nothing changes: the card starts at the margin with the sidebar at the left.
+    expect(stageTop({ showToolbar: false, toolbarLine: false, sidebarRight: false, controls: false })).toBe(PAGE_MARGIN)
+    expect(stageTop({ showToolbar: false, toolbarLine: false, sidebarRight: false })).toBe(PAGE_MARGIN)
+  })
+
+  it('leave the toolbar row as it is when it is shown, with the line of a light bar too', () => {
+    expect(stageTop({ showToolbar: true, toolbarLine: false, sidebarRight: false, controls: true })).toBe(PAGE_MARGIN + TOOLBAR_BAR_HEIGHT)
+    expect(stageTop({ showToolbar: true, toolbarLine: true, sidebarRight: true, controls: true })).toBe(PAGE_MARGIN + TOOLBAR_HEIGHT)
+  })
+
+  it('measure how far the card ends from the window edge: the border, the docked panel, or the sidebar at the right', () => {
+    const base = { sidebarWidth: 323, margin: PAGE_MARGIN }
+    // The sidebar at the left: what the card gives up at its right, the border or the panel docked there with its margins.
+    expect(cardRightGap({ ...base, sidebarRight: false, sidebarVisible: true, docked: false, outer: PAGE_MARGIN })).toBe(PAGE_MARGIN)
+    expect(cardRightGap({ ...base, sidebarRight: false, sidebarVisible: true, docked: false, outer: 280 + PAGE_MARGIN * 2 })).toBe(280 + PAGE_MARGIN * 2)
+    // The sidebar at the right and shown: the card ends at its edge, the column's when docked.
+    expect(cardRightGap({ ...base, sidebarRight: true, sidebarVisible: true, docked: false, outer: PAGE_MARGIN })).toBe(323)
+    expect(cardRightGap({ ...base, sidebarRight: true, sidebarVisible: true, docked: true, outer: PAGE_MARGIN })).toBe(DOCK_WIDTH)
+    // Hidden, it is the border again.
+    expect(cardRightGap({ ...base, sidebarRight: true, sidebarVisible: false, docked: false, outer: PAGE_MARGIN })).toBe(PAGE_MARGIN)
+  })
+})
+
+describe('the room for the traffic lights on a system that has none', () => {
+  it('is nothing: no strip of the toolbar starts under lights that are not there, whichever side the sidebar is on', () => {
+    for (const docked of [false, true]) {
+      expect(cardLeftUnderLights({ sidebarRight: true, docked, outer: PAGE_MARGIN, lights: false })).toBeNull()
+      expect(toolbarLeading({ sidebarRight: true, docked, outer: PAGE_MARGIN, lights: false })).toBe(0)
+      expect(toolbarLeading({ sidebarRight: false, docked, outer: PAGE_MARGIN, lights: false })).toBe(0)
+    }
+    expect(lightsRoom({ sidebarRight: true, x: 8, lights: false })).toBe(0)
+  })
+
+  it('is the same as ever on macOS, said or not', () => {
+    expect(lightsRoom({ sidebarRight: true, x: 8 })).toBe(LIGHTS_CLEARANCE - 8)
+    expect(lightsRoom({ sidebarRight: true, x: 8, lights: true })).toBe(LIGHTS_CLEARANCE - 8)
+    expect(toolbarLeading({ sidebarRight: true, docked: false, outer: PAGE_MARGIN, lights: true })).toBe(LIGHTS_CLEARANCE - PAGE_MARGIN)
   })
 })

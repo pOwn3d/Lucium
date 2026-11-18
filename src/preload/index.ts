@@ -27,6 +27,7 @@ const api: LuciumApi = {
   putBackHistory: (url, profileId) => ipcRenderer.invoke(Channel.putBackHistory, url, profileId),
   forgetHistoryDay: (from, to, profileId) => ipcRenderer.invoke(Channel.forgetHistoryDay, from, to, profileId),
   showMenu: (target) => ipcRenderer.send(Channel.showMenu, target),
+  showAppMenu: (anchor) => ipcRenderer.send(Channel.showAppMenu, anchor),
   toggleReadable: (id) => ipcRenderer.send(Channel.toggleReadable, id),
   downloadAction: (id, command) => ipcRenderer.send(Channel.downloadAction, id, command),
   answerPermission: (id, allow, remember) => ipcRenderer.send(Channel.answerPermission, id, allow, remember),

@@ -79,6 +79,7 @@ describe('every surface that draws a snapshot', () => {
     renderToStaticMarkup(createElement(Surface))
     stop()
     expect(drawn).toBe(snapshot)
-    expect([...attributes].sort()).toEqual([[...ACCESSIBILITY_ATTRIBUTES.forceHighContrast], [...ACCESSIBILITY_ATTRIBUTES.forceReduceTransparency]].sort())
+    // The system the window runs on is on the root too (`data-platform`, window-controls.css): not a preference, so not counted here.
+    expect([...attributes].filter(([name]) => name !== 'data-platform').sort()).toEqual([[...ACCESSIBILITY_ATTRIBUTES.forceHighContrast], [...ACCESSIBILITY_ATTRIBUTES.forceReduceTransparency]].sort())
   })
 })

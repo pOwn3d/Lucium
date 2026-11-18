@@ -11,6 +11,7 @@ import { NOTES_LIST_REQUEST } from '@shared/notes'
 import { READABLE_LABELS, READABLE_NEXT, type ReadableMode } from '@shared/readable-mode'
 import { translateSentence, type TranslateOffer } from '@shared/translate-quick'
 import { api } from './api'
+import { AppMenuButton } from './AppMenuButton'
 import { ExtensionActions } from './ExtensionActions'
 import { HostText } from './HostText'
 import { hideTooltip, tipProps } from './tooltip'
@@ -245,6 +246,10 @@ interface ToolbarProps {
    * than the target, or translated). Absent: no button. In a split view only the focused pane's strip draws it.
    */
   translate?: TranslateOffer
+  /** The button ☰ starts the bar: the window has no menu bar (Windows), so the menu of the application is opened from here. */
+  menu?: boolean
+  /** The buttons of the system lie over the end of this bar (the window's top right): its last group leaves them room (the stylesheet reads their width from the system). */
+  underControls?: boolean
 }
 
 /** A bar that is not told the shortcuts in force draws its tooltips without keys: no system is assumed, so no glyph of another one is shown. */
@@ -259,7 +264,7 @@ const armsLongPress = (e: { button: number; ctrlKey: boolean }): boolean => e.bu
  * The bar above the page (the toolbar): navigation on the left, the address in the middle, extensions and page
  * controls on the right. Its height is TOOLBAR_BAR_HEIGHT; the page view sits right below it.
  */
-function ToolbarView({ space, current, runtime, sidebarVisible, fullUrl, draggable, canSplit, zoomMark = null, pane, sidebarRight = false, leading = 0, badges = false, annotate = false, notesList, keys = DEFAULT_KEYS, readable, translate }: ToolbarProps) {
+function ToolbarView({ space, current, runtime, sidebarVisible, fullUrl, draggable, canSplit, zoomMark = null, pane, sidebarRight = false, leading = 0, badges = false, annotate = false, notesList, keys = DEFAULT_KEYS, readable, translate, menu = false, underControls = false }: ToolbarProps) {
   const act = api()
   // A tooltip with the keys of its command as they are set now; a command the user left without a shortcut shows its text alone.
   const tip = (text: string, command: keyof ToolbarKeys) => tipProps(text, keys[command].length > 0 ? [...keys[command]] : undefined)
@@ -357,6 +362,7 @@ function ToolbarView({ space, current, runtime, sidebarVisible, fullUrl, draggab
       onMouseDown={pane && !pane.focused ? pane.onSelect : undefined}
     >
       <div className="tb-left" ref={leftRef}>
+        {menu && <AppMenuButton className="tb-button" />}
         {!sidebarVisible && !pane && !sidebarRight && (
           <button className="tb-button" aria-label={t('toolbar.afficher-la-barre-laterale')} {...tip(t('toolbar.afficher-la-barre-laterale'), 'toggleSidebar')} onClick={() => void act.dispatch({ type: 'settings/update', patch: { sidebarVisible: true } })}>
             <SidebarIcon />
@@ -488,6 +494,8 @@ function ToolbarView({ space, current, runtime, sidebarVisible, fullUrl, draggab
             )}
           </>
         )}
+        {/* The room for the buttons of the system over the end of the bar: empty, as wide as what of them lies over this bar (the stylesheet knows it). It is in the group so that the address, which is centred, keeps clear of it too. */}
+        {underControls && <span className="tb-controls-room" aria-hidden="true" />}
       </div>
       {/* A line of 2 px under the bar while this page loads: it has no figure to show (the shell knows loading or not), so it moves. Only with the marks of `tabStateBadges` on. */}
       {badges && current !== undefined && runtime.tabs[current.id]?.loading === true && <div className="tb-progress" role="progressbar" aria-label={t('tab-state.chargement')} />}

@@ -7,6 +7,7 @@ import { t } from '@shared/i18n'
 import { PRIVATE_BACKGROUND } from '@shared/private-window'
 import { guestLabel } from '@shared/guest-window'
 import { GUEST_QUERY, PRIVATE_QUERY, TRAFFIC_LIGHTS } from '@shared/ipc'
+import { firstControlsOverlay } from '@shared/window-controls'
 import type { ElectronEngine } from '../engine/electron-engine'
 import type { HistoryBook } from '../history'
 import type { currentPlatform } from '../platform'
@@ -53,7 +54,7 @@ export function createWindowManager({ engine, sharedStore, views, history, windo
         title: guest ? guestLabel() : privateWindow ? t('menu.private-window-name') : 'Lucium',
         // A guest window is private underneath but wears nothing of the private look.
         backgroundColor: privateWindow && !guest ? PRIVATE_BACKGROUND : '#17171c',
-        ...platform.windowFrame(TRAFFIC_LIGHTS),
+        ...platform.windowFrame(TRAFFIC_LIGHTS, firstControlsOverlay(sharedStore.get().settings, { dark: nativeTheme.shouldUseDarkColors, privateBar: privateWindow && !guest })),
         webPreferences
       })
       const extraOverlay = new WebContentsView({ webPreferences })

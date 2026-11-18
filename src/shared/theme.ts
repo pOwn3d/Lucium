@@ -396,7 +396,7 @@ export function pagePaletteCss(theme: SpaceTheme, appearance: ResolvedAppearance
 }
 
 /** The WCAG contrast of two opaque colours. */
-const contrastOf = (a: string, b: string): number => {
+export const contrastOf = (a: string, b: string): number => {
   const [la, lb] = [luminance(a), luminance(b)]
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05)
 }

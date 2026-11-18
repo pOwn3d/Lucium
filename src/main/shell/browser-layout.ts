@@ -1,7 +1,7 @@
 // A layer of the class Browser (browser.ts; the order of the layers: docs/architecture.md). Where everything goes on screen: the sync of the
 // views with the state, the stage, the split view, the overlay, the traffic lights, the sliding sidebar.
 
-import { screen, type View } from 'electron'
+import { Menu, screen, type View } from 'electron'
 import { FIND_PANEL, FIND_REPLACE_PANEL, PEEK_HEADER_HEIGHT, TOOLBAR_BAR_HEIGHT, type OverlayRequest } from '@shared/ipc'
 import type { SplitView } from '@shared/model'
 import { ZAP_PANEL } from '@shared/boost'
@@ -19,6 +19,7 @@ import { runtimeOfTabs } from '@shared/lock'
 import { withSleepingEntries } from '@shared/sleep'
 import { CYCLE_PANEL, cyclePanelWidth } from '@shared/tab-cycle'
 import { toolbarIsLight } from '@shared/toolbar'
+import { appMenuAnchor, controlsOverlay } from '@shared/window-controls'
 import { pageMargin } from '@shared/window-look'
 import { activeTab, splitFor } from '@shared/sidebar'
 import { PERMISSION_LAYER } from '@shared/permissions'
@@ -26,6 +27,7 @@ import type { Bounds } from '../engine/types'
 import { prefersReducedMotion } from './motion'
 import { batterySaver } from './battery-saver'
 import { currentPlatform } from '../platform'
+import { popupApplicationMenu } from './app-menu-popup'
 import { SIDEBAR_SLIDE_MS, SIDEBAR_SLIDE_STEP_MS, THEME_MAX_HEIGHT, THEME_WIDTH } from './browser-base'
 import { BrowserPages } from './browser-pages'
 import { FullscreenNotice } from './fullscreen-notice'
@@ -253,7 +255,7 @@ export abstract class BrowserLayout extends BrowserPages {
       sideInset: this.cardLeft(sidebarVisible, scaled(docked ? DOCK_WIDTH : sidebarVisible ? sidebarWidth : margin, k)),
       sidebarRight,
       panelWidth: dock === null ? null : scaled(dock, k),
-      top: scaled(stageTop({ showToolbar, toolbarLine: showToolbar && this.toolbarLine(), sidebarRight, docked, margin }), k),
+      top: scaled(stageTop({ showToolbar, toolbarLine: showToolbar && this.toolbarLine(), sidebarRight, docked, margin, controls: currentPlatform().facts.controlsOverlay }), k),
       margin: scaled(margin, k)
     })
   }
@@ -396,6 +398,45 @@ export abstract class BrowserLayout extends BrowserPages {
   }
 
   /**
+   * The system's buttons over the right end of the window (Windows) follow what is behind them: the ink of their symbols reads on the bar of the page on
+   * screen, on a split view's dark strips, or on the space itself when the toolbar is hidden, and their height covers the toolbar's row and the border above
+   * it. Told to the window only when it changes: the layout runs at every change of the state.
+   */
+  private syncControlsOverlay(): void {
+    const platform = currentPlatform()
+    if (!platform.facts.controlsOverlay) return
+    const state = this.store.get()
+    const active = activeTab(state)
+    const space = state.spaces.find((s) => s.id === (active?.spaceId ?? state.activeSpaceId))
+    const overlay = controlsOverlay({
+      kind: 'browser',
+      margin: pageMargin(state.settings),
+      scale: this.k(),
+      toolbar: state.settings.showToolbar,
+      split: !!active && !!splitFor(state, active.id),
+      pageColor: active ? this.runtime.tabs[active.id]?.color : undefined,
+      appearance: space ? resolveAppearance(space.theme, this.systemDark) : 'dark',
+      privateBar: this.isPrivate()
+    })
+    const key = `${overlay.symbolColor} ${overlay.height}`
+    if (key === this.controlsOverlayGiven) return
+    if (platform.syncControlsOverlay(this.win, overlay)) this.controlsOverlayGiven = key
+  }
+
+  /**
+   * The button ☰ of the toolbar: the menu of the application, popped up where the interface says (CSS pixels of the window, read again here: a point outside the
+   * window opens nothing). Answers whether a menu opened.
+   */
+  popupAppMenu(anchor: unknown): boolean {
+    if (this.win.isDestroyed()) return false
+    const bounds = this.win.getContentBounds()
+    const at = appMenuAnchor(anchor, this.toCss({ x: 0, y: 0, width: bounds.width, height: bounds.height }))
+    if (!at) return false
+    const point = this.fromCss({ x: at.x, y: at.y, width: 0, height: 0 })
+    return popupApplicationMenu(Menu.getApplicationMenu(), this.win, { x: Math.round(point.x), y: Math.round(point.y) })
+  }
+
+  /**
    * Puts these views on top of the window's, in this order, unless they already are: `addChildView` reorders the native views even when nothing
    * moves, and the layout runs at every change of the state. A view added since (a page shown, a cover) is above them, and they go back on top.
    */
@@ -464,6 +505,7 @@ export abstract class BrowserLayout extends BrowserPages {
       this.floatPhase = null
     }
     this.syncTrafficLights()
+    this.syncControlsOverlay()
     // The view of the floating sidebar lives while the sidebar is hidden, loaded before the pointer reaches the edge; it goes a few minutes after the sidebar is back.
     this.floating.want(!settings.sidebarVisible)
     const floatingView = this.floating.current()

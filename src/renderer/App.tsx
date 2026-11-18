@@ -3,7 +3,7 @@ import type { RuntimeState, Settings, Space, SplitGrid, SplitView, TabItem } fro
 import { getLanguage } from '@shared/i18n'
 import { SPLIT_GAP, balancePair, dividerKeyRatios, dividerValues, gridDividerValues, gridDividers, gridKeyShare, gridRoom, isGridCount, resizeRatios, resizeShare, splitBarRect, splitDividers, splitLayout, splitPaneStage, type GridAxis } from '@shared/split'
 import { TOOLBAR_BAR_HEIGHT, type UiSnapshot } from '@shared/ipc'
-import { DOCK_WIDTH, cardLeftUnderLights, lightsRoom, toolbarLeading } from '@shared/frame-layout'
+import { DOCK_WIDTH, cardLeftUnderLights, cardRightGap, lightsRoom, toolbarLeading } from '@shared/frame-layout'
 import { sidebarPlacement } from '@shared/window-sidebar'
 import { isTranslucent, pageMargin, windowLookVars } from '@shared/window-look'
 import { zoomMark } from '@shared/site-zoom'
@@ -13,7 +13,7 @@ import { showsNotesListButton } from '@shared/notes'
 import { readableButtonMode, type ReadableMode } from '@shared/readable-mode'
 import { targetLanguage } from '@shared/translate-local'
 import { translateOffer, type TranslateOffer } from '@shared/translate-quick'
-import { platformOf } from '@shared/platform'
+import { PLATFORM_FACTS, platformOf } from '@shared/platform'
 import { api, useSnapshot } from './api'
 import { Toolbar } from './Toolbar'
 import { startDrag } from './drag'
@@ -25,6 +25,9 @@ import { FLOATING, Sidebar } from './Sidebar'
 import './window.css'
 import './sidebar-right.css'
 import { useSystemDark } from './system-dark'
+import { useControlsOverlay } from './window-controls'
+import { stripHoldsMenu, stripUnderControls } from '@shared/window-controls'
+import './window-controls.css'
 
 /**
  * The two dividers of a grid (shared/split.ts `gridDividers`): the column one sets the width of the left column, the row one the height of the top
@@ -87,7 +90,7 @@ function GridDividers({ split, grid, room, linked }: { split: SplitView; grid: S
  * Drag handles in the gaps between the panes of a split view, and under the panes the layout bar of a split view of two. The panes
  * themselves are native views above this layer; the strip of the bar is the part of the stage they leave free.
  */
-export function SplitDividers({ split, tabs, activeId, space, runtime, sidebarVisible, fullUrl, draggable, stageLeft, zoom, scrollSync, synced, annotate, notesList, keys, readable, translate }: { split: SplitView; tabs: TabItem[]; activeId: string | undefined; space: Space; runtime: RuntimeState; sidebarVisible: boolean; fullUrl: boolean; draggable: boolean; stageLeft: number | null; zoom: Pick<Settings, 'showZoomIndicator' | 'siteZoom'>; scrollSync: boolean; synced: boolean; annotate: boolean; notesList?: readonly string[]; keys?: ToolbarKeys | undefined; readable?: ReadableMode; translate?: TranslateOffer }) {
+export function SplitDividers({ split, tabs, activeId, space, runtime, sidebarVisible, fullUrl, draggable, stageLeft, lights = true, controls = false, zoom, scrollSync, synced, annotate, notesList, keys, readable, translate }: { split: SplitView; tabs: TabItem[]; activeId: string | undefined; space: Space; runtime: RuntimeState; sidebarVisible: boolean; fullUrl: boolean; draggable: boolean; stageLeft: number | null; lights?: boolean; controls?: boolean; zoom: Pick<Settings, 'showZoomIndicator' | 'siteZoom'>; scrollSync: boolean; synced: boolean; annotate: boolean; notesList?: readonly string[]; keys?: ToolbarKeys | undefined; readable?: ReadableMode; translate?: TranslateOffer }) {
   const act = api()
   const ref = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState({ width: 0, height: 0 })
@@ -130,7 +133,10 @@ export function SplitDividers({ split, tabs, activeId, space, runtime, sidebarVi
             draggable={draggable}
             // With the sidebar at the right the traffic lights are over the page card: the strip that starts under them keeps clear (a bar of a
             // lower row, in a stack or a grid, is not under them).
-            leading={stageLeft === null || pane.y > 0 ? 0 : lightsRoom({ sidebarRight: true, x: stageLeft + pane.x })}
+            leading={stageLeft === null || pane.y > 0 ? 0 : lightsRoom({ sidebarRight: true, x: stageLeft + pane.x, lights })}
+            // Windows: the strip at the window's top left holds the button ☰, the one at the top right leaves the buttons of the system room (a strip of a lower row is under neither).
+            menu={controls && stripHoldsMenu(pane)}
+            underControls={controls && stripUnderControls(pane, room)}
             zoomMark={zoomMark(zoom, tab?.url)}
             // The panes' strips carry the button « Annoter » too (the focused one): the flag must reach them, or a split view has none.
             annotate={annotate}
@@ -238,6 +244,10 @@ export function App() {
 function Shell({ snapshot, systemDark }: { snapshot: UiSnapshot; systemDark: boolean }) {
   const { state, runtime, sidePanel } = snapshot
   const act = api()
+  // Windows: the buttons of the system lie over the window's top right and the window has no menu bar (window-controls.ts); false on every other system, and on the
+  // floating copy of the sidebar, which is a surface of its own.
+  const controls = useControlsOverlay(true)
+  const lights = PLATFORM_FACTS[platformOf(snapshot.platform)].trafficLights
   const space = state.spaces.find((s) => s.id === state.activeSpaceId) ?? state.spaces[0]!
   const activeId = state.activeTabBySpace[space.id]
   const current = state.tabs.find((t) => t.spaceId === space.id && t.id === activeId)
@@ -280,8 +290,11 @@ function Shell({ snapshot, systemDark }: { snapshot: UiSnapshot; systemDark: boo
   const inner = sidebarVisible ? 0 : margin
   // Where the page card starts, in window coordinates, when the traffic lights are over its toolbar: the sidebar at the right, or docked to a column
   // at the left (the lights stay at the window's top left corner whatever the side of the column).
-  const stageLeft = cardLeftUnderLights({ sidebarRight: right, docked, outer })
-  const leading = toolbarLeading({ sidebarRight: right, docked, outer })
+  const stageLeft = cardLeftUnderLights({ sidebarRight: right, docked, outer, lights })
+  const leading = toolbarLeading({ sidebarRight: right, docked, outer, lights })
+  // The buttons of the system start `--controls-w` from the window's right edge (window-controls.css); the card ends this far from it, so the toolbar leaves
+  // the difference empty. In the style of the shell: the sidebar's row and the panel's header read it too.
+  const cardGap = cardRightGap({ sidebarRight: right, sidebarVisible, docked, sidebarWidth: state.settings.sidebarWidth, outer, margin })
   const platform = platformOf(snapshot.platform)
   // The button « Toutes les notes », with the keys of File › Notes as they are set now; none in a private window.
   const notesList = showsNotesListButton(state.settings, snapshot.private === true) ? acceleratorKeys(effectiveAccelerator('notes', state.settings.keyBindings, platform), platform) : undefined
@@ -294,20 +307,22 @@ function Shell({ snapshot, systemDark }: { snapshot: UiSnapshot; systemDark: boo
   const translate = translateOffer(state.settings.translateLocal, current?.url, current ? runtime.tabs[current.id] : undefined, targetLanguage(state.settings, getLanguage())) ?? undefined
 
   return (
-    <div className={`shell ${appearance}${look} ${right ? 'sidebar-right' : ''}`} style={style}>
+    <div className={`shell ${appearance}${look} ${right ? 'sidebar-right' : ''}`} style={controls ? ({ ...style, '--card-gap-right': `${cardGap}px` } as CSSProperties) : style}>
       {sidebar}
       {dock && (
-        <SidePanelFrame name={dock.name} width={panelWidth} margin={margin} panelAtLeft={right} onClose={() => act.closeSidePanel()} onWidth={(sidePanelWidth) => void act.dispatch({ type: 'settings/update', patch: { sidePanelWidth } })} />
+        <SidePanelFrame lights={lights} name={dock.name} width={panelWidth} margin={margin} panelAtLeft={right} onClose={() => act.closeSidePanel()} onWidth={(sidePanelWidth) => void act.dispatch({ type: 'settings/update', patch: { sidePanelWidth } })} />
       )}
       <main
-        className={`stage ${showToolbar || right || docked ? 'with-toolbar' : ''}`}
+        className={`stage ${showToolbar || right || docked || controls ? 'with-toolbar' : ''}`}
         style={right ? { marginLeft: outer, marginRight: inner } : { marginLeft: inner, marginRight: outer }}
       >
+        {/* Windows, toolbar hidden: the strip above the card is bare, and it drags the window (window-controls.css). */}
+        {controls && !showToolbar && !activeSplit && <div className="stage-strip" aria-hidden="true" />}
         {showToolbar && !activeSplit && (
-          <Toolbar key={getLanguage()} space={space} current={current} runtime={runtime} sidebarVisible={sidebarVisible} fullUrl={state.settings.fullUrlInToolbar} draggable={state.settings.dragWindowFromToolbar} zoomMark={zoomMark(state.settings, current?.url)} canSplit={!!current} sidebarRight={right} leading={leading} badges={state.settings.tabStateBadges} annotate={snapshot.annotateEnabled === true} notesList={notesList} keys={keys} readable={readable} translate={translate} />
+          <Toolbar key={getLanguage()} space={space} current={current} runtime={runtime} sidebarVisible={sidebarVisible} fullUrl={state.settings.fullUrlInToolbar} draggable={state.settings.dragWindowFromToolbar} zoomMark={zoomMark(state.settings, current?.url)} canSplit={!!current} sidebarRight={right} leading={leading} menu={controls} underControls={controls} badges={state.settings.tabStateBadges} annotate={snapshot.annotateEnabled === true} notesList={notesList} keys={keys} readable={readable} translate={translate} />
         )}
         {activeSplit && (
-          <SplitDividers split={activeSplit} tabs={state.tabs} activeId={current?.id} space={space} runtime={runtime} sidebarVisible={sidebarVisible} fullUrl={state.settings.fullUrlInToolbar} draggable={state.settings.dragWindowFromToolbar} stageLeft={stageLeft} zoom={state.settings} scrollSync={state.settings.scrollSync} synced={snapshot.scrollSyncedSplits?.includes(activeSplit.id) === true} annotate={snapshot.annotateEnabled === true} notesList={notesList} keys={keys} readable={readable} translate={translate} />
+          <SplitDividers split={activeSplit} tabs={state.tabs} activeId={current?.id} space={space} runtime={runtime} sidebarVisible={sidebarVisible} fullUrl={state.settings.fullUrlInToolbar} draggable={state.settings.dragWindowFromToolbar} stageLeft={stageLeft} lights={lights} controls={controls} zoom={state.settings} scrollSync={state.settings.scrollSync} synced={snapshot.scrollSyncedSplits?.includes(activeSplit.id) === true} annotate={snapshot.annotateEnabled === true} notesList={notesList} keys={keys} readable={readable} translate={translate} />
         )}
         {spaceLocked && <LockScreen snapshot={snapshot} kind="space" space={space} systemDark={systemDark} />}
         {/* The page of the tab is in Lucium's floating window: its place says so, and brings the video back or the window to the front. */}

@@ -83,6 +83,18 @@ describe('the snapshot of a document', () => {
     setKeyPlatform(undefined)
   })
 
+  // The room kept for the traffic lights is macOS's alone: the stylesheets read the system from the root (window-controls.css).
+  it('says the system on the root of the document, for the stylesheets', () => {
+    const main = bridge()
+    mounted = mount(several())
+    act(() => main.push(snapshot('win32')))
+    expect(document.documentElement.getAttribute('data-platform')).toBe('win32')
+    act(() => main.push(snapshot('darwin')))
+    expect(document.documentElement.getAttribute('data-platform')).toBe('darwin')
+    document.documentElement.removeAttribute('data-platform')
+    setKeyPlatform(undefined)
+  })
+
   it('is read once and listened to once for all the views that draw it', async () => {
     const main = bridge()
     mounted = mount(several())
