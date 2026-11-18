@@ -6,7 +6,8 @@
 #   linux-ci.sh sandbox-profile <binary>           Ubuntu 24.04: let that one binary create user namespaces, by an AppArmor profile (what the .deb ships)
 #   linux-ci.sh unrestrict                         Ubuntu 24.04: lift the restriction on user namespaces for the whole machine (a runner is thrown away)
 #   linux-ci.sh smoke <label> <start|refused> <command...>
-#                                                  start the built application, as a user would, and check what happens
+#                                                  start the built application, as a user would, and check what happens (`refused`: the launch
+#                                                  is refused, the line says why on the standard error and a box says it on the screen)
 #
 # The sandbox of Chromium is never switched off: no step of the workflow and no line of this file passes --no-sandbox. `smoke` fails when a process of
 # the application carries it, and when a renderer has no seccomp filter (the proof that the sandbox is on, not only that nobody asked it to be off).
@@ -124,22 +125,38 @@ check_started() {
   fi
 }
 
-# What a refused application must show: it ends by itself with code 1 and says why, before any window.
+# What a refused application must show (an AppImage whose AppRun added --no-sandbox: Lucium refuses it, never runs without the sandbox). Two things: the line
+# that says why on the standard error, before anything else, and, since a screen exists, a box of the system that says it to a person who has no terminal
+# (src/main/launch-refusal.ts; Electron opens no box before `ready` on Linux, which is why the person used to see nothing). The box waits to be closed and
+# nobody here can click it: the check finds it on the virtual screen by its title, « Lucium cannot start » (the runner's locale is English), checks that no page was started, then
+# closes the application with a signal. An application that ends by itself instead did not show the box: that is a failure.
 check_refused() {
-  local app="$1" log="$2" waited=0 status=0
-  while kill -0 "$app" 2>/dev/null && [ "$waited" -lt 60 ]; do
+  local app="$1" data="$2" log="$3" waited=0 status=0
+  # Counted, not `grep -q` (which stops at the first match and can hand xwininfo a SIGPIPE that `pipefail` reports as a failure).
+  until [ "$(xwininfo -root -tree 2>/dev/null | grep -ci "lucium cannot start" || true)" -gt 0 ]; do
+    if ! kill -0 "$app" 2>/dev/null; then
+      wait "$app" || status=$?
+      fail "the application ended by itself after ${waited} s (exit code $status) without showing the box that says why it refuses to start"
+      return 1
+    fi
+    if [ "$waited" -ge 60 ]; then
+      fail "no box after ${waited} s: the application is still running and shows nothing that says why it refuses to start"
+      return 1
+    fi
     sleep 1
     waited=$((waited + 1))
   done
-  if kill -0 "$app" 2>/dev/null; then
-    fail "the application is still running after ${waited} s: it was expected to refuse to start"
-    return 1
-  fi
-  wait "$app" || status=$?
-  echo "the application ended by itself after ${waited} s, exit code $status"
-  [ "$status" = 1 ] || { fail "exit code $status, expected 1"; return 1; }
+  echo "the box that says why appeared after ${waited} s"
   grep -q 'refused: this application does not start with --no-sandbox' "$log" || { fail "the log does not say that --no-sandbox is refused"; return 1; }
   grep -q 'sandbox' "$log" && echo "the refusal names the sandbox"
+  # Nothing but the box was made: no page, so no renderer (and no window of the application other than the box).
+  if [ -n "$(renderer_pids "$data")" ]; then
+    fail "a renderer is running in a launch that was refused"
+    return 1
+  fi
+  # What closing the box would end with, here by the signal.
+  kill -TERM "$app" 2>/dev/null || true
+  wait "$app" 2>/dev/null || true
 }
 
 smoke() {
@@ -157,7 +174,7 @@ smoke() {
   echo "== $label: $* (expected: $expect)"
   "$@" "--user-data-dir=$data" --enable-logging=stderr >"$log" 2>&1 &
   app=$!
-  if [ "$expect" = start ]; then check_started "$app" "$data" "$log" || status=$?; else check_refused "$app" "$log" || status=$?; fi
+  if [ "$expect" = start ]; then check_started "$app" "$data" "$log" || status=$?; else check_refused "$app" "$data" "$log" || status=$?; fi
   if [ "$status" -ne 0 ]; then
     echo "---- log of the application ($log), last 60 lines"
     tail -n 60 "$log" || true

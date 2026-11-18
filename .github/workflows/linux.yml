@@ -28,8 +28,10 @@ name: Linux
 #     installs the package with apt and starts it, which fails when the profile does not load;
 #   - the E2E suite starts an Electron binary that no profile names: the step "Sandbox" loads the same profile for that binary (scripts/linux-ci.sh);
 #   - an AppImage cannot carry a profile. electron-builder's AppRun adds `--no-sandbox` when `unshare -Ur true` fails, and Lucium refuses that switch
-#     (REFUSED_SWITCHES): started on a machine that restricts user namespaces, it must end with code 1 and say why (the step "AppImage, as the
-#     machine has it"); once the restriction is lifted for the machine, it must start, sandbox on (the step after it). No step passes --no-sandbox.
+#     (REFUSED_SWITCHES): started on a machine that restricts user namespaces, it must say why, on the standard error and in a box on the screen
+#     (src/main/launch-refusal.ts: before `ready` Electron shows no box on Linux, so a person who double-clicked the AppImage saw nothing), and start
+#     no page; the step "AppImage, as the machine has it" finds the box on the virtual screen and closes the application. Once the restriction is
+#     lifted for the machine, it must start, sandbox on (the step after it). No step passes --no-sandbox.
 # `scripts/linux-ci.sh smoke` fails when a process of the application carries --no-sandbox, and when a renderer has no seccomp filter.
 #
 # When it runs: on a pull request that touches the code, the packaging or the tests (not on a documentation-only one), every night at 03:30 UTC

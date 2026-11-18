@@ -4,7 +4,7 @@
 // - a GitHub "latest release" answer, for an address given by hand: Lucium then only opens the download page.
 
 import { joinPieces, readPiecesWithin } from './bounded-stream'
-import { getLanguage, t } from './i18n'
+import { getLanguage, t, type Language } from './i18n'
 import { compareVersions, isDottedVersion } from './versions'
 
 export interface UpdateOffer {
@@ -19,6 +19,14 @@ export interface UpdateOffer {
 }
 
 const https = (url: unknown): url is string => typeof url === 'string' && /^https:\/\/\S+$/i.test(url)
+
+/**
+ * The page of the site where the latest version is downloaded by hand, in the language of the interface. It is where Windows and Linux, whose builds carry no
+ * update address and install nothing (`updatesByHand`, shared/platform.ts), send a person who asks for updates.
+ */
+export const DOWNLOAD_PAGES: Readonly<Record<Language, string>> = { fr: 'https://lucium.app/telecharger/', en: 'https://lucium.app/en/download/' }
+
+export const downloadPageUrl = (language: Language): string => DOWNLOAD_PAGES[language]
 
 /**
  * A version as Squirrel.Mac compares it with the running one (`NSNumericSearch` on the text, after an exact match of `currentRelease`): digits

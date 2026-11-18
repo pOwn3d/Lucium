@@ -341,6 +341,39 @@ describe('a launch that the built application refuses (runtime.ts)', () => {
   })
 })
 
+describe('the AppImage that AppArmor refuses (launch-refusal.ts, carte 469)', () => {
+  const realPlatform = process.platform
+  afterEach(() => Object.defineProperty(process, 'platform', { value: realPlatform }))
+  const onLinux = (): void => void Object.defineProperty(process, 'platform', { value: 'linux' })
+
+  it('shows a box on Linux with a screen for the --no-sandbox its AppRun added, then ends with code 1, once: no lock, no window, no file of the profile', async () => {
+    onLinux()
+    const main = await run({ packaged: true, argv: ['--no-sandbox'], env: { DISPLAY: ':99' }, waitForMain: false })
+    await vi.waitFor(() => expect(main.world.exits).toEqual([1]))
+    // The line for the terminal is still written, and the box says the same to a person who has none.
+    expect(main.world.logged.some((line) => line.includes('[launch] refused') && line.includes('--no-sandbox'))).toBe(true)
+    expect(main.world.boxes).toHaveLength(1)
+    const box = main.world.boxes[0] as { type: string; title: string; message: string; detail: string; buttons: string[] }
+    expect(box).toMatchObject({ type: 'error', title: 'Lucium ne peut pas démarrer', buttons: ['Ouvrir la page Télécharger', 'Fermer'] })
+    // Which cause it names depends on the machine the test runs on (the kernel file of AppArmor): the sentence both share is the one that matters here.
+    expect(box.detail).toContain('Lucium ne démarre jamais sans bac à sable')
+    // Ended once, and only after the box: nothing of the launch went on, and it was not quit as a second instance either.
+    expect(main.world.quits).toBe(0)
+    expect(main.world.locks).toBe(0)
+    const { windows } = await worlds()
+    expect(windows.made).toHaveLength(0)
+    expect(main.listeners('second-instance')).toHaveLength(0)
+    expect(existsSync(join(main.world.userData, 'state.json'))).toBe(false)
+  })
+
+  it('shows none, and ends at once, with no screen to draw it on', async () => {
+    onLinux()
+    const main = await run({ packaged: true, argv: ['--no-sandbox'], env: { DISPLAY: undefined, WAYLAND_DISPLAY: undefined }, waitForMain: false })
+    expect(main.world.exits).toEqual([1])
+    expect(main.world.boxes).toEqual([])
+  })
+})
+
 describe('the development variables (runtime.ts)', () => {
   it('are taken out of the environment at the start by the built application, before anything reads them, and kept by a run from the sources', async () => {
     const env = { LUCIUM_ANNOTATE: '1', LUCIUM_UPDATE_FEED: 'https://feed.example/', LUCIUM_SMOKE_ONLY: 'perf' }
