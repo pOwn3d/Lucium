@@ -535,11 +535,11 @@ export function windowCandidates(q: string, windows: readonly NamedWindow[] | un
 }
 
 /**
- * The tabs an iPhone announced that the text names (title or host), the best first, five at most: « Sur l'iPhone ». Nothing is listed for no text: the section answers a
+ * The tabs an iPhone announced that the text names (title or host), the best first, five at most: « Sur l'iPhone ». The bar lists nothing for no text (`rankCandidates` returns before the sources): the section answers a
  * search, as its twin on the iPhone does (« Sur le Mac »). `now` is the clock of the bar, for the age of the list.
  */
 export function iphoneCandidates(q: string, iphone: { lines: readonly ResumeLine[]; announcedAt: number | null; now: number }): Candidate[] {
-  if (q.trim() === '' || iphone.announcedAt === null) return []
+  if (iphone.announcedAt === null) return []
   const age = resumeAge(iphone.announcedAt, iphone.now)
   return matchResume(iphone.lines, q, MAX_IPHONE).map((line): Candidate => ({ kind: 'iphone', id: `iphone:${line.id}`, label: line.title, detail: iphoneDetail(line.host, age), resumeId: line.id }))
 }

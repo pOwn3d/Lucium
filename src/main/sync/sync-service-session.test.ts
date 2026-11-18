@@ -199,16 +199,29 @@ describe('the service with the exchange of the data', () => {
       expect(r.service.resumeSource()).toMatchObject({ paired: false, announcedAt: null, rows: [] })
     })
 
-    it('forgets the list with the iPhone', async () => {
+    it('forgets the list with the iPhone: paired again, the old list does not come back', async () => {
       const r = await withList()
+      const peer = r.store.peers()[0]!
       r.service.forget(PHONE_ID)
-      expect(r.service.resumeSource()).toMatchObject({ paired: false, announcedAt: null, sessionHappened: false, rows: [] })
+      expect(r.service.resumeSource()).toMatchObject({ paired: false, announcedAt: null, rows: [] })
+      r.store.addPeer(peer)
+      expect(r.service.resumeSource()).toMatchObject({ paired: true, announcedAt: null, listAnnounced: false, sessionHappened: false, rows: [] })
+    })
+
+    it('counts the iPhones only: another kind of device is no iPhone paired', async () => {
+      const r = rig({}, {})
+      await r.service.setEnabled(true)
+      const peer = r.store.peers()[0]!
+      r.store.forgetPeer(PHONE_ID)
+      r.store.addPeer({ ...peer, platform: 'mac' })
+      expect(r.service.resumeSource().paired).toBe(false)
     })
 
     it('forgets the list with the window', async () => {
       const r = await withList()
       await r.service.closeWindow()
-      expect(r.service.resumeSource()).toMatchObject({ announcedAt: null, rows: [] })
+      // Not even « a session went through »: the next one is waited for, and the iPhone is not said to have sent nothing.
+      expect(r.service.resumeSource()).toMatchObject({ announcedAt: null, sessionHappened: false, rows: [] })
     })
   })
 

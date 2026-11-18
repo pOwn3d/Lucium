@@ -255,7 +255,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       .syncResume({ kind: 'list' })
       .then(
         (reply) => {
-          if (!stale) setIphone(reply?.ok === true && reply.view.availability === 'list' ? { lines: reply.view.lines, announcedAt: reply.view.announcedAt } : null)
+          if (!stale) setIphone(reply?.ok === true ? { lines: reply.view.lines, announcedAt: reply.view.announcedAt } : null)
         },
         (error: unknown) => {
           // A convenience: without the list the bar keeps its other lines. The name of the error only.
