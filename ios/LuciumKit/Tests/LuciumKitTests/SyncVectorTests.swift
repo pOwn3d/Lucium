@@ -6,10 +6,11 @@ import Testing
 /// The shared vectors of the synchronisation (`ios/Contracts/sync-*.json`, docs/synchronisation.md §19). The Mac's TypeScript plays them in
 /// `src/shared/ios-sync-contract.test.ts` and `ios-sync-merge-contract.test.ts` against a reference written in the tests.
 ///
-/// There is no synchronisation code in LuciumKit yet (cards 445 and 446 write it), so this suite does what needs none: it reads the same files,
+/// The pairing and the messages are not written in LuciumKit yet (card 445), so this suite does what needs none: it reads the same files,
 /// checks their form, and recomputes with the system's own primitives what the specification fixes byte for byte: the pairing proofs (CryptoKit's
 /// HMAC), the SHA-256 of the canonical texts, the order of the marks (Swift's string order), and the certificate profile (Security.framework reads the
-/// sample certificate and finds the same fingerprint and the same key). It does not write the merge, nor the canonical form: that is the card 446.
+/// sample certificate and finds the same fingerprint and the same key). The merge, the canonical form and the reading of a snapshot are played in
+/// `SyncMergeTests.swift` (card 446).
 private enum SyncVectors {
     static func load(_ name: String) throws -> [String: Any] {
         // …/ios/LuciumKit/Tests/LuciumKitTests/SyncVectorTests.swift → …/ios/Contracts/<name>

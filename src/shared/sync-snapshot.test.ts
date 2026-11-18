@@ -1,6 +1,9 @@
 // The door a received snapshot goes through (sync-snapshot.ts, docs/synchronisation.md §8.3 and §7.1): the form is checked, hostile shapes are refused,
 // and what comes out shares nothing with what came in.
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { canonicalJson } from './sync-canonical'
 import { cloneJson, emptySnapshot, parseSnapshot, SNAPSHOT_LIMITS } from './sync-snapshot'
 
 const mark = '1790000000001-0000-mac'
@@ -104,5 +107,29 @@ describe('sync snapshot: reading what was received', () => {
     expect(copy).toEqual(value)
     expect(copy).not.toBe(value)
     expect((copy as typeof value).a).not.toBe(value.a)
+  })
+})
+
+// The cases LuciumKit plays too (SyncSnapshotVectorTests): the same reader in two languages.
+const vectors = JSON.parse(readFileSync(join(__dirname, '../../ios/Contracts/sync-snapshot-vectors.json'), 'utf8')) as { cases: { name: string; json: string; expect: { accepted: boolean; canonical?: string } }[] }
+
+describe('sync snapshot: the vectors of ios/Contracts/sync-snapshot-vectors.json', () => {
+  it('are numerous enough, and named once', () => {
+    expect(vectors.cases.length).toBeGreaterThanOrEqual(30)
+    expect(new Set(vectors.cases.map((c) => c.name)).size).toBe(vectors.cases.length)
+    expect(vectors.cases.filter((c) => !c.expect.accepted).length).toBeGreaterThan(15)
+  })
+
+  it.each(vectors.cases.map((c) => [c.name, c] as const))('%s', (_name, c) => {
+    const read = parseSnapshot(JSON.parse(c.json))
+    expect('snapshot' in read, 'problem' in read ? read.problem : '').toBe(c.expect.accepted)
+    if ('snapshot' in read && c.expect.canonical !== undefined) expect(canonicalJson(read.snapshot)).toBe(c.expect.canonical)
+  })
+
+  it('refuses a key that is not in normalization form C, which Swift would not tell from its precomposed twin', () => {
+    expect(problem({ entities: { space: { 'e\u0301': entity({}) } } })).toMatch(/bad name/)
+    expect(problem({ entities: { space: { s1: entity({ 'cafe\u0301': 1 }) } } })).toMatch(/bad name/)
+    expect(problem({ entities: { space: { s1: entity({ a: { 'cafe\u0301': 1 } }) } } })).toMatch(/normalization form C/)
+    expect('snapshot' in parseSnapshot({ entities: { space: { s1: entity({ caf\u00e9: 1 }) } } })).toBe(true)
   })
 })

@@ -61,7 +61,14 @@ export const SNAPSHOT_LIMITS = {
 export type SnapshotProblem = string
 
 /** A name that is used as a key of a record must not be the one JavaScript reads as the prototype, nor hold a control character. */
-const isKeyName = (key: string, max: number): boolean => key.length >= 1 && key.length <= max && key !== '__proto__' && !/[\u0000-\u001f\u007f]/.test(key)
+const isKeyName = (key: string, max: number): boolean => key.length >= 1 && key.length <= max && key !== '__proto__' && !/[\u0000-\u001f\u007f]/.test(key) && isNormalized(key)
+
+/**
+ * A key must be in normalization form C. Swift treats two keys that differ only by their normalization ("é" in one scalar and in two) as one key of a
+ * dictionary, where JavaScript keeps two: a snapshot with both would give the two devices different entities. With every key in form C, two keys that
+ * are told apart here are told apart there.
+ */
+const isNormalized = (key: string): boolean => key.normalize('NFC') === key
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
@@ -85,6 +92,7 @@ function jsonProblem(value: unknown, depth: number, path: string): SnapshotProbl
   if (isPlainObject(value)) {
     for (const [key, member] of Object.entries(value)) {
       if (key === '__proto__') return `${path}: a __proto__ key`
+      if (!isNormalized(key)) return `${path}: a key that is not in normalization form C`
       const problem = jsonProblem(member, depth + 1, `${path}.${key}`)
       if (problem !== null) return problem
     }
@@ -97,8 +105,8 @@ function jsonProblem(value: unknown, depth: number, path: string): SnapshotProbl
  * Reads a snapshot from what was received (or read from a file): the form of §8.3 or a reason. A member the form does not name is left out (a newer
  * version may add one: §7.1). `-0` is read as `0` (§7.1). The result shares nothing with the input.
  *
- * Refused: an entity that is not `{fields, stamps}` with `fields` an object and every mark of `stamps` well formed; a name that is empty, too long, `__proto__` or
- * made of control characters, as a kind, an id, a field, a list key; a `__proto__` key at any depth; a depth over 32; a number the two languages do not write alike;
+ * Refused: an entity that is not `{fields, stamps}` with `fields` an object and every mark of `stamps` well formed; a name that is empty, too long, `__proto__`,
+ * made of control characters or not in normalization form C, as a kind, an id, a field, a list key; a `__proto__` key at any depth; a depth over 32; a number the two languages do not write alike;
  * more than 100 000 entities; a list that is not a list of ids.
  */
 export function parseSnapshot(input: unknown): { snapshot: SyncSnapshot } | { problem: SnapshotProblem } {
