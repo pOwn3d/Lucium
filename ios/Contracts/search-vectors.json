@@ -1,0 +1,204 @@
+{
+  "engines": [
+    {
+      "name": "DuckDuckGo",
+      "url": "https://duckduckgo.com/?q=%s"
+    },
+    {
+      "name": "Google",
+      "url": "https://www.google.com/search?q=%s"
+    },
+    {
+      "name": "Bing",
+      "url": "https://www.bing.com/search?q=%s"
+    },
+    {
+      "name": "Brave Search",
+      "url": "https://search.brave.com/search?q=%s"
+    },
+    {
+      "name": "Qwant",
+      "url": "https://www.qwant.com/?q=%s"
+    },
+    {
+      "name": "Ecosia",
+      "url": "https://www.ecosia.org/search?q=%s"
+    }
+  ],
+  "choose": [
+    {
+      "name": "the default profile writes the general engine, in a state with no settings",
+      "before": null,
+      "profile": "default",
+      "choice": "https://www.google.com/search?q=%s",
+      "after": {
+        "searchUrlTemplate": "https://www.google.com/search?q=%s",
+        "profiles": {}
+      },
+      "effective": "https://www.google.com/search?q=%s"
+    },
+    {
+      "name": "another profile writes an override and leaves the general engine alone",
+      "before": {
+        "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+        "profiles": {}
+      },
+      "profile": "work",
+      "choice": "https://search.brave.com/search?q=%s",
+      "after": {
+        "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+        "profiles": {
+          "work": {
+            "searchUrlTemplate": "https://search.brave.com/search?q=%s"
+          }
+        }
+      },
+      "effective": "https://search.brave.com/search?q=%s"
+    },
+    {
+      "name": "an override keeps the other keys of the profile's entry",
+      "before": {
+        "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+        "profiles": {
+          "work": {
+            "downloadDir": "/Users/me/Downloads",
+            "searchSuggestions": false
+          }
+        }
+      },
+      "profile": "work",
+      "choice": "https://www.qwant.com/?q=%s",
+      "after": {
+        "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+        "profiles": {
+          "work": {
+            "downloadDir": "/Users/me/Downloads",
+            "searchSuggestions": false,
+            "searchUrlTemplate": "https://www.qwant.com/?q=%s"
+          }
+        }
+      },
+      "effective": "https://www.qwant.com/?q=%s"
+    },
+    {
+      "name": "back to the default profile's engine removes the entry when nothing else is left",
+      "before": {
+        "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+        "profiles": {
+          "work": {
+            "searchUrlTemplate": "https://search.brave.com/search?q=%s"
+          }
+        }
+      },
+      "profile": "work",
+      "choice": "inherited",
+      "after": {
+        "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+        "profiles": {}
+      },
+      "effective": "https://duckduckgo.com/?q=%s"
+    },
+    {
+      "name": "back to the default profile's engine keeps the other keys of the entry",
+      "before": {
+        "searchUrlTemplate": "https://www.qwant.com/?q=%s",
+        "profiles": {
+          "work": {
+            "searchUrlTemplate": "https://search.brave.com/search?q=%s",
+            "downloadDir": "/Users/me/Work"
+          }
+        }
+      },
+      "profile": "work",
+      "choice": "inherited",
+      "after": {
+        "searchUrlTemplate": "https://www.qwant.com/?q=%s",
+        "profiles": {
+          "work": {
+            "downloadDir": "/Users/me/Work"
+          }
+        }
+      },
+      "effective": "https://www.qwant.com/?q=%s"
+    },
+    {
+      "name": "the default profile changes the general engine the others inherit",
+      "before": {
+        "searchUrlTemplate": "https://www.qwant.com/?q=%s",
+        "profiles": {
+          "work": {
+            "searchUrlTemplate": "https://search.brave.com/search?q=%s"
+          }
+        }
+      },
+      "profile": "default",
+      "choice": "https://www.ecosia.org/search?q=%s",
+      "after": {
+        "searchUrlTemplate": "https://www.ecosia.org/search?q=%s",
+        "profiles": {
+          "work": {
+            "searchUrlTemplate": "https://search.brave.com/search?q=%s"
+          }
+        }
+      },
+      "effective": "https://www.ecosia.org/search?q=%s"
+    },
+    {
+      "name": "another profile's override is not touched by a choice in a third",
+      "before": {
+        "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+        "profiles": {
+          "work": {
+            "searchUrlTemplate": "https://search.brave.com/search?q=%s"
+          }
+        }
+      },
+      "profile": "home",
+      "choice": "https://www.bing.com/search?q=%s",
+      "after": {
+        "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+        "profiles": {
+          "work": {
+            "searchUrlTemplate": "https://search.brave.com/search?q=%s"
+          },
+          "home": {
+            "searchUrlTemplate": "https://www.bing.com/search?q=%s"
+          }
+        }
+      },
+      "effective": "https://www.bing.com/search?q=%s"
+    },
+    {
+      "name": "an engine of one's own the Mac wrote is replaced by a listed one",
+      "before": {
+        "searchUrlTemplate": "https://search.example.org/find?q=%s",
+        "profiles": {}
+      },
+      "profile": "default",
+      "choice": "https://duckduckgo.com/?q=%s",
+      "after": {
+        "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+        "profiles": {}
+      },
+      "effective": "https://duckduckgo.com/?q=%s"
+    },
+    {
+      "name": "a profile that inherited an engine of one's own can still pick its own",
+      "before": {
+        "searchUrlTemplate": "https://search.example.org/find?q=%s",
+        "profiles": {}
+      },
+      "profile": "work",
+      "choice": "https://www.google.com/search?q=%s",
+      "after": {
+        "searchUrlTemplate": "https://search.example.org/find?q=%s",
+        "profiles": {
+          "work": {
+            "searchUrlTemplate": "https://www.google.com/search?q=%s"
+          }
+        }
+      },
+      "effective": "https://www.google.com/search?q=%s"
+    }
+  ]
+}

@@ -16,6 +16,9 @@ final class BrowserModel {
 
     var tabsSheetShown = false
     var spacesSheetShown = false
+    /// The settings screen (`SettingsScreen`), opened by the gear of the bottom bar and of the iPad's sidebar, and the page it opens on (the list when nil).
+    var settingsShown = false
+    var settingsStart: SettingsRow?
     /// The site "Clear this site's data" was asked for, until the person answers (`SiteDataFlow`).
     var siteDataAsked: String?
     /// The full-screen command bar (mockup `Commandes`): opened by the address pill.

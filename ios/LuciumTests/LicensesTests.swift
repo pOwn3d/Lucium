@@ -27,7 +27,7 @@ final class LicensesTests: XCTestCase {
         let lists = try XCTUnwrap(EmbeddedLists.load(in: Bundle(for: Self.self)))
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first, "the hosted tests run inside the application's scene")
         for language in ["en", "fr"] {
-            let controller = UIHostingController(rootView: LicensesSheet(lists: lists).environment(\.locale, Locale(identifier: language)))
+            let controller = UIHostingController(rootView: NavigationStack { LicensesScreen(lists: lists) }.environment(\.locale, Locale(identifier: language)))
             let window = UIWindow(windowScene: scene)
             window.frame = CGRect(x: 0, y: 0, width: 390, height: 844)
             window.rootViewController = controller

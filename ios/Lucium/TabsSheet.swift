@@ -9,8 +9,6 @@ struct TabsSheet: View {
     @State private var query = ""
     @State private var namingFolder = false
     @State private var nameText = ""
-    @State private var licensesShown = false
-    @State private var lockShown = false
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -28,13 +26,6 @@ struct TabsSheet: View {
                 case .archive: ArchiveScreen(model: model)
                 }
             }
-        }
-        // The privacy choices and what the application owes to the people whose work it carries (its licence, the filter lists): no place of the mockups
-        // holds them yet, so they are the last rows of this sheet until the settings have a page of their own.
-        .sheet(isPresented: $model.privacyPrompts.settingsShown) { PrivacySheet(model: model) }
-        .sheet(isPresented: $licensesShown) { LicensesSheet() }
-        .sheet(isPresented: $lockShown) {
-            if let lock = model.lock { LockSettingsSheet(lock: lock, spaces: model.spaces) }
         }
         .alert("folder.new.title", isPresented: $namingFolder) {
             TextField("folder.name", text: $nameText)
@@ -126,7 +117,6 @@ struct TabsSheet: View {
                 searchResults
             } else {
                 if model.activeSpaceCovered { lockedNotice } else { library }
-                aboutSection
             }
         }
         .listStyle(.insetGrouped)
@@ -216,30 +206,6 @@ struct TabsSheet: View {
                 .buttonStyle(.plain)
             }
         }
-    }
-
-    /// The privacy choices, the lock and the licenses: rows that open sheets of the application while the settings have no page of their own. They are
-    /// there whether the space on screen is locked or not.
-    @ViewBuilder private var aboutSection: some View {
-        Section {
-            aboutRow("tabs.privacy") { model.privacyPrompts.settingsShown = true }
-            if model.lock != nil { aboutRow("tabs.lock") { lockShown = true } }
-            aboutRow("tabs.licenses") { licensesShown = true }
-        }
-    }
-
-    /// A row that opens one of the sheets of the application (the privacy choices, the licenses) while the settings have no page of their own.
-    private func aboutRow(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 12) {
-                Text(title).font(.subheadline)
-                Spacer(minLength: 8)
-                IconView(.chevron, size: 16).foregroundStyle(.secondary)
-            }
-            .frame(minHeight: 48)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 
     private func sectionTitle(_ text: Text) -> some View {

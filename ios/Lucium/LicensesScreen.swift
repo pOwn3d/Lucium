@@ -3,9 +3,9 @@ import SwiftUI
 
 /// What the application owes to the people whose work it carries: its own licence, and, for every filter list built into it, the title,
 /// the author, the licence, the source and the date of the copy (docs/ios.md, "Licences des listes embarquées"). The entries come from the
-/// registry the build step wrote next to the lists, so the screen has no copy written by hand.
-struct LicensesSheet: View {
-    @Environment(\.dismiss) private var dismiss
+/// registry the build step wrote next to the lists, so the screen has no copy written by hand. A page of the settings screen: it is pushed on its
+/// navigation stack.
+struct LicensesScreen: View {
     private let registry: FilterListRegistry?
     private let problem: Error?
 
@@ -27,32 +27,27 @@ struct LicensesSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section("licenses.app.header") {
-                    Text("licenses.app.summary")
-                    ForEach(LicenseText.allCases) { text in
-                        NavigationLink(text.title) { LicenseTextScreen(text: text) }
-                    }
-                }
-                Section {
-                    if let registry {
-                        ForEach(registry.lists) { list in FilterListRow(list: list) }
-                    } else {
-                        Text(problem == nil ? "licenses.lists.none" : "licenses.lists.unreadable")
-                    }
-                } header: {
-                    Text("licenses.lists.header")
-                } footer: {
-                    Text("licenses.lists.footer")
+        List {
+            Section("licenses.app.header") {
+                Text("licenses.app.summary")
+                ForEach(LicenseText.allCases) { text in
+                    NavigationLink(text.title) { LicenseTextScreen(text: text) }
                 }
             }
-            .navigationTitle("licenses.title")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("tabs.done") { dismiss() } }
+            Section {
+                if let registry {
+                    ForEach(registry.lists) { list in FilterListRow(list: list) }
+                } else {
+                    Text(problem == nil ? "licenses.lists.none" : "licenses.lists.unreadable")
+                }
+            } header: {
+                Text("licenses.lists.header")
+            } footer: {
+                Text("licenses.lists.footer")
             }
         }
+        .navigationTitle("licenses.title")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 
