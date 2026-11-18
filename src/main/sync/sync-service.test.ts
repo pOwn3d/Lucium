@@ -178,6 +178,30 @@ describe('SyncService: the window', () => {
     warn.mockRestore()
   })
 
+  it('draws another port when the system refuses the one it drew (EACCES: Windows keeps ranges of the dynamic ports for itself, and a port of the dynamic range is never one a person needs rights for)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const r = rig()
+    const refused = (): NodeJS.ErrnoException => Object.assign(new Error('listen EACCES: permission denied'), { code: 'EACCES' })
+    r.door.failStart.push(refused(), refused())
+    await r.service.setEnabled(true)
+    await r.service.openWindow()
+    expect(r.door.starts).toHaveLength(1)
+    expect(r.store.config().port).toBe(r.door.starts[0])
+    expect(r.service.status().window.open).toBe(true)
+    warn.mockRestore()
+  })
+
+  it('says `port`, not `internal`, when every port it tries is refused by the system', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const r = rig()
+    for (let n = 0; n < 6; n++) r.door.failStart.push(Object.assign(new Error('listen EACCES'), { code: 'EACCES' }))
+    await r.service.setEnabled(true)
+    await expect(r.service.openWindow()).rejects.toMatchObject({ problem: 'port' })
+    warn.mockRestore()
+    log.mockRestore()
+  })
+
   it('gives up after five ports that are taken, and says `port`', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -208,7 +232,7 @@ describe('SyncService: the window', () => {
   it('says `internal` for a door that fails for another reason, and logs it', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const r = rig()
-    r.door.failStart.push(Object.assign(new Error('EACCES'), { code: 'EACCES' }))
+    r.door.failStart.push(Object.assign(new Error('EMFILE'), { code: 'EMFILE' }))
     await r.service.setEnabled(true)
     await expect(r.service.openWindow()).rejects.toMatchObject({ problem: 'internal' })
     expect(log).toHaveBeenCalledWith(expect.stringContaining('could not be opened'), expect.anything())
