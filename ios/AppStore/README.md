@@ -71,14 +71,14 @@ How it is made, so that it can be trusted and redone:
 - The simulator draws the Dynamic Island in some pictures of an iPhone and not in others (it is not part of the screen it renders, and nothing here controls it). A set whose pictures disagree is taken again, up to three times (`finish.mjs --island` exit 3).
 - One simulator at a time on a machine others use (`AGENTS.md`, section 1): the script is heavy, about three minutes for all twenty pictures once the project is built.
 
-Retake them when the interface changes, and always before a submission. The iPad pictures show the layout of the iPhone on a larger screen today: the permanent sidebar of an iPad in landscape is another piece of work, and its pictures replace these (take them with the same script, in landscape).
+Retake them when the interface changes, and always before a submission. The iPad pictures are portrait, where the bottom bar of the iPhone is kept on the larger screen. **There is no picture of the permanent sidebar of an iPad held in landscape**, which is what an iPad listing would like to show: a headless simulator cannot be turned. An iPad in windowed mode refuses an application's request to change orientation (`requestGeometryUpdate`: "the current windowing mode does not allow for programmatic changes to interface orientation"), `XCUIDevice` refuses in a unit test ("Not authorized for performing UI testing actions"), and `simctl` has no command for it; turning it needs `Simulator.app` or a UI-testing target, neither of which is used here. The offscreen picture of the sidebar in `docs/images/` is not a screen of the device.
 
 ## Before a submission: what to read again
 
 Found while writing these texts, and not fixed here (each belongs to another piece of work):
 
 1. **The start page still says "Foundation mockup"** (`start.title`, `start.body` in `Localizable.xcstrings`): the first thing a reviewer sees. It needs a real start page before any build leaves the maintainer's Mac.
-2. **The texts describe `main` of 18 November 2026** (downloads to the Files app, sharing a page and saving it as a PDF are in them). What waits in other pull requests, the permanent sidebar of an iPad in landscape, is not: add it to the description and to the notes for the review when it is merged, and take the pictures again.
+2. **The texts describe `main` of 18 November 2026**, downloads, sharing, saving as a PDF and the iPad sidebar included. Take the pictures again after any change of the interface, and read the texts again against the list of functions.
 3. **The privacy page of the site lists two connections that the code does not make yet** (search suggestions and site icons, "on by default"), while the README of the project, which follows the code, lists neither. The policy must say what the application does the day it is submitted: either the code gets them first, with their switches and their line in the README, or the page is corrected. The notes for the review say "no connection of its own", and a test reads the sources to hold them to it.
 4. Sections 5.1.1, 5.1.2 and 5.2 of the review guidelines were read only in summary (docs/ios.md, section 9); the age rating and the export compliance are the two *to confirm* lines above.
 5. The name "Lucium" has to be free in App Store Connect (docs/ios.md, section 10.2).

@@ -4,7 +4,7 @@ SPACES, NOT ONE BIG PILE OF TABS
 Keep work, home and projects apart. Each Space has its own colour, its own tabs, pinned tabs and folders. A Space can use a profile of its own: two profiles share no cookie, so what you signed in to in one never follows you into the other.
 
 A BAR WITHIN REACH OF YOUR THUMB
-The address, back, forward, your Spaces and your tabs sit in a bar at the bottom of the screen. The tabs sheet lists your pinned tabs, your folders and what you opened today; tabs you leave alone for a while are archived instead of piling up. The command bar finds a tab, a favourite or an action as you type.
+The address, back, forward, your Spaces and your tabs sit in a bar at the bottom of the screen. The tabs sheet lists your pinned tabs, your folders and what you opened today; tabs you leave alone for a while are archived instead of piling up. The command bar finds a tab, a favourite or an action as you type. On an iPad held in landscape, the bar becomes a permanent sidebar with your Spaces and tabs beside the page.
 
 PRIVATE BY DEFAULT
 • A built-in blocker for ads, trackers and cookie banners. Its lists are inside the app: nothing is downloaded to block.
