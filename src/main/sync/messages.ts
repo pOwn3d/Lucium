@@ -11,6 +11,7 @@
 
 import { ALPN, MAX_CATEGORIES, MAX_DEVICE_ID_CHARS, MAX_DEVICE_NAME_CHARS, MAX_ENTITIES_PER_PART, MAX_HOSTS, MAX_JSON_DEPTH, MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES, MAX_OPEN_TABS, MAX_PARTS, MAX_STRING_BYTES, PROTOCOL_VERSION } from './limits'
 import { isErrorCode, type ErrorCode, type Verdict } from './error-codes'
+import { isInheritedName } from '@shared/sync-snapshot'
 
 export { ALPN }
 
@@ -141,8 +142,8 @@ function readDevice(value: unknown): DeviceInfo | null {
 function readEntity(value: unknown): WireEntity | null {
   if (!isObject(value)) return null
   const { kind, id, fields, stamps } = value
-  if (typeof kind !== 'string' || kind.length === 0 || kind.length > 64) return null
-  if (typeof id !== 'string' || id.length === 0 || id.length > 128) return null
+  if (typeof kind !== 'string' || kind.length === 0 || kind.length > 64 || isInheritedName(kind)) return null
+  if (typeof id !== 'string' || id.length === 0 || id.length > 128 || isInheritedName(id)) return null
   if (!isObject(fields) || !isObject(stamps)) return null
   if (!Object.values(stamps).every((stamp) => typeof stamp === 'string' && STAMP.test(stamp))) return null
   return { kind, id, fields, stamps: stamps as Record<string, string> }
@@ -151,7 +152,7 @@ function readEntity(value: unknown): WireEntity | null {
 function readTombstone(value: unknown): WireTombstone | null {
   if (!isObject(value)) return null
   const { kind, id, stamp } = value
-  if (typeof kind !== 'string' || kind.length === 0 || kind.length > 64 || typeof id !== 'string' || id.length === 0 || id.length > 128) return null
+  if (typeof kind !== 'string' || kind.length === 0 || kind.length > 64 || isInheritedName(kind) || typeof id !== 'string' || id.length === 0 || id.length > 128 || isInheritedName(id)) return null
   return typeof stamp === 'string' && STAMP.test(stamp) ? { kind, id, stamp } : null
 }
 
@@ -216,16 +217,16 @@ const readSnapshotPart: Reader<SnapshotPart> = (m) => {
   }
   if (m['order'] !== undefined) {
     const order = m['order']
-    if (!isObject(order) || !Object.values(order).every((list) => textList(list, 100_000, 128))) return null
+    if (!isObject(order) || !Object.keys(order).every((key) => !isInheritedName(key)) || !Object.values(order).every((list) => textList(list, 100_000, 128) && list.every((id) => !isInheritedName(id)))) return null
     result.order = order as Record<string, string[]>
   }
   if (m['orderStamps'] !== undefined) {
     const stamps = m['orderStamps']
-    if (!isObject(stamps) || !Object.values(stamps).every((stamp) => typeof stamp === 'string' && STAMP.test(stamp))) return null
+    if (!isObject(stamps) || !Object.keys(stamps).every((key) => !isInheritedName(key)) || !Object.values(stamps).every((stamp) => typeof stamp === 'string' && STAMP.test(stamp))) return null
     result.orderStamps = stamps as Record<string, string>
   }
   if (m['withheld'] !== undefined) {
-    if (!textList(m['withheld'], 10_000, 128)) return null
+    if (!textList(m['withheld'], 10_000, 128) || !m['withheld'].every((id) => !isInheritedName(id))) return null
     result.withheld = m['withheld']
   }
   return result

@@ -545,6 +545,27 @@ describe('a hostile device', () => {
     expect(twice.result).toMatchObject({ ok: false, code: 'bad-message' })
   })
 
+  it('cannot write into the prototype of the process by naming a kind or a tombstone `__proto__` (or `constructor`): the session ends, and Object.prototype and Object are as they were', async () => {
+    const stamp = '1790000000000-0000-iphone-device-0000001'
+    const proto = Object.prototype as unknown as Record<string, unknown>
+    const statics = Object as unknown as Record<string, unknown>
+    const attempts: Array<Record<string, unknown>> = [
+      { t: 'snapshot.part', part: 0, parts: 1, entities: [{ kind: '__proto__', id: 'lucium_polluted_entity', fields: { a: 1 }, stamps: { a: stamp } }] },
+      { t: 'snapshot.part', part: 0, parts: 1, entities: [], tombstones: [{ kind: '__proto__', id: 'lucium_polluted_tombstone', stamp }] },
+      { t: 'snapshot.part', part: 0, parts: 1, entities: [{ kind: 'constructor', id: 'lucium_polluted_static', fields: { a: 1 }, stamps: { a: stamp } }] }
+    ]
+    for (const part of attempts) {
+      const { result } = await hostile(async (_phone, send) => {
+        await send(part)
+        await send({ t: 'snapshot.end', entityCount: 1, digest: 'f'.repeat(64) })
+      })
+      expect(result).toMatchObject({ ok: false, code: 'bad-message' })
+    }
+    expect(proto['lucium_polluted_entity']).toBeUndefined()
+    expect(proto['lucium_polluted_tombstone']).toBeUndefined()
+    expect(statics['lucium_polluted_static']).toBeUndefined()
+  })
+
   it('is refused when its identifier is not the one paired with its certificate', async () => {
     const mac = new Device(MAC_ID, 'mac', {})
     const sockets = await socketPair()

@@ -70,6 +70,24 @@ describe('sync snapshot: reading what was received', () => {
     expect(problem(JSON.parse(`{"tombstones":{"tab":{"__proto__":"${mark}"}}}`))).toMatch(/bad name/)
   })
 
+  it('refuses a name a plain object already answers to, as a kind, an id, a field, a mark, a list or an id of a list (it would reach the prototype, or read back as a function)', () => {
+    for (const name of ['constructor', 'toString', 'hasOwnProperty', 'valueOf', 'isPrototypeOf', 'prototype']) {
+      expect(problem({ entities: { [name]: {} } }), name).toMatch(/bad name/)
+      expect(problem({ entities: { space: { [name]: entity({ a: 1 }) } } }), name).toMatch(/bad name/)
+      expect(problem({ entities: { space: { s1: { fields: { [name]: 1 }, stamps: {} } } } }), name).toMatch(/bad name/)
+      expect(problem({ entities: { space: { s1: { fields: { a: 1 }, stamps: { [name]: mark } } } } }), name).toMatch(/bad name/)
+      expect(problem({ tombstones: { [name]: {} } }), name).toMatch(/bad name/)
+      expect(problem({ tombstones: { tab: { [name]: mark } } }), name).toMatch(/bad name/)
+      expect(problem({ order: { [name]: [] } }), name).toMatch(/bad key/)
+      expect(problem({ order: { spaces: [name] } }), name).toMatch(/bad name/)
+      expect(problem({ orderStamps: { [name]: mark } }), name).toMatch(/bad key/)
+    }
+  })
+
+  it('still reads names that merely resemble them', () => {
+    expect('problem' in parseSnapshot({ entities: { constructors: { toStrings: entity({ a: 1 }) } }, order: { 'folders:sp:-': ['valueOf2'] } })).toBe(false)
+  })
+
   it('refuses a name that is empty, too long, or made of control characters', () => {
     expect(problem({ entities: { '': {} } })).toMatch(/bad name/)
     expect(problem({ entities: { space: { [`s${'x'.repeat(SNAPSHOT_LIMITS.maxIdChars)}`]: entity({ a: 1 }) } } })).toMatch(/bad name/)
