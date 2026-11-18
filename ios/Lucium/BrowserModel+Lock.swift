@@ -22,12 +22,29 @@ extension BrowserModel {
         guard let lock else { return }
         for tab in state.tabs where lock.covers(space: tab.spaceId) { putToSleep(tab.id) }
         if lock.appLocked {
-            tabsSheetShown = false
-            settingsShown = false  // it holds the lock's own switches, and the list of the spaces
-            commandBarShown = false
-            downloads.sheetShown = false
+            closePresentedScreens()
+        } else if activeSpaceCovered {
+            closePagePrompts()
         }
         if isReady, let tab = activeTab { syncFrom(wake(tab)) } else { syncFrom(nil) }
+    }
+
+    /// Every sheet, cover and prompt of `BrowserScreen`, closed: none may stay over the lock screen (they name sites, tabs and spaces, and the settings hold
+    /// the lock's own switches). A new sheet is added here as well: `ios-contract.test.ts` reads the sheets of `BrowserScreen` and fails on one that is not.
+    private func closePresentedScreens() {
+        tabsSheetShown = false
+        spacesSheetShown = false
+        settingsShown = false
+        commandBarShown = false
+        downloads.sheetShown = false
+        closePagePrompts()
+    }
+
+    /// The questions and notices about a page name its site: they do not outlive the lock of the space the page is in. The sheet of the spaces stays
+    /// when only a space is locked: it says "locked" and is where the owner opens it.
+    private func closePagePrompts() {
+        siteDataAsked = nil
+        privacyPrompts = PrivacyPrompts()
     }
 
     /// The button of the lock screen: asks the owner for the application, or for the space on screen.

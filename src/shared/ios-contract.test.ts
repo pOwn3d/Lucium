@@ -166,6 +166,17 @@ describe('iOS contract: lock', () => {
     }
   })
 
+  it('closes every sheet and cover of the browser screen when the application locks, so that none stays over the lock screen', () => {
+    const screen = readFileSync(join(IOS_SOURCES, 'BrowserScreen.swift'), 'utf8')
+    const lock = readFileSync(join(IOS_SOURCES, 'BrowserModel+Lock.swift'), 'utf8')
+    const closing = lock.match(/func closePresentedScreens\(\) \{([\s\S]*?)\n    \}/)?.[1] ?? ''
+    // `.sheet(isPresented: $model.spacesSheetShown)`, `.fullScreenCover(isPresented: $model.tabsSheetShown)` and the one that reads `model.downloads.sheetShown`.
+    const flags = [...screen.matchAll(/\.(?:sheet|fullScreenCover)\(isPresented:\s*(?:Binding\(get:\s*\{\s*)?\$?model\.([A-Za-z.]+Shown)/g)].map((m) => m[1]!)
+    expect(flags.length, 'no sheet found: the pattern no longer reads BrowserScreen').toBeGreaterThanOrEqual(5)
+    expect(closing, 'closePresentedScreens not found').toContain('tabsSheetShown = false')
+    for (const flag of flags) expect(closing, `${flag} is presented by BrowserScreen and not closed when the application locks`).toContain(`${flag} = false`)
+  })
+
   it('carries the Face ID sentence in both languages, and in the project so that the system never stops the application at the first prompt', () => {
     const info = JSON.parse(readFileSync(join(IOS_SOURCES, 'InfoPlist.xcstrings'), 'utf8')) as Catalogue
     const entry = info.strings['NSFaceIDUsageDescription']?.localizations
