@@ -35,7 +35,7 @@ describe('createSyncService', () => {
 
   it('keeps its two files next to the state, under the names the specification gives', async () => {
     const { SYNC_FILES } = await import('./sync-wiring')
-    expect(SYNC_FILES).toEqual({ config: 'sync.json', identity: 'sync-identity.json' })
+    expect(SYNC_FILES).toEqual({ config: 'sync.json', identity: 'sync-identity.json', marks: 'sync-marks.json' })
   })
 
   it('makes the identity, sealed, in the data folder, when the person turns it on', async () => {

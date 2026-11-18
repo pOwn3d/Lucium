@@ -12,7 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
-- **Synchronization with your iPhone, pairing first**: Settings › Downloads and files › Synchronization pairs an iPhone by QR code or typed code, with Allow or Deny on the Mac. Off by default: the Mac listens only while you have opened the window by hand (10 minutes at most), on your local network, with no server. The exchange of your spaces comes next.
+- **Synchronization with your iPhone**: Settings › Downloads and files › Synchronization pairs an iPhone by QR code or typed code, with Allow or Deny on the Mac. Off by default: the Mac listens only while you have opened the window by hand (10 minutes at most), on your local network. Your spaces and pinned tabs are then exchanged.
 
 ### Changed
 

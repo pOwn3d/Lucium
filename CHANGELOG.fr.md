@@ -6,7 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Ajouts
 
-- **Synchronisation avec votre iPhone, l’appairage d’abord** : Réglages › Téléchargements et fichiers › Synchronisation appaire un iPhone par code QR ou code à saisir, avec Autoriser ou Refuser sur le Mac. Désactivée par défaut : le Mac n’écoute que pendant une fenêtre ouverte à la main (10 minutes au plus), sur votre réseau local. L’échange de vos espaces viendra ensuite.
+- **Synchronisation avec votre iPhone** : Réglages › Téléchargements et fichiers › Synchronisation appaire un iPhone par code QR ou à saisir, avec Autoriser ou Refuser sur le Mac. Désactivée par défaut : le Mac n’écoute que pendant une fenêtre ouverte à la main (10 minutes au plus), sur votre réseau local. Espaces et onglets épinglés s’échangent alors.
 
 ### Changements
 

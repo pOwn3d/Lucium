@@ -79,6 +79,20 @@ export class IdentityStore {
   }
 
   /**
+   * The identifier the file holds, read WITHOUT opening the key (the key is sealed by the system, and opening it may ask the keychain): enough to follow the marks at the
+   * launch without touching the keychain. Null when there is no usable file.
+   */
+  peekDeviceId(): string | null {
+    if (!existsSync(this.path)) return null
+    try {
+      return parseRecord(readTextBounded(this.path, SMALL_FILE_MAX_BYTES))?.deviceId ?? null
+    } catch (error) {
+      console.error(`[sync] cannot read ${this.path}:`, error)
+      return null
+    }
+  }
+
+  /**
    * The identity the file holds, or null when there is none or it cannot be used here: no file, a file that is not ours, a certificate that does not parse, a key
    * that does not open or does not belong to the certificate. The reason is logged: the caller decides what null means (a first activation, or a replaced identity).
    */

@@ -14,6 +14,7 @@ import { reduceLibrary } from './sidebar-library'
 import { reduceWorkViews } from './sidebar-work-views'
 import { pruneWorkViews } from './work-views'
 import { reduceSettings } from './sidebar-settings'
+import { reduceSync } from './sidebar-sync'
 
 // Moved to modules of their own, still importable from here.
 export { USAGE_KEY_PREFIX } from './sidebar-helpers'
@@ -49,7 +50,7 @@ export function reduce(state: SidebarState, action: Action, ctx: Ctx): SidebarSt
 function reduceCore(state: SidebarState, action: Action, ctx: Ctx): SidebarState {
   // Each domain answers the actions it knows and gives undefined for every other one: a type is the case of one domain only. An unknown type (actions
   // arrive over IPC) is a no-op, never an undefined state.
-  return reduceTabs(state, action, ctx, AGAIN) ?? reduceSpaces(state, action, ctx, AGAIN) ?? reduceLibrary(state, action, ctx, AGAIN) ?? reduceWorkViews(state, action, ctx, AGAIN) ?? reduceSettings(state, action, ctx) ?? state
+  return reduceTabs(state, action, ctx, AGAIN) ?? reduceSpaces(state, action, ctx, AGAIN) ?? reduceLibrary(state, action, ctx, AGAIN) ?? reduceWorkViews(state, action, ctx, AGAIN) ?? reduceSync(state, action, ctx) ?? reduceSettings(state, action, ctx) ?? state
 }
 
 /** What a family calls back for an action made of others (see `Reducers`). */

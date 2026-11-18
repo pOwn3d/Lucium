@@ -131,7 +131,8 @@ export class Channel {
     if (this.fault !== null) return Promise.reject(this.fault)
     const frame = encodeFrame({ v: PROTOCOL_VERSION, n: this.outgoing.next(), ...body })
     return new Promise<void>((resolve, reject) => {
-      this.socket.write(frame, (error) => (error ? reject(error) : resolve()))
+      // A write that fails means the connection is gone (a peer that left, a reset): that is the connection ending, not a fault of the conversation.
+      this.socket.write(frame, (error) => (error ? reject(new ConnectionClosed(`the connection failed: ${error.message}`)) : resolve()))
     })
   }
 
