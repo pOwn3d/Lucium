@@ -10,7 +10,7 @@ enum Icon: String {
     // Drawn before this file by the screens of the spaces (`ProjectIcon`): the same set, the same catalogue folder.
     case plus = "IconPlus", person = "IconPerson", check = "IconCheck"
     case commands = "icon-commands", pin = "icon-pin", archive = "icon-archive", star = "icon-star", restore = "icon-restore"
-    case trash = "icon-trash", rename = "icon-rename", folderPlus = "icon-folder-plus", more = "icon-more"
+    case trash = "icon-trash", rename = "icon-rename", folderPlus = "icon-folder-plus", more = "icon-more", sidebar = "icon-sidebar", download = "icon-download"
 
     var image: Image { Image(rawValue) }
 }

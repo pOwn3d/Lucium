@@ -30,18 +30,8 @@ struct BottomBar: View {
     private var addressPill: some View {
         HStack(spacing: 0) {
             Button { model.commandBarShown = true } label: {
-                HStack(spacing: 6) {
-                    if model.activeTab?.isPrivate == true {
-                        ProjectIcon(name: .privateMask, size: 16).foregroundStyle(.secondary)  // what a private tab is, always in sight
-                    } else {
-                        IconView(.link, size: 15).foregroundStyle(.secondary)
-                    }
-                    // Idle, the pill shows the host only (what the Mac's address place shows); the whole address is typed in the command bar.
-                    if model.host.isEmpty {
-                        Text("bar.address.placeholder").foregroundStyle(.secondary)
-                    } else {
-                        Text(verbatim: model.host)
-                    }
+                HStack(spacing: 0) {
+                    AddressLabel(model: model)
                     Spacer(minLength: 0)
                 }
                 .font(.subheadline)
@@ -91,5 +81,26 @@ struct BottomBar: View {
             .foregroundStyle(enabled ? Color.primary : Color.secondary.opacity(0.5))
             .disabled(!enabled)
             .accessibilityLabel(Text(label))
+    }
+}
+
+/// What the address pill says while idle: the icon of the page (a mask for a private tab) and the host only (what the Mac's address place shows); the
+/// whole address is typed in the command bar. The bottom bar and the iPad's page toolbar both draw it.
+struct AddressLabel: View {
+    let model: BrowserModel
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if model.activeTab?.isPrivate == true {
+                ProjectIcon(name: .privateMask, size: 16).foregroundStyle(.secondary)  // what a private tab is, always in sight
+            } else {
+                IconView(.link, size: 15).foregroundStyle(.secondary)
+            }
+            if model.host.isEmpty {
+                Text("bar.address.placeholder").foregroundStyle(.secondary)
+            } else {
+                Text(verbatim: model.host)
+            }
+        }
     }
 }
