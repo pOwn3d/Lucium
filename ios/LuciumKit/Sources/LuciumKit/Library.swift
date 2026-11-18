@@ -108,6 +108,8 @@ public struct ArchivedTab: Equatable, Identifiable, Sendable, LibraryEntry {
         /// Archived by hand (one tab, or "Archive all").
         case manual
         case little
+        /// The open tabs of a space another device deleted, kept when the synchronisation removed the space (docs/synchronisation.md §8.5).
+        case sync
     }
 
     public var id: String

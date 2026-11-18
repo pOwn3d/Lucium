@@ -3,8 +3,9 @@
 // `sync-identity.json` of the data folder, and never renewed: replacing them is pairing again.
 //
 // The private key is sealed (secret-box.ts) before it is written: the file holds the certificate in the clear (it is public) and the sealed key. A restoration on
-// another machine, a copy of the profile, or a keychain that refuses brings the file without a key that opens: the identity is then unusable, a new one is made
-// at the next switching on, and the list of paired devices, which belonged to the old fingerprint, is forgotten by the caller (`IdentityLoad.replaced`).
+// another machine, a copy of the profile, or a keychain that refuses brings the file without a key that opens. It is not replaced the first time (a keychain that
+// refuses for a moment must not take the paired devices with it: `IdentityNotOpenableError`); asked again, a new one is made, and the list of paired devices, which
+// belonged to the old fingerprint, is forgotten by the caller (`IdentityLoad.replaced`).
 //
 // Everything read from the file is hostile input: bounded, checked, and the key must belong to the certificate.
 
@@ -37,6 +38,14 @@ interface IdentityRecord {
   createdAt: number
   certificate: string
   sealedKey: string
+}
+
+/** The key of the identity is sealed and the system does not open it now: not replaced without being asked (`IdentityStore.loadOrCreate`). */
+export class IdentityNotOpenableError extends Error {
+  constructor() {
+    super('the key of the identity cannot be opened now')
+    this.name = 'IdentityNotOpenableError'
+  }
 }
 
 /** What `loadOrCreate` did: the identity, and whether it replaced one the file held but that could not be used (the paired devices went with it). */
@@ -93,46 +102,74 @@ export class IdentityStore {
   }
 
   /**
-   * The identity the file holds, or null when there is none or it cannot be used here: no file, a file that is not ours, a certificate that does not parse, a key
-   * that does not open or does not belong to the certificate. The reason is logged: the caller decides what null means (a first activation, or a replaced identity).
+   * What the file holds, told apart by what could change it: `none` (no file), `broken` (a file that is not ours, a certificate Node cannot read, a key that is not the
+   * certificate's: nothing could make it open later), `unopenable` (the key is sealed and the system does not open it now: another machine, or a keychain that refuses, and
+   * the keychain may answer again) and `usable`. The reason of each is logged.
    */
-  load(): SyncIdentity | null {
-    if (!existsSync(this.path)) return null
+  private read(): { kind: 'none' | 'broken' | 'unopenable' } | { kind: 'usable'; identity: SyncIdentity } {
+    if (!existsSync(this.path)) return { kind: 'none' }
     let record: IdentityRecord | null
     try {
       record = parseRecord(readTextBounded(this.path, SMALL_FILE_MAX_BYTES))
     } catch (error) {
       console.error(`[sync] cannot read ${this.path}:`, error)
-      return null
+      return { kind: 'broken' }
     }
     if (record === null) {
       console.error(`[sync] ${this.path} is not an identity file this version can use`)
-      return null
+      return { kind: 'broken' }
     }
+    let certificate: Buffer
     try {
-      const certificate = Buffer.from(record.certificate, 'base64')
+      certificate = Buffer.from(record.certificate, 'base64')
       // Parsed once here: a certificate Node cannot read would only fail later, in the middle of a handshake.
       new X509Certificate(certificate)
-      const pkcs8 = this.box.open(Buffer.from(record.sealedKey, 'base64'))
-      if (!keyMatchesCertificate(pkcs8, certificate)) {
-        console.error(`[sync] the key of ${this.path} does not belong to its certificate`)
-        return null
-      }
-      return { deviceId: record.deviceId, certificate, fingerprint: fingerprintOf(certificate), privateKey: privateKeyOf(pkcs8) }
+    } catch (error) {
+      console.error(`[sync] the certificate of ${this.path} cannot be read:`, error)
+      return { kind: 'broken' }
+    }
+    let pkcs8: Buffer
+    try {
+      pkcs8 = this.box.open(Buffer.from(record.sealedKey, 'base64'))
     } catch (error) {
       console.error(`[sync] the identity of ${this.path} cannot be opened on this machine (another machine, or a keychain that refuses):`, error)
-      return null
+      return { kind: 'unopenable' }
     }
+    try {
+      if (!keyMatchesCertificate(pkcs8, certificate)) {
+        console.error(`[sync] the key of ${this.path} does not belong to its certificate`)
+        return { kind: 'broken' }
+      }
+      return { kind: 'usable', identity: { deviceId: record.deviceId, certificate, fingerprint: fingerprintOf(certificate), privateKey: privateKeyOf(pkcs8) } }
+    } catch (error) {
+      console.error(`[sync] the key of ${this.path} cannot be used:`, error)
+      return { kind: 'broken' }
+    }
+  }
+
+  /**
+   * The identity the file holds, or null when there is none or it cannot be used here: no file, a file that is not ours, a certificate that does not parse, a key
+   * that does not open or does not belong to the certificate. The reason is logged: the caller decides what null means (a first activation, or a replaced identity).
+   */
+  load(): SyncIdentity | null {
+    const reading = this.read()
+    return reading.kind === 'usable' ? reading.identity : null
   }
 
   /**
    * The identity, made when there is none. Throws when the system cannot seal a key (nothing is written then: a key is never kept in the clear), and when the file
    * cannot be written (the caller shows the error; the synchronisation stays off).
+   *
+   * An identity whose key the system does not open is **not replaced** unless the caller says so (`replaceUnopenable`): a keychain that refuses for a moment (a prompt
+   * that was denied, a keychain that is locked) would otherwise take every paired device with it, since a new identity has another fingerprint (review n° 22 of the
+   * synchronisation). `IdentityNotOpenableError` tells the caller to say so to the person, and to ask again with the flag when the key still does not open; a file that is
+   * not an identity at all is replaced at once, nothing could make it open later.
    */
-  loadOrCreate(): IdentityLoad {
-    const existing = this.load()
-    if (existing !== null) return { identity: existing, created: false, replaced: false }
+  loadOrCreate(options: { replaceUnopenable?: boolean } = {}): IdentityLoad {
+    const reading = this.read()
+    if (reading.kind === 'usable') return { identity: reading.identity, created: false, replaced: false }
     if (!this.box.available()) throw new Error('the system cannot seal the key of the device: the synchronisation cannot be switched on')
+    if (reading.kind === 'unopenable' && options.replaceUnopenable !== true) throw new IdentityNotOpenableError()
     const replaced = this.exists()
     const made = makeDeviceCertificate()
     const deviceId = randomBytes(DEVICE_ID_BYTES).toString('base64url')

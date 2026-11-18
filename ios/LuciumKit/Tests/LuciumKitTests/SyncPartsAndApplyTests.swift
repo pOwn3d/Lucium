@@ -440,7 +440,10 @@ struct SyncApplyTests {
         #expect(outcome.state.tabs.isEmpty, "the pinned tabs and the Today tab of the space")
         #expect(Set(outcome.removedTabIDs) == ["t1", "t2", "today", "secret"])
         #expect(outcome.state.folders.isEmpty)
-        #expect(outcome.state.archive.isEmpty)
+        // The Today tab does not go without a trace (review n° 13): it is in the archive, as `sync`, in the space left. The entry the space had in its archive went with it.
+        #expect(outcome.state.archive.map(\.id) == ["today"])
+        #expect(outcome.state.archive.first?.source == "sync")
+        #expect(outcome.state.archive.first?.spaceId == "s2")
         #expect(outcome.state.activeTabBySpace["s1"] == nil)
     }
 

@@ -17,6 +17,7 @@ const PROBLEM_TEXT: Record<SyncProblem, MessageKey> = {
   unavailable: 'sync.error.unavailable',
   port: 'sync.error.port',
   identity: 'sync.error.identity',
+  'identity-unopenable': 'sync.error.identity-unopenable',
   locked: 'sync.error.locked',
   network: 'sync.error.network',
   internal: 'sync.error.internal'
