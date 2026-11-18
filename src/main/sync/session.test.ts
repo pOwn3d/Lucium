@@ -307,7 +307,9 @@ describe('what a session checks before it writes', () => {
     const local = cleanSnapshot(snapshotOf(mac.state, mac.marks, { categories: common, withheld: new Set(), base: null }), mac.clock).snapshot
     const merged = mergeSnapshots(null, local, cleanSnapshot(remote, mac.clock).snapshot, [])
     const wire = Object.entries(remote.entities).flatMap(([kind, byId]) => Object.entries(byId).map(([id, entity]) => ({ kind, id, fields: entity.fields, stamps: entity.stamps })))
-    await phoneChannel.send({ t: 'snapshot.part', part: 0, parts: 1, entities: wire, withheld: [] } as never)
+    const tombstones = Object.entries(remote.tombstones).flatMap(([kind, byId]) => Object.entries(byId).map(([id, stamp]) => ({ kind, id, stamp })))
+    const lists = Object.keys(remote.order).length > 0 || Object.keys(remote.orderStamps).length > 0 ? { order: remote.order, orderStamps: remote.orderStamps } : {}
+    await phoneChannel.send({ t: 'snapshot.part', part: 0, parts: 1, entities: wire, ...(tombstones.length > 0 ? { tombstones } : {}), ...lists, withheld: [] } as never)
     if (options.openTabs === true) await phoneChannel.send({ t: 'open-tabs', items: [{ id: 'p1', spaceId: 's', url: 'https://p.example/', title: 'P', lastActiveAt: 1 }] } as never)
     await phoneChannel.send({ t: 'snapshot.end', entityCount: wire.length, digest: hashOfSnapshot(remote) })
     for (;;) {
@@ -336,6 +338,15 @@ describe('what a session checks before it writes', () => {
     const out = await honest(new Device(MAC_ID, 'mac', { spaces: [{ id: 'sp-main' }] }), space('Remote'))
     expect(out.result).toMatchObject({ ok: true })
     expect(out.mac.state.spaces.map((s) => s.id).sort()).toEqual(['sp-main', 'sp-remote'])
+  })
+
+  it('refuses a tombstone and the mark of a list that are more than a week ahead, and the clock of the marks of this device does not follow them', async () => {
+    const far = '9999999999999-0000-iphone-device-0000001'
+    const remote: SyncSnapshot = { entities: {}, tombstones: { tab: { ghost: far } }, order: { spaces: ['sp-main'] }, orderStamps: { spaces: far } }
+    const out = await honest(new Device(MAC_ID, 'mac', { spaces: [{ id: 'sp-main' }] }), remote)
+    expect(out.result).toMatchObject({ ok: true, refused: 2 })
+    expect(out.mac.marks.clock.state().ms).toBeLessThan(NOW + 8 * 86_400_000)
+    expect(Object.values(out.mac.marks.tombstonesOf()).flatMap((byId) => Object.values(byId))).not.toContain(far)
   })
 
   it('does not take into the merge what the gate for incoming entities refuses: it is counted, and the two merges still agree', async () => {
