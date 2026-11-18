@@ -10,7 +10,7 @@ Cinq onglets arrondis s'ouvrent depuis un point de lumière : chaque onglet est 
 
 ## Licence : hors GPL
 
-Le dessin (`fan-logo.ts`) et les icônes rendues (`build/icon.icns`, `resources/app-icons/*.png`) ne sont pas sous la GPL du reste du dépôt : Copyright © 2026 ConsilioWeb, tous droits réservés. Le logo est réservé aux builds officielles ; `TRADEMARKS.fr.md` dit ce qui reste permis et ce qu'une version modifiée doit remplacer. `make-icons.mjs` et `fan-logo.test.ts` sont du code sous GPL.
+Le dessin (`fan-logo.ts`) et les icônes rendues (`build/icon.icns`, `resources/app-icons/*.png`, l'icône d'iOS) ne sont pas sous la GPL du reste du dépôt : Copyright © 2026 ConsilioWeb, tous droits réservés. Le logo est réservé aux builds officielles ; `TRADEMARKS.fr.md` dit ce qui reste permis et ce qu'une version modifiée doit remplacer. `make-icons.mjs` et `fan-logo.test.ts` sont du code sous GPL.
 
 ## Refaire les icônes
 
@@ -25,6 +25,7 @@ Il faut un Mac (`iconutil`) et Google Chrome. Aucune fenêtre ne s'ouvre. Ne pas
 
 - `build/icon.icns` : l'icône de l'application, la version par défaut (Clair), de 16 à 1024 px en 1x et 2x ;
 - `resources/app-icons/<id>.png` : l'icône de chaque choix de Réglages › Icône, en 512 px.
+- `ios/Lucium/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png` : l'icône de l'application iPhone et iPad, la version par défaut en carré plein de 1024 px, **sans transparence** (App Store Connect la refuse) ni coins arrondis (le système les arrondit lui-même) ; `Contents.json` du même dossier la nomme.
 
 Écrit dans `out-icons/` (ignoré par Git) :
 

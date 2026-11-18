@@ -1,0 +1,27 @@
+Lucium is a web browser built around Spaces, and private by default.
+
+SPACES, NOT ONE BIG PILE OF TABS
+Keep work, home and projects apart. Each Space has its own colour, its own tabs, pinned tabs and folders. A Space can use a profile of its own: two profiles share no cookie, so what you signed in to in one never follows you into the other.
+
+A BAR WITHIN REACH OF YOUR THUMB
+The address, back, forward, your Spaces and your tabs sit in a bar at the bottom of the screen. The tabs sheet lists your pinned tabs, your folders and what you opened today; tabs you leave alone for a while are archived instead of piling up. The command bar finds a tab, a favourite or an action as you type.
+
+PRIVATE BY DEFAULT
+• A built-in blocker for ads, trackers and cookie banners. Its lists are inside the app: nothing is downloaded to block.
+• HTTPS first: Lucium asks for the secure address of a site before the plain one.
+• Tracking parameters (utm_, fbclid, gclid…) are removed from the addresses you open.
+• The Global Privacy Control signal asks sites not to track you.
+• Private tabs keep nothing on your device.
+• Clear the data of one site, and only that site.
+
+DOWNLOADS, SHARING, PDF
+Files you download land in the Files app, in the Downloads folder of Lucium, and a download that was cut off can resume. Share a page, or save it whole as a PDF, from the page actions button in the bottom bar.
+
+A LOCK THAT KNOWS YOUR FACE OR YOUR FINGER
+Lock a Space, or the whole app, with Face ID, Touch ID or your passcode. A locked Space keeps its tabs hidden and asleep until you unlock it.
+
+NO ACCOUNT, NO TELEMETRY
+Lucium has no account, no analytics and no crash reporting of its own. Your Spaces, tabs and favourites stay on your device. It is free software, and its source code is public.
+
+GOOD TO KNOW
+Lucium uses WebKit, the web engine of iOS, as every browser on iPhone and iPad does. Extensions made for other browsers are not supported, and videos protected by DRM may not play. YouTube works; Lucium applies rules of its own against its ads, but the site changes often, so the blocking there is partial.

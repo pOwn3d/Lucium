@@ -1,0 +1,9 @@
+La première version de Lucium pour iPhone et iPad.
+
+• Des espaces, chacun avec ses onglets, ses onglets épinglés et ses dossiers, et des profils qui ne partagent aucun cookie
+• Une barre en bas, à portée de pouce, une feuille d’onglets et une barre de commandes
+• Un bloqueur intégré de publicités, de traqueurs et de bannières de cookies
+• HTTPS d’abord, signal Global Privacy Control, paramètres de suivi retirés
+• Des onglets privés, et l’effacement des données d’un seul site
+• Les téléchargements dans l’app Fichiers, le partage d’une page et son enregistrement en PDF
+• Un verrou par Face ID, Touch ID ou code de l’appareil, pour un espace ou pour toute l’application

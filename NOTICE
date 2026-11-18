@@ -54,8 +54,9 @@ licence, nor under any other free licence, and this project grants no right
 to reuse them. See NOTICE-MEDIA.md (in French: NOTICE-MEDIA.fr.md).
 
 The drawing of the logo and the icons of the application made from it
-(scripts/logo/fan-logo.ts, build/icon.icns, resources/app-icons) are not
-under the GPL either: see the next section.
+(scripts/logo/fan-logo.ts, build/icon.icns, resources/app-icons, and the
+icon of the iOS application) are not under the GPL either: see the next
+section.
 
 
 The name and the logo
@@ -68,7 +69,8 @@ The logo files are not covered by the GPL. Copyright © 2026 ConsilioWeb, all
 rights reserved, for:
 
 - scripts/logo/fan-logo.ts, the drawing of the logo;
-- build/icon.icns and resources/app-icons/*.png, the icons of the
+- build/icon.icns, resources/app-icons/*.png and the picture in
+  ios/Lucium/Assets.xcassets/AppIcon.appiconset/, the icons of the
   application, rendered from that drawing.
 
 TRADEMARKS.md says what you may do with them without asking (keep them in a

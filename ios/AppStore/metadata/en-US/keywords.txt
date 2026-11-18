@@ -1,0 +1,1 @@
+browser,privacy,adblock,tracker,tabs,spaces,profiles,private,secure,https,cookies,web,lock,webkit

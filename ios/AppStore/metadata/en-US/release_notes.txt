@@ -1,0 +1,9 @@
+The first version of Lucium for iPhone and iPad.
+
+• Spaces, each with its own tabs, pinned tabs and folders, and profiles that share no cookie
+• A bottom bar within reach of your thumb, a tabs sheet and a command bar
+• A built-in blocker for ads, trackers and cookie banners
+• HTTPS first, the Global Privacy Control signal, tracking parameters removed
+• Private tabs, and clearing the data of a single site
+• Downloads in the Files app, sharing a page, and saving a page as a PDF
+• A lock with Face ID, Touch ID or your passcode, for a Space or the whole app
