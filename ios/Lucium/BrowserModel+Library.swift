@@ -100,6 +100,7 @@ extension BrowserModel {
         guard let restored else { return }
         if restored.spaceId != state.activeSpaceId { state.selectSpace(restored.spaceId) }
         tabsSheetShown = false
+        drawerEvent(.pageShown)
         arrive()
     }
 
@@ -132,6 +133,7 @@ extension BrowserModel {
         guard let shown else { return }
         tabsSheetShown = false
         commandBarShown = false
+        drawerEvent(.pageShown)
         arrive()
         // The favourite's tab is on screen now: closing the blank one frees its view and files and only keeps the state.
         if let blank, blank != shown, let tab = state.tabs.first(where: { $0.id == blank }) { close(tab) }

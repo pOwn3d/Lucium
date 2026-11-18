@@ -21,16 +21,22 @@ struct SidebarLayout: View {
                 .padding(.top, 6)
                 .padding(.bottom, 8)
         }
-        // The colours of the theme are strong (they colour a whole window on the Mac); behind the sidebar they are laid pale on the ground, as on the
-        // mockup and on the sheet of tabs.
-        .background {
-            ZStack {
-                Color(.systemBackground)
-                LinearGradient(colors: model.colors(of: model.activeSpace).map { $0.opacity(0.35) }, startPoint: .topLeading, endPoint: .bottomTrailing)
-            }
-            .ignoresSafeArea()
-        }
+        .background { SidebarGround(model: model) }
         .ignoresSafeArea(.container, edges: .bottom)
+    }
+}
+
+/// The ground of the sidebar, the iPad's permanent one and the iPhone's that slides out: the colours of the space on screen. They are strong (they colour a
+/// whole window on the Mac); behind the lists they are laid pale on the ground, as on the mockup and on the sheet of tabs, and they follow the space.
+struct SidebarGround: View {
+    let model: BrowserModel
+
+    var body: some View {
+        ZStack {
+            Color(.systemBackground)
+            LinearGradient(colors: model.colors(of: model.activeSpace).map { $0.opacity(0.35) }, startPoint: .topLeading, endPoint: .bottomTrailing)
+        }
+        .ignoresSafeArea()
     }
 }
 
@@ -113,6 +119,7 @@ struct Sidebar: View {
     @Bindable var model: BrowserModel
     @Binding var sidebarShown: Bool
     @Binding var expandedFolders: Set<String>
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var archiveShown = false
     @State private var folderEdit: FolderEdit?
     @State private var folderName = ""
@@ -261,12 +268,15 @@ struct Sidebar: View {
     @ViewBuilder private var today: some View {
         let today = content.today
         if !today.isEmpty {
-            HStack {
+            // The largest text leaves no room for the button beside the title (the iPhone's sidebar has it too): it goes under it.
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout())
+            layout {
                 sectionTitle(Text("tabs.today \(today.count)"))
-                Spacer()
+                if !typeSize.isAccessibilitySize { Spacer() }
                 Button("tabs.archive-all") { model.archiveToday() }
                     .font(.footnote.weight(.semibold))
                     .frame(minHeight: 32)
+                    .padding(.leading, typeSize.isAccessibilitySize ? 10 : 0)  // under the title's own inset
                     .disabled(today.allSatisfy { model.isShown($0) })
             }
             .sidebarRow()
@@ -439,9 +449,18 @@ struct SidebarFolderRow: View {
         Button(action: toggle) {
             HStack(spacing: 10) {
                 IconView(.folder, size: 20)
-                Text(verbatim: folder.name).font(.subheadline).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
-                Spacer(minLength: 4)
-                Text("folder.tabs \(count)").font(.footnote).foregroundStyle(.secondary)
+                if typeSize.isAccessibilitySize {
+                    // The largest text leaves a name no room beside its count (the iPhone's sidebar has it too): the count goes under the name.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(verbatim: folder.name).font(.subheadline).lineLimit(3)
+                        Text("folder.tabs \(count)").font(.footnote).foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 4)
+                } else {
+                    Text(verbatim: folder.name).font(.subheadline).lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text("folder.tabs \(count)").font(.footnote).foregroundStyle(.secondary)
+                }
                 IconView(.chevron, size: 14).rotationEffect(.degrees(isExpanded ? 90 : 0)).foregroundStyle(.secondary)
             }
             .padding(.leading, 10 + CGFloat(depth) * 18)

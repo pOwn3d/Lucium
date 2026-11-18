@@ -25,6 +25,9 @@ final class BrowserModel {
     @ObservationIgnored var isApplyingSync = false
 
     var tabsSheetShown = false
+    /// The sidebar that slides out from the left edge of an iPhone (`EdgeDrawerHost`). Only changed through `drawerEvent(_:)`, which knows what opens it and
+    /// what closes it (`EdgeDrawer.isOpen(after:wasOpen:)`, in `LuciumKit`).
+    private(set) var drawerShown = false
     var spacesSheetShown = false
     /// The settings screen (`SettingsScreen`), opened by the gear of the bottom bar and of the iPad's sidebar, and the page it opens on (the list when nil).
     var settingsShown = false
@@ -66,6 +69,10 @@ final class BrowserModel {
     /// The navigation delegate of every web view: the privacy rules of the Mac (docs/ios.md, "Vie privée").
     @ObservationIgnored let navigationPolicy = PrivacyNavigation()
 
+    /// Whether this is an iPhone. The iPhone has the sidebar that slides out from its left edge and no swipe back of WebKit; the iPad has neither (its
+    /// permanent sidebar and its swipe back are as they were). Given by the tests, which play both.
+    let isPhone: Bool
+
     /// The downloads (files, and pages saved as PDF); `PrivacyNavigation` hands a navigation that became one over to it (`DownloadNavigation.swift`).
     let downloads: DownloadsModel
 
@@ -102,7 +109,9 @@ final class BrowserModel {
          rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
          embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
          pageGuard makePageGuard: @escaping @MainActor (ScriptletTable) throws -> PageGuard? = { table in try PageGuard.load(table: table) },
-         store: WKContentRuleListStore = .default(), downloadsDirectory: URL = DownloadsModel.defaultDirectory()) {
+         store: WKContentRuleListStore = .default(), downloadsDirectory: URL = DownloadsModel.defaultDirectory(),
+         isPhone: Bool = UIDevice.current.userInterfaceIdiom == .phone) {
+        self.isPhone = isPhone
         self.downloads = DownloadsModel(directory: downloadsDirectory)
         let initial = state.consistent() ?? Self.defaultState()
         self.state = initial
@@ -212,9 +221,20 @@ final class BrowserModel {
         if isLoading { view.stopLoading() } else { view.reload() }
     }
 
+    // MARK: The sidebar of the iPhone
+
+    /// Something happened to the sidebar that slides out from the left edge of an iPhone: it opens, closes or stays as `EdgeDrawer` says. The iPad never has
+    /// it, so nothing opens it there.
+    func drawerEvent(_ event: EdgeDrawerEvent) {
+        let open = EdgeDrawer.isOpen(after: event, wasOpen: drawerShown)
+        guard open != drawerShown, !open || isPhone else { return }
+        drawerShown = open
+    }
+
     // MARK: Spaces and tabs
 
     func selectSpace(_ id: String) {
+        drawerEvent(.spaceChosen)
         guard id != state.activeSpaceId, state.spaces.contains(where: { $0.id == id }) else { return }
         leaveActiveTab()
         state.selectSpace(id)
@@ -226,6 +246,7 @@ final class BrowserModel {
     /// Shows a tab of the active space, waking it if it slept.
     func openTab(_ tab: TabItem) {
         tabsSheetShown = false
+        drawerEvent(.pageShown)
         guard !activeSpaceCovered, tab.id != activeTab?.id else { return }
         leaveActiveTab()
         state.show(tabId: tab.id, now: clock())
@@ -235,6 +256,7 @@ final class BrowserModel {
     /// A new blank tab in the active space, unless the one on screen is blank already.
     func newTab() {
         tabsSheetShown = false
+        drawerEvent(.pageShown)
         if activeSpaceCovered || activeTab?.isBlank == true { return }
         leaveActiveTab()
         openBlankTab()

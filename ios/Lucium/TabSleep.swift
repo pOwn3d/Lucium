@@ -27,7 +27,8 @@ extension BrowserModel {
         configuration.allowsInlineMediaPlayback = true
         let view = WKWebView(frame: .zero, configuration: configuration)
         navigationPolicy.attach(to: view)
-        view.allowsBackForwardNavigationGestures = true
+        // The left edge is the sidebar's on an iPhone: going back is the button of the bottom bar (the iPad keeps WebKit's swipe).
+        view.allowsBackForwardNavigationGestures = EdgeDrawer.allowsWebKitBackGesture(isPhone: isPhone)
         view.isInspectable = true
         webViews[tab.id] = view
         observe(view, tabId: tab.id)

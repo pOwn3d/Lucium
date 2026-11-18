@@ -21,7 +21,7 @@ final class SidebarTests: BrowserCoreTestCase {
     static let portrait = CGSize(width: 820, height: 1180)
 
     /// A space with what the mockup shows: favourites, pinned tabs, two folders with tabs in them, Today, an archive.
-    private func seededModel(lock: LockController? = nil) async -> BrowserModel {
+    private func seededModel(lock: LockController? = nil, isPhone: Bool = false) async -> BrowserModel {
         let now = 1_790_000_000_000.0
         var state = BrowserModel.defaultState()
         func open(_ id: String, _ title: String, _ host: String, at: Double) {
@@ -46,7 +46,7 @@ final class SidebarTests: BrowserCoreTestCase {
         open("old1", "Recettes de saison", "recettes.example", at: now - 30 * 3_600_000)
         state.archive(tabIds: ["old1"], source: .auto, now: now)
         state.show(tabId: "notebook", now: now)
-        let model = BrowserModel(state: state, clock: { now })
+        let model = BrowserModel(state: state, clock: { now }, isPhone: isPhone)
         if let lock { model.attach(lock) }
         await model.prepare()
         return model
@@ -215,5 +215,136 @@ final class SidebarTests: BrowserCoreTestCase {
         XCTAssertEqual(content.outline.count, 0, "home has no pinned tab in this state: an empty list is not a locked one")
         XCTAssertEqual(content.today.count, 1, "home has the blank tab every space gets, and nothing of work")
         XCTAssertTrue(content.today.allSatisfy { $0.spaceId == "home" })
+    }
+
+    // MARK: The iPhone's sidebar, from the left edge (decision of 18 November 2026)
+
+    static let phone = CGSize(width: 393, height: 852)  // iPhone 17 Pro
+
+    /// Whether a point of `image` is the page of `away` (the same screen with the sidebar put away) dimmed: black laid at a third over what the page was. The
+    /// sidebar is the colours of the space over the ground, which is not that.
+    private func isDimmed(_ image: UIImage, over away: UIImage, at point: CGPoint) throws -> Bool {
+        let now = try colour(of: image, at: point)
+        let before = try colour(of: away, at: point)
+        func near(_ now: Int, _ before: Int) -> Bool { abs(Double(now) - Double(before) * 0.68) <= 8 }
+        return near(now.red, before.red) && near(now.green, before.green) && near(now.blue, before.blue)
+    }
+
+    private func drawPhone(_ model: BrowserModel, scheme: ColorScheme = .light, largeText: Bool = false) async throws -> UIImage {
+        let screen = BrowserScreen(model: model).environment(\.dynamicTypeSize, largeText ? .accessibility3 : .large)
+        return try await draw(screen, size: Self.phone, regularWidth: false, scheme: scheme)
+    }
+
+    func testTheIPhonesSidebarIsAwayUntilTheEdgeBringsItOutAndThenItCoversMostOfTheScreen() async throws {
+        let model = await seededModel(isPhone: true)
+        XCTAssertFalse(model.drawerShown)
+        let away = try await drawPhone(model)
+        XCTAssertTrue(try pageFillsTheLeftEdge(away, Self.phone), "the page takes the whole width while the sidebar is away")
+        try check("iphone-sidebar-away", away)
+
+        model.drawerEvent(.pulledOpen)
+        XCTAssertTrue(model.drawerShown)
+        let out = try await drawPhone(model)
+        XCTAssertFalse(try pageFillsTheLeftEdge(out, Self.phone), "the sidebar is at the left: the colours of the space, not the page")
+        XCTAssertTrue(try isDimmed(out, over: away, at: CGPoint(x: 380, y: Self.phone.height * 0.45)), "the page that is left of the screen, at the right, is dimmed")
+        XCTAssertFalse(try isDimmed(out, over: away, at: CGPoint(x: 150, y: Self.phone.height * 0.45)), "and the sidebar is not")
+        try check("iphone-sidebar-open", out)
+    }
+
+    func testTheIPhonesSidebarHoldsTheListsOfTheIPadsSidebar() async throws {
+        let model = await seededModel(isPhone: true)
+        // `Sidebar` is the one view both draw, and it reads `sidebarContent`: what the iPad lists is what the iPhone lists.
+        let content = model.sidebarContent(expanded: [])
+        XCTAssertEqual(content.favorites.map(\.title), ["Agenda de la semaine", "Guide de style", "Bibliothèque", "Musée"])
+        XCTAssertEqual(content.outline.map(\.id), ["tab:mosaic", "tab:notebook", "folder:f-meetings", "folder:f-docs"])
+        XCTAssertEqual(content.today.map(\.id), ["weather", "files"])
+        model.drawerEvent(.pulledOpen)
+        let dark = try await drawPhone(model, scheme: .dark)
+        try check("iphone-sidebar-open-dark", dark)
+        let large = try await drawPhone(model, largeText: true)
+        model.drawerEvent(.dismissed)
+        let away = try await drawPhone(model, largeText: true)
+        XCTAssertTrue(try isDimmed(large, over: away, at: CGPoint(x: 385, y: Self.phone.height * 0.45)), "the largest text widens the sidebar but leaves a strip of page to tap on")
+        XCTAssertFalse(try isDimmed(large, over: away, at: CGPoint(x: 345, y: Self.phone.height * 0.45)), "a sidebar wider than 85 % of the screen (334 points)")
+        try check("iphone-sidebar-open-large-text", large)
+    }
+
+    func testShowingAPageClosesTheSidebarAndChoosingASpaceLeavesItOut() async throws {
+        let model = await seededModel(isPhone: true)
+        let weather = try XCTUnwrap(model.todayTabs.first { $0.id == "weather" })
+        model.drawerEvent(.openedByButton)
+        model.openTab(weather)
+        XCTAssertFalse(model.drawerShown, "a tab of the list is opened: the page is what the person came for")
+        XCTAssertEqual(model.activeTab?.id, "weather")
+
+        model.drawerEvent(.openedByButton)
+        model.openTab(weather)  // the tab that is on screen already
+        XCTAssertFalse(model.drawerShown, "the sidebar closes on the tab that is shown too")
+
+        model.drawerEvent(.openedByButton)
+        let favorite = try XCTUnwrap(model.favorites.first)
+        model.openFavorite(favorite)
+        XCTAssertFalse(model.drawerShown, "a favourite")
+
+        model.drawerEvent(.openedByButton)
+        model.newTab()
+        XCTAssertFalse(model.drawerShown, "\"New tab\", the blank tab being shown already or not")
+
+        model.drawerEvent(.openedByButton)
+        let archived = try XCTUnwrap(model.archiveGroups.first?.entries.first)
+        model.restore(archived)
+        XCTAssertFalse(model.drawerShown, "a page brought back from the archive")
+
+        model.drawerEvent(.openedByButton)
+        model.selectSpace("home")
+        XCTAssertTrue(model.drawerShown, "another space is chosen to see its tabs: the sidebar stays and lists them")
+        XCTAssertEqual(model.activeSpace.id, "home")
+        let content = model.sidebarContent(expanded: [])
+        XCTAssertTrue(content.outline.isEmpty, "and it lists the space that was chosen: nothing of work")
+        XCTAssertTrue(content.today.allSatisfy { $0.spaceId == "home" })
+    }
+
+    func testTheIPhonesSidebarClosesWhenTheApplicationLocks() async throws {
+        let file = LockSettingsFile(url: directory.appending(path: LockSettingsFile.fileName))
+        let lock = LockController(authenticator: YesOwner(), file: file)
+        let model = await seededModel(lock: lock, isPhone: true)
+        let turnedOn = await lock.setLockApp(true)
+        XCTAssertTrue(turnedOn)
+        model.drawerEvent(.openedByButton)
+        XCTAssertTrue(model.drawerShown)
+        model.lockOnLeaving()
+        XCTAssertTrue(lock.appLocked)
+        XCTAssertFalse(model.drawerShown, "the sidebar names tabs and sites: it does not stay over the lock screen")
+    }
+
+    func testALockedSpaceListsNothingInTheIPhonesSidebarEither() async throws {
+        let file = LockSettingsFile(url: directory.appending(path: LockSettingsFile.fileName))
+        let lock = LockController(authenticator: YesOwner(), file: file)
+        let model = await seededModel(lock: lock, isPhone: true)
+        let locked = await lock.setSpace("work", guarded: true)
+        XCTAssertTrue(locked)
+        model.drawerEvent(.openedByButton)
+        XCTAssertTrue(model.drawerShown, "a locked space does not close the sidebar: it is where the owner unlocks it")
+        let content = model.sidebarContent(expanded: ["f-meetings", "f-docs"])
+        XCTAssertTrue(content.isCovered)
+        XCTAssertTrue(content.favorites.isEmpty && content.outline.isEmpty && content.today.isEmpty)
+        try check("iphone-sidebar-locked", try await drawPhone(model))
+    }
+
+    func testOnlyAnIPhoneHasTheSidebarAndTheIPadKeepsItsOwn() async throws {
+        let pad = await seededModel(isPhone: false)
+        pad.drawerEvent(.pulledOpen)
+        XCTAssertFalse(pad.drawerShown, "the iPad's permanent sidebar and its bar are as they were: nothing slides out from the edge")
+        let portrait = try await draw(BrowserScreen(model: pad), size: Self.portrait)
+        XCTAssertTrue(try pageFillsTheLeftEdge(portrait, Self.portrait), "an iPad held upright keeps the bottom bar and the whole width for the page")
+    }
+
+    func testWebKitsSwipeBackIsOffOnAnIPhoneAndKeptOnAnIPad() async throws {
+        let phone = await seededModel(isPhone: true)
+        let phoneView = try XCTUnwrap(phone.webView)
+        XCTAssertFalse(phoneView.allowsBackForwardNavigationGestures, "the left edge is the sidebar's: going back is the button of the bottom bar")
+        let pad = await seededModel(isPhone: false)
+        let padView = try XCTUnwrap(pad.webView)
+        XCTAssertTrue(padView.allowsBackForwardNavigationGestures, "the iPad keeps WebKit's swipe")
     }
 }
