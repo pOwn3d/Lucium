@@ -243,6 +243,22 @@ describe('the categories, the settings, the archive and the open tabs', () => {
     expect(mac.state.settings.searchUrlTemplate).toBe(OWN_ENGINE)
   })
 
+  // Review n° 17: a session that does not exchange a category must not forget the marks of that category.
+  it('keeps the marks and the tombstones of the categories it did not exchange: the settings and the archive stay as they were marked', async () => {
+    const mac = new Device(MAC_ID, 'mac', { settings: { sendGpc: false } }, ['structure'])
+    const phone = new Device(PHONE_ID, 'ios', {}, ['structure'])
+    mac.edit((s) => s)
+    mac.edit((s) => ({ ...s, archive: [{ id: 'old-tab', spaceId: 'sp-main', url: 'https://old.example/', title: 'Old', archivedAt: NOW }] }))
+    mac.edit((s) => ({ ...s, archive: [] }))
+    const setting = mac.marks.stampsOf('setting', 'sendGpc')
+    const tombstone = mac.marks.tombstonesOf()['archived']?.['old-tab']
+    expect(Object.keys(setting)).toEqual(['value'])
+    expect(tombstone).toBeDefined()
+    await sync(mac, phone)
+    expect(mac.marks.stampsOf('setting', 'sendGpc')).toEqual(setting)
+    expect(mac.marks.tombstonesOf()['archived']?.['old-tab']).toBe(tombstone)
+  })
+
   it('announces the open tabs only when both ticked them, and never writes them into the state', async () => {
     const mac = new Device(MAC_ID, 'mac', {}, ['openTabs'])
     mac.openTabs = [{ id: 't1', spaceId: 'sp-main', url: 'https://read.example/', title: 'Reading', lastActiveAt: 5 }]
@@ -330,7 +346,9 @@ describe('what a session refuses, and what it leaves untouched', () => {
     log.mockRestore()
   })
 
-  it('refuses a snapshot with a mark more than a week ahead of the clock', async () => {
+  // Review n° 18: marks made while the clock was wrong must not shut the device out for ever. (A device that keeps marks more than a week ahead of the time of day on
+  // purpose is refused all the same: `honest()` below plays it.)
+  it('takes the changes of a device whose clock was wrong and has been put right: the marks made too far ahead are made again before they are sent, not refused for ever', async () => {
     const mac = new Device(MAC_ID, 'mac', { spaces: [{ id: 'sp-main' }] })
     const phone = new Device(PHONE_ID, 'ios', { spaces: [{ id: 'sp-main' }, { id: 'sp-future', name: 'Future' }] })
     mac.edit((s) => s)
@@ -338,8 +356,12 @@ describe('what a session refuses, and what it leaves untouched', () => {
     phone.edit((s) => s, 0)
     phone.clock = NOW
     const result = await sync(mac, phone)
-    expect(result.mac).toMatchObject({ ok: true })
-    expect(mac.state.spaces.map((s) => s.id)).toEqual(['sp-main'])
+    expect(result.mac).toMatchObject({ ok: true, refused: 0 })
+    expect(result.phone).toMatchObject({ ok: true })
+    expect(mac.refused.flat()).toEqual([])
+    expect(mac.state.spaces.map((s) => s.id).sort()).toEqual(['sp-future', 'sp-main'])
+    // And what it marked after the clock was put right is later than what it had, as it must be.
+    for (const stamp of Object.values(phone.marks.stampsOf('space', 'sp-future'))) expect(stamp.slice(0, 13)).toBe(String(NOW))
   })
 })
 

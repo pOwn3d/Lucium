@@ -27,7 +27,7 @@ import { cleanSnapshot, isKnownSearchTemplate, isWebAddress } from './inbound-fi
 import type { MarkBook } from './marks'
 import type { OpenTab, SnapshotPart, WireEntity, WireTombstone } from './messages'
 import { buildPatch, patchIsEmpty } from './patch'
-import { baseOf, follows, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
+import { baseOf, follows, kindIsExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 import { randomBytes } from 'node:crypto'
 
 /** What a session needs of the state of the device. */
@@ -273,7 +273,7 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     // state holds now, not what it held at the freeze: the person may have typed one meanwhile.
     if (Object.hasOwn(patch.settings, 'searchUrlTemplate') && !isKnownSearchTemplate((deps.host.state().settings as unknown as Record<string, unknown>)['searchUrlTemplate'])) delete patch.settings['searchUrlTemplate']
     if (!patchIsEmpty(patch)) deps.host.apply(patch)
-    deps.marks.adopt(merged.snapshot, follows)
+    deps.marks.adopt(merged.snapshot, follows, (kind) => kindIsExchanged(kind, common))
     try {
       deps.bases.save(peerId, baseOf(merged.snapshot), deps.now())
       deps.saveMarks()

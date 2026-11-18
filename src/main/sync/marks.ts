@@ -12,13 +12,22 @@
 import { createHash } from 'node:crypto'
 import { canonicalJson } from '@shared/sync-canonical'
 import { ZERO_STAMP, compareStamps, type SyncSnapshot } from '@shared/sync-snapshot'
-import { TOMBSTONE_DAYS } from './limits'
+import { STAMP_FUTURE_REFUSE_MS, TOMBSTONE_DAYS } from './limits'
 
 const DAY_MS = 86_400_000
 
 interface Clock {
   ms: number
   counter: number
+}
+
+/** The largest time thirteen digits hold: a mark is `<ms on 13 digits>-…`, and one with more digits is not a mark (§9.2). */
+const MAX_MS = 9_999_999_999_999
+
+/** The list keys are made of the kind they order (`spaces`, `folders:<space>:<parent>`, `tabs:<space>:<folder>`, `favorites:<profile>`): the kind, or null for a key of no kind this version knows. */
+export function listKindOf(key: string): 'space' | 'folder' | 'tab' | 'favorite' | null {
+  const head = key.split(':')[0]
+  return head === 'spaces' ? 'space' : head === 'folders' ? 'folder' : head === 'tabs' ? 'tab' : head === 'favorites' ? 'favorite' : null
 }
 
 const pad = (ms: number, counter: number, device: string): string => `${String(ms).padStart(13, '0')}-${counter.toString(16).padStart(4, '0')}-${device}`
@@ -35,8 +44,13 @@ export class Hlc {
     private last: Clock = { ms: 0, counter: 0 }
   ) {}
 
-  /** The next mark: the time of day, or one tick after the last mark made or seen when the time of day is not ahead of it. */
+  /**
+   * The next mark: the time of day, or one tick after the last mark made or seen when the time of day is not ahead of it. A clock more than a week ahead of the time of
+   * day, or at the end of what thirteen digits hold, was wrong (the time of day was put right since, or the file was spoilt): every other device refuses marks that far ahead
+   * (§9.3), so staying on them would shut this device out of the synchronisation for ever. It starts over from the time of day.
+   */
   next(now: number): string {
+    if (this.last.ms > now + STAMP_FUTURE_REFUSE_MS || this.last.ms >= MAX_MS) this.last = { ms: 0, counter: 0 }
     if (now > this.last.ms) this.last = { ms: now, counter: 0 }
     else if (this.last.counter >= 0xffff) this.last = { ms: this.last.ms + 1, counter: 0 }
     else this.last = { ms: this.last.ms, counter: this.last.counter + 1 }
@@ -94,6 +108,10 @@ export class MarkBook {
 
   /** Brings the book up to the state: a mark for what changed since it last looked, a tombstone for what went. Cheap when nothing changed. */
   update(view: TrackedView, now: number): void {
+    // A mark more than a week ahead of the time of day was made while the clock was wrong (review n° 18): no other device accepts it, so the thing it marks would never
+    // leave this one. It is marked again, as a change of now.
+    const limit = now + STAMP_FUTURE_REFUSE_MS
+    const tooFar = (stamp: string): boolean => (parse(stamp)?.ms ?? 0) > limit
     for (const [kind, byId] of Object.entries(view.entities)) {
       const known = (this.entities[kind] ??= {})
       for (const [id, fields] of Object.entries(byId)) {
@@ -101,9 +119,13 @@ export class MarkBook {
         if (this.tombstones[kind]?.[id] !== undefined) delete this.tombstones[kind][id]
         for (const [name, value] of Object.entries(fields)) {
           const hash = hashOf(value)
-          if (record[name]?.hash !== hash) record[name] = { hash, stamp: this.clock.next(now) }
+          const mark = record[name]
+          if (mark?.hash !== hash || tooFar(mark.stamp)) record[name] = { hash, stamp: this.clock.next(now) }
         }
-        for (const [name, mark] of Object.entries(record)) if (mark.hash !== null && !Object.hasOwn(fields, name)) record[name] = { hash: null, stamp: this.clock.next(now) }
+        for (const [name, mark] of Object.entries(record)) {
+          if (mark.hash !== null && !Object.hasOwn(fields, name)) record[name] = { hash: null, stamp: this.clock.next(now) }
+          else if (mark.hash === null && tooFar(mark.stamp)) record[name] = { hash: null, stamp: this.clock.next(now) }
+        }
       }
       for (const id of Object.keys(known)) {
         if (Object.hasOwn(byId, id)) continue
@@ -115,9 +137,11 @@ export class MarkBook {
     for (const kind of Object.keys(this.entities)) if (!Object.hasOwn(view.entities, kind)) delete this.entities[kind]
     for (const [key, ids] of Object.entries(view.order)) {
       const hash = hashOf(ids)
-      if (this.orders[key]?.hash !== hash) this.orders[key] = { hash, stamp: this.clock.next(now) }
+      const mark = this.orders[key]
+      if (mark?.hash !== hash || tooFar(mark.stamp)) this.orders[key] = { hash, stamp: this.clock.next(now) }
     }
     for (const key of Object.keys(this.orders)) if (!Object.hasOwn(view.order, key)) delete this.orders[key]
+    for (const byId of Object.values(this.tombstones)) for (const [id, stamp] of Object.entries(byId)) if (tooFar(stamp)) byId[id] = this.clock.next(now)
     this.purge(now)
   }
 
@@ -147,8 +171,11 @@ export class MarkBook {
    * The state now holds what the merge decided: the book takes the marks of the merged snapshot, so that the next `update` sees nothing new in what came from the other
    * device (it would otherwise mark it as this device's change, and send it back). Fields the book does not follow (seeds, local) are left out.
    */
-  adopt(merged: SyncSnapshot, follows: (kind: string, field: string) => boolean): void {
+  adopt(merged: SyncSnapshot, follows: (kind: string, field: string) => boolean, exchanged: (kind: string) => boolean = () => true): void {
+    // What the session did not exchange (a category that was not ticked on both devices) is not in the merged snapshot, and is not forgotten with it: its marks and its
+    // tombstones stay as they were, or its fields would take a mark of the moment at the next look and its deletions could come back (review n° 17).
     const entities: MarksFile['entities'] = {}
+    for (const [kind, byKind] of Object.entries(this.entities)) if (!exchanged(kind)) entities[kind] = byKind
     for (const [kind, byId] of Object.entries(merged.entities)) {
       for (const [id, entity] of Object.entries(byId)) {
         const record: Record<string, FieldMark> = {}
@@ -162,9 +189,17 @@ export class MarkBook {
       }
     }
     this.entities = entities
-    this.tombstones = JSON.parse(JSON.stringify(merged.tombstones)) as MarksFile['tombstones']
-    for (const byId of Object.values(this.tombstones)) for (const stamp of Object.values(byId)) this.clock.observe(stamp)
-    this.orders = Object.fromEntries(Object.entries(merged.order).map(([key, ids]) => [key, { hash: hashOf(ids), stamp: merged.orderStamps[key] ?? ZERO_STAMP }]))
+    const tombstones = JSON.parse(JSON.stringify(merged.tombstones)) as MarksFile['tombstones']
+    for (const [kind, byId] of Object.entries(this.tombstones)) if (!exchanged(kind)) tombstones[kind] = byId
+    this.tombstones = tombstones
+    for (const byId of Object.values(merged.tombstones)) for (const stamp of Object.values(byId)) this.clock.observe(stamp)
+    const orders: MarksFile['orders'] = {}
+    for (const [key, order] of Object.entries(this.orders)) {
+      const kind = listKindOf(key)
+      if (kind !== null && !exchanged(kind)) orders[key] = order
+    }
+    for (const [key, ids] of Object.entries(merged.order)) orders[key] = { hash: hashOf(ids), stamp: merged.orderStamps[key] ?? ZERO_STAMP }
+    this.orders = orders
     for (const stamp of Object.values(merged.orderStamps)) this.clock.observe(stamp)
   }
 
