@@ -72,24 +72,56 @@ struct SyncInboundTests {
         }
     }
 
-    @Test(arguments: [
-        ("httpsUpgrade", JSONValue.string("true")), ("sendGpc", .number(1)), ("protectionBaseline", .string("extreme")), ("autoArchiveHours", .number(-1)),
-        ("autoArchiveHours", .number(.infinity)), ("autoArchiveHours", .number(24 * 366 + 1)), ("autoArchiveHours", .string("12")),
-        ("searchUrlTemplate", .string("https://example.com/search")), ("searchUrlTemplate", .string("javascript:alert(%s)")),
-        ("searchUrlTemplate", .string("https://example.com/?q=%s" + String(repeating: "x", count: 2100))), ("profileNames", .string("x")),
-        ("profileNames", .object(["work": .number(3)])), ("profileNames", .object(["bad id!": .string("x")])), ("profileNames", .object(["work": .string(String(repeating: "x", count: 41))])),
-        ("profileNames", .object(Dictionary(uniqueKeysWithValues: (0..<65).map { ("p\($0)", JSONValue.string("x")) }))),
-    ])
-    func aValueThisVersionWouldNotWriteIsRefused(key: String, value: JSONValue) {
-        #expect(SyncInbound.filter(kind: "setting", id: key, fields: ["value": value]) == .refused(.invalidValue), "\(key)")
+    /// A setting and a value this version would not write. Typed on its own, and in small pieces: a long literal of mixed values in the arguments of a test is more than
+    /// the compiler of every toolchain type-checks in reasonable time.
+    private static let invalidSettings: [Setting] = {
+        let manyProfiles: [String: JSONValue] = Dictionary(uniqueKeysWithValues: (0..<65).map { index in (String("p\(index)"), JSONValue.string("x")) })
+        let longTemplate: String = "https://example.com/?q=%s" + String(repeating: "x", count: 2100)
+        let longName: String = String(repeating: "x", count: 41)
+        var all: [Setting] = []
+        all.append(Setting(key: "httpsUpgrade", value: .string("true")))
+        all.append(Setting(key: "sendGpc", value: .number(1)))
+        all.append(Setting(key: "protectionBaseline", value: .string("extreme")))
+        all.append(Setting(key: "autoArchiveHours", value: .number(-1)))
+        all.append(Setting(key: "autoArchiveHours", value: .number(Double.infinity)))
+        all.append(Setting(key: "autoArchiveHours", value: .number(Double(24 * 366 + 1))))
+        all.append(Setting(key: "autoArchiveHours", value: .string("12")))
+        all.append(Setting(key: "searchUrlTemplate", value: .string("https://example.com/search")))
+        all.append(Setting(key: "searchUrlTemplate", value: .string("javascript:alert(%s)")))
+        all.append(Setting(key: "searchUrlTemplate", value: .string(longTemplate)))
+        all.append(Setting(key: "profileNames", value: .string("x")))
+        all.append(Setting(key: "profileNames", value: .object(["work": .number(3)])))
+        all.append(Setting(key: "profileNames", value: .object(["bad id!": .string("x")])))
+        all.append(Setting(key: "profileNames", value: .object(["work": .string(longName)])))
+        all.append(Setting(key: "profileNames", value: .object(manyProfiles)))
+        return all
+    }()
+
+    private static let validSettings: [Setting] = {
+        var all: [Setting] = []
+        all.append(Setting(key: "httpsUpgrade", value: .bool(false)))
+        all.append(Setting(key: "protectionBaseline", value: .string("renforcee")))
+        all.append(Setting(key: "autoArchiveHours", value: .number(0)))
+        all.append(Setting(key: "autoArchiveHours", value: .number(Double(24 * 366))))
+        all.append(Setting(key: "searchUrlTemplate", value: .string("https://example.com/?q=%s")))
+        all.append(Setting(key: "profileNames", value: .object(["work": .string("Travail"), "perso": .string("Perso")])))
+        return all
+    }()
+
+    struct Setting: Sendable, CustomTestStringConvertible {
+        let key: String
+        let value: JSONValue
+        var testDescription: String { "\(key) = \(value)" }
     }
 
-    @Test(arguments: [
-        ("httpsUpgrade", JSONValue.bool(false)), ("protectionBaseline", .string("renforcee")), ("autoArchiveHours", .number(0)), ("autoArchiveHours", .number(24 * 366)),
-        ("searchUrlTemplate", .string("https://example.com/?q=%s")), ("profileNames", .object(["work": .string("Travail"), "perso": .string("Perso")])),
-    ])
-    func aValueThisVersionWouldWriteIsKept(key: String, value: JSONValue) {
-        #expect(SyncInbound.filter(kind: "setting", id: key, fields: ["value": value]) == .accepted(fields: ["value": value]), "\(key)")
+    @Test(arguments: SyncInboundTests.invalidSettings)
+    func aValueThisVersionWouldNotWriteIsRefused(setting: Setting) {
+        #expect(SyncInbound.filter(kind: "setting", id: setting.key, fields: ["value": setting.value]) == .refused(.invalidValue), "\(setting.key)")
+    }
+
+    @Test(arguments: SyncInboundTests.validSettings)
+    func aValueThisVersionWouldWriteIsKept(setting: Setting) {
+        #expect(SyncInbound.filter(kind: "setting", id: setting.key, fields: ["value": setting.value]) == .accepted(fields: ["value": setting.value]), "\(setting.key)")
     }
 
     @Test func aSettingKeepsItsValueAndNothingElse() {

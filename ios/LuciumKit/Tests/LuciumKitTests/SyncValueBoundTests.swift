@@ -64,3 +64,41 @@ struct SyncValueBoundTests {
         #expect(read >= 12 && read <= 14, "about fourteen frames of a hundred and fifty thousand values")
     }
 }
+
+@Suite("Synchronisation: a text with a lone UTF-16 surrogate")
+struct SyncSurrogateTests {
+    private func message(_ title: String) -> Data { Data((#"{"v":1,"t":"bye","n":1,"x":""# + title + #""}"#).utf8) }
+
+    @Test func aHalfOfAPairThatIsAloneIsRefusedWhereverItStands() {
+        for escape in [#"\ud83d"#, #"\ud83dx"#, #"\ude00"#, #"x\ude00"#, #"\ud83d\ud83d"#, #"\ud83d\u0041"#, #"\uD83D"#, #"ab\ud83d\\n"#] {
+            #expect(SyncMessageCodec.hasLoneSurrogate(message(escape)), "\(escape)")
+            guard case .failure(let failure) = SyncMessageCodec.decode(message(escape)) else { Issue.record("a lone surrogate was read: \(escape)"); continue }
+            #expect(failure.code == .badMessage, "\(escape)")
+        }
+    }
+
+    @Test func theEdgesOfBothHalvesAreHalves() {
+        for escape in [#"\ud800"#, #"\udbff"#, #"\uDBFF"#, #"\udc00"#, #"\udfff"#, #"\uDFFF"#, #"\ud800\ud800"#, #"\udbff\udbff"#] {
+            #expect(SyncMessageCodec.hasLoneSurrogate(message(escape)), "\(escape)")
+        }
+        #expect(!SyncMessageCodec.hasLoneSurrogate(message(#"\ud800\udc00"#)), "the first pair")
+        #expect(!SyncMessageCodec.hasLoneSurrogate(message(#"\udbff\udfff"#)), "the last pair")
+        #expect(!SyncMessageCodec.hasLoneSurrogate(message(#"\ud7ff\ue000"#)), "what is next to the halves is not one")
+    }
+
+    @Test func aPairAndTheOtherEscapesAreRead() {
+        for text in [#"\ud83d\ude00"#, #"\uD83D\uDE00"#, #"é😀"#, #"\u0041\u00e9"#, #"\\ud83d"#, #"\\\\"#, #"\n\t\"\/"#, #"\ud83d\ude00\ud83d\ude01"#, ""] {
+            #expect(!SyncMessageCodec.hasLoneSurrogate(message(text)), "\(text)")
+            if case .failure(let failure) = SyncMessageCodec.decode(message(text)) { Issue.record("refused: \(text) \(failure)") }
+        }
+    }
+
+    @Test func aTruncatedEscapeIsNotTakenForASurrogate() {
+        // The decoder refuses these as not JSON; the scan only looks for surrogates and never reads past the end.
+        for broken in [#"{"a":"\u"#, #"{"a":"\ud8"#, #"{"a":"\ud83d"#, #"\"#, ""] {
+            _ = SyncMessageCodec.hasLoneSurrogate(Data(broken.utf8))
+        }
+        #expect(SyncMessageCodec.hasLoneSurrogate(Data(#"{"a":"\ud83d"#.utf8)), "a high half at the very end is alone")
+        #expect(!SyncMessageCodec.hasLoneSurrogate(Data(#"{"a":"\u00"#.utf8)))
+    }
+}
