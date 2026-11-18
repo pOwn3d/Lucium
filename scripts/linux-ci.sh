@@ -159,17 +159,20 @@ check_refused() {
   [ "$status" = 1 ] || { fail "exit code $status, expected 1"; return 1; }
   grep -q 'refused: this application does not start with --no-sandbox' "$log" || { fail "the log does not say that --no-sandbox is refused"; return 1; }
   grep -q 'sandbox' "$log" && echo "the refusal names the sandbox"
-  # Nothing of the application is running while the box is shown: no browser process, no page (renderer), no GPU process, no network service. The AppImage's
-  # own runtime (it carries the same command line, and unmounts the image) is given a few seconds to follow the application.
-  local left="" i
-  for i in 1 2 3 4 5 6 7 8 9 10; do
-    left="$(run_pids "$data")"
-    [ -z "$left" ] && break
-    sleep 1
+  # Nothing of the application is running while the box is shown: no browser process, no page (renderer), no GPU process, no network service. The AppImage's own
+  # runtime is not the application: it serves the image and unmounts it, carries the same command line and stays until the box, which uses the image's libraries
+  # and data, is closed (seen on the runner and in a virtual machine): a process whose program is the .AppImage file itself is left out.
+  local left="" pid argv0
+  for pid in $(run_pids "$data"); do
+    argv0="$(tr '\0' '\n' <"/proc/$pid/cmdline" 2>/dev/null | head -n 1)"
+    case "$argv0" in
+      *.AppImage) ;;
+      *) left="$left $pid" ;;
+    esac
   done
   if [ -n "$left" ]; then
-    fail "a process of the application is still running while the box is shown: $(echo "$left" | tr '\n' ' ')"
-    ps -o pid,args -p "$(echo "$left" | paste -sd, -)" | cut -c1-200 || true
+    fail "a process of the application is still running while the box is shown:$left"
+    ps -o pid,args -p "$(echo "$left" | xargs | tr ' ' ',')" | cut -c1-200 || true
     return 1
   fi
   # What closing the box would end with, here by the signal (the box is zenity's: its command line carries the title).
