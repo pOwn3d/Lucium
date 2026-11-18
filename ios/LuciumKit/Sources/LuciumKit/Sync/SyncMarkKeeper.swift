@@ -77,14 +77,6 @@ public final class SyncMarkKeeper: @unchecked Sendable {
         try file.save(book)
     }
 
-    /// A session ended without adopting (a failure after the write): the book follows the state again.
-    public func release() {
-        lock.lock()
-        defer { lock.unlock() }
-        holding = false
-        lastView = nil
-    }
-
     /// The mark a change made now would get, for the tests.
     var currentBook: SyncMarkBook {
         lock.lock()

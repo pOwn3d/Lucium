@@ -210,7 +210,6 @@ public struct SyncExchangeBody: SyncSessionBody {
             try marks.adopt(merged.snapshot)
             try bases.save(peerId: mac, snapshot: SyncStateView.base(of: merged.snapshot), now: now())
         } catch {
-            marks.release()
             log("the base or the marks could not be written after the state was: \(error)")
             throw SyncFailure(.internal, "the base could not be written")
         }

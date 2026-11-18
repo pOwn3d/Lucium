@@ -545,16 +545,6 @@ struct SyncMarkKeeperTests {
         #expect(keeper.currentBook.stamps(of: "space", id: "s1")["name"]?.hasPrefix("1790000005000-") == true, "adopting lets go of the hold: what the state holds is marked again")
     }
 
-    @Test func aReleaseMakesTheBookFollowTheStateAgain() throws {
-        let (keeper, directory) = keeper()
-        defer { try? FileManager.default.removeItem(at: directory) }
-        let state = try SyncStateFixtures.sample()
-        keeper.hold()
-        keeper.release()
-        keeper.observe(state, now: now)
-        #expect(!keeper.currentBook.stamps(of: "space", id: "s1").isEmpty)
-    }
-
     @Test func theStateIsLookedAtOnlyWhenItChangedAndTheBookIsWrittenThen() throws {
         let (keeper, directory) = keeper()
         defer { try? FileManager.default.removeItem(at: directory) }

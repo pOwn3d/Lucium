@@ -728,6 +728,43 @@ struct SyncExchangeTests {
         #expect(await rig.host.state.favorites.contains { $0.id == "constructor" }, "it stays on the phone, untouched")
     }
 
+    @Test func everyNameAJavaScriptObjectAnswersToIsLeftOutOfWhatThePhoneSendsWhereverItStands() {
+        #expect(SyncSnapshot.namesOfAnObject.count == 13 && SyncSnapshot.namesOfAnObject.contains("prototype") && SyncSnapshot.namesOfAnObject.contains("valueOf"))
+        for name in SyncSnapshot.namesOfAnObject.sorted() {
+            let entity = SyncEntity(fields: ["name": .string("x")], stamps: ["name": "0"])
+            var snapshot = SyncSnapshot()
+            snapshot.entities = ["space": [name: entity, "ok": entity], name: ["id": entity]]
+            snapshot.tombstones = ["tab": [name: "0", "gone": "0"], name: ["id": "0"]]
+            snapshot.order = ["spaces": [name, "ok"], name: ["ok"], "tabs:s:-": ["ok"]]
+            snapshot.orderStamps = ["spaces": "0", name: "0", "tabs:s:-": "0"]
+            let vetted = SyncExchangeBody.vet(snapshot, log: { _ in })
+            #expect(vetted.snapshot.entities == ["space": ["ok": entity]], "\(name): in an id or a kind of an entity")
+            #expect(vetted.snapshot.tombstones == ["tab": ["gone": "0"]], "\(name): in a tombstone")
+            #expect(vetted.snapshot.order == ["tabs:s:-": ["ok"]] && vetted.snapshot.orderStamps == ["tabs:s:-": "0"], "\(name): as a list or in a list")
+            #expect(Set(vetted.refused.map(\.id)) == [name, "id"], "\(name): the entities are counted")
+        }
+    }
+
+    @Test func anOddNameAndAnEntityThatDoesNotReadAreBothCountedWhenTheSnapshotIsCutEntityByEntity() {
+        let entity = SyncEntity(fields: ["name": .string("x")], stamps: ["name": "0"])
+        var snapshot = SyncSnapshot()
+        snapshot.entities = ["space": ["constructor": entity, "ok": entity, "bad": SyncEntity(fields: ["e\u{301}": .bool(true)], stamps: [:])]]
+        let vetted = SyncExchangeBody.vet(snapshot, log: { _ in })
+        #expect(vetted.snapshot.entities == ["space": ["ok": entity]])
+        #expect(vetted.refused.map(\.id) == ["bad", "constructor"], "both were left out, and both are counted")
+    }
+
+    @Test func aLockedSpaceWithAnOddNameIsNotNamedAmongThoseSetAside() async throws {
+        var state = try SyncStateFixtures.sample()
+        state.spaces.append(Space(id: "valueOf", name: "Odd", emoji: "🎲", profileId: "default"))
+        let rig = try rig(state: state)
+        defer { rig.cleanup() }
+        await rig.host.set(locked: ["valueOf", "s2"])
+        let (report, seen) = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()))
+        #expect(report?.outcome == .committed(at: now))
+        #expect(seen.phoneWithheld == ["s2"], "a name the Mac would refuse is not in the list, and the session still goes through")
+    }
+
     @Test func anEntityOfCodeThatAMacSendsIsRefusedAndTheSessionDoesNotGoThrough() async throws {
         let rig = try rig()
         defer { rig.cleanup() }
