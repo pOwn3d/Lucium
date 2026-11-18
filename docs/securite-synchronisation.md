@@ -2,7 +2,7 @@
 
 Rapport de la carte 448 (synchro 6/6), écrit le 18 novembre 2026. Il porte sur le code **déjà fusionné** dans `main` (jusqu'au commit `bb7e8067`) et sur les correctifs ouverts ou fusionnés par cette carte. La spécification est `docs/synchronisation.md` ; ce rapport dit ce que l'attaque a trouvé, ce qui est corrigé, ce qui reste, et propose la réponse au questionnaire d'exportation du chiffrement.
 
-**Résultat en une phrase.** Aucun défaut ne permet à quelqu'un qui n'est pas appairé de lire ou d'écrire des données, **sauf si la personne scanne un faux QR avec son iPhone** (n° 9) : l'appairage, l'épinglage et le filtre d'adresses tiennent. En revanche, **un appareil appairé hostile pouvait faire plus que ne le dit la spécification** (écrire dans le prototype du processus principal, empoisonner l'horloge, faire supprimer des données), et **deux points de conception restent ouverts** (§3, n° 9 et n° 10). Le rapport n'est donc **pas encore « sans point bloquant »** : voir la liste des points à décider au §8.
+**Résultat en une phrase.** Aucun défaut ne permet à quelqu'un qui n'est pas appairé de lire ou d'écrire des données, **sauf si la personne scanne un faux QR avec son iPhone** (n° 9) : l'appairage, l'épinglage et le filtre d'adresses tiennent. En revanche, **un appareil appairé hostile pouvait faire plus que ne le dit la spécification** (écrire dans le prototype du processus principal, empoisonner l'horloge, faire supprimer des données, bloquer le processus principal quelques secondes) ; **huit de ces défauts sont corrigés par des PR** (§10) et **deux points de conception restent ouverts** (n° 9 et n° 10). Le rapport n'est donc **pas encore « sans point bloquant »** : voir la liste des points à décider au §8.
 
 ## 1. Périmètre
 
@@ -37,8 +37,8 @@ Gravité : **haute** = un appareil appairé hostile casse le processus ou fait p
 | 8 | basse | **iPhone : l'appairage laisse la connexion ouverte** quand le Mac répond `bye` au lieu du défi, quand un envoi échoue, ou après un délai. | Test Swift | **Corrigé**, PR #98 |
 | 9 | moyenne | **L'iPhone ne demande jamais « s'appairer à quel Mac ? ».** Un faux QR (affiche, message) que la personne scanne dans « Ajouter un Mac » fait épingler le Mac de l'attaquant, puis lancer une séance : espaces, dossiers, favoris et onglets épinglés partent chez lui. La confirmation du §4.1 [Q7] protège le Mac, pas l'iPhone. | Lecture du code (`SyncPairingSheet`, `SyncController`) ; relevé par la relecture, non rejoué | **Non corrigé : décision d'interface** (§8) |
 | 10 | moyenne | **Modèle de recherche reçu : `http` accepté, hôte libre.** Un appareil appairé peut, si la catégorie « réglages » est cochée des deux côtés (non cochée par défaut), rediriger toutes les recherches du Mac vers un serveur de son choix. | Lecture de `inbound-filter.ts` | **Non corrigé : risque de conception** (§5, §8) |
-| 11 | moyenne | **Application d'un patch en temps quadratique.** `applySyncPatch` cherche dans la liste pour chaque entité : 40 000 créations bloquent le processus principal 3,9 s, 20 000 dossiers et 20 000 onglets 7 s (mesures de la relecture). L'appareil hostile calcule la même fusion, donc les résumés concordent. | Mesures de la relecture, non rejouées | **Non corrigé** (§8) |
-| 12 | moyenne | **Bornes en octets, pas en nœuds.** Une trame de 30 Mio de tableaux vides imbriqués coûte 8 à 12 s de gel et 1,76 Go de mémoire (la relecture). | Mesure de la relecture, non rejouée | **Non corrigé** (§8) |
+| 11 | moyenne | **Application d'un patch en temps quadratique.** `applySyncPatch` cherchait dans la liste pour chaque entité : 40 000 créations bloquaient le processus principal 3,4 s (rejoué ici ; 3,9 s et 7 s pour 20 000 dossiers et 20 000 onglets selon la relecture). L'appareil hostile calcule la même fusion, donc les résumés concordent : il pouvait relancer le gel à chaque séance. | Rejoué : 3,4 s contre 91 ms après correctif | **Corrigé**, PR #99 (ouverte) |
+| 12 | moyenne | **Bornes en octets, pas en valeurs.** Une trame de 30 Mio de tableaux vides imbriqués coûte 8 à 12 s de gel et 1,76 Go de mémoire (la relecture). | Mesure de la relecture, non rejouée ; le calcul (350 000 valeurs au Mio) est de moi | **Corrigé**, PR #100 (ouverte) : 150 000 valeurs par trame, 2 000 000 par connexion |
 | 13 | moyenne | **Supprimer un espace sur l'iPhone supprime, sur le Mac, ses onglets ouverts** (ceux d'« Aujourd'hui », qui ne se synchronisent pas) sans archive, comme une suppression locale mais sans confirmation sur le Mac. Un appareil hostile peut le faire pour tout ce qu'il connaît. | Rejoué | **Non corrigé : décision** (§8) |
 | 14 | moyenne | **Pierres tombales cumulées sans borne** (198 000 après deux séances) : la séance suivante échoue en `too many tombstones` des deux côtés ; les tombes de genres interdits (`password`…) sont acceptées puis renvoyées. | Relecture, non rejoué | **Non corrigé** |
 | 15 | moyenne (latent) | **Texte avec un substitut isolé** (`\ud83d`) : le Mac en produit (coupe à 60 ou 1000 unités au milieu d'un émoji) et le Swift ne sait pas le lire (`bad-message`) : la séance échoue tant que la valeur est dans l'état. | Relecture, non rejoué | **Non corrigé** |
@@ -79,24 +79,23 @@ Lu en entier et jugé sain, avec la preuve quand elle existe :
 - Le corps de séance de l'iPhone (carte 452) ; à relire à sa fusion.
 - Rien sur un appareil réel : `Network.framework`, résolution d'un nom `.local`, invite du réseau local, caméra, `safeStorage` dans l'application, pare-feu de macOS. Le Node d'Electron 45.2.1 a été essayé par la carte 444, pas par moi.
 - `smoke-sync.ts` n'a pas été lancé (`AGENTS.md` §1) ; les essais de bout en bout du Mac sont ceux des tests Vitest.
-- Les mesures des n° 11 et 12 sont celles de la relecture ; je ne les ai pas rejouées.
+- La mesure du n° 12 (mémoire, gel) est celle de la relecture ; je ne l'ai pas rejouée. Celle du n° 11 l'a été.
 - La page des Réglages et `sync-conflicts` (le journal n'est pas encore branché au Mac) ont été lus vite.
 - Pas de revue de l'interface (textes, accessibilité) ni des captures.
 - **Aucune nouvelle dépendance n'a été ajoutée.**
 
 ## 7. Pour les cartes voisines
 
-- **Carte 452 (corps de séance iPhone)** : (a) écarter, comme le Mac, les pierres tombales et les marques d'ordre à plus de 7 jours dans le futur (§9.3, PR #94) ; (b) remplacer par la version de la base une entité refusée pour ses marques, son adresse ou sa valeur (§22, PR #97) ; (c) le Mac refuse un genre ou un identifiant qui porte un nom de `Object.prototype` (§7.1, PR #93) : le Swift n'en a pas besoin, mais ne doit pas en produire ; (d) lire `SyncLimits.sessionMaximum` (n° 19) ; (e) refuser les chaînes à substitut isolé (n° 15).
+- **Carte 452 (corps de séance iPhone)** : (a) écarter, comme le Mac, les pierres tombales et les marques d'ordre à plus de 7 jours dans le futur (§9.3, PR #94) ; (b) remplacer par la version de la base une entité refusée pour ses marques, son adresse ou sa valeur (§22, PR #97) ; (c) le Mac refuse un genre ou un identifiant qui porte un nom de `Object.prototype` (§7.1, PR #93) : le Swift n'en a pas besoin, mais ne doit pas en produire ; (d) lire `SyncLimits.sessionMaximum` (n° 19) ; (e) refuser les chaînes à substitut isolé (n° 15) ; (f) appliquer la borne de valeurs JSON (150 000 par trame, 2 000 000 par connexion, PR #100).
 - **Carte 447 (reprise d'un onglet)** : la liste reçue est filtrée en `http(s)` (PR #96) ; ne rien ouvrir d'autre que par ce chemin.
 
 ## 8. Points à décider avant de dire « sans point bloquant »
 
 1. **N° 9, l'iPhone confirme-t-il le Mac ?** Recommandation : après la preuve du Mac et avant d'enregistrer, afficher « Appairer avec « nom » ? » et quatre à six caractères de l'empreinte, **et** montrer les mêmes caractères sur le Mac dans la feuille « Autoriser / Refuser » (n° 21), pour que la personne compare. Texte FR et EN, test.
 2. **N° 10, le modèle de recherche.** Recommandation : ne synchroniser que les moteurs connus (la liste de `settings-guide.ts`) et refuser `http`. Le Swift doit suivre (vecteur `inbound`).
-3. **N° 11 et 12, les bornes.** Recommandation : indexer par `Map` dans `applySyncPatch`, et compter les nœuds JSON par trame (150 000) et par séance (2 millions).
-4. **N° 13.** Recommandation : archiver, ou mettre dans une copie de session, les onglets ouverts d'un espace avant de le supprimer à la demande d'un autre appareil.
+3. **N° 13.** Recommandation : archiver, ou mettre dans une copie de session, les onglets ouverts d'un espace avant de le supprimer à la demande d'un autre appareil.
 
-Les n° 14 à 22 sont des correctifs sans décision à prendre ; ils peuvent suivre en PR séparées.
+Les n° 14 à 22 sont des correctifs sans décision à prendre ; ils n'ont pas été faits faute de temps dans cette carte et peuvent suivre en PR séparées.
 
 ## 9. Conformité du chiffrement : réponse proposée au questionnaire d'App Store Connect
 
@@ -157,5 +156,7 @@ Dans l'ordre où App Store Connect pose les questions (ordre et formulation **à
 | #96 | ne garder que des pages web parmi les onglets ouverts annoncés | ouverte |
 | #97 | ne pas lire comme une suppression une entité qui ne peut pas être envoyée maintenant | ouverte |
 | #98 | iPhone : hexadécimal non ASCII, octet nul dans un hôte, connexion d'appairage non fermée | ouverte |
+| #99 | appliquer un patch en temps linéaire | ouverte |
+| #100 | borner les valeurs d'un message, pas seulement ses octets | ouverte |
 
-Chacune a un test qui échoue sans le correctif (mutation vue) et met à jour `docs/synchronisation.md`.
+Chacune a un test qui échoue sans le correctif (mutation vue) et met à jour `docs/synchronisation.md`. Un seul écart de méthode : la branche de la PR #97 a été amendée et poussée de force (`--force-with-lease`) quelques minutes après son premier envoi, avant l'ouverture de la PR, ce que `AGENTS.md` §7 déconseille ; rien d'autre n'était sur cette branche.
