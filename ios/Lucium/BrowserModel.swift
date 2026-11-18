@@ -14,6 +14,12 @@ final class BrowserModel {
     /// What is locked (`BrowserModel+Lock.swift`). Nil in a model with no lock (most tests): nothing is covered then.
     var lock: LockController?
 
+    /// The synchronisation with the Mac (`SyncController`). Nil in a model with none (most tests): the settings list has no page for it then.
+    var sync: SyncController?
+
+    /// Whether this phone has ever been changed by its person: kept from the first launch, read by the synchronisation at its first exchange (`SyncOrigin`).
+    @ObservationIgnored var syncOrigin: SyncOriginKeeper?
+
     var tabsSheetShown = false
     var spacesSheetShown = false
     /// The settings screen (`SettingsScreen`), opened by the gear of the bottom bar and of the iPad's sidebar, and the page it opens on (the list when nil).
@@ -322,6 +328,7 @@ final class BrowserModel {
         } catch {
             report(.state, "the state was not written: \(error)")
         }
+        syncOrigin?.observe(state)
     }
 
     /// Something could not be written. The person keeps browsing; the failure is logged where it happened and kept for the screen and the tests.
@@ -381,6 +388,10 @@ extension BrowserModel {
                                  sideStore: TabSideStore(directory: directory.appending(path: TabSideStore.directoryName, directoryHint: .isDirectory)), startup: load,
                                  awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, pageGuard: pageGuard, store: store, downloadsDirectory: downloadsDirectory)
         if let lock { model.attach(lock) }
+        // A state that was found, even one that had to be put aside, means this phone was used before: only a launch with no file at all is a first one.
+        let stateWasFound: Bool
+        if case .fresh = load { stateWasFound = false } else { stateWasFound = true }
+        model.syncOrigin = SyncOriginKeeper(file: SyncOriginFile(url: directory.appending(path: SyncOriginFile.fileName)), stateWasFound: stateWasFound, state: state)
         return model
     }
 }

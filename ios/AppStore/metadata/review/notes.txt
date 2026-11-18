@@ -1,35 +1,32 @@
 Lucium is a web browser for iPhone and iPad. Every web page is shown with WKWebView (WebKit); the app has no other web engine (guideline 2.5.6).
 
 SIGN-IN AND TESTING
-The app has no account, sign-in, purchase, subscription or advertising, so no demo account is needed. Open the app: a start page and a bar at the bottom appear. Tap the address field in the bar, type a web address or a search, and the page opens.
+The app has no account, sign-in, purchase, subscription or advertising: no demo account is needed. Open the app, tap the address field in the bottom bar, type an address or a search, and the page opens.
 
 WHERE TO FIND EACH FEATURE
-- Tabs: the right-hand button of the bottom bar opens the tabs sheet (pinned tabs, folders, today, archive, favourites). "Privacy", "Lock" and "Licenses" (credits of the filter lists) are its last rows.
-- Spaces and profiles: the round buttons in the bottom bar are the Spaces; touch and hold one for "Spaces and profiles", where a Space and a profile are created. Two profiles keep separate cookies and website data.
-- iPad in landscape: a permanent sidebar replaces the bottom bar, with the Spaces, the tabs and the same actions.
-- Private tab: in the same menu ("New private tab"). Nothing is kept once it is closed.
-- Command bar: the address field. It searches open tabs and favourites and offers commands.
-- Clear the data of one site: touch and hold the address field.
-- Page actions: the three-dots button of the bottom bar: Share page, Save as PDF, Downloads. Downloaded files go to the Downloads folder of the app, which shows in the Files app (Info.plist: UIFileSharingEnabled, LSSupportsOpeningDocumentsInPlace); nothing else is kept in Documents.
-- Privacy settings: tabs sheet, "Privacy": protection level, HTTPS first, Global Privacy Control signal, removal of tracking parameters.
-- Lock: tabs sheet, "Lock": a Space or the whole app can be locked with Face ID, Touch ID or the device passcode (LocalAuthentication; the app receives only a yes or a no and never a biometric).
+- Tabs: the right-hand button of the bottom bar opens the tabs sheet (pinned, folders, today, archive).
+- Settings: the gear beside the address field (on iPad in landscape, the sidebar's foot): search engine, privacy (protection level, HTTPS first, Global Privacy Control, tracking parameters), lock, spaces, synchronization, licenses.
+- Spaces and profiles: the round buttons of the bottom bar; touch and hold one to create a Space and a profile. Two profiles keep separate cookies. iPad in landscape: a permanent sidebar replaces the bar.
+- Private tab: "New private tab" in that menu; nothing is kept once it is closed. Command bar: the address field; touch and hold it to clear one site's data.
+- Page actions: the three-dots button: Share, Save as PDF, Downloads (the app's Downloads folder, shown in the Files app (Info.plist: UIFileSharingEnabled, LSSupportsOpeningDocumentsInPlace); nothing else is kept in Documents).
+- Lock: a Space or the app can be locked with Face ID, Touch ID or the passcode (LocalAuthentication: the app gets only a yes or a no).
 
 THE CONTENT BLOCKER
-The blocker uses WKContentRuleList. Its filter lists (public lists of ad and tracker rules) are converted before the app is built and are inside it: nothing is downloaded, and they change only with an app update. Their authors and licenses are in the app (Licenses).
+The blocker uses WKContentRuleList. Its filter lists (public ad and tracker rules) are converted before the build and are inside the app: nothing is downloaded, and they change only with an update. Authors and licenses: the Licenses screen.
 
 JAVASCRIPT THE APP RUNS IN PAGES (guidelines 2.5.2 and 4.7)
-The app adds its own scripts to pages with WKUserScript, to hide cookie-consent banners and to apply the blocking rules of its lists and its YouTube rules. All of this code is in the app bundle: no script, rule or other code is downloaded, and no native function of the device is exposed to a web page (no script message handler).
+The app adds its own scripts to pages with WKUserScript, to hide cookie-consent banners and to apply its lists' blocking rules and its YouTube rules. All of this code is in the app bundle, and no native function of the device is exposed to a web page (no script message handler).
 
 NETWORK
-The app makes no connection of its own: no analytics, no crash reporting, no account, no synchronization, no update check, no download of lists. It connects only to the pages the person opens, loads what those pages load, and downloads the files the person asks for (WKDownload).
+The app makes no connection of its own, except one that is off by default: the gear > Synchronization pairs it with the person's own Mac, over the local network only (any other address is refused; no Bonjour, server, account or internet). The person turns it on and reads the QR code the Mac shows (camera, NSCameraUsageDescription; a code can be typed instead; local network: NSLocalNetworkUsageDescription). Otherwise: no analytics, crash reporting, account or update check, and no download of lists. It connects only to the pages the person opens, loads what they load, and downloads the files the person asks for (WKDownload).
 
 APP TRANSPORT SECURITY
-Info.plist sets NSAllowsArbitraryLoadsInWebContent. A browser opens the pages the person asks for, and some are http. With "HTTPS first" the app asks for https:// first and opens http:// only if the site refuses or stays silent for 5 seconds, and says so. A page with an invalid certificate is never opened over http without the person's tap. NSAllowsArbitraryLoads is not set.
+Info.plist sets NSAllowsArbitraryLoadsInWebContent: some pages a browser opens are http. With "HTTPS first" the app asks for https:// first and opens http:// only if the site refuses or stays silent for 5 seconds, and says so. An invalid certificate never falls back to http without the person's tap. NSAllowsArbitraryLoads is not set.
 
 PRIVACY AND ENCRYPTION
-PrivacyInfo.xcprivacy declares no tracking, no data collected and no tracking domain, and none of the required-reason APIs is called. The privacy label answers "Data Not Collected". The only encryption is what iOS provides for HTTPS (WebKit); Face ID is used only through LocalAuthentication.
+PrivacyInfo.xcprivacy declares no tracking, no data collected and no tracking domain, and none of the required-reason APIs is called. The privacy label: "Data Not Collected". The encryption is what iOS provides: HTTPS (WebKit) and, for the synchronization with the person's own Mac, TLS 1.3 of Network.framework, plus HMAC-SHA-256 and SHA-256 of CryptoKit to authenticate the pairing; the app implements no cipher and no protocol of its own. ITSAppUsesNonExemptEncryption is not set: export compliance is answered in App Store Connect for each build.
 
 OTHER POINTS
-- No donation or payment button in the app (guideline 3.2.2). The default-browser entitlement is not requested in this version.
-- YouTube loads and plays; the app applies rules of its own against its ads, and the blocking there is partial. Videos protected by DRM may not play.
-- Lucium is free software under the GPL-3.0-or-later with an additional permission that lets the maintainer distribute it through the App Store; the source code is public.
+- No donation or payment button (guideline 3.2.2). The default-browser entitlement is not requested.
+- YouTube plays; the app's own rules against its ads block only in part. DRM-protected videos may not play.
+- Lucium is free software (GPL-3.0-or-later, with an additional permission for distribution through the App Store); the source is public.

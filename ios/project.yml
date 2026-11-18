@@ -59,6 +59,11 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: Lucium
         # The sentence the system shows when Face ID is first asked for. Its text is in InfoPlist.xcstrings (French and English); this is the fallback.
         INFOPLIST_KEY_NSFaceIDUsageDescription: "Lucium uses Face ID to unlock the application and the spaces you chose to lock."
+        # The sentences the system shows when the camera and the local network are first asked for (the synchronisation with the Mac, docs/synchronisation.md). Their
+        # texts are in InfoPlist.xcstrings (French and English); these are the fallbacks. No Bonjour service is declared: nothing is discovered, the Mac is reached by
+        # its .local name and its last addresses.
+        INFOPLIST_KEY_NSCameraUsageDescription: "Lucium uses the camera only to read the QR code the Mac shows for pairing. No photo is taken or kept."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Lucium connects to your Mac, on your local network, to pair with it and synchronize your spaces. Nothing goes through the internet."
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
         INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents: YES

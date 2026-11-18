@@ -68,6 +68,16 @@ public actor SyncChannel {
 
     /// One read from the transport, or `timeout`. The read that loses the race is abandoned by closing the transport, which ends it.
     private static func read(_ transport: any SyncTransport, timeout: Duration) async throws -> Data {
+        // A read of the transport cannot be cancelled by itself: when the task that waits is cancelled (the application is locked, the person leaves the pairing),
+        // the connection is closed, which ends the read at once instead of after the silence timeout.
+        try await withTaskCancellationHandler {
+            try await readOrTimeOut(transport, timeout: timeout)
+        } onCancel: {
+            transport.close()
+        }
+    }
+
+    private static func readOrTimeOut(_ transport: any SyncTransport, timeout: Duration) async throws -> Data {
         try await withThrowingTaskGroup(of: Data?.self) { group in
             group.addTask { try await transport.receive() }
             group.addTask {

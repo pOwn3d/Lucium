@@ -256,5 +256,36 @@ struct SyncSessionFlowTests {
         #expect(log.all.first?.contains("broken pipe") == true)
     }
 
+    /// A body that waits for a message that never comes: the session is cancelled while it waits.
+    private struct WaitsForever: SyncSessionBody {
+        func run(_ context: SyncSessionContext, channel: SyncChannel) async throws -> SyncBodyOutcome {
+            _ = try await channel.receive(timeout: .seconds(60))
+            return .notExchanged
+        }
+    }
+
+    @Test func cancellingASessionClosesTheConnectionAtOnceInsteadOfWaitingForTheSilenceTimeout() async throws {
+        let ends = syncLoopback()
+        let fake = SyncFakeMac(ends.mac)
+        let macTask = Task { try await fake.write("hello", macHello()); try await Task.sleep(for: .seconds(30)) }
+        defer { macTask.cancel() }
+        let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
+        let session = Task {
+            try await SyncSessionClient.run(connection: connection, peer: peer, device: phone, categories: [.structure], appVersion: "0.1.0", supportedStateVersion: 1, nonce: nonce,
+                                            baseHash: nil, now: { 1_790_000_000_000 }, body: WaitsForever(), handshakeTimeout: .seconds(2))
+        }
+        try await Task.sleep(for: .milliseconds(300))
+        let started = ContinuousClock.now
+        session.cancel()
+        do {
+            _ = try await session.value
+            Issue.record("a cancelled session reported a success")
+        } catch {
+            // Whatever it is, it ends now: the connection was closed by the cancellation.
+        }
+        #expect(ContinuousClock.now - started < .seconds(5), "the 60 s wait of the body did not hold the cancellation")
+        #expect(ends.phone.closed)
+    }
+
     private final class ErrorBox: @unchecked Sendable { var message: [String: Any]? }
 }

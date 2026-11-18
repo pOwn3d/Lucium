@@ -138,7 +138,9 @@ describe('the notes for the review', () => {
     // "no native function of the device is exposed to a web page (no script message handler)".
     expect(notes).toContain('no script message handler')
     // "The app makes no connection of its own": nothing in the sources opens one, WebKit loads the pages.
-    expect(notes).toContain('The app makes no connection of its own')
+    expect(notes).toContain('The app makes no connection of its own, except one that is off by default')
+    expect(notes).toContain('NSLocalNetworkUsageDescription')
+    expect(notes).toContain('NSCameraUsageDescription')
     const own = /\b(?:URLSession|NWConnection|NWBrowser|NWListener|CFStream|URLSessionWebSocketTask)\b/
     const bridge = /\b(?:WKScriptMessageHandler|WKScriptMessageHandlerWithReply|addScriptMessageHandler|addScriptMessageHandlerWithReply)\b/
     // The one file that may name `Network` is the connector of the synchronisation (docs/synchronisation.md section 6.4): it connects to the Mac the person
@@ -151,7 +153,9 @@ describe('the notes for the review', () => {
   })
 
   it('say the only encryption is what iOS provides, and no source has a cipher of its own', () => {
-    expect(notes).toContain('The only encryption is what iOS provides')
+    expect(notes).toContain('The encryption is what iOS provides')
+    expect(notes).toContain('the app implements no cipher and no protocol of its own')
+    expect(notes).toContain('ITSAppUsesNonExemptEncryption is not set')
     // A cipher, a sealed box or a symmetric key that encrypts would make that answer false. The one symmetric key of the sources is the key of an HMAC: the
     // proof of a pairing (docs/synchronisation.md §4.4), which authenticates and encrypts nothing.
     const cipher = /\b(?:CCCrypt|CCCryptorCreate|AES|ChaChaPoly|SealedBox|SecKeyCreateEncryptedData|SecKeyCreateDecryptedData)\b/
