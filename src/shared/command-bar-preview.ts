@@ -130,6 +130,8 @@ export function candidatePreview(candidate: Candidate, ctx: PreviewContext): Can
       const item = state.readLater.find((r) => r.id === candidate.readLaterId)
       return make({ glyph: 'page', title: candidate.label, address: item ? address(item.url) : '', chips: [t('cmd.groupe-lire-plus-tard'), ...(item ? [t('cmd.enregistre', { when: relativeAgo(item.savedAt, now) })] : [])], keys: [{ keys: ENTER, label: t('cmd.ouvrir-la-page') }] })
     }
+    case 'iphone':
+      return make({ glyph: 'page', title: candidate.label, note: candidate.detail, chips: [t('cmd.groupe-sur-iphone')], keys: [{ keys: ENTER, label: t('cmd.ouvrir-la-page') }] })
     case 'archived': {
       const entry = state.archive.find((a) => a.id === candidate.archivedId)
       const space = entry ? state.spaces.find((s) => s.id === entry.spaceId) : undefined
