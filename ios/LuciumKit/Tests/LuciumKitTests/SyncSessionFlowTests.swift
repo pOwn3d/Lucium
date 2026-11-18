@@ -36,14 +36,15 @@ struct SyncSessionFlowTests {
     }
 
     private func run(mac script: @escaping @Sendable (SyncFakeMac) async throws -> Void, presented: Data? = nil, categories: [SyncCategory] = [.structure, .archive],
-                     supported: Int = 1, now: Int = 1_790_000_000_000, body: any SyncSessionBody = SyncNoSessionBody()) async throws -> (SyncSessionReport, SyncLoopbackEnd) {
+                     supported: Int = 1, now: Int = 1_790_000_000_000, body: any SyncSessionBody = SyncNoSessionBody(),
+                     sessionMaximum: Duration = SyncLimits.sessionMaximum) async throws -> (SyncSessionReport, SyncLoopbackEnd) {
         let ends = syncLoopback()
         let fake = SyncFakeMac(ends.mac)
         let task = Task { try await script(fake) }
         defer { task.cancel() }
         let connection = SyncConnection(transport: ends.phone, presentedFingerprint: presented ?? macFingerprint)
         let report = try await SyncSessionClient.run(connection: connection, peer: peer, device: phone, categories: categories, appVersion: "0.1.0", supportedStateVersion: supported, nonce: nonce,
-                                                     baseHash: nil, now: { now }, body: body, handshakeTimeout: .seconds(2))
+                                                     baseHash: nil, now: { now }, body: body, handshakeTimeout: .seconds(2), sessionMaximum: sessionMaximum)
         _ = try? await task.value
         return (report, ends.phone)
     }
@@ -57,6 +58,46 @@ struct SyncSessionFlowTests {
             let next = try await mac.read()
             #expect(next.fields["t"] as? String == "bye", "with no body the session ends with bye")
         }
+    }
+
+    // MARK: How long a session may last (docs/synchronisation.md §6.1, §7.5, review n° 19)
+
+    /// A body that reads message after message, each within the time of a silence: the pace of a peer that never stays quiet for long and never gets to the end (two hundred
+    /// messages at 60 ms are twelve seconds, far past the maximum the test gives).
+    private struct ReadsForLong: SyncSessionBody {
+        func run(_ context: SyncSessionContext, channel: SyncChannel) async throws -> SyncBodyOutcome {
+            for _ in 0..<200 { _ = try await channel.receive(timeout: .seconds(5)) }
+            return .committed(at: 1)
+        }
+    }
+
+    @Test func aSessionThatDripsPastTheTimeASessionMayTakeIsCutAtThatTimeAndTheConnectionIsClosed() async throws {
+        let ends = syncLoopback()
+        let fake = SyncFakeMac(ends.mac)
+        let drip = Task {
+            try await fake.write("hello", macHello())
+            _ = try await fake.read()
+            for _ in 0..<400 {
+                try await Task.sleep(for: .milliseconds(60))
+                try await fake.write("open-tabs", ["items": []])
+            }
+        }
+        defer { drip.cancel() }
+        let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
+        do {
+            _ = try await SyncSessionClient.run(connection: connection, peer: peer, device: phone, categories: [.structure], appVersion: "0.1.0", supportedStateVersion: 1, nonce: nonce,
+                                                baseHash: nil, now: { 1_790_000_000_000 }, body: ReadsForLong(), handshakeTimeout: .seconds(2), sessionMaximum: .milliseconds(350))
+            Issue.record("a session that outlasted its time went through")
+        } catch let failure as SyncFailure {
+            #expect(failure.code == .timeout)
+        }
+        #expect(ends.phone.closed)
+    }
+
+    @Test func aSessionThatFinishesInTimeIsNotTouchedByTheLimit() async throws {
+        let (report, transport) = try await run(mac: goodMac(hello: macHello()), sessionMaximum: .seconds(30))
+        #expect(report.outcome == .notExchanged)
+        #expect(transport.closed)
     }
 
     @Test func aSessionWithNoBodyGoesToHelloAndSaysNothingWasExchanged() async throws {
