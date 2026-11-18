@@ -4444,7 +4444,7 @@ export const fr = {
   'sync-conflict.kind-order': 'Ordre',
   'sync-conflict.kind-other': 'Élément',
   'sync-conflict.field-name': 'Nom',
-  'sync-conflict.field-emoji': 'Emoji',
+  'sync-conflict.field-emoji': 'Émoji',
   'sync-conflict.field-theme': 'Thème',
   'sync-conflict.field-profile-id': 'Profil',
   'sync-conflict.field-hide-header': 'En-tête masqué',
