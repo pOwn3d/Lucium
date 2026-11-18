@@ -23,7 +23,7 @@ import type { ErrorCode } from './error-codes'
 import { CLOCK_SKEW_WARN_MS, MAX_ENTITIES, MAX_ENTITIES_PER_PART, MAX_PARTS, NONCE_BYTES } from './limits'
 import type { BaseStore } from './bases'
 import { hashOfSnapshot } from './bases'
-import { cleanSnapshot } from './inbound-filter'
+import { cleanSnapshot, isWebAddress } from './inbound-filter'
 import type { MarkBook } from './marks'
 import type { OpenTab, SnapshotPart, WireEntity, WireTombstone } from './messages'
 import { buildPatch, patchIsEmpty } from './patch'
@@ -116,6 +116,12 @@ interface Assembled {
   entityCount: number
   withheld: Set<string>
 }
+
+/**
+ * The open tabs of the other device that this one keeps (§10.4): web pages only. What the other device announces is shown to the person as « Reprendre un onglet du Mac »
+ * and opened by the ordinary path of opening an address, which accepts more than a web page (a local file, a script): a device must not be able to plant one there.
+ */
+export const webTabs = (items: OpenTab[]): OpenTab[] => items.filter((tab) => isWebAddress(tab.url) && tab.id.length <= 128 && tab.spaceId.length <= 128)
 
 const fail = (code: ErrorCode, detail: string): never => {
   throw new ProtocolError(code, detail)
@@ -237,7 +243,16 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     await channel.send({ t: 'snapshot.end', entityCount: Object.values(local.entities).reduce((sum, byId) => sum + Object.keys(byId).length, 0), digest: hashOfSnapshot(local) })
 
     // receive, check
-    const received = await receiveSnapshot(channel, (items) => (common.has('openTabs') ? deps.onOpenTabs?.(peerId, items) : undefined), warn)
+    const received = await receiveSnapshot(
+      channel,
+      (items) => {
+        if (!common.has('openTabs')) return
+        const kept = webTabs(items)
+        if (kept.length < items.length) deps.onRefused?.(peerId, items.filter((tab) => !kept.includes(tab)).map((tab) => ({ kind: 'open-tab', id: tab.id.slice(0, 64), reason: 'invalid-url' })))
+        deps.onOpenTabs?.(peerId, kept)
+      },
+      warn
+    )
     const form = parseSnapshot(JSON.parse(canonicalJson(received.snapshot)))
     if ('problem' in form) return fail('bad-message', `the snapshot is not well formed: ${form.problem}`)
     const cleaned = cleanSnapshot(form.snapshot, deps.now(), base)

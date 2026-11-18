@@ -38,6 +38,8 @@ export interface PairingContext {
   now: () => number
   /** How long the person has to answer; a test shortens it. */
   confirmMs?: number
+  /** Told when the iPhone's `pair.request` has come, whatever its proof: from then on the connection is not a silent one (listener.ts). */
+  onRequest?: () => void
 }
 
 export type PairingOutcome = { outcome: 'paired'; peer: PeerRecord } | { outcome: 'failed'; code: ErrorCode; detail: string }
@@ -71,6 +73,7 @@ export async function runPairing(channel: Channel, ctx: PairingContext): Promise
     const request = await channel.receive()
     if (request.t === 'error') return { outcome: 'failed', code: request.code, detail: 'the iPhone ended the pairing' }
     if (request.t !== 'pair.request') return fail('bad-message', `a ${request.t} is not expected in a pairing`)
+    ctx.onRequest?.()
 
     const noncePhone = Buffer.from(request.nonce, 'base64url')
     const expected = requestProof({
