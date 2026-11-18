@@ -132,8 +132,10 @@ struct SyncTestMac: Sendable {
             try await mac.write("snapshot.part", try Self.jsonObject(.object(part)) as? [String: Any] ?? [:])
             if index == 0, let code = errorAfterParts {
                 try await mac.write("error", ["code": code.rawValue, "fatal": true])
-                // Whatever the phone says back is told: an error the Mac sent must not come back to it.
-                if let echoed = await Self.readWithin(mac, .milliseconds(400)), echoed["t"] as? String == "error" { seen.errors.append((echoed["code"] as? String ?? "?", echoed["fatal"] as? Bool ?? false)) }
+                // Whatever the phone says back is told (after the parts it was already sending): an error the Mac sent must not come back to it.
+                while let said = await Self.readWithin(mac, .milliseconds(400)) {
+                    if said["t"] as? String == "error" { seen.errors.append((said["code"] as? String ?? "?", said["fatal"] as? Bool ?? false)) }
+                }
                 return seen
             }
             if index == 0, unpairAfterParts { try await mac.write("unpair"); return seen }
