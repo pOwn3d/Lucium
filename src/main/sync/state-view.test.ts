@@ -4,7 +4,8 @@ import type { SyncCategory } from '@shared/sync-ipc'
 import type { SyncSnapshot } from '@shared/sync-snapshot'
 import { MarkBook } from './marks'
 import { NOW, stateOf } from './session-rig.test-support'
-import { hasLoneSurrogate } from './messages'
+import { hasLoneSurrogate, parseMessage } from './messages'
+import { MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES } from './limits'
 import { baseOf, follows, openTabsOf, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 
 const all = new Set<SyncCategory>(['structure', 'settings', 'archive', 'openTabs'])
@@ -185,6 +186,31 @@ describe('openTabsOf (§10.4)', () => {
     expect(tab?.title).toBe('T'.repeat(299))
     expect(tab?.url.length).toBe(4095)
     expect(hasLoneSurrogate(`${tab?.title}${tab?.url}`)).toBe(false)
+  })
+
+  it('cuts the title and the address to the BYTES the message allows, not to as many UTF-16 units: a title of 300 non-ASCII characters is 900 bytes, and the message holding it was refused', () => {
+    const wide = { ...state, tabs: [{ ...state.tabs[0]!, url: `https://x.example/${'é'.repeat(5000)}`, title: '日本語のタイトル'.repeat(60), lastActiveAt: 7 }] }
+    const [tab] = openTabsOf(wide, () => false)
+    expect(Buffer.byteLength(tab?.title ?? '', 'utf8')).toBeLessThanOrEqual(MAX_OPEN_TAB_TITLE_BYTES)
+    expect(Buffer.byteLength(tab?.url ?? '', 'utf8')).toBeLessThanOrEqual(MAX_OPEN_TAB_URL_BYTES)
+    // As much as fits, in whole characters (a title of three-byte characters is cut at a hundred of them), and what is left is text.
+    expect(tab?.title).toBe('日本語のタイトル'.repeat(60).slice(0, 100))
+    expect(hasLoneSurrogate(`${tab?.title}${tab?.url}`)).toBe(false)
+    // The message that carries it is read back by the same reader the other device uses (a Swift reader refuses what is over the bound).
+    const parsed = parseMessage(JSON.stringify({ v: 1, n: 2, t: 'open-tabs', items: [tab] }))
+    expect(parsed.ok).toBe(true)
+  })
+
+  it('cuts at the bytes without leaving half of an emoji either, whatever the cut falls on (one, two, three or four bytes)', () => {
+    for (const unit of ['a', 'é', '日', '\u{1F600}']) {
+      for (let before = 0; before < 4; before++) {
+        const title = `${'a'.repeat(before)}${unit.repeat(400)}`
+        const [tab] = openTabsOf({ ...state, tabs: [{ ...state.tabs[0]!, title }] }, () => false)
+        expect(Buffer.byteLength(tab?.title ?? '', 'utf8'), `${unit} after ${before}`).toBeLessThanOrEqual(MAX_OPEN_TAB_TITLE_BYTES)
+        expect(hasLoneSurrogate(tab?.title ?? ''), `${unit} after ${before}`).toBe(false)
+        expect(Buffer.byteLength(tab?.title ?? '', 'utf8'), `${unit} after ${before}: as much as fits`).toBeGreaterThan(MAX_OPEN_TAB_TITLE_BYTES - 4)
+      }
+    }
   })
 
   it('announces at most two hundred', () => {

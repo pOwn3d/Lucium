@@ -11,8 +11,8 @@ import type { SidebarState } from '@shared/model'
 import type { SyncCategory } from '@shared/sync-ipc'
 import { ZERO_STAMP, type SyncEntity, type SyncFields, type SyncSnapshot } from '@shared/sync-snapshot'
 import { ARCHIVE_PER_SPACE_SENT, FIELD_CLASSES, SYNCED_SETTINGS, isKind, type EntityKind } from './field-classes'
-import { cutText } from '@shared/state-clean'
-import { MAX_OPEN_TABS } from './limits'
+import { cutBytes } from '@shared/state-clean'
+import { MAX_OPEN_TABS, MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES } from './limits'
 import { earlier, type MarkBook, type TrackedView } from './marks'
 
 type Entity = object
@@ -157,5 +157,5 @@ export function openTabsOf(state: SidebarState, isSpaceLocked: (spaceId: string)
     .filter((tab) => tab.private !== true && /^https?:\/\//i.test(tab.url) && !isSpaceLocked(tab.spaceId))
     .sort((a, b) => b.lastActiveAt - a.lastActiveAt || (a.id < b.id ? -1 : 1))
     .slice(0, MAX_OPEN_TABS)
-    .map((tab) => ({ id: tab.id, spaceId: tab.spaceId, url: cutText(tab.url, 4096), title: cutText(tab.title, 300), lastActiveAt: Math.max(0, Math.trunc(tab.lastActiveAt)) }))
+    .map((tab) => ({ id: tab.id, spaceId: tab.spaceId, url: cutBytes(tab.url, MAX_OPEN_TAB_URL_BYTES), title: cutBytes(tab.title, MAX_OPEN_TAB_TITLE_BYTES), lastActiveAt: Math.max(0, Math.trunc(tab.lastActiveAt)) }))
 }

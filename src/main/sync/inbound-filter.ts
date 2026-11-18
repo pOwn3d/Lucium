@@ -17,7 +17,7 @@
 //     whatever it names and push the clock of this device out of the reach of every other one, for ever.
 // A refused entity (or tombstone, or list) is dropped, counted and logged: never fatal (§8.5).
 
-import { MAX_TOMBSTONES_PER_SNAPSHOT, STAMP_FUTURE_REFUSE_MS } from './limits'
+import { MAX_STRING_BYTES, MAX_TOMBSTONES_PER_SNAPSHOT, STAMP_FUTURE_REFUSE_MS } from './limits'
 import { hasLoneSurrogate } from './messages'
 import { isProfileId } from '@shared/profiles'
 import { compareStamps } from '@shared/sync-snapshot'
@@ -60,17 +60,21 @@ function settingValueProblem(key: string, value: unknown): boolean {
   }
 }
 
-/** Whether a JSON value holds, in a text or in a key, a lone surrogate. Iterative: the value is hostile. */
-function holdsLoneSurrogate(root: unknown): boolean {
+/**
+ * Whether a JSON value holds, in a text or in a key, what no message can carry: a lone surrogate (Swift cannot read it) or a text of more than `MAX_STRING_BYTES` bytes (the
+ * bound is in bytes, and a state bound in characters can exceed it with non-ASCII text: the message that held it was refused whole). Iterative: the value is hostile.
+ */
+function holdsUnsendableText(root: unknown): boolean {
+  const unsendable = (text: string): boolean => hasLoneSurrogate(text) || (text.length * 3 > MAX_STRING_BYTES && Buffer.byteLength(text, 'utf8') > MAX_STRING_BYTES)
   const stack: unknown[] = [root]
   while (stack.length > 0) {
     const value = stack.pop()
     if (typeof value === 'string') {
-      if (hasLoneSurrogate(value)) return true
+      if (unsendable(value)) return true
     } else if (Array.isArray(value)) stack.push(...value)
     else if (typeof value === 'object' && value !== null) {
       for (const [key, member] of Object.entries(value)) {
-        if (hasLoneSurrogate(key)) return true
+        if (unsendable(key)) return true
         stack.push(member)
       }
     }
@@ -80,7 +84,7 @@ function holdsLoneSurrogate(root: unknown): boolean {
 
 export function filterEntity(entity: Pick<WireEntity, 'kind' | 'id' | 'fields'>): Filtered {
   if (NEVER_KINDS.includes(entity.kind)) return { accepted: false, reason: 'never-synced' }
-  if (holdsLoneSurrogate(entity.fields)) return { accepted: false, reason: 'invalid-value' }
+  if (holdsUnsendableText(entity.fields)) return { accepted: false, reason: 'invalid-value' }
   // The key of a list is made of the profile (`favorites:<profile>`): an identifier of the Mac, or nothing (a long one made the base unreadable, a decomposed one two lists).
   if ((entity.kind === 'space' || entity.kind === 'favorite') && entity.fields['profileId'] !== undefined && !isProfileId(entity.fields['profileId'])) return { accepted: false, reason: 'invalid-value' }
   if (entity.kind === 'setting') {

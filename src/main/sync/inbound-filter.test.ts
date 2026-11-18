@@ -222,6 +222,11 @@ describe('cleanSnapshot', () => {
       expect(filterEntity({ kind: 'space', id: 's', fields: { name: 'Perso \ud83d\ude00' } }).accepted).toBe(true)
     })
 
+    it('refuses a text of more than 64 KiB in BYTES, which a state bound in characters can hold (40 000 Japanese characters are 120 000 bytes): the message that held it was refused whole', () => {
+      expect(filterEntity({ kind: 'favorite', id: 'f', fields: { url: 'https://a.example/', title: '日'.repeat(40_000) } })).toEqual({ accepted: false, reason: 'invalid-value' })
+      expect(filterEntity({ kind: 'favorite', id: 'f', fields: { url: 'https://a.example/', title: '日'.repeat(20_000) } }).accepted).toBe(true)
+    })
+
     it('stands in the version of the base for an entity it refuses for that, as for an address that is not a page any more', () => {
       const base: SyncSnapshot = { entities: { space: { s1: { fields: { name: 'Old' }, stamps: { name: `${String(NOW - 9000).padStart(13, '0')}-0000-phone` } } } }, tombstones: {}, order: {}, orderStamps: {} }
       const input: SyncSnapshot = { entities: { space: { s1: { fields: { name: 'Cut \ud83d' }, stamps: { name: `${String(NOW - 1000).padStart(13, '0')}-0000-phone` } } } }, tombstones: {}, order: {}, orderStamps: {} }

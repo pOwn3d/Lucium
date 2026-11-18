@@ -52,6 +52,23 @@ export const cutText = (text: string, max: number): string => {
   return last >= 0xd800 && last <= 0xdbff ? cut.slice(0, -1) : cut
 }
 
+/**
+ * The text cut to `max` BYTES of UTF-8, in whole characters: a bound the other device reads in bytes (the title and the address of an open tab, docs/synchronisation.md §7.3) is not
+ * met by cutting at as many UTF-16 units, since one unit of a Japanese title is three bytes and one of an emoji four: the message that held it was refused whole.
+ */
+export const cutBytes = (text: string, max: number): string => {
+  if (text.length * 3 <= max || Buffer.byteLength(text, 'utf8') <= max) return text
+  let bytes = 0
+  let end = 0
+  for (const character of text) {
+    const size = Buffer.byteLength(character, 'utf8')
+    if (bytes + size > max) break
+    bytes += size
+    end += character.length
+  }
+  return text.slice(0, end)
+}
+
 /** A label that cannot be empty: blank or missing gives `fallback` (a name of the catalogue, in the language of the interface when the state is read: it is then saved as it is). */
 const label = (value: unknown, max: number, fallback: string): string => {
   const text = printable(value, max)
