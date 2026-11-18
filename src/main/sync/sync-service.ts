@@ -28,6 +28,7 @@ import { PairingSecret } from './pairing-secret'
 import type { PairingRequestInfo } from './pairing-server'
 import { AddressLimiter } from './rate-limit'
 import { ownHosts, type HostEnvironment } from './own-hosts'
+import { isResumeId, resumeRows, type ResumeRow, type ResumeTab } from '@shared/sync-resume'
 import type { SafeClock } from './safe-clock'
 import type { SecretBox } from './secret-box'
 import { PORT_MAX, PORT_MIN, type PeerRecord, type SyncStore } from './sync-store'
@@ -121,7 +122,9 @@ export class SyncService {
   private exchanging = false
   private lastExchange: SyncLastExchange | null = null
   /** What the other devices announced as their open tabs: in memory only, never written, forgotten with the window and with the device (§10.4). */
-  private readonly announced = new Map<string, OpenTab[]>()
+  private readonly announced = new Map<string, { items: OpenTab[]; at: number }>()
+  /** The devices that went through a session since the lists were last forgotten: « it sent nothing » is only told after one (§10.4). */
+  private readonly sessionSeen = new Set<string>()
 
   constructor(private readonly deps: SyncServiceDeps) {
     this.limiter = new AddressLimiter(() => deps.clock.elapsed())
@@ -191,6 +194,7 @@ export class SyncService {
       this.startTracking(identity.deviceId)
     } else {
       await this.window.close('switch-off')
+      this.forgetAnnounced()
       this.deps.store.setEnabled(false)
       this.stopTracking()
     }
@@ -228,6 +232,8 @@ export class SyncService {
     this.begin()
     if (!(SYNC_CATEGORIES as readonly string[]).includes(category)) this.fail('internal', `${category} is not a category`)
     this.deps.store.setCategory(category, on)
+    // Unticked: what the iPhone said it had open is forgotten at once, not at the next session.
+    if (category === 'openTabs' && !on) this.forgetAnnounced()
     this.changed()
   }
 
@@ -299,7 +305,11 @@ export class SyncService {
 
   /** The application locked or unlocked: a lock closes the window and the sheet. */
   async lockChanged(): Promise<void> {
-    if (this.deps.isLocked()) await this.window.close('locked')
+    if (this.deps.isLocked()) {
+      // What the iPhone had open is what a person reads: it does not stay in memory behind a lock.
+      this.forgetAnnounced()
+      await this.window.close('locked')
+    }
   }
 
   private async startDoor(): Promise<void> {
@@ -330,7 +340,7 @@ export class SyncService {
 
   /** The window has closed, for whatever reason: nobody can be asked or paired any more. */
   private windowClosed(): void {
-    this.announced.clear()
+    this.forgetAnnounced()
     this.pairing?.secret.close()
     this.pairing = null
     this.resolveConfirm('refuse')
@@ -430,13 +440,42 @@ export class SyncService {
     this.deps.store.forgetPeer(id)
     this.bases?.remove(id)
     this.announced.delete(id)
+    this.sessionSeen.delete(id)
     this.door?.dropPeer(peer.fingerprint)
     this.changed()
   }
 
   /** The open tabs a paired device announced in its last session (in memory only; the screen « Reprise » of card 447 reads them). */
   openTabsFrom(peerId: string): readonly OpenTab[] {
-    return this.announced.get(peerId) ?? []
+    return this.announced.get(peerId)?.items ?? []
+  }
+
+  private forgetAnnounced(): void {
+    this.announced.clear()
+    this.sessionSeen.clear()
+  }
+
+  /**
+   * What the command bar shows of the iPhones' open tabs (« Sur l'iPhone »): the rows of every paired iPhone together, the most recent first, each named by the device and its
+   * own identifier, and the facts `resumeView` needs for saying why there is no list. Nothing is read from the state and nothing is kept.
+   */
+  resumeSource(): { paired: boolean; categoryOnHere: boolean; announcedAt: number | null; listAnnounced: boolean; sessionHappened: boolean; rows: ResumeRow[] } {
+    const config = this.deps.store.config()
+    const phones = this.deps.store.peers().filter((peer) => peer.platform === 'ios')
+    const tabs: ResumeTab[] = []
+    let announcedAt: number | null = null
+    let sessionHappened = false
+    for (const phone of phones) {
+      sessionHappened ||= this.sessionSeen.has(phone.id)
+      const list = this.announced.get(phone.id)
+      if (list === undefined) continue
+      announcedAt = Math.max(announcedAt ?? 0, list.at)
+      for (const tab of list.items) {
+        const id = `${phone.id}:${tab.id}`
+        if (isResumeId(id)) tabs.push({ ...tab, id })
+      }
+    }
+    return { paired: config.enabled && phones.length > 0, categoryOnHere: config.categories.openTabs, announcedAt, listAnnounced: announcedAt !== null, sessionHappened, rows: resumeRows(tabs) }
   }
 
   /** A session with a paired device: one at a time (a second is told `busy`), the exchange of docs/synchronisation.md §8 with the state and the marks of this device. */
@@ -462,10 +501,13 @@ export class SyncService {
         stateVersion: ports.stateVersion,
         hosts: () => ownHosts(this.deps.hostEnv()),
         ...(ports.openTabs !== undefined ? { openTabs: ports.openTabs } : {}),
-        onOpenTabs: (id, items) => void this.announced.set(id, items),
+        onOpenTabs: (id, items) => void this.announced.set(id, { items, at: this.deps.now() }),
         onUnpair: (id) => this.forget(id),
         onRefused: (id, refused) => console.warn(`[sync] ${refused.length} entities of ${id} were not taken (${[...new Set(refused.map((one) => one.reason))].join(', ')})`),
-        onDone: (id, at) => store.touchSession(id, at),
+        onDone: (id, at) => {
+          store.touchSession(id, at)
+          this.sessionSeen.add(id)
+        },
         onWarning: (id, code) => console.warn(`[sync] ${id} says: ${code}`)
       })
       const known = ['divergence', 'state-too-new', 'locked', 'interrupted'] as const

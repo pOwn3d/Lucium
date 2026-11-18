@@ -137,6 +137,9 @@ export type SyncResumeReply = { ok: true; view: SyncResumeView } | { ok: false }
 
 const ROW_ID = /^[A-Za-z0-9_:.-]{1,200}$/
 
+/** Whether a line can be named in a request of the bar: the main process leaves out of the list the tabs whose identifier is not one. */
+export const isResumeId = (id: string): boolean => ROW_ID.test(id)
+
 /** The request a message holds, or null: exactly one of the two kinds, with exactly its fields, and an identifier that looks like one. */
 export function parseSyncResumeRequest(raw: unknown): SyncResumeRequest | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null

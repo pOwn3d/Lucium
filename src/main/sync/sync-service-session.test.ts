@@ -32,12 +32,14 @@ interface Rig {
   phone: Device
   phoneTls: ReturnType<typeof testIdentity>
   time: { t: number }
+  locked: { v: boolean }
   port: () => number
 }
 
 function rig(macSeed: Parameters<typeof stateOf>[0], phoneSeed: Parameters<typeof stateOf>[0], over: { runSession?: boolean } = {}): Rig {
   const dir = tempDir('lucium-sync-exchange-')
   const time = { t: 0 }
+  const locked = { v: false }
   const mac: Rig['mac'] = { state: stateOf(macSeed), listeners: [], applied: [] }
   const store = new SyncStore(join(dir, 'sync.json'))
   const ports: SessionPorts = {
@@ -65,7 +67,7 @@ function rig(macSeed: Parameters<typeof stateOf>[0], phoneSeed: Parameters<typeo
     hostEnv: () => ({ hostname: 'mac.local', interfaces: {} }),
     deviceName: () => 'Mac de test',
     now: () => 1_790_000_000_000 + time.t,
-    isLocked: () => false,
+    isLocked: () => locked.v,
     session: ports,
     allowSource: () => true,
     ...(over.runSession === true ? { runSession: async () => undefined } : {})
@@ -74,7 +76,7 @@ function rig(macSeed: Parameters<typeof stateOf>[0], phoneSeed: Parameters<typeo
   const phoneTls = testIdentity(PHONE_ID)
   store.addPeer({ id: PHONE_ID, name: 'iPhone de test', platform: 'ios', fingerprint: phoneTls.fingerprint.toString('hex'), pairedAt: 1, lastSessionAt: null })
   const phone = new Device(PHONE_ID, 'ios', phoneSeed)
-  return { service, dir, store, mac, phone, phoneTls, time, port: () => store.config().port as number }
+  return { service, dir, store, mac, phone, phoneTls, time, locked, port: () => store.config().port as number }
 }
 
 /** The iPhone connects and runs one session, as the client of the door. */
@@ -133,6 +135,81 @@ describe('the service with the exchange of the data', () => {
     expect(r.mac.state.tabs).toEqual([])
     await r.service.closeWindow()
     expect(r.service.openTabsFrom(PHONE_ID)).toEqual([])
+  })
+
+  describe('the list « Sur l\'iPhone » of the command bar', () => {
+    /** A Mac with the category ticked on both sides, and one session through. */
+    async function withList() {
+      const r = rig({}, {})
+      r.store.setCategory('openTabs', true)
+      r.phone.categories.add('openTabs')
+      r.phone.openTabs = [{ id: 'p1', spaceId: 'sp-main', url: 'https://phone.example/', title: 'Phone page', lastActiveAt: 5 }]
+      await r.service.setEnabled(true)
+      await r.service.openWindow()
+      r.phone.edit((s) => s)
+      await phoneSession(r, macDeviceId(r))
+      await sleep(30)
+      return r
+    }
+
+    it('shows the rows once a session announced them, the iPhone named in the identifier', async () => {
+      const r = await withList()
+      const source = r.service.resumeSource()
+      expect(source).toMatchObject({ paired: true, categoryOnHere: true, listAnnounced: true, sessionHappened: true })
+      expect(source.announcedAt).toBe(1_790_000_000_000 + r.time.t)
+      expect(source.rows).toEqual([{ id: `${PHONE_ID}:p1`, url: 'https://phone.example/', title: 'Phone page', host: 'phone.example', spaceId: 'sp-main', lastActiveAt: 5 }])
+    })
+
+    it('says nothing before any session, and tells « the iPhone sent nothing » only after one without a list', async () => {
+      const r = rig({}, {})
+      r.store.setCategory('openTabs', true)
+      await r.service.setEnabled(true)
+      expect(r.service.resumeSource()).toMatchObject({ paired: true, announcedAt: null, sessionHappened: false, rows: [] })
+      await r.service.openWindow()
+      r.phone.edit((s) => s)
+      await phoneSession(r, macDeviceId(r))
+      await sleep(30)
+      expect(r.service.resumeSource()).toMatchObject({ announcedAt: null, listAnnounced: false, sessionHappened: true, rows: [] })
+    })
+
+    it('is not paired while the switch is off', async () => {
+      const r = rig({}, {})
+      expect(r.service.resumeSource()).toMatchObject({ paired: false })
+    })
+
+    it('forgets the list when the category is unticked, and keeps it when another one is', async () => {
+      const r = await withList()
+      r.service.setCategory('settings', true)
+      expect(r.service.resumeSource().rows).toHaveLength(1)
+      r.service.setCategory('openTabs', false)
+      expect(r.service.resumeSource()).toMatchObject({ categoryOnHere: false, announcedAt: null, rows: [] })
+      expect(r.service.openTabsFrom(PHONE_ID)).toEqual([])
+    })
+
+    it('forgets the list when the application locks', async () => {
+      const r = await withList()
+      r.locked.v = true
+      await r.service.lockChanged()
+      expect(r.service.resumeSource()).toMatchObject({ announcedAt: null, rows: [] })
+    })
+
+    it('forgets the list when the synchronisation is stopped', async () => {
+      const r = await withList()
+      await r.service.setEnabled(false)
+      expect(r.service.resumeSource()).toMatchObject({ paired: false, announcedAt: null, rows: [] })
+    })
+
+    it('forgets the list with the iPhone', async () => {
+      const r = await withList()
+      r.service.forget(PHONE_ID)
+      expect(r.service.resumeSource()).toMatchObject({ paired: false, announcedAt: null, sessionHappened: false, rows: [] })
+    })
+
+    it('forgets the list with the window', async () => {
+      const r = await withList()
+      await r.service.closeWindow()
+      expect(r.service.resumeSource()).toMatchObject({ announcedAt: null, rows: [] })
+    })
   })
 
   it('forgets the iPhone, and its base, when it says it forgets the Mac', async () => {
