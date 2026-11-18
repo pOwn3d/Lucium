@@ -1,6 +1,22 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "NSCameraUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium uses the camera only to read the QR code the Mac shows for pairing. No photo is taken or kept."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium utilise l’appareil photo uniquement pour lire le code QR que le Mac affiche pour s’appairer. Aucune photo n’est prise ni gardée."
+          }
+        }
+      }
+    },
     "NSFaceIDUsageDescription": {
       "localizations": {
         "en": {
@@ -13,6 +29,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lucium utilise Face ID pour déverrouiller l'application et les espaces que vous avez choisi de verrouiller. Rien n'est envoyé nulle part."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium connects to your Mac, on your local network, to pair with it and synchronize your spaces. Nothing goes through the internet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium se connecte à votre Mac, sur votre réseau local, pour s’appairer avec lui et synchroniser vos espaces. Rien ne passe par Internet."
           }
         }
       }

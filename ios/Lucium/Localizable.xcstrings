@@ -4601,6 +4601,1158 @@
         }
       }
     },
+    "sync.categories.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A category is exchanged only if it is ticked on both devices."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une catégorie ne passe que si elle est cochée sur les deux appareils."
+          }
+        }
+      }
+    },
+    "sync.categories.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What is sent"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce qui est envoyé"
+          }
+        }
+      }
+    },
+    "sync.category.archive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archived tabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets archivés"
+          }
+        }
+      }
+    },
+    "sync.category.archive.detail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The tabs Lucium put in the archive."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les onglets que Lucium a rangés dans l’archive."
+          }
+        }
+      }
+    },
+    "sync.category.open-tabs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open tabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets ouverts"
+          }
+        }
+      }
+    },
+    "sync.category.open-tabs.detail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "What you are reading is sent, titles and addresses included."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce que vous lisez est envoyé, titres et adresses compris."
+          }
+        }
+      }
+    },
+    "sync.category.settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Shared settings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réglages communs"
+          }
+        }
+      }
+    },
+    "sync.category.settings.detail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Eight settings: privacy, automatic archiving, search engine, profile names."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Huit réglages : vie privée, archivage automatique, moteur de recherche, noms des profils."
+          }
+        }
+      }
+    },
+    "sync.category.structure": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spaces and folders"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espaces et dossiers"
+          }
+        }
+      }
+    },
+    "sync.category.structure.detail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spaces, folders, favorites and pinned tabs."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Espaces, dossiers, favoris et onglets épinglés."
+          }
+        }
+      }
+    },
+    "sync.error.bad-proof": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Mac did not prove it knows the code. Show a new code on the Mac and start again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Mac n’a pas prouvé qu’il connaît le code. Affichez un nouveau code sur le Mac et recommencez."
+          }
+        }
+      }
+    },
+    "sync.error.busy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another synchronization is running with this Mac. Try again in a moment."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Une autre synchronisation est en cours avec ce Mac. Réessayez dans un instant."
+          }
+        }
+      }
+    },
+    "sync.error.divergence": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The two devices do not agree: nothing was changed."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les deux appareils ne s’accordent pas : rien n’a été changé."
+          }
+        }
+      }
+    },
+    "sync.error.fingerprint-mismatch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is not the Mac of the code."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce n’est pas le Mac du code."
+          }
+        }
+      }
+    },
+    "sync.error.identity": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This iPhone could not create the synchronization key (the keychain refused). Unlock the device and try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet iPhone n’a pas pu créer la clé de la synchronisation (le trousseau a refusé). Déverrouillez l’appareil et réessayez."
+          }
+        }
+      }
+    },
+    "sync.error.internal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A problem occurred on this iPhone. Try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un problème est survenu sur cet iPhone. Réessayez."
+          }
+        }
+      }
+    },
+    "sync.error.invalid-code": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This is not a Lucium pairing code. Read the code shown on the Mac again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce n’est pas un code d’appairage de Lucium. Lisez de nouveau le code affiché sur le Mac."
+          }
+        }
+      }
+    },
+    "sync.error.locked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium is locked on the Mac. Unlock it, then open synchronization."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium est verrouillé sur le Mac. Déverrouillez-le, puis ouvrez la synchronisation."
+          }
+        }
+      }
+    },
+    "sync.error.not-paired": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac no longer knows this iPhone. Pair them again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce Mac ne connaît plus cet iPhone. Appairez-les de nouveau."
+          }
+        }
+      }
+    },
+    "sync.error.pairing-closed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pairing was closed on the Mac. Open it again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’appairage a été fermé sur le Mac. Ouvrez-le de nouveau."
+          }
+        }
+      }
+    },
+    "sync.error.pairing-expired": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This code has expired. Show a new one on the Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce code a expiré. Affichez-en un nouveau sur le Mac."
+          }
+        }
+      }
+    },
+    "sync.error.pairing-locked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many tries with this code. Show a new one on the Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trop d’essais avec ce code. Affichez-en un nouveau sur le Mac."
+          }
+        }
+      }
+    },
+    "sync.error.pairing-refused": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Mac refused the pairing."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Mac a refusé l’appairage."
+          }
+        }
+      }
+    },
+    "sync.error.pairing-used": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This code has already been used. Show a new one on the Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce code a déjà été utilisé. Affichez-en un nouveau sur le Mac."
+          }
+        }
+      }
+    },
+    "sync.error.protocol": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Mac and the iPhone did not understand each other. Try again; if it keeps happening, update Lucium on both."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Mac et l’iPhone ne se sont pas compris. Réessayez ; si cela continue, mettez Lucium à jour des deux côtés."
+          }
+        }
+      }
+    },
+    "sync.error.rate-limited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Mac received too many connections. Try again in a minute."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Mac a reçu trop de connexions. Réessayez dans une minute."
+          }
+        }
+      }
+    },
+    "sync.error.state-too-new": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The other Lucium is newer: update this one."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’autre Lucium est plus récent : mettez celui-ci à jour."
+          }
+        }
+      }
+    },
+    "sync.error.timeout": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Mac did not answer in time. Try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Mac n’a pas répondu à temps. Réessayez."
+          }
+        }
+      }
+    },
+    "sync.error.truncated": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The exchange stopped before the end. Nothing was changed; try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’échange s’est arrêté avant la fin. Rien n’a été changé ; réessayez."
+          }
+        }
+      }
+    },
+    "sync.error.unsupported-version": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The two Luciums do not speak the same version: update them."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les deux Lucium ne parlent pas la même version : mettez-les à jour."
+          }
+        }
+      }
+    },
+    "sync.limits": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both devices must be on, on the same network, with Lucium open on the iPhone and the synchronization window open on the Mac. Passwords, locks, cookies and history are never sent."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les deux appareils doivent être allumés, sur le même réseau, Lucium ouvert sur l’iPhone et la fenêtre de synchronisation ouverte sur le Mac. Les mots de passe, les verrous, les cookies et l’historique ne sont jamais envoyés."
+          }
+        }
+      }
+    },
+    "sync.mac.add": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a Mac"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un Mac"
+          }
+        }
+      }
+    },
+    "sync.mac.forget": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forget this Mac"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oublier ce Mac"
+          }
+        }
+      }
+    },
+    "sync.mac.forget.message": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This iPhone will no longer connect to it. For the Mac to forget this iPhone too, forget it in Lucium’s settings on the Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet iPhone ne s’y connectera plus. Pour que le Mac l’oublie aussi, oubliez cet iPhone dans les réglages de Lucium sur le Mac."
+          }
+        }
+      }
+    },
+    "sync.mac.forget.title %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forget “%@”?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Oublier « %@ » ?"
+          }
+        }
+      }
+    },
+    "sync.mac.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Mac"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Votre Mac"
+          }
+        }
+      }
+    },
+    "sync.mac.now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync now"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchroniser maintenant"
+          }
+        }
+      }
+    },
+    "sync.pairing.address.placeholder": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Address (mac-name.local:49213)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse (nom-du-mac.local:49213)"
+          }
+        }
+      }
+    },
+    "sync.pairing.camera.asking": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium is asking for the camera to read the QR code."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium demande l’accès à l’appareil photo pour lire le code QR."
+          }
+        }
+      }
+    },
+    "sync.pairing.camera.denied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera access is denied. Allow it in iOS settings, or type the code by hand."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’accès à l’appareil photo est refusé. Autorisez-le dans les réglages d’iOS, ou saisissez le code à la main."
+          }
+        }
+      }
+    },
+    "sync.pairing.camera.label": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera: point it at the QR code Lucium shows on the Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appareil photo : visez le code QR affiché par Lucium sur le Mac."
+          }
+        }
+      }
+    },
+    "sync.pairing.camera.unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This device has no usable camera. Type the code by hand."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cet appareil n’a pas d’appareil photo utilisable. Saisissez le code à la main."
+          }
+        }
+      }
+    },
+    "sync.pairing.cancel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel pairing"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler l’appairage"
+          }
+        }
+      }
+    },
+    "sync.pairing.code.placeholder": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code to type (ABCDE-FGHIJ-…)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code à saisir (ABCDE-FGHIJ-…)"
+          }
+        }
+      }
+    },
+    "sync.pairing.connecting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connecting to the Mac…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion au Mac…"
+          }
+        }
+      }
+    },
+    "sync.pairing.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The code is valid for 2 minutes and works once. The Mac will ask for your approval."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le code est valable 2 minutes et ne sert qu’une fois. Le Mac demandera votre accord."
+          }
+        }
+      }
+    },
+    "sync.pairing.go": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pair"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appairer"
+          }
+        }
+      }
+    },
+    "sync.pairing.mode": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Way to pair"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Façon d’appairer"
+          }
+        }
+      }
+    },
+    "sync.pairing.mode.scan": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scan the code"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lire le code"
+          }
+        }
+      }
+    },
+    "sync.pairing.mode.type": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type a code"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisir un code"
+          }
+        }
+      }
+    },
+    "sync.pairing.scan.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On the Mac: Lucium settings, Synchronization, “Add an iPhone”. Point the camera at the QR code."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur le Mac : réglages de Lucium, Synchronisation, « Ajouter un iPhone ». Visez le code QR."
+          }
+        }
+      }
+    },
+    "sync.pairing.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add a Mac"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter un Mac"
+          }
+        }
+      }
+    },
+    "sync.pairing.type.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The address and the code are written under the QR code, on the Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’adresse et le code sont écrits sous le code QR, sur le Mac."
+          }
+        }
+      }
+    },
+    "sync.pairing.type.instead": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Type a code"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Saisir un code"
+          }
+        }
+      }
+    },
+    "sync.pairing.unreachable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac not found at these addresses. It must be on, on the same network, with the pairing window open."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac introuvable à ces adresses. Il doit être allumé, sur le même réseau, avec la fenêtre d’appairage ouverte."
+          }
+        }
+      }
+    },
+    "sync.pairing.waiting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On the Mac, tap “Allow”. It waits 60 seconds."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur le Mac, touchez « Autoriser ». Il attend 60 secondes."
+          }
+        }
+      }
+    },
+    "sync.state.clock-skew": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The clocks of the two devices differ by more than 5 minutes: in a conflict, the choice of the most recent may be wrong."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les horloges des deux appareils diffèrent de plus de 5 minutes : en cas de conflit, le choix du plus récent peut se tromper."
+          }
+        }
+      }
+    },
+    "sync.state.identity-lost": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This copy of Lucium no longer has the synchronization key (restore, reinstall). Pair the Mac again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette copie de Lucium n’a plus la clé de la synchronisation (restauration, réinstallation). Appairez le Mac de nouveau."
+          }
+        }
+      }
+    },
+    "sync.state.idle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready. No exchange yet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prête. Aucun échange pour l’instant."
+          }
+        }
+      }
+    },
+    "sync.state.interrupted": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exchange interrupted. Nothing was changed; it will start again at the next synchronization."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échange interrompu. Rien n’a été changé ; il reprendra à la prochaine synchronisation."
+          }
+        }
+      }
+    },
+    "sync.state.local-network-denied": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium is not allowed to use the local network: iOS Settings › Lucium."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium n’a pas le droit d’utiliser le réseau local : Réglages d’iOS › Lucium."
+          }
+        }
+      }
+    },
+    "sync.state.mac-answered %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Mac answered (%@). This version checks the connection; the exchange of your spaces is not available yet."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le Mac a répondu (%@). Cette version vérifie la connexion ; l’échange de vos espaces n’est pas encore disponible."
+          }
+        }
+      }
+    },
+    "sync.state.no-device": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No Mac paired."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun Mac appairé."
+          }
+        }
+      }
+    },
+    "sync.state.off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivée."
+          }
+        }
+      }
+    },
+    "sync.state.running": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Syncing…"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisation en cours…"
+          }
+        }
+      }
+    },
+    "sync.state.unreachable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac not found. It must be on, on the same network, with synchronization open."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac introuvable. Il doit être allumé, sur le même réseau, avec la synchronisation ouverte."
+          }
+        }
+      }
+    },
+    "sync.state.up-to-date %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Up to date (%@)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À jour (%@)."
+          }
+        }
+      }
+    },
+    "sync.state.waiting": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting: open synchronization on the Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En attente : ouvrez la synchronisation sur le Mac."
+          }
+        }
+      }
+    },
+    "sync.status.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Status"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "État"
+          }
+        }
+      }
+    },
+    "sync.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronization"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisation"
+          }
+        }
+      }
+    },
+    "sync.toggle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sync with my Mac"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchroniser avec mon Mac"
+          }
+        }
+      }
+    },
+    "sync.toggle.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Between your iPhone and your Mac, on your local network. Nothing goes through a server or the internet. Off until you turn it on."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entre votre iPhone et votre Mac, sur votre réseau local. Rien ne passe par un serveur ni par Internet. Désactivée tant que vous ne l’activez pas."
+          }
+        }
+      }
+    },
     "tabs.add-favorite": {
       "localizations": {
         "en": {

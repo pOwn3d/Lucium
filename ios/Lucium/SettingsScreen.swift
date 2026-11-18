@@ -17,7 +17,7 @@ struct SettingsScreen: View {
     var body: some View {
         NavigationStack(path: $path) {
             List {
-                ForEach(SettingsLayout.groups(lockAvailable: model.lock != nil)) { group in
+                ForEach(Self.groups(for: model)) { group in
                     Section {
                         ForEach(group.rows) { row in rowView(row) }
                     } header: {
@@ -33,7 +33,12 @@ struct SettingsScreen: View {
         .onDisappear { model.settingsStart = nil }
     }
 
-    /// The heading of a section. The synchronisation has none yet: its page comes with the phase 2 (docs/ios.md, section 13), and so does its text.
+    /// What the list holds for this copy: the lock when it has a controller, the synchronisation when it has one (docs/ios.md, sections 3.3 and 13.7).
+    static func groups(for model: BrowserModel) -> [SettingsGroup] {
+        SettingsLayout.groups(lockAvailable: model.lock != nil, syncAvailable: model.sync != nil)
+    }
+
+    /// The heading of a section. The synchronisation has none: its row says what it is.
     static func title(of section: SettingsSection) -> LocalizedStringKey? {
         switch section {
         case .navigation: "settings.section.navigation"
@@ -59,7 +64,7 @@ struct SettingsScreen: View {
         case .licenses:
             link(row, "licenses.title") { EmptyView() }
         case .sync:
-            EmptyView()  // phase 2: `SettingsLayout` does not list it yet
+            link(row, "sync.title") { Text(model.sync?.settings.enabled == true ? "settings.lock.on" : "settings.lock.off") }
         }
     }
 
@@ -81,7 +86,8 @@ struct SettingsScreen: View {
         // Choosing a space to browse in leaves the settings, as it leaves the sheet of the spaces.
         case .spaces: SpacesList(model: model) { model.settingsShown = false }
         case .licenses: LicensesScreen()
-        case .sync: EmptyView()
+        case .sync:
+            if let sync = model.sync { SyncScreen(controller: sync) }
         }
     }
 }

@@ -22,6 +22,7 @@ extension BrowserModel {
         guard let lock else { return }
         for tab in state.tabs where lock.covers(space: tab.spaceId) { putToSleep(tab.id) }
         if lock.appLocked {
+            sync?.applicationLocked()
             closePresentedScreens()
         } else if activeSpaceCovered {
             closePagePrompts()
@@ -61,7 +62,16 @@ extension BrowserModel {
     /// The model of the running application, with the lock of this phone: its settings are read from their own file next to the state.
     static func launchWithLock() -> BrowserModel {
         let file = LockSettingsFile(url: supportDirectory().appending(path: LockSettingsFile.fileName))
-        return launch(lock: LockController(authenticator: SystemAuthenticator(), file: file))
+        let model = launch(lock: LockController(authenticator: SystemAuthenticator(), file: file))
+        model.attach(SyncController(file: SyncSettingsFile(url: supportDirectory().appending(path: SyncSettingsFile.fileName)),
+                                    isAppLocked: { [weak model] in model?.lock?.appLocked ?? false }))
+        return model
+    }
+
+    /// Gives the model its synchronisation, and starts the first session the rules allow (off by default: nothing happens until the person turned it on).
+    func attach(_ sync: SyncController) {
+        self.sync = sync
+        sync.launched()
     }
 
     /// What the lock does as the scene changes. The cover goes up first: the system takes its picture of the application (the app switcher) as the
@@ -77,6 +87,7 @@ extension BrowserModel {
             Task { await enterBackground() }
         case .active:
             didBecomeActive()
+            sync?.becameActive()
             lock?.recheckDevice()
             Task { await lock?.promptIfPending() }
         default: break

@@ -151,7 +151,7 @@ La capture en tête de ce document la montre sur un iPhone ; l'iPad tenu droit l
 
 Chaque ligne **pousse sa page dans la pile de l'écran** : « Retour » revient toujours à la liste, et il n'y a plus de feuille dans la feuille. Les quatre écrans qui existaient (vie privée, verrou, espaces, licences) sont donc découpés en un contenu (une page) et, pour les espaces, la feuille qui l'enveloppe encore (`SpacesSheet`, ouverte par l'appui long sur une pastille) : même code, mêmes textes. Choisir un espace dans la page des espaces le montre et **ferme les Réglages**, comme il ferme la feuille. L'écran peut s'ouvrir **sur une page** (`openSettings(on:)`, la liste sinon) : c'est ce qu'utilisent la capture « Vie privée » de la fiche de l'App Store et, plus tard, tout renvoi vers un réglage.
 
-**La place de « Synchronisation » (phase 2).** Elle est prévue sans être montrée : `SettingsSection.sync` et `SettingsRow.sync` existent, **entre « Espaces » et « À propos »**, et `SettingsLayout.groups(lockAvailable:syncAvailable:)` ne les liste que si `syncAvailable` est vrai (faux par défaut ; un test le garde, un autre garde sa place). La phase 2 y branche sa page et son titre sans rien déplacer ; aucun texte n'est écrit d'avance (le catalogue refuse une clé que personne ne lit).
+**« Synchronisation » (phase 2, carte 445).** Elle avait sa place prévue sans être montrée : `SettingsSection.sync` et `SettingsRow.sync`, **entre « Espaces » et « À propos »**, que `SettingsLayout.groups(lockAvailable:syncAvailable:)` ne liste que si `syncAvailable` est vrai (faux par défaut dans le paquet ; un test le garde, un autre garde sa place). L'écran passe `syncAvailable: true` : la ligne ouvre `SyncScreen` (interrupteur **désactivé** par défaut, ce qui est envoyé, le Mac appairé, la ligne d'état). Le détail est au §13.7.
 
 **Le moteur de recherche.** Celui du **profil de l'espace à l'écran**, choisi parmi **les six moteurs que le Mac propose** (`SearchEngine.presets`, tenus égaux à `SEARCH_ENGINES` par `ios/Contracts/search-vectors.json`). Il est écrit dans l'état **comme la fenêtre Réglages du Mac l'écrit** (`profileEditor`, `CurrentProfileSettings.tsx`) : le moteur du profil par défaut est `settings.searchUrlTemplate`, celui d'un autre profil est `settings.profiles[id].searchUrlTemplate`, et « **Comme le profil par défaut** » (la ligne que la page propose aux autres profils) retire cette clé, puis l'entrée du profil quand plus rien n'y reste. Les autres clés de l'entrée (dossier de téléchargement, extensions…) et du reste de l'état ressortent telles qu'elles sont entrées. **Contrat** : les neuf scénarios de `search-vectors.json` sont joués contre l'éditeur du Mac lui-même (`src/renderer/ios-search-contract.test.ts` : ce qu'il écrit, `profileSearch` qui relit le moteur, `cleanProfileOverrides` qui garde l'écrit) et contre `chooseSearchEngine` (`swift test`). Trois points que le Mac ne dit pas, tranchés et testés :
 
@@ -1062,6 +1062,31 @@ Le Mac n'écrit pas un journal d'opérations : son état passe par un `reducer` 
 ### 13.6 Ce qu'il faut côté Mac
 
 Un module `src/main/sync/` (écoute TLS, appairage, fusion), une page de Réglages (« Synchronisation », les appareils, « Oublier »), les textes en deux langues, des tests, et un canal IPC validé (`AGENTS.md` §6). Pas de changement du format d'état : seulement un fichier de bases de fusion à côté de `state.json`.
+
+### 13.7 Côté iPhone : ce qui est fait (carte 445)
+
+Écrit par la carte « Synchro 3/6 : côté iPhone » ; la référence reste [synchronisation.md](synchronisation.md). Ce qui est dit « prouvé » l'est par `swift test`, XCTest sur simulateur (build signée ad hoc : le trousseau du simulateur exige une signature, `errSecMissingEntitlement` sinon ; `scripts/ios-check.sh` la pose) ou Vitest.
+
+| Pièce | Où | Prouvé par |
+|---|---|---|
+| Lecture du QR, du code à saisir et de l'adresse tapée ; filtre d'adresses locales ; preuves HMAC ; trames ; messages et leurs bornes ; transitions ; numéros ; certificat écrit à la main | `LuciumKit/Sources/LuciumKit/Sync/` | les vecteurs `sync-pairing-vectors.json` et `sync-message-vectors.json` joués contre ce code (`SyncPairingContractTests`, `SyncMessageContractTests`) |
+| Appairage et séance jusqu'à `hello` (le corps d'une séance est l'interface `SyncSessionBody`) ; ordre des adresses d'un Mac ; fichier `sync.json` ; règles de déclenchement | idem | `SyncPairingFlowTests`, `SyncSessionFlowTests`, `SyncReachTests`, `SyncSettingsTests`, contre un Mac écrit dans les tests |
+| Identité : clé P-256 au trousseau + certificat, identité formée par le système | `ios/Lucium/SyncIdentity.swift` | `SyncNetworkTests` sur simulateur |
+| Connexion : `NWConnection`, TLS 1.3 au moins, deux identités, ALPN `lucium-sync/1`, empreinte du Mac vérifiée par `sec_protocol_options_set_verify_block` ; aucune adresse non locale | `ios/Lucium/SyncNetwork.swift` | `SyncNetworkTests` : un vrai serveur TLS sur la boucle locale |
+| Contrôleur : réglages, appairage, séance, oubli, clé perdue | `ios/Lucium/SyncController.swift` | `SyncControllerTests` |
+| La page « Synchronisation » des réglages de l'iPhone, feuille d'appairage (caméra ou code), textes FR/EN, verrou de l'application (ferme la séance et l'appairage ouverts) | `SyncScreen.swift`, `SyncPairingSheet.swift`, `QRScanner.swift`, `SyncTexts.swift`, `BrowserModel+Lock.swift` | `SyncScreenTests` (dessins en deux langues, verrou, textes de chaque échec) |
+| Drapeau « iPhone jamais modifié » ([Q3], §11.8 de synchronisation.md) : un verrou qui ne passe qu'à faux ; vrai seulement si aucun fichier d'état n'existait au premier lancement ; faux dès que les espaces, dossiers, onglets épinglés ou favoris ne sont plus ceux du premier lancement | `LuciumKit/.../SyncOrigin.swift`, `sync-origin.json` à côté de l'état | `SyncOriginTests`, `SyncScreenTests` |
+
+**Ce que la séance fait aujourd'hui.** Elle va jusqu'à `hello` : le Mac répond, les catégories communes sont connues, la dérive d'horloge et une version d'état trop récente sont vues, et les adresses du Mac sont mises à jour. **Aucun espace, dossier ni onglet n'est échangé** : l'instantané, les marques, la fusion, `result`/`commit` et l'application du patch sont la carte #452, après la fusion à trois voies (carte 446). La page le dit (« Le Mac a répondu… l'échange de vos espaces n'est pas encore disponible ») et ne dit jamais « À jour ».
+
+**Constats de l'essai (simulateur iOS 26.5).**
+
+- Le trousseau du simulateur répond `-34018` à une application sans signature : il faut une build signée ad hoc (aucun certificat ni profil).
+- Le certificat que le projet écrit à la main est accepté par `Network.framework` des deux côtés (client et serveur), lu par `Security.framework`, et `SecItemAdd` d'un certificat puis d'une clé donne bien une identité (`kSecClassIdentity`) : le point 4 du §17 de synchronisation.md est **vérifié sur simulateur**.
+- Une empreinte qui n'est pas celle épinglée arrête la poignée de main (`CERTIFICATE_VERIFY_FAILED`) avant que l'iPhone montre son certificat ; un serveur en TLS 1.2 ou sans l'ALPN est refusé ; un port fermé donne `ECONNREFUSED` (le Mac est là et sa fenêtre est fermée), un serveur muet une attente sans fin que le délai de 3 s coupe.
+- La clé est créée avec `kSecAttrIsExtractable = false` et le trousseau garde `extr = 0`, **mais `SecKeyCopyExternalRepresentation` rend encore ses octets sur le simulateur** : le refus d'exporter n'est pas constaté ici, ni sur un appareil.
+
+**Pas vérifié.** Un appareil réel (invite d'accès au réseau local, résolution d'un nom `.local` par `NWConnection`, code d'erreur exact quand le réseau local est refusé : `kDNSServiceErr_PolicyDenied` et `kDNSServiceErr_NoAuth` sont mappés d'après les en-têtes, pas observés) ; l'appareil photo (le simulateur n'en a pas : le lecteur est écrit, la lecture d'un vrai QR ne l'est pas) ; un vrai Mac, le Node d'Electron 45.2.1 ; le comportement en arrière-plan au milieu d'une séance ; `ITSAppUsesNonExemptEncryption` (§9.5 : la clé est retirée, la valeur reste à décider).
 
 ## 14. Vérifié, supposé, à valider
 

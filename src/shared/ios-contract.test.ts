@@ -100,7 +100,7 @@ const IOS_SOURCES = join(__dirname, '../../ios/Lucium')
 const catalogue = JSON.parse(readFileSync(join(IOS_SOURCES, 'Localizable.xcstrings'), 'utf8')) as Catalogue
 // Dotted words of the Swift sources that are not text: the identifier of the rule list, and the labels of the queues and the tag of the keychain items of the
 // synchronisation.
-const NOT_TEXT = new Set(['app.lucium.builtin', 'app.lucium.sync.connection', 'app.lucium.sync.identity', 'app.lucium.sync.verify'])
+const NOT_TEXT = new Set(['app.lucium.builtin', 'app.lucium.sync.connection', 'app.lucium.sync.identity', 'app.lucium.sync.verify', 'app.lucium.sync.camera'])
 const placeholders = (text: string): string[] => (text.match(/%(\d+\$)?(@|d|lld|f|s)/g) ?? []).sort()
 /** A text of a localization: the one text, or the texts of the plural forms by form (a number is `%lld` in the catalogue and `\(n)` in the code). */
 const textsOf = (localization: Localization | undefined): Record<string, StringUnit | undefined> =>
@@ -185,6 +185,21 @@ describe('iOS contract: lock', () => {
     expect(entry?.fr?.stringUnit?.state).toBe('translated')
     expect(entry?.fr?.stringUnit?.value).not.toBe(entry?.en?.stringUnit?.value)
     expect(readFileSync(join(IOS_SOURCES, '../project.yml'), 'utf8')).toMatch(/INFOPLIST_KEY_NSFaceIDUsageDescription: "[^"]{10,}"/)
+  })
+
+  it('carries the camera and the local network sentences of the synchronisation in both languages and in the project, and asks for no Bonjour service', () => {
+    const info = JSON.parse(readFileSync(join(IOS_SOURCES, 'InfoPlist.xcstrings'), 'utf8')) as Catalogue
+    const project = readFileSync(join(IOS_SOURCES, '../project.yml'), 'utf8')
+    for (const key of ['NSCameraUsageDescription', 'NSLocalNetworkUsageDescription']) {
+      const entry = info.strings[key]?.localizations
+      expect(entry?.en?.stringUnit?.state, `${key} in English`).toBe('translated')
+      expect(entry?.fr?.stringUnit?.state, `${key} in French`).toBe('translated')
+      expect(entry?.fr?.stringUnit?.value, `${key}: French is not English left in place`).not.toBe(entry?.en?.stringUnit?.value)
+      expect(project, key).toMatch(new RegExp(`INFOPLIST_KEY_${key}: "[^"]{10,}"`))
+    }
+    // Nothing is discovered (docs/synchronisation.md section 5, [Q1]): the Mac is reached by its .local name and its last addresses.
+    expect(project).not.toContain('NSBonjourServices')
+    expect(readFileSync(join(IOS_SOURCES, 'Info.plist'), 'utf8')).not.toContain('NSBonjourServices')
   })
 })
 

@@ -234,6 +234,12 @@ final class SyncController {
         status = .running
         lastStart = clock.now
         let reach = await SyncReacher.connect(hosts: mac.hosts, port: UInt16(mac.port), pin: .fingerprint(fingerprint), using: makeConnector(identity))
+        // A session that was cancelled (the application was locked, the switch turned off) is not a failure of the Mac: the state goes back to what it was.
+        if Task.isCancelled {
+            if case .connected(let connection) = reach { connection.transport.close() }
+            status = Self.baseStatus(settings)
+            return
+        }
         guard case .connected(let connection) = reach else {
             if case .failed(let why) = reach { status = Self.status(for: why) }
             return
@@ -264,9 +270,19 @@ final class SyncController {
             default: status = .failed(failure.code)
             }
         } catch {
+            if Task.isCancelled {
+                status = Self.baseStatus(settings)
+                return
+            }
             print("[sync] the session was interrupted: \(error)")
             status = .interrupted
         }
+    }
+
+    /// The application has just been locked: whatever is open is closed (docs/synchronisation.md §8.1: no session while it is locked, and a locked space is not sent).
+    func applicationLocked() {
+        sessionTask?.cancel()
+        pairingTask?.cancel()
     }
 
     static func status(for failure: SyncReachFailure) -> SyncStatus {
@@ -351,5 +367,43 @@ struct SyncUnpairBody: SyncSessionBody {
     func run(_ context: SyncSessionContext, channel: SyncChannel) async throws -> SyncBodyOutcome {
         try await channel.send(.unpair)
         return .notExchanged
+    }
+}
+
+/// Keeps `SyncOrigin` (whether this phone was ever modified) and its file. The model hands it the state each time it is written; once the phone is judged
+/// modified the file is written once and nothing more is done.
+@MainActor
+final class SyncOriginKeeper {
+    private(set) var origin: SyncOrigin
+    private let file: SyncOriginFile
+
+    init(file: SyncOriginFile, stateWasFound: Bool, state: BrowserState) {
+        self.file = file
+        switch file.load() {
+        case .loaded(let kept):
+            origin = kept
+        case .none:
+            origin = SyncOrigin.atFirstRun(stateWasFound: stateWasFound, state: state)
+            write()
+        case .unreadable:
+            // What cannot be read cannot be trusted to say "never modified": the union loses nothing, adopting the Mac's state could.
+            origin = SyncOrigin(firstStructure: nil, untouched: false)
+            write()
+        }
+    }
+
+    func observe(_ state: BrowserState) {
+        let next = origin.observing(state)
+        guard next != origin else { return }
+        origin = next
+        write()
+    }
+
+    private func write() {
+        do {
+            try file.save(origin)
+        } catch {
+            print("[sync] the origin of this phone was not written: \(error)")
+        }
     }
 }
