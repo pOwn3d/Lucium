@@ -38,6 +38,7 @@ extension BrowserModel {
         settingsShown = false
         commandBarShown = false
         downloads.sheetShown = false
+        drawerEvent(.applicationLocked)
         closePagePrompts()
     }
 

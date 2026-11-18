@@ -70,12 +70,21 @@ struct BrowserScreen: View {
                 case .sidebar:
                     SidebarLayout(model: model, sidebarShown: $sidebarShown, expandedFolders: $expandedFolders)
                 case .bottomBar:
-                    VStack(spacing: 0) {
-                        PageArea(model: model)
-                        BottomBar(model: model)
+                    // On an iPhone the sidebar slides out from the left edge, above the page and the bar (decision of the project lead, 18 November 2026).
+                    if EdgeDrawer.isAvailable(layout: .bottomBar, isPhone: model.isPhone) {
+                        EdgeDrawerHost(model: model, expandedFolders: $expandedFolders, screenWidth: geometry.size.width) { pageAndBar }
+                    } else {
+                        pageAndBar
                     }
                 }
             }
+        }
+    }
+
+    private var pageAndBar: some View {
+        VStack(spacing: 0) {
+            PageArea(model: model)
+            BottomBar(model: model)
         }
     }
 

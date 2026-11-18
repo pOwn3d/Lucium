@@ -3593,6 +3593,22 @@
         }
       }
     },
+    "sidebar.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sidebar"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Barre latérale"
+          }
+        }
+      }
+    },
     "sitedata.done": {
       "localizations": {
         "en": {
