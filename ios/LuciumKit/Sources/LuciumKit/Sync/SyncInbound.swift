@@ -10,7 +10,9 @@ import Foundation
 ///   - a tab is accepted only if it is pinned and not private (`not-pinned`, `private`): the Today tabs are not entities;
 ///   - an address is accepted only if it is an http or https address (`invalid-url`): a page, never a script or a file;
 ///   - the fields of the class "local" are taken off: a device does not tell this one what its local files are;
-///   - an entity of a kind this version does not know, and a field of a known kind it does not know, cross as they are (§11.6).
+///   - an entity of a kind this version does not know, and a field of a known kind it does not know, cross as they are (§11.6);
+///   - the profile of a space or a favourite must be an identifier of the Mac (`BrowserState.isProfileId`): the key of a list is made of it (`invalid-value`; review n° 16);
+///   - the tombstones of a kind that is code or a secret are refused (`never-synced`), and a side keeps at most `maxTombstonesPerSnapshot` of the newest (review n° 14).
 /// A refused entity is dropped, counted and logged: never fatal (§8.5).
 public enum SyncInbound {
     public enum Refusal: String, Sendable {
@@ -21,6 +23,7 @@ public enum SyncInbound {
         case `private`
         case invalidURL = "invalid-url"
         case futureMark = "future-mark"
+        case tooManyTombstones = "too-many-tombstones"
     }
 
     public enum Verdict: Equatable, Sendable {
@@ -113,6 +116,10 @@ public enum SyncInbound {
             return .accepted(fields: ["value": fields["value"] ?? .null])
         }
         guard let known = SyncFieldClasses.kind(kind), let classes = SyncFieldClasses.classes[known] else { return .accepted(fields: fields) }
+        // The key of a list is made of the profile (`favorites:<profile>`): an identifier of the Mac, or nothing.
+        if known == .space || known == .favorite, let profile = fields["profileId"] {
+            guard case .string(let text) = profile, BrowserState.isProfileId(text) else { return .refused(.invalidValue) }
+        }
         if known == .tab {
             if case .bool(true)? = fields["private"] { return .refused(.private) }
             guard case .bool(true)? = fields["pinned"] else { return .refused(.notPinned) }
@@ -168,15 +175,33 @@ public enum SyncInbound {
             }
         }
         var tombstones: [String: [String: String]] = [:]
+        var standing: [(kind: String, id: String, stamp: String)] = []
         for (kind, byID) in snapshot.tombstones {
             for (id, stamp) in byID {
+                if SyncFieldClasses.neverKinds.contains(kind) {
+                    refused.append(Refused(kind: "tombstone", id: "\(kind)/\(id)", reason: .neverSynced))
+                    continue
+                }
                 if marksTheFuture(stamp, now: now) {
                     refused.append(Refused(kind: "tombstone", id: "\(kind)/\(id)", reason: .futureMark))
                     continue
                 }
-                tombstones[kind, default: [:]][id] = stamp
+                standing.append((kind, id, stamp))
             }
         }
+        // At most `maxTombstonesPerSnapshot` of them, the newest (a tie goes to the smaller kind then id, so that both devices keep the same ones): the merge keeps the tombstones
+        // of both sides, and a base that holds twice what a snapshot may is a base nobody can read.
+        if standing.count > SyncLimits.maxTombstonesPerSnapshot {
+            standing.sort { a, b in
+                let byStamp = SyncStamp.compare(b.stamp, a.stamp)
+                if byStamp != 0 { return byStamp < 0 }
+                let byKind = SyncCanonical.compare(a.kind, b.kind)
+                return byKind != 0 ? byKind < 0 : SyncCanonical.compare(a.id, b.id) < 0
+            }
+            standing = Array(standing.prefix(SyncLimits.maxTombstonesPerSnapshot))
+            refused.append(Refused(kind: "tombstone", id: "*", reason: .tooManyTombstones))
+        }
+        for one in standing { tombstones[one.kind, default: [:]][one.id] = one.stamp }
         var order: [String: [String]] = [:]
         var orderStamps: [String: String] = [:]
         for (key, ids) in snapshot.order {
