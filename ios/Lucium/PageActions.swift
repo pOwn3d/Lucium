@@ -1,0 +1,47 @@
+import LuciumKit
+import SwiftUI
+import WebKit
+
+/// What the person does with the page in front of them: share its address, save it as a PDF, open the downloads.
+extension BrowserModel {
+    /// The address that can be shared: a web page's, never the start page or a local file.
+    var shareURL: URL? { PageShare.shareableURL(webView?.url?.absoluteString) }
+
+    var pageTitle: String { webView?.title ?? "" }
+
+    var canSavePDF: Bool { shareURL != nil }
+
+    /// The page as a PDF in the folder of the downloads. The whole page is drawn, not only what is on screen (`WKPDFConfiguration` with no rectangle).
+    func savePageAsPDF() async {
+        guard let view = webView, canSavePDF else { return }
+        let page = host
+        let space = state.activeSpaceId
+        do {
+            let data = try await view.pdf(configuration: WKPDFConfiguration())
+            downloads.save(pdf: data, title: view.title, host: page, spaceId: space)
+        } catch {
+            downloads.failPDF(host: page, error: error, spaceId: space)
+        }
+    }
+}
+
+/// The button of the page's actions, in the bottom bar: share, save as PDF, downloads. A menu of words; the project's own icon (`Icon.more`) is on the button.
+struct PageActionsMenu: View {
+    @Bindable var model: BrowserModel
+
+    var body: some View {
+        Menu {
+            if let url = model.shareURL {
+                ShareLink(item: url, subject: Text(verbatim: model.pageTitle)) { Text("page.share") }
+            } else {
+                Button("page.share") {}.disabled(true)
+            }
+            Button("page.save-pdf") { Task { await model.savePageAsPDF() } }.disabled(!model.canSavePDF)
+            Button("page.downloads") { model.downloads.sheetShown = true }
+        } label: {
+            IconView(.more).frame(width: 44, height: 44).contentShape(Rectangle())
+        }
+        .foregroundStyle(Color.primary)
+        .accessibilityLabel(Text("page.more"))
+    }
+}

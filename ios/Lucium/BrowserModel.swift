@@ -53,6 +53,9 @@ final class BrowserModel {
     /// The navigation delegate of every web view: the privacy rules of the Mac (docs/ios.md, "Vie privée").
     @ObservationIgnored let navigationPolicy = PrivacyNavigation()
 
+    /// The downloads (files, and pages saved as PDF); `PrivacyNavigation` hands a navigation that became one over to it (`DownloadNavigation.swift`).
+    let downloads: DownloadsModel
+
     /// The short built-in list, used when this copy carries no embedded list; `embeddedLists` gives the lists the application carries (docs/ios.md,
     /// "Compiler les listes du Mac"), and `store` is where WebKit keeps what it compiled (tests give their own folder).
     @ObservationIgnored let rules: @MainActor () throws -> String
@@ -86,7 +89,8 @@ final class BrowserModel {
          rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
          embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
          pageGuard makePageGuard: @escaping @MainActor (ScriptletTable) throws -> PageGuard? = { table in try PageGuard.load(table: table) },
-         store: WKContentRuleListStore = .default()) {
+         store: WKContentRuleListStore = .default(), downloadsDirectory: URL = DownloadsModel.defaultDirectory()) {
+        self.downloads = DownloadsModel(directory: downloadsDirectory)
         let initial = state.consistent() ?? Self.defaultState()
         self.state = initial
         unreadableLibraryEntries = initial.unreadableLibraryEntries
@@ -108,6 +112,7 @@ final class BrowserModel {
         }
         ensureActiveTab()
         navigationPolicy.model = self
+        downloads.isCovered = { [weak self] space in self?.lock?.covers(space: space) ?? false }
     }
 
     var spaces: [Space] { state.spaces }
@@ -364,14 +369,14 @@ extension BrowserModel {
                        rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
                        embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
                        pageGuard: @escaping @MainActor (ScriptletTable) throws -> PageGuard? = { table in try PageGuard.load(table: table) },
-                       store: WKContentRuleListStore = .default()) -> BrowserModel {
+                       store: WKContentRuleListStore = .default(), downloadsDirectory: URL = DownloadsModel.defaultDirectory()) -> BrowserModel {
         var file = StateFile(url: directory.appending(path: StateFile.fileName))
         let load = file.load()
         var state = defaultState()
         if case .loaded(let loaded) = load { state = loaded }
         let model = BrowserModel(state: state, stateFile: file,
                                  sideStore: TabSideStore(directory: directory.appending(path: TabSideStore.directoryName, directoryHint: .isDirectory)), startup: load,
-                                 awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, pageGuard: pageGuard, store: store)
+                                 awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, pageGuard: pageGuard, store: store, downloadsDirectory: downloadsDirectory)
         if let lock { model.attach(lock) }
         return model
     }

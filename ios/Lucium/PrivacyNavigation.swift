@@ -123,6 +123,8 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
     }
 
     private func decide(_ webView: WKWebView, _ action: WKNavigationAction) async -> WKNavigationActionPolicy {
+        // A link marked `download` is a file, not a page: it never goes through the rewrites below, which would load it as a page.
+        if action.shouldPerformDownload { return DownloadNavigation.policy(shouldPerformDownload: true, address: action.request.url) }
         guard let tab = tabId(of: webView), action.targetFrame?.isMainFrame == true, let url = action.request.url,
               let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return .allow }
         let address = url.absoluteString

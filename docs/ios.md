@@ -131,9 +131,9 @@ Légende : **reprise** = même comportement ; **adaptée** = même but, autre mo
 | Image dans l'image (`auto-pip`, `document-pip`) | **adaptée** | `allowsPictureInPictureMediaPlayback` : **non lu** dans la documentation ; la vue flottante propre à Lucium n'existe pas sur iOS |
 | Lecteur multimédia de la barre latérale | **absente** | les commandes système (écran verrouillé, centre de contrôle) tiennent ce rôle |
 | DRM (Widevine, Netflix) | **absente** | Widevine est exclu du moteur WebKit. FairPlay Streaming / EME dans un `WKWebView` tiers : **non vérifié** (la recherche d'Apple n'a pas été concluante) |
-| Téléchargements, reprise, nettoyage des noms | **adaptée** | `WKDownload` vers l'app Fichiers ; nettoyage de noms repris (`file-names.ts` porté) |
+| Téléchargements, reprise, nettoyage des noms | **adaptée, faite** (§4.6) | `WKDownload` vers `Documents/Downloads`, que l'app Fichiers montre ; nettoyage de noms repris (`file-names.ts` porté, mêmes vecteurs) ; reprise dans la session |
 | Notes rapides | **reprise** | liées à la page ; éditeur Markdown **à porter** (gros morceau, carte plus tard) |
-| Captures, annotation, PDF | **adaptée** | `takeSnapshot`, `createPDF`, feuille de partage ; annotation : plus tard |
+| Captures, annotation, PDF | **adaptée** ; PDF et partage **faits** (§4.6), vignettes faites (§5.1) | `takeSnapshot`, `pdf(configuration:)`, feuille de partage ; annotation : plus tard |
 | Traduction locale (Bergamot) | **absente** | modèles lourds, moteur propre ; Apple fournit sa traduction dans Safari seulement (**non vérifié** pour une API de page web) |
 | Résumé de page par Ollama | **absente** | pas de serveur Ollama sur un iPhone ; l'exception du principe 2 (modèle local, sur l'ordinateur de l'utilisateur) ne s'y applique pas |
 | Recherche dans la page, lecteur, mode lisible | **adaptée** | recherche : `UIFindInteraction` ; mode lisible : Readability embarqué (déjà une dépendance du Mac) |
@@ -145,7 +145,7 @@ Légende : **reprise** = même comportement ; **adaptée** = même but, autre mo
 
 ### 4.4 Spécifique à l'iPhone (nouveau)
 
-Barre du bas et feuilles ; navigateur par défaut (§9.4) ; partage (`UIActivityViewController`) ; « Ouvrir dans Lucium » depuis une autre application ; widgets : plus tard.
+Barre du bas et feuilles ; navigateur par défaut (§9.4) ; partage de la page (**fait**, §4.6) ; « Ouvrir dans Lucium » depuis une autre application ; widgets : plus tard.
 
 ### 4.5 Le verrou : espaces et application (fait)
 
@@ -172,6 +172,34 @@ Barre du bas et feuilles ; navigateur par défaut (§9.4) ; partage (`UIActivity
 3. Verrouiller un espace, y lancer une vidéo, quitter Lucium : le son s'arrête ; revenir, choisir l'espace : Face ID est demandé, la page revient où elle était.
 4. Retirer le code de l'appareil (Réglages d'iOS), revenir dans Lucium : le verrou est désactivé et la personne en est avertie.
 5. Refuser Face ID à Lucium dans les Réglages d'iOS : l'invite propose le code de l'appareil.
+
+### 4.6 Téléchargements, partage et PDF : fait
+
+Fait par la carte « iOS 11 », **vérifié sur simulateur, pas sur un appareil** (voir plus bas).
+
+| Besoin | Moyen | Où |
+|---|---|---|
+| Un fichier arrive : lien `download`, réponse `Content-Disposition: attachment`, type que `WKWebView` ne sait pas montrer | le délégué de navigation répond `.download` ; `WKDownload` écrit dans `Documents/Downloads` ; la page reste où elle était | `DownloadNavigation.swift` (une extension du délégué unique, `PrivacyNavigation`), `Downloads.swift` ; règle pure `DownloadPolicy` (`LuciumKit`) |
+| Où est le fichier | app **Fichiers › Sur mon iPhone › Lucium › Downloads** (`UIFileSharingEnabled` et `LSSupportsOpeningDocumentsInPlace`, dans `ios/Lucium/Info.plist`) ; la feuille « Téléchargements » l'ouvre (aperçu du système), le partage (la feuille de partage offre « Enregistrer dans Fichiers » pour un autre dossier, AirDrop, les autres applications) ou le supprime | `DownloadsSheet.swift` |
+| Le nom du fichier | le nom que la page propose, **nettoyé comme sur le Mac** (`file-names.ts` porté dans `FileNames` : dernier élément du chemin, caractères de contrôle et d'inversion du texte retirés, 240 octets au plus avec l'extension gardée, jamais vide ni « . »), puis **numéroté s'il est pris** (`rapport (1).pdf` ; `.tar.gz` gardés ensemble, comme `uniquePath`) ; le nom est **réservé** tant que le fichier n'existe pas | `FileNames.swift` ; vecteurs communs `ios/Contracts/file-name-vectors.json`, lus par `src/shared/ios-file-names-contract.test.ts` et par `swift test` |
+| Progression, annulation, reprise | une bande au-dessus de la barre du bas (texte et barre de progression, sans icône) et une liste ; **annuler** retire la partie écrite ; **« Reprendre »** (`resumeDownload(fromResumeData:)`) quand WebKit rend de quoi reprendre | `DownloadStrip`, `DownloadsSheet`, `DownloadList` (`LuciumKit`) |
+| Partager la page | menu « … » de la barre du bas : `ShareLink` sur l'adresse (`http` ou `https` seulement, **sans identifiants**) ; rien pour la page de démarrage | `PageActions.swift`, `PageShare.shareableURL` |
+| Enregistrer en PDF | `WKWebView.pdf(configuration:)` **sans rectangle** : toute la page, pas seulement l'écran ; enregistré dans le même dossier, nommé d'après le titre (`/` et `:` deviennent des tirets, comme `pdfFileName` du Mac, mêmes vecteurs) ; une ligne de la liste comme un téléchargement | `PageActions.swift`, `PageShare.pdfFileName` |
+
+**Choix faits par défaut** (carte sans décision du chef sur ces points ; chacun se change sans toucher aux autres) :
+
+- **Les fichiers vont dans un dossier que Fichiers montre**, sans demander où à chaque fois (Safari et les autres navigateurs ne le demandent pas non plus). Un autre emplacement passe par la feuille de partage de la ligne (« Enregistrer dans Fichiers »), choix du système et de la personne : Lucium n'envoie rien.
+- **La liste ne dure que la session**, comme celle du Mac (les fichiers restent sur le disque, la liste est vidée). Aucun fichier de liste n'est écrit : pas d'horodatage de fichier lu, donc **rien à déclarer** au manifeste de confidentialité (§7) ; les tailles viennent de la progression que WebKit publie, pas d'un `stat`.
+- **La reprise ne dure que la session** : les données de reprise sont en mémoire, jamais sur le disque (la reprise après redémarrage du Mac, `docs/telechargements-reprise.md`, écrit une adresse et un chemin, désactivée par défaut : pas reprise ici). « Reprendre » n'apparaît que si WebKit a rendu les données **et** que l'onglet d'origine existe encore (la reprise passe par sa vue, donc par les cookies de son profil et non par ceux d'un autre).
+- **Les adresses acceptées pour un lien `download`** sont `http`, `https`, `blob` et `data` ; `file:` et le reste sont refusés (une page ne doit pas faire copier un fichier du téléphone). La liste montre l'hôte d'où vient le fichier, **jamais l'adresse entière** (elle peut porter un jeton) ; aucun journal ne contient d'adresse.
+- **Rien n'est supprimé hors du dossier des téléchargements** : chaque suppression passe par un contrôle du chemin (`inside`), et le nom vient du nettoyage, jamais de la page telle quelle.
+- **Les icônes** : le bouton du menu de la page est l'icône `more` du jeu du projet (`Icons.swift`), aucun symbole du système ; la bande, le menu et la feuille sont en texte.
+- **Un onglet qui dort ne coupe pas son téléchargement** (essayé : la vue est libérée, le fichier arrive entier).
+- **Pas de limite de taille** : iOS gère l'espace, et un disque plein est un échec dit à la personne (message du système). Pas de notification du système (elle demande une autorisation) ; la bande dit la fin pendant quelques secondes.
+- **Le verrou (Face ID, Touch ID, code)** : une ligne porte l'espace de la page qui l'a demandée ; la feuille, la bande et « Vider la liste » ne montrent ni ne touchent les lignes d'un espace que le verrou couvre (`model.lock?.covers(space:)` : le nom d'un fichier et son hôte disent ce qui était lu) ; elles reviennent à l'ouverture de l'espace, et la feuille se ferme quand l'application se verrouille. Partage et PDF partent de `model.webView`, nul pour un espace couvert. Les fichiers eux-mêmes sont dans le dossier de l'application : le verrou est celui de l'interface, pas du disque (§4.5).
+- **Onglets privés** : un fichier téléchargé depuis un onglet privé reste dans le dossier (c'est un enregistrement que la personne a demandé, comme sur le Mac et dans Safari) ; sa ligne reste dans la liste **de la session** (en mémoire, jamais écrite) jusqu'à ce que la personne la retire ou vide la liste. **À décider, non fait** : retirer ces lignes avec le dernier onglet privé (le nom d'un fichier et son hôte restent lisibles dans l'application jusqu'à la fin de la session).
+
+**Pas fait** : l'essai sur un iPhone ou un iPad (une build signée est une action du mainteneur, §10) ; l'aperçu d'un fichier est le **Quick Look** du système (sa liste de types est la sienne) ; pas de téléchargement en arrière-plan (WebKit arrête un téléchargement quand l'application est suspendue ; `NSURLSession` en arrière-plan serait une autre voie, à étudier si des gens le demandent) ; pas de Retouches ni de PDF avec l'adresse en pied de page comme sur le Mac (`pdf-source.ts`).
 
 ## 5. Modèle d'état : compatible avec `state.json`
 
@@ -374,6 +402,7 @@ Le README (anglais et français, « Connections of the iOS version » / « Conne
 | Connexion | Quand | Interrupteur (défaut) |
 |---|---|---|
 | **Les pages que vous ouvrez**, et leurs ressources | quand vous naviguez | — |
+| **Les fichiers que vous téléchargez** (un lien, une pièce jointe) | quand vous touchez le lien ; jamais de lui-même (§4.6) | — |
 | **Suggestions de recherche** : ce que vous tapez (pas une adresse) vers le moteur de votre profil (DuckDuckGo par défaut) ; sans cookie | pendant la saisie, ≥ 2 caractères ; jamais en onglet privé | Réglages › Navigation (**activé**, comme sur le Mac) |
 | **Icônes de sites** | à l'affichage d'une rangée | Réglages (**activé**) |
 | **Listes du bloqueur** | **aucune** : elles sont dans l'application (décision confirmée le 17 novembre 2026 : mises à jour avec l'application seulement, §6.5) | — |
@@ -490,9 +519,9 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 
 | Couche | Outil | Où ça tourne | Fenêtre ? |
 |---|---|---|---|
-| Logique pure (`LuciumKit` : adresses, état, fichier d'état, onglets, règle du sommeil, espaces et profils, onglets privés, données d'un site, thème, verrou, listes d'un espace, recherche des commandes) | Swift Testing, `swift test` | le Mac, sans simulateur | non |
-| Application (modèle, une vue par onglet, sommeil et réveil, restauration, WebKit réel, bloqueur, textes, profils et cookies, onglet privé, effacement d'un site, verrou, listes d'un espace, **chaque écran des maquettes dessiné hors écran**) | XCTest hébergé, `xcodebuild test` | simulateur iOS | **non** (démarré par `simctl`, jamais `Simulator.app` ; les écrans sont dessinés dans une fenêtre du processus de test, jamais montrée) |
-| Contrat avec le Mac (vecteurs d'adresses, de thèmes, d'identifiants de profil et de vie privée, **listes d'un espace, score de la recherche**, état de référence) | Vitest (`ios-contract.test.ts`, `ios-state-contract.test.ts`, `ios-privacy-contract.test.ts`, `ios-library-contract.test.ts`) puis `swift test` | le Mac, avec `pnpm test` | non |
+| Logique pure (`LuciumKit` : adresses, état, fichier d'état, onglets, règle du sommeil, espaces et profils, onglets privés, données d'un site, thème, verrou, listes d'un espace, recherche des commandes, noms de fichiers, règle de téléchargement, liste des téléchargements) | Swift Testing, `swift test` | le Mac, sans simulateur | non |
+| Application (modèle, une vue par onglet, sommeil et réveil, restauration, WebKit réel, bloqueur, textes, profils et cookies, onglet privé, effacement d'un site, verrou, listes d'un espace, **chaque écran des maquettes dessiné hors écran**, téléchargements réels depuis un serveur local, PDF) | XCTest hébergé, `xcodebuild test` | simulateur iOS | **non** (démarré par `simctl`, jamais `Simulator.app` ; les écrans sont dessinés dans une fenêtre du processus de test, jamais montrée) |
+| Contrat avec le Mac (vecteurs d'adresses, de thèmes, d'identifiants de profil et de vie privée, **listes d'un espace, score de la recherche**, état de référence) | Vitest (`ios-contract.test.ts`, `ios-state-contract.test.ts`, `ios-privacy-contract.test.ts`, `ios-file-names-contract.test.ts`, `ios-library-contract.test.ts`) puis `swift test` | le Mac, avec `pnpm test` | non |
 | Convertisseur, registre des listes, table des scriptlets, fichiers du garde (`scripts/ios-filter-lists/`) | Vitest | le Mac, avec `pnpm test` | non |
 | Plan d'une page, table des scriptlets, vecteurs YouTube (`PagePlanner`, `ScriptletTable`) | Swift Testing, `swift test` | le Mac, sans simulateur | non |
 | Garde de page dans WebKit (scriptlet avant les scripts de la page, plan suivi à chaque navigation et chaque redirection, feuille de style, scripts d'autrui) | XCTest hébergé (`PageGuardTests`) | simulateur iOS | **non** |
@@ -649,6 +678,33 @@ et l'envoi par Xcode, Transporter ou `altool` (la page d'Apple lue cite « Xcode
 | Un espace verrouillé n'offre ni « Aujourd'hui », ni favoris, ni commandes | gardes retirées | le même |
 | Épingler, archiver, montrer depuis l'extérieur d'un espace verrouillé : refusé | gardes retirées | le même |
 | La barre de commandes se ferme quand l'application se verrouille | la fermeture retirée de `applyLock()` | `testALockedApplicationHidesEverySpaceAndClosesTheCommandBar` |
+| *Téléchargements, partage, PDF — paquet (`swift test`, 16 mutations)* | | |
+| Les noms nettoyés suivent le Mac | caractères d'inversion du texte gardés ; entrée non coupée à 4 096 ; extension trop longue gardée ; nom vide laissé vide | `suggestedNamesMatchTheVectors` |
+| Les noms uniques suivent le Mac | `.tar.gz` coupé en deux ; numéro qui commence à (2) | `uniqueNamesMatchTheVectors` |
+| Le nom d'un PDF suit le Mac | « .pdf » non ajouté ; `/` et `:` du titre gardés | `pdfNamesMatchTheVectors` |
+| Un lien ne fait pas copier un fichier du téléphone | `file:` ajouté aux adresses permises | `aPageMayAskForOnlyTheAddressesThatHaveAUse` |
+| Seul `attachment` est une pièce jointe | `hasPrefix("attachment")` | `inlineAndLookAlikesAreNotAttachments` |
+| Une ligne terminée est définitive | garde « seulement pendant l'exécution » retirée | `aFinishedDownloadStaysFinishedWhateverWebKitSaysNext`, `aCancelledDownloadIsNotTurnedIntoAFailureByTheErrorThatFollows` |
+| Un fichier fini a la taille du fichier écrit (WebKit ne publie aucune progression pour un petit fichier : la première CI l'a montré) | taille du fichier ignorée | `theSizeOfTheWrittenFileIsTheSizeOfAFinishedDownloadEvenWhenNoProgressWasReported` |
+| La fraction ne dépasse pas 1 ; on ne reprend qu'une ligne en échec | borne retirée ; garde de phase retirée | `progressIsAFractionOfTheAnnouncedSize`, `aLineThatIsNotFailedCannotBeResumed` |
+| Les identifiants ne partent pas avec une adresse partagée | identifiants gardés | `credentialsAreLeftOutAndTheFragmentIsKept` |
+| Une ligne d'un espace couvert n'est pas visible | filtre de `visible(hiding:)` retiré | `aLineOfACoveredSpaceIsNotVisible` |
+| *Téléchargements, partage, PDF — application (XCTest sur simulateur, 19 mutations)* | | |
+| Un nom est réservé tant que son fichier n'existe pas | `reserved.insert` retiré | `testANameIsHeldForTheDownloadThatClaimedItUntilItsFileExists` |
+| Le nom de la page est nettoyé avant d'être utilisé | le nom brut de la page est utilisé | `testAnAttachmentIsSavedInTheFolderOfTheDownloadsUnderACleanName` (le caractère d'inversion reste dans le nom) |
+| Annuler retire la partie écrite | `removePartialFile` retiré de `cancel` | `testCancellingStopsTheDownloadAndRemovesWhatWasWritten` (WebKit **laisse** le fichier partiel : le test le prouve) |
+| Annuler est définitif | `list.cancel` retiré (la ligne devient un échec) | `testCancellingStopsTheDownloadAndRemovesWhatWasWritten` |
+| Un échec sans reprise possible ne laisse pas de demi-fichier | `removePartialFile` retiré de l'échec | `testADownloadThatEndsEarlyFailsWithAReasonAndLeavesNoFile` |
+| Une reprise remet la ligne en marche | `list.resumed` retiré | `testADownloadThatFailedResumesFromWhatWasReceived` |
+| Rien n'est lu ni supprimé hors du dossier | contrôle du chemin retiré de `inside` | `testTheGuardKeepsEveryFileOperationInsideTheFolder` |
+| « Supprimer le fichier » supprime le fichier | `removeItem` retiré | `testRemovingALineKeepsItsFileAndDeletingTheFileRemovesBoth` |
+| « Vider » ne touche pas aux lignes en cours | condition retirée | `testClearingTheListKeepsWhatRuns` |
+| Le PDF est celui de toute la page | rectangle réglé sur l'écran | `testAPageIsSavedAsAWholePdfNamedAfterItsTitle` |
+| Un échec d'écriture est dit | `report` retiré | `testAPageThatCannotBeWrittenFailsItsLineAndSaysSo` |
+| Le dossier s'affiche dans Fichiers | clé `UIFileSharingEnabled` retirée | `testTheApplicationAsksForItsFolderToShowInTheFilesApp` |
+| Une réponse non montrable est téléchargée ; un lien `file:` est refusé ; un lien `download` n'est pas réécrit par les règles de vie privée | réponse toujours permise ; action toujours `.download` ; retour anticipé retiré de `PrivacyNavigation` | `testTheNavigationDelegateAsksThePolicy`, `testATypeThatTheWebViewCannotShowIsDownloadedWithTheNameOfItsAddress`, `testALinkMarkedDownloadIsSavedUnderTheNameThePageGives` |
+| Un espace couvert par le verrou ne montre aucun téléchargement | la liste rend toutes les lignes ; « Vider » touche aussi les lignes cachées ; l'espace de la page n'est plus noté sur la ligne | `testTheLinesOfALockedSpaceAreShownNowhereAndComeBackWhenItOpens` (liste, bande, fin non annoncée, « Vider », partage et PDF nuls, retour à l'ouverture) |
+| La feuille ne reste pas sur l'écran de verrouillage | `downloads.sheetShown = false` retiré de `applyLock` | `testTheDownloadsSheetClosesWhenTheApplicationIsLocked` |
 
 **Mutations du convertisseur et du registre** (carte « Bloqueur », chacune appliquée puis retirée, le test échoue) : alternation acceptée dans une expression ; bouclier retiré ; blocages `$important` avant les exceptions ; séparateur réduit à `/` ; sélecteur procédural gardé ; CSS dans un sélecteur gardé ; domaines mêlés gardés ; option inconnue ignorée au lieu d'écarter le filtre ; exception de masquage ignorée ; `$badfilter` ignoré ; limite de 150 000 non appliquée ; nom d'hôte non vérifié ; alternation d'une expression régulière non découpée ; blocages de fenêtres surgissantes envoyés avec les blocages ; adresse de la licence, auteur ou limite de règles non vérifiés dans le registre ; écriture atomique du script (liste en échec : rien n'est écrit).
 
@@ -838,9 +894,13 @@ Un module `src/main/sync/` (écoute TLS, appairage, fusion), une page de Réglag
 
 **Vérifié pour la carte « Verrou »** (simulateur iOS 26.5, `swift test`, Vitest) : 40 tests Swift du verrou (propriétaire qui accepte, qui refuse, réponse tardive, appareil sans code, fichier illisible, écriture impossible), 14 XCTest (vues réelles et serveur local : aucun site d'un espace verrouillé n'est interrogé ; le vrai `LocalAuthentication`, interrogé sans invite, refuse) ; **34 mutations** (18 sur le paquet, 16 sur l'application) vues échouer, et 4 sur le contrat Vitest. **Ni Face ID ni Touch ID réels** : §4.5.
 
+**Vérifié pour la carte « iOS 11 : téléchargements, partage, PDF »** (simulateur iOS 26.5, `swift test`, Vitest) : un lien `download`, une réponse `attachment` et un type que `WKWebView` ne montre pas deviennent des `WKDownload` et arrivent entiers dans le dossier des téléchargements, sous un nom nettoyé (le caractère d'inversion du texte est retiré) et numéroté quand il est pris ; une annulation retire la partie écrite et la ligne ne change plus quand WebKit la rapporte ensuite comme un échec ; un échec dit pourquoi et ne laisse aucun fichier à moitié écrit ; un téléchargement que le serveur a coupé **reprend** à l'octet reçu quand il a donné un validateur (`ETag`, `Last-Modified`) et accepte les plages, et le fichier final est identique à l'original octet pour octet ; un téléchargement **continue quand la vue de son onglet est libérée** ; `pdf(configuration:)` sans rectangle rend **toute** la page (plus de 3 500 points de haut pour une page de 4 000 et une vue de 700) ; `UIFileSharingEnabled` et `LSSupportsOpeningDocumentsInPlace` sont bien dans le `Info.plist` de la build ; les 49 vecteurs de noms (31 de nettoyage, 10 de nom unique, 8 de nom de PDF) donnent le même résultat côté Mac et côté Swift.
+
 **Lu dans la documentation d'Apple** : les directives de l'App Store citées au §9 (sauf 5.1.1, 5.1.2, 5.2 : résumé) ; les pages `WKContentRuleList`, `WKContentRuleListStore`, `WKWebExtension`, l'entitlement `com.apple.developer.web-browser`, `NSLocalNetworkUsageDescription`, `NSBonjourServices`, l'entitlement multicast, l'aide d'App Store Connect (TestFlight, fiche, rôles, confidentialité).
 
 **Supposé ou non lu** : que `displayName` des enregistrements de WebKit soit le domaine enregistrable sur de vrais sites (§5.2 : non lu dans la documentation, vérifié seulement sur `127.0.0.1` et `localhost`) ; la GPL et l'App Store (§9.3 : permission accordée, texte non relu par un juriste) ; les licences des listes embarquées face aux conditions de l'App Store (§6.5) ; le comportement de `upgradeKnownHostsToHTTPS` et l'essai de `preferredHTTPSNavigationPolicy` à la place des règles écrites (§7.1) ; FairPlay / EME dans un `WKWebView` tiers ; l'AutoFill des mots de passe dans un `WKWebView` tiers ; la clé `CFBundleURLTypes` ; `-allowProvisioningUpdates` ; `ITSAppUsesNonExemptEncryption` (page d'Apple illisible) ; **un vrai certificat refusé** (le test remet à l'application l'erreur telle que WebKit la rend, faute de pouvoir en fabriquer un dans le simulateur) ; la mémoire, l'énergie et le temps de chargement des 18 fichiers de règles sur un vrai iPhone (le simulateur les compile et les accepte) ; iOS 27.0 (installé, non essayé) ; tout ce qui se joue sur un appareil réel ; **(garde de page)** la lecture d'une vidéo YouTube (le simulateur de cette machine ne joue aucune vidéo du réseau, même un MP4 simple), l'effet du blocage sur les publicités que YouTube sert aujourd'hui (le site change plus vite que le dépôt), la remise d'un script par navigation dans les cas que les tests ne jouent pas (deux navigations qui se chevauchent, une page revenue du cache de pages de WebKit, un cadre), le coût d'un plan sur le temps de chargement.
+
+**Supposé ou non lu pour les téléchargements (§4.6)** : que le dossier `Documents/Downloads` apparaît bien dans l'app Fichiers sur un appareil (les deux clés sont dans la build, c'est tout ce qui est prouvé), le Quick Look et la feuille de partage sur un vrai appareil, le comportement d'un téléchargement quand l'application passe en arrière-plan, un gros fichier et un disque plein, la reprise face à des serveurs réels (l'essai n'a qu'un serveur local qui répond comme il faut).
 
 ## 15. Décisions du chef de projet (17 novembre 2026)
 
