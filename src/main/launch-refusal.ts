@@ -7,12 +7,16 @@
 // `dialog.showErrorBox`, called before `ready`, writes to the standard error on Linux and opens no window (Electron 45 documentation). So the person saw
 // only the system's « the application quit unexpectedly ».
 //
-// The answer is to wait for `ready` and show an ordinary box of the system. Nothing else is made: no window, no page, no session, no read of the profile.
-// The process carries the switch the launcher gave it and does nothing but show the box and end; it never runs a page. A launch that is refused for any other
-// reason, on any other system, or with no screen to draw on, ends at once as before.
+// Waiting for `ready` to use an Electron box was tried and given up: Electron then starts its GPU process and its network service, and the launcher's
+// `--no-sandbox` makes them run without a sandbox for as long as the box is open (seen with `ps` in an Ubuntu 24.04 machine; a refused launch that ends
+// before `ready` has only Chromium's two zygote processes). So the box is drawn by a program of the system, as the AppRun draws its own errors: `zenity`, or
+// `kdialog`, by their absolute paths, started with the library path of the AppImage taken off. Electron stays where it is, before `ready`, and starts
+// nothing more than it did: the refused launch has the processes it always had, and nothing of the interface is made (no window, no page, no session, no
+// read of the profile). Without either program, or without a screen, or for any other refusal or system, the launch ends at once as before, with its line.
 
-import { readFileSync } from 'node:fs'
-import { app, dialog, shell } from 'electron'
+import { spawn } from 'node:child_process'
+import { existsSync, readFileSync } from 'node:fs'
+import { app } from 'electron'
 import { languageOfLocale, setLanguage, t, getLanguage } from '@shared/i18n'
 import { downloadPageUrl } from '@shared/update-check'
 
@@ -29,6 +33,7 @@ export interface RefusalBox {
   title: string
   message: string
   detail: string
+  /** The first opens the download page of the site, the second only closes the box. */
   buttons: [string, string]
 }
 
@@ -46,8 +51,30 @@ export function refusalBox(cause: SandboxCause): RefusalBox {
   }
 }
 
-/** How long to wait for Electron to be ready before giving up on the box: a launch must always end, never stay as a process with no window. */
-export const READY_TIMEOUT_MS = 15_000
+/** The programs of the system that draw a box, by the absolute paths the AppRun of the AppImage looks for them at: no search in the PATH. */
+export const BOX_HELPERS = [
+  { name: 'zenity', path: '/usr/bin/zenity' },
+  { name: 'kdialog', path: '/usr/bin/kdialog' }
+] as const
+export type BoxHelper = (typeof BOX_HELPERS)[number]['name']
+
+export const OPEN_PROGRAM = '/usr/bin/xdg-open'
+
+/**
+ * The arguments that make `helper` draw `box` with two buttons: its exit code is 0 for the first button, 1 for the second, anything else when the box was
+ * closed another way. The text is shown as it is (zenity is told not to read it as markup; the texts hold none).
+ */
+export function helperArguments(helper: BoxHelper, box: RefusalBox): string[] {
+  const text = `${box.message}\n\n${box.detail}`
+  if (helper === 'zenity') return ['--question', '--no-markup', '--width=560', `--title=${box.title}`, `--text=${text}`, `--ok-label=${box.buttons[0]}`, `--cancel-label=${box.buttons[1]}`]
+  return ['--title', box.title, '--yes-label', box.buttons[0], '--no-label', box.buttons[1], '--yesno', text]
+}
+
+/** The locale named by the environment, the way the system's programs read it: LANGUAGE (its first entry), then LC_ALL, LC_MESSAGES, LANG; `C` and `POSIX` name none. */
+export function localeOfEnv(env: NodeJS.ProcessEnv): string {
+  const candidates = [env['LANGUAGE']?.split(':')[0], env['LC_ALL'], env['LC_MESSAGES'], env['LANG']]
+  return candidates.find((value): value is string => typeof value === 'string' && value !== '' && value !== 'C' && value !== 'POSIX') ?? ''
+}
 
 /** What ending a refused launch needs from the system; `endRefusedLaunch` is tested with stand-ins for each. */
 export interface LaunchEnd {
@@ -55,21 +82,19 @@ export interface LaunchEnd {
   env: NodeJS.ProcessEnv
   /** The content of `RESTRICTION_FILE`, or null when it cannot be read. */
   readRestriction: () => string | null
-  whenReady: () => Promise<unknown>
-  /** The locale of the system, readable once Electron is ready. */
-  locale: () => string
-  /** Shows the box; resolves with the index of the button chosen. */
-  showBox: (box: RefusalBox) => Promise<number>
+  /** The program of the system that can draw the box, or null when there is none. */
+  findHelper: () => BoxHelper | null
+  /** Draws the box with that program and waits: resolves with the index of the button chosen (0 opens the page); rejects when the program cannot be started. */
+  runBox: (helper: BoxHelper, box: RefusalBox) => Promise<number>
   openPage: (url: string) => Promise<void>
   exit: (code: number) => void
   log: (line: string, error?: unknown) => void
-  readyTimeoutMs?: number
 }
 
 /**
- * Ends a launch `refusedSwitches` refused, with exit code 1: at once, unless the person can be told on a screen, which is when the box is shown first and
- * the launch ends when it is closed. The line for the standard error was written before (index.ts). The second button opens the download page of the site, in
- * the browser of the system, where the .deb package is.
+ * Ends a launch `refusedSwitches` refused, with exit code 1: at once, unless the person can be told on a screen by a program of the system, which is when the
+ * box is shown first and the launch ends when it is closed. The line for the standard error was written before (index.ts). The first button opens the
+ * download page of the site, in the browser of the system, where the .deb package is.
  */
 export function endRefusedLaunch(refused: readonly string[], deps: LaunchEnd): void {
   const screenHere = Boolean(deps.env['DISPLAY'] || deps.env['WAYLAND_DISPLAY'])
@@ -77,31 +102,22 @@ export function endRefusedLaunch(refused: readonly string[], deps: LaunchEnd): v
     deps.exit(1)
     return
   }
-  const cause = sandboxCause(deps.readRestriction())
-  let ended = false
-  const end = (): void => {
-    if (ended) return
-    ended = true
+  const helper = deps.findHelper()
+  if (helper === null) {
+    deps.log('[launch] no program of the system (zenity, kdialog) is there to show why the launch was refused: the line above is all there is')
     deps.exit(1)
+    return
   }
-  const giveUp = setTimeout(() => {
-    deps.log('[launch] Electron was not ready in time to show why the launch was refused: ending without the box')
-    end()
-  }, deps.readyTimeoutMs ?? READY_TIMEOUT_MS)
+  // The system's language: the profile is not read for a launch that is refused (the interface's own setting, French by default, lives in it).
+  setLanguage(languageOfLocale(localeOfEnv(deps.env)))
+  const box = refusalBox(sandboxCause(deps.readRestriction()))
   void deps
-    .whenReady()
-    .then(async () => {
-      clearTimeout(giveUp)
-      // The system's language: the profile is not read for a launch that is refused (the interface's own setting, French by default, lives in it).
-      setLanguage(languageOfLocale(deps.locale()))
-      const chosen = await deps.showBox(refusalBox(cause))
+    .runBox(helper, box)
+    .then(async (chosen) => {
       if (chosen === 0) await deps.openPage(downloadPageUrl(getLanguage()))
     })
-    .catch((error: unknown) => deps.log('[launch] the box that says why the launch was refused could not be shown:', error))
-    .finally(() => {
-      clearTimeout(giveUp)
-      end()
-    })
+    .catch((error: unknown) => deps.log(`[launch] ${helper} could not show why the launch was refused:`, error))
+    .finally(() => deps.exit(1))
 }
 
 /** The content of `RESTRICTION_FILE`; null when there is none (no AppArmor: the usual case elsewhere than Ubuntu) and, with a line in the log, when it cannot be read. */
@@ -115,16 +131,43 @@ export function readRestrictionFile(read: (path: string) => string = (path) => r
   }
 }
 
+/**
+ * The environment of the programs started here: the library path of the AppImage taken off, as its AppRun does for its own boxes, so that they load the libraries
+ * of the system and not the ones the AppImage carries for Electron.
+ */
+export const helperEnv = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => Object.fromEntries(Object.entries(env).filter(([name]) => name !== 'LD_LIBRARY_PATH'))
+
+/** Draws the box with a program of the system and waits for it: its exit code is the button (`helperArguments`); a program that cannot be started rejects. */
+export function runHelper(helper: BoxHelper, box: RefusalBox): Promise<number> {
+  const path = BOX_HELPERS.find((candidate) => candidate.name === helper)!.path
+  return new Promise((resolve, reject) => {
+    const child = spawn(path, helperArguments(helper, box), { stdio: 'ignore', env: helperEnv(process.env) })
+    child.once('error', reject)
+    child.once('close', (code) => resolve(code ?? 1))
+  })
+}
+
+/** Opens an address in the browser of the system, detached, and does not wait for it: some browsers keep `xdg-open` until they quit. */
+export function openInBrowser(url: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(OPEN_PROGRAM, [url], { stdio: 'ignore', detached: true, env: helperEnv(process.env) })
+    child.once('error', reject)
+    child.once('spawn', () => {
+      child.unref()
+      resolve()
+    })
+  })
+}
+
 /** Ends the launch the built application refused, in this process (index.ts). */
 export function refuseLaunch(refused: readonly string[]): void {
   endRefusedLaunch(refused, {
     platform: process.platform,
     env: process.env,
     readRestriction: () => readRestrictionFile(),
-    whenReady: () => app.whenReady(),
-    locale: () => app.getLocale(),
-    showBox: async (box) => (await dialog.showMessageBox({ type: 'error', title: box.title, message: box.message, detail: box.detail, buttons: box.buttons, defaultId: 1, cancelId: 1 })).response,
-    openPage: (url) => shell.openExternal(url),
+    findHelper: () => BOX_HELPERS.find((candidate) => existsSync(candidate.path))?.name ?? null,
+    runBox: runHelper,
+    openPage: openInBrowser,
     exit: (code) => app.exit(code),
     log: (line, error) => (error === undefined ? console.error(line) : console.error(line, error))
   })

@@ -126,12 +126,13 @@ check_started() {
 }
 
 # What a refused application must show (an AppImage whose AppRun added --no-sandbox: Lucium refuses it, never runs without the sandbox). Two things: the line
-# that says why on the standard error, before anything else, and, since a screen exists, a box of the system that says it to a person who has no terminal
-# (src/main/launch-refusal.ts; Electron opens no box before `ready` on Linux, which is why the person used to see nothing). The box waits to be closed and
+# that says why on the standard error, before anything else, and, since a screen exists, a box that says it to a person who has no terminal (drawn by zenity,
+# which the workflow installs as an Ubuntu desktop has it: src/main/launch-refusal.ts; Electron opens no box before `ready` on Linux, which is why the person
+# used to see nothing). The box waits to be closed and
 # nobody here can click it: the check finds it on the virtual screen by its title, « Lucium cannot start » (the runner's locale is English), checks that no page was started, then
 # closes the application with a signal. An application that ends by itself instead did not show the box: that is a failure.
 check_refused() {
-  local app="$1" data="$2" log="$3" waited=0 status=0
+  local app="$1" data="$2" log="$3" waited=0 status=0 pid
   # Counted, not `grep -q` (which stops at the first match and can hand xwininfo a SIGPIPE that `pipefail` reports as a failure).
   until [ "$(xwininfo -root -tree 2>/dev/null | grep -ci "lucium cannot start" || true)" -gt 0 ]; do
     if ! kill -0 "$app" 2>/dev/null; then
@@ -149,11 +150,18 @@ check_refused() {
   echo "the box that says why appeared after ${waited} s"
   grep -q 'refused: this application does not start with --no-sandbox' "$log" || { fail "the log does not say that --no-sandbox is refused"; return 1; }
   grep -q 'sandbox' "$log" && echo "the refusal names the sandbox"
-  # Nothing but the box was made: no page, so no renderer (and no window of the application other than the box).
+  # Nothing but the box was made: no page, so no renderer, and nothing that Electron starts once it is ready (its GPU process and its network service would run
+  # without a sandbox: the launcher gave `--no-sandbox` to the process, which carries it to its children).
   if [ -n "$(renderer_pids "$data")" ]; then
     fail "a renderer is running in a launch that was refused"
     return 1
   fi
+  for pid in $(run_pids "$data"); do
+    if tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -Eq -- '--type=(gpu-process|utility)'; then
+      fail "process $pid (GPU or utility) runs in a launch that was refused, with --no-sandbox"
+      return 1
+    fi
+  done
   # What closing the box would end with, here by the signal.
   kill -TERM "$app" 2>/dev/null || true
   wait "$app" 2>/dev/null || true

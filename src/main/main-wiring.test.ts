@@ -22,6 +22,14 @@ vi.mock('./blocking', async () => {
 })
 // The engine test is run from its own module, loaded only when the application is run as the engine test.
 vi.mock('./smoke-run', () => ({ runSmokeSuites: vi.fn(async () => undefined) }))
+// The end of a refused launch (launch-refusal.ts, tested on its own): here it stands for a box that stays open, so that what index.ts does meanwhile is seen. A refusal
+// that ends at once calls `exit(1)` on the application, which the first test of « a launch that the built application refuses » reads through its own stand-in.
+vi.mock('./launch-refusal', async () => {
+  const { vi: spies } = await import('vitest')
+  const { mainElectron } = await import('./main-run.test-support')
+  const electron = (await mainElectron()) as { app: { exit: (code: number) => void } }
+  return { refuseLaunch: spies.fn((refused: readonly string[]) => (refused.includes('no-sandbox') ? undefined : electron.app.exit(1))) }
+})
 
 let current: MainRun | undefined
 const own = mkdtempSync(join(tmpdir(), 'lucium-main-wiring-'))
@@ -342,22 +350,14 @@ describe('a launch that the built application refuses (runtime.ts)', () => {
 })
 
 describe('the AppImage that AppArmor refuses (launch-refusal.ts, carte 469)', () => {
-  const realPlatform = process.platform
-  afterEach(() => Object.defineProperty(process, 'platform', { value: realPlatform }))
-  const onLinux = (): void => void Object.defineProperty(process, 'platform', { value: 'linux' })
-
-  it('shows a box on Linux with a screen for the --no-sandbox its AppRun added, then ends with code 1, once: no lock, no window, no file of the profile', async () => {
-    onLinux()
-    const main = await run({ packaged: true, argv: ['--no-sandbox'], env: { DISPLAY: ':99' }, waitForMain: false })
-    await vi.waitFor(() => expect(main.world.exits).toEqual([1]))
-    // The line for the terminal is still written, and the box says the same to a person who has none.
+  it('hands a refusal of --no-sandbox to the end of the launch (which may wait for a box), and neither exits, quits nor takes the lock itself meanwhile', async () => {
+    const main = await run({ packaged: true, argv: ['--no-sandbox'], waitForMain: false })
+    const { refuseLaunch } = await import('./launch-refusal')
+    // The line for the terminal is still written, then the end of the launch is handed the switches: its box is open (the stand-in never ends it).
     expect(main.world.logged.some((line) => line.includes('[launch] refused') && line.includes('--no-sandbox'))).toBe(true)
-    expect(main.world.boxes).toHaveLength(1)
-    const box = main.world.boxes[0] as { type: string; title: string; message: string; detail: string; buttons: string[] }
-    expect(box).toMatchObject({ type: 'error', title: 'Lucium ne peut pas démarrer', buttons: ['Ouvrir la page Télécharger', 'Fermer'] })
-    // Which cause it names depends on the machine the test runs on (the kernel file of AppArmor): the sentence both share is the one that matters here.
-    expect(box.detail).toContain('Lucium ne démarre jamais sans bac à sable')
-    // Ended once, and only after the box: nothing of the launch went on, and it was not quit as a second instance either.
+    expect(vi.mocked(refuseLaunch).mock.calls).toEqual([[['no-sandbox']]])
+    // Ended once, and only by it: the launch was not exited at once, nor quit as a second instance, and nothing of it went on.
+    expect(main.world.exits).toEqual([])
     expect(main.world.quits).toBe(0)
     expect(main.world.locks).toBe(0)
     const { windows } = await worlds()
@@ -366,11 +366,15 @@ describe('the AppImage that AppArmor refuses (launch-refusal.ts, carte 469)', ()
     expect(existsSync(join(main.world.userData, 'state.json'))).toBe(false)
   })
 
-  it('shows none, and ends at once, with no screen to draw it on', async () => {
-    onLinux()
-    const main = await run({ packaged: true, argv: ['--no-sandbox'], env: { DISPLAY: undefined, WAYLAND_DISPLAY: undefined }, waitForMain: false })
-    expect(main.world.exits).toEqual([1])
-    expect(main.world.boxes).toEqual([])
+  it('hands the end of the launch every refusal, whatever the switch, and none for a launch that is not refused', async () => {
+    const { refuseLaunch } = await import('./launch-refusal')
+    vi.mocked(refuseLaunch).mockClear()
+    await run({ packaged: true, argv: ['--remote-debugging-port=9222'], waitForMain: false })
+    expect(vi.mocked(refuseLaunch).mock.calls).toEqual([[['remote-debugging-port']]])
+    current!.dispose()
+    vi.mocked(refuseLaunch).mockClear()
+    await run()
+    expect(vi.mocked(refuseLaunch)).not.toHaveBeenCalled()
   })
 })
 
