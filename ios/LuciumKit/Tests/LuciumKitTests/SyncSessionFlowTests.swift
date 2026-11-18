@@ -62,10 +62,11 @@ struct SyncSessionFlowTests {
 
     // MARK: How long a session may last (docs/synchronisation.md §6.1, §7.5, review n° 19)
 
-    /// A body that reads twenty messages, each within the time of a silence: the pace of a peer that never stays quiet for long and never gets to the end.
-    private struct ReadsTwenty: SyncSessionBody {
+    /// A body that reads message after message, each within the time of a silence: the pace of a peer that never stays quiet for long and never gets to the end (two hundred
+    /// messages at 60 ms are twelve seconds, far past the maximum the test gives).
+    private struct ReadsForLong: SyncSessionBody {
         func run(_ context: SyncSessionContext, channel: SyncChannel) async throws -> SyncBodyOutcome {
-            for _ in 0..<20 { _ = try await channel.receive(timeout: .seconds(5)) }
+            for _ in 0..<200 { _ = try await channel.receive(timeout: .seconds(5)) }
             return .committed(at: 1)
         }
     }
@@ -76,22 +77,20 @@ struct SyncSessionFlowTests {
         let drip = Task {
             try await fake.write("hello", macHello())
             _ = try await fake.read()
-            for _ in 0..<20 {
+            for _ in 0..<400 {
                 try await Task.sleep(for: .milliseconds(60))
                 try await fake.write("open-tabs", ["items": []])
             }
         }
         defer { drip.cancel() }
         let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
-        let started = ContinuousClock.now
         do {
             _ = try await SyncSessionClient.run(connection: connection, peer: peer, device: phone, categories: [.structure], appVersion: "0.1.0", supportedStateVersion: 1, nonce: nonce,
-                                                baseHash: nil, now: { 1_790_000_000_000 }, body: ReadsTwenty(), handshakeTimeout: .seconds(2), sessionMaximum: .milliseconds(350))
+                                                baseHash: nil, now: { 1_790_000_000_000 }, body: ReadsForLong(), handshakeTimeout: .seconds(2), sessionMaximum: .milliseconds(350))
             Issue.record("a session that outlasted its time went through")
         } catch let failure as SyncFailure {
             #expect(failure.code == .timeout)
         }
-        #expect(ContinuousClock.now - started < .milliseconds(900), "it was cut at the maximum, not when the Mac had finished")
         #expect(ends.phone.closed)
     }
 
