@@ -141,8 +141,11 @@ describe('the notes for the review', () => {
     expect(notes).toContain('The app makes no connection of its own')
     const own = /\b(?:URLSession|NWConnection|NWBrowser|NWListener|CFStream|URLSessionWebSocketTask)\b/
     const bridge = /\b(?:WKScriptMessageHandler|WKScriptMessageHandlerWithReply|addScriptMessageHandler|addScriptMessageHandlerWithReply)\b/
+    // The one file that may name `Network` is the connector of the synchronisation (docs/synchronisation.md section 6.4): it connects to the Mac the person
+    // paired, on the local network, and only after the person turned the synchronisation on. The notes say so from the day the page that turns it on exists.
+    const connector = 'ios/Lucium/SyncNetwork.swift'
     for (const { path, code } of swiftSources()) {
-      expect(own.test(code), `${path} opens a connection of its own, which the notes for the review deny`).toBe(false)
+      if (path !== connector) expect(own.test(code) || /^import Network$/m.test(code), `${path} opens a connection of its own, which the notes for the review deny`).toBe(false)
       expect(bridge.test(code), `${path} exposes a native function to pages, which the notes for the review deny`).toBe(false)
     }
   })

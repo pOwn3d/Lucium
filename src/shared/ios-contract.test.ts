@@ -98,8 +98,9 @@ interface Catalogue {
 
 const IOS_SOURCES = join(__dirname, '../../ios/Lucium')
 const catalogue = JSON.parse(readFileSync(join(IOS_SOURCES, 'Localizable.xcstrings'), 'utf8')) as Catalogue
-// Dotted words of the Swift sources that are not text: the identifier of the rule list.
-const NOT_TEXT = new Set(['app.lucium.builtin'])
+// Dotted words of the Swift sources that are not text: the identifier of the rule list, and the labels of the queues and the tag of the keychain items of the
+// synchronisation.
+const NOT_TEXT = new Set(['app.lucium.builtin', 'app.lucium.sync.connection', 'app.lucium.sync.identity', 'app.lucium.sync.verify'])
 const placeholders = (text: string): string[] => (text.match(/%(\d+\$)?(@|d|lld|f|s)/g) ?? []).sort()
 /** A text of a localization: the one text, or the texts of the plural forms by form (a number is `%lld` in the catalogue and `\(n)` in the code). */
 const textsOf = (localization: Localization | undefined): Record<string, StringUnit | undefined> =>
