@@ -44,6 +44,14 @@ export const MAX_ENTITIES = 100_000
 export const MAX_ENTITIES_PER_PART = 500
 export const MAX_PARTS = 4096
 export const MAX_JSON_DEPTH = 32
+/**
+ * How many values (every object, list, text, number, boolean and null) one frame and one whole connection may hold. The bounds in bytes do not bound the work: a frame of
+ * `[[],[],…]` holds a third of a million values to the mebibyte, thirty-two such frames ten million, and the copies a session makes of what it received (the assembly, its
+ * canonical form, its parse, the clean-up, the merge) made that more than a gigabyte and ten seconds of a stopped main process. A real state is about twenty values to a
+ * kilobyte of its frame and a hundred thousand entities of fifteen values make a million and a half.
+ */
+export const MAX_FRAME_VALUES = 150_000
+export const MAX_SESSION_VALUES = 2_000_000
 export const MAX_STRING_BYTES = 65_536
 export const MAX_DEVICE_NAME_CHARS = 80
 export const MAX_DEVICE_ID_CHARS = 64

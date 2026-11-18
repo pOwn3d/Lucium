@@ -10,12 +10,12 @@ afterEach(() => {
   while (open.length > 0) open.pop()?.()
 })
 
-async function pair(options: { phase?: 'pairing' | 'session'; idleMs?: number; maxContentBytes?: number } = {}): Promise<{ mac: Channel; phone: Channel; macRaw: import('node:net').Socket; phoneRaw: import('node:net').Socket }> {
+async function pair(options: { phase?: 'pairing' | 'session'; idleMs?: number; maxContentBytes?: number; maxValues?: number } = {}): Promise<{ mac: Channel; phone: Channel; macRaw: import('node:net').Socket; phoneRaw: import('node:net').Socket }> {
   const sockets = await socketPair()
   open.push(sockets.close)
   const phase = options.phase ?? 'session'
   return {
-    mac: new Channel(sockets.server, { phase, role: 'mac', ...(options.idleMs !== undefined ? { idleMs: options.idleMs } : {}), ...(options.maxContentBytes !== undefined ? { maxContentBytes: options.maxContentBytes } : {}) }),
+    mac: new Channel(sockets.server, { phase, role: 'mac', ...(options.idleMs !== undefined ? { idleMs: options.idleMs } : {}), ...(options.maxContentBytes !== undefined ? { maxContentBytes: options.maxContentBytes } : {}), ...(options.maxValues !== undefined ? { maxValues: options.maxValues } : {}) }),
     phone: new Channel(sockets.client, { phase, role: 'ios' }),
     macRaw: sockets.server,
     phoneRaw: sockets.client
@@ -111,6 +111,16 @@ describe('Channel: what ends it, and how the peer is told', () => {
     await phone.send({ t: 'snapshot.part', part: 0, parts: 1, entities: [{ kind: 'x', id: 'y', fields: { a: 'z'.repeat(400) }, stamps: {} }] })
     expect((await mac.receive()).t).toBe('hello')
     await expectFault(mac, 'too-large')
+  })
+
+  it('refuses a connection whose messages hold more values than the bound, whatever their size in bytes', async () => {
+    // A hello is fifteen values, a snapshot part with no entity seven: twenty values is a hello and not a part.
+    const { mac, phone } = await pair({ maxValues: 20 })
+    await phone.send(hello)
+    await phone.send({ t: 'snapshot.part', part: 0, parts: 1, entities: [] })
+    expect((await mac.receive()).t).toBe('hello')
+    await expectFault(mac, 'too-large')
+    expect(await phone.receive()).toMatchObject({ t: 'error', code: 'too-large', fatal: true })
   })
 
   it('ends on silence: timeout, told to the peer', async () => {
