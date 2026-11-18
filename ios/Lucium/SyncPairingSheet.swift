@@ -33,7 +33,9 @@ struct SyncPairingSheet: View {
                     .pickerStyle(.segmented)
                     .disabled(working)
                 }
-                if working {
+                if case .comparing(let proposal) = controller.pairingStep, working {
+                    compareSection(proposal)
+                } else if working {
                     Section {
                         HStack(spacing: 12) {
                             ProgressView()
@@ -59,6 +61,33 @@ struct SyncPairingSheet: View {
             .task(id: mode) { await openCameraIfNeeded() }
         }
         .interactiveDismissDisabled(working)
+    }
+
+    // MARK: The code to compare (§4.6)
+
+    /// « Appairer avec « Mac » ? Code : XXXXXX »: shown once the Mac has proved it holds the secret and before anything is kept. A Mac whose code is not the one on the
+    /// real Mac's sheet is not the person's Mac (a QR from a poster, a message): « Annuler » keeps nothing.
+    @ViewBuilder private func compareSection(_ proposal: SyncPairingProposal) -> some View {
+        Section {
+            Text("sync.pairing.compare.title \(proposal.macName)")
+                .font(.headline)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("sync.pairing.compare.code")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+                Text(proposal.code)
+                    .font(.system(.largeTitle, design: .monospaced).weight(.semibold))
+                    .textSelection(.enabled)
+                    // Read letter by letter, never as a word.
+                    .accessibilityLabel(Text(proposal.code.map(String.init).joined(separator: " ")))
+            }
+            .accessibilityElement(children: .combine)
+            Text("sync.pairing.compare.hint").font(.footnote).foregroundStyle(.secondary)
+            Button("sync.pairing.compare.accept") { controller.answerComparison(true) }
+                .frame(minHeight: 44)
+            Button("sync.pairing.compare.cancel", role: .cancel) { controller.answerComparison(false) }
+                .frame(minHeight: 44)
+        }
     }
 
     // MARK: The camera

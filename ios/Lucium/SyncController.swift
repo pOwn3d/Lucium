@@ -20,6 +20,8 @@ final class SyncController {
         case connecting
         /// The request is sent: the person has to say yes on the Mac (it waits 60 seconds).
         case waitingForMac
+        /// The Mac proved it holds the secret and nothing is kept yet: the person compares the code with the one on the Mac and says yes or no (§4.6).
+        case comparing(SyncPairingProposal)
     }
 
     /// Why a pairing did not happen.
@@ -29,6 +31,8 @@ final class SyncController {
         case reach(SyncReachFailure)
         /// This phone could not make its identity (the keychain refused).
         case identity
+        /// The person was shown the code and did not confirm it in time: nothing was kept.
+        case notConfirmed
         case cancelled
     }
 
@@ -64,6 +68,11 @@ final class SyncController {
     @ObservationIgnored private let isAppLocked: @MainActor () -> Bool
     @ObservationIgnored private var sessionTask: Task<Void, Never>?
     @ObservationIgnored private var pairingTask: Task<Result<Void, PairingFailure>, Never>?
+    /// The answer the person gives to « Appairer avec « … » ? Code : … » (§4.6), while the sheet waits for it.
+    @ObservationIgnored private var comparison: CheckedContinuation<Bool, Never>?
+    /// What happened to the last comparison: the person said no (`declined`), or was shown it and did not answer in time (`shown` only).
+    @ObservationIgnored private var comparisonShown = false
+    @ObservationIgnored private var comparisonDeclined = false
     @ObservationIgnored private var lastStart: ContinuousClock.Instant?
     @ObservationIgnored private let clock = ContinuousClock()
 
@@ -199,6 +208,31 @@ final class SyncController {
 
     func cancelPairing() { pairingTask?.cancel() }
 
+    /// The person's answer to the code (§4.6): `true` is « Appairer », `false` is « Annuler ». Nothing else keeps a Mac: no answer, a cancel of the pairing and the time
+    /// given all end in a refusal.
+    func answerComparison(_ agree: Bool) {
+        if !agree { comparisonDeclined = true }
+        resolveComparison(agree)
+    }
+
+    private func resolveComparison(_ agree: Bool) {
+        guard let waiting = comparison else { return }
+        comparison = nil
+        waiting.resume(returning: agree)
+    }
+
+    /// Shows the proposal and waits for the person. The wait ends by itself when the task that waits is cancelled (the time given, « Annuler » of the sheet, the
+    /// application locked): the pairing is then refused and nothing is kept.
+    private func compare(_ proposal: SyncPairingProposal) async -> Bool {
+        comparisonShown = true
+        pairingStep = .comparing(proposal)
+        return await withTaskCancellationHandler {
+            await withCheckedContinuation { continuation in comparison = continuation }
+        } onCancel: {
+            Task { @MainActor [weak self] in self?.resolveComparison(false) }
+        }
+    }
+
     private func performPairing(_ code: SyncPairingCode) async -> Result<Void, PairingFailure> {
         let identity: SyncIdentity
         do {
@@ -208,6 +242,8 @@ final class SyncController {
             return .failure(.identity)
         }
         guard let deviceId = settings.deviceId else { return .failure(.identity) }
+        comparisonShown = false
+        comparisonDeclined = false
         pairingStep = .connecting
         let pin: SyncPin = code.fingerprint.map { .fingerprint($0) } ?? .learn
         let reach = await SyncReacher.connect(hosts: code.hosts, port: code.port, pin: pin, using: makeConnector(identity))
@@ -222,7 +258,8 @@ final class SyncController {
         do {
             let outcome = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: identity.fingerprint,
                                                           device: SyncDeviceInfo(id: deviceId, name: deviceName, platform: .ios), nonce: Self.randomBytes(16),
-                                                          onRequestSent: { Task { @MainActor in self.pairingStep = .waitingForMac } })
+                                                          onRequestSent: { Task { @MainActor in if self.pairingStep == .connecting { self.pairingStep = .waitingForMac } } },
+                                                          confirm: { proposal in await self.compare(proposal) })
             let hosts = outcome.hosts.isEmpty ? SyncCandidates.ordered(code.hosts) : outcome.hosts
             settings.mac = SyncPairedMac(id: outcome.mac.id, name: outcome.mac.name, fingerprintHex: SyncEncoding.hex(outcome.fingerprint), port: Int(code.port), hosts: hosts, pairedAt: now())
             status = .idle
@@ -230,6 +267,8 @@ final class SyncController {
             return .success(())
         } catch let failure as SyncFailure {
             print("[sync] the pairing failed: \(failure.code.rawValue) \(failure.detail)")
+            // A refusal that is ours, not the Mac's: the person said no to the code (nothing to say to them), or was shown it and did not answer in time.
+            if failure.code == .pairingRefused, comparisonShown { return .failure(comparisonDeclined || Task.isCancelled ? .cancelled : .notConfirmed) }
             return .failure(.code(failure.code))
         } catch {
             print("[sync] the pairing was interrupted: \(error)")

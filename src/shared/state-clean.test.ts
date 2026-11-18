@@ -1,7 +1,7 @@
 // The cleaners of a saved state, read on their own: what they refuse at launch and what they keep when a file is too long.
 // Each test names the guard it protects; state-robustness.test.ts covers the whole path (normalize), this file covers the rules themselves.
 import { describe, expect, it } from 'vitest'
-import { EXTENSION_PATHS_MAX, LINK_ROUTES_MAX, cleanCommandBarUsage, cleanExtensionPaths, cleanLinkRoutes, cleanSpaces, cleanSplits } from './state-clean'
+import { EXTENSION_PATHS_MAX, LINK_ROUTES_MAX, cleanCommandBarUsage, cutText, printable, cleanExtensionPaths, cleanLinkRoutes, cleanSpaces, cleanSplits } from './state-clean'
 import { PRIVATE_SPACE_EMOJI } from './private-window'
 import { SPLIT_MAX_PANES } from './split'
 
@@ -99,5 +99,23 @@ describe('the emoji of a space read from a file', () => {
     for (const bad of ['x'.repeat(32), 'Travail', 'ab', '10', '!', '💼💼', ' 💼', '', 5, null, undefined]) expect(emojiOf(bad), String(bad)).toBe('✨')
     // One letter or one digit fits the box as one emoji does.
     for (const mark of ['a', 'Ω', '9']) expect(emojiOf(mark), mark).toBe(mark)
+  })
+})
+
+describe('the text cut to a length (review n° 15 of the synchronisation)', () => {
+  const emoji = '\u{1F600}'
+  const lone = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/
+
+  it('does not leave half of an emoji when it cuts in the middle of one: a lone surrogate is not text', () => {
+    expect(cutText(`${'a'.repeat(59)}${emoji}`, 60)).toBe('a'.repeat(59))
+    expect(cutText(`${'a'.repeat(58)}${emoji}`, 60)).toBe(`${'a'.repeat(58)}${emoji}`)
+    expect(cutText('short', 60)).toBe('short')
+    for (let max = 1; max < 8; max++) expect(lone.test(cutText(`${emoji}${emoji}${emoji}${emoji}`, max)), `max ${max}`).toBe(false)
+  })
+
+  it('is what a line of the interface is cut with: a title of the state that is cut at 1000 units does not keep half of an emoji', () => {
+    const title = printable(`${'t'.repeat(999)}${emoji}`, 1000)
+    expect(title).toBe('t'.repeat(999))
+    expect(lone.test(title ?? '')).toBe(false)
   })
 })

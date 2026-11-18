@@ -31,7 +31,7 @@ import type { SyncIdentity } from './identity'
 import type { PeerRecord } from './sync-store'
 
 /** What an open pairing gives the listener to run one: the context of the flow (the secret, the confirmation); null when no pairing is open. */
-export type OpenPairing = (peerFingerprint: Buffer) => Omit<PairingContext, 'peerFingerprint' | 'device'> | null
+export type OpenPairing = (peerFingerprint: Buffer) => Omit<PairingContext, 'peerFingerprint' | 'peerAddress' | 'device'> | null
 
 export interface ListenerDeps {
   identity: SyncIdentity
@@ -279,7 +279,7 @@ export class SyncListener {
       place.requested = true
       offer.onRequest?.()
     }
-    void runPairing(channel, { ...offer, onRequest, device: { id: this.deps.identity.deviceId, name: this.deps.deviceName(), fingerprint: this.deps.identity.fingerprint }, peerFingerprint }).then((outcome) => {
+    void runPairing(channel, { ...offer, onRequest, device: { id: this.deps.identity.deviceId, name: this.deps.deviceName(), fingerprint: this.deps.identity.fingerprint }, peerFingerprint, peerAddress: address }).then((outcome) => {
       if (outcome.outcome === 'failed') this.deps.limiter.recordFailure(address)
       this.deps.onPairingEnded?.(outcome)
     })

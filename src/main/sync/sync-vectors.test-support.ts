@@ -23,11 +23,13 @@ export interface ProofInputsVector {
 }
 
 export interface PairingVectors {
-  constants: { secretBytes: number; nonceBytes: number; fingerprintBytes: number; windowMs: number; maxInvalidProofs: number; qrMaxChars: number; qrMaxHosts: number }
+  constants: { secretBytes: number; nonceBytes: number; fingerprintBytes: number; windowMs: number; maxInvalidProofs: number; qrMaxChars: number; qrMaxHosts: number; comparisonCodeChars: number }
   proof: (ProofInputsVector & { name: string })[]
   mutations: { of: string; cases: (Partial<ProofInputsVector> & { field: keyof ProofInputsVector; value?: string; valueHex?: string; requestTag: string; acceptTag: string; changesRequestTag: boolean; changesAcceptTag: boolean })[] }
   qr: { valid: { name: string; text: string; expect: { fingerprintHex: string; secretHex: string; port: number; hosts: string[] } }[]; invalid: { name: string; text: string; expect: { code: string } }[] }
   manualCode: { valid: { name: string; input: string; expect: { secretHex: string } }[]; invalid: { name: string; input: string; expect: { code: string } }[] }
+  /** The code both devices show once the Mac's proof is checked (§4.6): the same two fingerprints, the same six characters. */
+  comparisonCode: { name: string; fpMac: string; fpPhone: string; code: string }[]
   secretLifecycle: { name: string; events: { atMs: number; event: 'request' | 'confirm' | 'close'; proof?: 'valid' | 'invalid'; decision?: 'refuse' | 'allow' }[]; expect: string[] }[]
   clientChecks: { name: string; mode: 'qr' | 'manualCode'; expectedFingerprintHex: string | null; presentedFingerprintHex: string; expect: string }[]
   addressPolicy: { host: string; allowed: boolean }[]
@@ -48,6 +50,8 @@ export interface MessageVectors {
   snapshotBytes: { total: number; expect: VectorVerdict }[]
   sequences: { name: string; ns: number[]; expect: VectorVerdict }[]
   messages: MessageVector[]
+  /** A JSON text, and whether an object of it names a key twice (the first wins in Swift, the last in JavaScript). Read by `hasDuplicateKey` and by LuciumKit's `SyncDuplicateKeys`. */
+  duplicateKeys: { name: string; raw: string; duplicate: boolean }[]
   transitions: { name: string; receiver: 'mac' | 'ios'; phase: 'session' | 'pairing'; history: string[]; type: string; expect: VectorVerdict }[]
   stamps: { a: string; b: string; expect: -1 | 0 | 1 }[]
   canonical: { name: string; value: unknown; canonical: string; sha256Hex: string }[]
@@ -57,7 +61,8 @@ export interface MessageVectors {
   settingsAllowed: string[]
   settingsNever: string[]
   neverKinds: string[]
-  inbound: { name: string; entity: { kind: string; id: string; fields: Record<string, unknown>; stamps: Record<string, string> }; expect: { accepted: boolean; reason?: string; fields?: Record<string, unknown> } }[]
+  inboundTombstones: { name: string; tombstones: Record<string, Record<string, string>>; expect: { kept: Record<string, Record<string, string>>; refused: string[] } }[]
+  inbound: { name: string; entity?: { kind: string; id: string; fields: Record<string, unknown>; stamps: Record<string, string> }; /** The entity as JSON text, for what a JSON file cannot hold as a value: a lone surrogate (LuciumKit could not read the file). */ entityRaw?: string; expect: { accepted: boolean; reason?: string; fields?: Record<string, unknown> } }[]
 }
 
 export const pairingVectors = read<PairingVectors>('sync-pairing-vectors.json')
@@ -75,3 +80,7 @@ export function textOfVector(vector: MessageVector): string {
   ;(holder as Record<string | number, unknown>)[last] = fill.repeat !== undefined ? fill.repeat.repeat(fill.times) : Array.from({ length: fill.times }, () => JSON.parse(JSON.stringify(fill.copy)) as unknown)
   return JSON.stringify(message)
 }
+
+/** The entity of an `inbound` vector, whichever way it is written. */
+export const entityOfVector = (vector: MessageVectors['inbound'][number]): NonNullable<MessageVectors['inbound'][number]['entity']> =>
+  vector.entity ?? (JSON.parse(vector.entityRaw as string) as NonNullable<MessageVectors['inbound'][number]['entity']>)

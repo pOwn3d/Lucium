@@ -5,6 +5,9 @@ public enum SyncLimits {
     public static let maxFrameBytes = 1_048_576
     public static let maxSnapshotBytes = 33_554_432
     public static let maxEntities = 100_000
+    /// The most tombstones a side sends or takes in a snapshot, the newest (docs/synchronisation.md §11.5, review n° 14): the merge keeps those of both sides, so two sides at the
+    /// bound of a snapshot would make a base nobody can read.
+    public static let maxTombstonesPerSnapshot = 50_000
     public static let maxEntitiesPerPart = 500
     public static let maxParts = 4096
     public static let maxJSONDepth = 32

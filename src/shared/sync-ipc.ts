@@ -44,9 +44,22 @@ export interface SyncPairingView {
   remainingMs: number
 }
 
-/** The question the Mac asks the person once the iPhone has proved it holds the secret: « Un iPhone nommé « … » demande à s'appairer ». */
+/**
+ * The question the Mac asks the person once the iPhone has proved it holds the secret: « Un iPhone nommé « … » demande à s'appairer ». It carries what lets the person
+ * tell the iPhone they scanned for from another one (review n° 9 and 21): the six characters the iPhone shows too (docs/synchronisation.md §4.6), and the address the request
+ * came from.
+ */
 export interface SyncConfirmView {
   name: string
+  /** Six characters made of the two fingerprints: the iPhone that is really connected shows the same ones. */
+  code: string
+  /** The source address of the connection, as the system gave it (`192.168.1.40`). */
+  address: string
+  /**
+   * false: « Autoriser » or « Refuser ». true: the person allowed, and the Mac waits for the iPhone's person to compare the code and say yes; nothing is kept before. The
+   * sheet keeps the code on screen and offers « Annuler ».
+   */
+  waiting: boolean
   /** The milliseconds before no answer becomes a refusal. */
   remainingMs: number
 }

@@ -18,8 +18,14 @@ struct SyncInboundTests {
         #expect(cases.count >= 20)
         for item in cases {
             let name = item["name"]?.text ?? "?"
-            let entity = try #require(item["entity"])
             let expect = try #require(item["expect"])
+            // A vector written as text because a JSON file cannot hold a lone surrogate as a value: this reader refuses the text before any entity is made (a stricter `bad-message`).
+            if let raw = item["entityRaw"]?.text {
+                #expect(SyncMessageCodec.hasLoneSurrogate(Data(raw.utf8)), "\(name): a text this reader cannot hold")
+                #expect(expect["accepted"]?.flag == false, "\(name)")
+                continue
+            }
+            let entity = try #require(item["entity"])
             let verdict = SyncInbound.filter(kind: try #require(entity["kind"]?.text), id: try #require(entity["id"]?.text), fields: fields(entity["fields"]))
             if expect["accepted"]?.flag == true {
                 guard case .accepted(let kept) = verdict else { Issue.record("\(name): refused, \(verdict)"); continue }

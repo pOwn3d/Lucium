@@ -1,5 +1,5 @@
 {
-  "comment": "Shared by src/shared/ios-sync-contract.test.ts (a reference reader written in the test, until src/main/sync/ exists) and by ios/LuciumKit (SyncVectorTests). The pairing of docs/synchronisation.md §4 and §6: the proofs (HMAC-SHA-256 over a transcription, §4.4), the text of the QR (§4.2), the code typed without a camera (§4.3), the life of the secret (§4.5), what the phone checks before it sends anything, the local-address filter (§6.2) and the certificate profile (§6.3). Binary values are lower-case hex when named `…Hex`, base64url without padding otherwise. Written by a script from fixed inputs: change a rule on one side and the other side fails.",
+  "comment": "Shared by src/shared/ios-sync-contract.test.ts (a reference reader written in the test, until src/main/sync/ exists) and by ios/LuciumKit (SyncVectorTests). The pairing of docs/synchronisation.md §4 and §6: the proofs (HMAC-SHA-256 over a transcription, §4.4), the text of the QR (§4.2), the code typed without a camera (§4.3), the code both devices show to be compared once the Mac's proof is checked (§4.6), the life of the secret (§4.5), what the phone checks before it sends anything, the local-address filter (§6.2) and the certificate profile (§6.3). Binary values are lower-case hex when named `…Hex`, base64url without padding otherwise. Written by a script from fixed inputs: change a rule on one side and the other side fails.",
   "constants": {
     "secretBytes": 16,
     "nonceBytes": 16,
@@ -7,7 +7,8 @@
     "windowMs": 120000,
     "maxInvalidProofs": 5,
     "qrMaxChars": 300,
-    "qrMaxHosts": 4
+    "qrMaxHosts": 4,
+    "comparisonCodeChars": 6
   },
   "proof": [
     {
@@ -425,6 +426,38 @@
       }
     ]
   },
+  "comparisonCode": [
+    {
+      "name": "the reference exchange",
+      "fpMac": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "code": "3FZUQD"
+    },
+    {
+      "name": "the same two fingerprints, the other way round: the Mac's comes first",
+      "fpMac": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "fpPhone": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "code": "YFEEFV"
+    },
+    {
+      "name": "two fingerprints of repeated bytes",
+      "fpMac": "1111111111111111111111111111111111111111111111111111111111111111",
+      "fpPhone": "2222222222222222222222222222222222222222222222222222222222222222",
+      "code": "O6NSGD"
+    },
+    {
+      "name": "the same fingerprint on both sides",
+      "fpMac": "abababababababababababababababababababababababababababababababab",
+      "fpPhone": "abababababababababababababababababababababababababababababababab",
+      "code": "C7YCIX"
+    },
+    {
+      "name": "all zero and all one bits",
+      "fpMac": "0000000000000000000000000000000000000000000000000000000000000000",
+      "fpPhone": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "code": "S4M7GG"
+    }
+  ],
   "secretLifecycle": [
     {
       "name": "a valid request inside the window is accepted",

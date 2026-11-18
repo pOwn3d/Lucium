@@ -100,7 +100,7 @@ struct SyncVectorTests {
     @Test func theConstantsAreTheOnesOfTheSpecification() throws {
         let pairing = try SyncVectors.load("sync-pairing-vectors.json")
         let constants = try #require(pairing["constants"] as? [String: Int])
-        #expect(constants == ["secretBytes": 16, "nonceBytes": 16, "fingerprintBytes": 32, "windowMs": 120000, "maxInvalidProofs": 5, "qrMaxChars": 300, "qrMaxHosts": 4])
+        #expect(constants == ["secretBytes": 16, "nonceBytes": 16, "fingerprintBytes": 32, "windowMs": 120000, "maxInvalidProofs": 5, "qrMaxChars": 300, "qrMaxHosts": 4, "comparisonCodeChars": 6])
         let limits = try #require(try SyncVectors.load("sync-message-vectors.json")["limits"] as? [String: Int])
         #expect(limits["maxFrameBytes"] == 1_048_576)
         #expect(limits["maxSnapshotBytes"] == 33_554_432)

@@ -177,6 +177,8 @@ public enum SyncMessageCodec {
     public static func decode(_ content: Data, valuesLeft: inout Int) -> Result<SyncEnvelope, SyncFailure> {
         let bad = { (why: String) in Result<SyncEnvelope, SyncFailure>.failure(SyncFailure(.badMessage, why)) }
         guard !hasLoneSurrogate(content) else { return bad("a text with a lone UTF-16 surrogate") }
+        // The first of two equal keys wins here and the last in JavaScript: the same text would be two messages (docs/synchronisation.md §7.1, review n° 20).
+        guard !SyncDuplicateKeys.has(in: content) else { return bad("a key written twice in one object") }
         guard let value = try? JSONDecoder().decode(JSONValue.self, from: content) else { return bad("not JSON") }
         guard case .object(let fields) = value, !hasProblem(value, depth: 1) else { return bad("not an object, or a value the rules refuse") }
         let count = valueCount(value, stopAbove: min(SyncLimits.maxFrameValues, valuesLeft))

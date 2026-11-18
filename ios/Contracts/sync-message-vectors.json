@@ -4,6 +4,7 @@
     "maxFrameBytes": 1048576,
     "maxSnapshotBytes": 33554432,
     "maxEntities": 100000,
+    "maxTombstonesPerSnapshot": 50000,
     "maxEntitiesPerPart": 500,
     "maxParts": 4096,
     "maxJsonDepth": 32,
@@ -824,6 +825,37 @@
       }
     },
     {
+      "name": "a lone high surrogate in a text (Swift cannot read it)",
+      "raw": "{\"v\":1,\"t\":\"snapshot.part\",\"n\":2,\"part\":0,\"parts\":1,\"entities\":[{\"kind\":\"tab\",\"id\":\"t1\",\"fields\":{\"name\":\"\\ud83d\"},\"stamps\":{}}]}",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a lone low surrogate in a text",
+      "raw": "{\"v\":1,\"t\":\"snapshot.part\",\"n\":2,\"part\":0,\"parts\":1,\"entities\":[{\"kind\":\"tab\",\"id\":\"t1\",\"fields\":{\"name\":\"a\\ude00b\"},\"stamps\":{}}]}",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a lone surrogate in a key",
+      "raw": "{\"v\":1,\"t\":\"snapshot.part\",\"n\":2,\"part\":0,\"parts\":1,\"entities\":[{\"kind\":\"tab\",\"id\":\"t1\",\"fields\":{\"\\ud83d\":1},\"stamps\":{}}]}",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "an emoji written as a pair of surrogates",
+      "raw": "{\"v\":1,\"t\":\"snapshot.part\",\"n\":2,\"part\":0,\"parts\":1,\"entities\":[{\"kind\":\"tab\",\"id\":\"t1\",\"fields\":{\"name\":\"\\ud83d\\ude00\"},\"stamps\":{}}]}",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
       "name": "a nesting of 32 levels",
       "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"x\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":1}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}",
       "expect": {
@@ -1487,6 +1519,28 @@
       }
     }
   ],
+  "duplicateKeys": [
+    {
+      "name": "a key written twice at the top",
+      "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"n\":3}",
+      "duplicate": true
+    },
+    {
+      "name": "a key written twice inside an entity",
+      "raw": "{\"v\":1,\"t\":\"snapshot.part\",\"n\":2,\"part\":0,\"parts\":1,\"entities\":[{\"kind\":\"tab\",\"id\":\"t1\",\"fields\":{\"name\":\"A\",\"name\":\"B\"},\"stamps\":{}}]}",
+      "duplicate": true
+    },
+    {
+      "name": "the same key written two ways, the second with an escape",
+      "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"\\u006e\":3}",
+      "duplicate": true
+    },
+    {
+      "name": "the same key in two different objects is not a duplicate",
+      "raw": "{\"v\":1,\"t\":\"snapshot.part\",\"n\":2,\"part\":0,\"parts\":1,\"entities\":[{\"kind\":\"tab\",\"id\":\"t1\",\"fields\":{\"name\":\"A\"},\"stamps\":{}},{\"kind\":\"tab\",\"id\":\"t2\",\"fields\":{\"name\":\"B\"},\"stamps\":{}}]}",
+      "duplicate": false
+    }
+  ],
   "transitions": [
     {
       "name": "a session starts with hello",
@@ -2080,6 +2134,49 @@
     "cookie",
     "session"
   ],
+  "inboundTombstones": [
+    {
+      "name": "the tombstones of code and of secrets are refused, whatever the device says, and the others are kept",
+      "tombstones": {
+        "password": {
+          "p1": "1790000000000-0001-phone-0000000001"
+        },
+        "tab": {
+          "t1": "1790000000000-0001-phone-0000000001"
+        },
+        "boost": {
+          "b1": "1790000000000-0001-phone-0000000001"
+        }
+      },
+      "expect": {
+        "kept": {
+          "tab": {
+            "t1": "1790000000000-0001-phone-0000000001"
+          }
+        },
+        "refused": [
+          "boost/b1",
+          "password/p1"
+        ]
+      }
+    },
+    {
+      "name": "a tombstone of a kind this version does not know crosses, as the entities of one do",
+      "tombstones": {
+        "widget": {
+          "w1": "1790000000000-0001-phone-0000000001"
+        }
+      },
+      "expect": {
+        "kept": {
+          "widget": {
+            "w1": "1790000000000-0001-phone-0000000001"
+          }
+        },
+        "refused": []
+      }
+    }
+  ],
   "inbound": [
     {
       "name": "a setting of the closed list",
@@ -2296,6 +2393,68 @@
         },
         "stamps": {}
       },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a space whose profile is not an identifier (33 characters): a list key is made of it",
+      "entity": {
+        "kind": "space",
+        "id": "s9",
+        "fields": {
+          "name": "Perso",
+          "profileId": "ppppppppppppppppppppppppppppppppp"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a favorite whose profile is written in decomposed Unicode",
+      "entity": {
+        "kind": "favorite",
+        "id": "f9",
+        "fields": {
+          "url": "https://example.com/",
+          "title": "Doc",
+          "profileId": "e\u0301"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a favorite of a profile as the Mac writes them",
+      "entity": {
+        "kind": "favorite",
+        "id": "f8",
+        "fields": {
+          "url": "https://example.com/",
+          "title": "Doc",
+          "profileId": "work"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true,
+        "fields": {
+          "url": "https://example.com/",
+          "title": "Doc",
+          "profileId": "work"
+        }
+      }
+    },
+    {
+      "name": "a space named with a lone surrogate (a text cut in the middle of an emoji)",
+      "entityRaw": "{\"kind\":\"space\",\"id\":\"s8\",\"fields\":{\"name\":\"Perso \\ud83d\"},\"stamps\":{}}",
       "expect": {
         "accepted": false,
         "reason": "invalid-value"

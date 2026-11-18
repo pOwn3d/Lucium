@@ -178,21 +178,33 @@ function Panel() {
           {status.confirm !== null && (
             <div className="sync-confirm" role="alertdialog" aria-labelledby="sync-confirm-title" aria-describedby="sync-confirm-text">
               <p className="sync-confirm-title" id="sync-confirm-title">
-                {t('sync.confirm-title')}
+                {t(status.confirm.waiting ? 'sync.confirm-waiting-title' : 'sync.confirm-title')}
               </p>
               <p className="sync-confirm-text" id="sync-confirm-text">
-                {t('sync.confirm-body', { name: status.confirm.name })}
+                {t(status.confirm.waiting ? 'sync.confirm-waiting-body' : 'sync.confirm-body', { name: status.confirm.name })}
               </p>
+              <p className="sync-confirm-code">
+                <span>{t('sync.confirm-code')}</span> <strong className="sync-code">{status.confirm.code}</strong>
+              </p>
+              {status.confirm.address !== '' && <p className="pref-hint">{t('sync.confirm-address', { address: status.confirm.address })}</p>}
               <p className="pref-hint" role="timer">
-                {t('sync.confirm-timer', { time: countdown(status.confirm.remainingMs) })}
+                {t(status.confirm.waiting ? 'sync.confirm-waiting-timer' : 'sync.confirm-timer', { time: countdown(status.confirm.remainingMs) })}
               </p>
               <div className="sync-buttons">
-                <button type="button" className="button primary" onClick={() => void ask({ kind: 'answer', allow: true })}>
-                  {t('sync.confirm-allow')}
-                </button>
-                <button type="button" className="button" onClick={() => void ask({ kind: 'answer', allow: false })}>
-                  {t('sync.confirm-refuse')}
-                </button>
+                {status.confirm.waiting ? (
+                  <button type="button" className="button" onClick={() => void ask({ kind: 'answer', allow: false })}>
+                    {t('sync.confirm-cancel')}
+                  </button>
+                ) : (
+                  <>
+                    <button type="button" className="button primary" onClick={() => void ask({ kind: 'answer', allow: true })}>
+                      {t('sync.confirm-allow')}
+                    </button>
+                    <button type="button" className="button" onClick={() => void ask({ kind: 'answer', allow: false })}>
+                      {t('sync.confirm-refuse')}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           )}
