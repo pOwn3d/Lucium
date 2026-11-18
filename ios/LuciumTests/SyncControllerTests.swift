@@ -148,7 +148,7 @@ final class SyncControllerTests: XCTestCase {
             try await mac.write("pair.accept", ["device": ["id": "mac-test-0000000001", "name": "Mac de test", "platform": "mac"], "proof": accept, "hosts": ["mac-de-test.local", "192.168.1.20"]])
             // The phone's person compares the code and decides (§4.6): a bye keeps the phone on the Mac, which answers with its own bye; anything else keeps nothing.
             let word = try? await mac.read()
-            wordOfThePhone.set(word?["t"] as? String)
+            wordOfThePhone.value = word?["t"] as? String
             if word?["t"] as? String == "bye" { try? await mac.write("bye") }
         })
     }
