@@ -120,6 +120,20 @@ shell('scripts/ios-archive.sh archives, exports and sends', () => {
     expect(result.stdout).toMatch(/internal TestFlight only/)
   })
 
+  it('puts the system folders first on the PATH of xcodebuild, so that a Homebrew rsync cannot break the export', () => {
+    // Xcode makes the .ipa with /usr/bin/rsync -E, which starts the "rsync" found on the PATH: Homebrew's rsync 3.x refuses it ("--extended-attributes: unknown
+    // option") and the export stops with "Copy failed" (seen on the first real send, 18 November 2026). The stand-in itself must still be the one that runs.
+    const result = run(lists, ['--build', '1234'], whole)
+    expect(result.status).toBe(0)
+    expect(result.commands).toHaveLength(3)
+    const paths = readFileSync(`${result.root.log}.path`, 'utf8').trim().split('\n')
+    expect(paths).toHaveLength(2) // the archive and the export
+    for (const path of paths) {
+      expect(path.startsWith('/usr/bin:/bin:/usr/sbin:/sbin:')).toBe(true)
+      expect(path).toContain(result.root.bin) // the rest of the PATH is kept: the other tools are still found
+    }
+  })
+
   it('only exports with --export-only: the destination is export and the message says nothing is sent', () => {
     const result = run(lists, ['--build', '1234', '--export-only'], whole)
     expect(result.status).toBe(0)
