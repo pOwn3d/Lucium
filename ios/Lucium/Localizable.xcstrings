@@ -4489,6 +4489,22 @@
         }
       }
     },
+    "start.privacy.sync": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing leaves this device, except to your Mac, on your network."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien ne quitte cet appareil, sauf vers votre Mac, sur votre réseau."
+          }
+        }
+      }
+    },
     "state.notice.corrupt": {
       "localizations": {
         "en": {
@@ -4773,6 +4789,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Espaces, dossiers, favoris et onglets épinglés."
+          }
+        }
+      }
+    },
+    "sync.conflicts.last": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last conflict settled"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dernier conflit réglé"
           }
         }
       }
