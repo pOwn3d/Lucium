@@ -17,12 +17,19 @@ name: CodeQL
 # Free on PUBLIC repositories. On a private repository it needs GitHub Code Security (a paid feature), so the jobs are skipped while
 # the repository is private: nothing to change when it becomes public, they start running by themselves.
 # Scheduled runs only happen on the default branch.
+#
+# A pull request that changes documents only (every file is a *.md or under docs/, the same filter as windows.yml) does not start it: none of
+# the four languages reads a document. This workflow is no required check of main, so a path filter cannot block a merge here (it would on
+# ci.yml, which has none: see its head). A push to main and the weekly run analyse everything, whatever changed.
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   schedule:
     - cron: '30 5 * * 3'
 
