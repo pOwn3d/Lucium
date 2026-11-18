@@ -86,13 +86,17 @@ struct BrowserScreen: View {
     }
 }
 
-/// The page of the tab on screen: a lock screen while its space is locked, its web view, or a plain ground until the blocker is ready.
+/// The page of the tab on screen: a lock screen while its space is locked, the start page for a blank tab, its web view, or a plain ground until the
+/// blocker is ready.
 struct PageArea: View {
     @Bindable var model: BrowserModel
 
     var body: some View {
         if let lock = model.lock, model.activeSpaceCovered {
             LockScreen(kind: .space(name: model.activeSpace.name), lock: lock, unlock: model.requestUnlock)
+        } else if model.activeTab?.isBlank == true {
+            // No page is loaded for it, so it does not wait for the blocker.
+            StartView(model: model)
         } else if let view = model.webView {
             WebViewHost(webView: view).id(model.activeTab?.id)
         } else {

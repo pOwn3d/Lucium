@@ -157,11 +157,12 @@ final class BrowserModelTests: BrowserCoreTestCase {
         XCTAssertEqual(model.activeTab?.id, workTab.id)
     }
 
-    func testABlankTabShowsTheStartPageAndKeepsNoPageStateWhenItSleeps() async throws {
+    /// The start page is drawn by SwiftUI (`StartView`); the view of a blank tab holds an empty document, which is what a first address loads over.
+    func testABlankTabHoldsAnEmptyDocumentAndKeepsNoPageStateWhenItSleeps() async throws {
         let model = await makeModel(cap: 1)
         let blank = try XCTUnwrap(model.activeTab)
         let view = try XCTUnwrap(model.webView)
-        try await eventually("the start page") { view.url?.absoluteString == "about:blank" && !view.isLoading }
+        try await eventually("the empty document") { view.url?.absoluteString == "about:blank" && !view.isLoading }
         XCTAssertTrue(blank.isBlank)
 
         model.selectSpace("home")  // the blank tab of "work" leaves the screen and, with a cap of one, sleeps
@@ -171,7 +172,7 @@ final class BrowserModelTests: BrowserCoreTestCase {
 
         model.selectSpace("work")
         let again = try XCTUnwrap(model.webView)
-        try await eventually("the start page again") { again.url?.absoluteString == "about:blank" && !again.isLoading }
+        try await eventually("the empty document again") { again.url?.absoluteString == "about:blank" && !again.isLoading }
         XCTAssertEqual(model.activeTab?.url, BrowserState.blankURL, "the start page is not a page to remember")
     }
 
