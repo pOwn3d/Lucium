@@ -11,6 +11,8 @@ public actor SyncChannel {
     private var outgoing = SyncSequence()
     private var history: [String] = []
     private var received = 0
+    /// What the messages of this connection may still hold in values (`SyncLimits.maxSessionValues`).
+    private var valuesLeft = SyncLimits.maxSessionValues
 
     /// `log` is where a failure that changes nothing for the person is written down (the line of a log, never a screen): it names no secret, no address and no
     /// fingerprint.
@@ -42,7 +44,7 @@ public actor SyncChannel {
             while true {
                 if let content = try decoder.next() {
                     let envelope: SyncEnvelope
-                    switch SyncMessageCodec.decode(content) {
+                    switch SyncMessageCodec.decode(content, valuesLeft: &valuesLeft) {
                     case .success(let value): envelope = value
                     case .failure(let failure): throw failure
                     }
