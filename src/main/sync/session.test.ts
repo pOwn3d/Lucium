@@ -241,6 +241,7 @@ describe('the categories, the settings, the archive and the open tabs', () => {
     await sync(mac, phone)
     expect(phone.state.settings.searchUrlTemplate).toBe(BRAVE)
     expect(mac.state.settings.searchUrlTemplate).toBe(OWN_ENGINE)
+  })
 
   // Review n° 17: a session that does not exchange a category must not forget the marks of that category.
   it('keeps the marks and the tombstones of the categories it did not exchange: the settings and the archive stay as they were marked', async () => {
