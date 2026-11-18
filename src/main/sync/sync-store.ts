@@ -8,16 +8,14 @@
 import { existsSync } from 'node:fs'
 import { replaceFileDurably } from '../durable-write'
 import { readTextBounded, setAsideOrHold, SMALL_FILE_MAX_BYTES } from '../persist'
+import { DEFAULT_SYNC_CATEGORIES, SYNC_CATEGORIES, type SyncCategory } from '@shared/sync-ipc'
 import { MAX_DEVICE_ID_CHARS, MAX_DEVICE_NAME_CHARS } from './limits'
 
 const VERSION = 1
 
-/** The four categories the person ticks (§10.1). A category passes only when both devices ticked it. */
-export const SYNC_CATEGORIES = ['structure', 'settings', 'archive', 'openTabs'] as const
-export type SyncCategory = (typeof SYNC_CATEGORIES)[number]
-
-/** [Q2]: only the structure is ticked by default; the settings, the archive and the open tabs are the person's choice, each with its own sentence. */
-export const DEFAULT_CATEGORIES: Readonly<Record<SyncCategory, boolean>> = { structure: true, settings: false, archive: false, openTabs: false }
+export { SYNC_CATEGORIES, type SyncCategory } from '@shared/sync-ipc'
+/** [Q2]: only the structure is ticked by default (shared/sync-ipc.ts: the page shows the same figures). */
+export const DEFAULT_CATEGORIES: Readonly<Record<SyncCategory, boolean>> = DEFAULT_SYNC_CATEGORIES
 
 /** The ports the Mac may listen on: chosen once at random in the range of the dynamic ports, kept, and drawn again only when it is taken. */
 export const PORT_MIN = 49_152

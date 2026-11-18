@@ -236,6 +236,22 @@ describe('SyncListener: the fingerprint decides', () => {
     second.socket.destroy()
   })
 
+  it('cuts the connections of a device the moment it is forgotten, and only that device\'s', async () => {
+    const r = await rig()
+    const a = testIdentity('iphone-0000000001')
+    const b = testIdentity('iphone-0000000002')
+    for (const phone of [a, b]) r.peers.set(phone.fingerprint.toString('hex'), peerOf(phone))
+    const first = await connectTls(r.port, a)
+    const second = await connectTls(r.port, b)
+    await sleep(60)
+    expect(r.listener.dropPeer(a.fingerprint.toString('hex'))).toBe(1)
+    expect(await closedOrFailed(first.socket)).toMatch(/closed|error/)
+    expect(second.socket.destroyed).toBe(false)
+    expect(r.listener.dropPeer(a.fingerprint.toString('hex'))).toBe(0)
+    expect(r.listener.dropPeer('f'.repeat(64))).toBe(0)
+    second.socket.destroy()
+  })
+
   it('refuses a fifth session: busy', async () => {
     const r = await rig()
     const phones = Array.from({ length: MAX_CONNECTIONS + 1 }, (_, n) => testIdentity(`iphone-000000000${n}`))

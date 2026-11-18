@@ -34,6 +34,8 @@ export interface SettingsWindowDeps {
   createWindow: (pane: SettingsPane, anchor?: SettingsAnchor) => BrowserWindow
   /** Called when a window opens, so the UI can come to the front. */
   onOpen?: () => void
+  /** Called once the window has closed (the page « Synchronisation » closes its window with it). */
+  onClosed?: () => void
 }
 
 /**
@@ -88,6 +90,7 @@ export class SettingsWindow {
       this.deps.trusted.delete(id)
       this.deps.browser.removeSurface(id)
       if (this.win === win) this.win = null
+      this.deps.onClosed?.()
     })
   }
 

@@ -45,7 +45,8 @@ describe('SyncStore: what is kept', () => {
     expect(again.categories).toEqual({ structure: false, settings: false, archive: false, openTabs: true })
   })
 
-  it('writes a file only its owner reads', () => {
+  // A POSIX mode: Windows keeps none.
+  it.skipIf(process.platform === 'win32')('writes a file only its owner reads', () => {
     const { path } = fresh()
     new SyncStore(path).setEnabled(true)
     expect(statSync(path).mode & 0o077).toBe(0)

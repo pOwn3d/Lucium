@@ -60,6 +60,8 @@ import { BackupFiles } from './backup-store'
 import { logUncaughtExceptions, logUnhandledRejections } from './rejection-log'
 import { LockService, NO_TOUCH_ID, setLockService, type PowerEvent } from './lock-service'
 import { LockStore } from './lock-store'
+import { setSyncService } from './sync/registry'
+import { createSyncService } from './sync/sync-wiring'
 import { restoreRefusal } from '@shared/lock'
 import { createBlockHandlerFollower } from './block-handlers'
 import { lastWindowClosedStep } from './window-lifecycle'
@@ -315,6 +317,12 @@ async function main(): Promise<void> {
   setLockService(lock)
   lock.start()
   app.on('will-quit', () => lock.stop())
+  // Settings › Téléchargements et fichiers › Synchronisation: the service holds a switch that is OFF and opens nothing until the person turns it on and opens the window by
+  // hand (docs/synchronisation.md §6.1). A lock closes the window; the quit closes the door.
+  const sync = createSyncService({ userData: app.getPath('userData'), isLocked: () => lock.isAppLocked() })
+  setSyncService(sync)
+  lock.subscribe(() => void sync.lockChanged().catch((error: unknown) => console.error('[sync] the window could not be closed when the application locked:', error)))
+  app.on('will-quit', () => void sync.dispose().catch((error: unknown) => console.error('[sync] the door could not be closed at the quit:', error)))
   // What costs something while it runs (timers, listeners, requests) is tied to its setting by these gates and stops with it (docs/fonctions.md).
   const gates = new FeatureGates(store)
   // Settings › Vie privée et sécurité › Mots de passe: the vault, its Touch ID, the gate of the page bridge, and what closes it (shell/password-wiring.ts). Its will-quit handler is installed here.

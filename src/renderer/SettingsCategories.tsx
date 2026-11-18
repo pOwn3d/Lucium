@@ -39,6 +39,7 @@ import { ProfilesPane } from './SettingsProfiles'
 import { HomePage } from './SettingsHome'
 import { BlockAdsRow, LaunchRow, ProtectionLevelRow } from './CategoryRows'
 import { FeatureSubpages, FeaturesPage } from './FeaturesPage'
+import { SyncEntry, SyncSettings } from './SyncSettings'
 import { ShortcutsPane } from './SettingsShortcuts'
 import { AutoplaySettings, ClearOnCloseSettings, SiteAutoplayList, SiteDataSettings } from './SitePrivacySettings'
 import { SpacesSettings } from './SpacesSettings'
@@ -334,6 +335,10 @@ function FilesCategory({ snapshot, update }: PaneProps) {
       <BookmarksGroup snapshot={snapshot} />
       <FaviconSettings snapshot={snapshot} update={update} />
       <BackupSettings snapshot={snapshot} update={update} />
+      <Group>
+        <SyncEntry snapshot={snapshot} />
+      </Group>
+      <SyncSettings />
       <Place at="more">
         <ExportData />
       </Place>

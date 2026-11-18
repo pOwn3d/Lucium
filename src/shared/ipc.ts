@@ -68,7 +68,7 @@ export const SETTINGS_ANCHORS = ['icon', 'about', 'status', 'engine', 'links', '
  */
 export const SETTINGS_SUBPAGES = [
   'contrast', 'awake', 'containers', 'sitesearches', 'linkroutes', 'exceptions', 'clearonclose', 'permissions', 'lockoptions', 'filterlists', 'network',
-  'extensionfolders', 'translatelists', 'userscripts', 'pagewatches', 'shortcuts', 'siteexclusions'
+  'extensionfolders', 'translatelists', 'userscripts', 'pagewatches', 'shortcuts', 'siteexclusions', 'sync'
 ] as const
 export type SettingsSubpage = (typeof SETTINGS_SUBPAGES)[number]
 

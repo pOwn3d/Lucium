@@ -1,6 +1,6 @@
 # Synchronisation Mac ↔ iPhone (phase 2) : spécification
 
-Spécification de la synchronisation directe entre le Mac et l'iPhone, sur le réseau local, sans serveur ni compte. Elle est écrite par la carte 443 et sert les cartes 444 (Mac), 445 (iPhone), 446 (fusion), 447 (reprise d'un onglet) et 448 (revue de sécurité). **Presque rien de ce qui est décrit ici n'est implémenté** : ce document dit ce que le code devra faire, et les vecteurs de contrat (§19) tiennent d'accord le Mac et l'iPhone. **La seule partie écrite est la fusion à trois voies (§11), la forme canonique (§8.4) et la lecture d'un instantané (§8.3) côté Mac, en TypeScript** (`src/shared/sync-merge.ts`, `sync-canonical.ts`, `sync-snapshot.ts`, carte 446) ; la même fusion en Swift, le journal des conflits et l'écran « Conflit réglé » sont les étapes suivantes de cette carte.
+Spécification de la synchronisation directe entre le Mac et l'iPhone, sur le réseau local, sans serveur ni compte. Elle est écrite par la carte 443 et sert les cartes 444 (Mac), 445 (iPhone), 446 (fusion), 447 (reprise d'un onglet) et 448 (revue de sécurité). Ce document dit ce que le code doit faire, et les vecteurs de contrat (§19) tiennent d'accord le Mac et l'iPhone. **État de la carte 444 (Mac)** : sont écrits, testés et câblés l'écoute et le filtre d'adresses (§6), l'appairage et sa confirmation (§4), l'identité et le certificat (§3, §6.3), la fenêtre de synchronisation (§6.1), la page des Réglages et son canal IPC (§13.1) et la ligne du README (§14) ; **la séance d'échange (§8 : instantané, marques, filtre des entités reçues, `sync/apply`) n'est pas encore écrite, et la fusion (§11) n'y est pas encore branchée** (elle est écrite en TypeScript par la carte 446 : `src/shared/sync-merge.ts`, `sync-canonical.ts`, `sync-snapshot.ts`) : un appareil appairé qui se connecte reçoit l'erreur `internal` (« l'échange des données n'est pas encore là »). Les cartes 445 à 448 restent à faire.
 
 Il complète [docs/ios.md](ios.md) §13, qui est l'étude. En cas d'écart, ce document prime ; les écarts voulus sont listés au §21.
 
@@ -591,7 +591,7 @@ Les écrans suivent ce que dit `docs/ios.md` pour le reste de l'application : Dy
 
 ## 14. Connexions : la ligne du README
 
-Ce qui suit est **à ajouter par les cartes 444 et 445, dans le même commit que la fonction** (`docs/ios.md` §13.5, `AGENTS.md` §5) : **il n'est pas dans le README aujourd'hui**, parce que rien n'est implémenté. Les deux README (anglais et français) changent ensemble.
+Ce qui suit est à ajouter par les cartes 444 et 445, avec la fonction (`docs/ios.md` §13.5, `AGENTS.md` §5). **La ligne du Mac est dans les deux README** (carte 444, page « Synchronisation » de Réglages › Téléchargements et fichiers) ; celle de l'iPhone reste à ajouter par la carte 445. Les deux README (anglais et français) changent ensemble.
 
 **Tableau du Mac** (anglais) :
 
@@ -658,9 +658,11 @@ Ce qui suit est **à ajouter par les cartes 444 et 445, dans le même commit que
 | `AVMetadataObjectTypeQRCode` | `AVMetadataObject.h` |
 | `/usr/bin/dns-sd -R` existe ; sa page de manuel dit que ses arguments et sa sortie peuvent changer et déconseille de l'appeler d'un script | `man dns-sd` |
 
+**Vérifié le 18 novembre 2026 (carte 444)** : le Node **d'Electron 45.2.1** (Node 24.22.1, TLS de BoringSSL ; Electron lancé avec `ELECTRON_RUN_AS_NODE=1` depuis l'archive officielle, sans fenêtre ni application) fait passer, avec le vrai code de `src/main/sync/` : le certificat du §6.3 (octets à signer du vecteur, lecture par `X509Certificate`, signature, empreinte), les 44 vecteurs du filtre d'adresses (IPv4 écrite en IPv6 comprise), les 29 vecteurs du QR et les 12 du code à saisir, les preuves, une séance **TLS 1.3 mutuelle avec ALPN `lucium-sync/1` entre deux certificats écrits à la main**, l'empreinte du certificat du Mac vue par le client, un appairage de bout en bout, le refus d'un client sans protocole commun et d'un inconnu (`not-paired`). **Ce que cet essai ne prouve pas** : `safeStorage` (il demande le trousseau : essai du smoke `sync`, non lancé), `os.hostname()` dans l'application, le pare-feu et l'autorisation du réseau local de macOS, un vrai appareil.
+
 **À vérifier** (non lu, non essayé) :
 
-1. Le Node **d'Electron 45.2.1** (la version n'a pas été lue) : tout ce qui est « essayé » ci-dessus l'est avec Node 26.13 ; les cartes 444 et 445 refont les essais dans le moteur et **sur un appareil**.
+1. ~~Le Node d'Electron 45.2.1~~ (fait, ci-dessus) ; reste **l'essai sur un appareil** et dans l'application elle-même (le smoke `sync` de `src/main/smoke-sync.ts` est écrit, pas lancé).
 2. `NWConnection` vers un nom `.local`, et ce que rend `os.hostname()` d'Electron (§5).
 3. Le code d'erreur de `Network.framework` quand le réseau local est refusé (§5) et le moment où le bloc de vérification est appelé face à un certificat auto-signé (§6.4).
 4. L'**identité** de l'iPhone : `SecItemAdd` d'un certificat et d'une clé, puis `kSecClassIdentity` (§3.3).

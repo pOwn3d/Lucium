@@ -51,6 +51,7 @@ import { registerAnnotateIpc } from './annotate-ipc'
 import { processMeter } from './process-meter'
 import { registerResourceIpc } from './resource-ipc'
 import { registerLockIpc } from './lock-ipc'
+import { registerSyncIpc } from './sync-ipc'
 import { registerPasswordIpc } from './password-ipc'
 import { getLockService } from '../lock-service'
 import { ExportCryptoError, PASSPHRASE_MAX, exportErrorMessage } from '../export-crypto'
@@ -693,6 +694,7 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
   registerFeatureIpc(ipcMain, guard, browser, store, win)
   registerAnnotateIpc(ipcMain, guard, browser, win)
   registerLockIpc(ipcMain, guard, browser)
+  registerSyncIpc(ipcMain, guard, browser)
   registerPasswordIpc(ipcMain, guard, browser)
   registerPrivacyIpc(ipcMain, guard, browser, store)
   registerHardwareIpc(ipcMain, guard, browser)

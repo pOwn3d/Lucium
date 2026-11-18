@@ -75,8 +75,19 @@ export class SyncListener {
   private readonly sockets = new Set<Socket>()
   private sessions = 0
   private pairings = 0
+  /** The connections of each paired device, by fingerprint (lower-case hexadecimal): « Oublier » cuts them at once (§12). */
+  private readonly byFingerprint = new Map<string, Set<TLSSocket>>()
 
   constructor(private readonly deps: ListenerDeps) {}
+
+  /** A device was forgotten: every connection it has is cut now, not at its next session (§12: the Mac refuses at once). Returns how many were cut. */
+  dropPeer(fingerprint: string): number {
+    const sockets = this.byFingerprint.get(fingerprint)
+    if (sockets === undefined) return 0
+    for (const socket of sockets) socket.destroy()
+    this.byFingerprint.delete(fingerprint)
+    return sockets.size
+  }
 
   /** The port the door listens on, or null while it is closed. */
   port(): number | null {
@@ -121,6 +132,7 @@ export class SyncListener {
     this.context = null
     for (const socket of this.sockets) socket.destroy()
     this.sockets.clear()
+    this.byFingerprint.clear()
     if (server === null) return Promise.resolve()
     return new Promise<void>((resolve) => server.close(() => resolve()))
   }
@@ -210,6 +222,13 @@ export class SyncListener {
       return
     }
     this.sessions++
+    const live = this.byFingerprint.get(peer.fingerprint) ?? new Set<TLSSocket>()
+    live.add(tls)
+    this.byFingerprint.set(peer.fingerprint, live)
+    tls.once('close', () => {
+      live.delete(tls)
+      if (live.size === 0 && this.byFingerprint.get(peer.fingerprint) === live) this.byFingerprint.delete(peer.fingerprint)
+    })
     this.deps.onEvent?.({ kind: 'session', peer })
     const channel = new Channel(tls, { phase: 'session', idleMs: this.deps.idleMs ?? IDLE_TIMEOUT_MS })
     const limit = setTimeout(() => channel.fail('timeout', 'the session lasted more than the time allowed'), this.deps.sessionMaxMs ?? SESSION_MAX_MS)

@@ -153,6 +153,8 @@ export const Channel = {
   answerPassphrase: 'lucium:answer-passphrase',
   lockUnlock: 'lucium:lock-unlock',
   lockConfigure: 'lucium:lock-configure',
+  /** The page « Synchronisation » of the Settings (src/main/shell/sync-ipc.ts): one request at a time, each checked by `parseSyncRequest`. */
+  syncRequest: 'lucium:sync',
   passwords: 'lucium:passwords',
   cookieSites: 'lucium:cookie-sites',
   cookieNames: 'lucium:cookie-names',

@@ -28,6 +28,7 @@ const MIGRATED: Record<string, { exempt?: RegExp[]; why?: string }> = {
   'passwords.css': {},
   'notes.css': {},
   'sessions.css': {},
+  'sync-settings.css': {},
   'work-views.css': {},
   'cookies.css': {},
   'read-later.css': {},
