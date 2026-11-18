@@ -3,12 +3,13 @@ import { describe, expect, it } from 'vitest'
 import { SEARCH_ENGINES } from '@shared/model'
 import type { SyncSnapshot } from '@shared/sync-snapshot'
 import { cleanSnapshot, filterEntity, isKnownSearchTemplate, isWebAddress } from './inbound-filter'
-import { STAMP_FUTURE_REFUSE_MS } from './limits'
-import { messageVectors } from './sync-vectors.test-support'
+import { MAX_TOMBSTONES_PER_SNAPSHOT, STAMP_FUTURE_REFUSE_MS } from './limits'
+import { entityOfVector, messageVectors } from './sync-vectors.test-support'
 
 describe('filterEntity: the vectors of the specification', () => {
-  it.each(messageVectors.inbound)('$name', ({ entity, expect: expected }) => {
-    const result = filterEntity(entity)
+  it.each(messageVectors.inbound)('$name', (vector) => {
+    const { expect: expected } = vector
+    const result = filterEntity(entityOfVector(vector))
     expect(result.accepted).toBe(expected.accepted)
     if (!result.accepted) expect(result.reason).toBe(expected.reason)
     if (result.accepted && expected.fields !== undefined) expect(result.fields).toEqual(expected.fields)
@@ -182,5 +183,70 @@ describe('cleanSnapshot', () => {
     expect(JSON.stringify(input)).toBe(before)
     expect(cleaned.tombstones).toEqual(input.tombstones)
     expect(cleaned.order).toEqual(input.order)
+  })
+
+  // Review n° 14: the tombstones are a door too.
+  describe('the tombstones', () => {
+    const stamp = (n: number): string => `${String(NOW - n).padStart(13, '0')}-0000-phone`
+    const withTombstones = (tombstones: SyncSnapshot['tombstones']): SyncSnapshot => ({ entities: {}, tombstones, order: {}, orderStamps: {} })
+
+    it.each(messageVectors.inboundTombstones)('the vectors: $name', ({ tombstones, expect: expected }) => {
+      const { snapshot: cleaned, refused } = cleanSnapshot(withTombstones(tombstones), NOW)
+      expect(cleaned.tombstones).toEqual(expected.kept)
+      expect(refused.filter((one) => one.reason === 'never-synced').map((one) => one.id).sort()).toEqual(expected.refused)
+    })
+
+    it('refuses the tombstone of a kind that is code or a secret, in what comes in and in what this device sends', () => {
+      for (const kind of ['password', 'vault', 'lock', 'history', 'cookie', 'session', 'boost', 'userScript', 'extension']) {
+        const { snapshot: cleaned, refused } = cleanSnapshot(withTombstones({ [kind]: { x1: stamp(5) } }), NOW)
+        expect(cleaned.tombstones, kind).toEqual({})
+        expect(refused, kind).toEqual([{ kind: 'tombstone', id: `${kind}/x1`, reason: 'never-synced' }])
+      }
+    })
+
+    it(`keeps the ${MAX_TOMBSTONES_PER_SNAPSHOT} newest and says it dropped the rest: the merge of two sides never holds more than a snapshot may, and the next session does not fail on its own base`, () => {
+      const many: Record<string, string> = {}
+      for (let n = 0; n < MAX_TOMBSTONES_PER_SNAPSHOT + 25; n++) many[`t${String(n).padStart(6, '0')}`] = stamp(n)
+      const { snapshot: cleaned, refused } = cleanSnapshot(withTombstones({ tab: many }), NOW)
+      const ids = Object.keys(cleaned.tombstones['tab'] ?? {})
+      expect(ids).toHaveLength(MAX_TOMBSTONES_PER_SNAPSHOT)
+      // The newest are the first ones drawn (the smaller the n, the later the mark): the 25 oldest went.
+      expect(ids).toContain('t000000')
+      expect(ids).not.toContain(`t${String(MAX_TOMBSTONES_PER_SNAPSHOT + 24).padStart(6, '0')}`)
+      expect(refused).toContainEqual({ kind: 'tombstone', id: '*', reason: 'too-many-tombstones' })
+    })
+
+    it('does not drop anything under the bound, and chooses the same ones on both devices when marks are equal (kind then id)', () => {
+      const tomb = { tab: { b: stamp(1), a: stamp(1) }, space: { z: stamp(1) } }
+      expect(cleanSnapshot(withTombstones(tomb), NOW).snapshot.tombstones).toEqual(tomb)
+    })
+  })
+
+  // Review n° 16 and 15: what becomes a key, and what Swift cannot read.
+  describe('the identifiers of a profile, and the texts', () => {
+    it('refuses a profile that is not an identifier of the Mac (32 characters of A–Z, a–z, 0–9, _ and -): the key of its list is made of it', () => {
+      for (const profileId of ['p'.repeat(33), 'e\u0301', 'é', 'with space', 'a:b', '', '__proto__', 'x'.repeat(500)]) {
+        expect(filterEntity({ kind: 'space', id: 's', fields: { name: 'A', profileId } }), JSON.stringify(profileId)).toEqual({ accepted: false, reason: 'invalid-value' })
+        expect(filterEntity({ kind: 'favorite', id: 'f', fields: { url: 'https://a.example/', profileId } }), JSON.stringify(profileId)).toEqual({ accepted: false, reason: 'invalid-value' })
+      }
+      for (const profileId of ['default', 'work', 'p-1_B', 'x'.repeat(32)]) expect(filterEntity({ kind: 'space', id: 's', fields: { name: 'A', profileId } }).accepted, profileId).toBe(true)
+    })
+
+    it('refuses a text with a lone surrogate anywhere in the fields of an entity (a name cut in the middle of an emoji), and takes a pair', () => {
+      for (const text of ['Perso \ud83d', '\ude00 Perso', 'a\ud83db']) expect(filterEntity({ kind: 'space', id: 's', fields: { name: text } }), text).toEqual({ accepted: false, reason: 'invalid-value' })
+      expect(filterEntity({ kind: 'folder', id: 'f', fields: { name: 'ok', icon: { deep: ['x', '\ud83d'] } } })).toEqual({ accepted: false, reason: 'invalid-value' })
+      expect(filterEntity({ kind: 'space', id: 's', fields: { name: 'Perso \ud83d\ude00' } }).accepted).toBe(true)
+    })
+
+    it('refuses a text of more than 64 KiB in BYTES, which a state bound in characters can hold (40 000 Japanese characters are 120 000 bytes): the message that held it was refused whole', () => {
+      expect(filterEntity({ kind: 'favorite', id: 'f', fields: { url: 'https://a.example/', title: '日'.repeat(40_000) } })).toEqual({ accepted: false, reason: 'invalid-value' })
+      expect(filterEntity({ kind: 'favorite', id: 'f', fields: { url: 'https://a.example/', title: '日'.repeat(20_000) } }).accepted).toBe(true)
+    })
+
+    it('stands in the version of the base for an entity it refuses for that, as for an address that is not a page any more', () => {
+      const base: SyncSnapshot = { entities: { space: { s1: { fields: { name: 'Old' }, stamps: { name: `${String(NOW - 9000).padStart(13, '0')}-0000-phone` } } } }, tombstones: {}, order: {}, orderStamps: {} }
+      const input: SyncSnapshot = { entities: { space: { s1: { fields: { name: 'Cut \ud83d' }, stamps: { name: `${String(NOW - 1000).padStart(13, '0')}-0000-phone` } } } }, tombstones: {}, order: {}, orderStamps: {} }
+      expect(cleanSnapshot(input, NOW, base).snapshot.entities['space']?.['s1']).toBe(base.entities['space']?.['s1'])
+    })
   })
 })

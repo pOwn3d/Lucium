@@ -13,7 +13,7 @@ describe('the limits of the synchronisation', () => {
   it('are the figures of the message vectors', () => {
     const v = messageVectors.limits
     expect({
-      maxFrameBytes: limits.MAX_FRAME_BYTES, maxSnapshotBytes: limits.MAX_SNAPSHOT_BYTES, maxEntities: limits.MAX_ENTITIES, maxEntitiesPerPart: limits.MAX_ENTITIES_PER_PART, maxParts: limits.MAX_PARTS,
+      maxFrameBytes: limits.MAX_FRAME_BYTES, maxSnapshotBytes: limits.MAX_SNAPSHOT_BYTES, maxEntities: limits.MAX_ENTITIES, maxTombstonesPerSnapshot: limits.MAX_TOMBSTONES_PER_SNAPSHOT, maxEntitiesPerPart: limits.MAX_ENTITIES_PER_PART, maxParts: limits.MAX_PARTS,
       maxJsonDepth: limits.MAX_JSON_DEPTH, maxStringBytes: limits.MAX_STRING_BYTES, maxDeviceNameChars: limits.MAX_DEVICE_NAME_CHARS, maxDeviceIdChars: limits.MAX_DEVICE_ID_CHARS, maxCategories: limits.MAX_CATEGORIES,
       maxHosts: limits.MAX_HOSTS, maxOpenTabs: limits.MAX_OPEN_TABS, maxOpenTabUrlBytes: limits.MAX_OPEN_TAB_URL_BYTES, maxOpenTabTitleBytes: limits.MAX_OPEN_TAB_TITLE_BYTES, handshakeTimeoutMs: limits.HANDSHAKE_TIMEOUT_MS,
       idleTimeoutMs: limits.IDLE_TIMEOUT_MS, sessionMaxMs: limits.SESSION_MAX_MS, maxConnections: limits.MAX_CONNECTIONS, minAutoIntervalMs: limits.MIN_AUTO_INTERVAL_MS, failuresPerMinuteBeforeRefusal: limits.FAILURES_PER_MINUTE_BEFORE_REFUSAL,

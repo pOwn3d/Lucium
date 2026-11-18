@@ -352,7 +352,8 @@ interface MessageVectors {
   settingsAllowed: string[]
   settingsNever: string[]
   neverKinds: string[]
-  inbound: { name: string; entity: { kind: string; id: string; fields: Record<string, unknown>; stamps: Record<string, string> }; expect: { accepted: boolean; reason?: string; fields?: Record<string, unknown> } }[]
+  inboundTombstones: { name: string; tombstones: Record<string, Record<string, string>>; expect: { kept: Record<string, Record<string, string>>; refused: string[] } }[]
+  inbound: { name: string; entity?: { kind: string; id: string; fields: Record<string, unknown>; stamps: Record<string, string> }; entityRaw?: string; expect: { accepted: boolean; reason?: string; fields?: Record<string, unknown> } }[]
 }
 const messageVectors = read<MessageVectors>('sync-message-vectors.json')
 const L = messageVectors.limits
@@ -363,15 +364,78 @@ const isInt = (v: unknown, min = 0): v is number => Number.isInteger(v) && (v as
 const isText = (v: unknown, maxBytes = L['maxStringBytes'] as number): v is string => typeof v === 'string' && Buffer.byteLength(v) <= maxBytes
 const textList = (v: unknown, max: number, maxChars = 64): boolean => Array.isArray(v) && v.length <= max && v.every((x) => typeof x === 'string' && x.length <= maxChars)
 
+/** A UTF-16 unit that is half of a pair and has no other half: not text, and Swift cannot read it (review n° 15). */
+const hasLoneSurrogate = (text: string): boolean => {
+  for (let at = 0; at < text.length; at++) {
+    const unit = text.charCodeAt(at)
+    if (unit >= 0xd800 && unit <= 0xdbff) {
+      const next = text.charCodeAt(at + 1)
+      if (!(next >= 0xdc00 && next <= 0xdfff)) return true
+      at++
+    } else if (unit >= 0xdc00 && unit <= 0xdfff) return true
+  }
+  return false
+}
+
+/**
+ * Whether an object of a JSON text (valid: it parses) names a key twice, however each is written: the first wins in Swift and the last in JavaScript (review n° 20). A small
+ * recursive reader of the grammar written for this test, so that the rule is the text's and not the Mac's scanner's.
+ */
+function namesAKeyTwice(text: string): boolean {
+  let at = 0
+  let duplicate = false
+  const skip = (): void => { while (' \t\n\r'.includes(text[at] ?? 'x')) at++ }
+  const string = (): string => {
+    const start = at
+    at++
+    while (text[at] !== '"') at += text[at] === '\\' ? 2 : 1
+    at++
+    return JSON.parse(text.slice(start, at)) as string
+  }
+  const value = (): void => {
+    skip()
+    const c = text[at]
+    if (c === '"') string()
+    else if (c === '{') {
+      at++
+      const seen = new Set<string>()
+      skip()
+      if (text[at] === '}') { at++; return }
+      for (;;) {
+        skip()
+        const key = string()
+        if (seen.has(key)) duplicate = true
+        seen.add(key)
+        skip()
+        at++ // the colon
+        value()
+        skip()
+        if (text[at++] === '}') return
+      }
+    } else if (c === '[') {
+      at++
+      skip()
+      if (text[at] === ']') { at++; return }
+      for (;;) {
+        value()
+        skip()
+        if (text[at++] === ']') return
+      }
+    } else while (at < text.length && !',]} \t\n\r'.includes(text[at] as string)) at++
+  }
+  value()
+  return duplicate
+}
+
 /** docs/synchronisation.md §7.1: what a hostile message may not be, wherever it is. */
 function valueProblem(value: unknown, depth: number): boolean {
-  if (typeof value === 'string') return Buffer.byteLength(value) > (L['maxStringBytes'] as number)
+  if (typeof value === 'string') return Buffer.byteLength(value) > (L['maxStringBytes'] as number) || hasLoneSurrogate(value)
   if (typeof value === 'number') return !Number.isFinite(value) || Math.abs(value) >= 1e21 || (value !== 0 && Math.abs(value) < 1e-6)
   if (typeof value !== 'object' || value === null) return false
   if (depth > (L['maxJsonDepth'] as number)) return true
   if (Array.isArray(value)) return value.some((item) => valueProblem(item, depth + 1))
   if (Object.prototype.hasOwnProperty.call(value, '__proto__')) return true
-  return Object.values(value).some((item) => valueProblem(item, depth + 1))
+  return Object.entries(value).some(([key, item]) => hasLoneSurrogate(key) || valueProblem(item, depth + 1))
 }
 
 const device = (d: unknown): boolean =>
@@ -399,7 +463,7 @@ function validateMessage(raw: string): Verdict {
   const bad: Verdict = { ok: false, code: 'bad-message' }
   let message: unknown
   try { message = JSON.parse(raw) } catch { return bad }
-  if (!isObject(message) || valueProblem(message, 1)) return bad
+  if (!isObject(message) || namesAKeyTwice(raw) || valueProblem(message, 1)) return bad
   if (!isInt(message['n'], 1) || typeof message['t'] !== 'string' || !Number.isInteger(message['v'])) return bad
   if (message['v'] !== 1) return { ok: false, code: 'unsupported-version' }
   const shape = SHAPES[message['t']]
@@ -614,8 +678,12 @@ function settingValueProblem(key: string, value: unknown): boolean {
     default: return true
   }
 }
-function filterEntity(e: MessageVectors['inbound'][number]['entity']): Filtered {
+const holdsLoneSurrogate = (v: unknown): boolean => (typeof v === 'string' ? hasLoneSurrogate(v) : Array.isArray(v) ? v.some(holdsLoneSurrogate) : isObject(v) ? Object.entries(v).some(([k, m]) => hasLoneSurrogate(k) || holdsLoneSurrogate(m)) : false)
+function filterEntity(e: NonNullable<MessageVectors['inbound'][number]['entity']>): Filtered {
   if (messageVectors.neverKinds.includes(e.kind)) return { accepted: false, reason: 'never-synced' }
+  // Review n° 15 and 16: a text Swift cannot read, and a profile that is not an identifier of the Mac (the key of a list is made of it).
+  if (holdsLoneSurrogate(e.fields)) return { accepted: false, reason: 'invalid-value' }
+  if ((e.kind === 'space' || e.kind === 'favorite') && e.fields['profileId'] !== undefined && !(typeof e.fields['profileId'] === 'string' && /^(?!__proto__$)[A-Za-z0-9_-]{1,32}$/.test(e.fields['profileId']))) return { accepted: false, reason: 'invalid-value' }
   if (e.kind === 'setting') {
     if (!messageVectors.settingsAllowed.includes(e.id)) return { accepted: false, reason: 'not-synced' }
     return settingValueProblem(e.id, e.fields['value']) ? { accepted: false, reason: 'invalid-value' } : { accepted: true, fields: { value: e.fields['value'] } }
@@ -631,8 +699,28 @@ function filterEntity(e: MessageVectors['inbound'][number]['entity']): Filtered 
   return { accepted: true, fields }
 }
 
+describe('iOS contract: the tombstones that come in (docs/synchronisation.md §11.5, review n° 14)', () => {
+  it.each(messageVectors.inboundTombstones)('$name', ({ tombstones, expect: expected }) => {
+    const kept: Record<string, Record<string, string>> = {}
+    const refused: string[] = []
+    for (const [kind, byId] of Object.entries(tombstones)) {
+      for (const [id, stamp] of Object.entries(byId)) {
+        if (messageVectors.neverKinds.includes(kind)) refused.push(`${kind}/${id}`)
+        else (kept[kind] ??= {})[id] = stamp
+      }
+    }
+    expect(kept).toEqual(expected.kept)
+    expect(refused.sort()).toEqual(expected.refused)
+  })
+
+  it('states the bound of a side: half of what a snapshot may hold, so that the union of two sides is readable', () => {
+    expect((L['maxTombstonesPerSnapshot'] as number) * 2).toBeLessThanOrEqual(L['maxEntities'] as number)
+  })
+})
+
 describe('iOS contract: what a received entity may carry (docs/synchronisation.md §8.5, §10)', () => {
-  it.each(messageVectors.inbound)('$name', ({ entity, expect: expected }) => {
+  it.each(messageVectors.inbound)('$name', ({ entity: given, entityRaw, expect: expected }) => {
+    const entity = given ?? (JSON.parse(entityRaw as string) as NonNullable<typeof given>)
     const result = filterEntity(entity)
     expect(result.accepted).toBe(expected.accepted)
     if (!result.accepted) expect(result.reason).toBe(expected.reason)
