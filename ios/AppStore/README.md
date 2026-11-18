@@ -77,8 +77,7 @@ Retake them when the interface changes, and always before a submission. The iPad
 
 Found while writing these texts, and not fixed here (each belongs to another piece of work):
 
-1. **The start page still says "Foundation mockup"** (`start.title`, `start.body` in `Localizable.xcstrings`): the first thing a reviewer sees. It needs a real start page before any build leaves the maintainer's Mac.
-2. **The texts describe `main` of 18 November 2026**, downloads, sharing, saving as a PDF and the iPad sidebar included. Take the pictures again after any change of the interface, and read the texts again against the list of functions.
-3. **The privacy page of the site lists two connections that the code does not make yet** (search suggestions and site icons, "on by default"), while the README of the project, which follows the code, lists neither. The policy must say what the application does the day it is submitted: either the code gets them first, with their switches and their line in the README, or the page is corrected. The notes for the review say "no connection of its own", and a test reads the sources to hold them to it.
-4. Sections 5.1.1, 5.1.2 and 5.2 of the review guidelines were read only in summary (docs/ios.md, section 9); the age rating and the export compliance are the two *to confirm* lines above.
-5. The name "Lucium" has to be free in App Store Connect (docs/ios.md, section 10.2).
+1. **The texts describe `main` of 18 November 2026**, downloads, sharing, saving as a PDF and the iPad sidebar included. Take the pictures again after any change of the interface, and read the texts again against the list of functions.
+2. **The privacy page of the site lists two connections that the code does not make yet** (search suggestions and site icons, "on by default"), while the README of the project, which follows the code, lists neither. The policy must say what the application does the day it is submitted: either the code gets them first, with their switches and their line in the README, or the page is corrected. The notes for the review say "no connection of its own", and a test reads the sources to hold them to it.
+3. Sections 5.1.1, 5.1.2 and 5.2 of the review guidelines were read only in summary (docs/ios.md, section 9); the age rating and the export compliance are the two *to confirm* lines above.
+4. The name "Lucium" has to be free in App Store Connect (docs/ios.md, section 10.2).

@@ -3057,34 +3057,50 @@
         }
       }
     },
-    "start.body": {
+    "start.favorites": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Foundation mockup: a web view, the bottom bar, an embedded blocker. Nothing leaves this device."
+            "value": "Favorites"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Maquette de fondation : une vue web, la barre du bas, un bloqueur embarqué. Rien ne quitte cet appareil."
+            "value": "Favoris"
           }
         }
       }
     },
-    "start.title": {
+    "start.favorites.empty": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lucium for iPhone"
+            "value": "No favorites yet. Open a page, press and hold its tab, then choose “Add to favorites”."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lucium pour iPhone"
+            "value": "Aucun favori pour l’instant. Ouvrez une page, appuyez longuement sur son onglet, puis choisissez « Ajouter aux favoris »."
+          }
+        }
+      }
+    },
+    "start.privacy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing leaves this device."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien ne quitte cet appareil."
           }
         }
       }

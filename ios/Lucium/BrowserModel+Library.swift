@@ -17,6 +17,10 @@ extension BrowserModel {
 
     var todayTabs: [TabItem] { activeSpaceCovered ? [] : state.todayTabs(in: activeSpace.id) }
     var favorites: [Favorite] { activeSpaceCovered ? [] : state.favorites(inSpace: activeSpace.id) }
+    /// What the start page of the blank tab on screen shows under its search field (`StartPageContent`, `StartView.swift`).
+    var startPage: StartPageContent {
+        StartPageContent.make(in: state, space: activeSpace.id, covered: activeSpaceCovered, isPrivate: activeTab?.isPrivate == true)
+    }
     var folders: [Folder] { activeSpaceCovered ? [] : state.folders.filter { $0.spaceId == activeSpace.id } }
     func pinnedRows(inside folderId: String? = nil) -> [PinnedRow] { activeSpaceCovered ? [] : state.pinnedRows(in: activeSpace.id, inside: folderId) }
     func folder(_ id: String) -> Folder? { state.folders.first { $0.id == id && !isCovered($0.spaceId) } }
@@ -117,16 +121,20 @@ extension BrowserModel {
 
     func removeFavorite(_ favorite: Favorite) { change { $0.removeFavorite(id: favorite.id) } }
 
-    /// Shows the page of a favourite (opening it when it was not), and closes the sheets.
+    /// Shows the page of a favourite (opening it when it was not), and closes the sheets. A blank tab on screen (the start page, where the favourites
+    /// are tiles) is not left behind: it has nothing to keep, and a tap on a tile would otherwise add a tab to Today each time.
     func openFavorite(_ favorite: Favorite) {
         guard !activeSpaceCovered else { return }
+        let blank = activeTab.flatMap { $0.isBlank ? $0.id : nil }
         leaveActiveTab()
         var shown: String?
         mutate { shown = $0.openFavorite(id: favorite.id, in: activeSpace.id, newTabId: UUID().uuidString.lowercased(), now: clock()) }
-        guard shown != nil else { return }
+        guard let shown else { return }
         tabsSheetShown = false
         commandBarShown = false
         arrive()
+        // The favourite's tab is on screen now: closing the blank one frees its view and files and only keeps the state.
+        if let blank, blank != shown, let tab = state.tabs.first(where: { $0.id == blank }) { close(tab) }
     }
 
     // MARK: From the command bar
