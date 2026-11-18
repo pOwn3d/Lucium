@@ -48,6 +48,10 @@ time, and run `xcrun simctl shutdown all` if it was interrupted. It signs nothin
 
 On GitHub the same script runs in [`.github/workflows/ios.yml`](../.github/workflows/ios.yml), on a macOS runner, for a pull request that changes `ios/` or the script (and on demand). It is not a required check of `main`.
 
+## Archive and TestFlight (the maintainer's step)
+
+`scripts/ios-archive.sh` archives the application in Release, signs it automatically with the maintainer's team, and sends it to App Store Connect for **internal** TestFlight testing (`--export-only` writes the `.ipa` and sends nothing; `--dry-run` runs the checks and only prints the rest). It **refuses to archive** unless `Lucium/FilterLists/` is whole (a build handed to testers without the blocker's lists would carry the short built-in list), and it reads the archive back before exporting it: the build number, and the lists and the page guard inside. The build number is made from the clock and given on the command line: nothing is committed. **Only the maintainer runs it, on their Mac** (`AGENTS.md`, section 7); the checks are tested with stand-ins for `xcodebuild` and `xcodegen` (`scripts/ios-archive/`). The steps, the prerequisites and the device trials that follow are in [docs/ios.md](../docs/ios.md), section 10.3 (in French).
+
 ## Rules that apply here
 
 - Every visible text is a key of `Lucium/Localizable.xcstrings`, in French and in English (`AGENTS.md`, section 3).
