@@ -1,0 +1,183 @@
+import Foundation
+import Testing
+@testable import LuciumKit
+
+/// What an entity that comes in may carry (docs/synchronisation.md §8.5, §10), played against the vectors the Mac's `inbound-filter.test.ts` plays too
+/// (`inbound`, `fieldClasses`, `settingsAllowed`, `neverKinds` of `ios/Contracts/sync-message-vectors.json`), then what the vectors do not say.
+@Suite("Synchronisation: the gate for what comes in")
+struct SyncInboundTests {
+    private let vectors = (try? Contract.load("sync-message-vectors.json")) ?? .null
+
+    private func fields(_ value: JSONValue?) -> [String: JSONValue] {
+        if case .object(let members)? = value { return members }
+        return [:]
+    }
+
+    @Test func theVectorsOfTheSpecificationAreTheMacsVerdicts() throws {
+        let cases = try #require(vectors["inbound"]).items
+        #expect(cases.count >= 20)
+        for item in cases {
+            let name = item["name"]?.text ?? "?"
+            let entity = try #require(item["entity"])
+            let expect = try #require(item["expect"])
+            let verdict = SyncInbound.filter(kind: try #require(entity["kind"]?.text), id: try #require(entity["id"]?.text), fields: fields(entity["fields"]))
+            if expect["accepted"]?.flag == true {
+                guard case .accepted(let kept) = verdict else { Issue.record("\(name): refused, \(verdict)"); continue }
+                if let wanted = expect["fields"] { #expect(JSONValue.object(kept) == wanted, "\(name)") }
+            } else {
+                let text = try #require(expect["reason"]?.text)
+                let reason = try #require(SyncInbound.Refusal(rawValue: text))
+                #expect(verdict == .refused(reason), "\(name)")
+            }
+        }
+    }
+
+    @Test func everyRefusalOfTheVectorsIsTriedAtLeastOnce() throws {
+        var reasons = Set<String>()
+        for item in try #require(vectors["inbound"]).items where item["expect"]?["accepted"]?.flag == false { reasons.insert(item["expect"]?["reason"]?.text ?? "") }
+        for reason in ["never-synced", "not-synced", "invalid-value", "not-pinned", "private", "invalid-url"] { #expect(reasons.contains(reason), "\(reason)") }
+    }
+
+    @Test func theClassesOfTheFieldsAreTheOnesOfTheVectors() throws {
+        let table = try #require(vectors["fieldClasses"])
+        for kind in SyncFieldClasses.Kind.allCases {
+            let classes = try #require(SyncFieldClasses.classes[kind])
+            let wanted = try #require(table[kind.rawValue])
+            #expect(classes.synced == (wanted["synced"]?.items.compactMap(\.text) ?? []), "\(kind) synced")
+            #expect(classes.seed == (wanted["seed"]?.items.compactMap(\.text) ?? []), "\(kind) seed")
+            #expect(classes.local == (wanted["local"]?.items.compactMap(\.text) ?? []), "\(kind) local")
+            // One class and only one: a field in two classes would be sent and kept at once.
+            let all = classes.synced + classes.seed + classes.local
+            #expect(Set(all).count == all.count, "\(kind): a field is in two classes")
+        }
+        guard case .object(let members) = table else { Issue.record("fieldClasses is not an object"); return }
+        #expect(Set(members.keys) == Set(SyncFieldClasses.Kind.allCases.map(\.rawValue)), "a kind of the vectors that this version does not list, or the other way round")
+    }
+
+    @Test func theClosedListOfSettingsAndTheKindsThatAreNeverSentAreTheOnesOfTheVectors() throws {
+        #expect(SyncFieldClasses.settingKeys == (try #require(vectors["settingsAllowed"]).items.compactMap(\.text)))
+        #expect(SyncFieldClasses.neverKinds == (try #require(vectors["neverKinds"]).items.compactMap(\.text)))
+        // A lock, a network setting or an update setting is in no list: every key the Mac never sends is refused whatever its value.
+        for key in try #require(vectors["settingsNever"]).items.compactMap(\.text) {
+            #expect(!SyncFieldClasses.settingKeys.contains(key), "\(key)")
+            #expect(SyncInbound.filter(kind: "setting", id: key, fields: ["value": .bool(true)]) == .refused(.notSynced), "\(key)")
+        }
+    }
+
+    // MARK: What the vectors do not say
+
+    @Test func aSettingOutsideTheClosedListIsRefusedWhateverItsValue() {
+        for key in ["lockEnabled", "lockApp", "proxyEnabled", "proxy", "dohCustomUrl", "updateFeedUrl", "customFilterLists", "extensionPaths", "passwordManager", "boostsEnabled", "userScripts", "__proto__", ""] {
+            #expect(SyncInbound.filter(kind: "setting", id: key, fields: ["value": .bool(true)]) == .refused(.notSynced), "\(key)")
+        }
+    }
+
+    @Test(arguments: [
+        ("httpsUpgrade", JSONValue.string("true")), ("sendGpc", .number(1)), ("protectionBaseline", .string("extreme")), ("autoArchiveHours", .number(-1)),
+        ("autoArchiveHours", .number(.infinity)), ("autoArchiveHours", .number(24 * 366 + 1)), ("autoArchiveHours", .string("12")),
+        ("searchUrlTemplate", .string("https://example.com/search")), ("searchUrlTemplate", .string("javascript:alert(%s)")),
+        ("searchUrlTemplate", .string("https://example.com/?q=%s" + String(repeating: "x", count: 2100))), ("profileNames", .string("x")),
+        ("profileNames", .object(["work": .number(3)])), ("profileNames", .object(["bad id!": .string("x")])), ("profileNames", .object(["work": .string(String(repeating: "x", count: 41))])),
+        ("profileNames", .object(Dictionary(uniqueKeysWithValues: (0..<65).map { ("p\($0)", JSONValue.string("x")) }))),
+    ])
+    func aValueThisVersionWouldNotWriteIsRefused(key: String, value: JSONValue) {
+        #expect(SyncInbound.filter(kind: "setting", id: key, fields: ["value": value]) == .refused(.invalidValue), "\(key)")
+    }
+
+    @Test(arguments: [
+        ("httpsUpgrade", JSONValue.bool(false)), ("protectionBaseline", .string("renforcee")), ("autoArchiveHours", .number(0)), ("autoArchiveHours", .number(24 * 366)),
+        ("searchUrlTemplate", .string("https://example.com/?q=%s")), ("profileNames", .object(["work": .string("Travail"), "perso": .string("Perso")])),
+    ])
+    func aValueThisVersionWouldWriteIsKept(key: String, value: JSONValue) {
+        #expect(SyncInbound.filter(kind: "setting", id: key, fields: ["value": value]) == .accepted(fields: ["value": value]), "\(key)")
+    }
+
+    @Test func aSettingKeepsItsValueAndNothingElse() {
+        #expect(SyncInbound.filter(kind: "setting", id: "sendGpc", fields: ["value": .bool(true), "extra": .string("x")]) == .accepted(fields: ["value": .bool(true)]))
+    }
+
+    @Test func onlyAnHttpOrHttpsAddressIsAPage() {
+        for bad in ["javascript:alert(1)", "file:///etc/passwd", "data:text/html,x", "about:blank", "chrome://settings", "ftp://x", "https://", "https:// bad", "//example.com", "", "https://:80/", "https://@/", "https://?x", "https://#x"] {
+            #expect(!SyncInbound.isWebAddress(.string(bad)), "\(bad)")
+            #expect(SyncInbound.filter(kind: "favorite", id: "f", fields: ["url": .string(bad)]) == .refused(.invalidURL), "\(bad)")
+            #expect(SyncInbound.filter(kind: "tab", id: "t", fields: ["pinned": .bool(true), "anchorUrl": .string(bad)]) == .refused(.invalidURL), "\(bad)")
+            #expect(SyncInbound.filter(kind: "archived", id: "a", fields: ["url": .string(bad)]) == .refused(.invalidURL), "\(bad)")
+        }
+        #expect(!SyncInbound.isWebAddress(.number(5)))
+        #expect(!SyncInbound.isWebAddress(.null))
+        #expect(!SyncInbound.isWebAddress(nil))
+        #expect(SyncInbound.filter(kind: "tab", id: "t", fields: ["pinned": .bool(true), "url": .string("javascript:1")]) == .refused(.invalidURL))
+        for good in ["http://example.com", "HTTPS://Example.com/a?b=c#d", "https://example.com:8443/path", "https://user@example.com/", "https://[::1]/", "https:///example.com/"] {
+            #expect(SyncInbound.isWebAddress(.string(good)), "\(good)")
+        }
+    }
+
+    @Test func everyKindOfCodeAndEverySecretIsRefusedByName() {
+        for kind in ["boost", "userScript", "extension", "password", "vault", "lock", "history", "cookie", "session"] {
+            #expect(SyncInbound.filter(kind: kind, id: "x", fields: [:]) == .refused(.neverSynced), "\(kind)")
+        }
+    }
+
+    @Test func theLocalFieldsOfEveryKindAreTakenOffAndTheSyncedAndUnknownOnesKept() {
+        let space: [String: JSONValue] = ["name": .string("Perso"), "image": .string("x.png"), "background": .object(["kind": .string("video")]), "webPanels": .array([]), "futureField": .array([.number(1)])]
+        #expect(SyncInbound.filter(kind: "space", id: "s", fields: space) == .accepted(fields: ["name": .string("Perso"), "futureField": .array([.number(1)])]))
+        #expect(SyncInbound.filter(kind: "folder", id: "f", fields: ["name": .string("A"), "live": .object(["url": .string("https://x")]), "collapsed": .bool(true)]) == .accepted(fields: ["name": .string("A"), "collapsed": .bool(true)]))
+        #expect(SyncInbound.filter(kind: "archived", id: "a", fields: ["url": .string("https://x"), "history": .object(["entries": .array([])]), "container": .string("c1")]) == .accepted(fields: ["url": .string("https://x")]))
+        #expect(SyncInbound.filter(kind: "widget", id: "w", fields: ["a": .array([.number(1), .object(["b": .number(2)])])]) == .accepted(fields: ["a": .array([.number(1), .object(["b": .number(2)])])]))
+    }
+
+    // MARK: A whole snapshot
+
+    private let now = 1_790_000_000_000
+    private func mark(_ ms: Int) -> String { String(format: "%013ld-0000-phone", ms) }
+    private func entity(_ fields: [String: JSONValue], at ms: Int? = nil) -> SyncEntity {
+        SyncEntity(fields: fields, stamps: Dictionary(uniqueKeysWithValues: fields.keys.map { ($0, mark(ms ?? now - 1000)) }))
+    }
+
+    @Test func refusedEntitiesAreDroppedListedWithTheirReasonAndTheOthersKept() {
+        var snapshot = SyncSnapshot()
+        snapshot.entities = ["space": ["s1": entity(["name": .string("Perso")])],
+                             "tab": ["t1": entity(["pinned": .bool(true), "url": .string("javascript:1")]), "t2": entity(["pinned": .bool(false)]), "t3": entity(["pinned": .bool(true), "anchorUrl": .string("https://a.example/")])],
+                             "boost": ["b1": entity(["code": .string("x")])]]
+        let cleaned = SyncInbound.clean(snapshot, now: now)
+        #expect(cleaned.snapshot.entities["tab"]?.keys.sorted() == ["t3"])
+        #expect(cleaned.snapshot.entities["boost"] == nil)
+        #expect(cleaned.refused == [.init(kind: "boost", id: "b1", reason: .neverSynced), .init(kind: "tab", id: "t1", reason: .invalidURL), .init(kind: "tab", id: "t2", reason: .notPinned)])
+    }
+
+    @Test func theMarksOfTheLocalFieldsGoWithTheFields() {
+        var snapshot = SyncSnapshot()
+        snapshot.entities = ["space": ["s1": entity(["name": .string("Perso"), "image": .string("x.png")])]]
+        let cleaned = SyncInbound.clean(snapshot, now: now).snapshot.entities["space"]?["s1"]
+        #expect(cleaned?.fields == ["name": .string("Perso")])
+        #expect(cleaned?.stamps.keys.sorted() == ["name"])
+    }
+
+    @Test func aMarkMoreThanSevenDaysAheadIsRefusedAndOneExactlySevenDaysAheadIsKept() {
+        let week = SyncInbound.futureRefusalMilliseconds
+        #expect(week == 604_800_000)
+        var snapshot = SyncSnapshot()
+        snapshot.entities = ["space": ["s1": entity(["name": .string("A")], at: now + week + 1), "s2": entity(["name": .string("B")], at: now + week)]]
+        let cleaned = SyncInbound.clean(snapshot, now: now)
+        #expect(cleaned.snapshot.entities["space"]?.keys.sorted() == ["s2"])
+        #expect(cleaned.refused == [.init(kind: "space", id: "s1", reason: .futureMark)])
+    }
+
+    @Test func theMarkZeroIsNotATime() {
+        var snapshot = SyncSnapshot()
+        snapshot.entities = ["space": ["s1": SyncEntity(fields: ["name": .string("A")], stamps: ["name": "0"])]]
+        #expect(SyncInbound.clean(snapshot, now: now).refused.isEmpty)
+    }
+
+    @Test func theTombstonesTheListsAndWhatTheyMarkAreLeftToTheMerge() {
+        var snapshot = SyncSnapshot()
+        snapshot.entities = ["space": ["s1": entity(["name": .string("A"), "image": .string("x")])]]
+        snapshot.tombstones = ["tab": ["t9": mark(now)]]
+        snapshot.order = ["spaces": ["s1"]]
+        snapshot.orderStamps = ["spaces": mark(now)]
+        let cleaned = SyncInbound.clean(snapshot, now: now).snapshot
+        #expect(cleaned.tombstones == snapshot.tombstones)
+        #expect(cleaned.order == snapshot.order)
+        #expect(cleaned.orderStamps == snapshot.orderStamps)
+    }
+}

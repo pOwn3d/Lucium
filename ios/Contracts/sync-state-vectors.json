@@ -1,0 +1,3075 @@
+{
+  "comment": "The state of a device as the synchronisation reads it, and the patch a session writes (docs/synchronisation.md §8.3, §8.5, §10). `view`: the Mac-shaped `state`, the categories both devices ticked, the spaces set aside and the base give the entities (their fields, the marks are not compared: a fresh book gives one per field) and the lists of the snapshot a session freezes; played by src/main/sync/state-view-vectors.test.ts against the Mac's trackedViewOf and snapshotOf, and by LuciumKit (SyncStateTests.swift) against SyncStateView. `patch`: two snapshots and the spaces set aside give the patch (the `upserts` and `removals` are compared sorted by kind then id, the `remove` lists sorted); played against buildPatch and SyncPatch.build. Generated from the Mac's own code by a script outside the repository.",
+  "view": [
+    {
+      "base": null,
+      "categories": [
+        "structure",
+        "settings",
+        "archive",
+        "openTabs"
+      ],
+      "expect": {
+        "entities": {
+          "archived": {
+            "a1": {
+              "archivedAt": 1790000000500,
+              "source": "auto",
+              "spaceId": "s1",
+              "title": "Old 1",
+              "url": "https://old1.example/"
+            },
+            "a2": {
+              "anchorUrl": "https://old2.example/",
+              "archivedAt": 1790000000100,
+              "folderId": "f1",
+              "pinned": true,
+              "source": "manual",
+              "spaceId": "s1",
+              "title": "Old 2",
+              "url": "https://old2.example/"
+            },
+            "a3": {
+              "archivedAt": 1790000000900,
+              "spaceId": "s2",
+              "title": "Old 3",
+              "url": "https://old3.example/"
+            }
+          },
+          "favorite": {
+            "fav1": {
+              "profileId": "default",
+              "title": "Fav 1",
+              "url": "https://fav1.example/"
+            },
+            "fav2": {
+              "profileId": "work",
+              "title": "Fav 2",
+              "url": "https://fav2.example/"
+            },
+            "fav3": {
+              "profileId": "default",
+              "title": "Fav 3",
+              "url": "https://fav3.example/"
+            }
+          },
+          "folder": {
+            "f1": {
+              "atBottom": true,
+              "collapsed": true,
+              "name": "Réunions",
+              "spaceId": "s1"
+            },
+            "f2": {
+              "collapsed": false,
+              "icon": "📁",
+              "name": "Sous-dossier",
+              "noWake": true,
+              "parentId": "f1",
+              "spaceId": "s1"
+            },
+            "f3": {
+              "collapsed": false,
+              "name": "Courses",
+              "spaceId": "s2"
+            }
+          },
+          "setting": {
+            "autoArchiveHours": {
+              "value": 12
+            },
+            "httpsUpgrade": {
+              "value": true
+            },
+            "profileNames": {
+              "value": {
+                "default": "Perso",
+                "work": "Travail"
+              }
+            },
+            "protectionBaseline": {
+              "value": "renforcee"
+            },
+            "searchUrlTemplate": {
+              "value": "https://duckduckgo.com/?q=%s"
+            },
+            "sendGpc": {
+              "value": false
+            },
+            "stripCopiedLinks": {
+              "value": true
+            },
+            "stripTrackingParams": {
+              "value": true
+            }
+          },
+          "space": {
+            "s1": {
+              "emoji": "💼",
+              "futureSpaceField": {
+                "a": [
+                  1,
+                  2
+                ]
+              },
+              "hideHeader": true,
+              "name": "Travail",
+              "profileId": "work",
+              "theme": {
+                "hue": 250,
+                "saturation": 0.5
+              }
+            },
+            "s2": {
+              "emoji": "🏠",
+              "iconColor": "#ff0000",
+              "iconKind": "letter",
+              "iconLetter": "M",
+              "iconRound": true,
+              "name": "Maison",
+              "profileId": "default",
+              "theme": {
+                "hue": 250,
+                "saturation": 0.5
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "anchorUrl": "https://a.example/",
+              "customTitle": "Doc",
+              "folderId": "f1",
+              "pinned": true,
+              "spaceId": "s1",
+              "title": "A now",
+              "url": "https://a.example/now"
+            },
+            "t2": {
+              "anchorUrl": "https://b.example/",
+              "futureTabField": "x",
+              "keepAwake": true,
+              "pinned": true,
+              "spaceId": "s1",
+              "title": "B",
+              "url": "https://b.example/"
+            },
+            "t3": {
+              "anchorUrl": "https://c.example/",
+              "pinned": true,
+              "spaceId": "s2",
+              "title": "C",
+              "url": "https://c.example/"
+            }
+          }
+        },
+        "order": {
+          "favorites:default": [
+            "fav1",
+            "fav3"
+          ],
+          "favorites:work": [
+            "fav2"
+          ],
+          "folders:s1:-": [
+            "f1"
+          ],
+          "folders:s1:f1": [
+            "f2"
+          ],
+          "folders:s2:-": [
+            "f3"
+          ],
+          "spaces": [
+            "s1",
+            "s2"
+          ],
+          "tabs:s1:-": [
+            "t2"
+          ],
+          "tabs:s1:f1": [
+            "t1"
+          ],
+          "tabs:s2:-": [
+            "t3"
+          ]
+        }
+      },
+      "name": "every kind, every category",
+      "state": {
+        "activeSpaceId": "s1",
+        "activeTabBySpace": {
+          "s1": null,
+          "s2": null
+        },
+        "archive": [
+          {
+            "archivedAt": 1790000000500,
+            "history": {
+              "entries": []
+            },
+            "id": "a1",
+            "source": "auto",
+            "spaceId": "s1",
+            "title": "Old 1",
+            "url": "https://old1.example/"
+          },
+          {
+            "anchorUrl": "https://old2.example/",
+            "archivedAt": 1790000000100,
+            "folderId": "f1",
+            "id": "a2",
+            "pinned": true,
+            "source": "manual",
+            "spaceId": "s1",
+            "title": "Old 2",
+            "url": "https://old2.example/"
+          },
+          {
+            "archivedAt": 1790000000900,
+            "container": "c1",
+            "id": "a3",
+            "spaceId": "s2",
+            "title": "Old 3",
+            "url": "https://old3.example/"
+          }
+        ],
+        "favorites": [
+          {
+            "faviconUrl": "https://fav1.example/i.png",
+            "id": "fav1",
+            "profileId": "default",
+            "title": "Fav 1",
+            "url": "https://fav1.example/"
+          },
+          {
+            "id": "fav2",
+            "profileId": "work",
+            "title": "Fav 2",
+            "url": "https://fav2.example/"
+          },
+          {
+            "id": "fav3",
+            "profileId": "default",
+            "title": "Fav 3",
+            "url": "https://fav3.example/"
+          }
+        ],
+        "folders": [
+          {
+            "atBottom": true,
+            "collapsed": true,
+            "id": "f1",
+            "name": "Réunions",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "icon": "📁",
+            "id": "f2",
+            "name": "Sous-dossier",
+            "noWake": true,
+            "parentId": "f1",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "id": "f3",
+            "live": {
+              "url": "https://feed.example/x"
+            },
+            "name": "Courses",
+            "spaceId": "s2"
+          }
+        ],
+        "revision": 2,
+        "settings": {
+          "autoArchiveHours": 12,
+          "httpsUpgrade": true,
+          "lockApp": false,
+          "lockEnabled": true,
+          "profileNames": {
+            "default": "Perso",
+            "work": "Travail"
+          },
+          "profiles": {
+            "work": {
+              "autoArchiveHours": 3
+            }
+          },
+          "protectionBaseline": "renforcee",
+          "proxyEnabled": true,
+          "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+          "sendGpc": false,
+          "stripCopiedLinks": true,
+          "stripTrackingParams": true,
+          "updateFeedUrl": "https://example.com/feed"
+        },
+        "spaces": [
+          {
+            "background": {
+              "kind": "video"
+            },
+            "emoji": "💼",
+            "futureSpaceField": {
+              "a": [
+                1,
+                2
+              ]
+            },
+            "hideHeader": true,
+            "id": "s1",
+            "image": "pic.png",
+            "name": "Travail",
+            "profileId": "work",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          },
+          {
+            "emoji": "🏠",
+            "iconColor": "#ff0000",
+            "iconKind": "letter",
+            "iconLetter": "M",
+            "iconRound": true,
+            "id": "s2",
+            "name": "Maison",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [
+          {
+            "anchorUrl": "https://a.example/",
+            "createdAt": 1,
+            "customTitle": "Doc",
+            "faviconUrl": "https://a.example/i.png",
+            "folderId": "f1",
+            "id": "t1",
+            "lastActiveAt": 9,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "A now",
+            "url": "https://a.example/now"
+          },
+          {
+            "anchorUrl": "https://b.example/",
+            "createdAt": 2,
+            "futureTabField": "x",
+            "id": "t2",
+            "keepAwake": true,
+            "lastActiveAt": 8,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "B",
+            "url": "https://b.example/"
+          },
+          {
+            "anchorUrl": "https://c.example/",
+            "createdAt": 3,
+            "id": "t3",
+            "lastActiveAt": 7,
+            "pinned": true,
+            "spaceId": "s2",
+            "title": "C",
+            "url": "https://c.example/"
+          },
+          {
+            "createdAt": 4,
+            "id": "today",
+            "lastActiveAt": 6,
+            "pinned": false,
+            "spaceId": "s1",
+            "title": "Today",
+            "url": "https://today.example/"
+          },
+          {
+            "anchorUrl": "https://secret.example/",
+            "createdAt": 5,
+            "id": "secret",
+            "lastActiveAt": 5,
+            "pinned": true,
+            "private": true,
+            "spaceId": "s1",
+            "title": "Private",
+            "url": "https://secret.example/"
+          }
+        ],
+        "version": 1
+      },
+      "withheld": []
+    },
+    {
+      "base": null,
+      "categories": [
+        "structure"
+      ],
+      "expect": {
+        "entities": {
+          "favorite": {
+            "fav1": {
+              "profileId": "default",
+              "title": "Fav 1",
+              "url": "https://fav1.example/"
+            },
+            "fav2": {
+              "profileId": "work",
+              "title": "Fav 2",
+              "url": "https://fav2.example/"
+            },
+            "fav3": {
+              "profileId": "default",
+              "title": "Fav 3",
+              "url": "https://fav3.example/"
+            }
+          },
+          "folder": {
+            "f1": {
+              "atBottom": true,
+              "collapsed": true,
+              "name": "Réunions",
+              "spaceId": "s1"
+            },
+            "f2": {
+              "collapsed": false,
+              "icon": "📁",
+              "name": "Sous-dossier",
+              "noWake": true,
+              "parentId": "f1",
+              "spaceId": "s1"
+            },
+            "f3": {
+              "collapsed": false,
+              "name": "Courses",
+              "spaceId": "s2"
+            }
+          },
+          "space": {
+            "s1": {
+              "emoji": "💼",
+              "futureSpaceField": {
+                "a": [
+                  1,
+                  2
+                ]
+              },
+              "hideHeader": true,
+              "name": "Travail",
+              "profileId": "work",
+              "theme": {
+                "hue": 250,
+                "saturation": 0.5
+              }
+            },
+            "s2": {
+              "emoji": "🏠",
+              "iconColor": "#ff0000",
+              "iconKind": "letter",
+              "iconLetter": "M",
+              "iconRound": true,
+              "name": "Maison",
+              "profileId": "default",
+              "theme": {
+                "hue": 250,
+                "saturation": 0.5
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "anchorUrl": "https://a.example/",
+              "customTitle": "Doc",
+              "folderId": "f1",
+              "pinned": true,
+              "spaceId": "s1",
+              "title": "A now",
+              "url": "https://a.example/now"
+            },
+            "t2": {
+              "anchorUrl": "https://b.example/",
+              "futureTabField": "x",
+              "keepAwake": true,
+              "pinned": true,
+              "spaceId": "s1",
+              "title": "B",
+              "url": "https://b.example/"
+            },
+            "t3": {
+              "anchorUrl": "https://c.example/",
+              "pinned": true,
+              "spaceId": "s2",
+              "title": "C",
+              "url": "https://c.example/"
+            }
+          }
+        },
+        "order": {
+          "favorites:default": [
+            "fav1",
+            "fav3"
+          ],
+          "favorites:work": [
+            "fav2"
+          ],
+          "folders:s1:-": [
+            "f1"
+          ],
+          "folders:s1:f1": [
+            "f2"
+          ],
+          "folders:s2:-": [
+            "f3"
+          ],
+          "spaces": [
+            "s1",
+            "s2"
+          ],
+          "tabs:s1:-": [
+            "t2"
+          ],
+          "tabs:s1:f1": [
+            "t1"
+          ],
+          "tabs:s2:-": [
+            "t3"
+          ]
+        }
+      },
+      "name": "the structure only: spaces, folders, pinned tabs and favourites",
+      "state": {
+        "activeSpaceId": "s1",
+        "activeTabBySpace": {
+          "s1": null,
+          "s2": null
+        },
+        "archive": [
+          {
+            "archivedAt": 1790000000500,
+            "history": {
+              "entries": []
+            },
+            "id": "a1",
+            "source": "auto",
+            "spaceId": "s1",
+            "title": "Old 1",
+            "url": "https://old1.example/"
+          },
+          {
+            "anchorUrl": "https://old2.example/",
+            "archivedAt": 1790000000100,
+            "folderId": "f1",
+            "id": "a2",
+            "pinned": true,
+            "source": "manual",
+            "spaceId": "s1",
+            "title": "Old 2",
+            "url": "https://old2.example/"
+          },
+          {
+            "archivedAt": 1790000000900,
+            "container": "c1",
+            "id": "a3",
+            "spaceId": "s2",
+            "title": "Old 3",
+            "url": "https://old3.example/"
+          }
+        ],
+        "favorites": [
+          {
+            "faviconUrl": "https://fav1.example/i.png",
+            "id": "fav1",
+            "profileId": "default",
+            "title": "Fav 1",
+            "url": "https://fav1.example/"
+          },
+          {
+            "id": "fav2",
+            "profileId": "work",
+            "title": "Fav 2",
+            "url": "https://fav2.example/"
+          },
+          {
+            "id": "fav3",
+            "profileId": "default",
+            "title": "Fav 3",
+            "url": "https://fav3.example/"
+          }
+        ],
+        "folders": [
+          {
+            "atBottom": true,
+            "collapsed": true,
+            "id": "f1",
+            "name": "Réunions",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "icon": "📁",
+            "id": "f2",
+            "name": "Sous-dossier",
+            "noWake": true,
+            "parentId": "f1",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "id": "f3",
+            "live": {
+              "url": "https://feed.example/x"
+            },
+            "name": "Courses",
+            "spaceId": "s2"
+          }
+        ],
+        "revision": 2,
+        "settings": {
+          "autoArchiveHours": 12,
+          "httpsUpgrade": true,
+          "lockApp": false,
+          "lockEnabled": true,
+          "profileNames": {
+            "default": "Perso",
+            "work": "Travail"
+          },
+          "profiles": {
+            "work": {
+              "autoArchiveHours": 3
+            }
+          },
+          "protectionBaseline": "renforcee",
+          "proxyEnabled": true,
+          "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+          "sendGpc": false,
+          "stripCopiedLinks": true,
+          "stripTrackingParams": true,
+          "updateFeedUrl": "https://example.com/feed"
+        },
+        "spaces": [
+          {
+            "background": {
+              "kind": "video"
+            },
+            "emoji": "💼",
+            "futureSpaceField": {
+              "a": [
+                1,
+                2
+              ]
+            },
+            "hideHeader": true,
+            "id": "s1",
+            "image": "pic.png",
+            "name": "Travail",
+            "profileId": "work",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          },
+          {
+            "emoji": "🏠",
+            "iconColor": "#ff0000",
+            "iconKind": "letter",
+            "iconLetter": "M",
+            "iconRound": true,
+            "id": "s2",
+            "name": "Maison",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [
+          {
+            "anchorUrl": "https://a.example/",
+            "createdAt": 1,
+            "customTitle": "Doc",
+            "faviconUrl": "https://a.example/i.png",
+            "folderId": "f1",
+            "id": "t1",
+            "lastActiveAt": 9,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "A now",
+            "url": "https://a.example/now"
+          },
+          {
+            "anchorUrl": "https://b.example/",
+            "createdAt": 2,
+            "futureTabField": "x",
+            "id": "t2",
+            "keepAwake": true,
+            "lastActiveAt": 8,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "B",
+            "url": "https://b.example/"
+          },
+          {
+            "anchorUrl": "https://c.example/",
+            "createdAt": 3,
+            "id": "t3",
+            "lastActiveAt": 7,
+            "pinned": true,
+            "spaceId": "s2",
+            "title": "C",
+            "url": "https://c.example/"
+          },
+          {
+            "createdAt": 4,
+            "id": "today",
+            "lastActiveAt": 6,
+            "pinned": false,
+            "spaceId": "s1",
+            "title": "Today",
+            "url": "https://today.example/"
+          },
+          {
+            "anchorUrl": "https://secret.example/",
+            "createdAt": 5,
+            "id": "secret",
+            "lastActiveAt": 5,
+            "pinned": true,
+            "private": true,
+            "spaceId": "s1",
+            "title": "Private",
+            "url": "https://secret.example/"
+          }
+        ],
+        "version": 1
+      },
+      "withheld": []
+    },
+    {
+      "base": null,
+      "categories": [
+        "archive",
+        "settings"
+      ],
+      "expect": {
+        "entities": {
+          "archived": {
+            "a1": {
+              "archivedAt": 1790000000500,
+              "source": "auto",
+              "spaceId": "s1",
+              "title": "Old 1",
+              "url": "https://old1.example/"
+            },
+            "a2": {
+              "anchorUrl": "https://old2.example/",
+              "archivedAt": 1790000000100,
+              "folderId": "f1",
+              "pinned": true,
+              "source": "manual",
+              "spaceId": "s1",
+              "title": "Old 2",
+              "url": "https://old2.example/"
+            },
+            "a3": {
+              "archivedAt": 1790000000900,
+              "spaceId": "s2",
+              "title": "Old 3",
+              "url": "https://old3.example/"
+            }
+          },
+          "setting": {
+            "autoArchiveHours": {
+              "value": 12
+            },
+            "httpsUpgrade": {
+              "value": true
+            },
+            "profileNames": {
+              "value": {
+                "default": "Perso",
+                "work": "Travail"
+              }
+            },
+            "protectionBaseline": {
+              "value": "renforcee"
+            },
+            "searchUrlTemplate": {
+              "value": "https://duckduckgo.com/?q=%s"
+            },
+            "sendGpc": {
+              "value": false
+            },
+            "stripCopiedLinks": {
+              "value": true
+            },
+            "stripTrackingParams": {
+              "value": true
+            }
+          }
+        },
+        "order": {}
+      },
+      "name": "the archive and the settings only",
+      "state": {
+        "activeSpaceId": "s1",
+        "activeTabBySpace": {
+          "s1": null,
+          "s2": null
+        },
+        "archive": [
+          {
+            "archivedAt": 1790000000500,
+            "history": {
+              "entries": []
+            },
+            "id": "a1",
+            "source": "auto",
+            "spaceId": "s1",
+            "title": "Old 1",
+            "url": "https://old1.example/"
+          },
+          {
+            "anchorUrl": "https://old2.example/",
+            "archivedAt": 1790000000100,
+            "folderId": "f1",
+            "id": "a2",
+            "pinned": true,
+            "source": "manual",
+            "spaceId": "s1",
+            "title": "Old 2",
+            "url": "https://old2.example/"
+          },
+          {
+            "archivedAt": 1790000000900,
+            "container": "c1",
+            "id": "a3",
+            "spaceId": "s2",
+            "title": "Old 3",
+            "url": "https://old3.example/"
+          }
+        ],
+        "favorites": [
+          {
+            "faviconUrl": "https://fav1.example/i.png",
+            "id": "fav1",
+            "profileId": "default",
+            "title": "Fav 1",
+            "url": "https://fav1.example/"
+          },
+          {
+            "id": "fav2",
+            "profileId": "work",
+            "title": "Fav 2",
+            "url": "https://fav2.example/"
+          },
+          {
+            "id": "fav3",
+            "profileId": "default",
+            "title": "Fav 3",
+            "url": "https://fav3.example/"
+          }
+        ],
+        "folders": [
+          {
+            "atBottom": true,
+            "collapsed": true,
+            "id": "f1",
+            "name": "Réunions",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "icon": "📁",
+            "id": "f2",
+            "name": "Sous-dossier",
+            "noWake": true,
+            "parentId": "f1",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "id": "f3",
+            "live": {
+              "url": "https://feed.example/x"
+            },
+            "name": "Courses",
+            "spaceId": "s2"
+          }
+        ],
+        "revision": 2,
+        "settings": {
+          "autoArchiveHours": 12,
+          "httpsUpgrade": true,
+          "lockApp": false,
+          "lockEnabled": true,
+          "profileNames": {
+            "default": "Perso",
+            "work": "Travail"
+          },
+          "profiles": {
+            "work": {
+              "autoArchiveHours": 3
+            }
+          },
+          "protectionBaseline": "renforcee",
+          "proxyEnabled": true,
+          "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+          "sendGpc": false,
+          "stripCopiedLinks": true,
+          "stripTrackingParams": true,
+          "updateFeedUrl": "https://example.com/feed"
+        },
+        "spaces": [
+          {
+            "background": {
+              "kind": "video"
+            },
+            "emoji": "💼",
+            "futureSpaceField": {
+              "a": [
+                1,
+                2
+              ]
+            },
+            "hideHeader": true,
+            "id": "s1",
+            "image": "pic.png",
+            "name": "Travail",
+            "profileId": "work",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          },
+          {
+            "emoji": "🏠",
+            "iconColor": "#ff0000",
+            "iconKind": "letter",
+            "iconLetter": "M",
+            "iconRound": true,
+            "id": "s2",
+            "name": "Maison",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [
+          {
+            "anchorUrl": "https://a.example/",
+            "createdAt": 1,
+            "customTitle": "Doc",
+            "faviconUrl": "https://a.example/i.png",
+            "folderId": "f1",
+            "id": "t1",
+            "lastActiveAt": 9,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "A now",
+            "url": "https://a.example/now"
+          },
+          {
+            "anchorUrl": "https://b.example/",
+            "createdAt": 2,
+            "futureTabField": "x",
+            "id": "t2",
+            "keepAwake": true,
+            "lastActiveAt": 8,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "B",
+            "url": "https://b.example/"
+          },
+          {
+            "anchorUrl": "https://c.example/",
+            "createdAt": 3,
+            "id": "t3",
+            "lastActiveAt": 7,
+            "pinned": true,
+            "spaceId": "s2",
+            "title": "C",
+            "url": "https://c.example/"
+          },
+          {
+            "createdAt": 4,
+            "id": "today",
+            "lastActiveAt": 6,
+            "pinned": false,
+            "spaceId": "s1",
+            "title": "Today",
+            "url": "https://today.example/"
+          },
+          {
+            "anchorUrl": "https://secret.example/",
+            "createdAt": 5,
+            "id": "secret",
+            "lastActiveAt": 5,
+            "pinned": true,
+            "private": true,
+            "spaceId": "s1",
+            "title": "Private",
+            "url": "https://secret.example/"
+          }
+        ],
+        "version": 1
+      },
+      "withheld": []
+    },
+    {
+      "base": null,
+      "categories": [
+        "openTabs"
+      ],
+      "expect": {
+        "entities": {},
+        "order": {}
+      },
+      "name": "the open tabs category sends no entity at all",
+      "state": {
+        "activeSpaceId": "s1",
+        "activeTabBySpace": {
+          "s1": null,
+          "s2": null
+        },
+        "archive": [
+          {
+            "archivedAt": 1790000000500,
+            "history": {
+              "entries": []
+            },
+            "id": "a1",
+            "source": "auto",
+            "spaceId": "s1",
+            "title": "Old 1",
+            "url": "https://old1.example/"
+          },
+          {
+            "anchorUrl": "https://old2.example/",
+            "archivedAt": 1790000000100,
+            "folderId": "f1",
+            "id": "a2",
+            "pinned": true,
+            "source": "manual",
+            "spaceId": "s1",
+            "title": "Old 2",
+            "url": "https://old2.example/"
+          },
+          {
+            "archivedAt": 1790000000900,
+            "container": "c1",
+            "id": "a3",
+            "spaceId": "s2",
+            "title": "Old 3",
+            "url": "https://old3.example/"
+          }
+        ],
+        "favorites": [
+          {
+            "faviconUrl": "https://fav1.example/i.png",
+            "id": "fav1",
+            "profileId": "default",
+            "title": "Fav 1",
+            "url": "https://fav1.example/"
+          },
+          {
+            "id": "fav2",
+            "profileId": "work",
+            "title": "Fav 2",
+            "url": "https://fav2.example/"
+          },
+          {
+            "id": "fav3",
+            "profileId": "default",
+            "title": "Fav 3",
+            "url": "https://fav3.example/"
+          }
+        ],
+        "folders": [
+          {
+            "atBottom": true,
+            "collapsed": true,
+            "id": "f1",
+            "name": "Réunions",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "icon": "📁",
+            "id": "f2",
+            "name": "Sous-dossier",
+            "noWake": true,
+            "parentId": "f1",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "id": "f3",
+            "live": {
+              "url": "https://feed.example/x"
+            },
+            "name": "Courses",
+            "spaceId": "s2"
+          }
+        ],
+        "revision": 2,
+        "settings": {
+          "autoArchiveHours": 12,
+          "httpsUpgrade": true,
+          "lockApp": false,
+          "lockEnabled": true,
+          "profileNames": {
+            "default": "Perso",
+            "work": "Travail"
+          },
+          "profiles": {
+            "work": {
+              "autoArchiveHours": 3
+            }
+          },
+          "protectionBaseline": "renforcee",
+          "proxyEnabled": true,
+          "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+          "sendGpc": false,
+          "stripCopiedLinks": true,
+          "stripTrackingParams": true,
+          "updateFeedUrl": "https://example.com/feed"
+        },
+        "spaces": [
+          {
+            "background": {
+              "kind": "video"
+            },
+            "emoji": "💼",
+            "futureSpaceField": {
+              "a": [
+                1,
+                2
+              ]
+            },
+            "hideHeader": true,
+            "id": "s1",
+            "image": "pic.png",
+            "name": "Travail",
+            "profileId": "work",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          },
+          {
+            "emoji": "🏠",
+            "iconColor": "#ff0000",
+            "iconKind": "letter",
+            "iconLetter": "M",
+            "iconRound": true,
+            "id": "s2",
+            "name": "Maison",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [
+          {
+            "anchorUrl": "https://a.example/",
+            "createdAt": 1,
+            "customTitle": "Doc",
+            "faviconUrl": "https://a.example/i.png",
+            "folderId": "f1",
+            "id": "t1",
+            "lastActiveAt": 9,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "A now",
+            "url": "https://a.example/now"
+          },
+          {
+            "anchorUrl": "https://b.example/",
+            "createdAt": 2,
+            "futureTabField": "x",
+            "id": "t2",
+            "keepAwake": true,
+            "lastActiveAt": 8,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "B",
+            "url": "https://b.example/"
+          },
+          {
+            "anchorUrl": "https://c.example/",
+            "createdAt": 3,
+            "id": "t3",
+            "lastActiveAt": 7,
+            "pinned": true,
+            "spaceId": "s2",
+            "title": "C",
+            "url": "https://c.example/"
+          },
+          {
+            "createdAt": 4,
+            "id": "today",
+            "lastActiveAt": 6,
+            "pinned": false,
+            "spaceId": "s1",
+            "title": "Today",
+            "url": "https://today.example/"
+          },
+          {
+            "anchorUrl": "https://secret.example/",
+            "createdAt": 5,
+            "id": "secret",
+            "lastActiveAt": 5,
+            "pinned": true,
+            "private": true,
+            "spaceId": "s1",
+            "title": "Private",
+            "url": "https://secret.example/"
+          }
+        ],
+        "version": 1
+      },
+      "withheld": []
+    },
+    {
+      "base": null,
+      "categories": [],
+      "expect": {
+        "entities": {},
+        "order": {}
+      },
+      "name": "no category in common",
+      "state": {
+        "activeSpaceId": "s1",
+        "activeTabBySpace": {
+          "s1": null,
+          "s2": null
+        },
+        "archive": [
+          {
+            "archivedAt": 1790000000500,
+            "history": {
+              "entries": []
+            },
+            "id": "a1",
+            "source": "auto",
+            "spaceId": "s1",
+            "title": "Old 1",
+            "url": "https://old1.example/"
+          },
+          {
+            "anchorUrl": "https://old2.example/",
+            "archivedAt": 1790000000100,
+            "folderId": "f1",
+            "id": "a2",
+            "pinned": true,
+            "source": "manual",
+            "spaceId": "s1",
+            "title": "Old 2",
+            "url": "https://old2.example/"
+          },
+          {
+            "archivedAt": 1790000000900,
+            "container": "c1",
+            "id": "a3",
+            "spaceId": "s2",
+            "title": "Old 3",
+            "url": "https://old3.example/"
+          }
+        ],
+        "favorites": [
+          {
+            "faviconUrl": "https://fav1.example/i.png",
+            "id": "fav1",
+            "profileId": "default",
+            "title": "Fav 1",
+            "url": "https://fav1.example/"
+          },
+          {
+            "id": "fav2",
+            "profileId": "work",
+            "title": "Fav 2",
+            "url": "https://fav2.example/"
+          },
+          {
+            "id": "fav3",
+            "profileId": "default",
+            "title": "Fav 3",
+            "url": "https://fav3.example/"
+          }
+        ],
+        "folders": [
+          {
+            "atBottom": true,
+            "collapsed": true,
+            "id": "f1",
+            "name": "Réunions",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "icon": "📁",
+            "id": "f2",
+            "name": "Sous-dossier",
+            "noWake": true,
+            "parentId": "f1",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "id": "f3",
+            "live": {
+              "url": "https://feed.example/x"
+            },
+            "name": "Courses",
+            "spaceId": "s2"
+          }
+        ],
+        "revision": 2,
+        "settings": {
+          "autoArchiveHours": 12,
+          "httpsUpgrade": true,
+          "lockApp": false,
+          "lockEnabled": true,
+          "profileNames": {
+            "default": "Perso",
+            "work": "Travail"
+          },
+          "profiles": {
+            "work": {
+              "autoArchiveHours": 3
+            }
+          },
+          "protectionBaseline": "renforcee",
+          "proxyEnabled": true,
+          "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+          "sendGpc": false,
+          "stripCopiedLinks": true,
+          "stripTrackingParams": true,
+          "updateFeedUrl": "https://example.com/feed"
+        },
+        "spaces": [
+          {
+            "background": {
+              "kind": "video"
+            },
+            "emoji": "💼",
+            "futureSpaceField": {
+              "a": [
+                1,
+                2
+              ]
+            },
+            "hideHeader": true,
+            "id": "s1",
+            "image": "pic.png",
+            "name": "Travail",
+            "profileId": "work",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          },
+          {
+            "emoji": "🏠",
+            "iconColor": "#ff0000",
+            "iconKind": "letter",
+            "iconLetter": "M",
+            "iconRound": true,
+            "id": "s2",
+            "name": "Maison",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [
+          {
+            "anchorUrl": "https://a.example/",
+            "createdAt": 1,
+            "customTitle": "Doc",
+            "faviconUrl": "https://a.example/i.png",
+            "folderId": "f1",
+            "id": "t1",
+            "lastActiveAt": 9,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "A now",
+            "url": "https://a.example/now"
+          },
+          {
+            "anchorUrl": "https://b.example/",
+            "createdAt": 2,
+            "futureTabField": "x",
+            "id": "t2",
+            "keepAwake": true,
+            "lastActiveAt": 8,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "B",
+            "url": "https://b.example/"
+          },
+          {
+            "anchorUrl": "https://c.example/",
+            "createdAt": 3,
+            "id": "t3",
+            "lastActiveAt": 7,
+            "pinned": true,
+            "spaceId": "s2",
+            "title": "C",
+            "url": "https://c.example/"
+          },
+          {
+            "createdAt": 4,
+            "id": "today",
+            "lastActiveAt": 6,
+            "pinned": false,
+            "spaceId": "s1",
+            "title": "Today",
+            "url": "https://today.example/"
+          },
+          {
+            "anchorUrl": "https://secret.example/",
+            "createdAt": 5,
+            "id": "secret",
+            "lastActiveAt": 5,
+            "pinned": true,
+            "private": true,
+            "spaceId": "s1",
+            "title": "Private",
+            "url": "https://secret.example/"
+          }
+        ],
+        "version": 1
+      },
+      "withheld": []
+    },
+    {
+      "base": null,
+      "categories": [
+        "structure",
+        "settings",
+        "archive",
+        "openTabs"
+      ],
+      "expect": {
+        "entities": {
+          "archived": {
+            "a1": {
+              "archivedAt": 1790000000500,
+              "source": "auto",
+              "spaceId": "s1",
+              "title": "Old 1",
+              "url": "https://old1.example/"
+            },
+            "a2": {
+              "anchorUrl": "https://old2.example/",
+              "archivedAt": 1790000000100,
+              "folderId": "f1",
+              "pinned": true,
+              "source": "manual",
+              "spaceId": "s1",
+              "title": "Old 2",
+              "url": "https://old2.example/"
+            }
+          },
+          "favorite": {
+            "fav1": {
+              "profileId": "default",
+              "title": "Fav 1",
+              "url": "https://fav1.example/"
+            },
+            "fav2": {
+              "profileId": "work",
+              "title": "Fav 2",
+              "url": "https://fav2.example/"
+            },
+            "fav3": {
+              "profileId": "default",
+              "title": "Fav 3",
+              "url": "https://fav3.example/"
+            }
+          },
+          "folder": {
+            "f1": {
+              "atBottom": true,
+              "collapsed": true,
+              "name": "Réunions",
+              "spaceId": "s1"
+            },
+            "f2": {
+              "collapsed": false,
+              "icon": "📁",
+              "name": "Sous-dossier",
+              "noWake": true,
+              "parentId": "f1",
+              "spaceId": "s1"
+            }
+          },
+          "setting": {
+            "autoArchiveHours": {
+              "value": 12
+            },
+            "httpsUpgrade": {
+              "value": true
+            },
+            "profileNames": {
+              "value": {
+                "default": "Perso",
+                "work": "Travail"
+              }
+            },
+            "protectionBaseline": {
+              "value": "renforcee"
+            },
+            "searchUrlTemplate": {
+              "value": "https://duckduckgo.com/?q=%s"
+            },
+            "sendGpc": {
+              "value": false
+            },
+            "stripCopiedLinks": {
+              "value": true
+            },
+            "stripTrackingParams": {
+              "value": true
+            }
+          },
+          "space": {
+            "s1": {
+              "emoji": "💼",
+              "futureSpaceField": {
+                "a": [
+                  1,
+                  2
+                ]
+              },
+              "hideHeader": true,
+              "name": "Travail",
+              "profileId": "work",
+              "theme": {
+                "hue": 250,
+                "saturation": 0.5
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "anchorUrl": "https://a.example/",
+              "customTitle": "Doc",
+              "folderId": "f1",
+              "pinned": true,
+              "spaceId": "s1",
+              "title": "A now",
+              "url": "https://a.example/now"
+            },
+            "t2": {
+              "anchorUrl": "https://b.example/",
+              "futureTabField": "x",
+              "keepAwake": true,
+              "pinned": true,
+              "spaceId": "s1",
+              "title": "B",
+              "url": "https://b.example/"
+            }
+          }
+        },
+        "order": {
+          "favorites:default": [
+            "fav1",
+            "fav3"
+          ],
+          "favorites:work": [
+            "fav2"
+          ],
+          "folders:s1:-": [
+            "f1"
+          ],
+          "folders:s1:f1": [
+            "f2"
+          ],
+          "spaces": [
+            "s1"
+          ],
+          "tabs:s1:-": [
+            "t2"
+          ],
+          "tabs:s1:f1": [
+            "t1"
+          ]
+        }
+      },
+      "name": "a space set aside takes its folders, tabs, archive and lists with it",
+      "state": {
+        "activeSpaceId": "s1",
+        "activeTabBySpace": {
+          "s1": null,
+          "s2": null
+        },
+        "archive": [
+          {
+            "archivedAt": 1790000000500,
+            "history": {
+              "entries": []
+            },
+            "id": "a1",
+            "source": "auto",
+            "spaceId": "s1",
+            "title": "Old 1",
+            "url": "https://old1.example/"
+          },
+          {
+            "anchorUrl": "https://old2.example/",
+            "archivedAt": 1790000000100,
+            "folderId": "f1",
+            "id": "a2",
+            "pinned": true,
+            "source": "manual",
+            "spaceId": "s1",
+            "title": "Old 2",
+            "url": "https://old2.example/"
+          },
+          {
+            "archivedAt": 1790000000900,
+            "container": "c1",
+            "id": "a3",
+            "spaceId": "s2",
+            "title": "Old 3",
+            "url": "https://old3.example/"
+          }
+        ],
+        "favorites": [
+          {
+            "faviconUrl": "https://fav1.example/i.png",
+            "id": "fav1",
+            "profileId": "default",
+            "title": "Fav 1",
+            "url": "https://fav1.example/"
+          },
+          {
+            "id": "fav2",
+            "profileId": "work",
+            "title": "Fav 2",
+            "url": "https://fav2.example/"
+          },
+          {
+            "id": "fav3",
+            "profileId": "default",
+            "title": "Fav 3",
+            "url": "https://fav3.example/"
+          }
+        ],
+        "folders": [
+          {
+            "atBottom": true,
+            "collapsed": true,
+            "id": "f1",
+            "name": "Réunions",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "icon": "📁",
+            "id": "f2",
+            "name": "Sous-dossier",
+            "noWake": true,
+            "parentId": "f1",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "id": "f3",
+            "live": {
+              "url": "https://feed.example/x"
+            },
+            "name": "Courses",
+            "spaceId": "s2"
+          }
+        ],
+        "revision": 2,
+        "settings": {
+          "autoArchiveHours": 12,
+          "httpsUpgrade": true,
+          "lockApp": false,
+          "lockEnabled": true,
+          "profileNames": {
+            "default": "Perso",
+            "work": "Travail"
+          },
+          "profiles": {
+            "work": {
+              "autoArchiveHours": 3
+            }
+          },
+          "protectionBaseline": "renforcee",
+          "proxyEnabled": true,
+          "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+          "sendGpc": false,
+          "stripCopiedLinks": true,
+          "stripTrackingParams": true,
+          "updateFeedUrl": "https://example.com/feed"
+        },
+        "spaces": [
+          {
+            "background": {
+              "kind": "video"
+            },
+            "emoji": "💼",
+            "futureSpaceField": {
+              "a": [
+                1,
+                2
+              ]
+            },
+            "hideHeader": true,
+            "id": "s1",
+            "image": "pic.png",
+            "name": "Travail",
+            "profileId": "work",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          },
+          {
+            "emoji": "🏠",
+            "iconColor": "#ff0000",
+            "iconKind": "letter",
+            "iconLetter": "M",
+            "iconRound": true,
+            "id": "s2",
+            "name": "Maison",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [
+          {
+            "anchorUrl": "https://a.example/",
+            "createdAt": 1,
+            "customTitle": "Doc",
+            "faviconUrl": "https://a.example/i.png",
+            "folderId": "f1",
+            "id": "t1",
+            "lastActiveAt": 9,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "A now",
+            "url": "https://a.example/now"
+          },
+          {
+            "anchorUrl": "https://b.example/",
+            "createdAt": 2,
+            "futureTabField": "x",
+            "id": "t2",
+            "keepAwake": true,
+            "lastActiveAt": 8,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "B",
+            "url": "https://b.example/"
+          },
+          {
+            "anchorUrl": "https://c.example/",
+            "createdAt": 3,
+            "id": "t3",
+            "lastActiveAt": 7,
+            "pinned": true,
+            "spaceId": "s2",
+            "title": "C",
+            "url": "https://c.example/"
+          },
+          {
+            "createdAt": 4,
+            "id": "today",
+            "lastActiveAt": 6,
+            "pinned": false,
+            "spaceId": "s1",
+            "title": "Today",
+            "url": "https://today.example/"
+          },
+          {
+            "anchorUrl": "https://secret.example/",
+            "createdAt": 5,
+            "id": "secret",
+            "lastActiveAt": 5,
+            "pinned": true,
+            "private": true,
+            "spaceId": "s1",
+            "title": "Private",
+            "url": "https://secret.example/"
+          }
+        ],
+        "version": 1
+      },
+      "withheld": [
+        "s2"
+      ]
+    },
+    {
+      "base": null,
+      "categories": [
+        "structure",
+        "settings",
+        "archive",
+        "openTabs"
+      ],
+      "expect": {
+        "entities": {
+          "favorite": {
+            "fav1": {
+              "profileId": "default",
+              "title": "Fav 1",
+              "url": "https://fav1.example/"
+            },
+            "fav2": {
+              "profileId": "work",
+              "title": "Fav 2",
+              "url": "https://fav2.example/"
+            },
+            "fav3": {
+              "profileId": "default",
+              "title": "Fav 3",
+              "url": "https://fav3.example/"
+            }
+          },
+          "setting": {
+            "autoArchiveHours": {
+              "value": 12
+            },
+            "httpsUpgrade": {
+              "value": true
+            },
+            "profileNames": {
+              "value": {
+                "default": "Perso",
+                "work": "Travail"
+              }
+            },
+            "protectionBaseline": {
+              "value": "renforcee"
+            },
+            "searchUrlTemplate": {
+              "value": "https://duckduckgo.com/?q=%s"
+            },
+            "sendGpc": {
+              "value": false
+            },
+            "stripCopiedLinks": {
+              "value": true
+            },
+            "stripTrackingParams": {
+              "value": true
+            }
+          }
+        },
+        "order": {
+          "favorites:default": [
+            "fav1",
+            "fav3"
+          ],
+          "favorites:work": [
+            "fav2"
+          ],
+          "spaces": []
+        }
+      },
+      "name": "both spaces set aside",
+      "state": {
+        "activeSpaceId": "s1",
+        "activeTabBySpace": {
+          "s1": null,
+          "s2": null
+        },
+        "archive": [
+          {
+            "archivedAt": 1790000000500,
+            "history": {
+              "entries": []
+            },
+            "id": "a1",
+            "source": "auto",
+            "spaceId": "s1",
+            "title": "Old 1",
+            "url": "https://old1.example/"
+          },
+          {
+            "anchorUrl": "https://old2.example/",
+            "archivedAt": 1790000000100,
+            "folderId": "f1",
+            "id": "a2",
+            "pinned": true,
+            "source": "manual",
+            "spaceId": "s1",
+            "title": "Old 2",
+            "url": "https://old2.example/"
+          },
+          {
+            "archivedAt": 1790000000900,
+            "container": "c1",
+            "id": "a3",
+            "spaceId": "s2",
+            "title": "Old 3",
+            "url": "https://old3.example/"
+          }
+        ],
+        "favorites": [
+          {
+            "faviconUrl": "https://fav1.example/i.png",
+            "id": "fav1",
+            "profileId": "default",
+            "title": "Fav 1",
+            "url": "https://fav1.example/"
+          },
+          {
+            "id": "fav2",
+            "profileId": "work",
+            "title": "Fav 2",
+            "url": "https://fav2.example/"
+          },
+          {
+            "id": "fav3",
+            "profileId": "default",
+            "title": "Fav 3",
+            "url": "https://fav3.example/"
+          }
+        ],
+        "folders": [
+          {
+            "atBottom": true,
+            "collapsed": true,
+            "id": "f1",
+            "name": "Réunions",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "icon": "📁",
+            "id": "f2",
+            "name": "Sous-dossier",
+            "noWake": true,
+            "parentId": "f1",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "id": "f3",
+            "live": {
+              "url": "https://feed.example/x"
+            },
+            "name": "Courses",
+            "spaceId": "s2"
+          }
+        ],
+        "revision": 2,
+        "settings": {
+          "autoArchiveHours": 12,
+          "httpsUpgrade": true,
+          "lockApp": false,
+          "lockEnabled": true,
+          "profileNames": {
+            "default": "Perso",
+            "work": "Travail"
+          },
+          "profiles": {
+            "work": {
+              "autoArchiveHours": 3
+            }
+          },
+          "protectionBaseline": "renforcee",
+          "proxyEnabled": true,
+          "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+          "sendGpc": false,
+          "stripCopiedLinks": true,
+          "stripTrackingParams": true,
+          "updateFeedUrl": "https://example.com/feed"
+        },
+        "spaces": [
+          {
+            "background": {
+              "kind": "video"
+            },
+            "emoji": "💼",
+            "futureSpaceField": {
+              "a": [
+                1,
+                2
+              ]
+            },
+            "hideHeader": true,
+            "id": "s1",
+            "image": "pic.png",
+            "name": "Travail",
+            "profileId": "work",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          },
+          {
+            "emoji": "🏠",
+            "iconColor": "#ff0000",
+            "iconKind": "letter",
+            "iconLetter": "M",
+            "iconRound": true,
+            "id": "s2",
+            "name": "Maison",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [
+          {
+            "anchorUrl": "https://a.example/",
+            "createdAt": 1,
+            "customTitle": "Doc",
+            "faviconUrl": "https://a.example/i.png",
+            "folderId": "f1",
+            "id": "t1",
+            "lastActiveAt": 9,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "A now",
+            "url": "https://a.example/now"
+          },
+          {
+            "anchorUrl": "https://b.example/",
+            "createdAt": 2,
+            "futureTabField": "x",
+            "id": "t2",
+            "keepAwake": true,
+            "lastActiveAt": 8,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "B",
+            "url": "https://b.example/"
+          },
+          {
+            "anchorUrl": "https://c.example/",
+            "createdAt": 3,
+            "id": "t3",
+            "lastActiveAt": 7,
+            "pinned": true,
+            "spaceId": "s2",
+            "title": "C",
+            "url": "https://c.example/"
+          },
+          {
+            "createdAt": 4,
+            "id": "today",
+            "lastActiveAt": 6,
+            "pinned": false,
+            "spaceId": "s1",
+            "title": "Today",
+            "url": "https://today.example/"
+          },
+          {
+            "anchorUrl": "https://secret.example/",
+            "createdAt": 5,
+            "id": "secret",
+            "lastActiveAt": 5,
+            "pinned": true,
+            "private": true,
+            "spaceId": "s1",
+            "title": "Private",
+            "url": "https://secret.example/"
+          }
+        ],
+        "version": 1
+      },
+      "withheld": [
+        "s1",
+        "s2"
+      ]
+    },
+    {
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "pinned": true,
+                "spaceId": "s1"
+              },
+              "stamps": {
+                "pinned": "1790000000000-0002-mac",
+                "spaceId": "1790000000000-0001-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "categories": [
+        "structure"
+      ],
+      "expect": {
+        "entities": {
+          "favorite": {
+            "fav1": {
+              "profileId": "default",
+              "title": "Fav 1",
+              "url": "https://fav1.example/"
+            },
+            "fav2": {
+              "profileId": "work",
+              "title": "Fav 2",
+              "url": "https://fav2.example/"
+            },
+            "fav3": {
+              "profileId": "default",
+              "title": "Fav 3",
+              "url": "https://fav3.example/"
+            }
+          },
+          "folder": {
+            "f1": {
+              "atBottom": true,
+              "collapsed": true,
+              "name": "Réunions",
+              "spaceId": "s1"
+            },
+            "f2": {
+              "collapsed": false,
+              "icon": "📁",
+              "name": "Sous-dossier",
+              "noWake": true,
+              "parentId": "f1",
+              "spaceId": "s1"
+            },
+            "f3": {
+              "collapsed": false,
+              "name": "Courses",
+              "spaceId": "s2"
+            }
+          },
+          "space": {
+            "s1": {
+              "emoji": "💼",
+              "futureSpaceField": {
+                "a": [
+                  1,
+                  2
+                ]
+              },
+              "hideHeader": true,
+              "name": "Travail",
+              "profileId": "work",
+              "theme": {
+                "hue": 250,
+                "saturation": 0.5
+              }
+            },
+            "s2": {
+              "emoji": "🏠",
+              "iconColor": "#ff0000",
+              "iconKind": "letter",
+              "iconLetter": "M",
+              "iconRound": true,
+              "name": "Maison",
+              "profileId": "default",
+              "theme": {
+                "hue": 250,
+                "saturation": 0.5
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "anchorUrl": "https://a.example/",
+              "customTitle": "Doc",
+              "folderId": "f1",
+              "pinned": true,
+              "spaceId": "s1"
+            },
+            "t2": {
+              "anchorUrl": "https://b.example/",
+              "futureTabField": "x",
+              "keepAwake": true,
+              "pinned": true,
+              "spaceId": "s1",
+              "title": "B",
+              "url": "https://b.example/"
+            },
+            "t3": {
+              "anchorUrl": "https://c.example/",
+              "pinned": true,
+              "spaceId": "s2",
+              "title": "C",
+              "url": "https://c.example/"
+            }
+          }
+        },
+        "order": {
+          "favorites:default": [
+            "fav1",
+            "fav3"
+          ],
+          "favorites:work": [
+            "fav2"
+          ],
+          "folders:s1:-": [
+            "f1"
+          ],
+          "folders:s1:f1": [
+            "f2"
+          ],
+          "folders:s2:-": [
+            "f3"
+          ],
+          "spaces": [
+            "s1",
+            "s2"
+          ],
+          "tabs:s1:-": [
+            "t2"
+          ],
+          "tabs:s1:f1": [
+            "t1"
+          ],
+          "tabs:s2:-": [
+            "t3"
+          ]
+        }
+      },
+      "name": "an entity the base holds does not carry its seed fields",
+      "state": {
+        "activeSpaceId": "s1",
+        "activeTabBySpace": {
+          "s1": null,
+          "s2": null
+        },
+        "archive": [
+          {
+            "archivedAt": 1790000000500,
+            "history": {
+              "entries": []
+            },
+            "id": "a1",
+            "source": "auto",
+            "spaceId": "s1",
+            "title": "Old 1",
+            "url": "https://old1.example/"
+          },
+          {
+            "anchorUrl": "https://old2.example/",
+            "archivedAt": 1790000000100,
+            "folderId": "f1",
+            "id": "a2",
+            "pinned": true,
+            "source": "manual",
+            "spaceId": "s1",
+            "title": "Old 2",
+            "url": "https://old2.example/"
+          },
+          {
+            "archivedAt": 1790000000900,
+            "container": "c1",
+            "id": "a3",
+            "spaceId": "s2",
+            "title": "Old 3",
+            "url": "https://old3.example/"
+          }
+        ],
+        "favorites": [
+          {
+            "faviconUrl": "https://fav1.example/i.png",
+            "id": "fav1",
+            "profileId": "default",
+            "title": "Fav 1",
+            "url": "https://fav1.example/"
+          },
+          {
+            "id": "fav2",
+            "profileId": "work",
+            "title": "Fav 2",
+            "url": "https://fav2.example/"
+          },
+          {
+            "id": "fav3",
+            "profileId": "default",
+            "title": "Fav 3",
+            "url": "https://fav3.example/"
+          }
+        ],
+        "folders": [
+          {
+            "atBottom": true,
+            "collapsed": true,
+            "id": "f1",
+            "name": "Réunions",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "icon": "📁",
+            "id": "f2",
+            "name": "Sous-dossier",
+            "noWake": true,
+            "parentId": "f1",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "id": "f3",
+            "live": {
+              "url": "https://feed.example/x"
+            },
+            "name": "Courses",
+            "spaceId": "s2"
+          }
+        ],
+        "revision": 2,
+        "settings": {
+          "autoArchiveHours": 12,
+          "httpsUpgrade": true,
+          "lockApp": false,
+          "lockEnabled": true,
+          "profileNames": {
+            "default": "Perso",
+            "work": "Travail"
+          },
+          "profiles": {
+            "work": {
+              "autoArchiveHours": 3
+            }
+          },
+          "protectionBaseline": "renforcee",
+          "proxyEnabled": true,
+          "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+          "sendGpc": false,
+          "stripCopiedLinks": true,
+          "stripTrackingParams": true,
+          "updateFeedUrl": "https://example.com/feed"
+        },
+        "spaces": [
+          {
+            "background": {
+              "kind": "video"
+            },
+            "emoji": "💼",
+            "futureSpaceField": {
+              "a": [
+                1,
+                2
+              ]
+            },
+            "hideHeader": true,
+            "id": "s1",
+            "image": "pic.png",
+            "name": "Travail",
+            "profileId": "work",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          },
+          {
+            "emoji": "🏠",
+            "iconColor": "#ff0000",
+            "iconKind": "letter",
+            "iconLetter": "M",
+            "iconRound": true,
+            "id": "s2",
+            "name": "Maison",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [
+          {
+            "anchorUrl": "https://a.example/",
+            "createdAt": 1,
+            "customTitle": "Doc",
+            "faviconUrl": "https://a.example/i.png",
+            "folderId": "f1",
+            "id": "t1",
+            "lastActiveAt": 9,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "A now",
+            "url": "https://a.example/now"
+          },
+          {
+            "anchorUrl": "https://b.example/",
+            "createdAt": 2,
+            "futureTabField": "x",
+            "id": "t2",
+            "keepAwake": true,
+            "lastActiveAt": 8,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "B",
+            "url": "https://b.example/"
+          },
+          {
+            "anchorUrl": "https://c.example/",
+            "createdAt": 3,
+            "id": "t3",
+            "lastActiveAt": 7,
+            "pinned": true,
+            "spaceId": "s2",
+            "title": "C",
+            "url": "https://c.example/"
+          },
+          {
+            "createdAt": 4,
+            "id": "today",
+            "lastActiveAt": 6,
+            "pinned": false,
+            "spaceId": "s1",
+            "title": "Today",
+            "url": "https://today.example/"
+          },
+          {
+            "anchorUrl": "https://secret.example/",
+            "createdAt": 5,
+            "id": "secret",
+            "lastActiveAt": 5,
+            "pinned": true,
+            "private": true,
+            "spaceId": "s1",
+            "title": "Private",
+            "url": "https://secret.example/"
+          }
+        ],
+        "version": 1
+      },
+      "withheld": []
+    },
+    {
+      "base": null,
+      "categories": [
+        "structure",
+        "settings",
+        "archive",
+        "openTabs"
+      ],
+      "expect": {
+        "entities": {
+          "space": {
+            "only": {
+              "emoji": "✨",
+              "name": "Seul",
+              "profileId": "default",
+              "theme": {
+                "hue": 250,
+                "saturation": 0.5
+              }
+            }
+          }
+        },
+        "order": {
+          "spaces": [
+            "only"
+          ]
+        }
+      },
+      "name": "a state with one space and nothing else",
+      "state": {
+        "activeSpaceId": "only",
+        "activeTabBySpace": {
+          "only": null
+        },
+        "archive": [],
+        "favorites": [],
+        "folders": [],
+        "revision": 2,
+        "settings": {},
+        "spaces": [
+          {
+            "emoji": "✨",
+            "id": "only",
+            "name": "Seul",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [],
+        "version": 1
+      },
+      "withheld": []
+    }
+  ],
+  "patch": [
+    {
+      "expect": {
+        "order": {},
+        "removals": [],
+        "settings": {},
+        "upserts": []
+      },
+      "frozen": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {
+          "spaces": [
+            "s1"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {
+          "spaces": [
+            "s1"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "name": "nothing changed",
+      "withheld": []
+    },
+    {
+      "expect": {
+        "order": {},
+        "removals": [],
+        "settings": {},
+        "upserts": [
+          {
+            "create": false,
+            "expect": {
+              "hideHeader": true,
+              "name": "A"
+            },
+            "fields": {
+              "iconLetter": "B",
+              "name": "B"
+            },
+            "id": "s1",
+            "kind": "space",
+            "remove": [
+              "hideHeader"
+            ]
+          }
+        ]
+      },
+      "frozen": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "emoji": "🏠",
+                "hideHeader": true,
+                "name": "A"
+              },
+              "stamps": {
+                "emoji": "1790000000000-0000-mac",
+                "hideHeader": "1790000000000-0000-mac",
+                "name": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "emoji": "🏠",
+                "iconLetter": "B",
+                "name": "B"
+              },
+              "stamps": {
+                "emoji": "1790000000005-0000-mac",
+                "iconLetter": "1790000000005-0000-mac",
+                "name": "1790000000005-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "name": "a field changed, a field removed, a field added: what each held is expected",
+      "withheld": []
+    },
+    {
+      "expect": {
+        "order": {},
+        "removals": [],
+        "settings": {},
+        "upserts": [
+          {
+            "create": true,
+            "expect": {},
+            "fields": {
+              "collapsed": true,
+              "name": "Réunions",
+              "spaceId": "s1"
+            },
+            "id": "f1",
+            "kind": "folder",
+            "remove": []
+          }
+        ]
+      },
+      "frozen": {
+        "entities": {},
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {
+          "folder": {
+            "f1": {
+              "fields": {
+                "collapsed": true,
+                "name": "Réunions",
+                "spaceId": "s1"
+              },
+              "stamps": {
+                "collapsed": "1790000000000-0000-mac",
+                "name": "1790000000000-0000-mac",
+                "spaceId": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "name": "an entity that arrives is created with all its fields",
+      "withheld": []
+    },
+    {
+      "expect": {
+        "order": {},
+        "removals": [
+          {
+            "expect": {
+              "anchorUrl": "https://a.example/",
+              "pinned": true,
+              "spaceId": "s1"
+            },
+            "id": "t1",
+            "kind": "tab"
+          }
+        ],
+        "settings": {},
+        "upserts": []
+      },
+      "frozen": {
+        "entities": {
+          "tab": {
+            "t1": {
+              "fields": {
+                "anchorUrl": "https://a.example/",
+                "pinned": true,
+                "spaceId": "s1"
+              },
+              "stamps": {
+                "anchorUrl": "1790000000000-0000-mac",
+                "pinned": "1790000000000-0000-mac",
+                "spaceId": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {},
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "name": "an entity that goes is removed while it still holds what it held",
+      "withheld": []
+    },
+    {
+      "expect": {
+        "order": {
+          "tabs:s1:-": [
+            "t2",
+            "t1"
+          ]
+        },
+        "removals": [],
+        "settings": {},
+        "upserts": []
+      },
+      "frozen": {
+        "entities": {},
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t2"
+          ]
+        },
+        "orderStamps": {
+          "tabs:s1:-": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {},
+        "order": {
+          "tabs:s1:-": [
+            "t2",
+            "t1"
+          ]
+        },
+        "orderStamps": {
+          "tabs:s1:-": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "name": "a list that was reordered",
+      "withheld": []
+    },
+    {
+      "expect": {
+        "order": {},
+        "removals": [],
+        "settings": {},
+        "upserts": []
+      },
+      "frozen": {
+        "entities": {},
+        "order": {
+          "spaces": [
+            "a",
+            "b"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {},
+        "order": {
+          "spaces": [
+            "a",
+            "b"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "name": "a list that is the same is left out",
+      "withheld": []
+    },
+    {
+      "expect": {
+        "order": {},
+        "removals": [],
+        "settings": {
+          "sendGpc": true
+        },
+        "upserts": []
+      },
+      "frozen": {
+        "entities": {
+          "setting": {
+            "httpsUpgrade": {
+              "fields": {
+                "value": true
+              },
+              "stamps": {
+                "value": "1790000000000-0000-mac"
+              }
+            },
+            "sendGpc": {
+              "fields": {
+                "value": false
+              },
+              "stamps": {
+                "value": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {
+          "setting": {
+            "httpsUpgrade": {
+              "fields": {
+                "value": true
+              },
+              "stamps": {
+                "value": "1790000000000-0000-mac"
+              }
+            },
+            "sendGpc": {
+              "fields": {
+                "value": true
+              },
+              "stamps": {
+                "value": "1790000000003-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "name": "a setting that changed and a setting that did not",
+      "withheld": []
+    },
+    {
+      "expect": {
+        "order": {
+          "spaces": [
+            "s1"
+          ]
+        },
+        "removals": [],
+        "settings": {},
+        "upserts": []
+      },
+      "frozen": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Secret"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t9": {
+              "fields": {
+                "pinned": true,
+                "spaceId": "s2"
+              },
+              "stamps": {
+                "pinned": "1790000000000-0000-mac",
+                "spaceId": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {
+          "spaces": [
+            "s1",
+            "s2"
+          ],
+          "tabs:s2:-": [
+            "t9"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000000-0000-mac",
+          "tabs:s2:-": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {
+          "spaces": [
+            "s1"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "name": "a space set aside is left out of the patch whatever the merge says",
+      "withheld": [
+        "s2"
+      ]
+    },
+    {
+      "expect": {
+        "order": {},
+        "removals": [],
+        "settings": {},
+        "upserts": []
+      },
+      "frozen": {
+        "entities": {},
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {
+          "widget": {
+            "w1": {
+              "fields": {
+                "a": 1
+              },
+              "stamps": {
+                "a": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "name": "a kind this version does not know is not written into the state",
+      "withheld": []
+    },
+    {
+      "expect": {
+        "order": {},
+        "removals": [],
+        "settings": {},
+        "upserts": [
+          {
+            "create": false,
+            "expect": {},
+            "fields": {
+              "futureField": [
+                1,
+                {
+                  "b": 2
+                }
+              ]
+            },
+            "id": "s1",
+            "kind": "space",
+            "remove": []
+          }
+        ]
+      },
+      "frozen": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "futureField": [
+                  1,
+                  {
+                    "b": 2
+                  }
+                ],
+                "name": "A"
+              },
+              "stamps": {
+                "futureField": "1790000000002-0000-mac",
+                "name": "1790000000002-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "name": "an unknown field of a known kind goes with the others",
+      "withheld": []
+    }
+  ]
+}

@@ -317,8 +317,20 @@ public enum SyncMessageCodec {
             members["fatal"] = .bool(fatal)
             if let supported { members["supported"] = .array(supported.map { .number(Double($0)) }) }
             if let detail { members["detail"] = .string(detail) }
-        default:
-            throw SyncFailure(.internal, "the phone does not write \(message.type) here")
+        case .snapshotPart(let body), .openTabs(let body):
+            // The fields of the part (or of the list) as the session built them; the envelope is the codec's and overwrites whatever the body says of it.
+            guard case .object(let fields) = body else { throw SyncFailure(.internal, "the body of \(message.type) is not an object") }
+            members.merge(fields) { _, new in new }
+            members["v"] = .number(Double(version))
+            members["t"] = .string(message.type)
+            members["n"] = .number(Double(number))
+        case .snapshotEnd(let entityCount, let digest):
+            members["entityCount"] = .number(Double(entityCount))
+            members["digest"] = .string(digest)
+        case .result(let digest), .commit(let digest):
+            members["digest"] = .string(digest)
+        case .pairChallenge, .pairAccept:
+            throw SyncFailure(.internal, "the phone does not write \(message.type)")
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
