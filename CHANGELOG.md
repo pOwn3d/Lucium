@@ -8,6 +8,12 @@ How to keep it: every pull request that a user would notice adds a line to the t
 
 The “Nouveautés” sheet of the application shows the section of its version, from [CHANGELOG.fr.md](CHANGELOG.fr.md) when the interface is in French: every line added here is added there too, in French, with the same bold title then a colon.
 
+## [Unreleased]
+
+### Fixed
+
+- **Menu bar, reopening a closed tab**: “Reopen Last Closed Tab” could stay greyed out after a tab was archived, when the menu was asked to change while it was still being built. A change asked during a rebuild is now noted, and the menu is read again once it is in.
+
 ## [1.1.4] - 2026-11-18
 
 A tab put to sleep wakes with its Back and Forward pages, an extension made of pages only opens its popup at once, and the framing of a tall background video keeps its frame on the video. The additional permission for the App Store is added to the license.
@@ -24,7 +30,6 @@ A tab put to sleep wakes with its Back and Forward pages, an extension made of p
 - **Spelling dictionaries, Windows and Linux**: Chromium no longer downloads the dictionary of the system language from its CDN at the first launch, with the checker off. A session starts without a language: nothing is fetched until you switch Spelling on in the Edit menu.
 - **Background video, framing**: in “Customize Space…”, the still picture of “Video framing” was stretched to the width of the panel for a video taller than wide (the nine videos Lucium comes with are 9:16), and its frame came out of the video. The picture now keeps the shape of the video.
 - **Extensions without a service worker**: a click on the icon of an extension made of pages only (a popup, no background worker) opens its popup at once instead of after 10 seconds, and Lucium no longer logs a failed start for it. It reads the manifest, which says there is no worker to wait for.
-- **Menu bar, reopening a closed tab**: “Reopen Last Closed Tab” could stay greyed out after a tab was archived, when the menu was asked to change while it was still being built. A change asked during a rebuild is now noted, and the menu is read again once it is in.
 
 ## [1.1.3] - 2026-11-17
 
