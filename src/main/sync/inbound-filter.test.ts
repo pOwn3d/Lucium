@@ -136,6 +136,24 @@ describe('cleanSnapshot', () => {
     ])
   })
 
+  it('gives back the version of the base for an entity refused for its marks, its address or its value, and drops one refused for what it is, or one the base never held', () => {
+    const ahead = NOW + STAMP_FUTURE_REFUSE_MS + 1
+    const kept = entity({ name: 'Old' }, NOW - 5000)
+    const base: SyncSnapshot = { entities: { space: { s1: kept, s2: kept }, tab: { t1: entity({ pinned: true, anchorUrl: 'https://a.example/' }), t2: entity({ pinned: true }), t3: entity({ pinned: true }) }, setting: { sendGpc: entity({ value: true }) } }, tombstones: {}, order: {}, orderStamps: {} }
+    const input = snapshot({
+      space: { s1: entity({ name: 'New' }, ahead), s2: entity({ name: 'Fine' }), s9: entity({ name: 'Never held' }, ahead) },
+      tab: { t1: entity({ pinned: true, anchorUrl: 'javascript:1' }), t2: entity({ pinned: false }), t3: entity({ pinned: true, private: true }) },
+      setting: { sendGpc: entity({ value: 'yes' }) }
+    })
+    const { snapshot: cleaned, refused } = cleanSnapshot(input, NOW, base)
+    expect(cleaned.entities['space']).toEqual({ s1: kept, s2: entity({ name: 'Fine' }) })
+    expect(Object.keys(cleaned.entities['tab'] ?? {})).toEqual(['t1'])
+    expect(cleaned.entities['tab']?.['t1']).toBe(base.entities['tab']?.['t1'])
+    expect(cleaned.entities['setting']).toEqual({ sendGpc: base.entities['setting']?.['sendGpc'] })
+    expect(refused.map((one) => `${one.kind}/${one.id}:${one.reason}`)).toEqual(['space/s1:future-mark', 'space/s9:future-mark', 'tab/t1:invalid-url', 'tab/t2:not-pinned', 'tab/t3:private', 'setting/sendGpc:invalid-value'])
+    expect(Object.keys(cleanSnapshot(input, NOW).snapshot.entities['space'] ?? {})).toEqual(['s2'])
+  })
+
   it('does not look at the mark « zéro » as a time', () => {
     const zero = { fields: { name: 'A' }, stamps: { name: '0' } } as never
     expect(cleanSnapshot(snapshot({ space: { s1: zero } }), NOW).refused).toEqual([])
