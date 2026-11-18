@@ -1,5 +1,5 @@
 {
-  "comment": "Shared by src/shared/ios-sync-merge-contract.test.ts (a reference merge written in the test, until the cards of the three-way merge write the real one in src/shared/ and in LuciumKit) and later by LuciumKit. The three-way merge of docs/synchronisation.md §11. A snapshot is {entities: {kind: {id: {fields, stamps}}}, tombstones: {kind: {id: mark}}, order: {list: [id]}, orderStamps: {list: mark}}; `base: null` is the empty base. `expect` names what must hold: `entities` and `tombstones` are compared whole, `conflicts` whole and in the order (kind, id, field), `order` only for the lists it names. `swap: true` means that merging with local and remote exchanged gives the same entities, tombstones and order, and the same conflicts with every `winner` exchanged. A mark is <13 digits of ms>-<4 hex digits of counter>-<device id>, compared as text; \"0\" is the mark of a field that was never stamped. Written by a script: the expectations are written by hand and the test runs them.",
+  "comment": "Shared by src/shared/ios-sync-merge-contract.test.ts (played against the merge of the Mac's side, src/shared/sync-merge.ts) and by LuciumKit (SyncMergeVectorTests, against SyncMerge.swift: card 446). The three-way merge of docs/synchronisation.md §11. A snapshot is {entities: {kind: {id: {fields, stamps}}}, tombstones: {kind: {id: mark}}, order: {list: [id]}, orderStamps: {list: mark}}; `base: null` is the empty base. `expect` names what must hold: `entities` and `tombstones` are compared whole, `conflicts` whole and in the order (kind, id, field), `order` only for the lists it names. `swap: true` means that merging with local and remote exchanged gives the same entities, tombstones and order, and the same conflicts with every `winner` exchanged. A mark is <13 digits of ms>-<4 hex digits of counter>-<device id>, compared as text; \"0\" is the mark of a field that was never stamped. Written by a script: the expectations are written by hand and the test runs them.",
   "devices": {
     "mac": "mac",
     "phone": "phone"
@@ -4120,6 +4120,425 @@
                 "spaceId": "1790000000001-0000-mac",
                 "pinned": "1790000000001-0000-mac",
                 "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "two values with the same mark: compared by UTF-16 code unit, not by UTF-8 byte (the smiley is below U+FF5E)",
+      "base": null,
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "😀"
+              },
+              "stamps": {
+                "name": "0"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "～"
+              },
+              "stamps": {
+                "name": "0"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "～"
+              },
+              "stamps": {
+                "name": "0"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "field": "name",
+            "winner": "remote",
+            "reason": "value"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "a field that is absent and has the zero mark is not written (§8.3)",
+      "base": null,
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "ghost": "0"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "first exchange, [Q3]: a device that was never modified sends nothing, and the other's state is the result",
+      "base": null,
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Maison"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "spaces": [
+            "s1",
+            "s2"
+          ],
+          "tabs:s1:-": [
+            "t1"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000001-0000-mac"
+        }
+      },
+      "remote": {
+        "entities": {},
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Maison"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [],
+        "order": {
+          "spaces": [
+            "s1",
+            "s2"
+          ],
+          "tabs:s1:-": [
+            "t1"
+          ]
+        }
+      },
+      "swap": true
+    },
+    {
+      "name": "folders that loop: each loop is cut at the smallest id of its own, a folder that leads into a loop is left alone, a folder that is its own parent loses the link",
+      "base": null,
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "a": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F",
+                "parentId": "b"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "b": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F",
+                "parentId": "a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "c": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F",
+                "parentId": "d"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "d": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F",
+                "parentId": "c"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "e": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F",
+                "parentId": "a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "z": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Z",
+                "parentId": "z"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {},
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "a": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "b": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F",
+                "parentId": "a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "c": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "d": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F",
+                "parentId": "c"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "e": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "F",
+                "parentId": "a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
+              }
+            },
+            "z": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Z"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000001-0000-mac"
               }
             }
           }
