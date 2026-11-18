@@ -23,6 +23,7 @@ extension BrowserModel {
         for tab in state.tabs where lock.covers(space: tab.spaceId) { putToSleep(tab.id) }
         if lock.appLocked {
             tabsSheetShown = false
+            settingsShown = false  // it holds the lock's own switches, and the list of the spaces
             commandBarShown = false
             downloads.sheetShown = false
         }

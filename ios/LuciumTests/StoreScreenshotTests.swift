@@ -56,14 +56,10 @@ final class StoreScreenshotTests: BrowserCoreTestCase {
         model.commandBarShown = false
         try await settle()
 
-        // The privacy sheet belongs to the tabs sheet (its "Privacy" button): it is shown over it, and both go away together.
-        model.tabsSheetShown = true
-        try await settle()
-        model.privacyPrompts.settingsShown = true
+        // The privacy page is a page of the settings screen: the screen opens on it.
+        model.openSettings(on: .privacy)
         try await shoot("05-privacy")
-        model.privacyPrompts.settingsShown = false
-        try await settle()
-        model.tabsSheetShown = false
+        model.settingsShown = false
         try await settle()
     }
 

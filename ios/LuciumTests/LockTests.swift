@@ -188,7 +188,7 @@ final class LockBrowserTests: BrowserCoreTestCase {
             let screens: [(String, AnyView)] = [
                 ("app", AnyView(LockScreen(kind: .app, lock: lock, unlock: {}))),
                 ("space", AnyView(LockScreen(kind: .space(name: "Work"), lock: lock, unlock: {}))),
-                ("settings", AnyView(LockSettingsSheet(lock: lock, spaces: spaces))),
+                ("settings", AnyView(NavigationStack { LockSettingsForm(lock: lock, spaces: spaces) })),
             ]
             for (name, view) in screens {
                 let controller = UIHostingController(rootView: view.environment(\.locale, Locale(identifier: language)))

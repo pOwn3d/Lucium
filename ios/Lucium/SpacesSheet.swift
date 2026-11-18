@@ -1,10 +1,26 @@
 import LuciumKit
 import SwiftUI
 
-/// "Espaces et profils" (mockup `Espaces et profils`): the spaces grouped by profile, the private tab, a new space and a new profile. A profile keeps
-/// cookies and site data; several spaces can share one.
+/// "Espaces et profils" as a sheet of its own: the context menu of a space's button and the tabs sheet open it. The settings screen holds the same list
+/// as one of its pages (`SpacesList`).
 struct SpacesSheet: View {
     @Bindable var model: BrowserModel
+
+    var body: some View {
+        NavigationStack {
+            SpacesList(model: model) { model.spacesSheetShown = false }
+                .toolbar { ToolbarItem(placement: .confirmationAction) { Button("spaces.done") { model.spacesSheetShown = false } } }
+        }
+        .presentationDetents([.large])
+    }
+}
+
+/// "Espaces et profils" (mockup `Espaces et profils`): the spaces grouped by profile, the private tab, a new space and a new profile. A profile keeps
+/// cookies and site data; several spaces can share one. It needs a navigation stack around it (the form of a space is pushed on it): the sheet makes one,
+/// and so does the settings screen. `close` leaves whatever holds the list, once the person has chosen a space to browse in.
+struct SpacesList: View {
+    @Bindable var model: BrowserModel
+    let close: () -> Void
     @State private var adding = false
     @State private var editing: String?  // the id of the space being changed
     @State private var askingProfileName = false
@@ -14,26 +30,22 @@ struct SpacesSheet: View {
     @State private var failure: BrowserModel.SpaceFailure?
 
     var body: some View {
-        NavigationStack {
-            List {
-                ForEach(model.state.profileIds, id: \.self) { profileId in profileSection(profileId) }
-                Section {} footer: { Text("spaces.profile.explain") }
-                privateSection
-                Section {
-                    row(icon: .plus, title: "spaces.new.space", accent: true) { adding = true }
-                    row(icon: .person, title: "spaces.new.profile", accent: true) {
-                        profileName = ""
-                        askingProfileName = true
-                    }
+        List {
+            ForEach(model.state.profileIds, id: \.self) { profileId in profileSection(profileId) }
+            Section {} footer: { Text("spaces.profile.explain") }
+            privateSection
+            Section {
+                row(icon: .plus, title: "spaces.new.space", accent: true) { adding = true }
+                row(icon: .person, title: "spaces.new.profile", accent: true) {
+                    profileName = ""
+                    askingProfileName = true
                 }
             }
-            .navigationTitle("spaces.title")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("spaces.done") { model.spacesSheetShown = false } } }
-            .navigationDestination(isPresented: $adding) { SpaceForm(model: model, mode: .add) }
-            .navigationDestination(item: $editing) { id in SpaceForm(model: model, mode: .edit(id)) }
         }
-        .presentationDetents([.large])
+        .navigationTitle("spaces.title")
+        .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(isPresented: $adding) { SpaceForm(model: model, mode: .add) }
+        .navigationDestination(item: $editing) { id in SpaceForm(model: model, mode: .edit(id)) }
         .alert("spaces.new.profile", isPresented: $askingProfileName) {
             TextField("spaces.profile.placeholder", text: $profileName)
             Button("spaces.create") { if case .failure(let error) = model.addProfile(named: profileName) { failure = error } }
@@ -83,7 +95,7 @@ struct SpacesSheet: View {
         let selected = space.id == model.activeSpace.id
         return Button {
             model.selectSpace(space.id)
-            model.spacesSheetShown = false
+            close()
         } label: {
             HStack(spacing: 12) {
                 SpacePastille(space: space, colors: model.colors(of: space), selected: selected)
@@ -220,7 +232,7 @@ struct SpaceForm: View {
                     Text("spaces.form.profile.explain")
                 }
             }
-            if let failure { Section { Text(SpacesSheet.message(of: failure)).foregroundStyle(.red) } }
+            if let failure { Section { Text(SpacesList.message(of: failure)).foregroundStyle(.red) } }
         }
         .navigationTitle(mode == .add ? LocalizedStringKey("spaces.new.space") : LocalizedStringKey("spaces.edit"))
         .navigationBarTitleDisplayMode(.inline)

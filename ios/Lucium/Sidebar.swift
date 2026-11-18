@@ -114,8 +114,6 @@ struct Sidebar: View {
     @Binding var sidebarShown: Bool
     @Binding var expandedFolders: Set<String>
     @State private var archiveShown = false
-    @State private var licensesShown = false
-    @State private var lockShown = false
     @State private var folderEdit: FolderEdit?
     @State private var folderName = ""
 
@@ -135,11 +133,6 @@ struct Sidebar: View {
             }
             // Bringing a page back shows it, and the list has nothing more to say.
             .onChange(of: model.activeTab?.id) { archiveShown = false }
-        }
-        .sheet(isPresented: $model.privacyPrompts.settingsShown) { PrivacySheet(model: model) }
-        .sheet(isPresented: $licensesShown) { LicensesSheet() }
-        .sheet(isPresented: $lockShown) {
-            if let lock = model.lock { LockSettingsSheet(lock: lock, spaces: model.spaces) }
         }
         .alert(isRenaming ? "folder.rename.title" : "folder.new.title", isPresented: namingShown) {
             TextField("folder.name", text: $folderName)
@@ -352,16 +345,8 @@ struct Sidebar: View {
         HStack(spacing: 2) {
             ChromeButton(icon: .archive, label: "archive.title") { archiveShown = true }
             ChromeButton(icon: .download, label: "page.downloads") { model.downloads.sheetShown = true }
-            Menu {
-                Button("tabs.privacy") { model.privacyPrompts.settingsShown = true }
-                if model.lock != nil { Button("tabs.lock") { lockShown = true } }
-                Button("tabs.licenses") { licensesShown = true }
-            } label: {
-                IconView(.more).frame(width: 44, height: 44).contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.primary.opacity(0.74))
-            .accessibilityLabel(Text("sidebar.more"))
+            // The gear takes the place of the "More" menu, whose three rows (privacy, lock, licenses) are pages of the settings now.
+            ChromeButton(icon: .settings, label: "settings.title") { model.openSettings() }
             // Few spaces sit at the right edge; more than the row holds scroll.
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 2) {

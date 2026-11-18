@@ -40,6 +40,9 @@ struct BrowserScreen: View {
             .sheet(isPresented: $model.spacesSheetShown) {
                 SpacesSheet(model: model)
             }
+            .sheet(isPresented: $model.settingsShown) {
+                SettingsScreen(model: model)
+            }
             .modifier(SiteDataFlow(model: model))
             .sheet(isPresented: Binding(get: { model.downloads.sheetShown }, set: { model.downloads.sheetShown = $0 })) {
                 DownloadsSheet(downloads: model.downloads)

@@ -22,19 +22,91 @@ public enum SearchEngine {
     public static func isUsable(_ template: String) -> Bool {
         template.contains("%s") && Library.isLoadable(template.replacingOccurrences(of: "%s", with: "q"))
     }
+
+    /// One of the engines the Mac offers in its list. The settings screen offers these and no other: an engine of one's own is typed on the Mac, where
+    /// the address can be checked, and a state that carries one keeps it until another is chosen.
+    public static func isPreset(_ template: String) -> Bool { presets.contains { $0.url == template } }
+}
+
+/// What the search engine setting of a profile says: the engine of its own, or, for a profile other than the default one, the default profile's
+/// (the Mac's "Comme le profil par défaut": the profile has no override).
+public enum SearchChoice: Equatable, Sendable {
+    case inherited
+    case engine(String)
 }
 
 extension BrowserState {
     /// The search template of a space's profile: its own, else the general one the Mac wrote, else DuckDuckGo (`profileSearch`). One that is not a
     /// web address with `%s` is ignored: a search must never load something else.
     public func searchTemplate(forSpace spaceId: String) -> String {
-        guard case .object(let settings)? = rest["settings"] else { return AddressResolver.defaultSearchTemplate }
-        if let profile = spaces.first(where: { $0.id == spaceId })?.profileId, case .object(let profiles)? = settings["profiles"],
-           case .object(let own)? = profiles[profile], let template = own.string("searchUrlTemplate"), SearchEngine.isUsable(template) {
-            return template
+        guard let profile = spaces.first(where: { $0.id == spaceId })?.profileId else { return generalSearchTemplate }
+        return searchTemplate(forProfile: profile)
+    }
+
+    /// The search template a profile searches with: its own override, else the general one, else DuckDuckGo.
+    public func searchTemplate(forProfile profileId: String) -> String { ownSearchTemplate(of: profileId) ?? generalSearchTemplate }
+
+    private var generalSearchTemplate: String {
+        guard case .object(let settings)? = rest["settings"], let general = settings.string("searchUrlTemplate"), SearchEngine.isUsable(general) else {
+            return AddressResolver.defaultSearchTemplate
         }
-        if let general = settings.string("searchUrlTemplate"), SearchEngine.isUsable(general) { return general }
-        return AddressResolver.defaultSearchTemplate
+        return general
+    }
+
+    /// The engine a profile chose for itself, when the override is one a search can use (`settings.profiles[id].searchUrlTemplate`).
+    private func ownSearchTemplate(of profileId: String) -> String? {
+        guard case .object(let settings)? = rest["settings"], case .object(let profiles)? = settings["profiles"],
+              case .object(let own)? = profiles[profileId], let template = own.string("searchUrlTemplate"), SearchEngine.isUsable(template) else { return nil }
+        return template
+    }
+
+    /// What the settings screen shows for a profile: its engine, or that it has none of its own. The default profile is the one the others fall back
+    /// on, so it always has an engine (the general one, which is where the Mac keeps it).
+    public func searchChoice(forProfile profileId: String) -> SearchChoice {
+        if let own = ownSearchTemplate(of: profileId) { return .engine(own) }
+        return profileId == Self.defaultProfileId ? .engine(generalSearchTemplate) : .inherited
+    }
+
+    /// Chooses the search engine of a profile, writing it where the Mac does (`profileEditor` of `CurrentProfileSettings.tsx`): the default profile's
+    /// engine is the general `settings.searchUrlTemplate`, any other profile's is `settings.profiles[id].searchUrlTemplate`, and going back to the
+    /// default profile's engine removes that override (and the profile's entry once nothing is left in it). Nothing else of the state is touched: the
+    /// other keys of a profile's entry (its download folder, its extensions) go back out as they came in. Only an engine of the Mac's list is accepted.
+    /// Answers whether the state changed: a profile that does not exist, an engine that is not in the list, the default profile "inheriting", and a choice
+    /// that is already the profile's all leave it as it was.
+    @discardableResult
+    public mutating func chooseSearchEngine(_ choice: SearchChoice, forProfile profileId: String) -> Bool {
+        guard profileIds.contains(profileId), choice != searchChoice(forProfile: profileId) else { return false }
+        let isDefault = profileId == Self.defaultProfileId
+        switch choice {
+        case .engine(let template): guard SearchEngine.isPreset(template) else { return false }
+        case .inherited: guard !isDefault else { return false }
+        }
+        // A state with no settings at all is a new profile for the privacy rules: a `settings` that only held an engine would turn it into an earlier
+        // one (the five keys of `PrivacySettings.newProfile` are written first, as `setProfileName` does).
+        if rest["settings"] == nil { PrivacySettings.newProfile.write(into: &self) }
+        var settings: [String: JSONValue] = [:]
+        if case .object(let current)? = rest["settings"] { settings = current }
+        var profiles: [String: JSONValue] = [:]
+        if case .object(let current)? = settings["profiles"] { profiles = current }
+        var own: [String: JSONValue] = [:]
+        if case .object(let current)? = profiles[profileId] { own = current }
+
+        var touchesProfiles = !isDefault
+        if isDefault {
+            if case .engine(let template) = choice { settings["searchUrlTemplate"] = .string(template) }
+            // The Mac reads a profile's own override before the general engine, even for the default profile: one left in the file would hide the choice.
+            touchesProfiles = own.removeValue(forKey: "searchUrlTemplate") != nil
+        } else if case .engine(let template) = choice {
+            own["searchUrlTemplate"] = .string(template)
+        } else {
+            own.removeValue(forKey: "searchUrlTemplate")
+        }
+        if touchesProfiles {
+            if own.isEmpty { profiles.removeValue(forKey: profileId) } else { profiles[profileId] = .object(own) }
+            settings["profiles"] = .object(profiles)
+        }
+        rest["settings"] = .object(settings)
+        return true
     }
 
     /// The name the person gave a profile (`profileNames`), or nil when it has none: the default profile and an unnamed one are told by the interface.

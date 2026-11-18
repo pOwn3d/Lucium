@@ -15,7 +15,6 @@ struct PrivacyPrompts {
     /// A line the screen shows for a few seconds: "this site does not answer over HTTPS, the page opens over HTTP".
     var notice: String?
     var refusal: Refusal?
-    var settingsShown = false
 }
 
 /// The web views' navigation delegate: every main-frame navigation goes through the privacy rules of the Mac (docs/ios.md, "Vie privée").
