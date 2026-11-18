@@ -1,7 +1,7 @@
 // The certificate written by hand (docs/synchronisation.md §6.3) against the vector both sides follow, and read by Node's own parser, which is what TLS will use.
 import { createPrivateKey, createPublicKey, generateKeyPairSync, X509Certificate } from 'node:crypto'
 import { describe, expect, it, vi } from 'vitest'
-import { assembleCertificate, fingerprintOf, keyMatchesCertificate, makeDeviceCertificate, randomSerial, signCertificate, toBeSigned } from './certificate'
+import { assembleCertificate, certificatePem, fingerprintOf, keyMatchesCertificate, makeDeviceCertificate, randomSerial, signCertificate, toBeSigned } from './certificate'
 import { pairingVectors } from './sync-vectors.test-support'
 
 const fromHex = (hex: string): Buffer => Buffer.from(hex, 'hex')
@@ -74,6 +74,16 @@ describe('a certificate made on this profile', () => {
     const forged = signCertificate(other.privateKey, createPublicKey(createPrivateKey({ key: made.privateKey, format: 'der', type: 'pkcs8' })), randomSerial())
     const forgedParsed = new X509Certificate(forged.certificate)
     expect(forgedParsed.verify(forgedParsed.publicKey)).toBe(false)
+  })
+})
+
+describe('certificatePem', () => {
+  it('writes the same bytes in the PEM form `tls` reads: 64 characters a line, the same fingerprint back', () => {
+    const pem = certificatePem(fromHex(c.certificateDerHex))
+    expect(pem.startsWith('-----BEGIN CERTIFICATE-----\n')).toBe(true)
+    expect(pem.endsWith('\n-----END CERTIFICATE-----\n')).toBe(true)
+    for (const line of pem.split('\n').slice(1, -2)) expect(line.length).toBeLessThanOrEqual(64)
+    expect(new X509Certificate(pem).fingerprint256.replaceAll(':', '').toLowerCase()).toBe(c.fingerprintHex)
   })
 })
 
