@@ -690,6 +690,23 @@ struct SyncExchangeTests {
         #expect(summary.refusedSent.map(\.id) == ["s2"])
     }
 
+    @Test func aNameThatAJavaScriptObjectAnswersToIsLeftOutSoThatTheMacDoesNotRefuseTheWholeSnapshot() async throws {
+        var state = try SyncStateFixtures.sample()
+        state.favorites.append(Favorite(id: "constructor", url: "https://odd.example/", title: "Odd", profileId: "default"))
+        state.folders.append(Folder(id: "__proto__", spaceId: "s1", name: "Proto"))
+        let rig = try rig(state: state)
+        defer { rig.cleanup() }
+        await rig.host.set(locked: ["toString"])
+        let (report, seen) = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()))
+        #expect(report?.outcome == .committed(at: now))
+        #expect(seen.phone.entities["favorite"]?.keys.contains("constructor") == false && seen.phone.entities["folder"]?.keys.contains("__proto__") == false)
+        #expect(seen.phone.order.values.allSatisfy { !$0.contains("constructor") && !$0.contains("__proto__") }, "and not in a list")
+        #expect(seen.phoneWithheld.isEmpty || !seen.phoneWithheld.contains("toString"))
+        let summary = try #require(await rig.host.summaries.first)
+        #expect(summary.refusedSent.map(\.id).sorted() == ["__proto__", "constructor"])
+        #expect(await rig.host.state.favorites.contains { $0.id == "constructor" }, "it stays on the phone, untouched")
+    }
+
     @Test func anEntityOfCodeThatAMacSendsIsRefusedAndTheSessionDoesNotGoThrough() async throws {
         let rig = try rig()
         defer { rig.cleanup() }
@@ -742,6 +759,16 @@ struct SyncExchangeTests {
         defer { withIt.cleanup() }
         _ = try await session(withIt, mac: mac, categories: [.structure, .openTabs])
         #expect(try #require(await withIt.host.summaries.first).openTabs?.map(\.id) == ["x"], "an address that is not a web page is left out")
+    }
+
+    @Test func anOpenTabWithAnIdentifierLongerThanTheMacKeepsIsLeftOut() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["structure", "openTabs"])
+        mac.openTabs = [SyncOpenTab(id: "ok", spaceId: "m1", url: "https://reading.example/", title: "Lu", lastActiveAt: 7), SyncOpenTab(id: String(repeating: "i", count: 129), spaceId: "m1", url: "https://long-id.example/", title: "Long", lastActiveAt: 8),
+                        SyncOpenTab(id: "long-space", spaceId: String(repeating: "s", count: 129), url: "https://long-space.example/", title: "Long", lastActiveAt: 9), SyncOpenTab(id: String(repeating: "i", count: 128), spaceId: "m1", url: "https://edge.example/", title: "Edge", lastActiveAt: 10)]
+        _ = try await session(rig, mac: mac, categories: [.structure, .openTabs])
+        #expect(try #require(await rig.host.summaries.first).openTabs?.map(\.url) == ["https://reading.example/", "https://edge.example/"], "128 characters is kept, 129 is not")
     }
 
     @Test func theOpenTabsAreNotSentWhenTheMacDidNotTickTheCategory() async throws {

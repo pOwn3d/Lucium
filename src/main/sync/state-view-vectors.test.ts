@@ -7,6 +7,7 @@ import type { SidebarState } from '@shared/model'
 import type { SyncCategory } from '@shared/sync-ipc'
 import type { SyncPatch } from '@shared/sidebar-sync'
 import type { SyncSnapshot } from '@shared/sync-snapshot'
+import { cleanSnapshot } from './inbound-filter'
 import { MarkBook } from './marks'
 import { buildPatch } from './patch'
 import { snapshotOf, trackedViewOf } from './state-view'
@@ -30,7 +31,14 @@ interface PatchVector {
   expect: SyncPatch
 }
 
-const vectors = JSON.parse(readFileSync(join(__dirname, '../../../ios/Contracts/sync-state-vectors.json'), 'utf8')) as { view: ViewVector[]; patch: PatchVector[] }
+interface CleanVector {
+  name: string
+  now: number
+  snapshot: SyncSnapshot
+  expect: { snapshot: SyncSnapshot; refused: Array<{ kind: string; id: string; reason: string }> }
+}
+
+const vectors = JSON.parse(readFileSync(join(__dirname, '../../../ios/Contracts/sync-state-vectors.json'), 'utf8')) as { view: ViewVector[]; patch: PatchVector[]; clean: CleanVector[] }
 
 describe('the state the synchronisation reads: the vectors shared with the iPhone', () => {
   it('has the cases the iPhone plays', () => {
@@ -70,5 +78,17 @@ describe('the patch a session writes: the vectors shared with the iPhone', () =>
 
   it.each(vectors.patch)('$name', (vector) => {
     expect(normalizedPatch(buildPatch(vector.frozen, vector.merged, new Set(vector.withheld)))).toEqual(normalizedPatch(vector.expect))
+  })
+})
+
+describe('the gate every snapshot goes through: the vectors shared with the iPhone', () => {
+  it('has the cases the iPhone plays', () => {
+    expect(vectors.clean.length).toBeGreaterThanOrEqual(4)
+  })
+
+  it.each(vectors.clean)('$name', (vector) => {
+    const cleaned = cleanSnapshot(vector.snapshot, vector.now)
+    expect(cleaned.snapshot).toEqual(vector.expect.snapshot)
+    expect([...cleaned.refused].sort((a, b) => (`${a.kind} ${a.id}` < `${b.kind} ${b.id}` ? -1 : 1))).toEqual(vector.expect.refused)
   })
 })

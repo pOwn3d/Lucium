@@ -1,5 +1,5 @@
 {
-  "comment": "The state of a device as the synchronisation reads it, and the patch a session writes (docs/synchronisation.md §8.3, §8.5, §10). `view`: the Mac-shaped `state`, the categories both devices ticked, the spaces set aside and the base give the entities (their fields, the marks are not compared: a fresh book gives one per field) and the lists of the snapshot a session freezes; played by src/main/sync/state-view-vectors.test.ts against the Mac's trackedViewOf and snapshotOf, and by LuciumKit (SyncStateTests.swift) against SyncStateView. `patch`: two snapshots and the spaces set aside give the patch (the `upserts` and `removals` are compared sorted by kind then id, the `remove` lists sorted); played against buildPatch and SyncPatch.build. Generated from the Mac's own code by a script outside the repository.",
+  "comment": "The state of a device as the synchronisation reads it, and the patch a session writes (docs/synchronisation.md §8.3, §8.5, §10). `view`: the Mac-shaped `state`, the categories both devices ticked, the spaces set aside and the base give the entities (their fields, the marks are not compared: a fresh book gives one per field) and the lists of the snapshot a session freezes; played by src/main/sync/state-view-vectors.test.ts against the Mac's trackedViewOf and snapshotOf, and by LuciumKit (SyncStateTests.swift) against SyncStateView. `clean`: the gate every snapshot goes through, what comes in and what this device sends (§9.3, §10): the entities, tombstones and lists it keeps and what it refuses (marks more than seven days ahead, local fields); played against cleanSnapshot and SyncInbound.clean. `patch`: two snapshots and the spaces set aside give the patch (the `upserts` and `removals` are compared sorted by kind then id, the `remove` lists sorted); played against buildPatch and SyncPatch.build. Generated from the Mac's own code by a script outside the repository.",
   "view": [
     {
       "base": null,
@@ -3389,6 +3389,199 @@
       },
       "name": "an unknown field of a known kind goes with the others",
       "withheld": []
+    }
+  ],
+  "clean": [
+    {
+      "expect": {
+        "refused": [
+          {
+            "id": "space/gone",
+            "kind": "tombstone",
+            "reason": "future-mark"
+          },
+          {
+            "id": "tab/far",
+            "kind": "tombstone",
+            "reason": "future-mark"
+          }
+        ],
+        "snapshot": {
+          "entities": {},
+          "order": {},
+          "orderStamps": {},
+          "tombstones": {
+            "tab": {
+              "edge": "1790604800000-0000-mac",
+              "today": "1790000000000-0000-mac",
+              "zero": "0"
+            }
+          }
+        }
+      },
+      "name": "a tombstone more than seven days ahead is dropped, one exactly seven days ahead and one of today are kept",
+      "now": 1790000000000,
+      "snapshot": {
+        "entities": {},
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {
+          "space": {
+            "gone": "1850480000000-0000-mac"
+          },
+          "tab": {
+            "edge": "1790604800000-0000-mac",
+            "far": "1790604800001-0000-mac",
+            "today": "1790000000000-0000-mac",
+            "zero": "0"
+          }
+        }
+      }
+    },
+    {
+      "expect": {
+        "refused": [
+          {
+            "id": "spaces",
+            "kind": "order",
+            "reason": "future-mark"
+          }
+        ],
+        "snapshot": {
+          "entities": {},
+          "order": {
+            "folders:s1:-": [
+              "f"
+            ],
+            "tabs:s1:-": [
+              "t"
+            ]
+          },
+          "orderStamps": {
+            "folders:s1:-": "1789999999995-0000-mac",
+            "tabs:s1:-": "1790604800000-0000-mac"
+          },
+          "tombstones": {}
+        }
+      },
+      "name": "a list whose mark of order is in the future is dropped with its mark, a list of today is kept",
+      "now": 1790000000000,
+      "snapshot": {
+        "entities": {},
+        "order": {
+          "folders:s1:-": [
+            "f"
+          ],
+          "spaces": [
+            "a",
+            "b"
+          ],
+          "tabs:s1:-": [
+            "t"
+          ]
+        },
+        "orderStamps": {
+          "folders:s1:-": "1789999999995-0000-mac",
+          "spaces": "1790604800001-0000-mac",
+          "tabs:s1:-": "1790604800000-0000-mac"
+        },
+        "tombstones": {}
+      }
+    },
+    {
+      "expect": {
+        "refused": [],
+        "snapshot": {
+          "entities": {},
+          "order": {},
+          "orderStamps": {
+            "tabs:s8:-": "1790000000001-0000-mac"
+          },
+          "tombstones": {}
+        }
+      },
+      "name": "a mark of order with no list is checked and kept the same way",
+      "now": 1790000000000,
+      "snapshot": {
+        "entities": {},
+        "order": {},
+        "orderStamps": {
+          "tabs:s8:-": "1790000000001-0000-mac",
+          "tabs:s9:-": "1790604800001-0000-mac"
+        },
+        "tombstones": {}
+      }
+    },
+    {
+      "expect": {
+        "refused": [
+          {
+            "id": "s2",
+            "kind": "space",
+            "reason": "future-mark"
+          }
+        ],
+        "snapshot": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "A"
+                },
+                "stamps": {
+                  "name": "1790000000000-0000-mac"
+                }
+              }
+            }
+          },
+          "order": {
+            "spaces": [
+              "s1",
+              "s2"
+            ]
+          },
+          "orderStamps": {
+            "spaces": "1790000000000-0000-mac"
+          },
+          "tombstones": {}
+        }
+      },
+      "name": "an entity with a mark in the future, a local field, and a list that holds nothing at all",
+      "now": 1790000000000,
+      "snapshot": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "image": "x.png",
+                "name": "A"
+              },
+              "stamps": {
+                "image": "1790000000000-0000-mac",
+                "name": "1790000000000-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "B"
+              },
+              "stamps": {
+                "name": "1790604800001-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {
+          "spaces": [
+            "s1",
+            "s2"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      }
     }
   ]
 }

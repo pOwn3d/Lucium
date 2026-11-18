@@ -126,7 +126,7 @@ public struct SyncExchangeBody: SyncSessionBody {
         guard case .object(let fields) = message, case .array(let items)? = fields["items"] else { return [] }
         return items.compactMap { item in
             guard case .object(let tab) = item, case .string(let id)? = tab["id"], case .string(let spaceId)? = tab["spaceId"], case .string(let url)? = tab["url"], case .string(let title)? = tab["title"],
-                  case .number(let last)? = tab["lastActiveAt"], let at = Int(exactly: last), SyncInbound.isWebAddress(.string(url)) else { return nil }
+                  case .number(let last)? = tab["lastActiveAt"], let at = Int(exactly: last), SyncInbound.isWebAddress(.string(url)), id.utf16.count <= 128, spaceId.utf16.count <= 128 else { return nil }
             return SyncOpenTab(id: id, spaceId: spaceId, url: url, title: title, lastActiveAt: at)
         }
     }
@@ -175,7 +175,7 @@ public struct SyncExchangeBody: SyncSessionBody {
         if !refusedSent.isEmpty { log("not sent: \(refusedSent.count) entities (\(Dictionary(grouping: refusedSent, by: \.reason.rawValue).mapValues(\.count)))") }
 
         // send
-        let parts = SyncSnapshotParts.parts(of: local, withheld: locked.sorted(by: { SyncCanonical.compare($0, $1) < 0 }))
+        let parts = SyncSnapshotParts.parts(of: local, withheld: locked.filter { !SyncSnapshot.namesOfAnObject.contains($0) }.sorted(by: { SyncCanonical.compare($0, $1) < 0 }))
         guard parts.count <= SyncLimits.maxParts else { throw SyncFailure(.tooLarge, "the snapshot needs more parts than the bound") }
         for part in parts { try await channel.send(.snapshotPart(.object(part))) }
         if context.categories.contains(.openTabs) {
@@ -230,7 +230,29 @@ public struct SyncExchangeBody: SyncSessionBody {
     /// others left out and counted. The whole snapshot is tried first, which is the case almost always; only a failure goes entity by entity, so that one odd value in
     /// the state cannot end every session with `bad-message`.
     static func vet(_ snapshot: SyncSnapshot, log: (String) -> Void) -> (snapshot: SyncSnapshot, refused: [SyncInbound.Refused]) {
-        if case .success = SyncSnapshot.read(snapshot.json) { return (snapshot, []) }
+        func isObjectName(_ name: String) -> Bool { SyncSnapshot.namesOfAnObject.contains(name) }
+        // Names the Mac refuses outright (a kind, an id, a list or a list id that a JavaScript object already answers to) are taken out first.
+        var named = snapshot
+        var inherited: [SyncInbound.Refused] = []
+        for (kind, byID) in snapshot.entities {
+            for (id, _) in byID where isObjectName(kind) || isObjectName(id) {
+                named.entities[kind]?[id] = nil
+                inherited.append(SyncInbound.Refused(kind: kind, id: id, reason: .invalidValue))
+            }
+            if named.entities[kind]?.isEmpty == true { named.entities[kind] = nil }
+        }
+        for (kind, byID) in snapshot.tombstones {
+            for (id, _) in byID where isObjectName(kind) || isObjectName(id) { named.tombstones[kind]?[id] = nil }
+            if named.tombstones[kind]?.isEmpty == true { named.tombstones[kind] = nil }
+        }
+        for (key, ids) in snapshot.order where isObjectName(key) || ids.contains(where: isObjectName) {
+            named.order[key] = nil
+            named.orderStamps[key] = nil
+        }
+        for key in snapshot.orderStamps.keys where isObjectName(key) { named.orderStamps[key] = nil }
+        if !inherited.isEmpty || named != snapshot { log("a name the Mac would refuse was left out: \(inherited.count) entities") }
+        let snapshot = named
+        if case .success = SyncSnapshot.read(snapshot.json) { return (snapshot, inherited) }
         var kept = SyncSnapshot()
         var refused: [SyncInbound.Refused] = []
         for (kind, byID) in snapshot.entities {
@@ -258,6 +280,7 @@ public struct SyncExchangeBody: SyncSessionBody {
                 log("a list that the Mac would not read was left out: \(key)")
             }
         }
+        refused += inherited
         refused.sort { a, b in
             let kind = SyncCanonical.compare(a.kind, b.kind)
             return kind != 0 ? kind < 0 : SyncCanonical.compare(a.id, b.id) < 0

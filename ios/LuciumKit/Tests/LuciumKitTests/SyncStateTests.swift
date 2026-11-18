@@ -71,6 +71,20 @@ struct SyncStateVectorTests {
         }
     }
 
+    @Test func theGateKeepsAndRefusesWhatTheMacsCodeKeptAndRefused() throws {
+        let cases = try #require(vectors["clean"]).items
+        #expect(cases.count >= 4)
+        for item in cases {
+            let name = item["name"]?.text ?? "?"
+            guard case .number(let now)? = item["now"] else { Issue.record("\(name): no clock"); continue }
+            let cleaned = SyncInbound.clean(try Contract.snapshot(item["snapshot"]), now: Int(now))
+            let expect = try #require(item["expect"])
+            #expect(cleaned.snapshot == (try Contract.snapshot(expect["snapshot"])), "\(name): what is kept")
+            let wanted = (expect["refused"]?.items ?? []).map { "\($0["kind"]?.text ?? "") \($0["id"]?.text ?? "") \($0["reason"]?.text ?? "")" }
+            #expect(cleaned.refused.map { "\($0.kind) \($0.id) \($0.reason.rawValue)" }.sorted() == wanted.sorted(), "\(name): what is refused")
+        }
+    }
+
     /// The patch as the vectors hold it: upserts and removals sorted by kind then id, the lists of fields to remove sorted.
     private func normalized(_ patch: JSONValue) -> JSONValue {
         func key(_ item: JSONValue) -> String { (item["kind"]?.text ?? "") + (item["id"]?.text ?? "") }

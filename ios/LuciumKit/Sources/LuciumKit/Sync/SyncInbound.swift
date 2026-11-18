@@ -128,12 +128,17 @@ public enum SyncInbound {
         stamp == SyncStamp.zero ? 0 : (Int(stamp.prefix(13)) ?? 0)
     }
 
+    private static func marksTheFuture(_ stamp: String, now: Int) -> Bool { milliseconds(of: stamp) > now + futureRefusalMilliseconds }
+
     private static func isInTheFuture(_ entity: SyncEntity, now: Int) -> Bool {
-        entity.stamps.values.contains { milliseconds(of: $0) > now + futureRefusalMilliseconds }
+        entity.stamps.values.contains { marksTheFuture($0, now: now) }
     }
 
-    /// A snapshot with the entities that pass: the refused ones are dropped (and listed so that the session counts and logs them), and the local fields of the
-    /// others are taken off, with their marks. The tombstones, the orders and what they mark are left to the merge, which treats an id it does not know as nothing.
+    /// A snapshot with what passes: the refused entities are dropped (and listed so that the session counts and logs them), and the local fields of the others are
+    /// taken off, with their marks. A tombstone, or a list with its mark of order, whose mark is more than seven days ahead is dropped and listed the same way (kind
+    /// `tombstone` or `order`, §9.3: the merge keeps the greatest mark it sees and the book never lets its clock fall behind one it has seen, so a single such mark
+    /// would delete what it names and push the clock out of the reach of every other device). What the others are made of is left to the merge, which treats an id
+    /// it does not know as nothing.
     public static func clean(_ snapshot: SyncSnapshot, now: Int) -> Cleaned {
         var refused: [Refused] = []
         var entities: [String: [String: SyncEntity]] = [:]
@@ -152,8 +157,30 @@ public enum SyncInbound {
                 }
             }
         }
-        var cleaned = snapshot
-        cleaned.entities = entities
+        var tombstones: [String: [String: String]] = [:]
+        for (kind, byID) in snapshot.tombstones {
+            for (id, stamp) in byID {
+                if marksTheFuture(stamp, now: now) {
+                    refused.append(Refused(kind: "tombstone", id: "\(kind)/\(id)", reason: .futureMark))
+                    continue
+                }
+                tombstones[kind, default: [:]][id] = stamp
+            }
+        }
+        var order: [String: [String]] = [:]
+        var orderStamps: [String: String] = [:]
+        for (key, ids) in snapshot.order {
+            let stamp = snapshot.orderStamps[key]
+            if let stamp, marksTheFuture(stamp, now: now) {
+                refused.append(Refused(kind: "order", id: key, reason: .futureMark))
+                continue
+            }
+            order[key] = ids
+            if let stamp { orderStamps[key] = stamp }
+        }
+        // A mark of order with no list (a list that went empty keeps none, §11.4) is checked and kept the same way.
+        for (key, stamp) in snapshot.orderStamps where snapshot.order[key] == nil && !marksTheFuture(stamp, now: now) { orderStamps[key] = stamp }
+        let cleaned = SyncSnapshot(entities: entities, tombstones: tombstones, order: order, orderStamps: orderStamps)
         refused.sort { a, b in
             let kind = SyncCanonical.compare(a.kind, b.kind)
             return kind != 0 ? kind < 0 : SyncCanonical.compare(a.id, b.id) < 0

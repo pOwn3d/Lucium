@@ -163,6 +163,19 @@ struct SyncInboundTests {
         #expect(cleaned.refused == [.init(kind: "space", id: "s1", reason: .futureMark)])
     }
 
+    @Test func aTombstoneOrAListMoreThanSevenDaysAheadIsDroppedAndListedAndOneAtTheLimitIsKept() {
+        let week = SyncInbound.futureRefusalMilliseconds
+        var snapshot = SyncSnapshot()
+        snapshot.tombstones = ["tab": ["far": mark(now + week + 1), "edge": mark(now + week)], "space": ["gone": mark(now + 100 * week)]]
+        snapshot.order = ["spaces": ["a"], "tabs:s1:-": ["t"]]
+        snapshot.orderStamps = ["spaces": mark(now + week + 1), "tabs:s1:-": mark(now + week), "lonely": mark(now + week + 1), "kept": mark(now)]
+        let cleaned = SyncInbound.clean(snapshot, now: now)
+        #expect(cleaned.snapshot.tombstones == ["tab": ["edge": mark(now + week)]], "a deletion dated in the year 2286 would delete what it names and push the clock of the marks out of reach")
+        #expect(cleaned.snapshot.order == ["tabs:s1:-": ["t"]])
+        #expect(cleaned.snapshot.orderStamps == ["tabs:s1:-": mark(now + week), "kept": mark(now)], "a mark of order with no list is checked the same way")
+        #expect(cleaned.refused == [.init(kind: "order", id: "spaces", reason: .futureMark), .init(kind: "tombstone", id: "space/gone", reason: .futureMark), .init(kind: "tombstone", id: "tab/far", reason: .futureMark)])
+    }
+
     @Test func theMarkZeroIsNotATime() {
         var snapshot = SyncSnapshot()
         snapshot.entities = ["space": ["s1": SyncEntity(fields: ["name": .string("A")], stamps: ["name": "0"])]]
