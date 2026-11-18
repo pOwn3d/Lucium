@@ -126,16 +126,86 @@ public enum SyncMessageCodec {
     // MARK: Reading
 
     public static func decode(_ content: Data) -> Result<SyncEnvelope, SyncFailure> {
+        var unlimited = Int.max
+        return decode(content, valuesLeft: &unlimited)
+    }
+
+    /// Whether the JSON text holds a `\uD800` to `\uDFFF` escape that is not half of a pair: a text with a lone UTF-16 surrogate. A Swift string cannot hold one, so
+    /// the phone refuses it (`bad-message`), on purpose and not because of what a decoder happens to do: a decoder that put the replacement character in its place would
+    /// make the digest of the phone differ from the Mac's, which writes the surrogate as it was (docs/synchronisation.md §7.1; review n° 15).
+    static func hasLoneSurrogate(_ content: Data) -> Bool {
+        let bytes = [UInt8](content)
+        func hex(at start: Int) -> Int? {
+            guard start + 4 <= bytes.count else { return nil }
+            var value = 0
+            for index in start..<(start + 4) {
+                let byte = bytes[index]
+                let digit: Int
+                switch byte {
+                case 0x30...0x39: digit = Int(byte) - 0x30
+                case 0x41...0x46: digit = Int(byte) - 0x41 + 10
+                case 0x61...0x66: digit = Int(byte) - 0x61 + 10
+                default: return nil
+                }
+                value = value * 16 + digit
+            }
+            return value
+        }
+        var index = 0
+        while index < bytes.count {
+            guard bytes[index] == 0x5C else { index += 1; continue }  // a backslash
+            guard index + 1 < bytes.count else { return false }
+            if bytes[index + 1] != 0x75 {  // `\\`, `\"`, `\n`…: the escape is two bytes, and the next one is not the start of another
+                index += 2
+                continue
+            }
+            guard let unit = hex(at: index + 2) else { return false }
+            index += 6
+            if (0xD800...0xDBFF).contains(unit) {
+                // A high half must be followed at once by a low half.
+                guard index + 5 < bytes.count, bytes[index] == 0x5C, bytes[index + 1] == 0x75, let next = hex(at: index + 2), (0xDC00...0xDFFF).contains(next) else { return true }
+                index += 6
+            } else if (0xDC00...0xDFFF).contains(unit) {
+                return true
+            }
+        }
+        return false
+    }
+
+    /// `valuesLeft` is what a connection may still hold in values (`SyncLimits.maxSessionValues`): each message read spends its own, and one that goes over what is
+    /// left, or over a frame's bound, is `too-large` (nothing is spent for it).
+    public static func decode(_ content: Data, valuesLeft: inout Int) -> Result<SyncEnvelope, SyncFailure> {
         let bad = { (why: String) in Result<SyncEnvelope, SyncFailure>.failure(SyncFailure(.badMessage, why)) }
+        guard !hasLoneSurrogate(content) else { return bad("a text with a lone UTF-16 surrogate") }
         guard let value = try? JSONDecoder().decode(JSONValue.self, from: content) else { return bad("not JSON") }
         guard case .object(let fields) = value, !hasProblem(value, depth: 1) else { return bad("not an object, or a value the rules refuse") }
+        let count = valueCount(value, stopAbove: min(SyncLimits.maxFrameValues, valuesLeft))
+        guard count <= min(SyncLimits.maxFrameValues, valuesLeft) else { return .failure(SyncFailure(.tooLarge, "a message that holds more values than a frame or a connection may")) }
         guard let number = integer(fields["n"], minimum: 1), case .string(let type)? = fields["t"], let sentVersion = integer(fields["v"], minimum: Int.min) else {
             return bad("no number, no type, or no version")
         }
         guard sentVersion == version else { return .failure(SyncFailure(.unsupportedVersion, "version \(sentVersion)")) }
         guard knownTypes.contains(type) else { return .failure(SyncFailure(.unknownType, "type \(type.prefix(40))")) }
         guard let message = parse(type: type, fields: fields, whole: value) else { return bad("the fields of \(type)") }
+        valuesLeft -= count
         return .success(SyncEnvelope(number: number, message: message))
+    }
+
+    /// How many values a JSON value holds (each one counted once, the keys of an object not at all): `{"v":1,"t":"bye","n":1}` holds four. The count stops as soon as it is
+    /// over `stopAbove`: nothing past it is looked at.
+    static func valueCount(_ value: JSONValue, stopAbove limit: Int) -> Int {
+        var count = 0
+        var stack = [value]
+        while let next = stack.popLast() {
+            count += 1
+            if count > limit { return count }
+            switch next {
+            case .array(let items): stack.append(contentsOf: items)
+            case .object(let members): stack.append(contentsOf: members.values)
+            default: break
+            }
+        }
+        return count
     }
 
     private static let knownTypes: Set<String> = ["hello", "pair.challenge", "pair.request", "pair.accept", "snapshot.part", "snapshot.end", "open-tabs", "result", "commit", "unpair", "error", "bye"]
@@ -317,8 +387,20 @@ public enum SyncMessageCodec {
             members["fatal"] = .bool(fatal)
             if let supported { members["supported"] = .array(supported.map { .number(Double($0)) }) }
             if let detail { members["detail"] = .string(detail) }
-        default:
-            throw SyncFailure(.internal, "the phone does not write \(message.type) here")
+        case .snapshotPart(let body), .openTabs(let body):
+            // The fields of the part (or of the list) as the session built them; the envelope is the codec's and overwrites whatever the body says of it.
+            guard case .object(let fields) = body else { throw SyncFailure(.internal, "the body of \(message.type) is not an object") }
+            members.merge(fields) { _, new in new }
+            members["v"] = .number(Double(version))
+            members["t"] = .string(message.type)
+            members["n"] = .number(Double(number))
+        case .snapshotEnd(let entityCount, let digest):
+            members["entityCount"] = .number(Double(entityCount))
+            members["digest"] = .string(digest)
+        case .result(let digest), .commit(let digest):
+            members["digest"] = .string(digest)
+        case .pairChallenge, .pairAccept:
+            throw SyncFailure(.internal, "the phone does not write \(message.type)")
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
