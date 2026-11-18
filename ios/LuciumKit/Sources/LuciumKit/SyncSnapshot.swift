@@ -97,6 +97,12 @@ public struct SyncSnapshotProblem: Error, Equatable, Sendable, CustomStringConve
 }
 
 public extension SyncSnapshot {
+    /// The names a JavaScript object already answers to (`name in Object.prototype`, and `prototype`): the Mac refuses a kind, an id, a list name or a list id that is one
+    /// (a part that names `"kind": "__proto__"` would write the next entity into the prototype of every object of its process). A dictionary has no such thing, so this
+    /// side reads them; but a phone that sent one would end every session with `bad-message`, so it leaves its own entity, tombstone or list out (`SyncExchangeBody`).
+    static let namesOfAnObject: Set<String> = ["prototype", "constructor", "__proto__", "__defineGetter__", "__defineSetter__", "__lookupGetter__", "__lookupSetter__", "hasOwnProperty",
+                                               "isPrototypeOf", "propertyIsEnumerable", "toLocaleString", "toString", "valueOf"]
+
     /// The bounds of §7.5 that apply to the form (the sizes of the frames are the message layer's).
     enum Limits {
         public static let maxEntities = 100_000
