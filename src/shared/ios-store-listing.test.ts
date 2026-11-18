@@ -147,6 +147,17 @@ describe('the notes for the review', () => {
     }
   })
 
+  it('say the only encryption is what iOS provides, which the Info.plist declares exempt, and no source has a cipher of its own', () => {
+    // "The only encryption is what iOS provides for HTTPS (WebKit)": with the key at false, App Store Connect takes that as the answer for every build.
+    expect(notes).toContain('The only encryption is what iOS provides for HTTPS (WebKit)')
+    expect(source('ios/Lucium/Info.plist')).toMatch(/<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/)
+    // CryptoKit is imported, but only for SHA-256 identifiers: a hash is not a cipher. A cipher, a symmetric key or a sealed box would make the answer false.
+    const cipher = /\b(?:CCCrypt|CCCryptorCreate|SymmetricKey|AES|ChaChaPoly|SealedBox|SecKeyCreateEncryptedData|SecKeyCreateDecryptedData)\b/
+    for (const { path, code } of swiftSources()) {
+      expect(cipher.test(code), `${path} has a cipher of its own, which the declaration "exempt encryption" denies`).toBe(false)
+    }
+  })
+
   it('name the Face ID text the app declares, and the privacy manifest it ships', () => {
     expect(notes).toContain('LocalAuthentication')
     expect(source('ios/project.yml')).toContain('INFOPLIST_KEY_NSFaceIDUsageDescription')

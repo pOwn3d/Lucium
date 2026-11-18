@@ -503,7 +503,7 @@ Pour être proposé dans l'app Réglages d'iOS, à la rubrique « Navigateur par
 - **Catégorie** : « Utilities » cite la navigation web parmi ses exemples (page d'Apple lue) ; la catégorie doit refléter l'expérience principale (règle 2.3).
 - **Captures** : iPhone « Dynamic Island » (1179 × 2556 ou 1206 × 2622) et iPad 13 pouces (2064 × 2752 ou 2048 × 2732) ; jusqu'à 10 par taille.
 - **Statut de « trader » (loi européenne sur les services numériques)** : à déclarer **même sans distribution dans l'UE** ; si l'on est « trader », l'adresse, le téléphone et le courriel s'affichent sur la fiche (décision du titulaire de l'équipe : ConsilioWeb).
-- **Conformité à l'exportation du chiffrement** : voir §13.4 (phase 2). Pour la v1, la clé `ITSAppUsesNonExemptEncryption` est à valider : **la page d'Apple n'a pas pu être lue**, la documentation lue ne prévoit pas d'exemption « HTTPS seulement » explicite.
+- **Conformité à l'exportation du chiffrement** : voir §13.4 (phase 2). Pour la v1, la clé `ITSAppUsesNonExemptEncryption` est posée à `false` dans `ios/Lucium/Info.plist` (décision du chef de projet, 18 novembre 2026) : l'application n'utilise que le chiffrement d'iOS pour HTTPS (WebKit), et CryptoKit ne fait que des empreintes SHA-256 ; un garde Vitest refuse une API de chiffrement dans les sources. **La page d'Apple n'a pas pu être lue** et la documentation lue ne prévoit pas d'exemption « HTTPS seulement » explicite : à relire avant la première soumission.
 
 ## 10. Signature et TestFlight
 
