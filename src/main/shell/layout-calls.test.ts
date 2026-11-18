@@ -63,7 +63,7 @@ describe('the buttons of the system over the right end of a window (Windows)', (
   const spaceId = base.activeSpaceId
 
   /** A window with a page on screen, its bar the colour `color` (none: the default bar) and its settings changed by `settings`. */
-  function windowOn(o: { color?: string; settings?: Partial<Settings>; split?: boolean; dark?: boolean; private?: boolean } = {}) {
+  function windowOn(o: { color?: string; settings?: Partial<Settings>; split?: boolean; dark?: boolean; private?: boolean; sidebar?: { right: boolean; docked: boolean } } = {}) {
     const tab = { id: 'a', spaceId, url: 'https://a.example/', title: 'a', pinned: false, createdAt: 1, lastActiveAt: 2 }
     const state = {
       ...base,
@@ -77,6 +77,7 @@ describe('the buttons of the system over the right end of a window (Windows)', (
       store: { get: () => state },
       runtime: { tabs: { a: o.color ? { color: o.color } : {} }, canGoBack: false, canGoForward: false },
       systemDark: o.dark ?? true,
+      placement: () => o.sidebar ?? { right: false, docked: false },
       k: () => 1,
       isPrivate: () => o.private === true,
       win: {}
@@ -122,6 +123,17 @@ describe('the buttons of the system over the right end of a window (Windows)', (
     sync(windowOn({ settings: { showToolbar: false }, color: '#101010' }))
     sync(windowOn({ split: true, color: '#ffffff' }))
     expect(given().map((o) => o.symbolColor)).toEqual([given()[0]!.symbolColor, CONTROLS_SYMBOL.onDark])
+  })
+
+  it('read on the space, not on the bar of the page, when the sidebar is shown at the right: the buttons are over the sidebar then', () => {
+    reset()
+    // A dark window with a pale page bar: the bar asks for dark ink, the sidebar (the space, dark here) for light ink.
+    const pale = { color: '#ffffff', dark: true }
+    sync(windowOn({ ...pale, sidebar: { right: true, docked: false } }))
+    sync(windowOn({ ...pale, sidebar: { right: true, docked: false }, settings: { sidebarVisible: false } }))
+    sync(windowOn({ ...pale, sidebar: { right: true, docked: true } }))
+    sync(windowOn({ ...pale, sidebar: { right: false, docked: false } }))
+    expect(given().map((o) => o.symbolColor)).toEqual([CONTROLS_SYMBOL.onDark, CONTROLS_SYMBOL.onLight, CONTROLS_SYMBOL.onLight, CONTROLS_SYMBOL.onLight])
   })
 
   it('are asked again on a system that did nothing with them (the platform says so), and not at all where there are none', () => {

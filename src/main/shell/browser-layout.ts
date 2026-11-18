@@ -399,8 +399,8 @@ export abstract class BrowserLayout extends BrowserPages {
 
   /**
    * The system's buttons over the right end of the window (Windows) follow what is behind them: the ink of their symbols reads on the bar of the page on
-   * screen, on a split view's dark strips, or on the space itself when the toolbar is hidden, and their height covers the toolbar's row and the border above
-   * it. Told to the window only when it changes: the layout runs at every change of the state.
+   * screen, on a split view's dark strips, or on the space itself when the toolbar is hidden or the sidebar is at the right (they are over it), and their
+   * height covers the toolbar's row and the border above it. Told to the window only when it changes: the layout runs at every change of the state.
    */
   private syncControlsOverlay(): void {
     const platform = currentPlatform()
@@ -408,11 +408,14 @@ export abstract class BrowserLayout extends BrowserPages {
     const state = this.store.get()
     const active = activeTab(state)
     const space = state.spaces.find((s) => s.id === (active?.spaceId ?? state.activeSpaceId))
+    // With the sidebar shown at the right the buttons are over its first row, on the space itself, not over the toolbar of the page card.
+    const { right, docked } = this.placement()
+    const overSidebar = right && state.settings.sidebarVisible && !docked
     const overlay = controlsOverlay({
       kind: 'browser',
       margin: pageMargin(state.settings),
       scale: this.k(),
-      toolbar: state.settings.showToolbar,
+      toolbar: state.settings.showToolbar && !overSidebar,
       split: !!active && !!splitFor(state, active.id),
       pageColor: active ? this.runtime.tabs[active.id]?.color : undefined,
       appearance: space ? resolveAppearance(space.theme, this.systemDark) : 'dark',
