@@ -72,6 +72,9 @@ const KNOWN: readonly string[] = [
   'settings-guide.ts RECOMMENDED_AWAY_FROM_DEFAULTS',
   'site-data.ts siteScore',
   'space-image.ts squareCrop',
+  // The merge of the synchronisation (card 446): the session of the Mac (card 444) and of the iPhone (card 445) call them; remove these lines when they do.
+  'sync-merge.ts mergeSnapshots',
+  'sync-merge.ts otherSide',
   'tab-state.ts tabStateLegend',
   'tab-tree.ts TREE_INDENT',
   'tab-tree.ts treeDepth',
