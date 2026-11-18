@@ -667,7 +667,7 @@ export function PeekHeader({ rect, stage }: { rect: Rect; stage?: Rect }) {
 
 // ---------- Archive ----------
 
-const archiveSources = (): Array<[ArchiveSource | 'all', string]> => [['all', t('history-days.tout')], ['auto', t('menu.automatique')], ['manual', t('panels.manuel')], ['little', t('panels.little-source')]]
+const archiveSources = (): Array<[ArchiveSource | 'all', string]> => [['all', t('history-days.tout')], ['auto', t('menu.automatique')], ['manual', t('panels.manuel')], ['little', t('panels.little-source')], ['sync', t('panels.sync-source')]]
 
 /** The archive, on the template of the panels of a list (templates/ListPanel.tsx): a filter, the origin chips, the pages by day, "Fermer". */
 export function ArchivePanel() {

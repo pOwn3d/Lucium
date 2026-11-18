@@ -5,7 +5,7 @@ import { defaultTheme } from './theme'
 import type { SidebarState } from './model'
 import type { Ctx } from './sidebar-actions'
 import { normalize } from './sidebar-state'
-import { SYNCED_SETTING_KEYS, type PatchKind, type PatchUpsert, type SyncPatch } from './sidebar-sync'
+import { SYNCED_SETTING_KEYS, archiveOpenTabsOfRemovedSpaces, type PatchKind, type PatchUpsert, type SyncPatch } from './sidebar-sync'
 
 type Entity = Record<string, unknown>
 
@@ -90,11 +90,17 @@ export function referenceApplySyncPatch(state: SidebarState, patch: SyncPatch, c
     const name = COLLECTION[change.kind]
     draft[name] = upsert(lists()[name], change, ctx.now)
   }
+  const removedSpaces = new Set<unknown>()
   for (const removal of patch.removals) {
     const name = COLLECTION[removal.kind]
     const entity = lists()[name].find((one) => one['id'] === removal.id)
-    if (entity !== undefined && unchanged(entity, removal.expect, Object.keys(removal.expect))) draft[name] = lists()[name].filter((one) => one['id'] !== removal.id)
+    if (entity !== undefined && unchanged(entity, removal.expect, Object.keys(removal.expect))) {
+      draft[name] = lists()[name].filter((one) => one['id'] !== removal.id)
+      if (removal.kind === 'space') removedSpaces.add(removal.id)
+    }
   }
+  // The open tabs of a removed space go to the archive (review n° 13): the one rule the slow reducer shares with the fast one.
+  archiveOpenTabsOfRemovedSpaces(draft, removedSpaces, ctx)
   for (const [key, ids] of Object.entries(patch.order)) {
     const collection = collectionOf(key)
     const member = groupOf(key)
