@@ -21,7 +21,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **Default browser, Windows**: Settings no longer says Lucium is the default browser while Windows opens links in another one. The state is what Windows holds for http and https, read again when you come back, and “Make Default Browser” opens Windows Settings on Lucium, where the choice is yours.
 - **Spelling dictionaries, Windows and Linux**: Chromium no longer downloads the dictionary of the system language from its CDN at the first launch, with the checker off. A session starts without a language: nothing is fetched until you switch Spelling on in the Edit menu.
 - **Extensions without a service worker**: a click on the icon of an extension made of pages only (a popup, no background worker) opens its popup at once instead of after 10 seconds, and Lucium no longer logs a failed start for it. It reads the manifest, which says there is no worker to wait for.
-- **Menu bar, reopening a closed tab**: when the menu was asked to change while it was still being built, the older menu could be installed last, and “Reopen Last Closed Tab” stayed greyed out after a tab was archived until something else changed the menu. A change asked during a rebuild is now noted, and the menu is read again once it is in.
+- **Menu bar, reopening a closed tab**: “Reopen Last Closed Tab” could stay greyed out after a tab was archived, when the menu was asked to change while it was still being built. A change asked during a rebuild is now noted, and the menu is read again once it is in.
 
 ## [1.1.3] - 2026-11-17
 
