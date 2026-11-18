@@ -10,6 +10,8 @@ import Foundation
 ///   - a tab is accepted only if it is pinned and not private (`not-pinned`, `private`): the Today tabs are not entities;
 ///   - an address is accepted only if it is an http or https address (`invalid-url`): a page, never a script or a file;
 ///   - the fields of the class "local" are taken off: a device does not tell this one what its local files are;
+///   - the search engine is accepted only if it is one of those the Mac offers (`SearchEngine.presets`, all https): an engine of one's own stays where it is, and a device cannot send
+///     the searches of another to a server of its choice (`invalid-value`; review n° 10);
 ///   - an entity of a kind this version does not know, and a field of a known kind it does not know, cross as they are (§11.6);
 ///   - the profile of a space or a favourite must be an identifier of the Mac (`BrowserState.isProfileId`): the key of a list is made of it (`invalid-value`; review n° 16);
 ///   - the tombstones of a kind that is code or a secret are refused (`never-synced`), and a side keeps at most `maxTombstonesPerSnapshot` of the newest (review n° 14).
@@ -91,7 +93,7 @@ public enum SyncInbound {
             return true
         case "searchUrlTemplate":
             guard case .string(let template)? = value else { return true }
-            return !isWebAddress(value) || !template.contains("%s") || template.utf16.count > 2048
+            return !SearchEngine.isPreset(template)
         case "profileNames":
             guard case .object(let names)? = value, names.count <= 64 else { return true }
             return !names.allSatisfy { id, name in

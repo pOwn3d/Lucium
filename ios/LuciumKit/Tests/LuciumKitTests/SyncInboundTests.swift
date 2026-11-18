@@ -109,7 +109,7 @@ struct SyncInboundTests {
         all.append(Setting(key: "protectionBaseline", value: .string("renforcee")))
         all.append(Setting(key: "autoArchiveHours", value: .number(0)))
         all.append(Setting(key: "autoArchiveHours", value: .number(Double(24 * 366))))
-        all.append(Setting(key: "searchUrlTemplate", value: .string("https://example.com/?q=%s")))
+        all.append(Setting(key: "searchUrlTemplate", value: .string("https://duckduckgo.com/?q=%s")))
         all.append(Setting(key: "profileNames", value: .object(["work": .string("Travail"), "perso": .string("Perso")])))
         return all
     }()

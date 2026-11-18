@@ -2083,6 +2083,14 @@
       ]
     }
   },
+  "searchEngines": [
+    "https://duckduckgo.com/?q=%s",
+    "https://www.google.com/search?q=%s",
+    "https://www.bing.com/search?q=%s",
+    "https://search.brave.com/search?q=%s",
+    "https://www.qwant.com/?q=%s",
+    "https://www.ecosia.org/search?q=%s"
+  ],
   "settingsAllowed": [
     "httpsUpgrade",
     "sendGpc",
@@ -2294,6 +2302,65 @@
         "id": "searchUrlTemplate",
         "fields": {
           "value": "https://duckduckgo.com/?q=%s"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "a search template of an engine of one's own: it stays on the device that has it",
+      "entity": {
+        "kind": "setting",
+        "id": "searchUrlTemplate",
+        "fields": {
+          "value": "https://search.example.com/?q=%s"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a search template of a known engine, in clear http",
+      "entity": {
+        "kind": "setting",
+        "id": "searchUrlTemplate",
+        "fields": {
+          "value": "http://duckduckgo.com/?q=%s"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a search template that starts as a known engine and goes on to another host",
+      "entity": {
+        "kind": "setting",
+        "id": "searchUrlTemplate",
+        "fields": {
+          "value": "https://duckduckgo.com/?q=%s&redirect=https://evil.example/"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a search template of another engine of the list",
+      "entity": {
+        "kind": "setting",
+        "id": "searchUrlTemplate",
+        "fields": {
+          "value": "https://search.brave.com/search?q=%s"
         },
         "stamps": {}
       },

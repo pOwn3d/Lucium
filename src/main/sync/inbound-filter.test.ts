@@ -1,7 +1,8 @@
 // What an entity that comes in may carry (docs/synchronisation.md §8.5, §10): the vectors of the specification, and what they do not say.
 import { describe, expect, it } from 'vitest'
+import { SEARCH_ENGINES } from '@shared/model'
 import type { SyncSnapshot } from '@shared/sync-snapshot'
-import { cleanSnapshot, filterEntity, isWebAddress } from './inbound-filter'
+import { cleanSnapshot, filterEntity, isKnownSearchTemplate, isWebAddress } from './inbound-filter'
 import { MAX_TOMBSTONES_PER_SNAPSHOT, STAMP_FUTURE_REFUSE_MS } from './limits'
 import { entityOfVector, messageVectors } from './sync-vectors.test-support'
 
@@ -42,6 +43,11 @@ describe('filterEntity: what the vectors do not say', () => {
     ['searchUrlTemplate', 'https://example.com/search'],
     ['searchUrlTemplate', 'javascript:alert(%s)'],
     ['searchUrlTemplate', `https://example.com/?q=%s${'x'.repeat(2100)}`],
+    // An engine of one's own, a known engine in clear http, a known engine with something after it: none is one Lucium offers (§10.3, n° 10 of the review).
+    ['searchUrlTemplate', 'https://example.com/?q=%s'],
+    ['searchUrlTemplate', 'http://duckduckgo.com/?q=%s'],
+    ['searchUrlTemplate', 'https://duckduckgo.com/?q=%s&x=1'],
+    ['searchUrlTemplate', ' https://duckduckgo.com/?q=%s'],
     ['profileNames', 'x'],
     ['profileNames', { work: 3 }],
     ['profileNames', { 'bad id!': 'x' }],
@@ -56,10 +62,20 @@ describe('filterEntity: what the vectors do not say', () => {
     ['protectionBaseline', 'renforcee'],
     ['autoArchiveHours', 0],
     ['autoArchiveHours', 24 * 366],
-    ['searchUrlTemplate', 'https://example.com/?q=%s'],
+    ['searchUrlTemplate', 'https://duckduckgo.com/?q=%s'],
     ['profileNames', { work: 'Travail', perso: 'Perso' }]
   ])('accepts %s with the value %j', (key, value) => {
     expect(setting(key, value)).toEqual({ accepted: true, fields: { value } })
+  })
+
+  it('accepts every engine of the list the Mac offers, and only those (the vectors list the same ones)', () => {
+    expect(messageVectors.searchEngines).toEqual(SEARCH_ENGINES.map((engine) => engine.url))
+    for (const engine of SEARCH_ENGINES) {
+      expect(engine.url.startsWith('https://'), engine.name).toBe(true)
+      expect(setting('searchUrlTemplate', engine.url), engine.name).toEqual({ accepted: true, fields: { value: engine.url } })
+      expect(isKnownSearchTemplate(engine.url), engine.name).toBe(true)
+    }
+    expect(isKnownSearchTemplate(undefined)).toBe(false)
   })
 
   it('keeps only the value of a setting, and no other field it carries', () => {

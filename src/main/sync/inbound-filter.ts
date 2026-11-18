@@ -3,7 +3,8 @@
 // played against it.
 //
 //   - a kind that is code or a secret is refused (`never-synced`), whatever the device says;
-//   - a setting is accepted only if it is in the closed list and its value is one this version would write (`not-synced`, `invalid-value`);
+//   - a setting is accepted only if it is in the closed list and its value is one this version would write (`not-synced`, `invalid-value`); the search engine only if it is
+//     one of those Lucium offers, which are all https: an engine of one's own stays on the device that has it, and a device cannot send the searches of another to a server of its choice;
 //   - a tab is accepted only if it is pinned and not private (`not-pinned`, `private`): the Today tabs are not entities;
 //   - an address is accepted only if it is an http or https address (`invalid-url`): a page, never a script or a file;
 //   - the fields of the class « local » are taken off: a device does not tell this one what its local files are;
@@ -23,6 +24,7 @@ import { isProfileId } from '@shared/profiles'
 import { compareStamps } from '@shared/sync-snapshot'
 import { FIELD_CLASSES, isKind, NEVER_KINDS, SYNCED_SETTINGS, type EntityKind } from './field-classes'
 import type { WireEntity } from './messages'
+import { SEARCH_ENGINES } from '@shared/model'
 import { PROFILE_NAME_MAX } from '@shared/sidebar'
 import type { SyncEntity, SyncSnapshot } from '@shared/sync-snapshot'
 
@@ -35,6 +37,12 @@ const isObject = (value: unknown): value is Record<string, unknown> => typeof va
 export const isWebAddress = (value: unknown): boolean => typeof value === 'string' && /^https?:\/\//i.test(value) && URL.canParse(value)
 
 const URL_FIELDS: Readonly<Partial<Record<EntityKind, readonly string[]>>> = { tab: ['url', 'anchorUrl'], favorite: ['url'], archived: ['url', 'anchorUrl'] }
+
+/** The search templates Lucium offers (the engines of the Settings): the only ones that cross, all of them https (docs/synchronisation.md §10.3). */
+const KNOWN_SEARCH_TEMPLATES: ReadonlySet<string> = new Set(SEARCH_ENGINES.map((engine) => engine.url))
+
+/** Whether a template is one of the engines Lucium offers. An engine of one's own is not: it never crosses, in either direction. */
+export const isKnownSearchTemplate = (value: unknown): boolean => typeof value === 'string' && KNOWN_SEARCH_TEMPLATES.has(value)
 
 /** The ceiling of a delay of automatic archiving the Mac accepts from another device: a year of hours. */
 const ARCHIVE_HOURS_MAX = 24 * 366
@@ -52,7 +60,7 @@ function settingValueProblem(key: string, value: unknown): boolean {
     case 'autoArchiveHours':
       return typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > ARCHIVE_HOURS_MAX
     case 'searchUrlTemplate':
-      return !isWebAddress(value) || !(value as string).includes('%s') || (value as string).length > 2048
+      return !isKnownSearchTemplate(value)
     case 'profileNames':
       return !isObject(value) || Object.keys(value).length > 64 || !Object.entries(value).every(([id, name]) => /^[A-Za-z0-9_-]{1,64}$/.test(id) && typeof name === 'string' && name.length <= PROFILE_NAME_MAX)
     default:

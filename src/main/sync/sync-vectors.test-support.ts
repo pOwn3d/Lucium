@@ -54,6 +54,8 @@ export interface MessageVectors {
   stamps: { a: string; b: string; expect: -1 | 0 | 1 }[]
   canonical: { name: string; value: unknown; canonical: string; sha256Hex: string }[]
   fieldClasses: Record<string, { synced: string[]; seed: string[]; local: string[] }>
+  /** The engines of search the Mac offers (`SEARCH_ENGINES`): the only templates a device may send as the setting `searchUrlTemplate`. */
+  searchEngines: string[]
   settingsAllowed: string[]
   settingsNever: string[]
   neverKinds: string[]

@@ -67,6 +67,11 @@ export interface PlatformFacts {
    * there is the access list of the user's profile folder, which Node cannot read, so a check of the mode cannot be made (and must not refuse the file).
    */
   posixFileModes: boolean
+  /**
+   * The system has an update installer (Squirrel.Mac, which installs only after the user's click). It exists on macOS alone: the Windows and Linux builds
+   * carry no update address, so an update is made by hand from the download page (`updatesByHand`).
+   */
+  selfUpdate: boolean
 }
 
 export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
@@ -90,7 +95,8 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     nativeHosts: 'folders',
     pathDelimiter: ':',
     systemSpellChecker: true,
-    posixFileModes: true
+    posixFileModes: true,
+    selfUpdate: true
   },
   win32: {
     trafficLights: false,
@@ -113,7 +119,8 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     nativeHosts: 'registry',
     pathDelimiter: ';',
     systemSpellChecker: false,
-    posixFileModes: false
+    posixFileModes: false,
+    selfUpdate: false
   },
   linux: {
     trafficLights: false,
@@ -135,8 +142,18 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     nativeHosts: 'folders',
     pathDelimiter: ':',
     systemSpellChecker: false,
-    posixFileModes: true
+    posixFileModes: true,
+    selfUpdate: false
   }
+}
+
+/**
+ * Whether an update of Lucium is made by hand on this system: it has no update installer (`selfUpdate`), so the menu says where to download the latest
+ * version and the Settings show no switch for a check that cannot install. `platform` is a `process.platform` value (any Unix other than macOS counts as
+ * Linux, as in `platformOf`); anything that is not a string (a stand-in snapshot with no platform) is not a system and gets the macOS behaviour.
+ */
+export function updatesByHand(platform: unknown): boolean {
+  return typeof platform === 'string' && !PLATFORM_FACTS[platformOf(platform)].selfUpdate
 }
 
 // ---- words ----
