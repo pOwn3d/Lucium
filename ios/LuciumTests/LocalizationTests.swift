@@ -15,7 +15,7 @@ final class LocalizationTests: XCTestCase {
     }
 
     func testTheSameKeyReadsDifferentlyInEachLanguage() throws {
-        for key in ["bar.back", "tabs.new", "start.title", "space.work"] {
+        for key in ["bar.back", "tabs.new", "start.favorites.empty", "space.work"] {
             let english = String(localized: String.LocalizationValue(key), bundle: try bundle("en"))
             let french = String(localized: String.LocalizationValue(key), bundle: try bundle("fr"))
             XCTAssertNotEqual(english, key, "\(key) has no English text")
@@ -24,9 +24,15 @@ final class LocalizationTests: XCTestCase {
         }
     }
 
-    func testTheStartPageIsBuiltFromTheCatalogue() throws {
-        let page = StartPage.html(bundle: try bundle("fr"))
-        XCTAssertTrue(page.contains("Lucium pour iPhone"))
+    /// The start page is drawn by SwiftUI and reads its three texts from the catalogue: the sentence at its foot is the one the project lead chose.
+    func testTheStartPageSentencesAreInBothLanguages() throws {
+        func text(_ key: String, _ language: String) throws -> String { String(localized: String.LocalizationValue(key), bundle: try bundle(language)) }
+        XCTAssertEqual(try text("start.privacy", "fr"), "Rien ne quitte cet appareil.")
+        XCTAssertEqual(try text("start.privacy", "en"), "Nothing leaves this device.")
+        XCTAssertEqual(try text("bar.address.placeholder", "fr"), "Rechercher ou saisir une adresse")
+        XCTAssertEqual(try text("bar.address.placeholder", "en"), "Search or enter an address")
+        XCTAssertTrue(try text("start.favorites.empty", "fr").contains("Ajouter aux favoris"), "it names the command the sheet's menu offers")
+        XCTAssertTrue(try text("start.favorites.empty", "en").contains("Add to favorites"))
     }
 }
 

@@ -11,7 +11,7 @@ extension BrowserModel {
     // MARK: Waking
 
     /// The web view of a tab, made now when the tab slept: with the blocker and the data store of its space's profile, and the page where it
-    /// was left (its history too, when WebKit's state of it was kept), or the address of the state, or the start page for a blank tab.
+    /// was left (its history too, when WebKit's state of it was kept), or the address of the state, or an empty document for a blank tab (its start page).
     func wake(_ tab: TabItem) -> WKWebView {
         if let existing = webViews[tab.id] { return existing }
         let configuration = WKWebViewConfiguration()
@@ -46,7 +46,9 @@ extension BrowserModel {
             navigationPolicy.prepare(&request, for: view)
             view.load(request)
         } else {
-            view.loadHTMLString(StartPage.html(), baseURL: nil)
+            // A blank tab shows `StartView`, drawn by SwiftUI over the view: the view only holds an empty document (about:blank), so that the first
+            // address typed loads in it and no page is ever loaded for the start page.
+            view.loadHTMLString("", baseURL: nil)
         }
     }
 

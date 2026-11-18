@@ -220,6 +220,54 @@ final class LibraryModelTests: BrowserCoreTestCase {
         XCTAssertTrue(model.state.archive.isEmpty, "the archive never hears of a private tab")
     }
 
+    /// The start page reads the favourites of the profile of the space on screen; a private tab gets none (`StartPageContent` is proved in `LuciumKit`).
+    func testTheStartPageOffersTheFavouritesOfTheProfileOfTheSpaceOnScreenAndAPrivateTabOffersNone() async throws {
+        let model = await makeModel()
+        XCTAssertEqual(model.startPage, .noFavorites)
+        try await load("/a.html", in: model)
+        model.addFavorite(try XCTUnwrap(model.activeTab))
+        let favorite = try XCTUnwrap(model.favorites.first)
+        XCTAssertEqual(model.startPage, .favorites([favorite]))
+        model.selectSpace("home")  // another profile
+        XCTAssertEqual(model.startPage, .noFavorites)
+        model.selectSpace("work")
+        model.newPrivateTab()
+        XCTAssertEqual(model.startPage, .privateTab, "a private tab is not offered the favourites of the space")
+    }
+
+    /// A tile of the start page is a tap on a blank tab: the favourite opens, and the blank tab does not stay in Today (it would, once per tap).
+    func testAFavouriteOpenedFromTheStartPageTakesTheBlankTabsPlace() async throws {
+        let model = await makeModel()
+        try await load("/a.html", in: model)
+        model.addFavorite(try XCTUnwrap(model.activeTab))
+        let favorite = try XCTUnwrap(model.favorites.first)
+        model.newTab()
+        let blank = try XCTUnwrap(model.activeTab)
+        XCTAssertTrue(blank.isBlank)
+        XCTAssertTrue(model.awakeTabIds.contains(blank.id), "the blank tab holds a view")
+
+        model.openFavorite(favorite)
+
+        XCTAssertEqual(model.activeTab?.favoriteId, favorite.id, "the favourite is on screen")
+        XCTAssertFalse(model.state.tabs.contains { $0.id == blank.id }, "the blank tab is gone")
+        XCTAssertFalse(model.awakeTabIds.contains(blank.id), "and so is its view")
+        XCTAssertFalse(model.commandBarShown || model.tabsSheetShown)
+    }
+
+    /// Only a blank tab is replaced: opening a favourite from a page leaves that page open, as the sheet always did.
+    func testAFavouriteOpenedFromAPageLeavesThatPageOpen() async throws {
+        let model = await makeModel()
+        try await load("/a.html", in: model)
+        model.addFavorite(try XCTUnwrap(model.activeTab))
+        let favorite = try XCTUnwrap(model.favorites.first)
+        let page = try await openTab("/b.html", in: model)
+
+        model.openFavorite(favorite)
+
+        XCTAssertEqual(model.activeTab?.favoriteId, favorite.id)
+        XCTAssertTrue(model.state.tabs.contains { $0.id == page.id }, "the page that was on screen is still a tab")
+    }
+
     func testTheCommandsOfferedFollowThePageOnScreen() async throws {
         let model = await makeModel()
         XCTAssertEqual(CommandItem.available(in: model).map(\.id), ["new-tab", "close"], "a blank tab has no page to reload, pin or archive")
@@ -301,6 +349,7 @@ final class LibraryLockTests: BrowserCoreTestCase {
         let workTitles = Set(model.state.tabs(in: "work").map(\.title))
         let workEntry = try XCTUnwrap(model.state.archive.first { $0.spaceId == "work" })
         XCTAssertTrue(CommandItem.available(in: model).count > 1)
+        XCTAssertEqual(model.startPage, .favorites(model.favorites), "something for the start page to hide")
 
         let locked = await lock.setSpace("work", guarded: true)
         XCTAssertTrue(locked)
@@ -316,6 +365,7 @@ final class LibraryLockTests: BrowserCoreTestCase {
         XCTAssertFalse(found.contains("work"), "\(found)")
         XCTAssertTrue(model.commandTabs(matching: "page").allSatisfy { !workTitles.contains($0.title) || $0.spaceId != "work" })
         XCTAssertTrue(model.commandFavorites(matching: "").isEmpty)
+        XCTAssertEqual(model.startPage, .hidden, "nor does its start page say there are favourites, or that there are none")
         XCTAssertTrue(CommandItem.available(in: model).isEmpty, "a locked space has nothing to do from the bar")
         // The archive: the pages of the locked space are neither listed, nor counted, nor brought back, nor forgotten.
         XCTAssertEqual(model.archiveCount, 1)

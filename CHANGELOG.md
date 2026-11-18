@@ -8,7 +8,9 @@ How to keep it: every pull request that a user would notice adds a line to the t
 
 The “Nouveautés” sheet of the application shows the section of its version, from [CHANGELOG.fr.md](CHANGELOG.fr.md) when the interface is in French: every line added here is added there too, in French, with the same bold title then a colon.
 
-## [Unreleased]
+## [1.1.4] - 2026-11-18
+
+A tab put to sleep wakes with its Back and Forward pages, an extension made of pages only opens its popup at once, and the framing of a tall background video keeps its frame on the video. The additional permission for the App Store is added to the license.
 
 ### Added
 
@@ -24,6 +26,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **Windows, links under a file name**: the files Lucium writes (state, history, vault, download records) and a download that resumes are no longer opened through a link left under their name. Windows cannot make `open` refuse one, so the name is now looked at first.
 - **Default browser, Windows**: Settings no longer says Lucium is the default browser while Windows opens links in another one. The state is what Windows holds for http and https, read again when you come back, and “Make Default Browser” opens Windows Settings on Lucium, where the choice is yours.
 - **Spelling dictionaries, Windows and Linux**: Chromium no longer downloads the dictionary of the system language from its CDN at the first launch, with the checker off. A session starts without a language: nothing is fetched until you switch Spelling on in the Edit menu.
+- **Background video, framing**: in “Customize Space…”, the still picture of “Video framing” was stretched to the width of the panel for a video taller than wide (the nine videos Lucium comes with are 9:16), and its frame came out of the video. The picture now keeps the shape of the video.
 - **Extensions without a service worker**: a click on the icon of an extension made of pages only (a popup, no background worker) opens its popup at once instead of after 10 seconds, and Lucium no longer logs a failed start for it. It reads the manifest, which says there is no worker to wait for.
 
 ## [1.1.3] - 2026-11-17
