@@ -173,7 +173,7 @@ Dans l'ordre où App Store Connect pose les questions (ordre et formulation **à
 | #109 | n° 13 : les onglets ouverts d'un espace supprimé à distance vont dans l'archive | fusionnée |
 | #111 | n° 9 et 21 : code à comparer à l'appairage, adresse source sur la feuille, enregistrement après l'accord des deux côtés | fusionnée |
 | #112 | n° 14, 15, 16 et 20 : pierres tombales, substituts isolés et octets, profil, clés écrites deux fois | fusionnée |
-| #113 | n° 17 et 18 : marques des catégories non échangées, horloge qui se rétablit | à fusionner |
+| #113 | n° 17 et 18 : marques des catégories non échangées, horloge qui se rétablit | fusionnée |
 | #114 | n° 19 et 22 : durée de séance de l'iPhone, identité non remplacée au premier refus du trousseau | fusionnée |
 | #121 | hors périmètre, bloquait la CI : un autre port quand le système refuse celui qui est tiré (Windows) | fusionnée |
 
