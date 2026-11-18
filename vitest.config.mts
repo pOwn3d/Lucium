@@ -6,8 +6,8 @@ export default defineConfig({
   test: {
     // The pure modules of scripts/site-captures.mjs and scripts/site-film/film.mjs are tested beside them (scripts/site-*/*.test.ts), and the drawing of
     // the logo (scripts/logo/fan-logo.ts) with the pictures made from it, and the licence notices (scripts/notices/) with the file written from the lockfile,
-    // and the icon of the probe extension (scripts/probe-icon/) with the file drawn from it, and the converter of the filter lists of the iOS blocker (scripts/ios-filter-lists/), and the finishing of the pictures of the iOS store listing (scripts/ios-store-shots/).
-    include: ['src/**/*.test.ts', 'scripts/site-captures/**/*.test.ts', 'scripts/site-film/**/*.test.ts', 'scripts/logo/**/*.test.ts', 'scripts/notices/**/*.test.ts', 'scripts/probe-icon/**/*.test.ts', 'scripts/ios-filter-lists/**/*.test.ts', 'scripts/ios-store-shots/**/*.test.ts'],
+    // and the icon of the probe extension (scripts/probe-icon/) with the file drawn from it, and the converter of the filter lists of the iOS blocker (scripts/ios-filter-lists/), and the finishing of the pictures of the iOS store listing (scripts/ios-store-shots/), and the checks of the archive step of the iOS application with its script run on stand-ins (scripts/ios-archive/).
+    include: ['src/**/*.test.ts', 'scripts/site-captures/**/*.test.ts', 'scripts/site-film/**/*.test.ts', 'scripts/logo/**/*.test.ts', 'scripts/notices/**/*.test.ts', 'scripts/probe-icon/**/*.test.ts', 'scripts/ios-filter-lists/**/*.test.ts', 'scripts/ios-store-shots/**/*.test.ts', 'scripts/ios-archive/**/*.test.ts'],
     // Run on their own with `pnpm test:bench-script` (vitest.bench-script.config.mts), `pnpm test:snapshot-bench` (vitest.snapshot-bench.config.mts)
     // and `pnpm test:state-bench` (vitest.state-bench.config.mts).
     exclude: [...configDefaults.exclude, 'src/main/bench-script.test.ts', 'src/main/snapshot-bench.test.ts', 'src/main/state-bench.test.ts'],
