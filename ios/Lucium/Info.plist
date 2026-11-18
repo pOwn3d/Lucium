@@ -8,6 +8,11 @@
 	     content only: nothing else in the application is allowed a plain connection, and it makes none of its own (docs/ios.md, "Vie privée"). -->
 	<!-- The folder of the downloads (Documents/Downloads) shows in the Files app, under "On My iPhone > Lucium": that is where a file goes (docs/ios.md,
 	     "Téléchargements"). Nothing else is kept in Documents. -->
+	<!-- Export compliance: the only encryption in the application is what iOS provides for HTTPS (WebKit), and Face ID goes through LocalAuthentication.
+	     The code has no cipher of its own (CryptoKit only makes SHA-256 identifiers). That is what Apple calls exempt, so the key says no and App Store
+	     Connect does not ask again for each build (docs/ios.md, "Règles de l'App Store"). -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIFileSharingEnabled</key>
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
