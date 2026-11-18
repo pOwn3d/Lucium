@@ -86,10 +86,18 @@ export class Channel {
   }
 
   /** (Re)starts the silence timer: every byte received is a sign of life. */
-  private armIdle(): void {
+  private armIdle(ms: number = this.idleMs): void {
     if (this.idle !== null) clearTimeout(this.idle)
-    this.idle = setTimeout(() => this.abort(new ProtocolError('timeout', `no message for ${this.idleMs} ms`)), this.idleMs)
+    this.idle = setTimeout(() => this.abort(new ProtocolError('timeout', `no message for ${ms} ms`)), ms)
     this.idle.unref()
+  }
+
+  /**
+   * The silence that is waited for may last `ms` from now, instead of the usual one: a flow that waits for a person (the iPhone's, who compares the code at the end of a
+   * pairing, §4.6) says so. The next frame that comes brings back the usual silence.
+   */
+  allowSilence(ms: number): void {
+    if (this.fault === null) this.armIdle(ms)
   }
 
   private onData(chunk: Buffer): void {

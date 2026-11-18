@@ -129,6 +129,23 @@ describe('Channel: what ends it, and how the peer is told', () => {
     expect(await phone.receive()).toMatchObject({ t: 'error', code: 'timeout', fatal: true })
   })
 
+  it('puts up with a longer silence when the flow says it waits for a person, and with the usual one again after the next frame', async () => {
+    const { mac, phone } = await pair({ idleMs: 60 })
+    mac.allowSilence(400)
+    await sleep(150)
+    expect(mac.failure()).toBeNull()
+    await phone.send(hello)
+    expect((await mac.receive()).t).toBe('hello')
+    // The next frame brought back the usual silence of 60 ms.
+    await expectFault(mac, 'timeout')
+  })
+
+  it('ends on the longer silence all the same when nobody comes', async () => {
+    const { mac } = await pair({ idleMs: 5_000 })
+    mac.allowSilence(60)
+    await expectFault(mac, 'timeout')
+  })
+
   it('counts every byte as a sign of life', async () => {
     const { mac, phone, phoneRaw } = await pair({ idleMs: 150 })
     const frame = encodeFrame({ ...hello, v: 1, n: 1 })

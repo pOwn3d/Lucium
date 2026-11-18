@@ -28,11 +28,12 @@ const fromHex = (hex: string): Buffer => Buffer.from(hex, 'hex')
 
 interface ProofInputs { secret: string; fpMac: string; fpPhone: string; nonceMac: string; noncePhone: string; idMac: string; idPhone: string; requestTag: string; acceptTag: string }
 interface PairingVectors {
-  constants: { secretBytes: number; nonceBytes: number; fingerprintBytes: number; windowMs: number; maxInvalidProofs: number; qrMaxChars: number; qrMaxHosts: number }
+  constants: { secretBytes: number; nonceBytes: number; fingerprintBytes: number; windowMs: number; maxInvalidProofs: number; qrMaxChars: number; qrMaxHosts: number; comparisonCodeChars: number }
   proof: (ProofInputs & { name: string })[]
   mutations: { of: string; cases: (Partial<ProofInputs> & { field: keyof ProofInputs; value?: string; valueHex?: string; requestTag: string; acceptTag: string; changesRequestTag: boolean; changesAcceptTag: boolean })[] }
   qr: { valid: { name: string; text: string; expect: { fingerprintHex: string; secretHex: string; port: number; hosts: string[] } }[]; invalid: { name: string; text: string; expect: { code: string } }[] }
   manualCode: { valid: { name: string; input: string; expect: { secretHex: string } }[]; invalid: { name: string; input: string; expect: { code: string } }[] }
+  comparisonCode: { name: string; fpMac: string; fpPhone: string; code: string }[]
   secretLifecycle: { name: string; events: { atMs: number; event: 'request' | 'confirm' | 'close'; proof?: 'valid' | 'invalid'; decision?: 'refuse' | 'allow' }[]; expect: string[] }[]
   clientChecks: { name: string; mode: 'qr' | 'manualCode'; expectedFingerprintHex: string | null; presentedFingerprintHex: string; expect: string }[]
   addressPolicy: { host: string; allowed: boolean }[]
@@ -66,7 +67,7 @@ describe('iOS contract: sync pairing vectors, form', () => {
   })
 
   it('states the constants of the specification', () => {
-    expect(pairing.constants).toEqual({ secretBytes: 16, nonceBytes: 16, fingerprintBytes: 32, windowMs: 120000, maxInvalidProofs: 5, qrMaxChars: 300, qrMaxHosts: 4 })
+    expect(pairing.constants).toEqual({ secretBytes: 16, nonceBytes: 16, fingerprintBytes: 32, windowMs: 120000, maxInvalidProofs: 5, qrMaxChars: 300, qrMaxHosts: 4, comparisonCodeChars: 6 })
   })
 
   it('writes every proof input with the size the specification gives it', () => {
@@ -164,6 +165,31 @@ function parseManualCode(input: string): { ok: true; secretHex: string } | { ok:
   const bytes = bits.slice(0, 128).match(/.{8}/g)?.map((byte) => parseInt(byte, 2)) ?? []
   return { ok: true, secretHex: Buffer.from(bytes).toString('hex') }
 }
+
+describe('iOS contract: the code to compare at a pairing (docs/synchronisation.md §4.6)', () => {
+  // The reference reader of the code, written here from the text of the specification (the label, the two fingerprints each after its length, SHA-256, the first 30 bits as
+  // six characters of the alphabet of the typed code): the real code of the Mac and LuciumKit play the same vectors.
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+  const comparisonOf = (fpMac: Buffer, fpPhone: Buffer): string => {
+    const digest = sha256(transcription('lucium-sync/1 pair-compare', [fpMac, fpPhone]))
+    const bits = [...digest.subarray(0, 4)].map((byte) => byte.toString(2).padStart(8, '0')).join('')
+    return Array.from({ length: 6 }, (_, at) => ALPHABET[Number.parseInt(bits.slice(at * 5, at * 5 + 5), 2)]).join('')
+  }
+
+  it.each(pairing.comparisonCode)('$name', ({ fpMac, fpPhone, code }) => {
+    expect(fpMac).toMatch(HEX(32))
+    expect(fpPhone).toMatch(HEX(32))
+    expect(code).toMatch(/^[A-Z2-7]{6}$/)
+    expect(comparisonOf(fromHex(fpMac), fromHex(fpPhone))).toBe(code)
+  })
+
+  it('tells the Mac fingerprint from the iPhone one: the same two in the other order give another code', () => {
+    const [reference] = pairing.comparisonCode
+    const swapped = pairing.comparisonCode.find((one) => one.fpMac === reference?.fpPhone && one.fpPhone === reference?.fpMac)
+    expect(swapped).toBeDefined()
+    expect(swapped?.code).not.toBe(reference?.code)
+  })
+})
 
 describe('iOS contract: sync local addresses (docs/synchronisation.md §6.2)', () => {
   it.each(pairing.addressPolicy.map((v) => [JSON.stringify(v.host), v] as const))('isLocalAddress(%s)', (_label, v) => {

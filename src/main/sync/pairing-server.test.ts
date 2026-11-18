@@ -4,9 +4,10 @@ import { randomBytes } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Channel } from './channel'
 import { MAX_INVALID_PROOFS, PAIRING_WINDOW_MS } from './limits'
+import { comparisonCode } from './pairing-compare'
 import { acceptProof, proofMatches, requestProof } from './pairing-proof'
 import { PairingSecret } from './pairing-secret'
-import { runPairing, type PairingContext } from './pairing-server'
+import { runPairing, type PairingContext, type PairingRequestInfo } from './pairing-server'
 import { socketPair } from './sync-net.test-support'
 import type { PeerRecord } from './sync-store'
 
@@ -23,7 +24,12 @@ interface Setup {
   secret: PairingSecret
   clock: { now: number }
   added: PeerRecord[]
+  /** The name each question named, in order. */
   asked: string[]
+  /** What each question carried. */
+  requests: PairingRequestInfo[]
+  /** Told when the person allowed and the Mac waits for the iPhone's. */
+  waited: number[]
 }
 
 function setup(over: Partial<PairingContext> & { decision?: 'allow' | 'refuse' | 'throw' | 'never' } = {}): Setup {
@@ -31,13 +37,17 @@ function setup(over: Partial<PairingContext> & { decision?: 'allow' | 'refuse' |
   const secret = new PairingSecret(randomBytes(16), () => clock.now)
   const added: PeerRecord[] = []
   const asked: string[] = []
+  const requests: PairingRequestInfo[] = []
+  const waited: number[] = []
   const { decision = 'allow', ...rest } = over
   const ctx: PairingContext = {
     device: { id: 'mac-device-0000000001', name: 'MacBook de test', fingerprint: MAC_FP },
     secret,
     peerFingerprint: PHONE_FP,
+    peerAddress: '192.168.1.40',
     confirm: (request) => {
       asked.push(request.name)
+      requests.push(request)
       if (decision === 'throw') return Promise.reject(new Error('the sheet is gone'))
       if (decision === 'never') return new Promise(() => undefined)
       return Promise.resolve(decision)
@@ -45,20 +55,41 @@ function setup(over: Partial<PairingContext> & { decision?: 'allow' | 'refuse' |
     addPeer: (peer) => void added.push(peer),
     hosts: () => ['macbook-de-test.local', '192.168.1.20'],
     now: () => 1_790_000_000_000,
+    waiting: () => {
+      waited.push(1)
+      return new Promise<void>(() => undefined)
+    },
     confirmMs: 80,
     ...rest
   }
-  return { ctx, secret, clock, added, asked }
+  return { ctx, secret, clock, added, asked, requests, waited }
 }
 
-/** The iPhone: reads the challenge, answers with a proof made from `secret` (or a wrong one), and returns what the Mac says next. */
-async function iphone(s: Setup, phone: Channel, options: { secret?: Buffer; fingerprintPhone?: Buffer; platform?: 'ios' | 'mac'; wrongProof?: boolean } = {}): Promise<{ challenge: string; noncePhone: Buffer; reply: Awaited<ReturnType<Channel['receive']>> }> {
+/**
+ * The iPhone: reads the challenge, answers with a proof made from `secret` (or a wrong one), reads what the Mac says next and, when that is the accept, plays what its person
+ * decides (§4.6): `accept` says `bye` and reads the Mac's last word, `refuse` says `error` (`pairing-refused`), `silent` says nothing.
+ */
+async function iphone(
+  s: Setup,
+  phone: Channel,
+  options: { secret?: Buffer; fingerprintPhone?: Buffer; platform?: 'ios' | 'mac'; wrongProof?: boolean; decision?: 'accept' | 'refuse' | 'silent'; onAccept?: () => void } = {}
+): Promise<{ challenge: string; noncePhone: Buffer; reply: Awaited<ReturnType<Channel['receive']>>; final: Awaited<ReturnType<Channel['receive']>> | null }> {
   const challenge = await phone.receive()
   if (challenge.t !== 'pair.challenge') throw new Error(`expected a challenge, got ${challenge.t}`)
   const noncePhone = randomBytes(16)
   const proof = requestProof({ secret: options.secret ?? s.secret.secret, fingerprintMac: MAC_FP, fingerprintPhone: options.fingerprintPhone ?? PHONE_FP, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone, idMac: 'mac-device-0000000001', idPhone: 'iphone-0000000001' })
   await phone.send({ t: 'pair.request', device: { id: 'iphone-0000000001', name: 'iPhone de test', platform: options.platform ?? 'ios' }, nonce: noncePhone.toString('base64url'), proof: options.wrongProof === true ? proof.replace(/.$/, proof.endsWith('A') ? 'B' : 'A') : proof })
-  return { challenge: challenge.nonce, noncePhone, reply: await phone.receive() }
+  const reply = await phone.receive()
+  let final: Awaited<ReturnType<Channel['receive']>> | null = null
+  if (reply.t === 'pair.accept') {
+    options.onAccept?.()
+    const decision = options.decision ?? 'accept'
+    if (decision === 'accept') {
+      await phone.send({ t: 'bye' })
+      final = await phone.receive().catch(() => null)
+    } else if (decision === 'refuse') await phone.send({ t: 'error', code: 'pairing-refused', fatal: true })
+  }
+  return { challenge: challenge.nonce, noncePhone, reply, final }
 }
 
 async function run(s: Setup, play: (phone: Channel) => Promise<void>): Promise<Awaited<ReturnType<typeof runPairing>>> {
@@ -91,14 +122,35 @@ describe('runPairing: a pairing that goes through', () => {
     expect(reply.proof).not.toBe(requestProof({ secret: s.secret.secret, fingerprintMac: MAC_FP, fingerprintPhone: PHONE_FP, nonceMac: Buffer.from(challenge, 'base64url'), noncePhone, idMac: 'mac-device-0000000001', idPhone: 'iphone-0000000001' }))
   })
 
-  it('writes the iPhone down BEFORE it sends its accept: the iPhone cannot come back to a Mac that forgot it', async () => {
+  it('keeps the iPhone only after the iPhone says yes too: nothing is written when the accept goes out, and the Mac answers its bye with its own', async () => {
     const s = setup()
     let keptWhenAcceptArrived = -1
-    await run(s, async (phone) => {
-      const { reply } = await iphone(s, phone)
-      if (reply.t === 'pair.accept') keptWhenAcceptArrived = s.added.length
+    let seen: Awaited<ReturnType<typeof iphone>> | null = null
+    const outcome = await run(s, async (phone) => {
+      seen = await iphone(s, phone, { onAccept: () => void (keptWhenAcceptArrived = s.added.length) })
     })
-    expect(keptWhenAcceptArrived).toBe(1)
+    expect(outcome.outcome).toBe('paired')
+    expect(keptWhenAcceptArrived).toBe(0)
+    expect(s.added).toHaveLength(1)
+    // The Mac's last word is a bye, sent AFTER the iPhone was kept: the iPhone that reads it can come back at once to a Mac that knows it.
+    expect((seen as unknown as Awaited<ReturnType<typeof iphone>>).final).toMatchObject({ t: 'bye' })
+  })
+
+  it('shows the person the same code the iPhone computes from the two fingerprints, and the address the request came from (review n° 9 and 21)', async () => {
+    const s = setup({ peerAddress: '192.168.1.40' })
+    await run(s, async (phone) => void (await iphone(s, phone)))
+    expect(s.requests).toEqual([{ name: 'iPhone de test', code: comparisonCode(MAC_FP, PHONE_FP), address: '192.168.1.40' }])
+    // Six characters, and the one the shared vectors give for these two fingerprints.
+    expect(s.requests[0]?.code).toBe('O6NSGD')
+  })
+
+  it('tells the sheet the person allowed, so that it can say it waits for the iPhone', async () => {
+    const s = setup()
+    await run(s, async (phone) => void (await iphone(s, phone)))
+    expect(s.waited).toEqual([1])
+    const refused = setup({ decision: 'refuse' })
+    await run(refused, async (phone) => void (await iphone(refused, phone)))
+    expect(refused.waited).toEqual([])
   })
 
   it('makes a proof that holds only for this connection: the same iPhone request on another connection would not match', async () => {
@@ -181,6 +233,28 @@ describe('runPairing: what it refuses', () => {
     expect(s.added).toEqual([])
   })
 
+  it('keeps nothing when the iPhone says it is not the Mac of the code, and passes its refusal on', async () => {
+    const s = setup()
+    const outcome = await run(s, async (phone) => void (await iphone(s, phone, { decision: 'refuse' })))
+    expect(outcome).toMatchObject({ outcome: 'failed', code: 'pairing-refused' })
+    expect(s.added).toEqual([])
+  })
+
+  it('keeps nothing when the iPhone says nothing for the time given to its person, and stops waiting', async () => {
+    const s = setup({ confirmMs: 60 })
+    const outcome = await run(s, async (phone) => void (await iphone(s, phone, { decision: 'silent' })))
+    expect(outcome).toMatchObject({ outcome: 'failed', code: 'timeout' })
+    expect(s.added).toEqual([])
+  })
+
+  it('keeps nothing when the person gives up on the Mac while the iPhone is asked', async () => {
+    let giveUp: () => void = () => undefined
+    const s = setup({ confirmMs: 5_000, waiting: () => new Promise<void>((resolve) => void (giveUp = resolve)) })
+    const outcome = await run(s, async (phone) => void (await iphone(s, phone, { decision: 'silent', onAccept: () => setTimeout(() => giveUp(), 20) })))
+    expect(outcome).toMatchObject({ outcome: 'failed', code: 'pairing-refused' })
+    expect(s.added).toEqual([])
+  })
+
   it('counts no answer as a refusal, and stops waiting', async () => {
     const s = setup({ decision: 'never', confirmMs: 50 })
     const outcome = await run(s, async (phone) => void (await iphone(s, phone)))
@@ -205,7 +279,7 @@ describe('runPairing: what it refuses', () => {
     expect(s.added).toEqual([])
   })
 
-  it('tells the iPhone, and does not send its accept, when the list of devices is full', async () => {
+  it('tells the iPhone `internal` instead of its last bye when the list of devices is full: the iPhone keeps nothing', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const s = setup({
       addPeer: () => {
@@ -213,8 +287,8 @@ describe('runPairing: what it refuses', () => {
       }
     })
     const outcome = await run(s, async (phone) => {
-      const { reply } = await iphone(s, phone)
-      expect(reply).toMatchObject({ t: 'error', code: 'internal' })
+      const { final } = await iphone(s, phone)
+      expect(final).toMatchObject({ t: 'error', code: 'internal' })
     })
     expect(outcome).toMatchObject({ outcome: 'failed', code: 'internal' })
     expect(log).toHaveBeenCalledWith(expect.stringContaining('could not be kept'), expect.anything())

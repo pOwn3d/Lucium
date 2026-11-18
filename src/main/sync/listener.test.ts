@@ -323,6 +323,11 @@ describe('SyncListener: a pairing', () => {
     const channel = new Channel(socket, { phase: 'pairing', role: 'ios' })
     await sendRequest(r, channel, phone, serverFingerprint, secret)
     const answer = (await channel.receive()) as unknown as Record<string, unknown>
+    // The iPhone's person says yes (§4.6): a bye, and the Mac keeps the iPhone and answers with its own.
+    if (answer['t'] === 'pair.accept') {
+      await channel.send({ t: 'bye' })
+      await channel.receive().catch(() => undefined)
+    }
     socket.destroy()
     return answer
   }
