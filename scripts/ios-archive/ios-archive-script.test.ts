@@ -8,6 +8,9 @@ import { appFilesFor, fakeRoot, REPO, scriptOf, wholeListsFolder, type FakeRoot 
 // copy of it in a temporary root, with stand-ins for xcodebuild, xcodegen and plutil first on the PATH: what the script does, or stops doing when a guard
 // is removed, reaches a log file and nothing else.
 
+// A shell script and POSIX stand-ins: the Windows runner has no such PATH (its separator is `;`) and nothing here is run there by anyone. The pure modules are tested everywhere.
+const shell = describe.skipIf(process.platform === 'win32')
+
 const roots: FakeRoot[] = []
 afterAll(() => {
   for (const { root } of roots) rmSync(root, { recursive: true, force: true })
@@ -42,7 +45,7 @@ function run(lists: Record<string, string> | null, args: string[], env: Record<s
 const lists = wholeListsFolder()
 const whole = { STUB_APP_FILES: appFilesFor(lists) }
 
-describe('scripts/ios-archive.sh refuses to archive without the filter lists (docs/ios.md, section 6.3)', () => {
+shell('scripts/ios-archive.sh refuses to archive without the filter lists (docs/ios.md, section 6.3)', () => {
   it('starts nothing at all on a checkout where the lists were never prepared, and says how to prepare them', () => {
     const result = run(null, ['--build', '1000'], whole)
     expect(result.status).toBe(1)
@@ -92,7 +95,7 @@ describe('scripts/ios-archive.sh refuses to archive without the filter lists (do
   })
 })
 
-describe('scripts/ios-archive.sh archives, exports and sends', () => {
+shell('scripts/ios-archive.sh archives, exports and sends', () => {
   it('runs the steps in order, with the team, the build number and the permission to talk to Apple, and sends', () => {
     const result = run(lists, ['--build', '1234'], whole)
     expect(result.stderr).toBe('')
@@ -170,7 +173,7 @@ describe('scripts/ios-archive.sh archives, exports and sends', () => {
   })
 })
 
-describe('scripts/ios-archive.sh stops, and says why, when a step fails', () => {
+shell('scripts/ios-archive.sh stops, and says why, when a step fails', () => {
   it('stops when the archive fails: nothing is exported, and the message says where to look', () => {
     const result = run(lists, ['--build', '1234'], { ...whole, STUB_FAIL: 'archive' })
     expect(result.status).toBe(1)
