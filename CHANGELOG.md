@@ -14,6 +14,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 - **License, App Store**: a second additional permission (GPL version 3, section 7) lets the maintainer hand out the iPhone and iPad application through Apple’s App Store and TestFlight, its source staying whole under the GPL. Text: `ADDITIONAL-PERMISSION-APP-STORE.txt` and `NOTICE`. The application is not published yet.
 
+### Changed
+
+- **Windows, one title bar**: the main window, the other and private windows, and the windows of a site opened as an application draw their own title bar, as on the Mac. The three buttons of Windows lie over the toolbar, in the colours of the theme (they follow it, and the colour a page asks for its bar), and the menu bar is replaced by a ☰ button at the start of the toolbar that opens the same menu, with the same shortcuts. The mini window and Settings keep the title bar of Windows. Seen in a virtual machine on Windows 11 at 100 % scale; other scales and a real PC are not yet.
+
 ### Fixed
 
 - **Sleeping tabs, Back and Forward**: a tab put to sleep to free its memory kept only its address, and woke without the list of the pages it had gone through. The list was read after the page was already closed. It is now read just before the close, and the tab wakes with its Back and Forward pages.

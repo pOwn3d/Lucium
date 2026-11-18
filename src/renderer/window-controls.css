@@ -20,8 +20,16 @@
    from the edge and the group stops short of them by the difference. The address, centred on the bar, measures the group with it. */
 .tb-controls-room { flex: none; width: max(0px, calc(var(--controls-w, 0px) - var(--card-gap-right, 0px) - 5px)); margin-left: -4px; }
 
-/* The button ☰ of the bar and of the sidebar's first row. The bar's own `.tb-button` is 32 x 24, the sidebar's `.icon` 32 x 32. */
+/* The address is centred on the bar and takes what the two groups leave (`--tb-side`, measured by the bar). In a narrow strip, such as the pane of a split view,
+   the room for the buttons of the system leaves it nothing: it would overflow, to the right, under them. It is clipped to its room, and put away when that is
+   less than the link glyph and a few letters. */
+:root[data-controls='overlay'] .tb-address { container-type: inline-size; overflow: hidden; }
+@container (max-width: 120px) { :root[data-controls='overlay'] .tb-address-inner { display: none; } }
+
+/* The button ☰ of the bar and of the sidebar's first row. The bar's own `.tb-button` is 32 x 24; in the sidebar it is the size of the buttons next to it (32 x 32, 7 px below the top). */
 .app-menu-button { flex: none; }
+.sidebar .sidebar-menu { width: 32px; height: 32px; margin-top: 7px; color: var(--sb-glyph); }
+.sidebar .sidebar-menu:hover:not(:disabled) { color: var(--text-on-space); }
 
 /* With the toolbar hidden the strip above the page card is bare (the card still starts under the buttons): it drags the window, as the bar would. */
 :root[data-controls='overlay'] .stage-strip { position: absolute; left: 0; right: 0; top: -32px; height: 32px; -webkit-app-region: drag; }

@@ -210,6 +210,11 @@ describe('the stylesheet of the buttons of the system', () => {
     expect(code).not.toMatch(/#[0-9a-f]{3,8}\b|\brgba?\(|\bhsla?\(/i)
   })
 
+  it('puts the address away, rather than under the buttons, when a strip is too narrow to hold it beside the room kept for them', () => {
+    expect(code).toMatch(/:root\[data-controls='overlay'\] \.tb-address \{[^}]*container-type: inline-size;[^}]*overflow: hidden;/)
+    expect(code).toMatch(/@container \(max-width: \d+px\) \{ :root\[data-controls='overlay'\] \.tb-address-inner \{ display: none; \} \}/)
+  })
+
   it('says the room for the lights is nothing everywhere but on macOS', () => {
     expect(code).toMatch(/:root\[data-platform\]:not\(\[data-platform='darwin'\]\)\s*\{\s*--lights-room:\s*0px;/)
   })
