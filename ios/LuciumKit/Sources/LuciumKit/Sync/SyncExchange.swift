@@ -146,9 +146,9 @@ public struct SyncExchangeBody: SyncSessionBody {
                 group.addTask { try await self.exchange(context, channel: channel) }
                 group.addTask {
                     try await Task.sleep(for: self.sessionMaximum)
-                    await channel.close()
                     throw SyncFailure(.timeout, "the session lasted more than \(self.sessionMaximum)")
                 }
+                // The loser is cancelled, which closes the connection under a read that waits (`SyncChannel`), so that the peer's silence cannot outlive the bound.
                 defer { group.cancelAll() }
                 guard let first = try await group.next() else { throw SyncFailure(.internal, "no result") }
                 return first
