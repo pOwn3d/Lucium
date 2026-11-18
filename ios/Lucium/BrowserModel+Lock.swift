@@ -21,7 +21,10 @@ extension BrowserModel {
     func applyLock() {
         guard let lock else { return }
         for tab in state.tabs where lock.covers(space: tab.spaceId) { putToSleep(tab.id) }
-        if lock.appLocked { tabsSheetShown = false }
+        if lock.appLocked {
+            tabsSheetShown = false
+            commandBarShown = false
+        }
         if isReady, let tab = activeTab { syncFrom(wake(tab)) } else { syncFrom(nil) }
     }
 

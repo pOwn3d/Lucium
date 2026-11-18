@@ -24,8 +24,12 @@ struct BrowserScreen: View {
             .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
                 Task { await model.sleepSurplus(underPressure: true) }
             }
-            .sheet(isPresented: $model.tabsSheetShown) {
+            // The tabs and the command bar each take the whole screen, as on the mockups (`C2`, `Commandes`).
+            .fullScreenCover(isPresented: $model.tabsSheetShown) {
                 TabsSheet(model: model)
+            }
+            .fullScreenCover(isPresented: $model.commandBarShown) {
+                CommandBar(model: model)
             }
             .sheet(isPresented: $model.spacesSheetShown) {
                 SpacesSheet(model: model)

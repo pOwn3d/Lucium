@@ -1,83 +1,299 @@
 import LuciumKit
 import SwiftUI
 
-/// The tabs of the active space (mockup C2, reduced to a list): the picture a tab was left with, its title, its site. Opening one shows it
-/// (waking it if it slept); swiping closes it.
+/// The tabs of the active space (mockup `C2 · Onglets de l'espace`): the spaces and the profile on top, a search of the tabs, the favourites as
+/// tiles, the pinned tabs and folders, Today (with "Archive all"), and under it the archive. A full screen, closed by "Done".
 struct TabsSheet: View {
     @Bindable var model: BrowserModel
+    @State private var path: [SheetRoute] = []
+    @State private var query = ""
+    @State private var namingFolder = false
+    @State private var nameText = ""
     @State private var licensesShown = false
     @State private var lockShown = false
 
     var body: some View {
-        NavigationStack {
-            List {
-                if model.activeSpaceCovered {
-                    // A locked space lists nothing: not a title, not a site.
-                    Section {
-                        Text("lock.sheet.locked")
-                        Button("lock.screen.unlock") { model.requestUnlock() }
-                    }
-                }
-                ForEach(model.activeTabs) { tab in
-                    Button { model.openTab(tab) } label: { row(tab) }
-                        .swipeActions(edge: .trailing) {
-                            Button("tabs.close", role: .destructive) { model.close(tab) }
-                        }
-                        .accessibilityAddTraits(tab.id == model.activeTab?.id ? .isSelected : [])
-                }
+        NavigationStack(path: $path) {
+            VStack(spacing: 0) {
+                header
+                searchField
+                content
             }
-            .navigationTitle(model.activeSpace.name)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("tabs.privacy") { model.privacyPrompts.settingsShown = true } }
-                ToolbarItem(placement: .confirmationAction) { Button("tabs.done") { model.tabsSheetShown = false } }
-                ToolbarItem(placement: .cancellationAction) { Button("tabs.licenses") { licensesShown = true } }
-                ToolbarItemGroup(placement: .bottomBar) {
-                    Button("tabs.new") { model.newTab() }.disabled(model.activeSpaceCovered)
-                    Spacer()
-                    Button("spaces.title") {
-                        model.tabsSheetShown = false
-                        model.spacesSheetShown = true
-                    }
-                    if model.lock != nil {
-                        Spacer()
-                        Button("tabs.lock") { lockShown = true }
-                    }
+            .background(Color(.systemGroupedBackground))
+            .safeAreaInset(edge: .bottom, spacing: 0) { footer }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(for: SheetRoute.self) { route in
+                switch route {
+                case .folder(let id): FolderPage(model: model, folderId: id, path: $path)
+                case .archive: ArchiveScreen(model: model)
                 }
             }
         }
+        // The privacy choices and what the application owes to the people whose work it carries (its licence, the filter lists): no place of the mockups
+        // holds them yet, so they are the last rows of this sheet until the settings have a page of their own.
         .sheet(isPresented: $model.privacyPrompts.settingsShown) { PrivacySheet(model: model) }
-        .presentationDetents([.medium, .large])
         .sheet(isPresented: $licensesShown) { LicensesSheet() }
         .sheet(isPresented: $lockShown) {
             if let lock = model.lock { LockSettingsSheet(lock: lock, spaces: model.spaces) }
         }
+        .alert("folder.new.title", isPresented: $namingFolder) {
+            TextField("folder.name", text: $nameText)
+            Button("folder.save") { model.newFolder(named: nameText) }
+            Button("tabs.cancel", role: .cancel) {}
+        }
     }
 
-    private func row(_ tab: TabItem) -> some View {
-        HStack(spacing: 12) {
-            if let picture = model.thumbnail(of: tab) {
-                Image(uiImage: picture)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 44, height: 60, alignment: .top)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .accessibilityHidden(true)
+    // MARK: Header
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(model.spaces) { space in spacePill(space) }
+                    Button {
+                        // The spaces sheet takes this one's place, as it did before this screen was drawn.
+                        model.tabsSheetShown = false
+                        model.spacesSheetShown = true
+                    } label: { IconView(.more).frame(width: 44, height: 44).contentShape(Rectangle()) }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(Text("spaces.title"))
+                }
             }
-            if tab.isPrivate { ProjectIcon(name: .privateMask, size: 18).foregroundStyle(Color.secondary) }
-            VStack(alignment: .leading, spacing: 2) {
-                title(of: tab).fontWeight(tab.id == model.activeTab?.id ? .semibold : .regular)
-                if !tab.isBlank { Text(AddressResolver.host(of: tab.url)).font(.footnote).foregroundStyle(.secondary) }
+            HStack(spacing: 6) {
+                IconView(.person, size: 14)
+                Text("tabs.profile \(model.profileTitle)")
+            }
+            .font(.footnote)
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 6)
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 4)
+        .padding(.bottom, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // The colours of the theme are strong (they colour a whole window on the Mac); under text they are laid pale on the ground, as on the mockup.
+        .background(LinearGradient(colors: model.colors(of: model.activeSpace).map { $0.opacity(0.35) }, startPoint: .topLeading, endPoint: .bottomTrailing), ignoresSafeAreaEdges: .top)
+    }
+
+    private func spacePill(_ space: Space) -> some View {
+        let active = space.id == model.activeSpace.id
+        return Button { model.selectSpace(space.id) } label: {
+            HStack(spacing: 7) {
+                SpacePastille(space: space, colors: model.colors(of: space), size: 28)
+                Text(verbatim: space.name).font(.subheadline).fontWeight(active ? .semibold : .regular).lineLimit(1)
+            }
+            .padding(.leading, 8)
+            .padding(.trailing, 12)
+            .frame(height: 44)
+            .background(active ? Color(.systemBackground).opacity(0.72) : Color.clear, in: Capsule())
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("bar.space.of \(space.name)"))
+        .accessibilityAddTraits(active ? .isSelected : [])
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 8) {
+            IconView(.search, size: 17).foregroundStyle(.secondary)
+            TextField("tabs.search", text: $query)
+                .font(.subheadline)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+            if !query.isEmpty {
+                Button { query = "" } label: { IconView(.close, size: 14).frame(width: 32, height: 32).contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .accessibilityLabel(Text("tabs.search.clear"))
+            }
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 40)
+        .disabled(model.activeSpaceCovered)
+        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
+    }
+
+    // MARK: Lists
+
+    @ViewBuilder private var content: some View {
+        let searching = !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        List {
+            if searching {
+                searchResults
+            } else {
+                if model.activeSpaceCovered { lockedNotice } else { library }
+                aboutSection
+            }
+        }
+        .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+    }
+
+    /// A locked space lists nothing: not a title, not a site, not a favourite (the lists of the model are empty; this says why).
+    @ViewBuilder private var lockedNotice: some View {
+        Section {
+            Text("lock.sheet.locked")
+            Button("lock.screen.unlock") { model.requestUnlock() }
+        }
+    }
+
+    @ViewBuilder private var searchResults: some View {
+        let hits = model.tabsMatching(query)
+        Section {
+            if hits.isEmpty {
+                Text("tabs.search.none").font(.subheadline).foregroundStyle(.secondary)
+            }
+            ForEach(hits) { tab in TabRowView(model: model, tab: tab, showsClose: !tab.pinned) }
+        } header: {
+            sectionTitle(Text("tabs.search.results \(hits.count)"))
+        }
+    }
+
+    @ViewBuilder private var library: some View {
+        let favorites = model.favorites
+        let pinned = model.pinnedRows()
+        let today = model.todayTabs
+        if !favorites.isEmpty {
+            Section {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                    ForEach(favorites) { favorite in favoriteTile(favorite) }
+                }
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+            }
+        }
+        Section {
+            if pinned.isEmpty { Text("tabs.pinned.empty").font(.subheadline).foregroundStyle(.secondary) }
+            ForEach(pinned) { row in
+                switch row {
+                case .tab(let tab): TabRowView(model: model, tab: tab)
+                case .folder(let folder, let count): FolderRowView(folder: folder, count: count) { path.append(.folder(folder.id)) }
+                }
+            }
+        } header: {
+            HStack {
+                sectionTitle(Text("tabs.pinned"))
+                Spacer()
+                Button { nameText = ""; namingFolder = true } label: { IconView(.folderPlus, size: 20).frame(width: 44, height: 32).contentShape(Rectangle()) }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(Color.accentColor)
+                    .accessibilityLabel(Text("folder.new"))
+            }
+        }
+        if !today.isEmpty {
+            Section {
+                ForEach(today) { tab in TabRowView(model: model, tab: tab, showsClose: true) }
+            } header: {
+                HStack {
+                    sectionTitle(Text("tabs.today \(today.count)"))
+                    Spacer()
+                    Button("tabs.archive-all") { model.archiveToday() }
+                        .font(.footnote.weight(.semibold))
+                        .textCase(nil)
+                        .frame(minHeight: 32)
+                        .disabled(today.allSatisfy { model.isShown($0) })
+                }
+            }
+        }
+        if model.archiveCount > 0 {
+            Section {
+                Button { path.append(.archive) } label: {
+                    HStack(spacing: 12) {
+                        IconView(.archive, size: 22).foregroundStyle(.secondary)
+                        Text("archive.title").font(.subheadline)
+                        Spacer(minLength: 8)
+                        Text("archive.count \(model.archiveCount)").font(.footnote).foregroundStyle(.secondary)
+                        IconView(.chevron, size: 16).foregroundStyle(.secondary)
+                    }
+                    .frame(minHeight: 48)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
         }
     }
 
-    /// The title of a page is data, not a text of the interface: it is never looked up in the catalogue.
-    @ViewBuilder private func title(of tab: TabItem) -> some View {
-        if tab.isBlank {
-            Text("tabs.blank")
-        } else {
-            Text(verbatim: tab.title.isEmpty ? AddressResolver.host(of: tab.url) : tab.title)
+    /// The privacy choices, the lock and the licenses: rows that open sheets of the application while the settings have no page of their own. They are
+    /// there whether the space on screen is locked or not.
+    @ViewBuilder private var aboutSection: some View {
+        Section {
+            aboutRow("tabs.privacy") { model.privacyPrompts.settingsShown = true }
+            if model.lock != nil { aboutRow("tabs.lock") { lockShown = true } }
+            aboutRow("tabs.licenses") { licensesShown = true }
         }
+    }
+
+    /// A row that opens one of the sheets of the application (the privacy choices, the licenses) while the settings have no page of their own.
+    private func aboutRow(_ title: LocalizedStringKey, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Text(title).font(.subheadline)
+                Spacer(minLength: 8)
+                IconView(.chevron, size: 16).foregroundStyle(.secondary)
+            }
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func sectionTitle(_ text: Text) -> some View {
+        text.font(.caption.weight(.semibold)).tracking(0.6).textCase(.uppercase).foregroundStyle(.secondary).accessibilityAddTraits(.isHeader)
+    }
+
+    /// A favourite: the tile of its site on a card; the one whose page is on screen is ringed. A tap shows its page, a long press removes it.
+    private func favoriteTile(_ favorite: Favorite) -> some View {
+        Button { model.openFavorite(favorite) } label: {
+            SiteTile(address: favorite.url, size: 26)
+                .frame(maxWidth: .infinity)
+                .frame(height: 52)
+                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay { if model.isShown(favorite) { RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.accentColor, lineWidth: 2) } }
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text(verbatim: favorite.title))
+        .accessibilityAddTraits(model.isShown(favorite) ? .isSelected : [])
+        .contextMenu {
+            Button(role: .destructive) { model.removeFavorite(favorite) } label: { Label { Text("tabs.remove-favorite") } icon: { IconView(.trash) } }
+        }
+    }
+
+    // MARK: Footer
+
+    private var footer: some View {
+        HStack(spacing: 10) {
+            Button { model.newTab() } label: {
+                HStack(spacing: 6) {
+                    IconView(.plus, size: 18)
+                    Text("tabs.new").fontWeight(.semibold)
+                }
+                // The text takes the colour of the ground (white on the accent in the light scheme, black on the lighter accent in the dark one).
+                .foregroundStyle(Color(.systemBackground))
+                .frame(maxWidth: .infinity, minHeight: 46)
+                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(model.activeSpaceCovered)
+            .opacity(model.activeSpaceCovered ? 0.4 : 1)
+            Button { model.tabsSheetShown = false } label: {
+                Text("tabs.done").fontWeight(.semibold)
+                    .padding(.horizontal, 18)
+                    .frame(minHeight: 46)
+                    .background(Color(.systemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.primary.opacity(0.1), lineWidth: 1) }
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 10)
+        .padding(.bottom, 6)
+        .background(.bar)
+        .overlay(alignment: .top) { Divider() }
     }
 }
