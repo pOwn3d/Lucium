@@ -292,7 +292,7 @@ describe('what a session checks before it writes', () => {
    * A peer written by hand that does everything right: it sends `remote` as its snapshot, works out the merge the Mac must reach (the same functions, the same gates) and
    * sends that digest, so that the Mac's own checks are what is tried. `options` makes it deviate on one point.
    */
-  async function honest(mac: Device, remote: SyncSnapshot, options: { categories?: string[]; commit?: boolean; openTabs?: boolean } = {}): Promise<{ result: SessionResult; mac: Device; seen: Message['t'][] }> {
+  async function honest(mac: Device, remote: SyncSnapshot, options: { categories?: string[]; commit?: boolean; openTabs?: boolean; tabs?: unknown[] } = {}): Promise<{ result: SessionResult; mac: Device; seen: Message['t'][] }> {
     const sockets = await socketPair()
     const macChannel = new Channel(sockets.server, { phase: 'session', role: 'mac' })
     const phoneChannel = new Channel(sockets.client, { phase: 'session', role: 'ios' })
@@ -310,7 +310,7 @@ describe('what a session checks before it writes', () => {
     const tombstones = Object.entries(remote.tombstones).flatMap(([kind, byId]) => Object.entries(byId).map(([id, stamp]) => ({ kind, id, stamp })))
     const lists = Object.keys(remote.order).length > 0 || Object.keys(remote.orderStamps).length > 0 ? { order: remote.order, orderStamps: remote.orderStamps } : {}
     await phoneChannel.send({ t: 'snapshot.part', part: 0, parts: 1, entities: wire, ...(tombstones.length > 0 ? { tombstones } : {}), ...lists, withheld: [] } as never)
-    if (options.openTabs === true) await phoneChannel.send({ t: 'open-tabs', items: [{ id: 'p1', spaceId: 's', url: 'https://p.example/', title: 'P', lastActiveAt: 1 }] } as never)
+    if (options.openTabs === true) await phoneChannel.send({ t: 'open-tabs', items: options.tabs ?? [{ id: 'p1', spaceId: 's', url: 'https://p.example/', title: 'P', lastActiveAt: 1 }] } as never)
     await phoneChannel.send({ t: 'snapshot.end', entityCount: wire.length, digest: hashOfSnapshot(remote) })
     for (;;) {
       const message = await phoneChannel.receive().catch(() => null)
@@ -377,6 +377,19 @@ describe('what a session checks before it writes', () => {
     const out = await honest(mac, space('Remote'), { categories: ['structure'], openTabs: true })
     expect(out.seen).not.toContain('open-tabs')
     expect(out.mac.received).toEqual([])
+  })
+
+  it('keeps of the open tabs another device announces only the web pages: a script, a local file, a data address and a name that is not an address are counted and left out', async () => {
+    const tab = (id: string, url: string): Record<string, unknown> => ({ id, spaceId: 's', url, title: id, lastActiveAt: 1 })
+    const mac = new Device(MAC_ID, 'mac', { spaces: [{ id: 'sp-main' }] }, ['structure', 'openTabs'])
+    const out = await honest(mac, space('Remote'), {
+      categories: ['structure', 'openTabs'],
+      openTabs: true,
+      tabs: [tab('web', 'https://p.example/a'), tab('script', 'javascript:alert(1)'), tab('file', 'file:///etc/passwd'), tab('data', 'data:text/html,<b>x</b>'), tab('text', 'not an address'), tab('long', `https://p.example/${'x'.repeat(10)}`), { ...tab('big', 'https://p.example/'), id: 'i'.repeat(129) }]
+    })
+    expect(out.result).toMatchObject({ ok: true })
+    expect(out.mac.received).toEqual([{ peer: PHONE_ID, items: [expect.objectContaining({ id: 'web' }), expect.objectContaining({ id: 'long' })] }])
+    expect(out.mac.refused.flat().filter((one) => one.kind === 'open-tab').map((one) => one.id.slice(0, 6))).toEqual(['script', 'file', 'data', 'text', 'iiiiii'])
   })
 
   it('takes the open tabs of a device that ticked them, and sends its own', async () => {
