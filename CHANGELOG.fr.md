@@ -10,7 +10,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Changements
 
-- **Windows, une seule barre** : la fenêtre principale, les autres fenêtres et les fenêtres privées, et celles d’un site ouvert comme application dessinent leur propre barre de titre, comme sur le Mac. Les trois boutons de Windows sont posés sur la barre d’outils, aux couleurs du thème (ils le suivent, ainsi que la couleur qu’une page demande pour sa barre), et la barre de menus est remplacée par un bouton ☰ au début de la barre d’outils, qui ouvre le même menu, avec les mêmes raccourcis. La mini-fenêtre et les Réglages gardent la barre de titre de Windows. Vu dans une machine virtuelle Windows 11, à l’échelle de 100 % ; les autres échelles et un vrai PC ne sont pas encore essayés.
+- **Windows, une seule barre** : les fenêtres du navigateur et celles d’un site ouvert comme application dessinent leur propre barre de titre. Les trois boutons de Windows sont posés sur la barre d’outils, aux couleurs du thème, et un bouton ☰ à son début ouvre le menu. La mini-fenêtre et les Réglages gardent la barre de Windows.
 
 ### Corrections
 

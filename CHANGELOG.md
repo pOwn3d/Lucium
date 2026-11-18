@@ -16,7 +16,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Changed
 
-- **Windows, one title bar**: the main window, the other and private windows, and the windows of a site opened as an application draw their own title bar, as on the Mac. The three buttons of Windows lie over the toolbar, in the colours of the theme (they follow it, and the colour a page asks for its bar), and the menu bar is replaced by a ☰ button at the start of the toolbar that opens the same menu, with the same shortcuts. The mini window and Settings keep the title bar of Windows. Seen in a virtual machine on Windows 11 at 100 % scale; other scales and a real PC are not yet.
+- **Windows, one title bar**: the main window, the other and private windows and the windows of a site opened as an application draw their own title bar. The three buttons of Windows lie over the toolbar, in the colours of the theme, and a ☰ button at its start opens the menu. The mini window and Settings keep the title bar of Windows.
 
 ### Fixed
 
