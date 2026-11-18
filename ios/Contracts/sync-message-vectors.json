@@ -1,0 +1,2464 @@
+{
+  "comment": "Shared by src/shared/ios-sync-contract.test.ts (a reference reader written in the test, until src/main/sync/ exists) and by ios/LuciumKit (SyncVectorTests). The frames and messages of docs/synchronisation.md §7, the marks of §9.2, the canonical form of §8.4, the classes of the fields and the closed list of settings of §10, and what a received entity may carry. A message may be given as `message` (an object) or as `raw` (the text, for what an object cannot hold, such as a __proto__ key); `fill` makes a long value without filling the file: with `repeat` it replaces the text at `path` by `repeat` written `times` times, with `copy` it replaces the list at `path` by `times` copies of `copy`. Written by a script from fixed inputs: change a rule on one side and the other side fails.",
+  "limits": {
+    "maxFrameBytes": 1048576,
+    "maxSnapshotBytes": 33554432,
+    "maxEntities": 100000,
+    "maxEntitiesPerPart": 500,
+    "maxParts": 4096,
+    "maxJsonDepth": 32,
+    "maxStringBytes": 65536,
+    "maxDeviceNameChars": 80,
+    "maxDeviceIdChars": 64,
+    "maxCategories": 8,
+    "maxHosts": 4,
+    "maxOpenTabs": 200,
+    "maxOpenTabUrlBytes": 4096,
+    "maxOpenTabTitleBytes": 300,
+    "handshakeTimeoutMs": 10000,
+    "idleTimeoutMs": 60000,
+    "sessionMaxMs": 600000,
+    "maxConnections": 4,
+    "minAutoIntervalMs": 15000,
+    "failuresPerMinuteBeforeRefusal": 10,
+    "clockSkewWarnMs": 300000,
+    "stampFutureRefuseMs": 604800000,
+    "tombstoneDays": 30,
+    "archivePerSpace": 500
+  },
+  "frames": [
+    {
+      "length": 0,
+      "expect": {
+        "ok": false,
+        "code": "bad-frame"
+      }
+    },
+    {
+      "length": 1,
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "length": 1048576,
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "length": 1048577,
+      "expect": {
+        "ok": false,
+        "code": "too-large"
+      }
+    },
+    {
+      "length": 4294967295,
+      "expect": {
+        "ok": false,
+        "code": "too-large"
+      }
+    }
+  ],
+  "snapshotBytes": [
+    {
+      "total": 33554432,
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "total": 33554433,
+      "expect": {
+        "ok": false,
+        "code": "too-large"
+      }
+    }
+  ],
+  "sequences": [
+    {
+      "name": "in order",
+      "ns": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a gap",
+      "ns": [
+        1,
+        2,
+        4
+      ],
+      "expect": {
+        "ok": false,
+        "code": "bad-sequence",
+        "at": 2
+      }
+    },
+    {
+      "name": "a repeat",
+      "ns": [
+        1,
+        1
+      ],
+      "expect": {
+        "ok": false,
+        "code": "bad-sequence",
+        "at": 1
+      }
+    },
+    {
+      "name": "a start that is not 1",
+      "ns": [
+        2
+      ],
+      "expect": {
+        "ok": false,
+        "code": "bad-sequence",
+        "at": 0
+      }
+    },
+    {
+      "name": "a start at 0",
+      "ns": [
+        0
+      ],
+      "expect": {
+        "ok": false,
+        "code": "bad-sequence",
+        "at": 0
+      }
+    },
+    {
+      "name": "backwards",
+      "ns": [
+        1,
+        2,
+        3,
+        2
+      ],
+      "expect": {
+        "ok": false,
+        "code": "bad-sequence",
+        "at": 3
+      }
+    }
+  ],
+  "messages": [
+    {
+      "name": "a hello from an iPhone",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a hello from a Mac, with its addresses",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "MacBook Pro de test",
+          "platform": "mac"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "hosts": [
+          "mac-de-test.local",
+          "192.168.1.20"
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a hello with a field this version does not know: ignored",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "futureField": {
+          "a": [
+            1,
+            2,
+            3
+          ]
+        }
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a hello with a category this version does not know: ignored",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "somethingNew"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a hello with no category at all",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a hello of an unknown version",
+      "message": {
+        "v": 2,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "unsupported-version"
+      }
+    },
+    {
+      "name": "a hello with no device",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a device id with a space",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "bad id",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a device id of 65 characters",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "an empty device name",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a device name of 81 characters",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a device name of 80 characters",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "an unknown platform",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone",
+          "platform": "android"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a nonce of the wrong length",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "BEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a nonce with padding",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_=",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a clock that is a text",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": "1790000000000"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a base hash in upper case",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": "0BF474896363505E5EA5E5D6ACE8EBFB13A760A409B1FB467D428FC716F9F284",
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a base hash that is too short",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": "f474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "nine categories",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g",
+          "h",
+          "i"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "five hosts",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "hosts": [
+          "a.local",
+          "b.local",
+          "c.local",
+          "d.local",
+          "e.local"
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a message of an unknown type",
+      "message": {
+        "v": 1,
+        "t": "ping",
+        "n": 1
+      },
+      "expect": {
+        "ok": false,
+        "code": "unknown-type"
+      }
+    },
+    {
+      "name": "a message with no type",
+      "message": {
+        "v": 1,
+        "n": 1
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a message with no number",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a number that is not an integer",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1.5,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a version that is not an integer",
+      "message": {
+        "v": "1",
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a list instead of an object",
+      "raw": "[]",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a number instead of an object",
+      "raw": "1",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "text that is not JSON",
+      "raw": "{\"v\":1,",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a __proto__ key at the top",
+      "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"__proto__\":{\"admin\":true}}",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a __proto__ key inside an entity",
+      "raw": "{\"v\":1,\"t\":\"snapshot.part\",\"n\":2,\"part\":0,\"parts\":1,\"entities\":[{\"kind\":\"tab\",\"id\":\"t1\",\"fields\":{\"__proto__\":{\"x\":1}},\"stamps\":{}}]}",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a nesting of 32 levels",
+      "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"x\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":1}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a nesting of 33 levels",
+      "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"x\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":{\"a\":1}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}}",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a number of 1e21",
+      "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"x\":1e21}",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a number below 1e-6",
+      "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"x\":0.0000001}",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a number of 1e-6, the smallest allowed",
+      "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"x\":0.000001}",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a negative zero is read as zero",
+      "raw": "{\"v\":1,\"t\":\"bye\",\"n\":2,\"x\":-0}",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a text of 65536 bytes in a field",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "tab",
+            "id": "t1",
+            "fields": {
+              "customTitle": "x"
+            },
+            "stamps": {
+              "customTitle": "0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      },
+      "fill": {
+        "path": [
+          "entities",
+          0,
+          "fields",
+          "customTitle"
+        ],
+        "repeat": "a",
+        "times": 65536
+      }
+    },
+    {
+      "name": "a text of 65537 bytes in a field",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "tab",
+            "id": "t1",
+            "fields": {
+              "customTitle": "x"
+            },
+            "stamps": {
+              "customTitle": "0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      },
+      "fill": {
+        "path": [
+          "entities",
+          0,
+          "fields",
+          "customTitle"
+        ],
+        "repeat": "a",
+        "times": 65537
+      }
+    },
+    {
+      "name": "a text of 40000 two-byte characters (80000 bytes): bytes are counted",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "tab",
+            "id": "t1",
+            "fields": {
+              "customTitle": "x"
+            },
+            "stamps": {
+              "customTitle": "0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      },
+      "fill": {
+        "path": [
+          "entities",
+          0,
+          "fields",
+          "customTitle"
+        ],
+        "repeat": "é",
+        "times": 40000
+      }
+    },
+    {
+      "name": "a pair.challenge",
+      "message": {
+        "v": 1,
+        "t": "pair.challenge",
+        "n": 1,
+        "nonce": "ABEiM0RVZneImaq7zN3u_w"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a pair.request",
+      "message": {
+        "v": 1,
+        "t": "pair.request",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "proof": "4FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a pair.request with a proof of the wrong length",
+      "message": {
+        "v": 1,
+        "t": "pair.request",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "proof": "FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.accept",
+      "message": {
+        "v": 1,
+        "t": "pair.accept",
+        "n": 2,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "Mac",
+          "platform": "mac"
+        },
+        "proof": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A",
+        "hosts": [
+          "mac-de-test.local"
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a snapshot part with one entity",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a snapshot part with a list of withheld spaces",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [],
+        "withheld": [
+          "s2"
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a snapshot part with no entities field",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a snapshot part with 500 entities",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "tab",
+            "id": "t0",
+            "fields": {},
+            "stamps": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      },
+      "fill": {
+        "path": [
+          "entities"
+        ],
+        "copy": {
+          "kind": "tab",
+          "id": "t0",
+          "fields": {},
+          "stamps": {}
+        },
+        "times": 500
+      }
+    },
+    {
+      "name": "a snapshot part with 501 entities",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "tab",
+            "id": "t0",
+            "fields": {},
+            "stamps": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      },
+      "fill": {
+        "path": [
+          "entities"
+        ],
+        "copy": {
+          "kind": "tab",
+          "id": "t0",
+          "fields": {},
+          "stamps": {}
+        },
+        "times": 501
+      }
+    },
+    {
+      "name": "a snapshot part with part beyond parts",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 1,
+        "parts": 1,
+        "entities": []
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a snapshot part with 4097 parts",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 4097,
+        "entities": []
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "an entity with no stamps",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "tab",
+            "id": "t1",
+            "fields": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "an entity whose fields is a list",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "tab",
+            "id": "t1",
+            "fields": [],
+            "stamps": {}
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a snapshot.end",
+      "message": {
+        "v": 1,
+        "t": "snapshot.end",
+        "n": 3,
+        "entityCount": 1,
+        "digest": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a snapshot.end with a negative count",
+      "message": {
+        "v": 1,
+        "t": "snapshot.end",
+        "n": 3,
+        "entityCount": -1,
+        "digest": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "open tabs",
+      "message": {
+        "v": 1,
+        "t": "open-tabs",
+        "n": 2,
+        "items": [
+          {
+            "id": "t1",
+            "spaceId": "s1",
+            "url": "https://example.com/a",
+            "title": "A page",
+            "lastActiveAt": 1790000000000
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "201 open tabs",
+      "message": {
+        "v": 1,
+        "t": "open-tabs",
+        "n": 2,
+        "items": [
+          {
+            "id": "t0",
+            "spaceId": "s1",
+            "url": "https://example.com/",
+            "title": "T",
+            "lastActiveAt": 1
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      },
+      "fill": {
+        "path": [
+          "items"
+        ],
+        "copy": {
+          "id": "t0",
+          "spaceId": "s1",
+          "url": "https://example.com/",
+          "title": "T",
+          "lastActiveAt": 1
+        },
+        "times": 201
+      }
+    },
+    {
+      "name": "200 open tabs",
+      "message": {
+        "v": 1,
+        "t": "open-tabs",
+        "n": 2,
+        "items": [
+          {
+            "id": "t0",
+            "spaceId": "s1",
+            "url": "https://example.com/",
+            "title": "T",
+            "lastActiveAt": 1
+          }
+        ]
+      },
+      "expect": {
+        "ok": true
+      },
+      "fill": {
+        "path": [
+          "items"
+        ],
+        "copy": {
+          "id": "t0",
+          "spaceId": "s1",
+          "url": "https://example.com/",
+          "title": "T",
+          "lastActiveAt": 1
+        },
+        "times": 200
+      }
+    },
+    {
+      "name": "an open tab with an address of 4097 bytes",
+      "message": {
+        "v": 1,
+        "t": "open-tabs",
+        "n": 2,
+        "items": [
+          {
+            "id": "t1",
+            "spaceId": "s1",
+            "url": "https://example.com/",
+            "title": "T",
+            "lastActiveAt": 1
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      },
+      "fill": {
+        "path": [
+          "items",
+          0,
+          "url"
+        ],
+        "repeat": "a",
+        "times": 4097
+      }
+    },
+    {
+      "name": "a result",
+      "message": {
+        "v": 1,
+        "t": "result",
+        "n": 5,
+        "digest": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a commit",
+      "message": {
+        "v": 1,
+        "t": "commit",
+        "n": 6,
+        "digest": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "an unpair",
+      "message": {
+        "v": 1,
+        "t": "unpair",
+        "n": 4
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a bye",
+      "message": {
+        "v": 1,
+        "t": "bye",
+        "n": 7
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "an error",
+      "message": {
+        "v": 1,
+        "t": "error",
+        "n": 2,
+        "code": "pairing-expired",
+        "fatal": true
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "an error that lists the supported versions",
+      "message": {
+        "v": 1,
+        "t": "error",
+        "n": 2,
+        "code": "unsupported-version",
+        "fatal": true,
+        "supported": [
+          1
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "an error with a code that is not in the catalogue",
+      "message": {
+        "v": 1,
+        "t": "error",
+        "n": 2,
+        "code": "teapot",
+        "fatal": true
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "an error with no fatal flag",
+      "message": {
+        "v": 1,
+        "t": "error",
+        "n": 2,
+        "code": "timeout"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    }
+  ],
+  "transitions": [
+    {
+      "name": "a session starts with hello",
+      "receiver": "mac",
+      "phase": "session",
+      "history": [],
+      "type": "hello",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a session that starts with a snapshot",
+      "receiver": "mac",
+      "phase": "session",
+      "history": [],
+      "type": "snapshot.part",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.request in a session",
+      "receiver": "mac",
+      "phase": "session",
+      "history": [],
+      "type": "pair.request",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a hello during a pairing",
+      "receiver": "mac",
+      "phase": "pairing",
+      "history": [],
+      "type": "hello",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the Mac waits for pair.request in a pairing",
+      "receiver": "mac",
+      "phase": "pairing",
+      "history": [],
+      "type": "pair.request",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "the Mac does not accept a second pair.request",
+      "receiver": "mac",
+      "phase": "pairing",
+      "history": [
+        "pair.request"
+      ],
+      "type": "pair.request",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the iPhone waits for pair.challenge first",
+      "receiver": "ios",
+      "phase": "pairing",
+      "history": [],
+      "type": "pair.accept",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the iPhone reads pair.challenge, then pair.accept",
+      "receiver": "ios",
+      "phase": "pairing",
+      "history": [
+        "pair.challenge"
+      ],
+      "type": "pair.accept",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a second hello",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello"
+      ],
+      "type": "hello",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a snapshot part after hello",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello"
+      ],
+      "type": "snapshot.part",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "open tabs between hello and the end of the snapshot",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part"
+      ],
+      "type": "open-tabs",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "open tabs after the end of the snapshot",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end"
+      ],
+      "type": "open-tabs",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a snapshot.end with no part before",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello"
+      ],
+      "type": "snapshot.end",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a part after the end",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end"
+      ],
+      "type": "snapshot.part",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a result after the end",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end"
+      ],
+      "type": "result",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a result before the end",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part"
+      ],
+      "type": "result",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a commit right after hello",
+      "receiver": "mac",
+      "phase": "session",
+      "history": [
+        "hello"
+      ],
+      "type": "commit",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a commit after the result",
+      "receiver": "mac",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "result"
+      ],
+      "type": "commit",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "an unpair after hello",
+      "receiver": "mac",
+      "phase": "session",
+      "history": [
+        "hello"
+      ],
+      "type": "unpair",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "an unpair before hello",
+      "receiver": "mac",
+      "phase": "session",
+      "history": [],
+      "type": "unpair",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "an error is allowed at any time",
+      "receiver": "mac",
+      "phase": "session",
+      "history": [],
+      "type": "error",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a bye is allowed at any time",
+      "receiver": "mac",
+      "phase": "pairing",
+      "history": [],
+      "type": "bye",
+      "expect": {
+        "ok": true
+      }
+    }
+  ],
+  "stamps": [
+    {
+      "a": "1790000000001-0000-mac",
+      "b": "1790000000001-0000-mac",
+      "expect": 0
+    },
+    {
+      "a": "1790000000001-0000-mac",
+      "b": "1790000000002-0000-mac",
+      "expect": -1
+    },
+    {
+      "a": "1790000000009-0000-mac",
+      "b": "1790000000010-0000-mac",
+      "expect": -1
+    },
+    {
+      "a": "1790000000001-0009-mac",
+      "b": "1790000000001-000a-mac",
+      "expect": -1
+    },
+    {
+      "a": "1790000000001-0000-mac",
+      "b": "1790000000001-0001-a",
+      "expect": -1
+    },
+    {
+      "a": "1790000000001-0000-mac",
+      "b": "1790000000001-0000-phone",
+      "expect": -1
+    },
+    {
+      "a": "1790000000001-0000-a-",
+      "b": "1790000000001-0000-a_",
+      "expect": -1
+    },
+    {
+      "a": "1790000000001-0000-A",
+      "b": "1790000000001-0000-a",
+      "expect": -1
+    },
+    {
+      "a": "1790000000001-0000-9",
+      "b": "1790000000001-0000-A",
+      "expect": -1
+    },
+    {
+      "a": "0",
+      "b": "1790000000001-0000-mac",
+      "expect": -1
+    },
+    {
+      "a": "1790000000001-0000-mac",
+      "b": "0",
+      "expect": 1
+    },
+    {
+      "a": "0",
+      "b": "0",
+      "expect": 0
+    }
+  ],
+  "canonical": [
+    {
+      "name": "keys are sorted",
+      "value": {
+        "b": 1,
+        "a": 2
+      },
+      "canonical": "{\"a\":2,\"b\":1}",
+      "sha256Hex": "d3626ac30a87e6f7a6428233b3c68299976865fa5508e4267c5415c76af7a772"
+    },
+    {
+      "name": "nested objects and lists keep list order and sort object keys",
+      "value": {
+        "z": [
+          3,
+          {
+            "y": 1,
+            "x": 2
+          },
+          1
+        ],
+        "a": {
+          "c": null,
+          "b": true
+        }
+      },
+      "canonical": "{\"a\":{\"b\":true,\"c\":null},\"z\":[3,{\"x\":2,\"y\":1},1]}",
+      "sha256Hex": "541a49c1f651a058037bd3ed4928e942a1762ca85567b83fbf2c6f8d08a9ed25"
+    },
+    {
+      "name": "empty values",
+      "value": {
+        "o": {},
+        "a": [],
+        "s": ""
+      },
+      "canonical": "{\"a\":[],\"o\":{},\"s\":\"\"}",
+      "sha256Hex": "c127f9b3c6f4233b3976f8e2d54486ab15f9a46cfa50fc14ae6d0787d1ac2917"
+    },
+    {
+      "name": "escapes: quote, backslash, newline, tab",
+      "value": {
+        "s": "a\"b\\c\nd\te"
+      },
+      "canonical": "{\"s\":\"a\\\"b\\\\c\\nd\\te\"}",
+      "sha256Hex": "3fe8db26dc2df0fc1e6cea51d173b76578b486002a00307b508f9fa116c30a36"
+    },
+    {
+      "name": "a control character is written as \\u00xx in lower case",
+      "value": {
+        "s": "\u0001\u001f"
+      },
+      "canonical": "{\"s\":\"\\u0001\\u001f\"}",
+      "sha256Hex": "38dc5e0128fedab8edba6b02f7f09663f16bfe0f1afb41a5774a29154732a6e0"
+    },
+    {
+      "name": "accents and a non-BMP character stay as they are",
+      "value": {
+        "s": "é 😀 日本"
+      },
+      "canonical": "{\"s\":\"é 😀 日本\"}",
+      "sha256Hex": "7126f88eabd7871ef3fb0232e488824e13edeeba5f94ff90d08dc5a594fa7c8b"
+    },
+    {
+      "name": "U+2028 is not escaped",
+      "value": {
+        "s": "a b"
+      },
+      "canonical": "{\"s\":\"a b\"}",
+      "sha256Hex": "0a4ca54e90421bef2c23dfa1cebd920b6e5f2ea54c97e41902076453dadedebb"
+    },
+    {
+      "name": "numbers: integers and short decimals",
+      "value": {
+        "n": [
+          0,
+          1,
+          -7,
+          1.5,
+          0.1,
+          123456789012,
+          0.000001
+        ]
+      },
+      "canonical": "{\"n\":[0,1,-7,1.5,0.1,123456789012,0.000001]}",
+      "sha256Hex": "786f104aa0bb4e6532be998c6ddbb80aa802074f68bde0e1e75d21f133a7b433"
+    },
+    {
+      "name": "keys are sorted by UTF-16 code unit, not by UTF-8 byte: a non-BMP key comes before U+FF5E",
+      "value": {
+        "～": 1,
+        "😀": 2
+      },
+      "canonical": "{\"😀\":2,\"～\":1}",
+      "sha256Hex": "c44a324298283d910e4120a2ff3c2d7746b4a5c9f2d9625c67f6abb58748cf31"
+    },
+    {
+      "name": "keys with accents and capitals",
+      "value": {
+        "é": 1,
+        "z": 2,
+        "Z": 3,
+        "a": 4
+      },
+      "canonical": "{\"Z\":3,\"a\":4,\"z\":2,\"é\":1}",
+      "sha256Hex": "3f0baa5e0f93f4217f9cbc2b2e0434551b48a97d052ec4f35b620c8871e14f85"
+    }
+  ],
+  "fieldClasses": {
+    "space": {
+      "synced": [
+        "id",
+        "name",
+        "emoji",
+        "theme",
+        "profileId",
+        "hideHeader",
+        "iconKind",
+        "iconLetter",
+        "iconColor",
+        "iconRound"
+      ],
+      "seed": [],
+      "local": [
+        "image",
+        "background",
+        "webPanels"
+      ]
+    },
+    "folder": {
+      "synced": [
+        "id",
+        "spaceId",
+        "name",
+        "parentId",
+        "atBottom",
+        "atTodayStart",
+        "noWake",
+        "icon"
+      ],
+      "seed": [
+        "collapsed"
+      ],
+      "local": [
+        "live"
+      ]
+    },
+    "tab": {
+      "synced": [
+        "id",
+        "spaceId",
+        "pinned",
+        "anchorUrl",
+        "customTitle",
+        "icon",
+        "folderId",
+        "keepAwake"
+      ],
+      "seed": [
+        "url",
+        "title"
+      ],
+      "local": [
+        "image",
+        "faviconUrl",
+        "deadKept",
+        "autoReload",
+        "container",
+        "windowKey",
+        "openerId",
+        "parentId",
+        "treeCollapsed",
+        "favoriteId",
+        "createdAt",
+        "lastActiveAt",
+        "private"
+      ]
+    },
+    "favorite": {
+      "synced": [
+        "id",
+        "url",
+        "title",
+        "profileId"
+      ],
+      "seed": [],
+      "local": [
+        "faviconUrl"
+      ]
+    },
+    "archived": {
+      "synced": [
+        "id",
+        "spaceId",
+        "url",
+        "title",
+        "archivedAt",
+        "source",
+        "pinned",
+        "anchorUrl",
+        "folderId"
+      ],
+      "seed": [],
+      "local": [
+        "history",
+        "container"
+      ]
+    }
+  },
+  "settingsAllowed": [
+    "httpsUpgrade",
+    "sendGpc",
+    "stripTrackingParams",
+    "stripCopiedLinks",
+    "protectionBaseline",
+    "autoArchiveHours",
+    "searchUrlTemplate",
+    "profileNames"
+  ],
+  "settingsNever": [
+    "lockEnabled",
+    "lockApp",
+    "lockedSpaces",
+    "lockTouchId",
+    "updateFeedUrl",
+    "updateChannel",
+    "autoUpdate",
+    "proxyEnabled",
+    "proxy",
+    "dohMode",
+    "dohProvider",
+    "dohCustomUrl",
+    "customFilterLists",
+    "extensionPaths",
+    "ollamaConfig",
+    "passwordManager",
+    "boostsEnabled",
+    "userScripts",
+    "translateModelsDir",
+    "profiles"
+  ],
+  "neverKinds": [
+    "boost",
+    "userScript",
+    "extension",
+    "password",
+    "vault",
+    "lock",
+    "history",
+    "cookie",
+    "session"
+  ],
+  "inbound": [
+    {
+      "name": "a setting of the closed list",
+      "entity": {
+        "kind": "setting",
+        "id": "httpsUpgrade",
+        "fields": {
+          "value": true
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "a setting that is not in the list: the update feed",
+      "entity": {
+        "kind": "setting",
+        "id": "updateFeedUrl",
+        "fields": {
+          "value": "https://evil.example/feed"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "not-synced"
+      }
+    },
+    {
+      "name": "a lock setting",
+      "entity": {
+        "kind": "setting",
+        "id": "lockApp",
+        "fields": {
+          "value": false
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "not-synced"
+      }
+    },
+    {
+      "name": "a boolean setting with a text value",
+      "entity": {
+        "kind": "setting",
+        "id": "sendGpc",
+        "fields": {
+          "value": "yes"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "the protection level, a value the Mac knows",
+      "entity": {
+        "kind": "setting",
+        "id": "protectionBaseline",
+        "fields": {
+          "value": "renforcee"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "the protection level, a value the Mac does not know",
+      "entity": {
+        "kind": "setting",
+        "id": "protectionBaseline",
+        "fields": {
+          "value": "ultra"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a number setting out of range",
+      "entity": {
+        "kind": "setting",
+        "id": "autoArchiveHours",
+        "fields": {
+          "value": -5
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a number setting in range",
+      "entity": {
+        "kind": "setting",
+        "id": "autoArchiveHours",
+        "fields": {
+          "value": 12
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "a search template with a %s",
+      "entity": {
+        "kind": "setting",
+        "id": "searchUrlTemplate",
+        "fields": {
+          "value": "https://duckduckgo.com/?q=%s"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "a search template with no %s",
+      "entity": {
+        "kind": "setting",
+        "id": "searchUrlTemplate",
+        "fields": {
+          "value": "https://example.com/"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a search template that is a script",
+      "entity": {
+        "kind": "setting",
+        "id": "searchUrlTemplate",
+        "fields": {
+          "value": "javascript:alert(%s)"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-value"
+      }
+    },
+    {
+      "name": "a pinned tab",
+      "entity": {
+        "kind": "tab",
+        "id": "t1",
+        "fields": {
+          "spaceId": "s1",
+          "pinned": true,
+          "anchorUrl": "https://example.com/",
+          "customTitle": "Doc"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true,
+        "fields": {
+          "spaceId": "s1",
+          "pinned": true,
+          "anchorUrl": "https://example.com/",
+          "customTitle": "Doc"
+        }
+      }
+    },
+    {
+      "name": "a tab that is not pinned: Today tabs are not entities",
+      "entity": {
+        "kind": "tab",
+        "id": "t2",
+        "fields": {
+          "spaceId": "s1",
+          "pinned": false,
+          "anchorUrl": "https://example.com/"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "not-pinned"
+      }
+    },
+    {
+      "name": "a private tab",
+      "entity": {
+        "kind": "tab",
+        "id": "t3",
+        "fields": {
+          "spaceId": "s1",
+          "pinned": true,
+          "anchorUrl": "https://example.com/",
+          "private": true
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "private"
+      }
+    },
+    {
+      "name": "the local-only fields of a tab are stripped",
+      "entity": {
+        "kind": "tab",
+        "id": "t4",
+        "fields": {
+          "spaceId": "s1",
+          "pinned": true,
+          "anchorUrl": "https://example.com/",
+          "lastActiveAt": 5,
+          "faviconUrl": "https://example.com/i.png",
+          "openerId": "x"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true,
+        "fields": {
+          "spaceId": "s1",
+          "pinned": true,
+          "anchorUrl": "https://example.com/"
+        }
+      }
+    },
+    {
+      "name": "a tab whose address is a script",
+      "entity": {
+        "kind": "tab",
+        "id": "t5",
+        "fields": {
+          "spaceId": "s1",
+          "pinned": true,
+          "anchorUrl": "javascript:alert(1)"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-url"
+      }
+    },
+    {
+      "name": "a favourite that opens a file",
+      "entity": {
+        "kind": "favorite",
+        "id": "f1",
+        "fields": {
+          "url": "file:///etc/passwd",
+          "title": "x"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "invalid-url"
+      }
+    },
+    {
+      "name": "a favourite",
+      "entity": {
+        "kind": "favorite",
+        "id": "f2",
+        "fields": {
+          "url": "https://example.com/",
+          "title": "Example"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "a space: its pictures are local and stripped",
+      "entity": {
+        "kind": "space",
+        "id": "s1",
+        "fields": {
+          "name": "Perso",
+          "emoji": "🏠",
+          "image": "photo.png",
+          "background": {
+            "kind": "video"
+          },
+          "webPanels": []
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true,
+        "fields": {
+          "name": "Perso",
+          "emoji": "🏠"
+        }
+      }
+    },
+    {
+      "name": "a Boost: code never travels",
+      "entity": {
+        "kind": "boost",
+        "id": "b1",
+        "fields": {
+          "css": "body{}"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "never-synced"
+      }
+    },
+    {
+      "name": "a password",
+      "entity": {
+        "kind": "password",
+        "id": "p1",
+        "fields": {
+          "value": "x"
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": false,
+        "reason": "never-synced"
+      }
+    },
+    {
+      "name": "a kind this version does not know: kept as it is",
+      "entity": {
+        "kind": "widget",
+        "id": "w1",
+        "fields": {
+          "x": 1
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true,
+        "fields": {
+          "x": 1
+        }
+      }
+    },
+    {
+      "name": "a field this version does not know, in a known kind: kept",
+      "entity": {
+        "kind": "space",
+        "id": "s2",
+        "fields": {
+          "name": "Neuf",
+          "futureField": [
+            1,
+            2
+          ]
+        },
+        "stamps": {}
+      },
+      "expect": {
+        "accepted": true,
+        "fields": {
+          "name": "Neuf",
+          "futureField": [
+            1,
+            2
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -6,6 +6,7 @@ Les documents de ce dossier sont en français. Pour installer, construire et uti
 
 - [reglages.md](reglages.md) : la fenêtre des Réglages en une page (« Pour commencer », la recherche, les préréglages, « Plus de réglages », « Réglages modifiés », les sous-pages, « Fonctions en option »).
 - [fonctions.md](fonctions.md) : chaque fonction optionnelle, son réglage, sa valeur par défaut, ce qu'elle coûte et ce que libère sa désactivation.
+- [synchronisation.md](synchronisation.md) : la synchronisation Mac ↔ iPhone sur le réseau local (phase 2 de la version iOS, [ios.md](ios.md) §13) : appairage par QR, TLS 1.3 épinglé, messages, fusion à trois voies, ce qui ne se synchronise jamais ; **spécification, rien n'est implémenté**.
 - [recherche.md](recherche.md) : la barre de commandes (sources des propositions, mots-clés « ! », calculatrice) et la recherche dans la page.
 - [gestionnaire-mots-de-passe.md](gestionnaire-mots-de-passe.md) : le coffre de mots de passe local, son modèle de menace et ses choix.
 - [traduction-locale.md](traduction-locale.md) : la traduction des pages sur la machine et l'interface traduite.

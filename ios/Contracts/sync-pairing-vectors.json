@@ -1,0 +1,958 @@
+{
+  "comment": "Shared by src/shared/ios-sync-contract.test.ts (a reference reader written in the test, until src/main/sync/ exists) and by ios/LuciumKit (SyncVectorTests). The pairing of docs/synchronisation.md §4 and §6: the proofs (HMAC-SHA-256 over a transcription, §4.4), the text of the QR (§4.2), the code typed without a camera (§4.3), the life of the secret (§4.5), what the phone checks before it sends anything, the local-address filter (§6.2) and the certificate profile (§6.3). Binary values are lower-case hex when named `…Hex`, base64url without padding otherwise. Written by a script from fixed inputs: change a rule on one side and the other side fails.",
+  "constants": {
+    "secretBytes": 16,
+    "nonceBytes": 16,
+    "fingerprintBytes": 32,
+    "windowMs": 120000,
+    "maxInvalidProofs": 5,
+    "qrMaxChars": 300,
+    "qrMaxHosts": 4
+  },
+  "proof": [
+    {
+      "name": "the reference exchange",
+      "secret": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43",
+      "fpMac": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "nonceMac": "00112233445566778899aabbccddeeff",
+      "noncePhone": "ffeeddccbbaa99887766554433221100",
+      "idMac": "vector-mac-0000000001",
+      "idPhone": "vector-phone-000000002",
+      "requestTag": "4FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q",
+      "acceptTag": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A"
+    },
+    {
+      "name": "another secret, other nonces and ids",
+      "secret": "00000000000000000000000000000001",
+      "fpMac": "c8be01df77558e6cc94376ffb15a186a6657fde92de46b65f5baada8c6477197",
+      "fpPhone": "9960b6df16bebcff3a63eee0ffedc8a1abd7e29042f315da80f55196d5fa66a0",
+      "nonceMac": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "noncePhone": "55555555555555555555555555555555",
+      "idMac": "M",
+      "idPhone": "P",
+      "requestTag": "r9PM8pUV6S_AQKbK1uUXEz3O5uTMhBd_0n_lrZGeAEU",
+      "acceptTag": "deQ0ZTSaM3eMS4fJCkXTL4U9B1EXyTgwFtDZpWQg2Es"
+    }
+  ],
+  "mutations": {
+    "of": "the reference exchange",
+    "cases": [
+      {
+        "field": "secret",
+        "valueHex": "6b1f0c2b9d4e7a35c81b2f0e5d7a9c43",
+        "requestTag": "A5jAJmMvPcg3VyeIllfdCuG9-AkH0eT2LB7eEe4T1Z4",
+        "acceptTag": "z03FXmNK5IJR-vsjJb2xhW2IWcD8-m9yxp3wE3x_1uY",
+        "changesRequestTag": true,
+        "changesAcceptTag": true
+      },
+      {
+        "field": "fpMac",
+        "valueHex": "d0e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+        "requestTag": "a5DuUrCpUSlhlq2YE8cdieF_BiHVcPCSUUOjmbZoHWM",
+        "acceptTag": "7QtxEBdsp0tAwgIYiKiRaSBgnyX5l_G8KY-z2NZciA8",
+        "changesRequestTag": true,
+        "changesAcceptTag": true
+      },
+      {
+        "field": "fpPhone",
+        "valueHex": "6b1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+        "requestTag": "Tpw_Q-NxekhYoroX1jaNkDx0r_ywdk_gpI2cbaRb-rI",
+        "acceptTag": "cjT5GHNNx7WJULbteNGIp8M5GkoXGozoEnLPZgBeAj8",
+        "changesRequestTag": true,
+        "changesAcceptTag": true
+      },
+      {
+        "field": "nonceMac",
+        "valueHex": "01112233445566778899aabbccddeeff",
+        "requestTag": "3pQ_6tFYBnYbGolHqzJ9pIuURI3zJ0XhTJalefiuw2Y",
+        "acceptTag": "ZQVOplcmGDTx8bZ0Z7zKewl6p-OfCX7AvoNdTcgMtkY",
+        "changesRequestTag": true,
+        "changesAcceptTag": true
+      },
+      {
+        "field": "noncePhone",
+        "valueHex": "feeeddccbbaa99887766554433221100",
+        "requestTag": "-RSZ-qONFqfVjduxTEFPY3iOQCTvXEDhk3BPL5RCkJ8",
+        "acceptTag": "zEG4F4FAfnBG1Kd_ue3t_O79qBDDfWMhWTfs_jv_IyM",
+        "changesRequestTag": true,
+        "changesAcceptTag": true
+      },
+      {
+        "field": "idMac",
+        "value": "vector-mac-0000000001x",
+        "requestTag": "4FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q",
+        "acceptTag": "93grSIBnEYDJRMd0Zi-kGl5vP_4rTs7MBesiIYp6cvk",
+        "changesRequestTag": false,
+        "changesAcceptTag": true
+      },
+      {
+        "field": "idPhone",
+        "value": "vector-phone-000000002x",
+        "requestTag": "GaZy_J3jjHdsgtn9u3XjM38J32PrI6_19cjz7vtQ2RY",
+        "acceptTag": "PzzgVyQlTphoMxlM8-ye3FS1sVsqSVeTybYnZfq51BQ",
+        "changesRequestTag": true,
+        "changesAcceptTag": true
+      }
+    ]
+  },
+  "qr": {
+    "valid": [
+      {
+        "name": "one IPv4 host",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/192.168.1.20",
+        "expect": {
+          "fingerprintHex": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+          "secretHex": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43",
+          "port": 49213,
+          "hosts": [
+            "192.168.1.20"
+          ]
+        }
+      },
+      {
+        "name": "a name, an IPv4 and a unique-local IPv6 address, in that order",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/51000/mac-de-test.local,10.0.0.7,fd12:3456:789a::1",
+        "expect": {
+          "fingerprintHex": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+          "secretHex": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43",
+          "port": 51000,
+          "hosts": [
+            "mac-de-test.local",
+            "10.0.0.7",
+            "fd12:3456:789a::1"
+          ]
+        }
+      },
+      {
+        "name": "four hosts, the most there can be",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/60001/a.local,172.16.0.2,100.64.1.1,fe80::1",
+        "expect": {
+          "fingerprintHex": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+          "secretHex": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43",
+          "port": 60001,
+          "hosts": [
+            "a.local",
+            "172.16.0.2",
+            "100.64.1.1",
+            "fe80::1"
+          ]
+        }
+      },
+      {
+        "name": "the lowest port",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/1/192.168.0.1",
+        "expect": {
+          "fingerprintHex": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+          "secretHex": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43",
+          "port": 1,
+          "hosts": [
+            "192.168.0.1"
+          ]
+        }
+      },
+      {
+        "name": "the highest port",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/65535/192.168.0.1",
+        "expect": {
+          "fingerprintHex": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+          "secretHex": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43",
+          "port": 65535,
+          "hosts": [
+            "192.168.0.1"
+          ]
+        }
+      }
+    ],
+    "invalid": [
+      {
+        "name": "another scheme",
+        "text": "lucium:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/192.168.1.20",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a later version of the code",
+        "text": "lucium-sync:2/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/192.168.1.20",
+        "expect": {
+          "code": "unsupported-version"
+        }
+      },
+      {
+        "name": "a fingerprint one character short",
+        "text": "lucium-sync:1/enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/192.168.1.20",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a fingerprint with padding",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ=/ah8MK51OejXIGy8OXXqcQw/49213/192.168.1.20",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a secret one character short",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/h8MK51OejXIGy8OXXqcQw/49213/192.168.1.20",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "port 0",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/0/192.168.1.20",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "port 65536",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/65536/192.168.1.20",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a port with a leading zero",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/049213/192.168.1.20",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a port that is not a number",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49x13/192.168.1.20",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a public address",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/8.8.8.8",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a local address after a public one",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/192.168.1.20,8.8.8.8",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a name that is not .local",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/example.com",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "no host",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "five hosts",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4,10.0.0.5",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a segment too many",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/192.168.1.20/extra",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a segment too few",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a space around the text",
+        "text": " lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/192.168.1.20",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a trailing newline",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/192.168.1.20\n",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "an upper-case IPv6 address",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/FD12:3456:789A::1",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "an IPv6 address between brackets",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/[fd12:3456:789a::1]",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "an IPv6 address with a zone",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/fe80::1%en0",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "an upper-case name",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/Mac.local",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a name that is only .local",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/.local",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a text over 300 characters (four long names)",
+        "text": "lucium-sync:1/0enMQBYlPLzFfZD6d2QLBtVQIjoU_VgsHDvzFCboUZ8/ah8MK51OejXIGy8OXXqcQw/49213/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.local,bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb.local,cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc.local,dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd.local",
+        "expect": {
+          "code": "invalid-code"
+        }
+      }
+    ]
+  },
+  "manualCode": {
+    "valid": [
+      {
+        "name": "the form the Mac shows",
+        "input": "NIPQY-K45JZ-5DLSA-3F4HF-26U4I-M",
+        "expect": {
+          "secretHex": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43"
+        }
+      },
+      {
+        "name": "lower case and spaces instead of dashes",
+        "input": "nipqy k45jz 5dlsa 3f4hf 26u4i m",
+        "expect": {
+          "secretHex": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43"
+        }
+      },
+      {
+        "name": "no separator at all",
+        "input": "NIPQYK45JZ5DLSA3F4HF26U4IM",
+        "expect": {
+          "secretHex": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43"
+        }
+      },
+      {
+        "name": "dashes in odd places",
+        "input": "NIP-QYK45JZ5DLSA3F--4HF26U4IM",
+        "expect": {
+          "secretHex": "6a1f0c2b9d4e7a35c81b2f0e5d7a9c43"
+        }
+      }
+    ],
+    "invalid": [
+      {
+        "name": "one character short",
+        "input": "NIPQY-K45JZ-5DLSA-3F4HF-26U4I-",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "one character too many",
+        "input": "NIPQY-K45JZ-5DLSA-3F4HF-26U4I-MA",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a digit the alphabet does not have (1)",
+        "input": "NI1QY-K45JZ-5DLSA-3F4HF-26U4I-M",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a character outside the alphabet (8)",
+        "input": "NI8QY-K45JZ-5DLSA-3F4HF-26U4I-M",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a punctuation mark inside",
+        "input": "NI.QY-K45JZ-5DLSA-3F4HF-26U4I-M",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "a last character whose two padding bits are not zero",
+        "input": "NIPQYK45JZ5DLSA3F4HF26U4IN",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "empty",
+        "input": "",
+        "expect": {
+          "code": "invalid-code"
+        }
+      },
+      {
+        "name": "only separators",
+        "input": "--- ---",
+        "expect": {
+          "code": "invalid-code"
+        }
+      }
+    ]
+  },
+  "secretLifecycle": [
+    {
+      "name": "a valid request inside the window is accepted",
+      "events": [
+        {
+          "atMs": 30000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "accepted"
+      ]
+    },
+    {
+      "name": "the last millisecond of the window still opens",
+      "events": [
+        {
+          "atMs": 119999,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "accepted"
+      ]
+    },
+    {
+      "name": "the window is closed at 120000 ms",
+      "events": [
+        {
+          "atMs": 120000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "pairing-expired"
+      ]
+    },
+    {
+      "name": "a second valid request after a success is refused: a replay",
+      "events": [
+        {
+          "atMs": 10000,
+          "event": "request",
+          "proof": "valid"
+        },
+        {
+          "atMs": 20000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "accepted",
+        "pairing-used"
+      ]
+    },
+    {
+      "name": "a wrong proof does not burn the secret",
+      "events": [
+        {
+          "atMs": 5000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 10000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "bad-proof",
+        "accepted"
+      ]
+    },
+    {
+      "name": "four wrong proofs, then a valid one: still pairs",
+      "events": [
+        {
+          "atMs": 1000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 2000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 3000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 4000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 6000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "accepted"
+      ]
+    },
+    {
+      "name": "five wrong proofs lock the secret, even against a valid one",
+      "events": [
+        {
+          "atMs": 1000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 2000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 3000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 4000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 5000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 6000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "pairing-locked"
+      ]
+    },
+    {
+      "name": "the refusal of the person leaves the secret burned",
+      "events": [
+        {
+          "atMs": 10000,
+          "event": "request",
+          "proof": "valid"
+        },
+        {
+          "atMs": 15000,
+          "event": "confirm",
+          "decision": "refuse"
+        },
+        {
+          "atMs": 40000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "accepted",
+        "pairing-used"
+      ]
+    },
+    {
+      "name": "closing the sheet closes the window",
+      "events": [
+        {
+          "atMs": 10000,
+          "event": "close"
+        },
+        {
+          "atMs": 20000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "pairing-closed"
+      ]
+    },
+    {
+      "name": "closed wins over locked, expired and used",
+      "events": [
+        {
+          "atMs": 1000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 2000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 3000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 4000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 5000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 20000,
+          "event": "close"
+        },
+        {
+          "atMs": 130000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "pairing-closed"
+      ]
+    },
+    {
+      "name": "expired wins over a wrong proof",
+      "events": [
+        {
+          "atMs": 130000,
+          "event": "request",
+          "proof": "invalid"
+        }
+      ],
+      "expect": [
+        "pairing-expired"
+      ]
+    },
+    {
+      "name": "used wins over a wrong proof",
+      "events": [
+        {
+          "atMs": 10000,
+          "event": "request",
+          "proof": "valid"
+        },
+        {
+          "atMs": 20000,
+          "event": "request",
+          "proof": "invalid"
+        }
+      ],
+      "expect": [
+        "accepted",
+        "pairing-used"
+      ]
+    },
+    {
+      "name": "locked wins over expired",
+      "events": [
+        {
+          "atMs": 100000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 101000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 102000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 103000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 104000,
+          "event": "request",
+          "proof": "invalid"
+        },
+        {
+          "atMs": 125000,
+          "event": "request",
+          "proof": "valid"
+        }
+      ],
+      "expect": [
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "bad-proof",
+        "pairing-locked"
+      ]
+    }
+  ],
+  "clientChecks": [
+    {
+      "name": "the QR names the fingerprint the Mac presents",
+      "mode": "qr",
+      "expectedFingerprintHex": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "presentedFingerprintHex": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "expect": "continue"
+    },
+    {
+      "name": "one bit of difference: nothing is sent",
+      "mode": "qr",
+      "expectedFingerprintHex": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "presentedFingerprintHex": "d0e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "expect": "fingerprint-mismatch"
+    },
+    {
+      "name": "a typed code knows no fingerprint: the proof decides later",
+      "mode": "manualCode",
+      "expectedFingerprintHex": null,
+      "presentedFingerprintHex": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "expect": "continue-unpinned"
+    }
+  ],
+  "addressPolicy": [
+    {
+      "host": "10.0.0.1",
+      "allowed": true
+    },
+    {
+      "host": "10.255.255.255",
+      "allowed": true
+    },
+    {
+      "host": "172.15.255.255",
+      "allowed": false
+    },
+    {
+      "host": "172.16.0.1",
+      "allowed": true
+    },
+    {
+      "host": "172.31.255.255",
+      "allowed": true
+    },
+    {
+      "host": "172.32.0.1",
+      "allowed": false
+    },
+    {
+      "host": "192.168.1.20",
+      "allowed": true
+    },
+    {
+      "host": "192.167.255.255",
+      "allowed": false
+    },
+    {
+      "host": "192.169.0.1",
+      "allowed": false
+    },
+    {
+      "host": "169.254.1.1",
+      "allowed": true
+    },
+    {
+      "host": "169.253.255.255",
+      "allowed": false
+    },
+    {
+      "host": "100.64.0.1",
+      "allowed": true
+    },
+    {
+      "host": "100.127.255.255",
+      "allowed": true
+    },
+    {
+      "host": "100.63.255.255",
+      "allowed": false
+    },
+    {
+      "host": "100.128.0.1",
+      "allowed": false
+    },
+    {
+      "host": "127.0.0.1",
+      "allowed": false
+    },
+    {
+      "host": "8.8.8.8",
+      "allowed": false
+    },
+    {
+      "host": "0.0.0.0",
+      "allowed": false
+    },
+    {
+      "host": "255.255.255.255",
+      "allowed": false
+    },
+    {
+      "host": "224.0.0.251",
+      "allowed": false
+    },
+    {
+      "host": "fd12:3456:789a::1",
+      "allowed": true
+    },
+    {
+      "host": "fc00::1",
+      "allowed": true
+    },
+    {
+      "host": "fbff::1",
+      "allowed": false
+    },
+    {
+      "host": "fe80::1",
+      "allowed": true
+    },
+    {
+      "host": "febf::1",
+      "allowed": true
+    },
+    {
+      "host": "fec0::1",
+      "allowed": false
+    },
+    {
+      "host": "::1",
+      "allowed": false
+    },
+    {
+      "host": "::",
+      "allowed": false
+    },
+    {
+      "host": "2001:4860:4860::8888",
+      "allowed": false
+    },
+    {
+      "host": "::ffff:192.168.1.5",
+      "allowed": true
+    },
+    {
+      "host": "::ffff:8.8.8.8",
+      "allowed": false
+    },
+    {
+      "host": "mac-de-test.local",
+      "allowed": true
+    },
+    {
+      "host": "a.b.local",
+      "allowed": true
+    },
+    {
+      "host": "example.com",
+      "allowed": false
+    },
+    {
+      "host": "localhost",
+      "allowed": false
+    },
+    {
+      "host": "local",
+      "allowed": false
+    },
+    {
+      "host": ".local",
+      "allowed": false
+    },
+    {
+      "host": "mac.local.",
+      "allowed": false
+    },
+    {
+      "host": "",
+      "allowed": false
+    },
+    {
+      "host": "192.168.1",
+      "allowed": false
+    },
+    {
+      "host": "192.168.1.256",
+      "allowed": false
+    },
+    {
+      "host": "192.168.01.1",
+      "allowed": false
+    },
+    {
+      "host": "192.168.1.1 ",
+      "allowed": false
+    },
+    {
+      "host": "http://192.168.1.1",
+      "allowed": false
+    }
+  ],
+  "certificate": {
+    "spkiHex": "3059301306072a8648ce3d020106082a8648ce3d03010703420004f9e0866b3898caeb3f748e79b8db61931fc417f4ed3777ee51ef96666e7f6285e14af3f69dca4c632665472a85f1eb8ba4e3bd16f8358fef3f7822c90fca69de",
+    "serialHex": "017f3a5c8e1d2b4f6a90c3d5e7f10243",
+    "tbsHex": "3081d0a0030201020210017f3a5c8e1d2b4f6a90c3d5e7f10243300a06082a8648ce3d04030230163114301206035504030c0b6c756369756d2d73796e633020170d3730303130313030303030305a180f39393939313233313233353935395a30163114301206035504030c0b6c756369756d2d73796e633059301306072a8648ce3d020106082a8648ce3d03010703420004f9e0866b3898caeb3f748e79b8db61931fc417f4ed3777ee51ef96666e7f6285e14af3f69dca4c632665472a85f1eb8ba4e3bd16f8358fef3f7822c90fca69de",
+    "certificateDerHex": "308201293081d0a0030201020210017f3a5c8e1d2b4f6a90c3d5e7f10243300a06082a8648ce3d04030230163114301206035504030c0b6c756369756d2d73796e633020170d3730303130313030303030305a180f39393939313233313233353935395a30163114301206035504030c0b6c756369756d2d73796e633059301306072a8648ce3d020106082a8648ce3d03010703420004f9e0866b3898caeb3f748e79b8db61931fc417f4ed3777ee51ef96666e7f6285e14af3f69dca4c632665472a85f1eb8ba4e3bd16f8358fef3f7822c90fca69de300a06082a8648ce3d0403020348003045022100ef51c547bc6994b8916dea59a4577827fb16f169dabb4a76dd362e131056fe0f02206f724e7df322ce348b6041f797e718cb9bdeeb3b32cddc33f3abc080b75076db",
+    "fingerprintHex": "ae926ef79637a15b7fdedb9cf1a845175ed3c08f208c7c693305c96ccd8a6a6b"
+  }
+}
