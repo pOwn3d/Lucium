@@ -90,7 +90,7 @@ struct SpacesSheet: View {
                 VStack(alignment: .leading, spacing: 2) {
                     // A name is data, never looked up in the catalogue. Colours are given as colours: a style such as `.primary` would take the tint of the button.
                     Text(verbatim: space.name).foregroundStyle(Color.primary).fontWeight(.semibold)
-                    Text(Self.count(model.tabCount(in: space))).font(.footnote).foregroundStyle(Color.secondary)
+                    Text(model.tabCount(in: space).map(Self.count) ?? "lock.sheet.short").font(.footnote).foregroundStyle(Color.secondary)
                 }
                 Spacer(minLength: 0)
                 if selected { ProjectIcon(name: .check).foregroundStyle(Color.accentColor) }
@@ -99,7 +99,7 @@ struct SpacesSheet: View {
         }
         .accessibilityAddTraits(selected ? .isSelected : [])
         .swipeActions(edge: .trailing) {
-            if model.spaces.count > 1 { Button("spaces.delete", role: .destructive) { deletion = space } }
+            if model.spaces.count > 1, !model.isCovered(space) { Button("spaces.delete", role: .destructive) { deletion = space } }
             Button("spaces.edit") { editing = space.id }.tint(.accentColor)
         }
     }
@@ -119,7 +119,7 @@ struct SpacesSheet: View {
                 }
                 .frame(minHeight: 44)
             }
-            if !model.state.privateTabs.isEmpty {
+            if !model.visiblePrivateTabs.isEmpty {
                 Button("spaces.private.close", role: .destructive) { model.closePrivateTabs() }
             }
         }
@@ -148,6 +148,7 @@ struct SpacesSheet: View {
         case .invalid(.notOneEmoji): "spaces.error.emoji"
         case .invalid(.profileNameTaken): "spaces.error.profiletaken"
         case .invalid(.lastSpace): "spaces.error.last"
+        case .locked: "spaces.error.locked"
         case .eraseFailed(let why): "spaces.error.erase \(why)"
         case .invalid, nil: "spaces.error.other"
         }

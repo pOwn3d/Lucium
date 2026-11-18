@@ -21,7 +21,17 @@ extension BrowserModel {
         state.profileNames[id] ?? (id == BrowserState.defaultProfileId ? String(localized: "profile.default") : id)
     }
 
-    func tabCount(in space: Space) -> Int { state.tabs.filter { $0.spaceId == space.id && !$0.isPrivate }.count }
+    /// What a list may show of a space: its tabs, unless the space is locked (`BrowserModel+Lock.swift`). Every list of tabs, and every count of them,
+    /// goes through here or through `activeTabs`: reading `state.tabs` directly would get round the lock.
+    func isCovered(_ space: Space) -> Bool { lock?.covers(space: space.id) ?? false }
+
+    /// How many tabs a space has, or `nil` while it is locked (a locked space says nothing of what it holds). Private tabs are not counted.
+    func tabCount(in space: Space) -> Int? {
+        isCovered(space) ? nil : state.tabs.filter { $0.spaceId == space.id && !$0.isPrivate }.count
+    }
+
+    /// The private tabs the lock lets be seen: none of a locked space.
+    var visiblePrivateTabs: [TabItem] { state.privateTabs.filter { lock?.covers(space: $0.spaceId) != true } }
 
     // MARK: Spaces and profiles
 
@@ -29,6 +39,8 @@ extension BrowserModel {
     enum SpaceFailure: Error, Equatable {
         case invalid(BrowserState.SpaceError)
         case eraseFailed(String)
+        /// The space is locked: it is not deleted behind its lock.
+        case locked
     }
 
     /// Which profile a new space uses: one that exists, or a new one that is made with the space.
@@ -84,6 +96,7 @@ extension BrowserModel {
 
     /// Deletes a space with its tabs: their web views, pictures and page states go too. Its profile stays, with its cookies.
     func deleteSpace(_ id: String) -> Result<Void, SpaceFailure> {
+        if lock?.covers(space: id) == true { return .failure(.locked) }
         var next = state
         let removed: [String]
         do throws(BrowserState.SpaceError) {
@@ -100,6 +113,7 @@ extension BrowserModel {
         }
         thumbnailRevision += 1
         state = next
+        lock?.reconcile(spaceIds: Set(state.spaces.map(\.id)))  // a deleted space leaves the guarded ones
         ensureActiveTab()
         if wasShown { arrive() } else { scheduleSave() }
         return .success(())
@@ -129,6 +143,7 @@ extension BrowserModel {
 
     /// A new private tab in the active space, shown. Its page lives in a data store that exists only in memory.
     func newPrivateTab() {
+        guard !activeSpaceCovered else { return }  // no tab is added to a space that is locked
         tabsSheetShown = false
         spacesSheetShown = false
         leaveActiveTab()
@@ -153,7 +168,7 @@ extension BrowserModel {
 
     /// Closes every private tab: the person leaves the private browsing in one gesture.
     func closePrivateTabs() {
-        for tab in state.privateTabs { close(tab) }
+        for tab in visiblePrivateTabs { close(tab) }
         releasePrivateStoreIfUnused()
     }
 
@@ -168,6 +183,7 @@ extension BrowserModel {
     /// Erases what the profile of the active space holds for a site: cookies, local storage, databases, caches. Answers how many records of WebKit
     /// it erased. The pages of that site that are awake reload, to show themselves signed out rather than as they were.
     func clearSiteData(host: String) async -> Int {
+        guard !activeSpaceCovered else { return 0 }
         let profileId = activeSpace.profileId
         let store = WKWebsiteDataStore(forIdentifier: ProfileStore.identifier(for: profileId))
         let types = WKWebsiteDataStore.allWebsiteDataTypes()

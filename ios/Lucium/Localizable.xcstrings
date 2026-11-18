@@ -753,6 +753,22 @@
         }
       }
     },
+    "lock.sheet.short": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Locked"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Verrouillé"
+          }
+        }
+      }
+    },
     "privacy.fallback %@": {
       "localizations": {
         "en": {
@@ -1389,6 +1405,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Le dernier espace ne peut pas être supprimé."
+          }
+        }
+      }
+    },
+    "spaces.error.locked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A locked space cannot be deleted: unlock it first."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un espace verrouillé ne se supprime pas : déverrouillez-le d’abord."
           }
         }
       }

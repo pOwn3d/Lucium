@@ -4,6 +4,15 @@ import WebKit
 import XCTest
 @testable import Lucium
 
+/// An owner of the phone that says what it is told to (the lock asks it before it turns on or opens a space).
+private final class Owner: LockAuthenticating, @unchecked Sendable {
+    private let guardLock = NSLock()
+    private var outcomeValue: LockOutcome = .granted
+    var outcome: LockOutcome { get { guardLock.withLock { outcomeValue } } set { guardLock.withLock { outcomeValue = newValue } } }
+    func canCheckOwner() -> Bool { true }
+    func authenticate(purpose: LockPurpose) async -> LockOutcome { outcome }
+}
+
 /// Spaces, profiles, private tabs and the data of a site, on real web views and real stores. A page of a local server stands for a site; its cookies
 /// are written by the page itself (`document.cookie`), the way a site writes them.
 @MainActor
@@ -226,6 +235,42 @@ final class SpacesTests: BrowserCoreTestCase {
         await model.sleepSurplus(underPressure: true)
         XCTAssertFalse(model.awakeTabIds.contains(secret.id), "under memory pressure only the tab on screen stays")
         XCTAssertNil(model.sideStore?.read(.interaction, for: secret.id), "…and the history of its page is not written to the disk")
+    }
+
+    // MARK: The lock
+
+    /// Every list and every action of this card goes through the lock: a locked space shows no count of tabs, no private tab, and cannot be deleted
+    /// behind its lock, receive a private tab or have the data of a site cleared while it is covered.
+    func testALockedSpaceShowsNoCountNoPrivateTabAndIsNotDeletedNorGivenOneNorCleared() async throws {
+        let owner = Owner()
+        let lock = LockController(authenticator: owner, file: LockSettingsFile(url: directory.appending(path: LockSettingsFile.fileName)))
+        let model = BrowserModel.launch(directory: directory, lock: lock, embeddedLists: { nil })
+        await model.prepare()
+        try await load("/a.html", in: model)  // work
+        let work = model.activeSpace
+        XCTAssertEqual(model.tabCount(in: work), 1)
+        model.newPrivateTab()
+        XCTAssertEqual(model.visiblePrivateTabs.count, 1)
+
+        model.selectSpace("home")
+        let locked = await lock.setSpace("work", guarded: true)
+        XCTAssertTrue(locked)
+        XCTAssertNil(model.tabCount(in: work), "a locked space says nothing of what it holds")
+        XCTAssertNotNil(model.tabCount(in: model.activeSpace), "the other spaces still do")
+        XCTAssertTrue(model.visiblePrivateTabs.isEmpty, "not even that it holds a private tab")
+        XCTAssertEqual(failure(model.deleteSpace("work")), .locked)
+        XCTAssertNotNil(model.spaces.first { $0.id == "work" }, "a locked space is not deleted behind its lock")
+        model.closePrivateTabs()
+        XCTAssertEqual(model.state.privateTabs.count, 1, "the private tab of a locked space is not reached either")
+
+        owner.outcome = .refused(.failed)
+        model.selectSpace("work")  // asks the owner, who refuses: the space stays covered
+        XCTAssertTrue(model.activeSpaceCovered)
+        model.newPrivateTab()
+        XCTAssertEqual(model.state.privateTabs.count, 1, "no tab is added to a locked space, private or not")
+        let erased = await model.clearSiteData(host: "127.0.0.1")
+        XCTAssertEqual(erased, 0)
+        XCTAssertNil(model.siteOfActivePage)
     }
 
     // MARK: The data of a site
