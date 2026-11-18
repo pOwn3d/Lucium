@@ -27,7 +27,7 @@ import { cleanSnapshot, isWebAddress } from './inbound-filter'
 import type { MarkBook } from './marks'
 import type { OpenTab, SnapshotPart, WireEntity, WireTombstone } from './messages'
 import { buildPatch, patchIsEmpty } from './patch'
-import { baseOf, follows, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
+import { baseOf, follows, kindIsExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 import { randomBytes } from 'node:crypto'
 
 /** What a session needs of the state of the device. */
@@ -270,7 +270,7 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     if (deps.host.isAppLocked()) return fail('locked', 'the application locked before anything was written')
     const patch = buildPatch(local, merged.snapshot, aside)
     if (!patchIsEmpty(patch)) deps.host.apply(patch)
-    deps.marks.adopt(merged.snapshot, follows)
+    deps.marks.adopt(merged.snapshot, follows, (kind) => kindIsExchanged(kind, common))
     try {
       deps.bases.save(peerId, baseOf(merged.snapshot), deps.now())
       deps.saveMarks()

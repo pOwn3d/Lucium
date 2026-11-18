@@ -1,7 +1,8 @@
 // The marks (docs/synchronisation.md §9.2, §11.5): the hybrid clock, and the book that gives a mark to what changes.
 import { describe, expect, it } from 'vitest'
 import { compareStamps } from '@shared/sync-snapshot'
-import { Hlc, MarkBook, type TrackedView } from './marks'
+import { STAMP_FUTURE_REFUSE_MS } from './limits'
+import { Hlc, MarkBook, listKindOf, type TrackedView } from './marks'
 import { messageVectors } from './sync-vectors.test-support'
 
 const NOW = 1_790_000_000_000
@@ -40,6 +41,63 @@ describe('Hlc', () => {
     clock.observe('garbage')
     clock.observe('0')
     expect(clock.state()).toEqual({ ms: 1790000500000, counter: 4 })
+  })
+})
+
+describe('Hlc: a clock that was wrong comes back (review n° 18)', () => {
+  const YEAR = 365 * 86_400_000
+
+  it('does not stay ahead for ever after the time of day was wrong: more than a week ahead of it, the next mark is of now', () => {
+    const clock = new Hlc('d')
+    clock.next(NOW + 3 * YEAR)
+    // The time of day was put right: the marks follow it, they are not three years ahead for good (every other device refuses them, §9.3).
+    expect(clock.next(NOW)).toBe('1790000000000-0000-d')
+    expect(clock.next(NOW)).toBe('1790000000000-0001-d')
+  })
+
+  it('still counts on from a clock that is only a little ahead (a few minutes: the usual skew), as a clock put back does', () => {
+    const clock = new Hlc('d')
+    clock.next(NOW + 60_000)
+    expect(clock.next(NOW)).toBe('1790000060000-0001-d')
+    const edge = new Hlc('e')
+    edge.next(NOW + STAMP_FUTURE_REFUSE_MS)
+    expect(edge.next(NOW)).toBe(`${String(NOW + STAMP_FUTURE_REFUSE_MS).padStart(13, '0')}-0001-e`)
+  })
+
+  it('never writes a mark of more than thirteen digits: a clock at the end of what thirteen digits hold starts over from the time of day', () => {
+    const full = new Hlc('d', { ms: 9_999_999_999_999, counter: 0xffff })
+    expect(full.next(NOW)).toBe('1790000000000-0000-d')
+    const poisoned = new Hlc('d', { ms: 99_999_999_999_999, counter: 3 })
+    expect(poisoned.next(NOW)).toMatch(/^[0-9]{13}-[0-9a-f]{4}-d$/)
+  })
+})
+
+describe('MarkBook.update: marks that are too far ahead are made again (review n° 18)', () => {
+  const FAR = NOW + 3 * 365 * 86_400_000
+
+  it('gives a fresh mark to a field, a removed field, a tombstone and a list whose mark is more than a week ahead, and leaves the others alone', () => {
+    const book = new MarkBook('mac')
+    book.update(view({ space: { s1: { name: 'A', gone: 1 }, s2: { name: 'B' } }, tab: { t1: { pinned: true } } }, { spaces: ['s1', 's2'] }), FAR)
+    book.update(view({ space: { s1: { name: 'A' }, s2: { name: 'B' } }, tab: {} }, { spaces: ['s1', 's2'] }), FAR)
+    expect(compareStamps(book.stampsOf('space', 's1')['name'] as string, `${NOW + STAMP_FUTURE_REFUSE_MS}`)).toBeGreaterThan(0)
+    // The clock comes back to the true time: every mark that is out of reach is made again, by the same call that notices it.
+    const unchanged = view({ space: { s1: { name: 'A' }, s2: { name: 'B' } }, tab: {} }, { spaces: ['s1', 's2'] })
+    book.update(unchanged, NOW)
+    const limit = `${NOW + STAMP_FUTURE_REFUSE_MS}`
+    for (const stamp of [...Object.values(book.stampsOf('space', 's1')), ...Object.values(book.stampsOf('space', 's2')), book.orderStampOf('spaces'), ...Object.values(book.tombstonesOf()['tab'] ?? {})]) {
+      expect(compareStamps(stamp, limit), stamp).toBeLessThanOrEqual(0)
+      expect(stamp.slice(0, 13).length).toBe(13)
+    }
+    expect(Object.keys(book.tombstonesOf()['tab'] ?? {})).toEqual(['t1'])
+    expect(compareStamps(book.clock.next(NOW), limit)).toBeLessThanOrEqual(0)
+  })
+
+  it('does not touch a mark that is merely a few minutes ahead, nor change the marks of a book that is in order', () => {
+    const book = new MarkBook('mac')
+    book.update(view({ space: { s1: { name: 'A' } } }, { spaces: ['s1'] }), NOW + 120_000)
+    const before = JSON.stringify(book)
+    book.update(view({ space: { s1: { name: 'A' } } }, { spaces: ['s1'] }), NOW)
+    expect(JSON.stringify(book)).toBe(before)
   })
 })
 
@@ -164,6 +222,43 @@ describe('MarkBook.adopt', () => {
     const book = new MarkBook('mac')
     book.adopt({ entities: {}, tombstones: { tab: { t9: '1790001000000-0007-phone' } }, order: {}, orderStamps: { spaces: '1790002000000-0001-phone' } }, follows)
     expect(compareStamps(book.clock.next(NOW), '1790002000000-0001-phone')).toBeGreaterThan(0)
+  })
+})
+
+describe('MarkBook.adopt: only what was exchanged (review n° 17)', () => {
+  const follows = (): boolean => true
+  const exchanged = (kind: string): boolean => kind === 'space' || kind === 'folder' || kind === 'tab' || kind === 'favorite'
+  const MARK = '1790000000500-0000-phone'
+
+  it('keeps the marks, the tombstones and the orders of the kinds that were not exchanged: a session without « réglages » or « archive » must not forget them', () => {
+    const book = new MarkBook('mac')
+    book.update(view({ space: { s1: { name: 'A' } }, setting: { sendGpc: { value: true } }, archived: { a1: { url: 'https://x.example/' } } }, { spaces: ['s1'] }), NOW)
+    book.update(view({ space: { s1: { name: 'A' } }, setting: { sendGpc: { value: true } }, archived: {} }, { spaces: ['s1'] }), NOW + 1000)
+    const setting = book.stampsOf('setting', 'sendGpc')
+    const tombstone = book.tombstonesOf()['archived']
+    expect(tombstone).toBeDefined()
+    // A session of the structure only: the merged snapshot has no settings and no archive in it.
+    book.adopt({ entities: { space: { s1: { fields: { name: 'B' }, stamps: { name: MARK } } } }, tombstones: {}, order: { spaces: ['s1'] }, orderStamps: { spaces: MARK } }, follows, exchanged)
+    expect(book.stampsOf('setting', 'sendGpc')).toEqual(setting)
+    expect(book.tombstonesOf()['archived']).toEqual(tombstone)
+    expect(book.stampsOf('space', 's1')).toEqual({ name: MARK })
+    expect(book.orderStampOf('spaces')).toBe(MARK)
+  })
+
+  it('still replaces what was exchanged, tombstones and lists included, and takes a kind it does not know as exchanged', () => {
+    const book = new MarkBook('mac')
+    book.update(view({ space: { s1: { name: 'A' }, s2: { name: 'B' } }, tab: { t1: { pinned: true } } }, { spaces: ['s1', 's2'], 'tabs:s1:-': ['t1'] }), NOW)
+    book.update(view({ space: { s1: { name: 'A' }, s2: { name: 'B' } }, tab: {} }, { spaces: ['s1', 's2'] }), NOW + 1000)
+    book.adopt({ entities: { space: { s1: { fields: { name: 'A' }, stamps: { name: MARK } } }, widget: { w1: { fields: { x: 1 }, stamps: { x: MARK } } } }, tombstones: { widget: { w2: MARK } }, order: { spaces: ['s1'] }, orderStamps: { spaces: MARK } }, follows, exchanged)
+    expect(Object.keys(book.stampsOf('space', 's2'))).toEqual([])
+    expect(book.tombstonesOf()['tab']).toBeUndefined()
+    expect(book.stampsOf('widget', 'w1')).toEqual({ x: MARK })
+    expect(book.tombstonesOf()['widget']).toEqual({ w2: MARK })
+    expect(book.orderStampOf('tabs:s1:-')).toBe('0')
+  })
+
+  it('knows which kind a list orders', () => {
+    expect(['spaces', 'folders:s:-', 'tabs:s:f', 'favorites:work', 'archived', 'elsewhere'].map(listKindOf)).toEqual(['space', 'folder', 'tab', 'favorite', null, null])
   })
 })
 
