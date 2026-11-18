@@ -11,8 +11,18 @@ describe('the synchronisation at the launch (main/index.ts)', () => {
   const index = read('index.ts')
 
   it('makes the service with the lock as its refusal, and puts it where the IPC channel finds it', () => {
-    expect(index).toMatch(/const sync = createSyncService\(\{ userData: app\.getPath\('userData'\), isLocked: \(\) => lock\.isAppLocked\(\) \}\)/)
+    expect(index).toMatch(/const sync = createSyncService\(\{\s+userData: app\.getPath\('userData'\),\s+isLocked: \(\) => lock\.isAppLocked\(\)/)
     expect(index).toContain('setSyncService(sync)')
+  })
+
+  it('gives the exchange of the data the shared state, written through the browser, and the lock of the spaces', () => {
+    expect(index).toContain("apply: (patch) => browser.dispatch({ type: 'sync/apply', patch })")
+    expect(index).toContain('isSpaceLocked: (spaceId) => lock.isSpaceLocked(spaceId)')
+    expect(index).toContain('state: () => sharedStore.get()')
+  })
+
+  it('has the marks follow the state again at the launch when the switch is on', () => {
+    expect(index).toMatch(/setSyncService\(sync\)\s+sync\.start\(\)/)
   })
 
   it('closes the window when the application locks, and says so in the log if it cannot', () => {

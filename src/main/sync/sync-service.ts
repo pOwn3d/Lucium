@@ -12,9 +12,15 @@
 
 import { randomInt, randomBytes } from 'node:crypto'
 import { encodeQr } from '@shared/qr'
-import { SYNC_CATEGORIES, type SyncCategory, type SyncPairingView, type SyncProblem, type SyncStatus } from '@shared/sync-ipc'
+import { SYNC_CATEGORIES, type SyncCategory, type SyncLastExchange, type SyncPairingView, type SyncProblem, type SyncStatus } from '@shared/sync-ipc'
+import { BaseStore } from './bases'
 import type { Channel } from './channel'
 import { CONFIRM_MS, FINGERPRINT_BYTES, SECRET_BYTES } from './limits'
+import { MarkStore } from './mark-store'
+import type { MarkBook } from './marks'
+import type { OpenTab } from './messages'
+import { runSession as runExchange, type SessionHost } from './session'
+import { MarkTracker } from './sync-tracker'
 import type { IdentityStore, SyncIdentity } from './identity'
 import { SyncListener, type ListenerDeps } from './listener'
 import { manualAddress, manualCode, qrText } from './pairing-code'
@@ -57,8 +63,10 @@ export interface SyncServiceDeps {
   now: () => number
   /** Whether the application is locked now: nothing opens while it is. */
   isLocked: () => boolean
-  /** The session with a paired device (§8). Until it exists, a device is told `internal`. */
+  /** The session with a paired device (§8), when a test puts its own. Without it, the exchange of `session` below is run, and without that a device is told `internal`. */
   runSession?: (channel: Channel, peer: PeerRecord) => Promise<void>
+  /** What the exchange of the data (§8) needs of this device: its state, where its marks and bases are kept, its versions. */
+  session?: SessionPorts
   /** Told when anything the page shows changed. */
   onChange?: () => void
   /** A port of the dynamic range, at random. */
@@ -69,6 +77,18 @@ export interface SyncServiceDeps {
   allowSource?: ListenerDeps['allowSource']
   confirmMs?: number
   windowMaxMs?: number
+}
+
+export interface SessionPorts {
+  host: SessionHost
+  /** Told at every change of the state (the marks follow it while the switch is on). */
+  subscribe: (listener: () => void) => () => void
+  marksFile: string
+  basesDir: string
+  appVersion: string
+  stateVersion: number
+  /** The tabs announced when the category « Onglets ouverts » is common. */
+  openTabs?: () => OpenTab[]
 }
 
 /** A device name as a person reads it: a control character or a mark that turns the text round is a space (a name is shown as written by the other device). */
@@ -87,6 +107,14 @@ export class SyncService {
   private problem: SyncProblem | null = null
   private readonly limiter: AddressLimiter
   private readonly window: SyncWindow
+  private marks: MarkBook | null = null
+  private marksStore: MarkStore | null = null
+  private bases: BaseStore | null = null
+  private tracker: MarkTracker | null = null
+  private exchanging = false
+  private lastExchange: SyncLastExchange | null = null
+  /** What the other devices announced as their open tabs: in memory only, never written, forgotten with the window and with the device (§10.4). */
+  private readonly announced = new Map<string, OpenTab[]>()
 
   constructor(private readonly deps: SyncServiceDeps) {
     this.limiter = new AddressLimiter(() => deps.clock.elapsed())
@@ -121,6 +149,7 @@ export class SyncService {
       devices: config.peers.map((peer) => ({ id: peer.id, name: readableName(peer.name), platform: peer.platform, pairedAt: peer.pairedAt, lastSessionAt: peer.lastSessionAt })),
       identityReplaced: this.identityReplaced,
       justPaired: this.justPaired,
+      lastExchange: this.lastExchange,
       problem: this.problem
     }
   }
@@ -150,13 +179,42 @@ export class SyncService {
     this.begin()
     if (on) {
       if (!this.deps.box.available()) this.fail('unavailable', 'the system cannot seal the key of the device')
-      this.ensureIdentity()
+      const identity = this.ensureIdentity()
       this.deps.store.setEnabled(true)
+      this.startTracking(identity.deviceId)
     } else {
       await this.window.close('switch-off')
       this.deps.store.setEnabled(false)
+      this.stopTracking()
     }
     this.changed()
+  }
+
+  /**
+   * The application starts: when the switch is on, the marks follow the state again (the identifier is read from the file without opening the key, so that the launch
+   * never asks the keychain). Off, nothing is done: nothing is read, nothing subscribed.
+   */
+  start(): void {
+    if (!this.deps.store.config().enabled) return
+    const device = this.deps.identities.peekDeviceId()
+    if (device !== null) this.startTracking(device)
+  }
+
+  private startTracking(deviceId: string): void {
+    const ports = this.deps.session
+    if (ports === undefined || this.tracker?.running() === true) return
+    this.marksStore ??= new MarkStore(ports.marksFile)
+    this.bases ??= new BaseStore(ports.basesDir)
+    const store = this.marksStore
+    this.marks ??= store.load(deviceId)
+    const marks = this.marks
+    this.tracker = new MarkTracker({ state: ports.host.state, subscribe: ports.subscribe, marks, save: () => store.save(marks), now: this.deps.now })
+    this.tracker.start()
+  }
+
+  private stopTracking(): void {
+    this.tracker?.halt()
+    this.tracker = null
   }
 
   setCategory(category: SyncCategory, on: boolean): void {
@@ -172,8 +230,11 @@ export class SyncService {
       const made = this.deps.identities.loadOrCreate()
       this.identity = made.identity
       if (made.replaced) {
-        // The old fingerprint is gone with the old key: the devices that were paired to it cannot be recognised any more (§3.3).
+        // The old fingerprint is gone with the old key: the devices that were paired to it cannot be recognised any more (§3.3), and what was kept for them goes too.
+        for (const peer of this.deps.store.peers()) this.bases?.remove(peer.id)
         this.deps.store.clearPeers()
+        this.stopTracking()
+        this.marks = null
         this.identityReplaced = true
       }
       return made.identity
@@ -254,6 +315,7 @@ export class SyncService {
 
   /** The window has closed, for whatever reason: nobody can be asked or paired any more. */
   private windowClosed(): void {
+    this.announced.clear()
     this.pairing?.secret.close()
     this.pairing = null
     this.resolveConfirm('refuse')
@@ -270,7 +332,7 @@ export class SyncService {
         if (pairing === null) return null
         return { secret: pairing.secret, confirm: (request) => this.ask(request), addPeer: (peer) => this.deps.store.addPeer(peer), hosts: () => ownHosts(this.deps.hostEnv()), now: this.deps.now, ...(this.deps.confirmMs !== undefined ? { confirmMs: this.deps.confirmMs } : {}) }
       },
-      runSession: this.deps.runSession ?? (async (channel) => channel.fail('internal', 'the exchange of data is not available yet')),
+      runSession: this.deps.runSession ?? (this.deps.session !== undefined ? (channel, peer) => this.exchange(channel, peer, identity.deviceId) : async (channel) => channel.fail('internal', 'the exchange of data is not available yet')),
       onPairingEnded: (outcome) => {
         if (outcome.outcome === 'paired') {
           this.justPaired = readableName(outcome.peer.name)
@@ -351,12 +413,58 @@ export class SyncService {
     const peer = this.deps.store.peers().find((one) => one.id === id)
     if (peer === undefined) return
     this.deps.store.forgetPeer(id)
+    this.bases?.remove(id)
+    this.announced.delete(id)
     this.door?.dropPeer(peer.fingerprint)
     this.changed()
   }
 
+  /** The open tabs a paired device announced in its last session (in memory only; the screen « Reprise » of card 447 reads them). */
+  openTabsFrom(peerId: string): readonly OpenTab[] {
+    return this.announced.get(peerId) ?? []
+  }
+
+  /** A session with a paired device: one at a time (a second is told `busy`), the exchange of docs/synchronisation.md §8 with the state and the marks of this device. */
+  private async exchange(channel: Channel, peer: PeerRecord, deviceId: string): Promise<void> {
+    const ports = this.deps.session
+    const { marks, marksStore: files, bases } = this
+    if (ports === undefined || marks === null || files === null || bases === null || this.exchanging) {
+      channel.fail('busy', 'a session is already running, or the marks are not followed')
+      return
+    }
+    this.exchanging = true
+    try {
+      const store = this.deps.store
+      const result = await runExchange(channel, peer.id, {
+        device: { id: deviceId, name: this.deps.deviceName(), platform: 'mac' },
+        host: ports.host,
+        marks,
+        saveMarks: () => files.save(marks),
+        bases,
+        categories: () => new Set(SYNC_CATEGORIES.filter((category) => store.config().categories[category])),
+        now: this.deps.now,
+        appVersion: ports.appVersion,
+        stateVersion: ports.stateVersion,
+        hosts: () => ownHosts(this.deps.hostEnv()),
+        ...(ports.openTabs !== undefined ? { openTabs: ports.openTabs } : {}),
+        onOpenTabs: (id, items) => void this.announced.set(id, items),
+        onUnpair: (id) => this.forget(id),
+        onRefused: (id, refused) => console.warn(`[sync] ${refused.length} entities of ${id} were not taken (${[...new Set(refused.map((one) => one.reason))].join(', ')})`),
+        onDone: (id, at) => store.touchSession(id, at),
+        onWarning: (id, code) => console.warn(`[sync] ${id} says: ${code}`)
+      })
+      const known = ['divergence', 'state-too-new', 'locked', 'interrupted'] as const
+      this.lastExchange = { at: this.deps.now(), ok: result.ok, code: result.ok ? null : (known as readonly string[]).includes(result.code) ? (result.code as (typeof known)[number]) : 'other' }
+      if (!result.ok) console.warn(`[sync] a session with ${peer.id} ended: ${result.code}: ${result.detail}`)
+      this.changed()
+    } finally {
+      this.exchanging = false
+    }
+  }
+
   /** The application quits: the door is closed with it. */
   async dispose(): Promise<void> {
+    this.stopTracking()
     await this.window.close('manual')
   }
 }

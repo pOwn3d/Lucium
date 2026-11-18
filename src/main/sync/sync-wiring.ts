@@ -7,11 +7,11 @@ import { join } from 'node:path'
 import { electronSecretBox } from './secret-box-electron'
 import { IdentityStore } from './identity'
 import { SafeClock } from './safe-clock'
-import { SyncService, type SyncServiceDeps } from './sync-service'
+import { SyncService, type SessionPorts, type SyncServiceDeps } from './sync-service'
 import { SyncStore } from './sync-store'
 
-/** `sync.json` and `sync-identity.json`, next to `state.json` and never part of it: no export, no backup and no copy of the session carries them. */
-export const SYNC_FILES = { config: 'sync.json', identity: 'sync-identity.json' } as const
+/** `sync.json`, `sync-identity.json`, `sync-marks.json` and the `sync-base-<id>.json` of each device, next to `state.json` and never part of it: no export, no backup and no copy of the session carries them. */
+export const SYNC_FILES = { config: 'sync.json', identity: 'sync-identity.json', marks: 'sync-marks.json' } as const
 
 /** What the person reads on the iPhone: the host name of the Mac without its `.local`, 80 characters at most. */
 export function deviceNameOf(name: string): string {
@@ -19,7 +19,15 @@ export function deviceNameOf(name: string): string {
   return [...(cleaned === '' ? 'Mac' : cleaned)].slice(0, 80).join('')
 }
 
-export function createSyncService(options: { userData: string; isLocked: () => boolean; runSession?: SyncServiceDeps['runSession'] }): SyncService {
+export interface SyncWiringOptions {
+  userData: string
+  isLocked: () => boolean
+  /** The state and what the exchange of the data needs of this device (§8); without it the service pairs and says `internal` to a session. */
+  session?: Omit<SessionPorts, 'marksFile' | 'basesDir'>
+  runSession?: SyncServiceDeps['runSession']
+}
+
+export function createSyncService(options: SyncWiringOptions): SyncService {
   const box = electronSecretBox()
   return new SyncService({
     store: new SyncStore(join(options.userData, SYNC_FILES.config)),
@@ -30,6 +38,7 @@ export function createSyncService(options: { userData: string; isLocked: () => b
     deviceName: () => deviceNameOf(hostname()),
     now: () => Date.now(),
     isLocked: options.isLocked,
+    ...(options.session !== undefined ? { session: { ...options.session, marksFile: join(options.userData, SYNC_FILES.marks), basesDir: options.userData } } : {}),
     ...(options.runSession !== undefined ? { runSession: options.runSession } : {})
   })
 }

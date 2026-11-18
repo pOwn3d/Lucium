@@ -54,6 +54,13 @@ export interface SyncConfirmView {
 /** Why the synchronisation could not do what was asked; the page says it in words of the catalogue (`sync.error.<code>`). */
 export type SyncProblem = 'unavailable' | 'port' | 'identity' | 'locked' | 'network' | 'internal'
 
+/** How the last session ended, for the page to say: `code` is null when it went through. */
+export interface SyncLastExchange {
+  at: number
+  ok: boolean
+  code: 'divergence' | 'state-too-new' | 'interrupted' | 'locked' | 'other' | null
+}
+
 export interface SyncStatus {
   /** Whether the system can seal the key of the device (without it the switch cannot be turned on). */
   available: boolean
@@ -67,6 +74,8 @@ export interface SyncStatus {
   identityReplaced: boolean
   /** An iPhone that has just been paired, by name; the page says it once. */
   justPaired: string | null
+  /** How the last session ended, or null before any. */
+  lastExchange: SyncLastExchange | null
   /** The last thing that went wrong when the page asked for something, or null. */
   problem: SyncProblem | null
 }

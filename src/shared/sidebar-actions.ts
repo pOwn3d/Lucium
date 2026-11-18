@@ -3,6 +3,7 @@
 
 import type { ArchiveSource, ClosedHistory, Favorite, Boost, BoostInput, BlockMode, Folder, PermissionDecision, Settings, SplitArrangement, SplitGrid, SplitOrientation, SplitView, SidebarState, Space, TabItem, WorkView, WorkViewTarget } from './model'
 import type { JoinZone } from './split-grid'
+import type { SyncPatch } from './sidebar-sync'
 import type { SharedBoost } from './boost-share'
 import type { SessionTarget } from './sessions'
 import type { SessionCopyData } from './session-backups'
@@ -364,6 +365,8 @@ export type Action =
   | { type: 'view/remove'; id: string }
   /** The « Annuler » of a removal (main process only): the view comes back at `index` of the list, and the split views `splitIds` it had open are its again. */
   | { type: 'view/restore'; view: WorkView; index: number; splitIds: string[] }
+  /** What a synchronisation session writes into the state (sidebar-sync.ts): sent by the main process only. */
+  | { type: 'sync/apply'; patch: SyncPatch }
   /**
    * `draft`: the editor is still open on a site whose Tweaks run a script. The Tweak is stored like any other save, so that what was typed outlives
    * the window; only the reload of the pages that run the script waits for the save without `draft` the editor sends as it closes.

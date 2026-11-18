@@ -476,6 +476,38 @@ const GENERATORS: Generators = {
   'view/reset': (g) => ({ type: 'view/reset', id: g.workViewId(), ...(g.chance(0.5) ? { spaceId: g.spaceId() } : {}) }),
   'view/move': (g) => ({ type: 'view/move', id: g.workViewId(), direction: g.pick([-1, 1] as const) }),
   'view/remove': (g) => ({ type: 'view/remove', id: g.workViewId() }),
+  'sync/apply': (g) => {
+    // What a session works out: entities that arrive (some with fields that are not fine), fields that change or go, entities that are removed (some that changed since the
+    // freeze, so that their `expect` is stale), lists in a new order (with ids that name nothing), and settings (some outside the closed list).
+    const kinds = ['space', 'folder', 'tab', 'favorite', 'archived'] as const
+    const upserts = Array.from({ length: g.int(5) }, () => {
+      const kind = g.pick(kinds)
+      const existing = { space: g.spaceId(), folder: g.folderId(), tab: g.tabId(), favorite: g.favoriteId(), archived: g.archiveId() }[kind]
+      return {
+        kind,
+        id: g.chance(0.5) ? existing : g.ghost('sync'),
+        create: g.chance(0.6),
+        fields: { ...(g.chance(0.5) ? { name: g.text() } : {}), ...(g.chance(0.6) ? { url: g.url() } : {}), ...(g.chance(0.4) ? { title: g.text() } : {}), ...(g.chance(0.5) ? { spaceId: g.spaceId() } : {}), ...(g.chance(0.3) ? { folderId: g.folderId() } : {}), ...(g.chance(0.4) ? { pinned: true } : {}), ...(g.chance(0.2) ? { theme: g.theme() } : {}), ...(g.chance(0.1) ? { ['__proto__']: { polluted: true } } : {}) },
+        remove: g.chance(0.3) ? [g.pick(['anchorUrl', 'icon', 'customTitle', 'hideHeader'])] : [],
+        expect: g.chance(0.5) ? {} : { name: g.text() }
+      }
+    })
+    const removals = Array.from({ length: g.int(3) }, () => ({ kind: g.pick(kinds), id: g.chance(0.5) ? g.tabId() : g.spaceId(), expect: g.chance(0.5) ? {} : { name: g.text() } }))
+    const spaceIds = g.state.spaces.map((s) => s.id)
+    const order: Record<string, string[]> = {}
+    if (g.chance(0.5)) order['spaces'] = [...spaceIds, g.ghost('space')].reverse()
+    if (g.chance(0.5)) order[`tabs:${g.spaceId()}:-`] = [g.tabId(), g.tabId(), g.ghost('tab')]
+    if (g.chance(0.3)) order[`folders:${g.spaceId()}:-`] = [g.folderId(), g.folderId()]
+    if (g.chance(0.3)) order[`favorites:${g.pick(PROFILES)}`] = [g.favoriteId(), g.favoriteId()]
+    if (g.chance(0.2)) order['nonsense'] = [g.tabId()]
+    const settings: Record<string, unknown> = {}
+    if (g.chance(0.4)) settings['httpsUpgrade'] = g.pick([true, false, 'yes', 3])
+    if (g.chance(0.3)) settings['autoArchiveHours'] = g.pick([0, 12, -3, Number.NaN, 'x'])
+    if (g.chance(0.3)) settings['profileNames'] = g.pick([{}, { work: 'Travail' }, { work: 3 }, 'x'])
+    if (g.chance(0.2)) settings['lockEnabled'] = g.pick([true, false])
+    if (g.chance(0.2)) settings['proxyEnabled'] = true
+    return { type: 'sync/apply', patch: { upserts, removals, order, settings } }
+  },
   'view/restore': (g) => {
     // A view removed earlier in the run, as the notice kept it, or one made up.
     const gone = g.history.flatMap((earlier) => earlier.workViews).filter((view) => !g.state.workViews.some((each) => each.id === view.id))
@@ -783,7 +815,8 @@ const EVERYDAY: Array<Action['type']> = [
   'archive/restore', 'archive/restore-last', 'archive/sweep', 'tab/tree-collapse', 'tab/tree-detach', 'settings/update', 'tab/back-to-origin', 'import/merge', 'import/revert',
   'container/create', 'container/update', 'container/rule', 'container/permission', 'container/delete', 'tab/set-container', 'space/panel-add', 'space/panel-remove', 'bookmark/add', 'bookmark/tag-rename', 'bookmark/tag-delete', 'bookmark/edit', 'readlater/add', 'readlater/move', 'readlater-folder/create', 'readlater-folder/collapse', 'tabs/reset-pinned', 'tab/back-to-anchor', 'tab/separate', 'tab/replace-anchor', 'livefolder/result', 'livefolder/refresh', 'livefolder/edit', 'livefolder/edit', 'livefolder/create', 'filterlist/add', 'filterlist/enable', 'filterlist/remove', 'favicon/fill', 'tab/forget-origin',
   'session/save', 'session/restore', 'space/reopen', 'livefolder/create',
-  'view/save', 'view/save', 'view/open', 'view/open', 'view/edit', 'view/capture', 'view/reset', 'view/move', 'view/remove', 'view/restore', 'view/create'
+  'view/save', 'view/save', 'view/open', 'view/open', 'view/edit', 'view/capture', 'view/reset', 'view/move', 'view/remove', 'view/restore', 'view/create',
+  'sync/apply', 'sync/apply', 'sync/apply'
 ]
 
 function report(failure: Failure): string {

@@ -40,12 +40,13 @@ export const REPLACING_ACTIONS: ReadonlySet<string> = new Set(['state/restore', 
  * Actions about every tab of the state, not only the window's: they are reduced on every tab, not on the window's view.
  *  - `space/aside` takes a whole space away and keeps what it held (in a session): on the view, the tabs the other windows have in that space
  *    would be closed without being kept;
+ *  - `sync/apply` adds and removes the pinned tabs the other device synchronised, in every window;
  *  - `container/delete` closes every tab of the container: on the view, the other windows' tabs would stay, naming a container that is gone,
  *    and load their page in the session of the profile, with its cookies;
  *  - `import/merge` adds only what the state does not hold yet: on the view, a tab of another window would be taken for a new one, and the
  *    copy of the file would replace it.
  */
-export const EVERY_TAB_ACTIONS: ReadonlySet<string> = new Set(['space/aside', 'container/delete', 'import/merge'])
+export const EVERY_TAB_ACTIONS: ReadonlySet<string> = new Set(['space/aside', 'container/delete', 'import/merge', 'sync/apply'])
 
 /** The window's view with every tab and split view of the shared state: what an `EVERY_TAB_ACTIONS` action is reduced on. The selection stays the window's. */
 export const withEveryTab = (view: SidebarState, shared: SidebarState): SidebarState => (view.tabs === shared.tabs && view.splits === shared.splits ? view : { ...view, tabs: shared.tabs, splits: shared.splits })

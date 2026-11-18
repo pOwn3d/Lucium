@@ -19,11 +19,12 @@ import { LOCK_SETTING_KEYS } from './lock'
  * `profile/revert-missing` puts the spaces of a profile whose folder is gone back on the default profile, which only the launch decides.
  * `sidepanel/behavior` is what an extension asked through `chrome.sidePanel`, relayed by the main process.
  * `view/restore` is the "Annuler" of the notice of a work view removed: the main process kept the view as it was, with the split views it had open.
+ * `sync/apply` is what a synchronisation session writes into the state (sidebar-sync.ts): the interface never sends a patch.
  *
  * Not in this list, on purpose: `permission/set` and `container/permission` grant or refuse a permission to a site without a question, and
  * they are the interface's to send: that is what the site panel and the permissions of the settings do when the user changes an answer.
  */
-export const MAIN_ONLY_ACTIONS: ReadonlySet<string> = new Set(['state/restore', 'import/merge', 'import/revert', 'backup/restore', 'boost/import', 'filterlist/add', 'filterlist/remove', 'space/image', 'bookmarks/import', 'livefolder/result', 'split/restore', 'tabs/untidy', 'archive/forget-pages', 'tab/image', 'favicon/fill', 'profile/revert-missing', 'sidepanel/behavior', 'view/restore'])
+export const MAIN_ONLY_ACTIONS: ReadonlySet<string> = new Set(['state/restore', 'import/merge', 'import/revert', 'backup/restore', 'boost/import', 'filterlist/add', 'filterlist/remove', 'space/image', 'bookmarks/import', 'livefolder/result', 'split/restore', 'tabs/untidy', 'archive/forget-pages', 'tab/image', 'favicon/fill', 'profile/revert-missing', 'sidepanel/behavior', 'view/restore', 'sync/apply'])
 
 const ACTION_TYPE_MAX = 64
 
