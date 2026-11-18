@@ -1,0 +1,299 @@
+{
+  "comment": "What a received snapshot must be (docs/synchronisation.md §8.3 and §7.1): the cases `src/shared/sync-snapshot.ts` (parseSnapshot, played by src/shared/sync-snapshot.test.ts) and LuciumKit (SyncSnapshot.read, played by SyncSnapshotVectorTests) both accept or refuse. `json` is the raw text received (so that a __proto__ key, a -0 and a number with an exponent reach the reader as they were written); `expect.accepted` says whether it goes in; for an accepted one, `expect.canonical` (when given) is the canonical text (§8.4) of what was read.",
+  "cases": [
+    {
+      "name": "an empty snapshot",
+      "json": "{}",
+      "expect": {
+        "accepted": true,
+        "canonical": "{\"entities\":{},\"order\":{},\"orderStamps\":{},\"tombstones\":{}}"
+      }
+    },
+    {
+      "name": "a snapshot of the specification",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"name\":\"Travail\"},\"stamps\":{\"name\":\"1790000000001-0000-mac\"}}}},\"tombstones\":{\"tab\":{\"t1\":\"1790000000001-0000-mac\"}},\"order\":{\"spaces\":[\"s1\"]},\"orderStamps\":{\"spaces\":\"1790000000001-0000-mac\"}}",
+      "expect": {
+        "accepted": true,
+        "canonical": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"name\":\"Travail\"},\"stamps\":{\"name\":\"1790000000001-0000-mac\"}}}},\"order\":{\"spaces\":[\"s1\"]},\"orderStamps\":{\"spaces\":\"1790000000001-0000-mac\"},\"tombstones\":{\"tab\":{\"t1\":\"1790000000001-0000-mac\"}}}"
+      }
+    },
+    {
+      "name": "a member the form does not name is left out",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"name\":\"Travail\"},\"stamps\":{\"name\":\"1790000000001-0000-mac\"}}}},\"tombstones\":{\"tab\":{\"t1\":\"1790000000001-0000-mac\"}},\"order\":{\"spaces\":[\"s1\"]},\"orderStamps\":{\"spaces\":\"1790000000001-0000-mac\"},\"future\":{\"a\":1}}",
+      "expect": {
+        "accepted": true,
+        "canonical": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"name\":\"Travail\"},\"stamps\":{\"name\":\"1790000000001-0000-mac\"}}}},\"order\":{\"spaces\":[\"s1\"]},\"orderStamps\":{\"spaces\":\"1790000000001-0000-mac\"},\"tombstones\":{\"tab\":{\"t1\":\"1790000000001-0000-mac\"}}}"
+      }
+    },
+    {
+      "name": "a kind with nothing in it is left out",
+      "json": "{\"entities\":{\"space\":{}}}",
+      "expect": {
+        "accepted": true,
+        "canonical": "{\"entities\":{},\"order\":{},\"orderStamps\":{},\"tombstones\":{}}"
+      }
+    },
+    {
+      "name": "-0 is read as 0",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"n\":-0},\"stamps\":{\"n\":\"1790000000001-0000-mac\"}}}}}",
+      "expect": {
+        "accepted": true,
+        "canonical": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"n\":0},\"stamps\":{\"n\":\"1790000000001-0000-mac\"}}}},\"order\":{},\"orderStamps\":{},\"tombstones\":{}}"
+      }
+    },
+    {
+      "name": "a key in normalization form C (one scalar for the accent)",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"caf\\u00e9\":1},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": true,
+        "canonical": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"café\":1},\"stamps\":{}}}},\"order\":{},\"orderStamps\":{},\"tombstones\":{}}"
+      }
+    },
+    {
+      "name": "nested values 31 deep are in",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "the numbers at the bounds are in",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":[1e20,0.000001,0,-5]},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": true,
+        "canonical": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":[100000000000000000000,0.000001,0,-5]},\"stamps\":{}}}},\"order\":{},\"orderStamps\":{},\"tombstones\":{}}"
+      }
+    },
+    {
+      "name": "not an object",
+      "json": "[]",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "null",
+      "json": "null",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "entities that is a list",
+      "json": "{\"entities\":[]}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a kind that is a list",
+      "json": "{\"entities\":{\"space\":[]}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an entity that is a number",
+      "json": "{\"entities\":{\"space\":{\"s1\":5}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an entity without stamps",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an entity whose fields are a list",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":[],\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a mark that is not in the form",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":1},\"stamps\":{\"a\":\"yesterday\"}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a mark that is a number",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":1},\"stamps\":{\"a\":5}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a tombstone with a bad mark",
+      "json": "{\"tombstones\":{\"tab\":{\"t1\":\"1790000000001-0000\"}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an order mark with a bad form",
+      "json": "{\"orderStamps\":{\"spaces\":\"x\"}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an order that is not a list",
+      "json": "{\"order\":{\"spaces\":\"s1\"}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an order holding a number",
+      "json": "{\"order\":{\"spaces\":[1]}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an order holding an empty id",
+      "json": "{\"order\":{\"spaces\":[\"s1\",\"\"]}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an order holding an id that is not in normalization form C",
+      "json": "{\"order\":{\"spaces\":[\"e\\u0301\"]}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an order holding a __proto__ id",
+      "json": "{\"order\":{\"spaces\":[\"__proto__\"]}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an order holding an id with a control character",
+      "json": "{\"order\":{\"spaces\":[\"s\\u0001\"]}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a __proto__ kind",
+      "json": "{\"entities\":{\"__proto__\":{}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a __proto__ id",
+      "json": "{\"entities\":{\"space\":{\"__proto__\":{\"fields\":{},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a __proto__ field",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"__proto__\":1},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a __proto__ key deep in a value",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":{\"b\":[{\"__proto__\":1}]}},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a __proto__ list key",
+      "json": "{\"order\":{\"__proto__\":[]}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a __proto__ tombstone id",
+      "json": "{\"tombstones\":{\"tab\":{\"__proto__\":\"1790000000001-0000-mac\"}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a key that is not in normalization form C (the accent is a second scalar)",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"cafe\\u0301\":1},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a key deep in a value that is not in normalization form C",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":{\"cafe\\u0301\":1}},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an id that is not in normalization form C",
+      "json": "{\"entities\":{\"space\":{\"e\\u0301\":{\"fields\":{},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an empty id",
+      "json": "{\"entities\":{\"space\":{\"\":{\"fields\":{},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an id with a control character",
+      "json": "{\"entities\":{\"space\":{\"s\\u0001\":{\"fields\":{},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an id of 129 characters",
+      "json": "{\"entities\":{\"space\":{\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\":{\"fields\":{},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an id of 128 characters",
+      "json": "{\"entities\":{\"space\":{\"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\":{\"fields\":{},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "values nested 32 deep are out",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a number with an exponent out of the range",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":1e21},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a number too small to be written without an exponent",
+      "json": "{\"entities\":{\"space\":{\"s1\":{\"fields\":{\"a\":1e-7},\"stamps\":{}}}}}",
+      "expect": {
+        "accepted": false
+      }
+    }
+  ]
+}

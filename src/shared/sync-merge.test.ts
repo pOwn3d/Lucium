@@ -1,6 +1,7 @@
 // The three-way merge (sync-merge.ts) tried on states nobody wrote: the properties docs/synchronisation.md §11.9 promises, on a few hundred draws of two devices
 // that edit a common ancestor the way people do (sync-merge-draws.test-support.ts). The vectors of ios/Contracts/sync-merge-vectors.json are played in
 // ios-sync-merge-contract.test.ts; the corpus of draws that LuciumKit plays too is written here, as a file snapshot of the merge of the Mac's side.
+import { createHash } from 'node:crypto'
 import { describe, expect, it } from 'vitest'
 import { canonicalJson } from './sync-canonical'
 import { compareConflicts, mergeSnapshots, otherSide, type SyncConflict } from './sync-merge'
@@ -369,11 +370,11 @@ describe('sync merge: the corpus of draws that LuciumKit plays too', () => {
   it('is written as a file snapshot of the merge, so that the Swift is held to the TypeScript on states nobody wrote', async () => {
     const corpus = draws(20261119, 60).map((d: Draw, index) => {
       const merged = mergeSnapshots(d.base, d.local, d.remote, d.withheld)
-      return { name: `draw ${index}`, base: d.base, local: d.local, remote: d.remote, withheld: d.withheld, expect: { snapshot: merged.snapshot, conflicts: merged.conflicts } }
+      return { name: `draw ${index}`, base: d.base, local: d.local, remote: d.remote, withheld: d.withheld, expect: { snapshot: merged.snapshot, conflicts: merged.conflicts, digest: createHash('sha256').update(canonicalJson(merged.snapshot), 'utf8').digest('hex') } }
     })
     const file = {
       comment:
-        'The corpus of the three-way merge on states nobody wrote (docs/synchronisation.md §11): 60 draws of two devices that edit a common ancestor (src/shared/sync-merge-draws.test-support.ts, seed 20261119), and what the merge of the Mac (src/shared/sync-merge.ts) gives. It is a file snapshot: src/shared/sync-merge.test.ts rewrites it with `pnpm exec vitest run src/shared/sync-merge.test.ts -u` and refuses a difference otherwise, and LuciumKit (SyncMergeVectorTests) plays it against the Swift merge. A snapshot is {entities, tombstones, order, orderStamps}; `base: null` is the empty base; `conflicts` are in the order of (kind, id, field).',
+        'The corpus of the three-way merge on states nobody wrote (docs/synchronisation.md §11): 60 draws of two devices that edit a common ancestor (src/shared/sync-merge-draws.test-support.ts, seed 20261119), and what the merge of the Mac (src/shared/sync-merge.ts) gives. It is a file snapshot: src/shared/sync-merge.test.ts rewrites it with `pnpm exec vitest run src/shared/sync-merge.test.ts -u` and refuses a difference otherwise, and LuciumKit (SyncMergeVectorTests) plays it against the Swift merge. A snapshot is {entities, tombstones, order, orderStamps}; `base: null` is the empty base; `conflicts` are in the order of (kind, id, field); `digest` is the SHA-256 of the canonical form (RFC 8785) of the merged snapshot, the text the two devices compare.',
       cases: corpus,
     }
     await expect(`${JSON.stringify(file)}\n`).toMatchFileSnapshot('../../ios/Contracts/sync-merge-draws.json')
