@@ -198,7 +198,8 @@ struct SyncMessageContractTests {
             guard case .success(let envelope) = SyncMessageCodec.decode(data) else { Issue.record("not read back: \(message.type)"); continue }
             #expect(envelope == SyncEnvelope(number: index + 1, message: message), "\(message.type)")
         }
-        #expect(throws: SyncFailure.self) { try SyncMessageCodec.encode(.result(digest: String(repeating: "a", count: 64)), number: 1) }
+        // What only the Mac writes is not written by the phone (the messages of an exchange are written, and read back, in SyncPartsAndApplyTests).
+        #expect(throws: SyncFailure.self) { try SyncMessageCodec.encode(.pairChallenge(nonce: nonce), number: 1) }
     }
 
     @Test func aNonceOrAProofThatIsAnotherWritingOfTheSameBytesIsRefused() throws {
