@@ -117,6 +117,25 @@ describe('cleanSnapshot', () => {
     expect(ahead.refused).toEqual([{ kind: 'space', id: 's1', reason: 'future-mark' }])
   })
 
+  it('refuses a tombstone, and a list with its mark of order, whose mark is more than seven days ahead, and keeps the ones exactly seven days ahead', () => {
+    const ahead = NOW + STAMP_FUTURE_REFUSE_MS
+    const input: SyncSnapshot = {
+      entities: {},
+      tombstones: { tab: { late: mark(ahead + 1), edge: mark(ahead) }, folder: { gone: mark(ahead + 1) } },
+      order: { spaces: ['a'], 'tabs:s:-': ['t'], 'favorites:default': ['f'] },
+      orderStamps: { spaces: mark(ahead + 1), 'tabs:s:-': mark(NOW), 'favorites:default': mark(ahead), 'folders:s:-': mark(ahead + 1), 'folders:s:p': mark(NOW) }
+    }
+    const { snapshot: cleaned, refused } = cleanSnapshot(input, NOW)
+    expect(cleaned.tombstones).toEqual({ tab: { edge: mark(ahead) } })
+    expect(cleaned.order).toEqual({ 'tabs:s:-': ['t'], 'favorites:default': ['f'] })
+    expect(cleaned.orderStamps).toEqual({ 'tabs:s:-': mark(NOW), 'favorites:default': mark(ahead), 'folders:s:p': mark(NOW) })
+    expect(refused).toEqual([
+      { kind: 'tombstone', id: 'tab/late', reason: 'future-mark' },
+      { kind: 'tombstone', id: 'folder/gone', reason: 'future-mark' },
+      { kind: 'order', id: 'spaces', reason: 'future-mark' }
+    ])
+  })
+
   it('does not look at the mark « zéro » as a time', () => {
     const zero = { fields: { name: 'A' }, stamps: { name: '0' } } as never
     expect(cleanSnapshot(snapshot({ space: { s1: zero } }), NOW).refused).toEqual([])

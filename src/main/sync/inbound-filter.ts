@@ -7,8 +7,11 @@
 //   - a tab is accepted only if it is pinned and not private (`not-pinned`, `private`): the Today tabs are not entities;
 //   - an address is accepted only if it is an http or https address (`invalid-url`): a page, never a script or a file;
 //   - the fields of the class « local » are taken off: a device does not tell this one what its local files are;
-//   - an entity of a kind this version does not know, and a field of a known kind it does not know, cross as they are (§11.6).
-// A refused entity is dropped, counted and logged: never fatal (§8.5).
+//   - an entity of a kind this version does not know, and a field of a known kind it does not know, cross as they are (§11.6);
+//   - a mark more than seven days ahead of this device's clock is refused wherever a mark is: an entity's, a tombstone's, the mark of a list's order (§9.3). The merge
+//     keeps the greatest mark it sees and the marks book never lets its clock fall behind one it has seen, so a single such mark would win every conflict, delete
+//     whatever it names and push the clock of this device out of the reach of every other one, for ever.
+// A refused entity (or tombstone, or list) is dropped, counted and logged: never fatal (§8.5).
 
 import { STAMP_FUTURE_REFUSE_MS } from './limits'
 import { FIELD_CLASSES, isKind, NEVER_KINDS, SYNCED_SETTINGS, type EntityKind } from './field-classes'
@@ -80,9 +83,13 @@ export interface Cleaned {
   refused: Array<{ kind: string; id: string; reason: Refusal }>
 }
 
+/** Whether a mark names a time more than seven days ahead of `now` (the mark « zéro » names none). */
+const marksTheFuture = (stamp: string, now: number): boolean => msOf(stamp) > now + STAMP_FUTURE_REFUSE_MS
+
 /**
- * A received snapshot with the entities that pass: refused ones are dropped (and listed so that the session counts and logs them), and the local fields of the others
- * are taken off, with their marks. The tombstones, the orders and what they mark are left to the merge, which treats an id it does not know as nothing.
+ * A received snapshot with what passes: refused entities are dropped (and listed so that the session counts and logs them), and the local fields of the others are taken
+ * off, with their marks. A tombstone, or a list with its mark of order, whose mark is in the future is dropped and listed the same way (`kind` `tombstone` or `order`);
+ * what the others are made of is left to the merge, which treats an id it does not know as nothing.
  */
 export function cleanSnapshot(remote: SyncSnapshot, now: number): Cleaned {
   const refused: Cleaned['refused'] = []
@@ -98,5 +105,28 @@ export function cleanSnapshot(remote: SyncSnapshot, now: number): Cleaned {
       ;(entities[kind] ??= {})[id] = { fields: verdict.fields as SyncEntity['fields'], stamps }
     }
   }
-  return { snapshot: { ...remote, entities }, refused }
+  const tombstones: SyncSnapshot['tombstones'] = {}
+  for (const [kind, byId] of Object.entries(remote.tombstones)) {
+    for (const [id, stamp] of Object.entries(byId)) {
+      if (marksTheFuture(stamp, now)) {
+        refused.push({ kind: 'tombstone', id: `${kind}/${id}`, reason: 'future-mark' })
+        continue
+      }
+      ;(tombstones[kind] ??= {})[id] = stamp
+    }
+  }
+  const order: SyncSnapshot['order'] = {}
+  const orderStamps: SyncSnapshot['orderStamps'] = {}
+  for (const [key, ids] of Object.entries(remote.order)) {
+    const stamp = remote.orderStamps[key]
+    if (stamp !== undefined && marksTheFuture(stamp, now)) {
+      refused.push({ kind: 'order', id: key, reason: 'future-mark' })
+      continue
+    }
+    order[key] = ids
+    if (stamp !== undefined) orderStamps[key] = stamp
+  }
+  // A mark of order with no list (a list that went empty keeps none, §11.4) is checked and kept the same way.
+  for (const [key, stamp] of Object.entries(remote.orderStamps)) if (!Object.hasOwn(remote.order, key) && !marksTheFuture(stamp, now)) orderStamps[key] = stamp
+  return { snapshot: { entities, tombstones, order, orderStamps }, refused }
 }
