@@ -83,15 +83,18 @@ export interface Cleaned {
   refused: Array<{ kind: string; id: string; reason: Refusal }>
 }
 
+/** The refusals that say « this cannot be sent now » (the marks, the address, the value): the version of the base stands in. The others say « this is not for the synchronisation »: a tab that was unpinned or made private leaves the set, and is deleted over there. */
+const STANDS_IN_AS_IN_THE_BASE: ReadonlySet<Refusal> = new Set(['future-mark', 'invalid-url', 'invalid-value'])
+
 /** Whether a mark names a time more than seven days ahead of `now` (the mark « zéro » names none). */
 const marksTheFuture = (stamp: string, now: number): boolean => msOf(stamp) > now + STAMP_FUTURE_REFUSE_MS
 
 /**
- * A received snapshot with what passes: refused entities are dropped (and listed so that the session counts and logs them), and the local fields of the others are taken
- * off, with their marks. A tombstone, or a list with its mark of order, whose mark is in the future is dropped and listed the same way (`kind` `tombstone` or `order`);
+ * A received snapshot with what passes: refused entities are dropped (and listed so that the session counts and logs them; one that is in `base` and was refused for its marks, its
+ * address or its value is given back as the base holds it, not dropped), and the local fields of the others are taken off, with their marks. A tombstone, or a list with its mark of order, whose mark is in the future is dropped and listed the same way (`kind` `tombstone` or `order`);
  * what the others are made of is left to the merge, which treats an id it does not know as nothing.
  */
-export function cleanSnapshot(remote: SyncSnapshot, now: number): Cleaned {
+export function cleanSnapshot(remote: SyncSnapshot, now: number, base: SyncSnapshot | null = null): Cleaned {
   const refused: Cleaned['refused'] = []
   const entities: SyncSnapshot['entities'] = {}
   for (const [kind, byId] of Object.entries(remote.entities)) {
@@ -99,6 +102,10 @@ export function cleanSnapshot(remote: SyncSnapshot, now: number): Cleaned {
       const verdict = inTheFuture(entity, now) ? ({ accepted: false, reason: 'future-mark' } as const) : filterEntity({ kind, id, fields: entity.fields })
       if (!verdict.accepted) {
         refused.push({ kind, id, reason: verdict.reason })
+        // What cannot travel as it is now is not what was taken out of the synchronised set: the merge would read an entity that is in the base and not in this snapshot as
+        // deleted, and the other device would lose it (a clock a week ahead, an address that stopped being a web page). The version of the base stands in: unchanged.
+        const before = base !== null && Object.hasOwn(base.entities, kind) && Object.hasOwn(base.entities[kind] as object, id) ? base.entities[kind]?.[id] : undefined
+        if (before !== undefined && STANDS_IN_AS_IN_THE_BASE.has(verdict.reason)) (entities[kind] ??= {})[id] = before
         continue
       }
       const stamps = Object.fromEntries(Object.entries(entity.stamps).filter(([name]) => !(isKind(kind) && FIELD_CLASSES[kind].local.includes(name))))

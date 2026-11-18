@@ -130,6 +130,18 @@ describe('later sessions: each side changes things', () => {
     expect(tabIds(phone)).toEqual(['tab-2'])
   })
 
+  it('does not take for a deletion what the other device cannot send because its clock is more than a week ahead: the base stands in for it, and neither side loses anything', async () => {
+    const { mac, phone } = await synchronised()
+    phone.clock = NOW + 8 * 86_400_000
+    rename(phone, 'sp-main', 'Boulot')
+    const result = await sync(mac, phone)
+    expect(result).toMatchObject({ mac: { ok: true }, phone: { ok: true } })
+    expect(names(mac)).toEqual(['sp-main:Perso'])
+    expect(tabIds(mac)).toEqual(['tab-1', 'tab-2'])
+    expect(mac.state.folders.map((folder) => folder.id)).toEqual(['fo-a'])
+    expect(names(phone)).toEqual(['sp-main:Boulot'])
+  })
+
   it('reorders a list the same way on both devices', async () => {
     const { mac, phone } = await synchronised()
     mac.edit((s) => ({ ...s, tabs: [...s.tabs].reverse() }))
@@ -292,7 +304,7 @@ describe('what a session checks before it writes', () => {
    * A peer written by hand that does everything right: it sends `remote` as its snapshot, works out the merge the Mac must reach (the same functions, the same gates) and
    * sends that digest, so that the Mac's own checks are what is tried. `options` makes it deviate on one point.
    */
-  async function honest(mac: Device, remote: SyncSnapshot, options: { categories?: string[]; commit?: boolean; openTabs?: boolean } = {}): Promise<{ result: SessionResult; mac: Device; seen: Message['t'][] }> {
+  async function honest(mac: Device, remote: SyncSnapshot, options: { categories?: string[]; commit?: boolean; openTabs?: boolean; base?: { snapshot: SyncSnapshot; hash: string } | null } = {}): Promise<{ result: SessionResult; mac: Device; seen: Message['t'][] }> {
     const sockets = await socketPair()
     const macChannel = new Channel(sockets.server, { phase: 'session', role: 'mac' })
     const phoneChannel = new Channel(sockets.client, { phase: 'session', role: 'ios' })
@@ -302,10 +314,11 @@ describe('what a session checks before it writes', () => {
     const seen: Message['t'][] = []
     const first = await phoneChannel.receive()
     seen.push(first.t)
-    await phoneChannel.send({ t: 'hello', device: { id: PHONE_ID, name: 'x', platform: 'ios' }, nonce: 'ABEiM0RVZneImaq7zN3u_w', categories, baseHash: null, stateVersion: 1, appVersion: '1', now: mac.clock } as never)
+    await phoneChannel.send({ t: 'hello', device: { id: PHONE_ID, name: 'x', platform: 'ios' }, nonce: 'ABEiM0RVZneImaq7zN3u_w', categories, baseHash: options.base?.hash ?? null, stateVersion: 1, appVersion: '1', now: mac.clock } as never)
     const common = new Set(categories.filter((c) => mac.categories.has(c as never))) as Set<never>
-    const local = cleanSnapshot(snapshotOf(mac.state, mac.marks, { categories: common, withheld: new Set(), base: null }), mac.clock).snapshot
-    const merged = mergeSnapshots(null, local, cleanSnapshot(remote, mac.clock).snapshot, [])
+    const base = options.base?.snapshot ?? null
+    const local = cleanSnapshot(snapshotOf(mac.state, mac.marks, { categories: common, withheld: new Set(), base }), mac.clock, base).snapshot
+    const merged = mergeSnapshots(base, local, cleanSnapshot(remote, mac.clock, base).snapshot, [])
     const wire = Object.entries(remote.entities).flatMap(([kind, byId]) => Object.entries(byId).map(([id, entity]) => ({ kind, id, fields: entity.fields, stamps: entity.stamps })))
     const tombstones = Object.entries(remote.tombstones).flatMap(([kind, byId]) => Object.entries(byId).map(([id, stamp]) => ({ kind, id, stamp })))
     const lists = Object.keys(remote.order).length > 0 || Object.keys(remote.orderStamps).length > 0 ? { order: remote.order, orderStamps: remote.orderStamps } : {}
@@ -347,6 +360,23 @@ describe('what a session checks before it writes', () => {
     expect(out.result).toMatchObject({ ok: true, refused: 2 })
     expect(out.mac.marks.clock.state().ms).toBeLessThan(NOW + 8 * 86_400_000)
     expect(Object.values(out.mac.marks.tombstonesOf()).flatMap((byId) => Object.values(byId))).not.toContain(far)
+  })
+
+  it('does not take for a deletion an entity that comes in with a mark a week ahead when the base holds it: the Mac keeps what it has', async () => {
+    const mac = new Device(MAC_ID, 'mac', { spaces: [{ id: 'sp-main', name: 'Perso' }], tabs: [{ id: 'tab-1', spaceId: 'sp-main', anchorUrl: 'https://tab-1.example/' }] })
+    const phone = new Device(PHONE_ID, 'ios', { spaces: [{ id: 'sp-main', name: 'Perso' }] })
+    mac.edit((s) => s)
+    phone.edit((s) => s)
+    expect((await sync(mac, phone)).mac).toMatchObject({ ok: true })
+    const base = mac.bases.get(PHONE_ID, mac.clock)
+    expect(base).not.toBeNull()
+    const remote = JSON.parse(JSON.stringify(base?.snapshot)) as SyncSnapshot
+    const held = remote.entities['space']?.['sp-main'] as { fields: Record<string, unknown>; stamps: Record<string, string> }
+    remote.entities['space']!['sp-main'] = { fields: { ...held.fields, name: 'Boulot' } as never, stamps: { ...held.stamps, name: '9990000000000-0000-iphone-device-0000001' } }
+    const out = await honest(mac, remote, { base: base as { snapshot: SyncSnapshot; hash: string } })
+    expect(out.result).toMatchObject({ ok: true, refused: 1 })
+    expect(names(out.mac)).toEqual(['sp-main:Perso'])
+    expect(tabIds(out.mac)).toEqual(['tab-1'])
   })
 
   it('does not take into the merge what the gate for incoming entities refuses: it is counted, and the two merges still agree', async () => {

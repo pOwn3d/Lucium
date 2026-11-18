@@ -227,7 +227,7 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     const withheld = withheldSpaces(state, (spaceId) => deps.host.isSpaceLocked(spaceId))
     // What this device sends is what it would itself accept (the same gate as for what comes in, with the other device's clock for the marks of the future): the two
     // merges then start from the same inputs. An entity that does not pass stays here, untouched, and is not sent; it is counted and logged.
-    const frozen = cleanSnapshot(snapshotOf(state, deps.marks, { categories: common, withheld: new Set(withheld), base }), hello.now)
+    const frozen = cleanSnapshot(snapshotOf(state, deps.marks, { categories: common, withheld: new Set(withheld), base }), hello.now, base)
     if (frozen.refused.length > 0) deps.onRefused?.(peerId, frozen.refused)
     const local = frozen.snapshot
     const parts = partsOf(local, withheld)
@@ -240,7 +240,7 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     const received = await receiveSnapshot(channel, (items) => (common.has('openTabs') ? deps.onOpenTabs?.(peerId, items) : undefined), warn)
     const form = parseSnapshot(JSON.parse(canonicalJson(received.snapshot)))
     if ('problem' in form) return fail('bad-message', `the snapshot is not well formed: ${form.problem}`)
-    const cleaned = cleanSnapshot(form.snapshot, deps.now())
+    const cleaned = cleanSnapshot(form.snapshot, deps.now(), base)
     if (cleaned.refused.length > 0) deps.onRefused?.(peerId, cleaned.refused)
 
     // merge, compare
