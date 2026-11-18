@@ -1,7 +1,7 @@
 {
   "name": "lucium",
   "productName": "Lucium",
-  "version": "1.1.3",
+  "version": "1.1.4",
   "packageManager": "pnpm@12.16.1",
   "description": "Navigateur à sidebar verticale et espaces, bâti sur Chromium (Electron)",
   "private": true,
