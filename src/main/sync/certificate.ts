@@ -50,10 +50,15 @@ export function assembleCertificate(tbs: Buffer, signature: Buffer): Buffer {
 /** The fingerprint of a certificate: the SHA-256 of its DER, 32 bytes. The same figure Node calls `fingerprint256` and Apple's `SecCertificateCopyData` hashes to. */
 export const fingerprintOf = (certificate: Buffer): Buffer => createHash('sha256').update(certificate).digest()
 
-/** A serial: 16 random bytes whose first is between 0x01 and 0x7F, so that the integer is positive and its DER minimal. */
+/**
+ * A serial: 16 random bytes whose first is between 0x01 and 0x7F, so that the integer is positive and its DER minimal. The first byte is drawn again until it
+ * falls in the range (a modulo of a random byte would favour the small values).
+ */
 export function randomSerial(): Buffer {
   const serial = randomBytes(16)
-  serial[0] = (serial[0] as number) % 0x7f + 1
+  let first = (serial[0] as number) & 0x7f
+  while (first === 0) first = (randomBytes(1)[0] as number) & 0x7f
+  serial[0] = first
   return serial
 }
 

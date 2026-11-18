@@ -79,7 +79,7 @@ describe('a certificate made on this profile', () => {
 
 describe('the serial', () => {
   it('is 16 bytes whose first is between 0x01 and 0x7F, a positive integer in minimal DER', () => {
-    for (let index = 0; index < 500; index++) {
+    for (let index = 0; index < 4000; index++) {
       const serial = randomSerial()
       expect(serial.length).toBe(16)
       expect(serial[0]).toBeGreaterThanOrEqual(0x01)
