@@ -694,7 +694,7 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
   registerFeatureIpc(ipcMain, guard, browser, store, win)
   registerAnnotateIpc(ipcMain, guard, browser, win)
   registerLockIpc(ipcMain, guard, browser)
-  registerSyncIpc(ipcMain, guard, browser)
+  registerSyncIpc(ipcMain, guard, browser, store)
   registerPasswordIpc(ipcMain, guard, browser)
   registerPrivacyIpc(ipcMain, guard, browser, store)
   registerHardwareIpc(ipcMain, guard, browser)

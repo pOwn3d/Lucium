@@ -10,6 +10,7 @@ import { activeTab } from '@shared/sidebar'
 import { activeProfileId } from '@shared/profiles'
 import { hostOf } from '@shared/url'
 import { api, useSnapshot } from './api'
+import type { ResumeLine } from '@shared/sync-resume'
 import { BarClipboardButtons, barNoticeText } from './BarClipboard'
 import { applyPaste, copyFromBar, noticeClock, pasteToBar, type BarClipNotice } from './bar-clipboard'
 import { ICONS, glyph } from './command-icons'
@@ -87,6 +88,8 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
   const [selected, setSelected] = useState(0)
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [suggestions, setSuggestions] = useState<string[]>([])
+  // The tabs an iPhone announced (« Sur l'iPhone »): asked for once when the bar opens, titles and hosts only. Nothing until the main process answers.
+  const [iphone, setIphone] = useState<{ lines: readonly ResumeLine[]; announcedAt: number | null } | null>(null)
   const input = useRef<HTMLInputElement>(null)
   // After a deletion the bar stops completing, as a browser's address field does, until the next letter typed.
   const [typing, setTyping] = useState(true)
@@ -244,6 +247,27 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
     }
   }, [query, barScope, staysPrivate, scope])
 
+  const showsIphone = snapshot !== null && snapshot.private !== true && !little
+  useEffect(() => {
+    if (!showsIphone) return
+    let stale = false
+    void api()
+      .syncResume({ kind: 'list' })
+      .then(
+        (reply) => {
+          if (!stale) setIphone(reply?.ok === true ? { lines: reply.view.lines, announcedAt: reply.view.announcedAt } : null)
+        },
+        (error: unknown) => {
+          // A convenience: without the list the bar keeps its other lines. The name of the error only.
+          console.warn('[command bar] the tabs of the iPhone could not be asked for:', error instanceof Error ? error.name : typeof error)
+          if (!stale) setIphone(null)
+        }
+      )
+    return () => {
+      stale = true
+    }
+  }, [showsIphone, mode])
+
   const ranked = useMemo(() => {
     if (!snapshot) return []
     if (little && !scope) return littleCandidates(query, snapshot.state, history, suggestions)
@@ -252,12 +276,12 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       return text ? [{ kind: 'open', id: 'scope', label: text, detail: scope.name, url: scope.url.replace('%s', encodeURIComponent(text)), search: true } satisfies Candidate] : []
     }
     // A bar opened for a new tab (⌘T, new window, split view) opens a new tab with what is typed; the open tabs follow in the list (setting `goToOpenTab` brings back the switch to an open tab).
-    const found = rankCandidates(lookFor, snapshot.state, history, suggestions, snapshot.extensions, { private: snapshot.private === true, windows: snapshot.windows, platform, newTab: mode === 'new' || mode === 'split', ...(snapshot.windowSidebar ? { windowSidebar: snapshot.windowSidebar } : {}) })
+    const found = rankCandidates(lookFor, snapshot.state, history, suggestions, snapshot.extensions, { private: snapshot.private === true, windows: snapshot.windows, platform, newTab: mode === 'new' || mode === 'split', ...(iphone ? { iphone: { ...iphone, now: Date.now() } } : {}), ...(snapshot.windowSidebar ? { windowSidebar: snapshot.windowSidebar } : {}) })
     if (barScope === null) return found
     // Narrowed to a genre: its lines only. The history has no line of its own while nothing is typed (the ranking lists it only for a text), so the recent pages are the list.
     if (barScope === 'history' && lookFor.trim() === '') return history.slice(0, HISTORY_RECENT).map((h): Candidate => ({ kind: 'history', id: `history:${h.url}`, label: h.title || h.url, detail: t('cmd.history-host', { host: hostOf(h.url) }), url: h.url }))
     return inScope(found, barScope)
-  }, [snapshot, query, lookFor, barScope, history, suggestions, scope, little, mode, platform])
+  }, [snapshot, query, lookFor, barScope, history, suggestions, scope, little, mode, platform, iphone])
   // Narrowed to a genre, no letters are completed: the field holds a prefix and a search, not an address.
   const completion = typing && barScope === null ? inlineCompletion(query, ranked) : null
   // The address on screen is what Enter opens: when the field shows a completed address and the first row would search for the letters typed, a row for the address leads.
@@ -381,6 +405,15 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
         break
       case 'bookmark':
         void act.dispatch({ type: 'bookmark/open', id: c.bookmarkId })
+        break
+      case 'iphone':
+        // The main process holds the address and the space: only the line is named. A refusal (the list was forgotten meanwhile, a space is locked) is said in the log, not hidden.
+        void api()
+          .syncResume({ kind: 'open', id: c.resumeId })
+          .then((reply) => {
+            if (reply?.ok !== true) console.warn('[command bar] the tab of the iPhone could not be opened')
+          })
+          .catch((error: unknown) => console.warn('[command bar] the tab of the iPhone could not be opened:', error instanceof Error ? error.name : typeof error))
         break
       case 'webpanel':
         // The main process closes the bar, then docks the site beside the page.

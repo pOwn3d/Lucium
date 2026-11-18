@@ -155,6 +155,8 @@ export const Channel = {
   lockConfigure: 'lucium:lock-configure',
   /** The page « Synchronisation » of the Settings (src/main/shell/sync-ipc.ts): one request at a time, each checked by `parseSyncRequest`. */
   syncRequest: 'lucium:sync',
+  /** The list « Sur l'iPhone » of the command bar and the opening of one of its lines (sync-resume.ts). */
+  syncResume: 'lucium:sync-resume',
   passwords: 'lucium:passwords',
   cookieSites: 'lucium:cookie-sites',
   cookieNames: 'lucium:cookie-names',
