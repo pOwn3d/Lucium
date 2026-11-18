@@ -107,6 +107,10 @@ final class SyncExchangeAppTests: BrowserCoreTestCase {
         guard case .loaded(let marks) = book else { return XCTFail("the marks were not kept") }
         XCTAssertTrue(marks.stamps(of: "space", id: "m1").values.allSatisfy { $0.hasSuffix("-mac-test-0000000001") }, "what the Mac wrote is not marked as the phone's own change")
         XCTAssertTrue(controller.lastConflicts.isEmpty)
+        // The session told the page what it did, through the host of the model (a summary that never arrives leaves the page without its line).
+        let summary = try XCTUnwrap(controller.lastExchange, "the session said nothing to the controller")
+        XCTAssertTrue(summary.applied, "what the Mac sent was written")
+        XCTAssertFalse(summary.adoptedTheMacState)
     }
 
     final class Recorder: @unchecked Sendable {
@@ -153,6 +157,25 @@ final class SyncExchangeAppTests: BrowserCoreTestCase {
         XCTAssertFalse(try XCTUnwrap(model.syncOrigin).origin.untouched, "and the phone is a modified one from then on")
         XCTAssertNotNil(model.activeTab, "a space always shows a tab")
         XCTAssertEqual(model.state.activeSpaceId, "m1")
+        XCTAssertEqual(controller.lastExchange?.adoptedTheMacState, true, "and the page is told that it took the Mac's state")
+    }
+
+    /// The host holds the model weakly (the model holds the controller, the controller holds the host): a host whose model is gone must not let a session write anything, so
+    /// it says that the application is locked.
+    func testAHostWhoseModelIsGoneSaysTheApplicationIsLocked() async throws {
+        let folder = directory.appending(path: "gone")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        var model: BrowserModel? = await makeModel(in: folder)
+        let host = SyncModelHost(model: try XCTUnwrap(model))
+        let alive = await host.isAppLocked()
+        XCTAssertFalse(alive, "an application that is not locked lets a session write")
+        model = nil
+        var locked = false
+        for _ in 0..<50 where !locked {
+            locked = await host.isAppLocked()
+            if !locked { try await Task.sleep(for: .milliseconds(100)) }
+        }
+        XCTAssertTrue(locked, "no model: no session writes")
     }
 
     func testASessionThatFindsTheTwoResultsDifferentWritesNothingAndSaysSo() async throws {
