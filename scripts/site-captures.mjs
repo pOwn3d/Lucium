@@ -47,6 +47,7 @@ import * as labels from './site-captures/labels.ts'
 import * as names from './site-captures/names.ts'
 import * as pages from './site-captures/pages.ts'
 import * as shots from './site-captures/shots.ts'
+import { showRowInPage } from './site-captures/show-row.ts'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 /** The profile of the installed application (and of `pnpm dev`): never opened here. Its name is the productName of package.json. */
@@ -1381,34 +1382,8 @@ const settingsHashOf = (url) => {
   }
 }
 
-/**
- * Unfolds the groups around the first row `selectors` find and scrolls it just under the head of the Settings window (its title and sidebar),
- * with the title of its group when it is the group's first row: the image keeps the top of the window (features.ts, `anchor: 'top'`). A row that only
- * a search shows (`data-search-only`) or that « Pour commencer » draws again (`data-mirror`) is passed over: the image keeps the row of the page. False
- * when no row is left.
- */
-const showSettingsRow = (settings, selectors, bottom = null) =>
-  settings.evaluate(([list, foot]) => {
-    const shown = (element) => !element.closest('[data-search-only], [data-mirror]')
-    const row = list.map((selector) => [...document.querySelectorAll(selector)].find(shown) ?? null).find((element) => element !== null)
-    if (!row) return false
-    for (let fold = row.closest('details'); fold; fold = fold.parentElement?.closest('details') ?? null) fold.open = true
-    // A row that waits in « Plus de réglages »: the fold is opened by its button (React draws it open before the click returns).
-    if (row.closest('.more-settings-body')?.hidden) row.closest('.more-settings')?.querySelector('.more-settings-toggle')?.click()
-    // The title of its group comes along when the row is the first of the group (nothing of another row above it).
-    const section = row.closest('.pref-section')
-    const firstRow = section?.querySelector('.pref-row')
-    const first = section && (firstRow === row || firstRow?.contains(row) || row.contains(firstRow)) ? section : row
-    let box = row.parentElement
-    while (box && !(box.scrollHeight > box.clientHeight + 1 && /auto|scroll/.test(getComputedStyle(box).overflowY))) box = box.parentElement
-    const scroller = box ?? document.scrollingElement
-    // A row near the end of its page could not reach the top: blank room under the last group lets it (nothing drawn, only space).
-    if (scroller.style.paddingBottom === '') scroller.style.paddingBottom = `${scroller.clientHeight}px`
-    // `foot`: the row's bottom at this height of the page instead (the foot of the image).
-    if (foot !== null) scroller.scrollTop += row.getBoundingClientRect().bottom - foot
-    else scroller.scrollTop += first.getBoundingClientRect().top - (box ? box.getBoundingClientRect().top : 0) - 12
-    return true
-  }, [selectors, bottom])
+/** Brings the first row `selectors` find up in the page of Réglages (site-captures/show-row.ts, which runs in the page); false when no row is left. */
+const showSettingsRow = (settings, selectors, bottom = null) => settings.evaluate(showRowInPage, [selectors, bottom])
 
 /**
  * The CGWindowID of the window of the shot. The development build gives it (getMediaSourceId); it is checked against the windows macOS lists for the
