@@ -143,6 +143,15 @@ struct SyncSettingsTests {
         #expect(file.load() == .none)
     }
 
+    @Test func hexIsReadOnlyAsLowerCaseAsciiDigitsAndNeverStopsTheApplication() {
+        #expect(SyncEncoding.data(hex: "00ff7a") == Data([0x00, 0xff, 0x7a]))
+        #expect(SyncEncoding.data(hex: "") == Data())
+        // `é` is two bytes and one character: an even count of bytes that used to run past the end of the string.
+        for text in ["é", "aé", "éa", "😀", "+f", "-0", "+f+f", "FF", "0g", "abc", " a", "a\u{0}"] {
+            #expect(SyncEncoding.data(hex: text) == nil, "\(text.debugDescription)")
+        }
+    }
+
     @Test func aFileThatCannotBeTrustedIsReportedAndNotGuessed() throws {
         let dir = try directory()
         defer { try? FileManager.default.removeItem(at: dir) }
@@ -153,6 +162,8 @@ struct SyncSettingsTests {
             "not json", "{}", #"{"version":2,"enabled":true,"categories":[]}"#, #"{"version":0,"enabled":true,"categories":[]}"#,
             #"{"version":1,"enabled":true,"categories":[],"deviceId":"a b"}"#,
             #"{"version":1,"enabled":true,"categories":[],"mac":{"id":"m","name":"x","fingerprintHex":"zz","port":1,"hosts":[],"pairedAt":1}}"#,
+            #"{"version":1,"enabled":true,"categories":[],"mac":{"id":"m","name":"x","fingerprintHex":"é","port":1,"hosts":[],"pairedAt":1}}"#,
+            #"{"version":1,"enabled":true,"categories":[],"mac":{"id":"m","name":"x","fingerprintHex":"\#(String(repeating: "+f", count: 32))","port":1,"hosts":[],"pairedAt":1}}"#,
             #"{"version":1,"enabled":true,"categories":[],"mac":{"id":"m","name":"x","fingerprintHex":"\#(String(repeating: "ab", count: 32))","port":0,"hosts":[],"pairedAt":1}}"#,
             #"{"version":1,"enabled":true,"categories":[],"mac":{"id":"m","name":"x","fingerprintHex":"\#(String(repeating: "ab", count: 32))","port":1,"hosts":["8.8.8.8"],"pairedAt":1}}"#,
             #"{"version":1,"enabled":true,"categories":[],"mac":{"id":"m","name":"x","fingerprintHex":"\#(String(repeating: "AB", count: 32))","port":1,"hosts":[],"pairedAt":1}}"#,
