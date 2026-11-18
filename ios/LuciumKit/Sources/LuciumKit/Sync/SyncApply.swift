@@ -84,7 +84,7 @@ public enum SyncApply {
         case (.tab, "customTitle"): .text(tabNameMax)
         case (.tab, "title"), (.favorite, "title"), (.archived, "title"): .text(Library.titleMax)
         case (.archived, "archivedAt"): .number
-        case (.archived, "source"): .oneOf(["auto", "manual", "little"])
+        case (.archived, "source"): .oneOf(["auto", "manual", "little", "sync"])
         default: nil
         }
     }
@@ -278,6 +278,7 @@ public enum SyncApply {
             case .archived: upsert(&lists.archive, kind: .archived, change: change, now: now, rejected: &rejected)
             }
         }
+        let spacesBefore = Set(lists.spaces.map(\.id))
         for removal in patch.removals {
             switch removal.kind {
             case .space:
@@ -289,6 +290,7 @@ public enum SyncApply {
             case .archived: remove(&lists.archive, removal)
             }
         }
+        keepOpenTabsOfRemovedSpaces(&lists, removed: spacesBefore.subtracting(lists.spaces.map(\.id)), active: state.activeSpaceId, now: now)
         for key in patch.order.keys.sorted(by: { SyncCanonical.compare($0, $1) < 0 }) { applyOrder(key, ids: patch.order[key] ?? [], to: &lists) }
         // A profile lists a page once among its favourites (the same rule as `favorite/add`): two devices that each added the same page under another id keep the first.
         var seen = Set<String>()
@@ -299,6 +301,32 @@ public enum SyncApply {
             return seen.insert(profile + "\u{0}" + url).inserted
         }
         return finish(lists, patch: patch, state: state, rejected: rejected)
+    }
+
+    /// The open tabs (the ones of Today: pinned tabs are synchronised, and went with the space on the other device too) of the spaces a patch has removed go to the archive before the
+    /// state is cleaned (review n° 13 of the synchronisation; docs/synchronisation.md §8.5). They are not synchronised, so the device that deleted the space did not decide about them;
+    /// a deletion made here asks the person first, one that comes from another device does not, and nothing must be lost without a trace. They are kept in the space the person is in
+    /// (else the first one left), as `sync`, newest first, before what the archive already held (the same rule as the Mac's `archiveOpenTabsOfRemovedSpaces`).
+    private static func keepOpenTabsOfRemovedSpaces(_ lists: inout Lists, removed: Set<String>, active: String, now: Double) {
+        guard !removed.isEmpty else { return }
+        let leaving = lists.tabs.filter { slot in
+            guard case .string(let space)? = slot.fields["spaceId"], removed.contains(space) else { return false }
+            if case .bool(true)? = slot.fields["pinned"] { return false }
+            if case .bool(true)? = slot.fields["private"] { return false }
+            return true
+        }
+        guard !leaving.isEmpty else { return }
+        let target = lists.spaces.contains { $0.id == active } ? active : (lists.spaces.first?.id ?? "")
+        let entries: [Slot<ArchivedTab>] = leaving.compactMap { slot in
+            guard case .string(let url)? = slot.fields["url"] else { return nil }
+            var title = url
+            if case .string(let custom)? = slot.fields["customTitle"], !custom.trimmingCharacters(in: .whitespaces).isEmpty { title = custom } else if case .string(let own)? = slot.fields["title"], !own.isEmpty { title = own }
+            let fields: [String: JSONValue] = ["id": .string(slot.id), "spaceId": .string(target), "url": .string(url), "title": .string(title), "archivedAt": .number(now), "source": .string("sync")]
+            return Slot(id: slot.id, fields: fields, original: nil, changed: true)
+        }
+        let made = Set(entries.map(\.id))
+        lists.tabs.removeAll { slot in made.contains(slot.id) }
+        lists.archive = Array((entries + lists.archive.filter { !made.contains($0.id) }).prefix(Library.archiveLimit))
     }
 
     /// What the typed lists and the settings become, and what no longer points at anything is cut.
