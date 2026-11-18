@@ -16,6 +16,7 @@ import { savedStateOf } from '../../src/shared/sidebar-state'
 import { demoState } from './demo'
 import { FEATURE_SCENARIOS, rowSelectors, showsQuote, type FeatureScenario } from './features'
 import { sameText } from './labels'
+import { namesShown } from './names'
 import type { Lang } from './shots'
 
 // Every page drawn in its parts, in two languages: a few seconds of processor on a loaded machine.
@@ -58,7 +59,20 @@ const firstRow = (root: ParentNode, row: string): Element | null =>
     .map((selector) => [...root.querySelectorAll(selector)].find((element) => element.closest('[data-search-only], [data-mirror]') === null) ?? null)
     .find((element) => element !== null) ?? null
 
-/** The names the image of a row shows: the label of the row (or of the rows of a group), the title of a group, the words of its buttons. */
+/** The least an image keeps beside its row: the two rows under it (a row at the top of the image), or the two above it (a row at the foot, `place: 'bottom'`). */
+const ROWS_IN_SIGHT = 2
+
+/** The rows of a part of a page, in the order the window draws them (a row only a search shows, or « Pour commencer » draws again, aside). */
+const rowsOf = (root: ParentNode): Element[] => [...root.querySelectorAll('.pref-row')].filter((row) => row.closest('[data-search-only], [data-mirror]') === null)
+
+/** The text a row shows: what waits folded under « En savoir plus » (`hidden`) is not on screen, so not in the image. */
+function shownText(row: Element): string {
+  const copy = row.cloneNode(true) as HTMLElement
+  copy.querySelectorAll('[hidden]').forEach((folded) => folded.remove())
+  return copy.textContent ?? ''
+}
+
+/** The names the image of a row shows:the label of the row (or of the rows of a group), the title of a group, the words of its buttons. */
 function namesOf(target: Element): string[] {
   const rows = [...(target.matches('.pref-row') ? [target] : []), ...target.querySelectorAll('.pref-row')]
   return [
@@ -107,6 +121,29 @@ describe('the rows of Réglages the images of the features page show', () => {
         const target = firstRow(part(s, lang, sub ? `sub:${sub}` : fold ? 'more' : 'page'), row!)
         const box = target?.querySelector<HTMLInputElement>('input[type="checkbox"]')
         if (!box?.hasAttribute('checked')) wrong.push(`${s.card} ${lang}: the text says it is on, the row is off`)
+      }
+    }
+    setLanguage('fr')
+    expect(wrong).toEqual([])
+  })
+
+  // The site names no other browser nor its maker (names.ts), and the capture refuses an image whose text does: a row followed by one that does must
+  // not have it in its image, so it is shown at the foot of the image (`place: 'bottom'`). The test finds that in the sources, before a run on the Mac.
+  it('keep the names of other browsers and of their makers out of the rows an image keeps beside its row', () => {
+    const wrong: string[] = []
+    for (const lang of ['fr', 'en'] as const) {
+      setLanguage(lang)
+      for (const s of settingScenarios) {
+        const { row, sub, fold, place } = s.scene!.settings!
+        const root = part(s, lang, sub ? `sub:${sub}` : fold ? 'more' : 'page')
+        // « Plus de réglages » is drawn after the rows of the page.
+        const rows = fold ? [...rowsOf(part(s, lang, 'page')), ...rowsOf(root)] : rowsOf(root)
+        const at = rows.findIndex((one) => one === firstRow(root, row!))
+        // A group or a form, not a row: its image is the element itself.
+        if (at < 0) continue
+        const beside = place === 'bottom' ? rows.slice(Math.max(0, at - ROWS_IN_SIGHT), at) : rows.slice(at + 1, at + 1 + ROWS_IN_SIGHT)
+        const named = namesShown(beside.map(shownText).join('\n'))
+        if (named.length > 0) wrong.push(`${s.card} ${lang}: the ${ROWS_IN_SIGHT} rows ${place === 'bottom' ? 'above' : 'under'} the row name ${named.join(', ')}`)
       }
     }
     setLanguage('fr')
