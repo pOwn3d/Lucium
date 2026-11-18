@@ -2,6 +2,7 @@
 // not know does not come out, that a nesting of a hundred thousand levels cannot exhaust the stack, that a text which is not UTF-8 is not a message.
 import { describe, expect, it } from 'vitest'
 import { ERROR_CODES, isFatal } from './error-codes'
+import { MAX_FRAME_VALUES } from './limits'
 import { messageText, Numbering, parseMessage, PhaseTracker, STAMP, type MessageType } from './messages'
 import { messageVectors, textOfVector } from './sync-vectors.test-support'
 
@@ -83,6 +84,25 @@ describe('parseMessage: what comes out', () => {
       expect(part({ withheld: [name] }), `aside ${name}`).toEqual({ ok: false, code: 'bad-message' })
     }
     expect(part({ entities: [{ kind: 'space', id: 's1', fields: {}, stamps: {} }], tombstones: [{ kind: 'tab', id: 't1', stamp }], order: { spaces: ['s1'] }, orderStamps: { spaces: stamp }, withheld: ['s9'] }).ok).toBe(true)
+  })
+
+  it('refuses a frame that holds more than a hundred and fifty thousand values, however few bytes they take, and keeps one at the bound', () => {
+    const frame = (empties: number): string => `{"v":1,"t":"bye","n":1,"x":[${Array.from({ length: empties }, () => '[]').join(',')}]}`
+    // The envelope is the object, `v`, `t` and `n` (four values), the list `x` one more, then the empty lists.
+    expect(parseMessage(frame(MAX_FRAME_VALUES - 5)).ok).toBe(true)
+    expect(parseMessage(frame(MAX_FRAME_VALUES - 4))).toEqual({ ok: false, code: 'too-large' })
+  })
+
+  it('spends the values of a connection: a message that goes over what is left is refused as too large', () => {
+    const budget = { left: 10 }
+    const bye = JSON.stringify({ v: 1, t: 'bye', n: 1 })
+    // A bye is four values: the object, `v`, `t` and `n`.
+    expect(parseMessage(bye, budget).ok).toBe(true)
+    expect(budget.left).toBe(6)
+    expect(parseMessage(bye, budget).ok).toBe(true)
+    expect(budget.left).toBe(2)
+    expect(parseMessage(bye, budget)).toEqual({ ok: false, code: 'too-large' })
+    expect(parseMessage(bye)).toMatchObject({ ok: true })
   })
 
   it('survives a nesting of a hundred thousand levels (it is refused, the stack is not exhausted)', () => {

@@ -4,7 +4,7 @@
 //
 //   - the length of a frame is read before its content (frames.ts); a content that is not UTF-8 is a bad message;
 //   - the messages of one direction are numbered from 1 (a gap is `bad-sequence`), and a message out of its phase is a bad message (messages.ts);
-//   - the contents of a whole connection may not add up to more than `MAX_SNAPSHOT_BYTES`;
+//   - the contents of a whole connection may not add up to more than `MAX_SNAPSHOT_BYTES`, nor hold more than `MAX_SESSION_VALUES` values (limits.ts: bytes do not bound the work);
 //   - `idleMs` of silence is `timeout`; a connection that ends is `ConnectionClosed`.
 //
 // A fault is sticky: once the channel has failed, `receive()` answers with the same fault, and the socket is closed. Nothing is read after a fault.
@@ -12,8 +12,8 @@
 import type { Duplex } from 'node:stream'
 import { encodeFrame, FrameReader } from './frames'
 import { isFatal, type ErrorCode } from './error-codes'
-import { IDLE_TIMEOUT_MS, MAX_SNAPSHOT_BYTES, PROTOCOL_VERSION } from './limits'
-import { messageText, Numbering, parseMessage, PhaseTracker, type Message, type Phase, type Role } from './messages'
+import { IDLE_TIMEOUT_MS, MAX_SESSION_VALUES, MAX_SNAPSHOT_BYTES, PROTOCOL_VERSION } from './limits'
+import { messageText, Numbering, parseMessage, PhaseTracker, type Message, type Phase, type Role, type ValueBudget } from './messages'
 
 /** A peer broke a rule of the protocol, or a limit was reached: the code is the one of the catalogue, the detail is for the log and never shown. */
 export class ProtocolError extends Error {
@@ -41,6 +41,8 @@ export interface ChannelOptions {
   idleMs?: number
   /** What the contents of one connection may add up to; a session counts them against the snapshot bound. */
   maxContentBytes?: number
+  /** How many values the messages of one connection may hold in all. */
+  maxValues?: number
 }
 
 /** A message to send: its type and its fields; the version and the number are the channel's. */
@@ -61,6 +63,7 @@ export class Channel {
   private idle: NodeJS.Timeout | null = null
   private readonly idleMs: number
   private readonly maxContentBytes: number
+  private readonly values: ValueBudget
 
   constructor(
     private readonly socket: Duplex,
@@ -69,6 +72,7 @@ export class Channel {
     this.phase = new PhaseTracker(options.role ?? 'mac', options.phase)
     this.idleMs = options.idleMs ?? IDLE_TIMEOUT_MS
     this.maxContentBytes = options.maxContentBytes ?? MAX_SNAPSHOT_BYTES
+    this.values = { left: options.maxValues ?? MAX_SESSION_VALUES }
     socket.on('data', (chunk: Buffer) => this.onData(chunk))
     socket.on('end', () => this.stop(new ConnectionClosed()))
     socket.on('close', () => this.stop(new ConnectionClosed()))
@@ -98,7 +102,7 @@ export class Channel {
       if (this.contentBytes > this.maxContentBytes) return this.abort(new ProtocolError('too-large', 'the contents of the connection add up to more than the bound'))
       const text = messageText(event.content)
       if (text === null) return this.abort(new ProtocolError('bad-message', 'a frame is not valid UTF-8'))
-      const parsed = parseMessage(text)
+      const parsed = parseMessage(text, this.values)
       if (!parsed.ok) return this.abort(new ProtocolError(parsed.code, 'a message is refused'))
       const numbered = this.incoming.accept(parsed.message.n)
       if (!numbered.ok) return this.abort(new ProtocolError(numbered.code, `message number ${parsed.message.n} is not the next`))
