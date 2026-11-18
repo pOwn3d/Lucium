@@ -9,7 +9,7 @@ Il complète [docs/ios.md](ios.md) §13, qui est l'étude. En cas d'écart, ce d
 - **Décidé** : décision du chef de projet (`docs/ios.md` §15, ou la demande de lancer la phase 2 le 18 novembre 2026).
 - **Vérifié** : lu dans un code installé (`@types/node` 26.6.6, SDK iPhoneOS 27.2) ou dans une page de manuel de ce Mac, ou essayé pour cette carte (essais du §17). Une phrase « essayé » dit sur quoi : Node 26.13 sur la boucle locale, ou Security.framework de ce Mac.
 - **À vérifier** : non lu et non essayé ; la carte qui l'implémente le vérifie avant de s'y fier.
-- **Proposé [Qn]** : un choix qui revient au chef de projet. Il est posé en commentaire `[question]` sur la carte 443, avec une recommandation ; **le texte ci-dessous suit la recommandation** en attendant la réponse. La liste est au §18.
+- **Choix [Qn]** : un des sept choix qui revenaient au chef de projet, posés en commentaire `[question]` sur la carte 443. **Réponse du chef de projet, le 18 novembre 2026 : « Le mieux le plus secure »**, lue ici comme : *pour chaque choix, l'option la plus sûre*. Cinq étaient déjà la recommandation (Q1, Q3, Q4, Q6, Q7) ; **deux changent** (Q2 : aucune catégorie cochée par défaut sauf la structure ; Q5 : le Mac n'écoute que pendant une fenêtre ouverte à la main). Cette lecture est à confirmer par le chef de projet ; la liste est au §18.
 
 ## 1. En bref
 
@@ -18,13 +18,13 @@ Il complète [docs/ios.md](ios.md) §13, qui est l'étude. En cas d'écart, ce d
 | Quoi | Une synchronisation **dans les deux sens** des espaces, dossiers, favoris et onglets épinglés (et, si la personne les coche, de l'archive et de quelques réglages) entre **son** Mac et **son** iPhone |
 | Par où | **Le réseau local seulement**, d'appareil à appareil. Aucun serveur, aucun compte, aucun service d'une entreprise (iCloud compris) : `GOVERNANCE.md` principe 5 et `AGENTS.md` §5 |
 | Qui parle à qui | **Le Mac écoute, l'iPhone se connecte.** Le Mac n'ouvre jamais de connexion vers l'iPhone |
-| Quand | **Désactivée par défaut**, des deux côtés. L'iPhone se synchronise à l'ouverture de l'application, au retour au premier plan et sur demande ; le Mac doit être allumé, Lucium ouvert, sur le même réseau |
+| Quand | **Désactivée par défaut**, des deux côtés. **Le Mac n'écoute que pendant une fenêtre de synchronisation que la personne ouvre elle-même** (10 minutes au plus, §6.1) ; pendant ce temps l'iPhone se synchronise à l'ouverture de l'application, au retour au premier plan et sur demande ; les deux sont sur le même réseau |
 | Appairage | Un **code QR** affiché par le Mac (adresse, port, empreinte, secret de 128 bits à usage unique valable 2 minutes), lu par l'iPhone ; à défaut de caméra, un code à saisir |
 | Transport | **TLS 1.3 mutuel**, certificats auto-signés, **empreinte de l'autre épinglée** des deux côtés ; pendant l'appairage seulement, un **HMAC-SHA-256** prouve que les deux côtés connaissent le secret |
 | Messages | Des trames de JSON précédées de leur longueur (1 Mio au plus), numérotées, sans accusé par message ; une version de protocole négociée par ALPN |
 | Fusion | **À trois voies**, entité par entité et champ par champ, avec une base par appareil appairé ; le plus récent gagne, **une suppression perd face à une modification** ; les champs inconnus traversent |
 | Jamais | Mots de passe, verrous, cookies, historique, onglets privés, Retouches, scripts, extensions, réglages de réseau et de mise à jour |
-| Choix qui reviennent au chef | **sept** ([Q1] à [Q7], §18) ; le texte suit la recommandation de chacun |
+| Choix du chef | **sept** ([Q1] à [Q7], §18) : réponse « le mieux le plus secure », l'option la plus sûre de chacun |
 | Dépendance nouvelle | **Aucune** (certificats écrits à la main : [Q6], §6.3) |
 
 ## 2. Règles du projet qui s'appliquent
@@ -44,7 +44,7 @@ Il complète [docs/ios.md](ios.md) §13, qui est l'étude. En cas d'écart, ce d
 ### 3.1 Rôles
 
 - **Le Mac est le serveur TLS** : il écoute (§6.1) et n'ouvre aucune connexion sortante pour la synchronisation.
-- **L'iPhone est le client** : il se connecte, ouvre la séance et la ferme. Conséquence : les changements faits sur le Mac arrivent sur l'iPhone **à la prochaine séance** (ouverture de l'application, retour au premier plan, bouton « Synchroniser maintenant »), pas au moment où ils sont faits. C'est l'écart assumé de `docs/ios.md` §13.1.
+- **L'iPhone est le client** : il se connecte, ouvre la séance et la ferme. Conséquence : les changements faits sur le Mac arrivent sur l'iPhone **à la prochaine séance** (ouverture de l'application, retour au premier plan, bouton « Synchroniser maintenant »), **à condition que la fenêtre de synchronisation du Mac soit ouverte** (§6.1), pas au moment où ils sont faits. C'est l'écart assumé de `docs/ios.md` §13.1.
 - Les deux appareils font **la même fusion** (§11) sur les mêmes entrées et comparent le résultat ; ce n'est pas le Mac qui tranche pour l'iPhone. Cette symétrie est voulue par la carte 446 (mêmes vecteurs des deux côtés) et laisse la porte ouverte à deux appareils de même rôle plus tard. Écarté : une fusion faite par le Mac seul, plus simple, mais qui ne détecte pas un écart entre les deux implémentations (le résumé `result` du §8 le détecte).
 
 ### 3.2 Identité d'un appareil
@@ -163,7 +163,7 @@ Les adresses d'un Mac changent (DHCP, autre Wi-Fi). L'iPhone garde **une liste d
 
 | Réglage | Valeur |
 |---|---|
-| Quand | **[Q5]** tant que Lucium tourne, que l'interrupteur est activé et qu'**au moins un appareil est appairé ou qu'une fenêtre d'appairage est ouverte** ; **jamais** pendant que l'application est verrouillée (`lock.ts`) ; fermée dès que l'interrupteur est coupé |
+| Quand | **[Q5]** **seulement pendant une fenêtre de synchronisation**, que la personne ouvre sur le Mac par le bouton « Ouvrir la synchronisation » de la page Réglages (ou en ouvrant une fenêtre d'appairage, §4.1) et qui **se ferme** : au bout de **10 minutes**, à la fermeture de la page Réglages, par « Fermer », quand l'interrupteur est coupé, ou quand l'application se verrouille (`lock.ts`). **Hors de toute fenêtre, aucun port n'est ouvert.** La page dit « Ouverte : il reste 8:40 » ; un appui sur « Prolonger » repart pour 10 minutes. C'est la lecture littérale de `docs/ios.md` §13.2 point 6 |
 | Où | l'adresse non spécifiée (toutes les interfaces), **mais** chaque connexion dont l'adresse source n'est pas locale (§6.2) est **fermée avant toute poignée de main** |
 | TLS | `minVersion: 'TLSv1.3'` (une version 1.2 n'est jamais proposée), `requestCert: true`, `rejectUnauthorized: false` (le certificat est auto-signé : la vérification de l'empreinte est faite par le code du projet), ALPN `lucium-sync/1` |
 | Limites | **4 connexions** de synchronisation à la fois, plus **1** d'appairage ; poignée de main en **10 s** ; **60 s** sans trame = fermeture ; séance de **10 min** au plus ; **10 connexions refusées en 60 s** depuis la même adresse = cette adresse est refusée pendant 60 s (table de 256 adresses au plus) |
@@ -318,7 +318,7 @@ Vecteurs : tableaux `frames`, `messages`, `sequences` de `sync-message-vectors.j
 
 ### 8.1 Quand
 
-L'iPhone ouvre une séance : au **lancement**, au **retour au premier plan** (5 s de délai pour regrouper), après un changement local (30 s de délai), et sur **« Synchroniser maintenant »**. Jamais plus d'une séance toutes les 15 s. L'application **suspendue** ne synchronise pas (`docs/ios.md` §13.1). Pas de séance si la synchronisation est coupée, si aucun appareil n'est appairé, ou si l'application est **verrouillée** (`locked`).
+L'iPhone ouvre une séance : au **lancement**, au **retour au premier plan** (5 s de délai pour regrouper), après un changement local (30 s de délai), et sur **« Synchroniser maintenant »**. Jamais plus d'une séance toutes les 15 s. L'application **suspendue** ne synchronise pas (`docs/ios.md` §13.1). Pas de séance si la synchronisation est coupée, si aucun appareil n'est appairé, ou si l'application est **verrouillée** (`locked`). **Le Mac n'écoute que pendant sa fenêtre (§6.1)** : une connexion refusée n'est **pas** une erreur, c'est l'état « En attente » (§13.3), avec la phrase « Ouvrez la synchronisation sur le Mac » ; l'iPhone n'insiste pas avant son prochain déclencheur.
 
 ### 8.2 Les entrées
 
@@ -398,12 +398,12 @@ L'égalité de deux marques est impossible entre deux appareils (l'identifiant d
 
 ### 10.1 Les catégories
 
-La personne coche ce qui voyage ; **une catégorie ne passe que si les deux appareils l'ont cochée**. Valeurs par défaut : **[Q2]**.
+La personne coche ce qui voyage ; **une catégorie ne passe que si les deux appareils l'ont cochée**. Valeurs par défaut **[Q2]** : **seule `structure` est cochée**, les trois autres sont au choix de la personne, chacune avec sa phrase.
 
 | Identifiant | Contenu | Fusionné ? | Défaut |
 |---|---|---|---|
 | `structure` | espaces, dossiers, favoris, onglets **épinglés** | oui | **coché** |
-| `settings` | les huit réglages de §10.3 | oui | **coché** |
+| `settings` | les huit réglages de §10.3 | oui | **non coché** |
 | `archive` | onglets archivés (au plus **500 par espace**, les plus récents) | oui | **non coché** |
 | `openTabs` | annonce des onglets ouverts (« Reprise », §10.4) | **non** (jamais écrits dans l'état de l'autre) | **non coché** |
 
@@ -555,7 +555,7 @@ Les textes sont des **clés des deux catalogues** (`src/shared/i18n-fr.ts` et `i
 
 ### 13.1 Mac : la page « Synchronisation » des Réglages
 
-- Un **interrupteur** « Synchroniser avec mes appareils » (**désactivé**), sous-texte : « Entre votre Mac et votre iPhone, sur votre réseau local. Rien ne passe par un serveur. »
+- Un **interrupteur** « Synchroniser avec mes appareils » (**désactivé**), sous-texte : « Entre votre Mac et votre iPhone, sur votre réseau local. Rien ne passe par un serveur. » ; un bouton **« Ouvrir la synchronisation »** (la fenêtre de 10 minutes du §6.1, avec son compte à rebours, « Prolonger » et « Fermer »).
 - Les **catégories** (§10.1), chacune avec une phrase qui dit ce qu'elle envoie ; « Onglets ouverts » dit : « Ce que vous lisez est envoyé, titres et adresses compris. »
 - La **liste des appareils** : nom, plateforme, **dernière synchronisation** (« il y a 2 min »), **« Oublier »** ; **« Ajouter un iPhone »** (feuille : QR, compte à rebours, adresse, code, bouton « Fermer »).
 - Une **ligne d'état** (§13.3) et, s'il y en a un, **« Dernier conflit réglé »** (§13.4).
@@ -571,7 +571,7 @@ Un interrupteur, **« Ajouter un Mac »** (caméra, puis « Saisir un code »), 
 |---|---|---|
 | Désactivée | interrupteur coupé | `sync.state.off` |
 | Aucun appareil | activée, aucun appairage | `sync.state.noDevice` |
-| En attente | l'iPhone n'a pas encore de séance, ou le Mac n'écoute pas (verrouillé) | `sync.state.waiting` |
+| En attente | l'iPhone n'a pas encore de séance, ou **la fenêtre de synchronisation du Mac est fermée** (ou le Mac verrouillé) : « Ouvrez la synchronisation sur le Mac » | `sync.state.waiting` |
 | Appareil absent | aucun candidat n'a répondu | `sync.state.unreachable` |
 | En cours | séance ouverte | `sync.state.running` |
 | **À jour** | `commit` de l'autre reçu : « il y a n min » | `sync.state.upToDate` |
@@ -595,11 +595,11 @@ Ce qui suit est **à ajouter par les cartes 444 et 445, dans le même commit que
 
 **Tableau du Mac** (anglais) :
 
-> | **Synchronization with your own iPhone**, once you have paired it: your spaces, folders, favorites and pinned tabs, and a short list of settings (and, only if you tick them, archived tabs and a list of your open tabs), in an encrypted exchange (TLS 1.3, each device holds the other's key) **with your iPhone only, on the local network, in both directions**. Nothing goes through a server, an account or the internet; the Mac refuses any connection from an address that is not private, and passwords, locks, cookies and history are never sent | only while the switch is on, Lucium is open and unlocked and your paired iPhone asks; a pairing opens for 2 minutes at your click | the “Synchronization” page of the Settings (**off**; the path is written by the card that creates the page) |
+> | **Synchronization with your own iPhone**, once you have paired it: your spaces, folders, favorites and pinned tabs (and, only if you tick them, a short list of settings, archived tabs and a list of your open tabs), in an encrypted exchange (TLS 1.3, each device holds the other's key) **with your iPhone only, on the local network, in both directions**. Nothing goes through a server, an account or the internet; the Mac refuses any connection from an address that is not private, and passwords, locks, cookies and history are never sent | only while the switch is on and you have opened the synchronization window on the Mac (10 minutes at most, closed when you quit the page or lock Lucium) and your paired iPhone asks; a pairing opens for 2 minutes at your click | the “Synchronization” page of the Settings (**off**; the path is written by the card that creates the page) |
 
 (français) :
 
-> | **Synchronisation avec votre iPhone**, une fois appairé : vos espaces, dossiers, favoris et onglets épinglés, et une courte liste de réglages (et, seulement si vous les cochez, les onglets archivés et la liste de vos onglets ouverts), dans un échange chiffré (TLS 1.3, chaque appareil garde la clé de l'autre) **avec votre iPhone seulement, sur le réseau local, dans les deux sens**. Rien ne passe par un serveur, un compte ou Internet ; le Mac refuse toute connexion venue d'une adresse qui n'est pas privée, et les mots de passe, les verrous, les cookies et l'historique ne sont jamais envoyés | seulement quand l'interrupteur est activé, que Lucium est ouvert et déverrouillé et que votre iPhone appairé le demande ; un appairage s'ouvre 2 minutes à votre clic | la page « Synchronisation » des Réglages (**désactivée** ; le chemin est écrit par la carte qui crée la page) |
+> | **Synchronisation avec votre iPhone**, une fois appairé : vos espaces, dossiers, favoris et onglets épinglés (et, seulement si vous les cochez, une courte liste de réglages, les onglets archivés et la liste de vos onglets ouverts), dans un échange chiffré (TLS 1.3, chaque appareil garde la clé de l'autre) **avec votre iPhone seulement, sur le réseau local, dans les deux sens**. Rien ne passe par un serveur, un compte ou Internet ; le Mac refuse toute connexion venue d'une adresse qui n'est pas privée, et les mots de passe, les verrous, les cookies et l'historique ne sont jamais envoyés | seulement quand l'interrupteur est activé, que vous avez ouvert la fenêtre de synchronisation sur le Mac (10 minutes au plus, fermée quand vous quittez la page ou verrouillez Lucium) et que votre iPhone appairé le demande ; un appairage s'ouvre 2 minutes à votre clic | la page « Synchronisation » des Réglages (**désactivée** ; le chemin est écrit par la carte qui crée la page) |
 
 **Tableau de la version iOS** : la ligne « Search suggestions, site icons, synchronization: not in the iOS code yet » perd le mot « synchronization » et gagne la sienne, symétrique : l'échange **avec votre Mac** sur le réseau local, **seulement** quand la synchronisation est activée et l'application ouverte, **désactivée** par défaut, avec son interrupteur dans la page « Synchronisation » des réglages de l'application. Chaque ligne dit ce qui est échangé et avec qui, et que rien n'est envoyé à un tiers.
 
@@ -632,6 +632,7 @@ Ce qui suit est **à ajouter par les cartes 444 et 445, dans le même commit que
 | Il **rejoue** un message ou un QR | TLS, secret brûlé, nonce de connexion, numéros | §9.1 |
 | Il **se fait passer** pour un appareil appairé | l'empreinte est épinglée ; l'identifiant est lié à l'empreinte | §3.2 |
 | Il envoie un **message énorme ou piégé** | longueur lue avant le contenu, bornes, profondeur, `__proto__` refusé, **rien n'est exécuté** | §7 |
+| Un **port ouvert en permanence** | **aucun port n'est ouvert hors d'une fenêtre de synchronisation** que la personne ouvre (10 minutes au plus) [Q5] | §6.1 |
 | Il **inonde** l'écoute | filtre d'adresses avant la poignée de main, 4 connexions, limites de débit, 10 échecs par minute et par adresse | §6.1 |
 | Il atteint le Mac **depuis Internet** | adresse source publique refusée avant TLS ; le Mac n'est pas annoncé ; **le routeur** ne doit pas rediriger le port (rien ici ne le fait) | §6.2 |
 | Un **appareil appairé est compromis** | **non couvert** (il envoie ce que l'appareil sait envoyer) ; ses effets sont bornés : pas de code, pas de réglage de réseau, entités rebornées | §8.6, §10 |
@@ -639,7 +640,7 @@ Ce qui suit est **à ajouter par les cartes 444 et 445, dans le même commit que
 | Un **tiers déjà sur l'appareil** | **non couvert** : le trousseau et l'état sont à lui | — |
 | **Divergence** entre le Swift et le TypeScript | résumé `result`, rien n'est écrit en cas d'écart | §8.5 |
 
-**Limites assumées.** Les deux appareils doivent se voir et être ouverts (§3.1) ; **pas de synchronisation hors du réseau local** ; un réseau qui isole les clients (Wi-Fi d'invités, d'entreprise) l'empêche ; l'ordre est **un registre par liste** (§11.4) ; un appareil hors ligne plus de 30 jours peut faire revenir ce qui a été supprimé (§11.5).
+**Limites assumées.** Les deux appareils doivent se voir et être ouverts, **et la personne doit ouvrir la fenêtre de synchronisation sur le Mac** (§3.1, §6.1) ; **pas de synchronisation hors du réseau local** ; un réseau qui isole les clients (Wi-Fi d'invités, d'entreprise) l'empêche ; l'ordre est **un registre par liste** (§11.4) ; un appareil hors ligne plus de 30 jours peut faire revenir ce qui a été supprimé (§11.5).
 
 ## 17. Vérifié et à vérifier
 
@@ -672,15 +673,15 @@ Ce qui suit est **à ajouter par les cartes 444 et 445, dans le même commit que
 
 ## 18. Choix qui reviennent au chef de projet
 
-Chacun est posé en commentaire `[question]` de la carte 443, avec sa recommandation. **Le texte ci-dessus suit la recommandation.**
+Chacun a été posé en commentaire `[question]` de la carte 443, avec sa recommandation. **Réponse du chef de projet (18 novembre 2026) : « Le mieux le plus secure »**, lue comme l'option **la plus sûre** de chacun ; le texte ci-dessus la suit. À confirmer : si la lecture est fausse pour l'un d'eux, il suffit de changer la ligne du tableau et le paragraphe qu'elle désigne.
 
-| | Choix | Recommandation | Où |
+| | Choix | Retenu (l'option la plus sûre) | Où |
 |---|---|---|---|
 | **Q1** | Découverte : Bonjour ou non | **Pas de Bonjour en v1** ; nom `.local` + dernières adresses | §5 |
-| **Q2** | Ce qui est synchronisé par défaut | `structure` et `settings` cochés ; `archive` et `openTabs` **non** | §10.1 |
+| **Q2** | Ce qui est synchronisé par défaut | **`structure` seule** cochée ; `settings`, `archive` et `openTabs` **non** (**changé** : la recommandation cochait aussi `settings`) | §10.1 |
 | **Q3** | Premier échange sans base | **Union**, avec adoption de l'état du Mac par un iPhone jamais modifié | §11.8 |
 | **Q4** | Espaces verrouillés | **Mis de côté** pendant le verrou, leurs identifiants seuls voyagent | §10.4, §13.3 |
-| **Q5** | Quand le Mac écoute | **Tant que Lucium tourne**, synchronisation activée, un appareil appairé (ou une fenêtre d'appairage) | §6.1 |
+| **Q5** | Quand le Mac écoute | **Seulement pendant une fenêtre de synchronisation ouverte à la main** (10 minutes au plus) : lecture littérale de `docs/ios.md` §13.2 (**changé** : la recommandation écoutait tant que Lucium tourne ; **coût** : la synchronisation demande un geste sur le Mac à chaque fois) | §6.1 |
 | **Q6** | Certificats | **DER écrit à la main**, des deux côtés | §6.3 |
 | **Q7** | Confirmation sur le Mac à l'appairage | **Oui** : Autoriser / Refuser | §4.1 |
 
@@ -707,7 +708,7 @@ Trois fichiers dans `ios/Contracts/`, **au format des vecteurs existants** (JSON
 
 | Carte | À faire |
 |---|---|
-| **444 : Mac** | `src/main/sync/` : identité (§3), écoute et filtre (§6.1–6.2), certificat (§6.3), appairage (§4), séance (§8), `sync/apply` dans le réducteur, page Réglages et **canal IPC validé** (une validation et un test par message), textes des deux langues, **ligne du README** (§14), test de classement des champs (§10.2), **mutations** des gardes (taille, adresse, preuve, épinglage) ; retire le comportement « fenêtre ouverte » littéral s'il est refusé [Q5] |
+| **444 : Mac** | `src/main/sync/` : identité (§3), écoute et filtre (§6.1–6.2), certificat (§6.3), appairage (§4), séance (§8), `sync/apply` dans le réducteur, page Réglages et **canal IPC validé** (une validation et un test par message), textes des deux langues, **ligne du README** (§14), test de classement des champs (§10.2), **mutations** des gardes (taille, adresse, preuve, épinglage) ; la **fenêtre de synchronisation** du §6.1 (ouverture, compte à rebours, fermeture, aucun port ouvert hors fenêtre) et son test [Q5] |
 | **445 : iPhone** | `NWConnection` épinglé (§6.4), identité par `SecItemAdd`, QR (`AVFoundation` ou `VisionKit`) et saisie du code (§4.3), `Info.plist` (`NSLocalNetworkUsageDescription`, `NSCameraUsageDescription`), Réglages, textes, ligne du README iOS ; **pas de `NWBrowser`** si [Q1] = A |
 | **446 : fusion** | `fusion` (§11) en TypeScript (`src/shared/`) **et** en Swift (`LuciumKit`), la forme canonique du §8.4 en Swift, **les mêmes vecteurs des deux côtés**, les propriétés du §11.9 sur des états tirés au hasard, l'écran « Conflit réglé » et le journal du §11.7 |
 | **447 : reprise** | l'écran « Reprise » et la source « Sur le Mac » de la barre de commandes, sur l'annonce du §10.4 |
@@ -720,7 +721,7 @@ Trois fichiers dans `ios/Contracts/`, **au format des vecteurs existants** (JSON
 | §13.2 : « l'empreinte de sa clé publique » | l'empreinte **du certificat** (SHA-256 du DER) | même hachage des deux côtés, aucun en-tête ASN.1 à fabriquer (§3.2) |
 | §13.2 point 2 : Bonjour, `NWBrowser`, `NSBonjourServices` | **aucun en v1** [Q1] | §5 |
 | §13.2 point 3 : `checkServerIdentity` | vérification de l'empreinte à `secureConnection` / `secureConnect` | `checkServerIdentity` compare un nom d'hôte ; `rejectUnauthorized: false` avec un certificat auto-signé (§6.1) |
-| §13.2 point 6 : « fenêtre de synchronisation ouverte » | l'écoute dure tant que Lucium tourne et que la synchronisation est activée [Q5] | lue à la lettre, la fonction serait inutilisable |
+| §13.2 point 6 : « fenêtre de synchronisation ouverte » | **repris à la lettre** : une fenêtre que la personne ouvre, 10 minutes au plus [Q5] | l'option la plus sûre (aucun port ouvert hors fenêtre) ; elle coûte un geste sur le Mac |
 | §13.3 étape 2c : Retouches reçues désactivées | **pas envoyées du tout** en v1 | du code : une revue à part (§10.5) |
 | §13.3 étape 2b : onglets d'« Aujourd'hui » | une **annonce** en lecture seule, pas une fusion | ouvrir 80 onglets ici ne doit pas en ouvrir 80 là (§10.4) |
 | §13.3 étape 2d : historique | **jamais** tant que l'iPhone n'en a pas | rien à fusionner (§10.5) |
