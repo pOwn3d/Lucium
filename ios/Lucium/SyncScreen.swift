@@ -5,6 +5,8 @@ import SwiftUI
 /// words. Everything here goes through `SyncController`; nothing runs while the switch is off.
 struct SyncScreen: View {
     @Bindable var controller: SyncController
+    /// The model that opens a page of « Reprise »; nil in a test of the page alone.
+    var resumeModel: BrowserModel?
     @State private var pairing = false
     @State private var forgetting = false
     @State private var identityFailed = false
@@ -21,6 +23,7 @@ struct SyncScreen: View {
             if controller.settings.enabled {
                 macSection
                 if !controller.lastConflicts.isEmpty { conflictsSection }
+                if let resumeModel, controller.settings.mac != nil { resumeSection(resumeModel) }
                 categoriesSection
             }
             Section {
@@ -75,6 +78,16 @@ struct SyncScreen: View {
             }
         } header: {
             Text("sync.mac.header")
+        }
+    }
+
+    // MARK: « Reprise »
+
+    /// The way to « Reprendre un onglet du Mac »: always there once a Mac is paired, and the screen says what is missing when the list is not there.
+    private func resumeSection(_ model: BrowserModel) -> some View {
+        Section {
+            NavigationLink { ResumeScreen(model: model) } label: { Text("resume.title") }
+                .frame(minHeight: 44)
         }
     }
 
