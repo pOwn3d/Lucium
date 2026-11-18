@@ -176,6 +176,26 @@ struct SyncInboundTests {
         #expect(cleaned.refused == [.init(kind: "order", id: "spaces", reason: .futureMark), .init(kind: "tombstone", id: "space/gone", reason: .futureMark), .init(kind: "tombstone", id: "tab/far", reason: .futureMark)])
     }
 
+    @Test func theBaseStandsInForAnEntityThatCannotTravelNowAndNotForOneThatLeftWhatIsSynchronised() {
+        let ahead = now + SyncInbound.futureRefusalMilliseconds + 1
+        let kept = entity(["name": .string("Old")], at: now - 5000)
+        var base = SyncSnapshot()
+        base.entities = ["space": ["s1": kept, "s2": kept], "tab": ["t1": entity(["pinned": .bool(true), "anchorUrl": .string("https://a.example/")]), "t2": entity(["pinned": .bool(true)]), "t3": entity(["pinned": .bool(true)])],
+                         "setting": ["sendGpc": entity(["value": .bool(true)])], "boost": ["b1": entity(["css": .string("x")])]]
+        var input = SyncSnapshot()
+        input.entities = ["space": ["s1": entity(["name": .string("New")], at: ahead), "s2": entity(["name": .string("Fine")]), "s9": entity(["name": .string("Never held")], at: ahead)],
+                          "tab": ["t1": entity(["pinned": .bool(true), "anchorUrl": .string("javascript:1")]), "t2": entity(["pinned": .bool(false)]), "t3": entity(["pinned": .bool(true), "private": .bool(true)])],
+                          "setting": ["sendGpc": entity(["value": .string("yes")])], "boost": ["b1": entity(["css": .string("y")])]]
+        let cleaned = SyncInbound.clean(input, now: now, base: base)
+        #expect(cleaned.snapshot.entities["space"] == ["s1": kept, "s2": entity(["name": .string("Fine")])], "refused for its marks: the base's version; one the base never held: dropped")
+        #expect(cleaned.snapshot.entities["tab"]?.keys.sorted() == ["t1"], "refused for its address: the base's version; not pinned, private: they left what is synchronised, and are dropped")
+        #expect(cleaned.snapshot.entities["tab"]?["t1"] == base.entities["tab"]?["t1"])
+        #expect(cleaned.snapshot.entities["setting"] == ["sendGpc": base.entities["setting"]?["sendGpc"] ?? entity([:])], "refused for its value: the base's version")
+        #expect(cleaned.snapshot.entities["boost"] == nil, "a kind that is never synchronised stays out, base or no base")
+        #expect(cleaned.refused.map { "\($0.kind)/\($0.id):\($0.reason.rawValue)" } == ["boost/b1:never-synced", "setting/sendGpc:invalid-value", "space/s1:future-mark", "space/s9:future-mark", "tab/t1:invalid-url", "tab/t2:not-pinned", "tab/t3:private"])
+        #expect(SyncInbound.clean(input, now: now).snapshot.entities["space"]?.keys.sorted() == ["s2"], "without a base: dropped")
+    }
+
     @Test func theMarkZeroIsNotATime() {
         var snapshot = SyncSnapshot()
         snapshot.entities = ["space": ["s1": SyncEntity(fields: ["name": .string("A")], stamps: ["name": "0"])]]

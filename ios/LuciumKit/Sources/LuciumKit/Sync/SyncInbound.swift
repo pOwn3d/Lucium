@@ -43,6 +43,9 @@ public enum SyncInbound {
     /// A mark more than seven days ahead of this device's clock: the device that wrote it has the wrong time, and its entity would win every conflict for ever (§9.3).
     public static let futureRefusalMilliseconds = 604_800_000
 
+    /// The refusals that say "this cannot be sent now" (the marks, the address, the value): the version of the base stands in.
+    private static let standsInAsInTheBase: Set<Refusal> = [.futureMark, .invalidURL, .invalidValue]
+
     /// The ceiling of a delay of automatic archiving accepted from another device: a year of hours.
     private static let archiveHoursMax = 24.0 * 366
 
@@ -139,7 +142,13 @@ public enum SyncInbound {
     /// `tombstone` or `order`, §9.3: the merge keeps the greatest mark it sees and the book never lets its clock fall behind one it has seen, so a single such mark
     /// would delete what it names and push the clock out of the reach of every other device). What the others are made of is left to the merge, which treats an id
     /// it does not know as nothing.
-    public static func clean(_ snapshot: SyncSnapshot, now: Int) -> Cleaned {
+    ///
+    /// `base` is the base of the session (nil when there is none): an entity that is in it and is refused for its marks, its address or its value (`futureMark`,
+    /// `invalidURL`, `invalidValue`) is given back as the base holds it, unchanged, and not dropped. The merge reads an entity that is in the base and not in a snapshot as
+    /// deleted, and the other device would lose it: a clock a week ahead, an address that stopped being a web page, is "this cannot travel now", not "this was deleted".
+    /// One refused for what it is (`notPinned`, `private`, a kind that is never synchronised) is dropped, and the other device deletes it: it left what is synchronised.
+    /// The same rule as the Mac's `cleanSnapshot` (docs/synchronisation.md §22), for what comes in and for what is sent.
+    public static func clean(_ snapshot: SyncSnapshot, now: Int, base: SyncSnapshot? = nil) -> Cleaned {
         var refused: [Refused] = []
         var entities: [String: [String: SyncEntity]] = [:]
         for (kind, byID) in snapshot.entities {
@@ -148,6 +157,7 @@ public enum SyncInbound {
                 switch verdict {
                 case .refused(let reason):
                     refused.append(Refused(kind: kind, id: id, reason: reason))
+                    if standsInAsInTheBase.contains(reason), let before = base?.entities[kind]?[id] { entities[kind, default: [:]][id] = before }
                 case .accepted(let fields):
                     var stamps = entity.stamps
                     if let known = SyncFieldClasses.kind(kind), let classes = SyncFieldClasses.classes[known] {

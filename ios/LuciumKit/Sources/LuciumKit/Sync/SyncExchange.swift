@@ -68,15 +68,18 @@ public struct SyncExchangeBody: SyncSessionBody {
     public let now: @Sendable () -> Int
     /// How long the phone waits for the next message of the Mac (§7.5: 60 s of silence ends the session).
     public let idleTimeout: Duration
+    /// How long a whole session may last (§7.5: ten minutes).
+    public let sessionMaximum: Duration
     public let log: @Sendable (String) -> Void
 
     public init(host: any SyncExchangeHost, marks: SyncMarkKeeper, bases: SyncBaseStore, now: @escaping @Sendable () -> Int = { Int(Date().timeIntervalSince1970 * 1000) },
-                idleTimeout: Duration = SyncLimits.idleTimeout, log: @escaping @Sendable (String) -> Void = { print("[sync] \($0)") }) {
+                idleTimeout: Duration = SyncLimits.idleTimeout, sessionMaximum: Duration = SyncLimits.sessionMaximum, log: @escaping @Sendable (String) -> Void = { print("[sync] \($0)") }) {
         self.host = host
         self.marks = marks
         self.bases = bases
         self.now = now
         self.idleTimeout = idleTimeout
+        self.sessionMaximum = sessionMaximum
         self.log = log
     }
 
@@ -138,7 +141,18 @@ public struct SyncExchangeBody: SyncSessionBody {
 
     public func run(_ context: SyncSessionContext, channel: SyncChannel) async throws -> SyncBodyOutcome {
         do {
-            return try await exchange(context, channel: channel)
+            // A session lasts ten minutes at most (§7.5): a peer that sends a byte a minute cannot keep "Synchronize now" busy for ever. The Mac applies the same bound.
+            return try await withThrowingTaskGroup(of: SyncBodyOutcome.self) { group in
+                group.addTask { try await self.exchange(context, channel: channel) }
+                group.addTask {
+                    try await Task.sleep(for: self.sessionMaximum)
+                    await channel.close()
+                    throw SyncFailure(.timeout, "the session lasted more than \(self.sessionMaximum)")
+                }
+                defer { group.cancelAll() }
+                guard let first = try await group.next() else { throw SyncFailure(.internal, "no result") }
+                return first
+            }
         } catch let ended as TheMacEndedIt {
             throw ended.failure
         } catch let failure as SyncFailure {
@@ -167,7 +181,7 @@ public struct SyncExchangeBody: SyncSessionBody {
         let frozen = marks.freeze(state, categories: context.categories, withheld: locked, base: base, now: now())
         // What this phone sends is what it would itself accept (the same gate as for what comes in, with the Mac's clock for the marks of the future): the two merges then
         // start from the same inputs. An entity that does not pass stays here, untouched, and is not sent; it is counted and logged.
-        let sentClean = SyncInbound.clean(frozen, now: context.remote.now)
+        let sentClean = SyncInbound.clean(frozen, now: context.remote.now, base: base)
         let vetted = Self.vet(sentClean.snapshot, log: log)
         let real = vetted.snapshot
         let local = adopting ? real.withoutStructure() : real
@@ -188,7 +202,7 @@ public struct SyncExchangeBody: SyncSessionBody {
 
         // receive, check
         let (received, openTabs) = try await receiveSnapshot(channel, takeOpenTabs: context.categories.contains(.openTabs))
-        let cleaned = SyncInbound.clean(received.snapshot, now: now())
+        let cleaned = SyncInbound.clean(received.snapshot, now: now(), base: base)
         if !cleaned.refused.isEmpty { log("not taken: \(cleaned.refused.count) entities (\(Dictionary(grouping: cleaned.refused, by: \.reason.rawValue).mapValues(\.count)))") }
 
         // merge, compare

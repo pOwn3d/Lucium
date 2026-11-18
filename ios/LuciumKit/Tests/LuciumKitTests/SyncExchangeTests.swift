@@ -68,6 +68,8 @@ struct SyncTestMac: Sendable {
     var skipCommit = false
     var wrongCommitDigest = false
     var extraPartAfterEnd = false
+    /// Says hello and then nothing at all.
+    var silentAfterHello = false
 
     struct Seen: @unchecked Sendable {
         var hello: [String: Any] = [:]
@@ -117,6 +119,10 @@ struct SyncTestMac: Sendable {
         seen.hello = theirs.fields
         seen.phoneBaseHash = theirs.fields["baseHash"]
         let phoneHash = theirs.fields["baseHash"] as? String
+        if silentAfterHello {
+            try await Task.sleep(for: .seconds(5))
+            return seen
+        }
         if warnAfterHello { try await mac.write("error", ["code": "clock-skew", "fatal": false, "detail": "the clocks differ"]) }
 
         // The Mac's own snapshot, in parts, as `session.ts` sends it: only the categories both ticked.
@@ -126,7 +132,7 @@ struct SyncTestMac: Sendable {
         if !common.contains("structure") { shown = shown.withoutStructure() }
         if !common.contains("settings") { shown.entities["setting"] = nil }
         if !common.contains("archive") { shown.entities["archived"] = nil }
-        let sent = SyncInbound.clean(shown, now: now).snapshot
+        let sent = SyncInbound.clean(shown, now: now, base: (hash != nil && phoneHash == hash) ? base : nil).snapshot
         let parts = SyncSnapshotParts.parts(of: sent, withheld: withheld)
         for (index, part) in parts.enumerated() {
             try await mac.write("snapshot.part", try Self.jsonObject(.object(part)) as? [String: Any] ?? [:])
@@ -162,8 +168,8 @@ struct SyncTestMac: Sendable {
                 let assembled = try assembler.finish(entityCount: message.fields["entityCount"] as? Int ?? -1, digest: message.fields["digest"] as? String ?? "")
                 seen.phone = assembled.snapshot
                 seen.phoneWithheld = assembled.withheld.sorted()
-                let cleaned = SyncInbound.clean(assembled.snapshot, now: now)
                 let usable: SyncSnapshot? = (hash != nil && phoneHash == hash) ? base : nil
+                let cleaned = SyncInbound.clean(assembled.snapshot, now: now, base: usable)
                 let aside = Set(withheld).union(assembled.withheld).sorted()
                 let merged = SyncMerge.merge(base: usable, local: sent, remote: cleaned.snapshot, withheld: aside)
                 seen.merged = merged
@@ -408,6 +414,47 @@ struct SyncExchangeTests {
         guard case .object(let settings)? = await rig.host.state.rest["settings"] else { Issue.record("no settings"); return }
         #expect(settings["autoArchiveHours"] == .number(6), "a patch that holds only a setting is written")
         #expect(await rig.host.state.spaces.map(\.id).sorted() == ["s1", "s2"])
+    }
+
+    @Test func anEntityThatCannotTravelBecauseOfItsMarkIsNotTakenForADeletion() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        let first = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()))
+        let merged = try #require(first.1.merged).snapshot
+        // The phone renames the Mac's space with a clock that is eight days ahead of the Mac's: the Mac would refuse that mark, and the entity would look deleted.
+        var state = await rig.host.state
+        let index = try #require(state.spaces.firstIndex { $0.id == "m1" })
+        state.spaces[index].name = "Horloge d'avance"
+        await rig.host.set(state: state)
+        rig.marks.observe(state, now: now + 8 * 24 * 60 * 60 * 1000)
+        let (report, seen) = try await session(rig, mac: SyncTestMac(snapshot: SyncStateView.base(of: merged), base: SyncStateView.base(of: merged)))
+        #expect(report?.outcome == .committed(at: now), "the two merges agree: the base stood in for the entity that could not travel")
+        #expect(seen.phone.entities["space"]?["m1"]?.fields["name"] == .string("Du Mac"), "what the Mac received of it is the base's version, unchanged")
+        let kept = await rig.host.state
+        #expect(kept.spaces.contains { $0.id == "m1" } && kept.folders.contains { $0.id == "mf" }, "nobody lost the space, nor what is in it")
+        let summary = try #require(await rig.host.summaries.last)
+        #expect(summary.refusedSent.contains(.init(kind: "space", id: "m1", reason: .futureMark)))
+    }
+
+    @Test func aSessionIsCutAtTheLongestTimeItMayLast() async throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "exchange-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let host = SyncTestHost(state: try SyncStateFixtures.sample())
+        let body = SyncExchangeBody(host: host, marks: SyncMarkKeeper(device: phone.id, file: SyncMarksFile(url: directory.appending(path: SyncMarksFile.fileName))), bases: SyncBaseStore(directory: directory), now: { self.now },
+                                    idleTimeout: .seconds(30), sessionMaximum: .milliseconds(300))
+        let ends = syncLoopback()
+        let fake = SyncFakeMac(ends.mac)
+        var mac = SyncTestMac(snapshot: macSnapshot())
+        mac.silentAfterHello = true
+        let script = mac
+        let task = Task { try await script.run(fake) }
+        defer { task.cancel() }
+        let started = ContinuousClock.now
+        await #expect(throws: SyncFailure.self) {
+            _ = try await SyncSessionClient.run(connection: SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint), peer: peer, device: phone, categories: [.structure], appVersion: "0.1.0",
+                                                supportedStateVersion: 1, nonce: Data(repeating: 9, count: 16), baseHash: nil, now: { self.now }, body: body, handshakeTimeout: .seconds(2))
+        }
+        #expect(ContinuousClock.now - started < .seconds(5), "cut by the bound of the session, not by the silence of the peer")
     }
 
     // MARK: When the two do not agree
