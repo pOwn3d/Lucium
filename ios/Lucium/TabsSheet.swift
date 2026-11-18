@@ -32,9 +32,17 @@ struct TabsSheet: View {
                 ToolbarItem(placement: .topBarLeading) { Button("tabs.privacy") { model.privacyPrompts.settingsShown = true } }
                 ToolbarItem(placement: .confirmationAction) { Button("tabs.done") { model.tabsSheetShown = false } }
                 ToolbarItem(placement: .cancellationAction) { Button("tabs.licenses") { licensesShown = true } }
-                ToolbarItem(placement: .bottomBar) { Button("tabs.new") { model.newTab() }.disabled(model.activeSpaceCovered) }
-                if model.lock != nil {
-                    ToolbarItem(placement: .bottomBar) { Button("tabs.lock") { lockShown = true } }
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Button("tabs.new") { model.newTab() }.disabled(model.activeSpaceCovered)
+                    Spacer()
+                    Button("spaces.title") {
+                        model.tabsSheetShown = false
+                        model.spacesSheetShown = true
+                    }
+                    if model.lock != nil {
+                        Spacer()
+                        Button("tabs.lock") { lockShown = true }
+                    }
                 }
             }
         }
@@ -56,6 +64,7 @@ struct TabsSheet: View {
                     .clipShape(RoundedRectangle(cornerRadius: 6))
                     .accessibilityHidden(true)
             }
+            if tab.isPrivate { ProjectIcon(name: .privateMask, size: 18).foregroundStyle(Color.secondary) }
             VStack(alignment: .leading, spacing: 2) {
                 title(of: tab).fontWeight(tab.id == model.activeTab?.id ? .semibold : .regular)
                 if !tab.isBlank { Text(AddressResolver.host(of: tab.url)).font(.footnote).foregroundStyle(.secondary) }

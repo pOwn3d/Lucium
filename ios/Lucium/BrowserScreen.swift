@@ -27,6 +27,10 @@ struct BrowserScreen: View {
             .sheet(isPresented: $model.tabsSheetShown) {
                 TabsSheet(model: model)
             }
+            .sheet(isPresented: $model.spacesSheetShown) {
+                SpacesSheet(model: model)
+            }
+            .modifier(SiteDataFlow(model: model))
             .alert("state.notice.title", isPresented: $model.startupNoticeShown) {
                 Button("state.notice.ok") {}
             } message: {

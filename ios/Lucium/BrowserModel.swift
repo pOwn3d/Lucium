@@ -8,19 +8,16 @@ import WebKit
 /// in the state, a picture and the state of its page (`TabSleep.swift`), and wakes where it left off.
 @MainActor @Observable
 final class BrowserModel {
-    /// What a space looks like. The theme is not in `BrowserState` (it stays in the `rest` of the space, written back untouched).
-    struct SpaceStyle {
-        let symbol: String
-        let tint: Color
-    }
-
-    private(set) var state: BrowserState
-    private let styles: [String: SpaceStyle]
+    /// The state in the shape of the Mac's. Changed here and in `SpacesModel.swift` (spaces, profiles, private tabs), never from a view.
+    var state: BrowserState
 
     /// What is locked (`BrowserModel+Lock.swift`). Nil in a model with no lock (most tests): nothing is covered then.
     var lock: LockController?
 
     var tabsSheetShown = false
+    var spacesSheetShown = false
+    /// The site "Clear this site's data" was asked for, until the person answers (`SiteDataFlow`).
+    var siteDataAsked: String?
     var addressText = ""
     private(set) var host = ""
     private(set) var canGoBack = false
@@ -63,19 +60,20 @@ final class BrowserModel {
     @ObservationIgnored let sideStore: TabSideStore?
     @ObservationIgnored let awakeCap: Int
     @ObservationIgnored let clock: @MainActor () -> Double
+    /// The in-memory data store of the private tabs, while at least one private tab has a view (`SpacesModel.swift`).
+    @ObservationIgnored var privateStore: WKWebsiteDataStore?
     @ObservationIgnored var webViews: [String: WKWebView] = [:]
     @ObservationIgnored var observations: [String: [NSKeyValueObservation]] = [:]
     @ObservationIgnored var saveTask: Task<Void, Never>?
     @ObservationIgnored var thumbnailCache: [String: UIImage] = [:]
 
-    init(state: BrowserState, styles: [String: SpaceStyle] = [:], stateFile: StateFile? = nil, sideStore: TabSideStore? = nil,
+    init(state: BrowserState, stateFile: StateFile? = nil, sideStore: TabSideStore? = nil,
          startup: StateLoad = .fresh, awakeCap: Int = SleepPlanner.defaultCap,
          clock: @escaping @MainActor () -> Double = { (Date().timeIntervalSince1970 * 1000).rounded() },
          rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
          embeddedLists: @escaping @MainActor () throws -> EmbeddedLists? = { try EmbeddedLists.load() },
          store: WKContentRuleListStore = .default()) {
         self.state = state.consistent() ?? Self.defaultState()
-        self.styles = styles
         self.stateFile = stateFile
         self.sideStore = sideStore
         self.startup = startup
@@ -97,7 +95,6 @@ final class BrowserModel {
     /// A space that is locked has no tab to show: whatever reads these (the screen, the list of tabs, the wake-up) finds nothing, which is the guard.
     var activeTabs: [TabItem] { activeSpaceCovered ? [] : state.tabs(in: state.activeSpaceId) }
     var activeTab: TabItem? { activeSpaceCovered ? nil : state.activeTab(in: state.activeSpaceId) }
-    func style(of space: Space) -> SpaceStyle { styles[space.id] ?? SpaceStyle(symbol: "square", tint: .gray) }
 
     /// The view of the tab on screen. It exists once the model is ready; asking for it wakes the tab if it was asleep.
     var webView: WKWebView? {
@@ -196,7 +193,7 @@ final class BrowserModel {
     }
 
     /// A tab of the active space always shows: when a space has none, it gets a blank one (the start page).
-    private func ensureActiveTab() {
+    func ensureActiveTab() {
         if state.activeTab(in: state.activeSpaceId) != nil { return }
         if let latest = state.tabs(in: state.activeSpaceId).max(by: { ($0.lastActiveAt ?? 0) < ($1.lastActiveAt ?? 0) }) {
             state.show(tabId: latest.id, now: clock())
@@ -205,17 +202,17 @@ final class BrowserModel {
         }
     }
 
-    private func openBlankTab() {
+    func openBlankTab() {
         state.openTab(id: UUID().uuidString.lowercased(), in: state.activeSpaceId, now: clock())
     }
 
     /// What is done as a tab leaves the screen: its picture is taken now, while it is still on screen.
-    private func leaveActiveTab() {
+    func leaveActiveTab() {
         if let tab = activeTab { captureThumbnail(of: tab.id) }
     }
 
     /// What is done when another tab is on screen: it wakes, the bar follows it, the change is kept, and the surplus of awake tabs sleeps.
-    private func arrive() {
+    func arrive() {
         if isReady, let tab = activeTab { syncFrom(wake(tab)) } else { syncFrom(nil) }
         scheduleSave()
         Task { await sleepSurplus() }
@@ -303,18 +300,17 @@ extension BrowserModel {
 extension BrowserModel {
     /// A first state: three spaces, each with a profile of its own, in the shape of the Mac's state file.
     static func defaultState() -> BrowserState {
-        BrowserState(revision: 2,
-                     spaces: [Space(id: "work", name: String(localized: "space.work"), emoji: "💼", profileId: "work"),
-                              Space(id: "home", name: String(localized: "space.home"), emoji: "🏠", profileId: "home"),
-                              Space(id: "projects", name: String(localized: "space.projects"), emoji: "🧩", profileId: "projects")],
-                     activeSpaceId: "work", activeTabBySpace: ["work": nil, "home": nil, "projects": nil])
+        func space(_ id: String, _ name: String, _ emoji: String, hue: Double) -> Space {
+            Space(id: id, name: name, emoji: emoji, profileId: id, rest: ["theme": SpaceTheme.make(hue: hue)])
+        }
+        var state = BrowserState(revision: 2,
+                                 spaces: [space("work", String(localized: "space.work"), "💼", hue: 250), space("home", String(localized: "space.home"), "🏠", hue: 30),
+                                          space("projects", String(localized: "space.projects"), "🧩", hue: 175)],
+                                 activeSpaceId: "work", activeTabBySpace: ["work": nil, "home": nil, "projects": nil])
+        // Each space starts with a profile of its own, named like it: the list of profiles shows them, and a profile outlives its space.
+        for space in state.spaces { state.setProfileName(space.name, for: space.profileId) }
+        return state
     }
-
-    static let defaultStyles: [String: SpaceStyle] = [
-        "work": SpaceStyle(symbol: "briefcase", tint: .indigo),
-        "home": SpaceStyle(symbol: "house", tint: .orange),
-        "projects": SpaceStyle(symbol: "puzzlepiece", tint: .teal),
-    ]
 
     /// The folder the application keeps its own files in (`state.json`, the pictures and page states of the tabs).
     static func supportDirectory() -> URL {
@@ -330,7 +326,7 @@ extension BrowserModel {
         let load = file.load()
         var state = defaultState()
         if case .loaded(let loaded) = load { state = loaded }
-        let model = BrowserModel(state: state, styles: defaultStyles, stateFile: file,
+        let model = BrowserModel(state: state, stateFile: file,
                                  sideStore: TabSideStore(directory: directory.appending(path: TabSideStore.directoryName, directoryHint: .isDirectory)), startup: load,
                                  awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, store: store)
         if let lock { model.attach(lock) }

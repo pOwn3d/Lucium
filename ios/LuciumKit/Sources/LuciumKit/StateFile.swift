@@ -53,7 +53,8 @@ public struct StateFile: Sendable {
     public mutating func load() -> StateLoad {
         guard FileManager.default.fileExists(atPath: url.path) else { return .fresh }
         do {
-            guard let state = try BrowserState.decode(Self.stripByteOrderMark(try readBounded())).consistent() else { throw StateFileError.noSpace }
+            // A private tab found in a file is not a tab of this run (the Mac's rule): it is dropped as the file is read.
+            guard let state = try BrowserState.decode(Self.stripByteOrderMark(try readBounded())).persistable().consistent() else { throw StateFileError.noSpace }
             return .loaded(state)
         } catch {
             let reason: SetAsideReason = (error as? BrowserState.StateError).map { _ in .future } ?? .corrupt
@@ -79,7 +80,8 @@ public struct StateFile: Sendable {
         }
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys]
-        try writeAtomically(try encoder.encode(state))
+        // The one place the state leaves memory: a private tab never goes through it (`BrowserState.persistable`).
+        try writeAtomically(try encoder.encode(state.persistable()))
     }
 
     /// The files put aside next to this one, of one sort, the most recent first.

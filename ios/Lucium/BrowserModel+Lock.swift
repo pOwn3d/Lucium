@@ -45,7 +45,10 @@ extension BrowserModel {
     /// What the lock does as the scene changes. The cover goes up first: the system takes its picture of the application (the app switcher) as the
     /// scene stops being active. Leaving locks at once; coming back asks the owner once if the application is locked.
     func sceneChanged(to phase: ScenePhase, cover: PrivacyCover) {
-        cover.set(shown: lock?.coversScreen(sceneActive: phase == .active) ?? false)
+        // A private page must not show in the app switcher either, lock or no lock: the same window, with the private mark instead of the lock.
+        let lockCover = lock?.coversScreen(sceneActive: phase == .active) ?? false
+        let privateCover = phase != .active && activeTab?.isPrivate == true
+        cover.set(shown: lockCover || privateCover, lock: lockCover)
         switch phase {
         case .background:
             lockOnLeaving()

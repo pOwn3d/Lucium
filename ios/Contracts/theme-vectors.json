@@ -1,0 +1,249 @@
+{
+  "theme": [
+    {
+      "hue": 250,
+      "baseColors": [
+        "#5139c6",
+        "#aec639"
+      ],
+      "themeHue": 250
+    },
+    {
+      "hue": 0,
+      "baseColors": [
+        "#c63939",
+        "#39c6c6"
+      ],
+      "themeHue": 0
+    },
+    {
+      "hue": 30,
+      "baseColors": [
+        "#c68039",
+        "#397fc6"
+      ],
+      "themeHue": 30
+    },
+    {
+      "hue": 55,
+      "baseColors": [
+        "#c6ba39",
+        "#3945c6"
+      ],
+      "themeHue": 55
+    },
+    {
+      "hue": 90,
+      "baseColors": [
+        "#80c639",
+        "#7f39c6"
+      ],
+      "themeHue": 90
+    },
+    {
+      "hue": 130,
+      "baseColors": [
+        "#39c651",
+        "#c639ae"
+      ],
+      "themeHue": 130
+    },
+    {
+      "hue": 175,
+      "baseColors": [
+        "#39c6ba",
+        "#c63945"
+      ],
+      "themeHue": 175
+    },
+    {
+      "hue": 215,
+      "baseColors": [
+        "#3974c6",
+        "#c68b39"
+      ],
+      "themeHue": 215
+    },
+    {
+      "hue": 295,
+      "baseColors": [
+        "#ba39c6",
+        "#45c639"
+      ],
+      "themeHue": 295
+    },
+    {
+      "hue": 345,
+      "baseColors": [
+        "#c6395c",
+        "#39c6a3"
+      ],
+      "themeHue": 345
+    },
+    {
+      "hue": 359.5,
+      "baseColors": [
+        "#c6393b",
+        "#39c6c4"
+      ],
+      "themeHue": 359
+    },
+    {
+      "hue": 360,
+      "baseColors": [
+        "#c63939",
+        "#39c6c6"
+      ],
+      "themeHue": 0
+    },
+    {
+      "hue": -30,
+      "baseColors": [
+        "#c63980",
+        "#39c67f"
+      ],
+      "themeHue": 330
+    },
+    {
+      "hue": 725,
+      "baseColors": [
+        "#c64539",
+        "#39bac6"
+      ],
+      "themeHue": 5
+    },
+    {
+      "hue": 120,
+      "saturation": 0.05,
+      "baseColors": [
+        "#738c73",
+        "#8c738c"
+      ],
+      "themeHue": 120
+    },
+    {
+      "hue": 200,
+      "saturation": 0.99,
+      "baseColors": [
+        "#06a8f9",
+        "#f95706"
+      ],
+      "themeHue": 200
+    },
+    {
+      "hue": 18,
+      "saturation": 0.55,
+      "baseColors": [
+        "#c66339",
+        "#399cc6"
+      ],
+      "themeHue": 18
+    }
+  ],
+  "newProfileId": [
+    {
+      "name": "Travail & Co",
+      "existing": [],
+      "expect": "travail-co"
+    },
+    {
+      "name": "Travail & Co",
+      "existing": [
+        "travail-co"
+      ],
+      "expect": "travail-co-2"
+    },
+    {
+      "name": "Travail & Co",
+      "existing": [
+        "travail-co",
+        "travail-co-2"
+      ],
+      "expect": "travail-co-3"
+    },
+    {
+      "name": "Été à la plage",
+      "existing": [],
+      "expect": "ete-a-la-plage"
+    },
+    {
+      "name": "  --Maison--  ",
+      "existing": [],
+      "expect": "maison"
+    },
+    {
+      "name": "",
+      "existing": [],
+      "expect": "profil"
+    },
+    {
+      "name": "日本語",
+      "existing": [],
+      "expect": "profil"
+    },
+    {
+      "name": "Private",
+      "existing": [],
+      "expect": "private-2"
+    },
+    {
+      "name": "Un nom de profil vraiment très très long pour un dossier",
+      "existing": [],
+      "expect": "un-nom-de-profil-vraiment-tr"
+    },
+    {
+      "name": "Perso",
+      "existing": [
+        "default",
+        "perso"
+      ],
+      "expect": "perso-2"
+    }
+  ],
+  "profileId": [
+    {
+      "id": "work",
+      "valid": true
+    },
+    {
+      "id": "a-b_c",
+      "valid": true
+    },
+    {
+      "id": "Z9",
+      "valid": true
+    },
+    {
+      "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "valid": true
+    },
+    {
+      "id": "",
+      "valid": false
+    },
+    {
+      "id": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "valid": false
+    },
+    {
+      "id": "__proto__",
+      "valid": false
+    },
+    {
+      "id": "é",
+      "valid": false
+    },
+    {
+      "id": "a b",
+      "valid": false
+    },
+    {
+      "id": "a/b",
+      "valid": false
+    },
+    {
+      "id": "..",
+      "valid": false
+    }
+  ]
+}

@@ -10,9 +10,11 @@ final class PrivacyCover {
 
     var isShown: Bool { window?.isHidden == false }
 
-    func set(shown: Bool) {
+    /// `lock` says what the cover is for: the lock (a padlock) or a private tab on screen (the private mark).
+    func set(shown: Bool, lock: Bool = true) {
         if shown {
             if window == nil { window = Self.makeWindow() }
+            window?.rootViewController = UIHostingController(rootView: CoverView(lock: lock))
             window?.isHidden = false
         } else {
             window?.isHidden = true
@@ -26,17 +28,22 @@ final class PrivacyCover {
         }
         let window = UIWindow(windowScene: scene)
         window.windowLevel = .alert + 1
-        window.rootViewController = UIHostingController(rootView: CoverView())
         return window
     }
 
     private struct CoverView: View {
+        let lock: Bool
+
         var body: some View {
             ZStack {
                 Color(.systemBackground).ignoresSafeArea()
-                LockGlyph()
-                    .stroke(.secondary, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
-                    .frame(width: 56, height: 56)
+                if lock {
+                    LockGlyph()
+                        .stroke(.secondary, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
+                        .frame(width: 56, height: 56)
+                } else {
+                    ProjectIcon(name: .privateMask, size: 56).foregroundStyle(Color.secondary)
+                }
             }
             .accessibilityHidden(true)
         }
