@@ -22,6 +22,13 @@ export const PAIRING_WINDOW_MS = 120_000
 export const MAX_INVALID_PROOFS = 5
 /** How long the person has to answer « Autoriser / Refuser » (§4.1 step 7): no answer is a refusal. */
 export const CONFIRM_MS = 60_000
+/**
+ * How long a connection that took the only place of a pairing is safe from a newcomer while it has not yet sent its `pair.request` (§4.5, §6.1): the iPhone sends it as
+ * soon as it has the challenge, so a connection still silent after this has no business being there. Past it, the next stranger takes the place and the silent one is cut
+ * and counted; before it, the newcomer is told `busy`. Without this a neighbour holds the place with one idle connection for the sixty seconds of the silence timer, again
+ * and again, for the whole window.
+ */
+export const PAIRING_REQUEST_GRACE_MS = 3_000
 
 /** The synchronisation window the person opens by hand: the only time the Mac listens (§6.1, [Q5]). */
 export const WINDOW_MAX_MS = 600_000

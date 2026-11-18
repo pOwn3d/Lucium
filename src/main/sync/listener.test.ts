@@ -2,6 +2,7 @@
 // (`allowSource`) except the ones that prove the real policy refuses it.
 import { createHash, randomBytes } from 'node:crypto'
 import { connect as netConnect, type Socket } from 'node:net'
+import type { TLSSocket } from 'node:tls'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Channel } from './channel'
 import { encodeFrame } from './frames'
@@ -304,9 +305,8 @@ describe('SyncListener: a pairing', () => {
     return { secret }
   }
 
-  async function pairOnce(r: Rig, phone: TestIdentity, secret: Buffer): Promise<Record<string, unknown>> {
-    const { socket, serverFingerprint } = await connectTls(r.port, phone)
-    const channel = new Channel(socket, { phase: 'pairing', role: 'ios' })
+  /** The iPhone's half up to its request: takes the challenge, sends a request with the right proof. */
+  async function sendRequest(r: Rig, channel: Channel, phone: TestIdentity, serverFingerprint: Buffer, secret: Buffer): Promise<void> {
     const challenge = await channel.receive()
     if (challenge.t !== 'pair.challenge') throw new Error('no challenge')
     const nonce = randomBytes(16)
@@ -316,6 +316,12 @@ describe('SyncListener: a pairing', () => {
       nonce: nonce.toString('base64url'),
       proof: requestProof({ secret, fingerprintMac: serverFingerprint, fingerprintPhone: phone.fingerprint, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: r.mac.deviceId, idPhone: phone.deviceId })
     })
+  }
+
+  async function pairOnce(r: Rig, phone: TestIdentity, secret: Buffer): Promise<Record<string, unknown>> {
+    const { socket, serverFingerprint } = await connectTls(r.port, phone)
+    const channel = new Channel(socket, { phase: 'pairing', role: 'ios' })
+    await sendRequest(r, channel, phone, serverFingerprint, secret)
     const answer = (await channel.receive()) as unknown as Record<string, unknown>
     socket.destroy()
     return answer
@@ -366,18 +372,61 @@ describe('SyncListener: a pairing', () => {
     socket.destroy()
   })
 
-  it('runs one pairing at a time: a second stranger meets `busy`', async () => {
-    const r = await rig()
+  it('runs one pairing at a time: a second stranger meets `busy` while the first one waits for the person, however long it has waited', async () => {
+    const r = await rig({ pairingGraceMs: 20 })
     const { secret } = offer(r)
     r.pairingOffer.current = { ...(r.pairingOffer.current as NonNullable<typeof r.pairingOffer.current>), confirm: () => new Promise(() => undefined) }
-    const first = await connectTls(r.port, testIdentity('iphone-0000000001'))
-    new Channel(first.socket, { phase: 'pairing', role: 'ios' })
-    await sleep(60)
+    const phone = testIdentity('iphone-0000000001')
+    const first = await connectTls(r.port, phone)
+    await sendRequest(r, new Channel(first.socket, { phase: 'pairing', role: 'ios' }), phone, first.serverFingerprint, secret.secret)
+    // Longer than the grace: age alone does not move a connection that has asked to pair.
+    await sleep(80)
     const second = await connectTls(r.port, testIdentity('iphone-0000000002'))
     expect(await firstFrame(second.socket)).toMatchObject({ t: 'error', code: 'busy' })
     expect(secret.remainingMs()).toBeGreaterThan(0)
+    expect(r.listener.open().pairings).toBe(1)
     first.socket.destroy()
     second.socket.destroy()
+  })
+
+  it('does not let a connection that says nothing keep the only place: the next stranger, once the grace is over, takes it, and the silent one is cut and counted', async () => {
+    const r = await rig({ pairingGraceMs: 40 })
+    const { secret } = offer(r)
+    const silent = await connectTls(r.port, testIdentity('iphone-0000000idle'))
+    // Read nothing but let the stream flow, so that the end of the connection is seen.
+    silent.socket.resume()
+    const silentEnds = closedOrFailed(silent.socket)
+    await sleep(100)
+    const answer = await pairOnce(r, testIdentity('iphone-0000000009'), secret.secret)
+    expect(answer).toMatchObject({ t: 'pair.accept' })
+    expect(await silentEnds).toMatch(/closed|error/)
+    expect(r.paired).toEqual([expect.objectContaining({ id: 'iphone-0000000009' })])
+  })
+
+  it('keeps the place of a connection that is still within its grace: the newcomer is told `busy`', async () => {
+    const r = await rig({ pairingGraceMs: 60_000 })
+    offer(r)
+    const young = await connectTls(r.port, testIdentity('iphone-0000000001'))
+    await sleep(60)
+    const second = await connectTls(r.port, testIdentity('iphone-0000000002'))
+    expect(await firstFrame(second.socket)).toMatchObject({ t: 'error', code: 'busy' })
+    expect(r.listener.open().pairings).toBe(1)
+    young.socket.destroy()
+    second.socket.destroy()
+  })
+
+  it('counts every silent connection it cuts against its address, so that one address cannot do it for ever', async () => {
+    const r = await rig({ pairingGraceMs: 10 })
+    offer(r)
+    const held: TLSSocket[] = []
+    for (let n = 0; n <= FAILURES_PER_MINUTE_BEFORE_REFUSAL; n++) {
+      const connection = await connectTls(r.port, testIdentity(`iphone-00000000${n}`)).catch(() => null)
+      if (connection !== null) held.push(connection.socket)
+      await sleep(40)
+    }
+    await sleep(40)
+    expect(r.limiter.isRefused('127.0.0.1') || r.limiter.isRefused('::ffff:127.0.0.1')).toBe(true)
+    for (const socket of held) socket.destroy()
   })
 })
 
