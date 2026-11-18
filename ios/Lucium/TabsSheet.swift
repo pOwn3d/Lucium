@@ -161,7 +161,7 @@ struct TabsSheet: View {
         if !favorites.isEmpty {
             Section {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
-                    ForEach(favorites) { favorite in favoriteTile(favorite) }
+                    ForEach(favorites) { favorite in FavoriteTile(model: model, favorite: favorite) }
                 }
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
@@ -244,24 +244,6 @@ struct TabsSheet: View {
 
     private func sectionTitle(_ text: Text) -> some View {
         text.font(.caption.weight(.semibold)).tracking(0.6).textCase(.uppercase).foregroundStyle(.secondary).accessibilityAddTraits(.isHeader)
-    }
-
-    /// A favourite: the tile of its site on a card; the one whose page is on screen is ringed. A tap shows its page, a long press removes it.
-    private func favoriteTile(_ favorite: Favorite) -> some View {
-        Button { model.openFavorite(favorite) } label: {
-            SiteTile(address: favorite.url, size: 26)
-                .frame(maxWidth: .infinity)
-                .frame(height: 52)
-                .background(Color(.secondarySystemGroupedBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay { if model.isShown(favorite) { RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.accentColor, lineWidth: 2) } }
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(Text(verbatim: favorite.title))
-        .accessibilityAddTraits(model.isShown(favorite) ? .isSelected : [])
-        .contextMenu {
-            Button(role: .destructive) { model.removeFavorite(favorite) } label: { Label { Text("tabs.remove-favorite") } icon: { IconView(.trash) } }
-        }
     }
 
     // MARK: Footer
