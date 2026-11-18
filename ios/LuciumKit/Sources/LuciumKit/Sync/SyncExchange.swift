@@ -221,7 +221,7 @@ public struct SyncExchangeBody: SyncSessionBody {
         marks.hold()
         if !patch.isEmpty { applied = await host.apply(patch) }
         do {
-            try marks.adopt(merged.snapshot)
+            try marks.adopt(merged.snapshot, exchanged: { SyncStateView.isExchanged(kind: $0, categories: context.categories) })
             try bases.save(peerId: mac, snapshot: SyncStateView.base(of: merged.snapshot), now: now())
         } catch {
             log("the base or the marks could not be written after the state was: \(error)")

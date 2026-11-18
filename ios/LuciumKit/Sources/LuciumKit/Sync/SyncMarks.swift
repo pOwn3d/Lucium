@@ -63,8 +63,27 @@ public struct SyncMarkBook: Equatable, Sendable {
         String(format: "%013ld-%04lx-", clock.milliseconds, clock.counter) + device
     }
 
-    /// The next mark: the time of day, or one tick after the last mark made or seen when the time of day is not ahead of it.
+    /// The largest time thirteen digits hold: a mark with more digits is not a mark (§9.2).
+    static let maxMilliseconds = 9_999_999_999_999
+    /// A mark more than seven days ahead of the time of day is refused by every other device (§9.3).
+    static let futureMilliseconds = 604_800_000
+
+    /// The kind a list key orders (`spaces`, `folders:<space>:<parent>`, `tabs:<space>:<folder>`, `favorites:<profile>`), or nil for a key of no kind this version knows.
+    static func listKind(of key: String) -> String? {
+        switch key.split(separator: ":", maxSplits: 1, omittingEmptySubsequences: false).first.map(String.init) {
+        case "spaces": "space"
+        case "folders": "folder"
+        case "tabs": "tab"
+        case "favorites": "favorite"
+        default: nil
+        }
+    }
+
+    /// The next mark: the time of day, or one tick after the last mark made or seen when the time of day is not ahead of it. A clock more than a week ahead of the time of day,
+    /// or at the end of what thirteen digits hold, was wrong (the time of day was put right since, or the file was spoilt): every other device refuses marks that far ahead, so
+    /// staying on them would shut this device out of the synchronisation for ever. It starts over from the time of day (review n° 18).
     public mutating func next(now: Int) -> String {
+        if clock.milliseconds > now + Self.futureMilliseconds || clock.milliseconds >= Self.maxMilliseconds { clock = SyncClock() }
         if now > clock.milliseconds {
             clock = SyncClock(milliseconds: now, counter: 0)
         } else if clock.counter >= 0xFFFF {
@@ -91,6 +110,10 @@ public struct SyncMarkBook: Equatable, Sendable {
 
     /// Brings the book up to the state: a mark for what changed since it last looked, a tombstone for what went. Cheap when nothing changed.
     public mutating func update(_ view: SyncTrackedView, now: Int) {
+        // A mark more than a week ahead of the time of day was made while the clock was wrong (review n° 18): no other device accepts it, so the thing it marks would never leave
+        // this one. It is marked again, as a change of now.
+        let limit = now + Self.futureMilliseconds
+        func tooFar(_ stamp: String) -> Bool { (SyncClock.parse(stamp)?.milliseconds ?? 0) > limit }
         for (kind, byID) in view.entities {
             var known = entities[kind] ?? [:]
             for (id, fields) in byID {
@@ -98,9 +121,9 @@ public struct SyncMarkBook: Equatable, Sendable {
                 tombstones[kind]?[id] = nil
                 for (name, value) in fields {
                     let hash = Self.hash(of: value)
-                    if record[name]?.hash != hash { record[name] = FieldMark(hash: hash, stamp: next(now: now)) }
+                    if record[name]?.hash != hash || tooFar(record[name]?.stamp ?? SyncStamp.zero) { record[name] = FieldMark(hash: hash, stamp: next(now: now)) }
                 }
-                for (name, mark) in record where mark.hash != nil && fields[name] == nil { record[name] = FieldMark(hash: nil, stamp: next(now: now)) }
+                for (name, mark) in record where fields[name] == nil && (mark.hash != nil || tooFar(mark.stamp)) { record[name] = FieldMark(hash: nil, stamp: next(now: now)) }
                 known[id] = record
             }
             for id in known.keys.sorted(by: { SyncCanonical.compare($0, $1) < 0 }) where byID[id] == nil {
@@ -114,9 +137,14 @@ public struct SyncMarkBook: Equatable, Sendable {
         for kind in entities.keys where view.entities[kind] == nil { entities[kind] = nil }
         for (key, ids) in view.order.sorted(by: { SyncCanonical.compare($0.key, $1.key) < 0 }) {
             let hash = Self.hash(of: .array(ids.map { .string($0) }))
-            if orders[key]?.hash != hash { orders[key] = OrderMark(hash: hash, stamp: next(now: now)) }
+            if orders[key]?.hash != hash || tooFar(orders[key]?.stamp ?? SyncStamp.zero) { orders[key] = OrderMark(hash: hash, stamp: next(now: now)) }
         }
         for key in orders.keys where view.order[key] == nil { orders[key] = nil }
+        for (kind, byID) in tombstones {
+            var remade = byID
+            for (id, stamp) in byID.sorted(by: { SyncCanonical.compare($0.key, $1.key) < 0 }) where tooFar(stamp) { remade[id] = next(now: now) }
+            tombstones[kind] = remade
+        }
         purge(now: now)
     }
 
@@ -143,8 +171,13 @@ public struct SyncMarkBook: Equatable, Sendable {
 
     /// The state now holds what the merge decided: the book takes the marks of the merged snapshot, so that the next `update` sees nothing new in what came from
     /// the other device (it would otherwise mark it as this device's change, and send it back). Fields the book does not follow (seeds, local) are left out.
-    public mutating func adopt(_ merged: SyncSnapshot) {
+    ///
+    /// What the session did not exchange (a category that was not ticked on both devices) is not in the merged snapshot, and is not forgotten with it: `exchanged` says which kinds
+    /// the session carried, and the marks, tombstones and lists of the others stay as they were, or their fields would take a mark of the moment at the next look and their
+    /// deletions could come back (review n° 17).
+    public mutating func adopt(_ merged: SyncSnapshot, exchanged: (String) -> Bool = { _ in true }) {
         var adopted: [String: [String: [String: FieldMark]]] = [:]
+        for (kind, byID) in entities where !exchanged(kind) { adopted[kind] = byID }
         for (kind, byID) in merged.entities {
             for (id, entity) in byID {
                 var record: [String: FieldMark] = [:]
@@ -159,11 +192,18 @@ public struct SyncMarkBook: Equatable, Sendable {
             }
         }
         entities = adopted
-        tombstones = merged.tombstones
+        var kept = merged.tombstones
+        for (kind, byID) in tombstones where !exchanged(kind) { kept[kind] = byID }
+        tombstones = kept
         for byID in merged.tombstones.values { for stamp in byID.values { observe(stamp) } }
-        orders = merged.order.reduce(into: [:]) { result, list in
-            result[list.key] = OrderMark(hash: Self.hash(of: .array(list.value.map { .string($0) })), stamp: merged.orderStamps[list.key] ?? SyncStamp.zero)
+        var lists: [String: OrderMark] = [:]
+        for (key, order) in orders {
+            if let kind = Self.listKind(of: key), !exchanged(kind) { lists[key] = order }
         }
+        for (key, ids) in merged.order {
+            lists[key] = OrderMark(hash: Self.hash(of: .array(ids.map { .string($0) })), stamp: merged.orderStamps[key] ?? SyncStamp.zero)
+        }
+        orders = lists
         for stamp in merged.orderStamps.values { observe(stamp) }
     }
 

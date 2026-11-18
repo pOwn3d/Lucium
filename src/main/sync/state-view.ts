@@ -92,10 +92,17 @@ export interface SnapshotOptions {
 
 const STRUCTURE_KINDS: readonly string[] = ['space', 'folder', 'tab', 'favorite']
 
+/** The kinds a session exchanges, for the categories both devices ticked (`structure`, `archive`, `settings`: what `snapshotOf` sends). */
+const kindsOfCategories = (categories: ReadonlySet<SyncCategory>): ReadonlySet<string> =>
+  new Set<string>([...(categories.has('structure') ? STRUCTURE_KINDS : []), ...(categories.has('archive') ? ['archived'] : []), ...(categories.has('settings') ? ['setting'] : [])])
+
+/** Whether a session with these categories exchanges the kind: the kinds of the categories, and the kinds this version does not know (they cross whatever is ticked, §11.6). */
+export const kindIsExchanged = (kind: string, categories: ReadonlySet<SyncCategory>): boolean => kindsOfCategories(categories).has(kind) || (!isKind(kind) && kind !== 'setting')
+
 /** The snapshot a session freezes and sends. The marks must be up to date (`MarkBook.update`) before it is made. */
 export function snapshotOf(state: SidebarState, marks: MarkBook, options: SnapshotOptions): SyncSnapshot {
   const view = trackedViewOf(state)
-  const kinds = new Set<string>([...(options.categories.has('structure') ? STRUCTURE_KINDS : []), ...(options.categories.has('archive') ? ['archived'] : []), ...(options.categories.has('settings') ? ['setting'] : [])])
+  const kinds = new Set<string>(kindsOfCategories(options.categories))
   const withheldSpace = (kind: string, fields: Record<string, unknown>, id: string): boolean => (kind === 'space' ? options.withheld.has(id) : typeof fields['spaceId'] === 'string' && options.withheld.has(fields['spaceId']))
   const byId: Record<string, Record<string, Entity>> = {
     space: Object.fromEntries(state.spaces.map((one) => [one.id, one])),
