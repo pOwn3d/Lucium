@@ -157,6 +157,33 @@ struct SyncPairingFlowTests {
         }
     }
 
+    @Test func everyFailureLeavesTheConnectionClosed() async throws {
+        let attempts: [(String, @Sendable (SyncFakeMac) async throws -> Void, SyncErrorCode)] = [
+            ("a bye in place of the challenge", { mac in try await mac.write("bye") }, .badMessage),
+            ("a Mac that stays silent", { mac in try await Task.sleep(for: .seconds(5)); _ = mac }, .timeout),
+            ("a bye in place of the accept", { mac in
+                try await mac.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
+                _ = try await mac.read()
+                try await mac.write("bye")
+            }, .badMessage),
+        ]
+        for (name, script, expected) in attempts {
+            let ends = syncLoopback()
+            let fake = SyncFakeMac(ends.mac)
+            let task = Task { try? await script(fake) }
+            defer { task.cancel() }
+            let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
+            do {
+                _ = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: phoneFingerprint, device: phone, nonce: phoneNonce,
+                                                     handshakeTimeout: .milliseconds(300), confirmationTimeout: .milliseconds(300))
+                Issue.record("\(name) was accepted")
+            } catch let failure as SyncFailure {
+                #expect(failure.code == expected, "\(name)")
+            }
+            #expect(ends.phone.closed, "\(name): the connection is still open")
+        }
+    }
+
     @Test func theAnswerOfADeviceThatIsNotAMacIsRefused() async throws {
         do {
             _ = try await pair(code, mac: { mac in

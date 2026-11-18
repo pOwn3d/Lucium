@@ -11,6 +11,9 @@ public enum SyncAddress {
     /// here: the zone is the phone's own and never travels.
     public static func isLocal(_ host: String) -> Bool {
         guard !host.isEmpty, host.utf8.count <= 253 else { return false }
+        // Visible ASCII only. `inet_pton` reads a C string and stops at a zero byte: `fd00::1\0.evil.com` is read as `fd00::1`, and two readers (this one, the name resolver)
+        // would not read the same address in it.
+        guard host.utf8.allSatisfy({ $0 > 0x20 && $0 < 0x7f }) else { return false }
         if let octets = ipv4(host) { return isLocalIPv4(octets) }
         if host.contains(":") {
             // Darwin's `inet_pton` reads a zone (`fe80::1%en0`); here a zone is refused, whatever the system says.
