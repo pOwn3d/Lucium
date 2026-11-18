@@ -566,7 +566,7 @@ Pour être proposé dans l'app Réglages d'iOS, à la rubrique « Navigateur par
 - **Catégorie** : « Utilities » cite la navigation web parmi ses exemples (page d'Apple lue) ; la catégorie doit refléter l'expérience principale (règle 2.3).
 - **Captures** : iPhone « Dynamic Island » (1179 × 2556 ou 1206 × 2622) et iPad 13 pouces (2064 × 2752 ou 2048 × 2732) ; jusqu'à 10 par taille.
 - **Statut de « trader » (loi européenne sur les services numériques)** : à déclarer **même sans distribution dans l'UE** ; si l'on est « trader », l'adresse, le téléphone et le courriel s'affichent sur la fiche (décision du titulaire de l'équipe : ConsilioWeb).
-- **Conformité à l'exportation du chiffrement** : voir §13.4 (phase 2). Pour la v1, la clé `ITSAppUsesNonExemptEncryption` est posée à `false` dans `ios/Lucium/Info.plist` (décision du chef de projet, 18 novembre 2026) : l'application n'utilise que le chiffrement d'iOS pour HTTPS (WebKit), et CryptoKit ne fait que des empreintes SHA-256 ; un garde Vitest refuse une API de chiffrement dans les sources. **La page d'Apple n'a pas pu être lue** et la documentation lue ne prévoit pas d'exemption « HTTPS seulement » explicite : à relire avant la première soumission.
+- **Conformité à l'exportation du chiffrement** : voir [synchronisation.md](synchronisation.md) §15 (phase 2). Pour la v1 (sans synchronisation), la clé `ITSAppUsesNonExemptEncryption` était posée à `false` dans `ios/Lucium/Info.plist` (décision du chef de projet, 18 novembre 2026) : l'application n'utilisait que le chiffrement d'iOS pour HTTPS (WebKit), et CryptoKit ne faisait que des empreintes SHA-256. **Depuis la synchronisation, la clé n'y est plus** (carte 445) : le code de la synchronisation ouvre une connexion chiffrée vers un autre appareil et authentifie ses messages (HMAC), il est dans toute build, et la documentation d'Apple ne dit pas qu'une telle application reste exemptée. App Store Connect pose donc la question à chaque envoi ; le mainteneur y répond et la carte 448 conclut avant qu'une valeur de la clé soit posée. Un garde Vitest refuse une API de chiffrement dans les sources, une clé symétrique hors du HMAC de la preuve d'appairage, et un `false` tant que la synchronisation est dans la build. **La page d'Apple n'a pas pu être lue** : à relire avant la première soumission.
 
 ## 10. Signature et TestFlight
 
@@ -598,7 +598,7 @@ Rôles lus dans l'aide d'Apple : Account Holder ou Admin pour créer l'App ID ex
 2. `brew install xcodegen`, et `pnpm install` déjà fait dans le dépôt (le script des listes s'appuie sur Vite).
 3. L'équipe est `9A9AUX9UHT` (§10.1) ; pour une autre, `LUCIUM_IOS_TEAM=<équipe>` ou `--team`.
 4. La fiche d'App Store Connect existe (identifiant `app.lucium.browser.ios`, Apple ID 6836199825). Le dernier contrat (section « Business ») doit être signé : c'est une condition d'Apple (§10.2).
-5. La PR qui pose `ITSAppUsesNonExemptEncryption` dans `Info.plist` (§9.5) est fusionnée : sans elle, App Store Connect pose la question du chiffrement à la main pour chaque build.
+5. ~~La PR qui pose `ITSAppUsesNonExemptEncryption` dans `Info.plist` (§9.5) est fusionnée~~ : **remplacé** par la carte 445, qui retire la clé tant que la synchronisation est dans la build ; App Store Connect pose donc la question du chiffrement à la main pour chaque build, et le mainteneur y répond avant le premier envoi (synchronisation.md §15).
 
 **La commande**, depuis la racine du dépôt, sur une copie à jour de `main` :
 
