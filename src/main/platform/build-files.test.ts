@@ -162,9 +162,12 @@ describe('.github/workflows/ios.yml', () => {
     expect(workflow.match(/^ {4}permissions:\n {6}contents: read$/gm)).toHaveLength(1)
     expect(workflow).not.toMatch(/secrets\.|GITHUB_TOKEN|GH_TOKEN|CSC_|APPLE_|write/)
     expect(workflow).not.toMatch(/xcodebuild archive|-exportArchive|altool|notarytool|testflight|allowProvisioningUpdates|DEVELOPMENT_TEAM|\.p12|\.p8|\.mobileprovision/i)
-    // The project is built without a signature, by the script, and nothing of the run is uploaded or cached (workflow-hygiene.test.ts: no pnpm cache outside ci.yml).
-    expect(script).toMatch(/CODE_SIGNING_ALLOWED=NO/)
-    expect(script).not.toMatch(/\barchive\b|-exportArchive|altool|notarytool|DEVELOPMENT_TEAM/)
+    // The project is built by the script with an ad hoc signature of the simulator only (identity `-`, "Sign to Run Locally": no certificate, no team, no profile;
+    // the simulator's keychain answers errSecMissingEntitlement to an application with no signature at all, and the synchronisation keeps its key there,
+    // docs/synchronisation.md section 3.3). Any other identity is refused. Nothing of the run is uploaded or cached (workflow-hygiene.test.ts: no pnpm cache outside ci.yml).
+    expect(script).toMatch(/CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- /)
+    expect(script).not.toMatch(/CODE_SIGN_IDENTITY=(?!- )/)
+    expect(script).not.toMatch(/\barchive\b|-exportArchive|altool|notarytool|DEVELOPMENT_TEAM|PROVISIONING_PROFILE|\bcodesign\b/)
     expect(workflow).not.toMatch(/upload-artifact|actions\/cache|\bcache:|\.\/\.github\/actions\/setup/)
   })
 
