@@ -1,0 +1,14 @@
+/* The page « Synchronisation » of the Settings (SyncSettings.tsx): the sheet that adds an iPhone, the question of the pairing and the list of devices. Colours are tokens. */
+.sync-sheet { display: grid; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); }
+.sync-sheet .sync-qr { display: block; width: 100%; max-width: 240px; aspect-ratio: 1; margin: 0 auto; border-radius: var(--r-s); }
+.sync-sheet .sync-fields { display: grid; grid-template-columns: max-content 1fr; gap: var(--sp-1) var(--sp-3); margin: 0; }
+.sync-sheet .sync-fields dt { color: var(--text-muted); }
+.sync-sheet .sync-fields dd { margin: 0; font-family: var(--mono); user-select: text; overflow-wrap: anywhere; }
+.sync-sheet .sync-timer { margin: 0; color: var(--text-muted); }
+.sync-confirm { display: grid; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border: 1px solid var(--line-strong); border-radius: var(--r-m); background: var(--surface-raised); }
+.sync-confirm .sync-confirm-title { margin: 0; font-weight: var(--w-semibold); }
+.sync-confirm .sync-confirm-text { margin: 0; user-select: text; overflow-wrap: anywhere; }
+.sync-buttons { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
+.sync-notice { color: var(--text-2); }
+.sync-problem { color: var(--danger-ink); }
+.sync-device-name { font-weight: var(--w-semibold); }

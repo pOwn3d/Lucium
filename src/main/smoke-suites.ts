@@ -430,6 +430,13 @@ export const SUITES: readonly SuiteEntry[] = [
     run: async (context) => (await import('./smoke-notes')).runNotesSmoke(context)
   },
   {
+    name: 'sync',
+    chain: false,
+    what: 'The synchronisation with the iPhone in a real engine: safeStorage seals the key, the identity and its hand-written certificate are read, TLS 1.3 with ALPN between two such certificates, the door opens only with the window and answers a paired device, refuses a stranger, closes with the window, and a pairing goes through end to end.',
+    order: 'Written and never run by its author (AGENTS.md §1: a run opens windows): it stays out of the chain until a maintainer has run it with LUCIUM_SMOKE_ONLY=sync and seen it green. It works in a data folder of its own and on the loopback, and leaves no port open.',
+    run: async (context) => (await import('./smoke-sync')).runSyncSmoke(context)
+  },
+  {
     name: 'work-views',
     chain: true,
     what: 'The checks of the work views: a split view of two local pages saved as a view from its menu and its sheet, the tile after the favourites, a real click that opens the view and a second one that opens nothing more, the removal and its « Annuler », the menu of the Dock, the row of the + and the switch.',

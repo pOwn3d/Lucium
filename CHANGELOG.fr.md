@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Synchronisation avec votre iPhone, l’appairage d’abord** : Réglages › Téléchargements et fichiers › Synchronisation appaire un iPhone par code QR ou code à saisir, avec Autoriser ou Refuser sur le Mac. Désactivée par défaut : le Mac n’écoute que pendant une fenêtre ouverte à la main (10 minutes au plus), sur votre réseau local. L’échange de vos espaces viendra ensuite.
+
 ### Changements
 
 - **Windows, une seule barre** : les fenêtres du navigateur et celles d’un site ouvert comme application dessinent leur propre barre de titre. Les trois boutons de Windows sont posés sur la barre d’outils, aux couleurs du thème, et un bouton ☰ à son début ouvre le menu. La mini-fenêtre et les Réglages gardent la barre de Windows.

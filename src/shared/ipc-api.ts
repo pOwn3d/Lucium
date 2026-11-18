@@ -42,6 +42,7 @@ import type { AnnotateDoneRequest, AnnotateReply } from './annotate'
 import type { PasswordReply, PasswordRequest } from './passwords'
 import type { ExtensionsReply, ExtensionsRequest } from './extension-page'
 import type { NotesReply, NotesRequest } from './notes'
+import type { SyncReply, SyncRequest } from './sync-ipc'
 import type { NoteFileReply, NoteFileRequest } from './note-files'
 import type { ResourceAction, ResourceActionReply, ResourceReport } from './resources'
 import type { UiSnapshot, NavCommand, OverlayRequest, CommandBarMode, FindOptions, MenuTarget, DownloadCommand, LittleCommand, LittleState, ProcessRow, ExportRequest, ExportReply, TabResources, TooltipRequest, PeekAction } from './ipc'
@@ -199,6 +200,8 @@ export interface LuciumApi {
   lockUnlock(request: UnlockRequest): Promise<LockReply>
   /** Changes the lock: its phrase, switching it off, the application lock, Touch ID, the locked spaces, locking now. */
   lockConfigure(request: LockConfig): Promise<LockReply>
+  /** The page « Synchronisation » of the Settings: the switch, the window, the pairing sheet, the devices (see sync-ipc.ts). The reply is the state to draw; it holds no key. */
+  sync(request: SyncRequest): Promise<SyncReply>
   /** The password manager: every request of its panel and of the command bar (see passwords.ts). The reply holds rows and counts, never a password (the generator's text aside). */
   passwords(request: PasswordRequest): Promise<PasswordReply>
   /** Moves tabs to another space (a tab dropped on a space of the footer). Crossing profiles asks the user first. */

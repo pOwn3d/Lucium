@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **Synchronization with your iPhone, pairing first**: Settings › Downloads and files › Synchronization pairs an iPhone by QR code or typed code, with Allow or Deny on the Mac. Off by default: the Mac listens only while you have opened the window by hand (10 minutes at most), on your local network, with no server. The exchange of your spaces comes next.
+
 ### Changed
 
 - **Windows, one title bar**: the main window, the other and private windows and the windows of a site opened as an application draw their own title bar. The three buttons of Windows lie over the toolbar, in the colours of the theme, and a ☰ button at its start opens the menu. The mini window and Settings keep the title bar of Windows.

@@ -115,7 +115,8 @@ export const SUBPAGE_LABELS: Readonly<Record<SettingsSubpageKey, Localized<strin
   userscripts: { fr: 'Scripts importés', en: 'Imported scripts' },
   pagewatches: { fr: 'Pages surveillées', en: 'Watched pages' },
   shortcuts: { fr: 'Raccourcis clavier', en: 'Keyboard shortcuts' },
-  siteexclusions: { fr: 'Sites sans gestes ni touches Vim', en: 'Sites without gestures or Vim keys' }
+  siteexclusions: { fr: 'Sites sans gestes ni touches Vim', en: 'Sites without gestures or Vim keys' },
+  sync: { fr: 'Synchronisation', en: 'Synchronization' }
 }
 
 /**

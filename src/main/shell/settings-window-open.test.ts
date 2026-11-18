@@ -173,3 +173,36 @@ describe('the page the Settings window opens on when it is asked for none (Régl
   })
 })
 
+
+describe('the Settings window and the synchronisation window', () => {
+  /** A window that keeps its own listeners, so that the test can close it the way Electron does: `close`, then `closed`. */
+  function closable() {
+    const listeners = new Map<string, Array<() => void>>()
+    const on = (event: string, listener: () => void) => void (listeners.set(event, [...(listeners.get(event) ?? []), listener]), undefined)
+    const win = { webContents: { id: 9, isDestroyed: () => false, getURL: () => 'file:///settings.html#files/sync', executeJavaScript: async () => undefined, on: () => undefined }, isDestroyed: () => false, once: on, on, close: () => undefined }
+    return { win, emit: (event: string) => (listeners.get(event) ?? []).forEach((run) => run()) }
+  }
+
+  it('tells that it has closed, once, so that the Mac stops listening for the iPhone (docs/synchronisation.md §6.1)', () => {
+    const { win, emit } = closable()
+    const onClosed = vi.fn()
+    const trusted = new Set<number>()
+    const settings = new SettingsWindow({ browser: { addSurface: () => undefined, removeSurface: () => undefined } as never, trusted, createWindow: () => win as never, onClosed })
+    settings.open('files')
+    expect(trusted.has(9)).toBe(true)
+    expect(onClosed).not.toHaveBeenCalled()
+    emit('close')
+    expect(onClosed).not.toHaveBeenCalled()
+    emit('closed')
+    expect(onClosed).toHaveBeenCalledTimes(1)
+    expect(trusted.has(9)).toBe(false)
+    expect(settings.isOpen()).toBe(false)
+  })
+
+  it('has nothing to tell when nobody asked', () => {
+    const { win, emit } = closable()
+    const settings = new SettingsWindow({ browser: { addSurface: () => undefined, removeSurface: () => undefined } as never, trusted: new Set<number>(), createWindow: () => win as never })
+    settings.open('files')
+    expect(() => emit('closed')).not.toThrow()
+  })
+})

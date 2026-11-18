@@ -47,7 +47,9 @@ export const SUBPAGES: readonly SettingsSubpageDef[] = [
   { id: 'siteexclusions', pane: 'keyboard', title: 'settings.sub-siteexclusions', intro: 'settings.sub-siteexclusions-intro', keys: ['mouseGestureExcludedHosts', 'vimKeysExcludedHosts'], at: 'page' },
   { id: 'containers', pane: 'features', title: 'settings.sub-containers-title', intro: 'settings.sub-containers-intro', keys: ['containers', 'containerRules'], at: 'page' },
   { id: 'userscripts', pane: 'features', title: 'settings.sub-userscripts', intro: 'settings.sub-userscripts-intro', keys: [], at: 'page' },
-  { id: 'pagewatches', pane: 'features', title: 'web-tools-settings.pages-surveillees', intro: 'settings.sub-pagewatches-intro', keys: ['pageWatches'], at: 'page' }
+  { id: 'pagewatches', pane: 'features', title: 'web-tools-settings.pages-surveillees', intro: 'settings.sub-pagewatches-intro', keys: ['pageWatches'], at: 'page' },
+  // The synchronisation with the iPhone is kept by the main process (src/main/sync/), not in the settings: the row that opens it says its state itself (`syncSummary`).
+  { id: 'sync', pane: 'files', title: 'settings.sub-sync', intro: 'settings.sub-sync-intro', keys: [], at: 'page' }
 ]
 
 export const subpageById = (id: SettingsSubpage): SettingsSubpageDef => SUBPAGES.find((subpage) => subpage.id === id)!
@@ -128,6 +130,9 @@ export function subpageSummary(id: SettingsSubpage, facts: SubpageFacts): string
     case 'userscripts':
       // The scripts live in the main process: the pane that draws the row counts them (`scriptsSummary`).
       return ''
+    case 'sync':
+      // The synchronisation lives in the main process too: the row is drawn with its state (`syncSummary`).
+      return ''
     case 'pagewatches':
       return settings.pageWatches.length === 0 ? t('settings.sub-no-page') : tp('settings.sub-pages', settings.pageWatches.length)
     case 'shortcuts': {
@@ -141,3 +146,10 @@ export function subpageSummary(id: SettingsSubpage, facts: SubpageFacts): string
 
 /** What the row of the scripts says: how many were imported. */
 export const scriptsSummary = (count: number): string => (count === 0 ? t('settings.sub-no-script') : tp('settings.sub-scripts', count))
+
+/** What the row of the synchronisation says of it: off, or how many devices are paired and whether the window is open. */
+export function syncSummary(status: { enabled: boolean; devices: number; windowOpen: boolean }): string {
+  if (!status.enabled) return t('sync.state-off')
+  const devices = status.devices === 0 ? t('sync.state-none') : tp('sync.state-devices', status.devices)
+  return status.windowOpen ? `${devices} · ${t('sync.state-open')}` : devices
+}

@@ -20,6 +20,7 @@ import { setTaskManagerOpener } from './resource-ipc'
 import { SETTINGS_WINDOW_OPTIONS, SettingsWindow } from './settings-window'
 import type { Surface } from './surface-load'
 import { TaskManager } from './task-manager'
+import { getSyncService } from '../sync/registry'
 
 export interface OwnWindowsDeps {
   engine: ElectronEngine
@@ -139,7 +140,9 @@ export function createOwnWindows({ engine, store, sharedStore, browser, history,
       const sw = panelScaling.open(SETTINGS_WINDOW_OPTIONS, (options) => new BrowserWindow({ ...options, backgroundColor: panelWindowBackground(nativeTheme.shouldUseDarkColors), webPreferences }))
       load(sw.webContents, { page: 'settings', hash: settingsHash(pane, anchor) })
       return sw
-    }
+    },
+    // The Mac listens for the iPhone only while the page « Synchronisation » is open: the window closes with the Settings window (docs/synchronisation.md §6.1).
+    onClosed: () => void getSyncService()?.leave().catch((error: unknown) => console.error('[sync] the window could not be closed with the Settings:', error))
   })
   browser.setSettingsOpener((pane, anchor) => settings.open(pane, anchor))
   const taskManager = new TaskManager({

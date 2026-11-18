@@ -593,7 +593,7 @@ Les écrans suivent ce que dit `docs/ios.md` pour le reste de l'application : Dy
 
 ## 14. Connexions : la ligne du README
 
-Ce qui suit est **à ajouter par les cartes 444 et 445, dans le même commit que la fonction** (`docs/ios.md` §13.5, `AGENTS.md` §5) : **il n'est pas dans le README aujourd'hui**, parce que rien n'est implémenté. Les deux README (anglais et français) changent ensemble.
+Ce qui suit est à ajouter par les cartes 444 et 445, avec la fonction (`docs/ios.md` §13.5, `AGENTS.md` §5). **La ligne du Mac est dans les deux README** (carte 444, page « Synchronisation » de Réglages › Téléchargements et fichiers) ; celle de l'iPhone reste à ajouter par la carte 445. Les deux README (anglais et français) changent ensemble.
 
 **Tableau du Mac** (anglais) :
 
@@ -660,9 +660,11 @@ Ce qui suit est **à ajouter par les cartes 444 et 445, dans le même commit que
 | `AVMetadataObjectTypeQRCode` | `AVMetadataObject.h` |
 | `/usr/bin/dns-sd -R` existe ; sa page de manuel dit que ses arguments et sa sortie peuvent changer et déconseille de l'appeler d'un script | `man dns-sd` |
 
+**Vérifié le 18 novembre 2026 (carte 444)** : le Node **d'Electron 45.2.1** (Node 24.22.1, TLS de BoringSSL ; Electron lancé avec `ELECTRON_RUN_AS_NODE=1` depuis l'archive officielle, sans fenêtre ni application) fait passer, avec le vrai code de `src/main/sync/` : le certificat du §6.3 (octets à signer du vecteur, lecture par `X509Certificate`, signature, empreinte), les 44 vecteurs du filtre d'adresses (IPv4 écrite en IPv6 comprise), les 29 vecteurs du QR et les 12 du code à saisir, les preuves, une séance **TLS 1.3 mutuelle avec ALPN `lucium-sync/1` entre deux certificats écrits à la main**, l'empreinte du certificat du Mac vue par le client, un appairage de bout en bout, le refus d'un client sans protocole commun et d'un inconnu (`not-paired`). **Ce que cet essai ne prouve pas** : `safeStorage` (il demande le trousseau : essai du smoke `sync`, non lancé), `os.hostname()` dans l'application, le pare-feu et l'autorisation du réseau local de macOS, un vrai appareil.
+
 **À vérifier** (non lu, non essayé) :
 
-1. Le Node **d'Electron 45.2.1** (la version n'a pas été lue) : tout ce qui est « essayé » ci-dessus l'est avec Node 26.13 ; les cartes 444 et 445 refont les essais dans le moteur et **sur un appareil**.
+1. ~~Le Node d'Electron 45.2.1~~ (fait, ci-dessus) ; reste **l'essai sur un appareil** et dans l'application elle-même (le smoke `sync` de `src/main/smoke-sync.ts` est écrit, pas lancé).
 2. `NWConnection` vers un nom `.local`, et ce que rend `os.hostname()` d'Electron (§5).
 3. Le code d'erreur de `Network.framework` quand le réseau local est refusé (§5) et le moment où le bloc de vérification est appelé face à un certificat auto-signé (§6.4).
 4. L'**identité** de l'iPhone : `SecItemAdd` d'un certificat et d'une clé, puis `kSecClassIdentity` (§3.3).

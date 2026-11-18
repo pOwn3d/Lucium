@@ -55,7 +55,8 @@ describe('IdentityStore', () => {
     expect(JSON.parse(text)).toMatchObject({ version: 1 })
   })
 
-  it('writes a file only its owner reads', () => {
+  // POSIX modes: Windows keeps none, and root writes where a folder is closed.
+  it.skipIf(process.platform === 'win32')('writes a file only its owner reads', () => {
     const path = join(tempDir('lucium-sync-id-'), 'id.json')
     new IdentityStore(path, box(2)).loadOrCreate()
     expect(statSync(path).mode & 0o077).toBe(0)
@@ -137,7 +138,7 @@ describe('IdentityStore', () => {
     expect(second.identity.fingerprint.equals(first.fingerprint)).toBe(false)
   })
 
-  it('throws, and leaves nothing behind, when the file cannot be written', () => {
+  it.skipIf(process.platform === 'win32' || process.getuid?.() === 0)('throws, and leaves nothing behind, when the file cannot be written', () => {
     const dir = tempDir('lucium-sync-id-')
     chmodSync(dir, 0o500)
     expect(() => new IdentityStore(join(dir, 'id.json'), box(1)).loadOrCreate()).toThrow()

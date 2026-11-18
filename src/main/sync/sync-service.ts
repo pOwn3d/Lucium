@@ -1,0 +1,363 @@
+// The synchronisation with the iPhone as the Settings page sees it (docs/synchronisation.md §13.1): one object that owns the switch, the window, the pairing sheet
+// and the list of devices, and that the IPC channel (shell/sync-ipc.ts) drives. It holds the pieces of src/main/sync/ together and decides nothing they do not:
+//
+//   - the switch is OFF by default; turning it on makes the identity (key sealed by the system, certificate) and opens NOTHING: the Mac listens only while the
+//     person has opened the window by hand, ten minutes at most [Q5];
+//   - « Ajouter un iPhone » opens the window if it is not open, draws a secret, and builds the QR and the code; the sheet is the secret's life (two minutes);
+//   - when an iPhone proves it holds the secret, the person is asked: Autoriser or Refuser, and no answer in a minute is a refusal [Q7];
+//   - the window and the pairing close when the page is left, when the switch is cut, and when the application locks;
+//   - « Oublier » removes a device and cuts what it has open at once (§12).
+//
+// The exchange of data itself (the session, §8) is a flow handed in (`runSession`): until it exists, a device that connects is told `internal`, honestly.
+
+import { randomInt, randomBytes } from 'node:crypto'
+import { encodeQr } from '@shared/qr'
+import { SYNC_CATEGORIES, type SyncCategory, type SyncPairingView, type SyncProblem, type SyncStatus } from '@shared/sync-ipc'
+import type { Channel } from './channel'
+import { CONFIRM_MS, FINGERPRINT_BYTES, SECRET_BYTES } from './limits'
+import type { IdentityStore, SyncIdentity } from './identity'
+import { SyncListener, type ListenerDeps } from './listener'
+import { manualAddress, manualCode, qrText } from './pairing-code'
+import { PairingSecret } from './pairing-secret'
+import type { PairingRequestInfo } from './pairing-server'
+import { AddressLimiter } from './rate-limit'
+import { ownHosts, type HostEnvironment } from './own-hosts'
+import type { SafeClock } from './safe-clock'
+import type { SecretBox } from './secret-box'
+import { PORT_MAX, PORT_MIN, type PeerRecord, type SyncStore } from './sync-store'
+import { SyncWindow, type WindowCloseReason } from './sync-window'
+
+/** What a request of the page could not do, with the word the page says it with. */
+export class SyncServiceError extends Error {
+  constructor(
+    readonly problem: SyncProblem,
+    detail: string
+  ) {
+    super(`${problem}: ${detail}`)
+    this.name = 'SyncServiceError'
+  }
+}
+
+/** The part of the listener the service uses: the real one, or a stand-in in a test. */
+export interface SyncDoor {
+  start(port: number): Promise<number>
+  stop(): Promise<void>
+  port(): number | null
+  dropPeer(fingerprint: string): number
+}
+
+export interface SyncServiceDeps {
+  store: SyncStore
+  identities: IdentityStore
+  box: SecretBox
+  /** Elapsed milliseconds (a `SafeClock`): the window, the pairing and the question are counted with it. */
+  clock: SafeClock
+  hostEnv: () => HostEnvironment
+  deviceName: () => string
+  now: () => number
+  /** Whether the application is locked now: nothing opens while it is. */
+  isLocked: () => boolean
+  /** The session with a paired device (§8). Until it exists, a device is told `internal`. */
+  runSession?: (channel: Channel, peer: PeerRecord) => Promise<void>
+  /** Told when anything the page shows changed. */
+  onChange?: () => void
+  /** A port of the dynamic range, at random. */
+  pickPort?: () => number
+  /** The door: the real listener, made from what the service gives it, unless a test puts another. */
+  makeDoor?: (deps: ListenerDeps) => SyncDoor
+  /** Tests only: the source addresses that may connect (the loopback). Nothing else widens the filter of §6.2. */
+  allowSource?: ListenerDeps['allowSource']
+  confirmMs?: number
+  windowMaxMs?: number
+}
+
+/** A device name as a person reads it: a control character or a mark that turns the text round is a space (a name is shown as written by the other device). */
+export const readableName = (name: string): string => name.replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/g, ' ').trim()
+
+const EADDRINUSE = 'EADDRINUSE'
+const PORT_TRIES = 5
+
+export class SyncService {
+  private identity: SyncIdentity | null = null
+  private identityReplaced = false
+  private door: SyncDoor | null = null
+  private pairing: { secret: PairingSecret; view: Omit<SyncPairingView, 'remainingMs'> } | null = null
+  private confirm: { name: string; until: number; resolve: (decision: 'allow' | 'refuse') => void } | null = null
+  private justPaired: string | null = null
+  private problem: SyncProblem | null = null
+  private readonly limiter: AddressLimiter
+  private readonly window: SyncWindow
+
+  constructor(private readonly deps: SyncServiceDeps) {
+    this.limiter = new AddressLimiter(() => deps.clock.elapsed())
+    this.window = new SyncWindow({
+      door: { start: () => this.startDoor(), stop: () => this.stopDoor() },
+      elapsed: () => deps.clock.elapsed(),
+      ...(deps.windowMaxMs !== undefined ? { maxMs: deps.windowMaxMs } : {}),
+      onChange: (state, reason) => {
+        if (!state.open && reason !== undefined) this.windowClosed()
+        this.changed()
+      }
+    })
+  }
+
+  private changed(): void {
+    this.deps.onChange?.()
+  }
+
+  // ---------- what the page shows ----------
+
+  status(): SyncStatus {
+    const config = this.deps.store.config()
+    const pairing = this.livePairing()
+    const confirm = this.confirm
+    return {
+      available: this.deps.box.available(),
+      enabled: config.enabled,
+      categories: config.categories,
+      window: this.window.state(),
+      pairing: pairing === null ? null : { ...pairing.view, remainingMs: pairing.secret.remainingMs() },
+      confirm: confirm === null ? null : { name: confirm.name, remainingMs: Math.max(0, confirm.until - this.deps.clock.elapsed()) },
+      devices: config.peers.map((peer) => ({ id: peer.id, name: readableName(peer.name), platform: peer.platform, pairedAt: peer.pairedAt, lastSessionAt: peer.lastSessionAt })),
+      identityReplaced: this.identityReplaced,
+      justPaired: this.justPaired,
+      problem: this.problem
+    }
+  }
+
+  /** The pairing whose secret still lives; one that has expired is dropped here, so that the sheet closes by itself. */
+  private livePairing(): NonNullable<SyncService['pairing']> | null {
+    if (this.pairing !== null && this.pairing.secret.remainingMs() === 0) this.pairing = null
+    return this.pairing
+  }
+
+  /** Every request of the page starts here: what the last one left behind is forgotten, except what is shown once. */
+  private begin(): void {
+    this.problem = null
+    this.justPaired = null
+  }
+
+  private fail(problem: SyncProblem, detail: string): never {
+    this.problem = problem
+    this.changed()
+    throw new SyncServiceError(problem, detail)
+  }
+
+  // ---------- the switch and the categories ----------
+
+  /** Turns the synchronisation on or off. On: the identity is made (the key sealed); nothing opens. Off: the window and the pairing close first. */
+  async setEnabled(on: boolean): Promise<void> {
+    this.begin()
+    if (on) {
+      if (!this.deps.box.available()) this.fail('unavailable', 'the system cannot seal the key of the device')
+      this.ensureIdentity()
+      this.deps.store.setEnabled(true)
+    } else {
+      await this.window.close('switch-off')
+      this.deps.store.setEnabled(false)
+    }
+    this.changed()
+  }
+
+  setCategory(category: SyncCategory, on: boolean): void {
+    this.begin()
+    if (!(SYNC_CATEGORIES as readonly string[]).includes(category)) this.fail('internal', `${category} is not a category`)
+    this.deps.store.setCategory(category, on)
+    this.changed()
+  }
+
+  private ensureIdentity(): SyncIdentity {
+    if (this.identity !== null) return this.identity
+    try {
+      const made = this.deps.identities.loadOrCreate()
+      this.identity = made.identity
+      if (made.replaced) {
+        // The old fingerprint is gone with the old key: the devices that were paired to it cannot be recognised any more (§3.3).
+        this.deps.store.clearPeers()
+        this.identityReplaced = true
+      }
+      return made.identity
+    } catch (error) {
+      console.error('[sync] the identity of this Mac could not be made or read:', error)
+      return this.fail('identity', 'the identity could not be made')
+    }
+  }
+
+  // ---------- the window ----------
+
+  async openWindow(): Promise<void> {
+    this.begin()
+    await this.open()
+    this.changed()
+  }
+
+  private async open(): Promise<void> {
+    if (!this.deps.store.config().enabled) this.fail('internal', 'the synchronisation is off')
+    if (this.deps.isLocked()) this.fail('locked', 'the application is locked')
+    this.ensureIdentity()
+    try {
+      await this.window.open()
+    } catch (error) {
+      if (error instanceof SyncServiceError) throw error
+      console.error('[sync] the door could not be opened:', error)
+      return this.fail((error as NodeJS.ErrnoException).code === EADDRINUSE ? 'port' : 'internal', 'the door could not be opened')
+    }
+  }
+
+  prolong(): void {
+    this.begin()
+    this.window.prolong()
+    this.changed()
+  }
+
+  async closeWindow(reason: WindowCloseReason = 'manual'): Promise<void> {
+    this.begin()
+    await this.window.close(reason)
+    this.changed()
+  }
+
+  /** The page was left (another page, the window closed): the window closes with it (§6.1). */
+  async leave(): Promise<void> {
+    await this.window.close('page-closed')
+  }
+
+  /** The application locked or unlocked: a lock closes the window and the sheet. */
+  async lockChanged(): Promise<void> {
+    if (this.deps.isLocked()) await this.window.close('locked')
+  }
+
+  private async startDoor(): Promise<void> {
+    const identity = this.ensureIdentity()
+    const door = this.deps.makeDoor?.(this.listenerDeps(identity)) ?? new SyncListener(this.listenerDeps(identity))
+    const pick = this.deps.pickPort ?? ((): number => randomInt(PORT_MIN, PORT_MAX + 1))
+    let port = this.deps.store.port(pick)
+    for (let attempt = 1; ; attempt++) {
+      try {
+        await door.start(port)
+        this.door = door
+        return
+      } catch (error) {
+        // A port that is taken is replaced by another one, kept for next time; any other reason, or too many tries, is the caller's to show.
+        if ((error as NodeJS.ErrnoException).code !== EADDRINUSE || attempt >= PORT_TRIES) throw error
+        console.warn(`[sync] the port ${port} is taken, trying another one`)
+        port = pick()
+        this.deps.store.replacePort(port)
+      }
+    }
+  }
+
+  private async stopDoor(): Promise<void> {
+    const door = this.door
+    this.door = null
+    await door?.stop()
+  }
+
+  /** The window has closed, for whatever reason: nobody can be asked or paired any more. */
+  private windowClosed(): void {
+    this.pairing?.secret.close()
+    this.pairing = null
+    this.resolveConfirm('refuse')
+  }
+
+  private listenerDeps(identity: SyncIdentity): ListenerDeps {
+    return {
+      identity,
+      deviceName: this.deps.deviceName,
+      limiter: this.limiter,
+      findPeer: (fingerprint) => this.deps.store.findByFingerprint(fingerprint),
+      openPairing: () => {
+        const pairing = this.livePairing()
+        if (pairing === null) return null
+        return { secret: pairing.secret, confirm: (request) => this.ask(request), addPeer: (peer) => this.deps.store.addPeer(peer), hosts: () => ownHosts(this.deps.hostEnv()), now: this.deps.now, ...(this.deps.confirmMs !== undefined ? { confirmMs: this.deps.confirmMs } : {}) }
+      },
+      runSession: this.deps.runSession ?? (async (channel) => channel.fail('internal', 'the exchange of data is not available yet')),
+      onPairingEnded: (outcome) => {
+        if (outcome.outcome === 'paired') {
+          this.justPaired = readableName(outcome.peer.name)
+          this.pairing = null
+        } else if (outcome.code === 'pairing-refused') this.pairing = null
+        this.resolveConfirm('refuse')
+        this.changed()
+      },
+      ...(this.deps.allowSource !== undefined ? { allowSource: this.deps.allowSource } : {})
+    }
+  }
+
+  // ---------- the pairing ----------
+
+  /** « Ajouter un iPhone »: opens the window if it is not open, draws a secret, and builds what the sheet shows. */
+  async startPairing(): Promise<void> {
+    this.begin()
+    await this.open()
+    const identity = this.ensureIdentity()
+    const port = this.door?.port() ?? null
+    const hosts = ownHosts(this.deps.hostEnv())
+    if (port === null || hosts.length === 0) return this.fail('network', 'this Mac has no address of the local network')
+    this.pairing?.secret.close()
+    const secret = new PairingSecret(randomBytes(SECRET_BYTES), () => this.deps.clock.elapsed())
+    const fingerprint = identity.fingerprint
+    if (fingerprint.length !== FINGERPRINT_BYTES) this.fail('internal', 'the fingerprint is not 32 bytes')
+    // The encoder takes 213 bytes: a long list of addresses loses its last ones, never the first (the name, then the IPv4 addresses).
+    let text: string | null = null
+    let used = hosts.length
+    for (; used >= 1; used--) {
+      const candidate = qrText({ fingerprint, secret: secret.secret, port, hosts: hosts.slice(0, used) })
+      if (!('error' in encodeQr(candidate))) {
+        text = candidate
+        break
+      }
+    }
+    if (text === null) this.fail('internal', 'the code cannot be drawn')
+    this.pairing = { secret, view: { qr: text as string, code: manualCode(secret.secret), address: manualAddress(hosts[0] as string, port) } }
+    this.changed()
+  }
+
+  closePairing(): void {
+    this.begin()
+    this.pairing?.secret.close()
+    this.pairing = null
+    this.resolveConfirm('refuse')
+    this.changed()
+  }
+
+  /** The question of [Q7]: resolved by `answer`, by the end of the minute, or by the close of the sheet or of the window. */
+  private ask(request: PairingRequestInfo): Promise<'allow' | 'refuse'> {
+    this.resolveConfirm('refuse')
+    return new Promise((resolve) => {
+      this.confirm = { name: readableName(request.name), until: this.deps.clock.elapsed() + (this.deps.confirmMs ?? CONFIRM_MS), resolve }
+      this.changed()
+    })
+  }
+
+  /** « Autoriser » or « Refuser ». With no question open it does nothing (a late click). */
+  answer(allow: boolean): void {
+    this.begin()
+    this.resolveConfirm(allow ? 'allow' : 'refuse')
+    this.changed()
+  }
+
+  private resolveConfirm(decision: 'allow' | 'refuse'): void {
+    const open = this.confirm
+    if (open === null) return
+    this.confirm = null
+    open.resolve(decision)
+  }
+
+  // ---------- the devices ----------
+
+  /** « Oublier »: the device is removed, and what it has open is cut at once. */
+  forget(id: string): void {
+    this.begin()
+    const peer = this.deps.store.peers().find((one) => one.id === id)
+    if (peer === undefined) return
+    this.deps.store.forgetPeer(id)
+    this.door?.dropPeer(peer.fingerprint)
+    this.changed()
+  }
+
+  /** The application quits: the door is closed with it. */
+  async dispose(): Promise<void> {
+    await this.window.close('manual')
+  }
+}
+
