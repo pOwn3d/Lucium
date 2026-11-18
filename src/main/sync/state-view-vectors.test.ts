@@ -35,6 +35,7 @@ interface CleanVector {
   name: string
   now: number
   snapshot: SyncSnapshot
+  base?: SyncSnapshot
   expect: { snapshot: SyncSnapshot; refused: Array<{ kind: string; id: string; reason: string }> }
 }
 
@@ -87,7 +88,7 @@ describe('the gate every snapshot goes through: the vectors shared with the iPho
   })
 
   it.each(vectors.clean)('$name', (vector) => {
-    const cleaned = cleanSnapshot(vector.snapshot, vector.now)
+    const cleaned = cleanSnapshot(vector.snapshot, vector.now, vector.base ?? null)
     expect(cleaned.snapshot).toEqual(vector.expect.snapshot)
     expect([...cleaned.refused].sort((a, b) => (`${a.kind} ${a.id}` < `${b.kind} ${b.id}` ? -1 : 1))).toEqual(vector.expect.refused)
   })

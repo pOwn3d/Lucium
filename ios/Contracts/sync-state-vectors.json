@@ -3513,6 +3513,252 @@
       }
     },
     {
+      "base": {
+        "entities": {
+          "boost": {
+            "b1": {
+              "fields": {
+                "css": "x"
+              },
+              "stamps": {
+                "css": "1790000000000-0000-mac"
+              }
+            }
+          },
+          "setting": {
+            "sendGpc": {
+              "fields": {
+                "value": true
+              },
+              "stamps": {
+                "value": "1790000000000-0000-mac"
+              }
+            }
+          },
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Old"
+              },
+              "stamps": {
+                "name": "1789999995000-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Old"
+              },
+              "stamps": {
+                "name": "1789999995000-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "anchorUrl": "https://a.example/",
+                "pinned": true
+              },
+              "stamps": {
+                "anchorUrl": "1790000000000-0000-mac",
+                "pinned": "1790000000000-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "pinned": true
+              },
+              "stamps": {
+                "pinned": "1790000000000-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "pinned": true
+              },
+              "stamps": {
+                "pinned": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "expect": {
+        "refused": [
+          {
+            "id": "b1",
+            "kind": "boost",
+            "reason": "never-synced"
+          },
+          {
+            "id": "sendGpc",
+            "kind": "setting",
+            "reason": "invalid-value"
+          },
+          {
+            "id": "s1",
+            "kind": "space",
+            "reason": "future-mark"
+          },
+          {
+            "id": "s9",
+            "kind": "space",
+            "reason": "future-mark"
+          },
+          {
+            "id": "t1",
+            "kind": "tab",
+            "reason": "invalid-url"
+          },
+          {
+            "id": "t2",
+            "kind": "tab",
+            "reason": "not-pinned"
+          },
+          {
+            "id": "t3",
+            "kind": "tab",
+            "reason": "private"
+          }
+        ],
+        "snapshot": {
+          "entities": {
+            "setting": {
+              "sendGpc": {
+                "fields": {
+                  "value": true
+                },
+                "stamps": {
+                  "value": "1790000000000-0000-mac"
+                }
+              }
+            },
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "Old"
+                },
+                "stamps": {
+                  "name": "1789999995000-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "Fine"
+                },
+                "stamps": {
+                  "name": "1790000000000-0000-mac"
+                }
+              }
+            },
+            "tab": {
+              "t1": {
+                "fields": {
+                  "anchorUrl": "https://a.example/",
+                  "pinned": true
+                },
+                "stamps": {
+                  "anchorUrl": "1790000000000-0000-mac",
+                  "pinned": "1790000000000-0000-mac"
+                }
+              }
+            }
+          },
+          "order": {},
+          "orderStamps": {},
+          "tombstones": {}
+        }
+      },
+      "name": "the base stands in for an entity refused for its marks, its address or its value, and not for one refused for what it is or one it never held",
+      "now": 1790000000000,
+      "snapshot": {
+        "entities": {
+          "boost": {
+            "b1": {
+              "fields": {
+                "css": "y"
+              },
+              "stamps": {
+                "css": "1790000000000-0000-mac"
+              }
+            }
+          },
+          "setting": {
+            "sendGpc": {
+              "fields": {
+                "value": "yes"
+              },
+              "stamps": {
+                "value": "1790000000000-0000-mac"
+              }
+            }
+          },
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "New"
+              },
+              "stamps": {
+                "name": "1790604800001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Fine"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            },
+            "s9": {
+              "fields": {
+                "name": "Never held"
+              },
+              "stamps": {
+                "name": "1790604800001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "anchorUrl": "javascript:1",
+                "pinned": true
+              },
+              "stamps": {
+                "anchorUrl": "1790000000000-0000-mac",
+                "pinned": "1790000000000-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "pinned": false
+              },
+              "stamps": {
+                "pinned": "1790000000000-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "pinned": true,
+                "private": true
+              },
+              "stamps": {
+                "pinned": "1790000000000-0000-mac",
+                "private": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      }
+    },
+    {
       "expect": {
         "refused": [
           {

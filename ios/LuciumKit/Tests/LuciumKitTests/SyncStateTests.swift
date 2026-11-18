@@ -77,7 +77,7 @@ struct SyncStateVectorTests {
         for item in cases {
             let name = item["name"]?.text ?? "?"
             guard case .number(let now)? = item["now"] else { Issue.record("\(name): no clock"); continue }
-            let cleaned = SyncInbound.clean(try Contract.snapshot(item["snapshot"]), now: Int(now))
+            let cleaned = SyncInbound.clean(try Contract.snapshot(item["snapshot"]), now: Int(now), base: item["base"] == nil ? nil : try Contract.optionalSnapshot(item["base"]))
             let expect = try #require(item["expect"])
             #expect(cleaned.snapshot == (try Contract.snapshot(expect["snapshot"])), "\(name): what is kept")
             let wanted = (expect["refused"]?.items ?? []).map { "\($0["kind"]?.text ?? "") \($0["id"]?.text ?? "") \($0["reason"]?.text ?? "")" }
