@@ -2,6 +2,12 @@
 
 Les changements visibles de Lucium, en français. C'est ce texte que la feuille « Nouveautés » de l'application montre quand l'interface est en français ; la référence est [CHANGELOG.md](CHANGELOG.md), en anglais, publié avec chaque version. Chaque ligne ajoutée là-bas est ajoutée ici, avec le même titre en gras suivi de deux-points.
 
+## [Unreleased]
+
+### Changements
+
+- **Windows, une seule barre** : les fenêtres du navigateur et celles d’un site ouvert comme application dessinent leur propre barre de titre. Les trois boutons de Windows sont posés sur la barre d’outils, aux couleurs du thème, et un bouton ☰ à son début ouvre le menu. La mini-fenêtre et les Réglages gardent la barre de Windows.
+
 ## [1.1.4] - 2026-11-18
 
 Un onglet mis en veille se réveille avec ses pages Précédent et Suivant, une extension faite de pages seules ouvre sa fenêtre tout de suite, et le cadrage d’une vidéo de fond en hauteur garde son cadre sur la vidéo. La permission additionnelle pour l’App Store est ajoutée à la licence.
@@ -9,10 +15,6 @@ Un onglet mis en veille se réveille avec ses pages Précédent et Suivant, une 
 ### Ajouts
 
 - **Licence, App Store** : une seconde permission additionnelle (GPL version 3, article 7) permet au mainteneur de distribuer l’application iPhone et iPad par l’App Store d’Apple et TestFlight, ses sources restant complètes sous GPL. Texte : `ADDITIONAL-PERMISSION-APP-STORE.txt` et `NOTICE`. L’application n’est pas encore publiée.
-
-### Changements
-
-- **Windows, une seule barre** : les fenêtres du navigateur et celles d’un site ouvert comme application dessinent leur propre barre de titre. Les trois boutons de Windows sont posés sur la barre d’outils, aux couleurs du thème, et un bouton ☰ à son début ouvre le menu. La mini-fenêtre et les Réglages gardent la barre de Windows.
 
 ### Corrections
 

@@ -8,6 +8,12 @@ How to keep it: every pull request that a user would notice adds a line to the t
 
 The “Nouveautés” sheet of the application shows the section of its version, from [CHANGELOG.fr.md](CHANGELOG.fr.md) when the interface is in French: every line added here is added there too, in French, with the same bold title then a colon.
 
+## [Unreleased]
+
+### Changed
+
+- **Windows, one title bar**: the main window, the other and private windows and the windows of a site opened as an application draw their own title bar. The three buttons of Windows lie over the toolbar, in the colours of the theme, and a ☰ button at its start opens the menu. The mini window and Settings keep the title bar of Windows.
+
 ## [1.1.4] - 2026-11-18
 
 A tab put to sleep wakes with its Back and Forward pages, an extension made of pages only opens its popup at once, and the framing of a tall background video keeps its frame on the video. The additional permission for the App Store is added to the license.
@@ -15,10 +21,6 @@ A tab put to sleep wakes with its Back and Forward pages, an extension made of p
 ### Added
 
 - **License, App Store**: a second additional permission (GPL version 3, section 7) lets the maintainer hand out the iPhone and iPad application through Apple’s App Store and TestFlight, its source staying whole under the GPL. Text: `ADDITIONAL-PERMISSION-APP-STORE.txt` and `NOTICE`. The application is not published yet.
-
-### Changed
-
-- **Windows, one title bar**: the main window, the other and private windows and the windows of a site opened as an application draw their own title bar. The three buttons of Windows lie over the toolbar, in the colours of the theme, and a ☰ button at its start opens the menu. The mini window and Settings keep the title bar of Windows.
 
 ### Fixed
 
