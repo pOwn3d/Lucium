@@ -54,6 +54,23 @@ final class SpacesTests: BrowserCoreTestCase {
         await WKWebsiteDataStore(forIdentifier: ProfileStore.identifier(for: profileId)).httpCookieStore.allCookies().map(\.name).sorted()
     }
 
+    /// Waits until the store of a profile holds exactly these cookies. A page's `document.cookie = …` returns before the cookie reaches the store (the
+    /// web process hands it to the network process a moment later), so a read right after the script can still see nothing: the state is awaited, not a delay.
+    @discardableResult
+    private func awaitCookies(_ expected: [String], of profileId: String, file: StaticString = #filePath, line: UInt = #line) async throws -> [String] {
+        let deadline = ContinuousClock.now + .seconds(30)
+        var names = await cookieNames(of: profileId)
+        while names != expected {
+            if ContinuousClock.now > deadline {
+                XCTFail("timed out waiting for the cookies \(expected) of \(profileId), it holds \(names)", file: file, line: line)
+                throw NavigationWaiter.TimedOut()
+            }
+            try await Task.sleep(for: .milliseconds(50))
+            names = await cookieNames(of: profileId)
+        }
+        return names
+    }
+
     // MARK: Profiles
 
     /// The fix of the card: two spaces with two profiles share no cookie; two spaces with the same profile do.
@@ -92,7 +109,7 @@ final class SpacesTests: BrowserCoreTestCase {
         XCTAssertEqual(model.label(ofProfile: "lecture-co"), "Lecture & Co")
         try await load("/a.html", in: model)
         try await setCookie("who=reading", in: model)
-        let before = await cookieNames(of: "lecture-co")
+        let before = try await awaitCookies(["who"], of: "lecture-co")
         XCTAssertEqual(before, ["who"])
 
         model.selectSpace("work")
@@ -100,6 +117,26 @@ final class SpacesTests: BrowserCoreTestCase {
         XCTAssertTrue(model.state.profileIds.contains("lecture-co"), "a profile outlives its last space")
         let after = await cookieNames(of: "lecture-co")
         XCTAssertEqual(after, ["who"], "…and keeps its cookies")
+    }
+
+    /// What this test found (card 489): WebKit keeps the cookies a page has just written in the session of the data store, and writes them to the disk
+    /// a moment later. When the last view of a profile was freed and nothing else held the store, the session went with what it had not written yet
+    /// (about one run in three under load, and never back): the person lost the cookies of the profile. The model holds the store of every profile it used.
+    func testTheStoreOfAProfileOutlivesItsLastViewSoThatNoCookieOfItIsLost() async throws {
+        let model = await makeModel()
+        guard case .success(let space) = model.addSpace(name: "Lecture", emoji: "📚", profile: .new("Lecture & Co"), hue: 130) else { return XCTFail("refused") }
+        try await load("/a.html", in: model)
+        weak var view: WKWebView?
+        weak var store: WKWebsiteDataStore?
+        do {
+            let shown = try XCTUnwrap(model.webView)
+            view = shown
+            store = shown.configuration.websiteDataStore
+        }
+        model.selectSpace("work")
+        guard case .success = model.deleteSpace(space.id) else { return XCTFail("the space was not deleted") }
+        try await eventually("the view of the deleted space is gone", { view == nil })
+        XCTAssertNotNil(store, "no view uses the store of the profile any more, and the model still holds it")
     }
 
     func testRemovingAProfileNoSpaceUsesErasesItsData() async throws {
@@ -281,15 +318,18 @@ final class SpacesTests: BrowserCoreTestCase {
         let model = await makeModel()
         try await load("/a.html", in: model)  // work, 127.0.0.1
         try await setCookie("a=1", in: model)
+        try await awaitCookies(["a"], of: "work")
         let view = try XCTUnwrap(model.webView)
         let waiter = NavigationWaiter()
         let other = try XCTUnwrap(URL(string: "http://localhost:\(port)/b.html"))
         try await waiter.load(in: view) { view.load(URLRequest(url: other)) }
         try await setCookie("b=2", in: model)
+        try await awaitCookies(["a", "b"], of: "work")
 
         model.selectSpace("home")
         try await load("/a.html", in: model)  // home, 127.0.0.1
         try await setCookie("c=3", in: model)
+        try await awaitCookies(["c"], of: "home")
         model.selectSpace("work")
 
         XCTAssertEqual(model.siteOfActivePage, "localhost", "the page on screen is the one on localhost")
