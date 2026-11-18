@@ -32,7 +32,7 @@ const READINGS: readonly Reading[] = [
   { file: 'src/main/index.ts', code: "const measuring = smoke && process.env['LUCIUM_SMOKE_ONLY'] === 'perf'", doc: 'la suite `perf` les démarre' },
   { file: 'src/main/index.ts', code: 'if (smoke) {\n  const skipped', doc: 'remplacés par une ligne de journal), et le trousseau de macOS' },
   { file: 'src/main/index.ts', code: 'isPrimaryInstance(smoke, () => app.requestSingleInstanceLock(), process.argv)', doc: "le verrou d'instance unique" },
-  { file: 'src/main/index.ts', code: 'if (smoke || refused.length > 0) app.exit(1)', doc: 'la passe refuse de démarrer' },
+  { file: 'src/main/index.ts', code: 'if (smoke) app.exit(1)', doc: 'la passe refuse de démarrer' },
   { file: 'src/main/index.ts', code: 'if (!smoke) void installWidevine(', doc: "l'installation de Widevine" },
   { file: 'src/main/index.ts', code: 'let quitConfirmed = smoke', doc: 'la question avant de quitter' },
   { file: 'src/main/index.ts', code: "if (smoke) app.setPath('downloads',", doc: 'les téléchargements vont dans le dossier de données de la passe' },
