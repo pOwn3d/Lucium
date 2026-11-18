@@ -9,7 +9,7 @@ final class LocalServer: @unchecked Sendable {
         let body: String
         /// A route that takes the request and never answers: a page that is loading for as long as the test needs.
         static let hang = Route(contentType: "hang", body: "")
-        /// A route that answers with a redirect to `location`.
+        /// A route that answers with a redirect to `location` (`{port}` is the port of this server, known once it listens).
         static func redirect(_ location: String) -> Route { Route(contentType: "redirect", body: location) }
     }
 
@@ -86,7 +86,8 @@ final class LocalServer: @unchecked Sendable {
                 return
             }
             if route?.contentType == "redirect", let route {
-                let head = "HTTP/1.1 302 Found\r\nLocation: \(route.body)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+                let location = route.body.replacingOccurrences(of: "{port}", with: String(self.listener.port?.rawValue ?? 0))
+                let head = "HTTP/1.1 302 Found\r\nLocation: \(location)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
                 connection.send(content: Data(head.utf8), completion: .contentProcessed { _ in connection.cancel() })
                 return
             }

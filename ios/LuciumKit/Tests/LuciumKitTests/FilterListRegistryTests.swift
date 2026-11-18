@@ -33,6 +33,19 @@ private func registryJSON(sourceUrl: String = "https://example.org/list.txt", li
 
 @Suite("Registry of the embedded filter lists")
 struct FilterListRegistryTests {
+    /// A list that names scriptlets has a file of calls beside its files of rules: WebKit reads the rules only, and the count of rules says so.
+    @Test func countsTheRulesWebKitReadsApartFromTheScriptletCalls() throws {
+        let json = String(decoding: registryJSON(), as: UTF8.self).replacingOccurrences(
+            of: #"{ "name": "sample.cosmetic.json""#,
+            with: #"{ "name": "sample.scriptlets.json", "kind": "scriptlets", "rules": 7, "sha256": "\#(String(repeating: "d", count: 64))" }, { "name": "sample.cosmetic.json""#)
+        let list = try #require(try FilterListRegistry.decode(Data(json.utf8)).lists.first)
+        #expect(list.files.map(\.kind) == [.network, .scriptlets, .cosmetic])
+        #expect(list.rules == 150, "120 + 30: the calls are not rules")
+        #expect(list.scriptletCalls == 7)
+        #expect(FilterListFile.Kind.scriptlets.isWebKitRules == false)
+        #expect(FilterListFile.Kind.network.isWebKitRules && FilterListFile.Kind.cosmetic.isWebKitRules)
+    }
+
     @Test func readsWhereEachListComesFromAndUnderWhatTerms() throws {
         let registry = try FilterListRegistry.decode(registryJSON())
         let list = try #require(registry.lists.first)

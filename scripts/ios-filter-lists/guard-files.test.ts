@@ -1,0 +1,156 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import vm from 'node:vm'
+import { describe, expect, it } from 'vitest'
+import { guardWorld } from '../../src/preload/guard-world'
+import { consentWallCss } from '../../src/shared/blocker'
+import { parseScriptletCall } from '../../src/shared/scriptlets'
+import { AD_PATHS, isYouTubeAdRequest, YOUTUBE, YOUTUBE_COSMETIC_CSS, YOUTUBE_SCRIPTLETS } from '../../src/shared/youtube-rules'
+import { isWebKitExpression } from './abp-to-webkit'
+import { blockPath, guardFiles, guardRules, guardRuntime, RULES_FILE, RUNTIME_FILE, type GuardInputs } from './guard-files'
+
+const inputs: GuardInputs = {
+  guardWorldSource: guardWorld.toString(),
+  youtube: { domain: YOUTUBE, scriptlets: YOUTUBE_SCRIPTLETS, css: YOUTUBE_COSMETIC_CSS, adPaths: AD_PATHS },
+  consentWallCss: consentWallCss(),
+  parse: parseScriptletCall as GuardInputs['parse']
+}
+
+describe('the rules of our own', () => {
+  it('are the Mac’s: the same YouTube calls, the same style sheets, written once', () => {
+    const rules = guardRules(inputs)
+    expect(rules.youtube.scriptlets).toEqual(YOUTUBE_SCRIPTLETS.map((call) => [call.id, call.args]))
+    expect(rules.youtube.css).toBe(YOUTUBE_COSMETIC_CSS)
+    expect(rules.consentWalls.css).toBe(consentWallCss())
+    expect(rules.youtube.domain).toBe('youtube.com')
+  })
+
+  it('refuse a call the Mac’s library refuses: a rule that would never run is not shipped', () => {
+    const bad = { ...inputs, youtube: { ...inputs.youtube, scriptlets: [{ id: 'trusted-click-element', args: ['button'] }] } }
+    expect(() => guardRules(bad)).toThrow(/trusted-click-element is refused by the library/)
+  })
+
+  it('block the ad paths of YouTube with rules WebKit reads, and the Mac blocks the same requests', () => {
+    const { networkRules } = guardRules(inputs).youtube
+    expect(networkRules).toHaveLength(AD_PATHS.length)
+    const blocks = (url: string): boolean => networkRules.some((rule) => isWebKitExpression(rule.trigger['url-filter']) && new RegExp(rule.trigger['url-filter']).test(url))
+    for (const url of ['https://www.youtube.com/pagead/viewthroughconversion/1', 'https://m.youtube.com/api/stats/ads?ver=2', 'http://youtube.com/pagead/x', 'https://youtube.com/pagead/']) {
+      expect(blocks(url), url).toBe(true)
+      expect(isYouTubeAdRequest(url), `the Mac on ${url}`).toBe(true)
+    }
+    // The site's own files, other sites with the same path, and a host that only ends like it, are not touched.
+    for (const url of ['https://www.youtube.com/watch?v=x', 'https://www.youtube.com/s/player/base.js', 'https://example.com/pagead/x', 'https://notyoutube.com/pagead/x', 'https://youtube.com.evil.net/pagead/x']) {
+      expect(blocks(url), url).toBe(false)
+      expect(isYouTubeAdRequest(url), `the Mac on ${url}`).toBe(false)
+    }
+  })
+
+  it('escape what a path says as text, so that it is read as itself', () => {
+    expect(new RegExp(blockPath('a.example', '/x.y+z/').trigger['url-filter']).test('https://a.example/x.y+z/')).toBe(true)
+    expect(new RegExp(blockPath('a.example', '/x.y+z/').trigger['url-filter']).test('https://a.example/xAy+z/')).toBe(false)
+    expect(new RegExp(blockPath('a.example', '/x/').trigger['url-filter']).test('https://aXexample/x/')).toBe(false)
+  })
+})
+
+/** A page in a fresh V8 context: the parts of a window the runtime reads. `sheets` collects what is adopted; `failing` makes the sheet APIs throw. */
+function page(options: { constructedSheets?: boolean; styleElements?: boolean } = {}) {
+  const logs: string[] = []
+  const sheets: string[] = []
+  const styles: string[] = []
+  const sandbox: Record<string, unknown> = {
+    console: { debug: (...args: unknown[]) => logs.push(args.join(' ')), warn: (...args: unknown[]) => logs.push(args.join(' ')) },
+    document: {
+      adoptedStyleSheets: [] as unknown[],
+      documentElement: { appendChild: (node: { textContent: string }) => styles.push(node.textContent) },
+      createElement: () => {
+        if (options.styleElements === false) throw new Error('no style element')
+        return { textContent: '' }
+      }
+    }
+  }
+  if (options.constructedSheets !== false) {
+    sandbox['CSSStyleSheet'] = class {
+      text = ''
+      replaceSync(css: string): void {
+        this.text = css
+        sheets.push(css)
+      }
+    }
+  }
+  const context = vm.createContext(sandbox)
+  const run = (plan: unknown): void => {
+    const runtime = vm.runInContext(guardRuntime(inputs.guardWorldSource), context) as (plan: unknown) => void
+    runtime(plan)
+  }
+  return { context, run, logs, sheets, styles, document: sandbox['document'] as { adoptedStyleSheets: unknown[] } }
+}
+
+describe('the runtime', () => {
+  it('is an expression that takes a plan, and says in its first line where it comes from', () => {
+    const text = guardRuntime(inputs.guardWorldSource)
+    expect(text.split('\n')[0]).toMatch(/Generated by scripts\/ios-guard\.mjs/)
+    expect(typeof vm.runInNewContext(text)).toBe('function')
+    expect(text).not.toMatch(/__vite|\bimport\(/)
+  })
+
+  it('refuses a source that is not the function it expects, rather than embedding anything', () => {
+    expect(() => guardRuntime('alert(1)')).toThrow(/not a function declaration/)
+  })
+
+  it('runs the scriptlets of the plan in the page, with the Mac’s code', () => {
+    const { run, context } = page()
+    run({ scriptlets: [{ id: 'set-constant', args: ['adsLoaded', 'false'] }], css: '' })
+    expect(vm.runInContext('adsLoaded', context)).toBe(false)
+  })
+
+  it('checks every call again: a call that the library refuses does nothing, whoever gave it', () => {
+    const { run, context, logs } = page()
+    run({ scriptlets: [{ id: 'set-constant', args: ['document.__proto__.cookie', 'false'] }, { id: 'no-such-thing', args: ['x'] }], css: '' })
+    expect(vm.runInContext('typeof adsLoaded', context)).toBe('undefined')
+    expect(vm.runInContext('Object.prototype.hasOwnProperty.call(document, "cookie")', context)).toBe(false)
+    // The page-side library says what it refused, on the console, and goes on.
+    expect(logs).toHaveLength(1)
+    expect(logs[0]).toMatch(/no-such-thing could not be installed/)
+  })
+
+  it('adds the style sheet of the plan as a constructed sheet, which a page’s content security policy does not stop', () => {
+    const { run, sheets, styles, document } = page()
+    run({ scriptlets: [], css: 'a { display: none }' })
+    expect(sheets).toEqual(['a { display: none }'])
+    expect(document.adoptedStyleSheets).toHaveLength(1)
+    expect(styles).toEqual([])
+  })
+
+  it('falls back to a style element when constructed sheets are missing, and says so when nothing works', () => {
+    const element = page({ constructedSheets: false })
+    element.run({ scriptlets: [], css: 'b { color: red }' })
+    expect(element.styles).toEqual(['b { color: red }'])
+    const none = page({ constructedSheets: false, styleElements: false })
+    none.run({ scriptlets: [], css: 'b { color: red }' })
+    expect(none.logs).toHaveLength(1)
+    expect(none.logs[0]).toMatch(/^\[guard\] a style sheet could not be added: .*no style element/)
+  })
+
+  it('does nothing for an empty plan', () => {
+    const { run, sheets, styles, logs } = page()
+    run({ scriptlets: [], css: '' })
+    expect([sheets, styles, logs]).toEqual([[], [], []])
+  })
+})
+
+describe('the files', () => {
+  it('are the runtime and the rules, and the rules are JSON that ends with a line break', () => {
+    const files = guardFiles(inputs)
+    expect(Object.keys(files).sort()).toEqual([RULES_FILE, RUNTIME_FILE])
+    expect(JSON.parse(files[RULES_FILE]!)).toEqual(guardRules(inputs))
+    expect(files[RULES_FILE]!.endsWith('\n')).toBe(true)
+  })
+})
+
+describe('the files in the application', () => {
+  // Ours and small, so they are committed (a runner builds the application without Node); this keeps them equal to what the Mac's sources give.
+  // After a change of src/preload/guard-world.ts, of the YouTube rules or of the consent walls: `node scripts/ios-guard.mjs`, and commit the result.
+  it.each([RUNTIME_FILE, RULES_FILE])('%s is what scripts/ios-guard.mjs writes from the Mac’s sources', (name) => {
+    expect(readFileSync(join(__dirname, '../../ios/Lucium/Guard', name), 'utf8')).toBe(guardFiles(inputs)[name])
+  })
+})

@@ -103,11 +103,25 @@ final class EmbeddedListsTests: XCTestCase {
         let started = ContinuousClock.now
         let outcome = await lists.compile(in: try temporaryStore())
         let seconds = (ContinuousClock.now - started).formatted(.units(allowed: [.seconds], fractionalPart: .show(length: 2)))
-        let files = lists.registry.lists.flatMap(\.files)
+        let files = lists.registry.lists.flatMap(\.files).filter { $0.kind.isWebKitRules }
         print("[blocker] \(files.count) files, \(files.reduce(0) { $0 + $1.rules }) rules compiled in \(seconds)")
         XCTAssertTrue(outcome.failures.isEmpty, "lists that WebKit refuses: \(outcome.failures.map { "\($0.file): \($0.error)" })")
         XCTAssertEqual(outcome.lists.count, files.count)
         XCTAssertTrue(files.allSatisfy { $0.rules <= FilterListRegistry.ruleLimit })
+    }
+
+    /// The scriptlet tables of the real lists are read, in a time a launch can afford, and a site the lists name gets calls. Needs the real lists.
+    func testTheScriptletTablesOfThisBuildAreReadQuicklyAndAnswerForASiteTheListsName() throws {
+        guard let lists = try EmbeddedLists.load() else { throw XCTSkip("this build has no embedded filter lists: run scripts/ios-filter-lists.mjs first") }
+        let started = ContinuousClock.now
+        let table = try lists.scriptletTable()
+        let seconds = (ContinuousClock.now - started).formatted(.units(allowed: [.seconds], fractionalPart: .show(length: 3)))
+        let calls = lists.registry.lists.reduce(0) { $0 + $1.scriptletCalls }
+        print("[guard] scriptlet tables: \(table.siteCount) sites, \(table.callCount) calls (registry says \(calls)) read in \(seconds)")
+        XCTAssertEqual(table.callCount, calls, "every call of the registry is in the table")
+        XCTAssertGreaterThan(table.siteCount, 1000)
+        // The most named site of the table answers, whatever it is today, with a handful of calls and never more than a page may run.
+        XCTAssertLessThanOrEqual(table.calls(forHost: "www.example.com", categories: [.ads, .cookies]).count, ScriptletTable.callsMax)
     }
 
     /// The real lists, all together on one view, against a real page: paths that EasyList names (on 17 November 2026) must not reach the server, and a

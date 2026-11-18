@@ -23,6 +23,7 @@ extension BrowserModel {
         }
         for list in blockers { ContentBlocker.install(list, on: configuration) }
         navigationPolicy.configure(configuration)
+        if let guardList { ContentBlocker.install(guardList, on: configuration) }
         configuration.allowsInlineMediaPlayback = true
         let view = WKWebView(frame: .zero, configuration: configuration)
         navigationPolicy.attach(to: view)
