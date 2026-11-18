@@ -30,8 +30,9 @@ name: Linux
 #   - an AppImage cannot carry a profile. electron-builder's AppRun adds `--no-sandbox` when `unshare -Ur true` fails, and Lucium refuses that switch
 #     (REFUSED_SWITCHES): started on a machine that restricts user namespaces, it must say why, on the standard error and in a box on the screen
 #     (src/main/launch-refusal.ts: before `ready` Electron shows no box on Linux, so a person who double-clicked the AppImage saw nothing; the box is
-#     drawn by zenity, which keeps Electron from starting more than it does for a refusal), and start no page; the step "AppImage, as the machine has
-#     it" finds the box on the virtual screen and closes the application. Once the restriction is
+#     drawn by zenity, started detached, and the application ends at once, so that no process keeps running with the launcher's --no-sandbox); the step
+#     "AppImage, as the machine has it" finds the box on the virtual screen, checks that the application ended by itself with code 1 and left no process,
+#     and closes the box. Once the restriction is
 #     lifted for the machine, it must start, sandbox on (the step after it). No step passes --no-sandbox.
 # `scripts/linux-ci.sh smoke` fails when a process of the application carries --no-sandbox, and when a renderer has no seccomp filter.
 #

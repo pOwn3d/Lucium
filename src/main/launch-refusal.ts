@@ -7,12 +7,14 @@
 // `dialog.showErrorBox`, called before `ready`, writes to the standard error on Linux and opens no window (Electron 45 documentation). So the person saw
 // only the system's « the application quit unexpectedly ».
 //
-// Waiting for `ready` to use an Electron box was tried and given up: Electron then starts its GPU process and its network service, and the launcher's
-// `--no-sandbox` makes them run without a sandbox for as long as the box is open (seen with `ps` in an Ubuntu 24.04 machine; a refused launch that ends
-// before `ready` has only Chromium's two zygote processes). So the box is drawn by a program of the system, as the AppRun draws its own errors: `zenity`, or
-// `kdialog`, by their absolute paths, started with the library path of the AppImage taken off. Electron stays where it is, before `ready`, and starts
-// nothing more than it did: the refused launch has the processes it always had, and nothing of the interface is made (no window, no page, no session, no
-// read of the profile). Without either program, or without a screen, or for any other refusal or system, the launch ends at once as before, with its line.
+// Keeping the process alive to show the box, by Electron or by a program it waits for, was tried and given up: Chromium starts its GPU process and its
+// network service on its own, a few hundred milliseconds after the start and whatever Lucium does, and the launcher's `--no-sandbox` makes them run without a
+// sandbox for as long as the process lives (seen with `ps` in an Ubuntu 24.04 machine, with an Electron box and with a box drawn by zenity that the process
+// waited for; a refused launch that ends at once is gone before they exist). So the process does not wait: it starts the box in a program of the system, as the
+// AppRun draws its own errors (`zenity`, or `kdialog`, by their absolute paths, with the library path of the AppImage taken off), **detached**, and ends at once
+// with code 1, as it always did. The box outlives it, an ordinary program with nothing of Lucium in it, and its first button opens the download page (`xdg-open`,
+// run by the same small shell command, once the box answered). Nothing of the interface is made (no window, no page, no session, no read of the profile).
+// Without either program, or without a screen, or for any other refusal or system, the launch ends at once as before, with its line.
 
 import { spawn } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
@@ -84,17 +86,16 @@ export interface LaunchEnd {
   readRestriction: () => string | null
   /** The program of the system that can draw the box, or null when there is none. */
   findHelper: () => BoxHelper | null
-  /** Draws the box with that program and waits: resolves with the index of the button chosen (0 opens the page); rejects when the program cannot be started. */
-  runBox: (helper: BoxHelper, box: RefusalBox) => Promise<number>
-  openPage: (url: string) => Promise<void>
+  /** Starts the box in that program, detached, with the page its first button opens: resolves once it is started; rejects when it cannot be. */
+  startBox: (helper: BoxHelper, box: RefusalBox, page: string) => Promise<void>
   exit: (code: number) => void
   log: (line: string, error?: unknown) => void
 }
 
 /**
- * Ends a launch `refusedSwitches` refused, with exit code 1: at once, unless the person can be told on a screen by a program of the system, which is when the
- * box is shown first and the launch ends when it is closed. The line for the standard error was written before (index.ts). The first button opens the
- * download page of the site, in the browser of the system, where the .deb package is.
+ * Ends a launch `refusedSwitches` refused, with exit code 1, at once: the person who can be told on a screen is told by a program of the system that is started first
+ * and outlives the launch. The line for the standard error was written before (index.ts). The first button of the box opens the download page of the site, in
+ * the browser of the system, where the .deb package is.
  */
 export function endRefusedLaunch(refused: readonly string[], deps: LaunchEnd): void {
   const screenHere = Boolean(deps.env['DISPLAY'] || deps.env['WAYLAND_DISPLAY'])
@@ -112,11 +113,8 @@ export function endRefusedLaunch(refused: readonly string[], deps: LaunchEnd): v
   setLanguage(languageOfLocale(localeOfEnv(deps.env)))
   const box = refusalBox(sandboxCause(deps.readRestriction()))
   void deps
-    .runBox(helper, box)
-    .then(async (chosen) => {
-      if (chosen === 0) await deps.openPage(downloadPageUrl(getLanguage()))
-    })
-    .catch((error: unknown) => deps.log(`[launch] ${helper} could not show why the launch was refused:`, error))
+    .startBox(helper, box, downloadPageUrl(getLanguage()))
+    .catch((error: unknown) => deps.log(`[launch] ${helper} could not be started to show why the launch was refused:`, error))
     .finally(() => deps.exit(1))
 }
 
@@ -137,20 +135,20 @@ export function readRestrictionFile(read: (path: string) => string = (path) => r
  */
 export const helperEnv = (env: NodeJS.ProcessEnv): NodeJS.ProcessEnv => Object.fromEntries(Object.entries(env).filter(([name]) => name !== 'LD_LIBRARY_PATH'))
 
-/** Draws the box with a program of the system and waits for it: its exit code is the button (`helperArguments`); a program that cannot be started rejects. */
-export function runHelper(helper: BoxHelper, box: RefusalBox): Promise<number> {
+/**
+ * What the shell command that carries the box runs: the program of the box, then, when the first button was chosen (exit code 0), the opener of the browser on the
+ * page. Its parameters are `program opener page arguments…`, never pasted into the text of the command: nothing in the texts or the address is read as shell.
+ */
+export const BOX_COMMAND = 'program="$1"; opener="$2"; page="$3"; shift 3; if "$program" "$@"; then exec "$opener" "$page"; fi'
+
+/**
+ * Starts the box in a program of the system, detached (a session of its own: it outlives this process, which ends at once) and with no input or output, and resolves
+ * once it is started; a command that cannot be started rejects. `spawn` is not told to wait: the process is on its way out.
+ */
+export function startBox(helper: BoxHelper, box: RefusalBox, page: string): Promise<void> {
   const path = BOX_HELPERS.find((candidate) => candidate.name === helper)!.path
   return new Promise((resolve, reject) => {
-    const child = spawn(path, helperArguments(helper, box), { stdio: 'ignore', env: helperEnv(process.env) })
-    child.once('error', reject)
-    child.once('close', (code) => resolve(code ?? 1))
-  })
-}
-
-/** Opens an address in the browser of the system, detached, and does not wait for it: some browsers keep `xdg-open` until they quit. */
-export function openInBrowser(url: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const child = spawn(OPEN_PROGRAM, [url], { stdio: 'ignore', detached: true, env: helperEnv(process.env) })
+    const child = spawn('/bin/sh', ['-c', BOX_COMMAND, 'lucium-box', path, OPEN_PROGRAM, page, ...helperArguments(helper, box)], { stdio: 'ignore', detached: true, env: helperEnv(process.env) })
     child.once('error', reject)
     child.once('spawn', () => {
       child.unref()
@@ -166,8 +164,7 @@ export function refuseLaunch(refused: readonly string[]): void {
     env: process.env,
     readRestriction: () => readRestrictionFile(),
     findHelper: () => BOX_HELPERS.find((candidate) => existsSync(candidate.path))?.name ?? null,
-    runBox: runHelper,
-    openPage: openInBrowser,
+    startBox,
     exit: (code) => app.exit(code),
     log: (line, error) => (error === undefined ? console.error(line) : console.error(line, error))
   })

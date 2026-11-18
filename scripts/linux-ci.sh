@@ -125,46 +125,55 @@ check_started() {
   fi
 }
 
-# What a refused application must show (an AppImage whose AppRun added --no-sandbox: Lucium refuses it, never runs without the sandbox). Two things: the line
-# that says why on the standard error, before anything else, and, since a screen exists, a box that says it to a person who has no terminal (drawn by zenity,
-# which the workflow installs as an Ubuntu desktop has it: src/main/launch-refusal.ts; Electron opens no box before `ready` on Linux, which is why the person
-# used to see nothing). The box waits to be closed and
-# nobody here can click it: the check finds it on the virtual screen by its title, « Lucium cannot start » (the runner's locale is English), checks that no page was started, then
-# closes the application with a signal. An application that ends by itself instead did not show the box: that is a failure.
+# What a refused application must show (an AppImage whose AppRun added --no-sandbox: Lucium refuses it, never runs without the sandbox). Three things: the line
+# that says why on the standard error, before anything else; the end of the application by itself, at once, with code 1; and, since a screen exists, a box that
+# says it to a person who has no terminal, drawn by zenity (which the workflow installs, as an Ubuntu desktop has it) that the application started detached and
+# that outlives it (src/main/launch-refusal.ts: Electron opens no box before `ready` on Linux, which is why the person used to see nothing; and a process that
+# waited would have its GPU process and its network service, which Chromium starts on its own, run without a sandbox, because of the --no-sandbox the launcher
+# gave it). The box waits to be closed and nobody here can click it: the check finds it on the virtual screen by its title, « Lucium cannot start » (the
+# runner's locale is English), checks that nothing of the application is running any more, closes the box with a signal and reads how the application ended.
 check_refused() {
-  local app="$1" data="$2" log="$3" waited=0 status=0 pid
+  local app="$1" data="$2" log="$3" waited=0 status=0
   # Counted, not `grep -q` (which stops at the first match and can hand xwininfo a SIGPIPE that `pipefail` reports as a failure).
   until [ "$(xwininfo -root -tree 2>/dev/null | grep -ci "lucium cannot start" || true)" -gt 0 ]; do
-    if ! kill -0 "$app" 2>/dev/null; then
-      wait "$app" || status=$?
-      fail "the application ended by itself after ${waited} s (exit code $status) without showing the box that says why it refuses to start"
-      return 1
-    fi
     if [ "$waited" -ge 60 ]; then
-      fail "no box after ${waited} s: the application is still running and shows nothing that says why it refuses to start"
+      fail "no box after ${waited} s: nothing shows why the application refuses to start"
       return 1
     fi
     sleep 1
     waited=$((waited + 1))
   done
   echo "the box that says why appeared after ${waited} s"
-  grep -q 'refused: this application does not start with --no-sandbox' "$log" || { fail "the log does not say that --no-sandbox is refused"; return 1; }
-  grep -q 'sandbox' "$log" && echo "the refusal names the sandbox"
-  # Nothing but the box was made: no page, so no renderer, and nothing that Electron starts once it is ready (its GPU process and its network service would run
-  # without a sandbox: the launcher gave `--no-sandbox` to the process, which carries it to its children).
-  if [ -n "$(renderer_pids "$data")" ]; then
-    fail "a renderer is running in a launch that was refused"
+  # The application ends by itself, without waiting for the box, with code 1.
+  local ended=0
+  while kill -0 "$app" 2>/dev/null && [ "$ended" -lt 20 ]; do
+    sleep 1
+    ended=$((ended + 1))
+  done
+  if kill -0 "$app" 2>/dev/null; then
+    fail "the application is still running ${ended} s after its box appeared: it must end at once (a process kept alive runs its GPU process and network service without a sandbox)"
     return 1
   fi
-  for pid in $(run_pids "$data"); do
-    if tr '\0' ' ' <"/proc/$pid/cmdline" 2>/dev/null | grep -Eq -- '--type=(gpu-process|utility)'; then
-      fail "process $pid (GPU or utility) runs in a launch that was refused, with --no-sandbox"
-      return 1
-    fi
+  wait "$app" || status=$?
+  echo "the application ended by itself, exit code $status"
+  [ "$status" = 1 ] || { fail "exit code $status, expected 1"; return 1; }
+  grep -q 'refused: this application does not start with --no-sandbox' "$log" || { fail "the log does not say that --no-sandbox is refused"; return 1; }
+  grep -q 'sandbox' "$log" && echo "the refusal names the sandbox"
+  # Nothing of the application is running while the box is shown: no browser process, no page (renderer), no GPU process, no network service. The AppImage's
+  # own runtime (it carries the same command line, and unmounts the image) is given a few seconds to follow the application.
+  local left="" i
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    left="$(run_pids "$data")"
+    [ -z "$left" ] && break
+    sleep 1
   done
-  # What closing the box would end with, here by the signal.
-  kill -TERM "$app" 2>/dev/null || true
-  wait "$app" 2>/dev/null || true
+  if [ -n "$left" ]; then
+    fail "a process of the application is still running while the box is shown: $(echo "$left" | tr '\n' ' ')"
+    ps -o pid,args -p "$(echo "$left" | paste -sd, -)" | cut -c1-200 || true
+    return 1
+  fi
+  # What closing the box would end with, here by the signal (the box is zenity's: its command line carries the title).
+  pkill -f -- '--title=Lucium cannot start' 2>/dev/null || true
 }
 
 smoke() {
