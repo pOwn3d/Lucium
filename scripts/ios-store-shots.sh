@@ -14,6 +14,8 @@
 # It is heavy (a build, two simulators, one after the other): several minutes and a good part of the CPU. AGENTS.md, section 1: say so before running it on a
 # machine somebody is using, run one simulator at a time, and run `xcrun simctl shutdown all` if it was interrupted.
 #
+# The Dynamic Island: the simulator draws it in some pictures of an iPhone and not in others; a set whose pictures disagree is taken again (up to three times).
+#
 # LUCIUM_IOS_RUNTIME chooses the runtime (default: iOS 26.5). LUCIUM_STORE_ONLY=iphone-6.9 (or ipad-13) takes one device, LUCIUM_STORE_LOCALES=en-US one language.
 set -euo pipefail
 
@@ -62,6 +64,43 @@ watch() {
   done
 }
 
+# Takes the five pictures of one device in one language. Returns 3 when the pictures disagree on the Dynamic Island (finish.mjs), another status on a failure.
+take_set() {
+  local udid="$1" id="$2" locale="$3" size="$4" flag="${5:-}"
+  local language="${locale%%-*}" region="${locale##*-}" target="$out/$locale/$id" handshake status=0
+  # The language of the device itself, not only of the application: the status bar of an iPad writes the date, the keyboard follows the region. The system
+  # reads it at start, so the device is restarted.
+  xcrun simctl spawn "$udid" defaults write -g AppleLanguages -array "$language"
+  xcrun simctl spawn "$udid" defaults write -g AppleLocale -string "${language}_${region}"
+  xcrun simctl shutdown "$udid" || return 1
+  xcrun simctl boot "$udid" || return 1
+  xcrun simctl bootstatus "$udid" -b >/dev/null || return 1
+  xcrun simctl status_bar "$udid" override --time "9:41" --batteryState discharging --batteryLevel 100 --wifiBars 3 --cellularBars 4 --dataNetwork wifi
+  # A fresh simulator shows the keyboard's first-use tips over the command bar: say they were seen (the keyboard's own preferences, in this simulator only).
+  xcrun simctl spawn "$udid" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
+  xcrun simctl spawn "$udid" defaults write com.apple.keyboard.preferences DidShowGestureKeyboardIntroduction -bool true
+  handshake="$(mktemp -d)"
+  rm -rf "$target"; mkdir -p "$target"
+  echo "== $id, $locale"
+  watch "$handshake" "$udid" "$target" &
+  watcher=$!
+  (cd "$root/ios" && TEST_RUNNER_LUCIUM_STORE_SHOTS="$handshake" xcodebuild -project Lucium.xcodeproj -scheme Lucium -destination "id=$udid" \
+    -configuration Debug CODE_SIGNING_ALLOWED=NO -parallel-testing-enabled NO -testLanguage "$language" -testRegion "$region" \
+    -only-testing:LuciumTests/StoreScreenshotTests test-without-building) || status=$?
+  : > "$handshake/stop"
+  wait "$watcher" 2>/dev/null || true
+  watcher=""
+  rm -rf "$handshake"
+  [ "$status" = 0 ] || { echo "the run failed for $id, $locale" >&2; return "$status"; }
+
+  local name
+  for name in "${expected[@]}"; do
+    [ -s "$target/$name.png" ] || { echo "missing picture: $target/$name.png" >&2; return 1; }
+  done
+  # The size of the device, and no alpha channel (the simulator writes one, the store takes none): refused or rewritten in place.
+  node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON "$root/scripts/ios-store-shots/finish.mjs" "$size" ${flag:+"$flag"} "$target"/*.png || return $?
+}
+
 built=0
 for entry in "${devices[@]}"; do
   IFS=: read -r id device size <<<"$entry"
@@ -81,40 +120,16 @@ for entry in "${devices[@]}"; do
   fi
 
   for locale in $locales; do
-    language="${locale%%-*}"
-    region="${locale##*-}"
-    target="$out/$locale/$id"
-    # The language of the device itself, not only of the application: the status bar of an iPad writes the date, the keyboard follows the region. The system
-    # reads it at start, so the device is restarted (it was booted just before).
-    xcrun simctl spawn "$udid" defaults write -g AppleLanguages -array "$language"
-    xcrun simctl spawn "$udid" defaults write -g AppleLocale -string "${language}_${region}"
-    xcrun simctl shutdown "$udid"
-    xcrun simctl boot "$udid"
-    xcrun simctl bootstatus "$udid" -b >/dev/null
-    xcrun simctl status_bar "$udid" override --time "9:41" --batteryState discharging --batteryLevel 100 --wifiBars 3 --cellularBars 4 --dataNetwork wifi
-    # A fresh simulator shows the keyboard's first-use tips over the command bar: say they were seen (the keyboard's own preferences, in this simulator only).
-    xcrun simctl spawn "$udid" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
-    xcrun simctl spawn "$udid" defaults write com.apple.keyboard.preferences DidShowGestureKeyboardIntroduction -bool true
-    handshake="$(mktemp -d)"
-    rm -rf "$target"; mkdir -p "$target"
-    echo "== $id, $locale"
-    watch "$handshake" "$udid" "$target" &
-    watcher=$!
-    status=0
-    (cd "$root/ios" && TEST_RUNNER_LUCIUM_STORE_SHOTS="$handshake" xcodebuild -project Lucium.xcodeproj -scheme Lucium -destination "id=$udid" \
-      -configuration Debug CODE_SIGNING_ALLOWED=NO -parallel-testing-enabled NO -testLanguage "$language" -testRegion "$region" \
-      -only-testing:LuciumTests/StoreScreenshotTests test-without-building) || status=$?
-    : > "$handshake/stop"
-    wait "$watcher" 2>/dev/null || true
-    watcher=""
-    rm -rf "$handshake"
-    [ "$status" = 0 ] || { echo "the run failed for $id, $locale" >&2; exit "$status"; }
-
-    for name in "${expected[@]}"; do
-      [ -s "$target/$name.png" ] || { echo "missing picture: $target/$name.png" >&2; exit 1; }
+    # An iPhone with a Dynamic Island: the simulator draws the island in some pictures and not in others, so a set whose pictures disagree is taken again.
+    flags=()
+    case "$id" in iphone*) flags=(--island) ;; esac
+    for attempt in 1 2 3; do
+      status=0
+      take_set "$udid" "$id" "$locale" "$size" "${flags[@]:-}" || status=$?
+      [ "$status" = 3 ] && [ "$attempt" -lt 3 ] || break
+      echo "the pictures of $id, $locale do not agree on the Dynamic Island: taking the set again ($attempt of 3)" >&2
     done
-    # The size of the device, and no alpha channel (the simulator writes one, the store takes none): refused or rewritten in place.
-    node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON "$root/scripts/ios-store-shots/finish.mjs" "$size" "$target"/*.png
+    [ "$status" = 0 ] || { echo "the pictures of $id, $locale could not be taken (exit $status)" >&2; exit "$status"; }
   done
 
   xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true

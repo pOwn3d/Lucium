@@ -14,6 +14,9 @@ PRIVÉ PAR DÉFAUT
 • Les onglets privés ne gardent rien sur votre appareil.
 • Effacez les données d’un site, et de ce site seulement.
 
+TÉLÉCHARGEMENTS, PARTAGE, PDF
+Les fichiers que vous téléchargez arrivent dans l’app Fichiers, dans le dossier Téléchargements de Lucium, et un téléchargement interrompu peut reprendre. Partagez une page, ou enregistrez-la en entier au format PDF, depuis le bouton d’actions de la page dans la barre du bas.
+
 UN VERROU QUI RECONNAÎT VOTRE VISAGE OU VOTRE DOIGT
 Verrouillez un espace, ou toute l’application, avec Face ID, Touch ID ou le code de l’appareil. Un espace verrouillé garde ses onglets cachés et endormis jusqu’à ce que vous le déverrouilliez.
 

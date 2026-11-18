@@ -1,6 +1,6 @@
 import { deflateSync } from 'node:zlib'
 import { describe, expect, it } from 'vitest'
-import { pictureProblems, pngFacts, readPixels, withoutAlpha } from './png'
+import { pictureProblems, pngFacts, readPixels, showsIsland, withoutAlpha } from './png'
 
 // A tiny PNG built here, the way the simulator writes one: 8-bit RGBA, one filter byte per row.
 function crc32(bytes: Buffer): number {
@@ -77,5 +77,16 @@ describe('the pictures of the store listing', () => {
     const sixteenBit = rgbaPng(2, 2, colourOf)
     sixteenBit[24] = 16
     expect(() => pngFacts(sixteenBit)).toThrow('depth 16')
+  })
+
+  it('tell whether the picture of an iPhone shows the Dynamic Island: a black pill at the top centre', () => {
+    // 1320 x 2868 is too big to build here: the same proportions at a tenth of the size (132 x 287; the pill is at row 10 of 287).
+    const picture = (island: boolean) => rgbaPng(132, 287, (x, y) => (island && x >= 47 && x <= 85 && y >= 4 && y <= 15 ? [0, 0, 0, 255] : [210, 205, 240, 255]))
+    expect(showsIsland(picture(true))).toBe(true)
+    expect(showsIsland(picture(false))).toBe(false)
+    // A dark status bar that is not black (the dimmed sheet behind a form) is not the island.
+    expect(showsIsland(rgbaPng(132, 287, () => [155, 155, 155, 255]))).toBe(false)
+    // Whichever filter the simulator used, and whether or not the alpha channel is still there.
+    expect(showsIsland(withoutAlpha(rgbaPng(132, 287, (x, y) => (x >= 47 && x <= 85 && y >= 4 && y <= 15 ? [0, 0, 0, 255] : [210, 205, 240, 255]), 1)))).toBe(true)
   })
 })

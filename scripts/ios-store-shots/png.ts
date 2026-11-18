@@ -54,7 +54,8 @@ export function readPixels(bytes: Buffer): Buffer {
   return unfiltered(bytes, pngFacts(bytes))
 }
 
-function unfiltered(bytes: Buffer, facts: PngFacts): Buffer {
+/** The first `rows` rows only when asked: the filters of a row depend on the rows above it, never below. */
+function unfiltered(bytes: Buffer, facts: PngFacts, rows: number = facts.height): Buffer {
   const channels = facts.colour === 6 ? 4 : 3
   const data: Buffer[] = []
   for (let at = 8; at < bytes.length; ) {
@@ -65,8 +66,8 @@ function unfiltered(bytes: Buffer, facts: PngFacts): Buffer {
   const raw = inflateSync(Buffer.concat(data))
   const stride = facts.width * channels
   if (raw.length !== (stride + 1) * facts.height) throw new Error('the pixel data does not match the size in the header')
-  const pixels = Buffer.alloc(stride * facts.height)
-  for (let y = 0; y < facts.height; y++) {
+  const pixels = Buffer.alloc(stride * rows)
+  for (let y = 0; y < rows; y++) {
     const filter = raw[y * (stride + 1)]!
     for (let i = 0; i < stride; i++) {
       const value = raw[y * (stride + 1) + 1 + i]!
@@ -129,4 +130,18 @@ export function pictureProblems(bytes: Buffer, size: string): string[] {
   if (`${facts.width}x${facts.height}` !== size) problems.push(`it is ${facts.width}x${facts.height}, not ${size}`)
   if (facts.colour !== 2) problems.push('it has an alpha channel')
   return problems
+}
+
+/**
+ * Whether the picture of an iPhone with a Dynamic Island shows the island: the simulator draws it in some pictures and not in others (it is not in the
+ * framebuffer the screen is made of, and whether the system puts it in a picture is not something this project controls), so the pictures of one set are
+ * checked to agree. The island is the black pill at the top centre (about 376 x 112 px on a picture 1320 px wide); no status bar of ours is black there.
+ */
+export function showsIsland(bytes: Buffer): boolean {
+  const facts = pngFacts(bytes)
+  const y = Math.round((facts.height * 96) / 2868)
+  const channels = facts.colour === 6 ? 4 : 3
+  const pixels = unfiltered(bytes, facts, y + 1)
+  const at = (facts.width >> 1) * channels + y * facts.width * channels
+  return [0, 1, 2].every((c) => pixels[at + c]! < 24)
 }

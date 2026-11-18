@@ -56,7 +56,7 @@ Taken from [docs/ios.md](../../docs/ios.md) (sections 7, 9 and 10) and from the 
 
 | File | What it shows |
 |---|---|
-| `01-browse.png` | a page, with the bottom bar and the Spaces |
+| `01-browse.png` | a page, with the bottom bar: Spaces, page actions, back, forward, tabs |
 | `02-tabs.png` | the tabs sheet: pinned tabs, folders, today, archive |
 | `03-spaces.png` | Spaces and profiles |
 | `04-commands.png` | the command bar, with the keyboard |
@@ -68,6 +68,7 @@ How it is made, so that it can be trusted and redone:
 - The screens are the application's own (`BrowserScreen` and its sheets), drawn by `LuciumTests/StoreScreenshotTests`, which is skipped in every other run. The picture is taken from outside with `xcrun simctl io … screenshot`, because only the simulator draws the status bar (9:41, full battery), the Dynamic Island and the home indicator; the test and the script agree through files (`ready-…`, `done-…`).
 - The demo data is the test's own: titles on reserved `.example` domains, a page drawn from a string (the address bar reads `journal.example`), no real site, no product or company name, no account, nothing taken from a real profile. `src/shared/ios-store-listing.test.ts` refuses any host that is not `.example` in that test.
 - Each picture is checked against the size of its device, and rewritten without its alpha channel (the simulator writes one, the store takes none): `scripts/ios-store-shots/finish.mjs`.
+- The simulator draws the Dynamic Island in some pictures of an iPhone and not in others (it is not part of the screen it renders, and nothing here controls it). A set whose pictures disagree is taken again, up to three times (`finish.mjs --island` exit 3).
 - One simulator at a time on a machine others use (`AGENTS.md`, section 1): the script is heavy, about three minutes for all twenty pictures once the project is built.
 
 Retake them when the interface changes, and always before a submission. The iPad pictures show the layout of the iPhone on a larger screen today: the permanent sidebar of an iPad in landscape is another piece of work, and its pictures replace these (take them with the same script, in landscape).
@@ -77,7 +78,7 @@ Retake them when the interface changes, and always before a submission. The iPad
 Found while writing these texts, and not fixed here (each belongs to another piece of work):
 
 1. **The start page still says "Foundation mockup"** (`start.title`, `start.body` in `Localizable.xcstrings`): the first thing a reviewer sees. It needs a real start page before any build leaves the maintainer's Mac.
-2. **The texts describe `main` of 18 November 2026.** What waits in other pull requests (downloads to the Files app, sharing a page, saving it as a PDF, the iPad sidebar) is not in them: add it to the description and to the notes for the review when it is merged, and take the pictures again.
+2. **The texts describe `main` of 18 November 2026** (downloads to the Files app, sharing a page and saving it as a PDF are in them). What waits in other pull requests, the permanent sidebar of an iPad in landscape, is not: add it to the description and to the notes for the review when it is merged, and take the pictures again.
 3. **The privacy page of the site lists two connections that the code does not make yet** (search suggestions and site icons, "on by default"), while the README of the project, which follows the code, lists neither. The policy must say what the application does the day it is submitted: either the code gets them first, with their switches and their line in the README, or the page is corrected. The notes for the review say "no connection of its own", and a test reads the sources to hold them to it.
 4. Sections 5.1.1, 5.1.2 and 5.2 of the review guidelines were read only in summary (docs/ios.md, section 9); the age rating and the export compliance are the two *to confirm* lines above.
 5. The name "Lucium" has to be free in App Store Connect (docs/ios.md, section 10.2).

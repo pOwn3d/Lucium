@@ -14,6 +14,9 @@ PRIVATE BY DEFAULT
 • Private tabs keep nothing on your device.
 • Clear the data of one site, and only that site.
 
+DOWNLOADS, SHARING, PDF
+Files you download land in the Files app, in the Downloads folder of Lucium, and a download that was cut off can resume. Share a page, or save it whole as a PDF, from the page actions button in the bottom bar.
+
 A LOCK THAT KNOWS YOUR FACE OR YOUR FINGER
 Lock a Space, or the whole app, with Face ID, Touch ID or your passcode. A locked Space keeps its tabs hidden and asleep until you unlock it.
 

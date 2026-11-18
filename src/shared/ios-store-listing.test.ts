@@ -130,6 +130,11 @@ describe('the notes for the review', () => {
     expect(notes).toContain('NSAllowsArbitraryLoadsInWebContent')
     expect(plist).toContain('<key>NSAllowsArbitraryLoadsInWebContent</key>')
     expect(plist).not.toContain('<key>NSAllowsArbitraryLoads</key>')
+    // "Downloaded files go to the Downloads folder of the app, which shows in the Files app (UIFileSharingEnabled, LSSupportsOpeningDocumentsInPlace)".
+    for (const key of ['UIFileSharingEnabled', 'LSSupportsOpeningDocumentsInPlace']) {
+      expect(notes).toContain(key)
+      expect(plist, key).toMatch(new RegExp(`<key>${key}</key>\\s*<true/>`))
+    }
     // "no native function of the device is exposed to a web page (no script message handler)".
     expect(notes).toContain('no script message handler')
     // "The app makes no connection of its own": nothing in the sources opens one, WebKit loads the pages.
