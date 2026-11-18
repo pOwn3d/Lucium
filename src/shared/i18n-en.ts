@@ -5795,6 +5795,7 @@ export const en: Record<MessageKey, string> = {
   'proxy-editor.tester': 'Test',
   'panels.se-connecter': 'Sign In',
   'panels.manuel': 'Manual',
+  'panels.sync-source': 'Synchronization',
   'extension-review.sensible': 'Sensitive',
   'extension-review.cette-extension-pourra': 'This extension will be able to:',
   'extension-review.version-chrome-web-store': 'Version {version} · Chrome Web Store',

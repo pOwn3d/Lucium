@@ -5799,6 +5799,7 @@ export const fr = {
   'proxy-editor.tester': 'Tester',
   'panels.se-connecter': 'Se connecter',
   'panels.manuel': 'Manuel',
+  'panels.sync-source': 'Synchronisation',
   'extension-review.sensible': 'Sensible',
   'extension-review.cette-extension-pourra': 'Cette extension pourra :',
   'extension-review.version-chrome-web-store': 'Version {version} · Chrome Web Store',

@@ -9,15 +9,19 @@
 //     is cut, and a state with no space gets one;
 //   - the lists are reordered group by group (the spaces, the folders of a folder, the pinned tabs of a folder, the favourites of a profile), in the places the members
 //     already hold, so that what is not synchronised (the Today tabs) does not move;
-//   - the settings are the closed list of docs/synchronisation.md §10.3, and nothing else.
+//   - the settings are the closed list of docs/synchronisation.md §10.3, and nothing else;
+//   - a space the patch removes does not take its open tabs with it: they go to the archive first (source `sync`), because they are not synchronised, so the other device,
+//     which deleted the space, cannot have meant to close them (review n° 13).
 //
 // Only the main process sends this action (`MAIN_ONLY_ACTIONS`, ipc-policy.ts): a page of the interface can never write a patch.
 
 import { sameJson } from './sync-canonical'
 import { defaultTheme } from './theme'
-import type { SidebarState } from './model'
+import { isInternalPageUrl } from './internal-page'
+import { tabName, type SidebarState } from './model'
 import type { Ctx, Action } from './sidebar-actions'
 import { normalize } from './sidebar-state'
+import { ARCHIVE_LIMIT } from './state-clean'
 
 export type PatchKind = 'space' | 'folder' | 'tab' | 'favorite' | 'archived'
 
@@ -173,6 +177,34 @@ function reorder(list: Entity[], positions: readonly number[], ids: readonly str
   positions.forEach((at, next) => void (list[at] = sorted[next] as Entity))
 }
 
+/**
+ * The open tabs (the ones of Today: pinned tabs are synchronised, and went with the space on the other device too) of the spaces a patch has removed, taken to the archive
+ * before the state is cleaned. They are not synchronised, so the device that deleted the space did not decide about them; a deletion made here asks the person first, one
+ * that comes from another device does not, and nothing must be lost without a trace. They are kept in the space the person is in (else the first one left), as `sync`,
+ * the way a tab that is archived is kept (a private tab and an internal page are not: the archive never hears of them). Changes `draft` in place.
+ */
+export function archiveOpenTabsOfRemovedSpaces(draft: Record<string, unknown>, gone: ReadonlySet<unknown>, ctx: Ctx): void {
+  if (gone.size === 0) return
+  const tabs = draft['tabs'] as Entity[]
+  const leaving = tabs.filter((tab) => gone.has(tab['spaceId']) && tab['pinned'] !== true && tab['private'] !== true && !isInternalPageUrl(tab['url']))
+  if (leaving.length === 0) return
+  const spaces = draft['spaces'] as Entity[]
+  const active = draft['activeSpaceId']
+  const target = spaces.some((space) => space['id'] === active) ? active : (spaces[0]?.['id'] ?? 'espace')
+  const entries: Entity[] = leaving.map((tab) => ({
+    id: tab['id'],
+    spaceId: target,
+    url: tab['url'],
+    title: tabName(tab as never),
+    archivedAt: ctx.now,
+    source: 'sync',
+    ...(tab['container'] !== undefined ? { container: tab['container'] } : {})
+  }))
+  const archive = draft['archive'] as Entity[]
+  const older = archive.filter((entry) => !entries.some((made) => made['id'] === entry['id']))
+  draft['archive'] = [...entries, ...older].slice(0, ARCHIVE_LIMIT)
+}
+
 /** The state after a patch. A patch that changes nothing gives back the state it was given. */
 export function applySyncPatch(state: SidebarState, patch: SyncPatch, ctx: Ctx): SidebarState {
   const draft: Record<string, unknown> = { ...state }
@@ -205,6 +237,7 @@ export function applySyncPatch(state: SidebarState, patch: SyncPatch, ctx: Ctx):
     removed.set(name, ids)
   }
   for (const [name, ids] of removed) draft[name] = lists()[name].filter((one) => !ids.has(one['id']))
+  archiveOpenTabsOfRemovedSpaces(draft, removed.get('spaces') ?? new Set(), ctx)
   const positions = new Map<string, Map<string, number[]>>()
   for (const [key, ids] of Object.entries(patch.order)) {
     const collection = collectionOf(key)
