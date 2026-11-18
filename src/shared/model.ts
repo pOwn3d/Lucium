@@ -178,7 +178,8 @@ export interface Favorite {
   profileId?: string
 }
 
-export type ArchiveSource = 'auto' | 'manual' | 'little'
+/** `sync`: the open tabs of a space that another device deleted, kept when the synchronisation removed the space (docs/synchronisation.md §8.5). */
+export type ArchiveSource = 'auto' | 'manual' | 'little' | 'sync'
 
 /** One page of a closed tab's Back / Forward list. */
 export interface ClosedPage {
@@ -198,7 +199,7 @@ export interface ArchivedTab {
   url: string
   title: string
   archivedAt: number
-  /** Why it is in the archive: left idle, archived by hand, or a closed mini window. */
+  /** Why it is in the archive: left idle, archived by hand, a closed mini window, or kept when another device deleted its space. */
   source?: ArchiveSource
   /** The pages before this one, when the setting asked for them to be kept: reopening the tab brings its Back list back. */
   history?: ClosedHistory

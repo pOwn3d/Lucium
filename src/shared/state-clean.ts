@@ -239,7 +239,7 @@ export function cleanFavorites(raw: unknown): Favorite[] {
 
 /** Entries kept in the archive, newest first (the reducer's own bound). */
 export const ARCHIVE_LIMIT = 500
-const ARCHIVE_SOURCES: readonly ArchiveSource[] = ['auto', 'manual', 'little']
+const ARCHIVE_SOURCES: readonly ArchiveSource[] = ['auto', 'manual', 'little', 'sync']
 
 export function cleanArchive(raw: unknown, spaceIds: ReadonlySet<string>): ArchivedTab[] {
   const out: ArchivedTab[] = []

@@ -134,7 +134,7 @@ describe('SyncService: off by default, and the switch opens nothing', () => {
     expect(() => r.service.setCategory('passwords' as never, true)).toThrow(SyncServiceError)
   })
 
-  it('says, once more, that the identity was replaced and the devices forgotten, when the key could not be opened', async () => {
+  it('says, once more, that the identity was replaced and the devices forgotten, when the file is not an identity (nothing could open it later)', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const r = rig()
     r.store.addPeer(iphone(1))
@@ -142,6 +142,52 @@ describe('SyncService: off by default, and the switch opens nothing', () => {
     await r.service.setEnabled(true)
     expect(r.service.status()).toMatchObject({ identityReplaced: true, devices: [] })
     log.mockRestore()
+  })
+
+  // Review n° 22: the keychain that refuses for a moment does not take the paired devices with it.
+  describe('a key the keychain does not open', () => {
+    /** A box whose key opens only when `opens.now` is true, as a keychain that refuses and then answers does. */
+    function flaky(opens: { now: boolean }): SecretBox {
+      const mix = (bytes: Buffer): Buffer => Buffer.from(bytes.map((byte) => byte ^ 3))
+      return { available: () => true, seal: (plain) => mix(plain), open: (sealed) => (opens.now ? mix(sealed) : ((): never => { throw new Error('the keychain refuses') })()) }
+    }
+
+    const withFlakyKey = (opens: { now: boolean }): { r: Rig; path: string } => {
+      const path = join(tempDir('lucium-sync-flaky-'), 'sync-identity.json')
+      return { path, r: rig({ identities: new IdentityStore(path, flaky(opens)), box: flaky(opens) }) }
+    }
+
+    it('keeps the devices paired and says so the first time, and finds the same identity when the keychain answers again', async () => {
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const opens = { now: true }
+      const { r, path } = withFlakyKey(opens)
+      const first = new IdentityStore(path, flaky(opens)).loadOrCreate().identity
+      r.store.addPeer(iphone(1))
+      opens.now = false
+      await expect(r.service.setEnabled(true)).rejects.toMatchObject({ problem: 'identity-unopenable' })
+      expect(r.service.status()).toMatchObject({ enabled: false, identityReplaced: false, problem: 'identity-unopenable' })
+      expect(r.store.peers()).toHaveLength(1)
+      opens.now = true
+      await r.service.setEnabled(true)
+      expect(r.service.status()).toMatchObject({ enabled: true, identityReplaced: false, problem: null })
+      expect(r.store.peers()).toHaveLength(1)
+      expect(new IdentityStore(path, flaky(opens)).loadOrCreate().identity.fingerprint.equals(first.fingerprint)).toBe(true)
+      log.mockRestore()
+    })
+
+    it('makes a new identity at the second try that the key still does not open, and tells the devices are forgotten', async () => {
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const opens = { now: true }
+      const { r, path } = withFlakyKey(opens)
+      new IdentityStore(path, flaky(opens)).loadOrCreate()
+      r.store.addPeer(iphone(1))
+      opens.now = false
+      await expect(r.service.setEnabled(true)).rejects.toMatchObject({ problem: 'identity-unopenable' })
+      opens.now = false
+      await r.service.setEnabled(true)
+      expect(r.service.status()).toMatchObject({ enabled: true, identityReplaced: true, devices: [] })
+      log.mockRestore()
+    })
   })
 })
 
@@ -178,6 +224,30 @@ describe('SyncService: the window', () => {
     warn.mockRestore()
   })
 
+  it('draws another port when the system refuses the one it drew (EACCES: Windows keeps ranges of the dynamic ports for itself, and a port of the dynamic range is never one a person needs rights for)', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const r = rig()
+    const refused = (): NodeJS.ErrnoException => Object.assign(new Error('listen EACCES: permission denied'), { code: 'EACCES' })
+    r.door.failStart.push(refused(), refused())
+    await r.service.setEnabled(true)
+    await r.service.openWindow()
+    expect(r.door.starts).toHaveLength(1)
+    expect(r.store.config().port).toBe(r.door.starts[0])
+    expect(r.service.status().window.open).toBe(true)
+    warn.mockRestore()
+  })
+
+  it('says `port`, not `internal`, when every port it tries is refused by the system', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const r = rig()
+    for (let n = 0; n < 6; n++) r.door.failStart.push(Object.assign(new Error('listen EACCES'), { code: 'EACCES' }))
+    await r.service.setEnabled(true)
+    await expect(r.service.openWindow()).rejects.toMatchObject({ problem: 'port' })
+    warn.mockRestore()
+    log.mockRestore()
+  })
+
   it('gives up after five ports that are taken, and says `port`', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
@@ -208,7 +278,7 @@ describe('SyncService: the window', () => {
   it('says `internal` for a door that fails for another reason, and logs it', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const r = rig()
-    r.door.failStart.push(Object.assign(new Error('EACCES'), { code: 'EACCES' }))
+    r.door.failStart.push(Object.assign(new Error('EMFILE'), { code: 'EMFILE' }))
     await r.service.setEnabled(true)
     await expect(r.service.openWindow()).rejects.toMatchObject({ problem: 'internal' })
     expect(log).toHaveBeenCalledWith(expect.stringContaining('could not be opened'), expect.anything())

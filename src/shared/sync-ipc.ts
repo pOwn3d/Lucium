@@ -52,7 +52,7 @@ export interface SyncConfirmView {
 }
 
 /** Why the synchronisation could not do what was asked; the page says it in words of the catalogue (`sync.error.<code>`). */
-export type SyncProblem = 'unavailable' | 'port' | 'identity' | 'locked' | 'network' | 'internal'
+export type SyncProblem = 'unavailable' | 'port' | 'identity' | 'identity-unopenable' | 'locked' | 'network' | 'internal'
 
 /** How the last session ended, for the page to say: `code` is null when it went through. */
 export interface SyncLastExchange {
