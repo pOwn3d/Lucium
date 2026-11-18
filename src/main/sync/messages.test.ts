@@ -3,7 +3,7 @@
 import { describe, expect, it } from 'vitest'
 import { ERROR_CODES, isFatal } from './error-codes'
 import { MAX_FRAME_VALUES } from './limits'
-import { messageText, Numbering, parseMessage, PhaseTracker, STAMP, type MessageType } from './messages'
+import { hasDuplicateKey, messageText, Numbering, parseMessage, PhaseTracker, STAMP, type MessageType } from './messages'
 import { messageVectors, textOfVector } from './sync-vectors.test-support'
 
 describe('parseMessage: the vectors of the specification', () => {
@@ -114,6 +114,36 @@ describe('parseMessage: what comes out', () => {
   it('counts the bytes of a key as it counts those of a text', () => {
     const key = 'k'.repeat(65_537)
     expect(parseMessage(`{"v":1,"t":"bye","n":1,"${key}":1}`)).toEqual({ ok: false, code: 'bad-message' })
+  })
+})
+
+describe('parseMessage: what the two languages read differently (review n° 15 and 20)', () => {
+  const part = (fields: string): string => `{"v":1,"t":"snapshot.part","n":2,"part":0,"parts":1,"entities":[{"kind":"tab","id":"t1","fields":${fields},"stamps":{}}]}`
+
+  it.each(messageVectors.duplicateKeys)('the vectors: $name', ({ raw, duplicate }) => {
+    expect(hasDuplicateKey(raw)).toBe(duplicate)
+    // What names a key twice is refused as a message, wherever the text is a message.
+    if (duplicate) expect(parseMessage(raw)).toEqual({ ok: false, code: 'bad-message' })
+  })
+
+  it('refuses a key written twice, at any depth and however it is written: the first wins in Swift and the last in JavaScript', () => {
+    for (const text of ['{"v":1,"t":"bye","n":2,"n":3}', part('{"name":"A","name":"B"}'), '{"v":1,"t":"bye","n":2,"\\u006e":3}', part('{"a":{"b":1,"b":2}}'), part('{"x":[{"k":1,"k":1}]}')]) {
+      expect(parseMessage(text), text).toEqual({ ok: false, code: 'bad-message' })
+    }
+  })
+
+  it('takes the same key in two objects, and a key that only looks like another (a different case, a different escape of another character)', () => {
+    expect(parseMessage(part('{"name":"A","Name":"B"}')).ok).toBe(true)
+    expect(parseMessage('{"v":1,"t":"snapshot.part","n":2,"part":0,"parts":1,"entities":[{"kind":"tab","id":"t1","fields":{"a":1},"stamps":{}},{"kind":"tab","id":"t2","fields":{"a":2},"stamps":{}}]}').ok).toBe(true)
+    // A string that holds a quote and a key-looking text is not a key.
+    expect(parseMessage(part('{"a":"\\"a\\":1,\\"a\\":2"}')).ok).toBe(true)
+  })
+
+  it('refuses a lone surrogate in a text or in a key (Swift cannot read it), and takes an emoji written as a pair', () => {
+    for (const text of [part('{"name":"\\ud83d"}'), part('{"name":"a\\ude00b"}'), part('{"\\ud83d":1}'), part('{"name":"\\ud83d\\ud83d\\ude00"}')]) {
+      expect(parseMessage(text), text).toEqual({ ok: false, code: 'bad-message' })
+    }
+    expect(parseMessage(part('{"name":"\\ud83d\\ude00 \u00e9"}')).ok).toBe(true)
   })
 })
 

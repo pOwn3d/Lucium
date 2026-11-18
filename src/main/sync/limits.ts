@@ -41,6 +41,12 @@ export const MAX_HOSTS = 4
 export const MAX_FRAME_BYTES = 1_048_576
 export const MAX_SNAPSHOT_BYTES = 33_554_432
 export const MAX_ENTITIES = 100_000
+/**
+ * The most tombstones one side puts in a snapshot, the newest ones (§11.5, review n° 14). The merge keeps the tombstones of both sides, so two sides that each sent the
+ * most a snapshot may hold (`MAX_ENTITIES`) made a base twice that, which no snapshot could be read from any more: the next session failed with `too many tombstones` on
+ * both devices. Half of the bound on each side keeps the union within it.
+ */
+export const MAX_TOMBSTONES_PER_SNAPSHOT = 50_000
 export const MAX_ENTITIES_PER_PART = 500
 export const MAX_PARTS = 4096
 export const MAX_JSON_DEPTH = 32

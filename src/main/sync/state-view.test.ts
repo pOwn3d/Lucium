@@ -4,6 +4,7 @@ import type { SyncCategory } from '@shared/sync-ipc'
 import type { SyncSnapshot } from '@shared/sync-snapshot'
 import { MarkBook } from './marks'
 import { NOW, stateOf } from './session-rig.test-support'
+import { hasLoneSurrogate } from './messages'
 import { baseOf, follows, openTabsOf, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 
 const all = new Set<SyncCategory>(['structure', 'settings', 'archive', 'openTabs'])
@@ -175,6 +176,15 @@ describe('openTabsOf (§10.4)', () => {
     expect(tab?.url.length).toBe(4096)
     expect(tab?.title.length).toBe(300)
     expect(tab?.lastActiveAt).toBe(7)
+  })
+
+  it('does not cut a title or an address in the middle of an emoji: a lone surrogate is not text, and Swift refuses the whole message that holds one (review n° 15)', () => {
+    const emoji = '\u{1F600}'
+    const long = { ...state, tabs: [{ ...state.tabs[0]!, url: `https://x.example/${'a'.repeat(4077)}${emoji}`, title: `${'T'.repeat(299)}${emoji}` }] }
+    const [tab] = openTabsOf(long, () => false)
+    expect(tab?.title).toBe('T'.repeat(299))
+    expect(tab?.url.length).toBe(4095)
+    expect(hasLoneSurrogate(`${tab?.title}${tab?.url}`)).toBe(false)
   })
 
   it('announces at most two hundred', () => {

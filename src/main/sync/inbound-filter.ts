@@ -8,18 +8,25 @@
 //   - an address is accepted only if it is an http or https address (`invalid-url`): a page, never a script or a file;
 //   - the fields of the class « local » are taken off: a device does not tell this one what its local files are;
 //   - an entity of a kind this version does not know, and a field of a known kind it does not know, cross as they are (§11.6);
+//   - a text with a lone surrogate anywhere in an entity's fields is refused (`invalid-value`): Swift cannot read it, so a Mac that sent one made every session fail;
+//   - the profile of a space or a favourite must be an identifier of the Mac (`isProfileId`): the key of a list is made of it (`favorites:<profile>`), and it has no business being
+//     long or written in two Unicode forms (`invalid-value`);
+//   - the tombstones are a door too: those of a kind that is code or a secret are refused (`never-synced`), and each side keeps at most `MAX_TOMBSTONES_PER_SNAPSHOT` of the newest;
 //   - a mark more than seven days ahead of this device's clock is refused wherever a mark is: an entity's, a tombstone's, the mark of a list's order (§9.3). The merge
 //     keeps the greatest mark it sees and the marks book never lets its clock fall behind one it has seen, so a single such mark would win every conflict, delete
 //     whatever it names and push the clock of this device out of the reach of every other one, for ever.
 // A refused entity (or tombstone, or list) is dropped, counted and logged: never fatal (§8.5).
 
-import { STAMP_FUTURE_REFUSE_MS } from './limits'
+import { MAX_TOMBSTONES_PER_SNAPSHOT, STAMP_FUTURE_REFUSE_MS } from './limits'
+import { hasLoneSurrogate } from './messages'
+import { isProfileId } from '@shared/profiles'
+import { compareStamps } from '@shared/sync-snapshot'
 import { FIELD_CLASSES, isKind, NEVER_KINDS, SYNCED_SETTINGS, type EntityKind } from './field-classes'
 import type { WireEntity } from './messages'
 import { PROFILE_NAME_MAX } from '@shared/sidebar'
 import type { SyncEntity, SyncSnapshot } from '@shared/sync-snapshot'
 
-export type Refusal = 'never-synced' | 'not-synced' | 'invalid-value' | 'not-pinned' | 'private' | 'invalid-url' | 'future-mark'
+export type Refusal = 'never-synced' | 'not-synced' | 'invalid-value' | 'not-pinned' | 'private' | 'invalid-url' | 'future-mark' | 'too-many-tombstones'
 export type Filtered = { accepted: true; fields: Record<string, unknown> } | { accepted: false; reason: Refusal }
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -53,8 +60,29 @@ function settingValueProblem(key: string, value: unknown): boolean {
   }
 }
 
+/** Whether a JSON value holds, in a text or in a key, a lone surrogate. Iterative: the value is hostile. */
+function holdsLoneSurrogate(root: unknown): boolean {
+  const stack: unknown[] = [root]
+  while (stack.length > 0) {
+    const value = stack.pop()
+    if (typeof value === 'string') {
+      if (hasLoneSurrogate(value)) return true
+    } else if (Array.isArray(value)) stack.push(...value)
+    else if (typeof value === 'object' && value !== null) {
+      for (const [key, member] of Object.entries(value)) {
+        if (hasLoneSurrogate(key)) return true
+        stack.push(member)
+      }
+    }
+  }
+  return false
+}
+
 export function filterEntity(entity: Pick<WireEntity, 'kind' | 'id' | 'fields'>): Filtered {
   if (NEVER_KINDS.includes(entity.kind)) return { accepted: false, reason: 'never-synced' }
+  if (holdsLoneSurrogate(entity.fields)) return { accepted: false, reason: 'invalid-value' }
+  // The key of a list is made of the profile (`favorites:<profile>`): an identifier of the Mac, or nothing (a long one made the base unreadable, a decomposed one two lists).
+  if ((entity.kind === 'space' || entity.kind === 'favorite') && entity.fields['profileId'] !== undefined && !isProfileId(entity.fields['profileId'])) return { accepted: false, reason: 'invalid-value' }
   if (entity.kind === 'setting') {
     if (!(SYNCED_SETTINGS as readonly string[]).includes(entity.id)) return { accepted: false, reason: 'not-synced' }
     return settingValueProblem(entity.id, entity.fields['value']) ? { accepted: false, reason: 'invalid-value' } : { accepted: true, fields: { value: entity.fields['value'] } }
@@ -113,15 +141,28 @@ export function cleanSnapshot(remote: SyncSnapshot, now: number, base: SyncSnaps
     }
   }
   const tombstones: SyncSnapshot['tombstones'] = {}
+  const standing: Array<{ kind: string; id: string; stamp: string }> = []
   for (const [kind, byId] of Object.entries(remote.tombstones)) {
     for (const [id, stamp] of Object.entries(byId)) {
+      if (NEVER_KINDS.includes(kind)) {
+        refused.push({ kind: 'tombstone', id: `${kind}/${id}`, reason: 'never-synced' })
+        continue
+      }
       if (marksTheFuture(stamp, now)) {
         refused.push({ kind: 'tombstone', id: `${kind}/${id}`, reason: 'future-mark' })
         continue
       }
-      ;(tombstones[kind] ??= {})[id] = stamp
+      standing.push({ kind, id, stamp })
     }
   }
+  // At most `MAX_TOMBSTONES_PER_SNAPSHOT` of them, the newest (a tie goes to the smaller kind and id, so that both devices keep the same ones): the merge keeps the tombstones
+  // of both sides, and a base that holds twice what a snapshot may is a base nobody can read.
+  if (standing.length > MAX_TOMBSTONES_PER_SNAPSHOT) {
+    standing.sort((a, b) => compareStamps(b.stamp, a.stamp) || (a.kind < b.kind ? -1 : a.kind > b.kind ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+    standing.length = MAX_TOMBSTONES_PER_SNAPSHOT
+    refused.push({ kind: 'tombstone', id: '*', reason: 'too-many-tombstones' })
+  }
+  for (const { kind, id, stamp } of standing) (tombstones[kind] ??= {})[id] = stamp
   const order: SyncSnapshot['order'] = {}
   const orderStamps: SyncSnapshot['orderStamps'] = {}
   for (const [key, ids] of Object.entries(remote.order)) {

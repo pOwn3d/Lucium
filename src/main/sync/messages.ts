@@ -4,8 +4,9 @@
 //
 // What a hostile message may not be, wherever it is (§7.1): not an object (a list, a number); nested deeper than 32 levels; a key `__proto__` at any depth (a copy
 // `object[key] = value` would take it for the prototype); a number that is not finite, of 1e21 or more, or below 1e-6 (zero apart; `-0` is read as `0`, so that
-// Swift and JavaScript write the same digits); a text of more than 64 KiB (bytes, not characters). The walk is iterative: a frame of a million nested brackets
-// must not exhaust the stack.
+// Swift and JavaScript write the same digits); a text of more than 64 KiB (bytes, not characters); a key written twice in one object (the first wins in Swift and the
+// last in JavaScript: two devices would read two messages); a text or a key with a lone surrogate (Swift cannot read it). The walk is iterative: a frame of a million
+// nested brackets must not exhaust the stack.
 //
 // The same vectors (ios/Contracts/sync-message-vectors.json: `messages`, `sequences`, `transitions`) are played on the iPhone side by LuciumKit.
 
@@ -77,6 +78,58 @@ export type MessageType = Message['t']
 
 // ---------- the walk over hostile JSON ----------
 
+/** A UTF-16 surrogate that has no partner: not text. A pair (an emoji) is two units that are fine together. */
+const LONE_SURROGATE = /[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/
+
+/** Whether a text holds a lone surrogate (`\ud83d` on its own). */
+export const hasLoneSurrogate = (text: string): boolean => LONE_SURROGATE.test(text)
+
+/**
+ * Whether an object of this JSON text names a key twice, however each is written (`"n"` and `"\u006e"` are one key). JSON.parse keeps the last, Swift's reader the first: the
+ * same message would read two ways, and the digests that say whether the two devices agree would not catch it, because each hashes what it read. The text is valid JSON (it
+ * was parsed), so a scan that tracks strings and brackets is enough; it keeps a set of keys for each object that is open, and never recurses.
+ */
+export function hasDuplicateKey(text: string): boolean {
+  const open: Array<Set<string> | null> = []
+  let expectKey = false
+  for (let at = 0; at < text.length; at++) {
+    const char = text.charCodeAt(at)
+    if (char === 0x22) {
+      // A string: up to its closing quote, the escapes skipped.
+      let end = at + 1
+      let escaped = false
+      while (end < text.length) {
+        const unit = text.charCodeAt(end)
+        if (unit === 0x5c) {
+          escaped = true
+          end += 2
+          continue
+        }
+        if (unit === 0x22) break
+        end++
+      }
+      const keys = open[open.length - 1]
+      if (keys !== null && keys !== undefined && expectKey) {
+        const key = escaped ? (JSON.parse(text.slice(at, end + 1)) as string) : text.slice(at + 1, end)
+        if (keys.has(key)) return true
+        keys.add(key)
+        expectKey = false
+      }
+      at = end
+    } else if (char === 0x7b) {
+      open.push(new Set())
+      expectKey = true
+    } else if (char === 0x5b) {
+      open.push(null)
+      expectKey = false
+    } else if (char === 0x7d || char === 0x5d) {
+      open.pop()
+      expectKey = false
+    } else if (char === 0x2c) expectKey = open[open.length - 1] instanceof Set
+  }
+  return false
+}
+
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
 /**
@@ -90,7 +143,7 @@ function walk(root: unknown): number | null {
     const { value, depth } = stack.pop() as { value: unknown; depth: number }
     values++
     if (typeof value === 'string') {
-      if (Buffer.byteLength(value, 'utf8') > MAX_STRING_BYTES) return null
+      if (Buffer.byteLength(value, 'utf8') > MAX_STRING_BYTES || hasLoneSurrogate(value)) return null
       continue
     }
     if (typeof value === 'number') {
@@ -114,7 +167,7 @@ function walk(root: unknown): number | null {
     if (Object.prototype.hasOwnProperty.call(value, '__proto__')) return null
     const record = value as Record<string, unknown>
     for (const key of Object.keys(record)) {
-      if (Buffer.byteLength(key, 'utf8') > MAX_STRING_BYTES) return null
+      if (Buffer.byteLength(key, 'utf8') > MAX_STRING_BYTES || hasLoneSurrogate(key)) return null
       const item = record[key]
       if (Object.is(item, -0)) {
         record[key] = 0
@@ -293,6 +346,7 @@ export function parseMessage(text: string, budget?: ValueBudget): Parsed {
     return bad
   }
   if (!isObject(value)) return bad
+  if (hasDuplicateKey(text)) return bad
   const values = walk(value)
   if (values === null) return bad
   // Too many values for one frame, or for what the connection has left: refused as too large, before the fields are read (a field of a million lists is not read).

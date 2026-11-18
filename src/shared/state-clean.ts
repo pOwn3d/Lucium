@@ -39,7 +39,18 @@ export const cleanId = (value: unknown): string | null => (typeof value === 'str
 
 const CONTROL = /\p{Cc}/gu
 /** A line of text shown in the interface: control characters (a stray newline, NUL, escape) become spaces, and it stops at `max`. */
-export const printable = (value: unknown, max: number): string | null => (typeof value === 'string' ? value.replace(CONTROL, ' ').slice(0, max) : null)
+export const printable = (value: unknown, max: number): string | null => (typeof value === 'string' ? cutText(value.replace(CONTROL, ' '), max) : null)
+
+/**
+ * The text cut to `max` UTF-16 units, without splitting a pair: a cut between the two halves of an emoji leaves a lone surrogate, which is not text (Swift refuses a message
+ * that holds one, so a state that kept it made every synchronisation session fail while it stayed in the state: review n° 15 of the synchronisation).
+ */
+export const cutText = (text: string, max: number): string => {
+  if (text.length <= max) return text
+  const cut = text.slice(0, max)
+  const last = cut.charCodeAt(cut.length - 1)
+  return last >= 0xd800 && last <= 0xdbff ? cut.slice(0, -1) : cut
+}
 
 /** A label that cannot be empty: blank or missing gives `fallback` (a name of the catalogue, in the language of the interface when the state is read: it is then saved as it is). */
 const label = (value: unknown, max: number, fallback: string): string => {
@@ -55,7 +66,7 @@ export const TITLE_MAX = 1000
  * The title of an entry that has none: the host of its address, or, for an address without a host (a local file, `about:`, `data:`), the
  * address itself, cut to the length of a title: an address may be sixty times longer than any title is.
  */
-const fallbackTitle = (url: string): string => (hostOf(url) || url).slice(0, TITLE_MAX)
+const fallbackTitle = (url: string): string => cutText(hostOf(url) || url, TITLE_MAX)
 const FAVICON_MAX = 65_536
 
 /**
@@ -285,7 +296,7 @@ export function cleanReadLaterItem(entry: Record<string, unknown>, id: string, f
   const item: ReadLaterItem = {
     id,
     url,
-    title: printable(entry['title'], READ_LATER_TITLE_MAX)?.trim() || (hostOf(url) || url).slice(0, READ_LATER_TITLE_MAX),
+    title: printable(entry['title'], READ_LATER_TITLE_MAX)?.trim() || cutText(hostOf(url) || url, READ_LATER_TITLE_MAX),
     savedAt: finite(entry['savedAt'], 0)
   }
   if (favicon) item.faviconUrl = favicon
