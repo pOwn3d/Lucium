@@ -4549,6 +4549,223 @@
       "swap": true
     },
     {
+      "name": "a field that was never stamped has no entry in `stamps`: it is merged like any other and takes the mark of zero",
+      "base": null,
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A",
+                "extra": "x"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A",
+                "extra": "x"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "extra": "0"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "a reorder that only moves a space set aside is no reorder: the other side's reorder is taken, with no conflict",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "S1"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "S2"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "s3": {
+              "fields": {
+                "name": "S3"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "spaces": [
+            "s1",
+            "s2",
+            "s3"
+          ]
+        },
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "S1"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "S2"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "s3": {
+              "fields": {
+                "name": "S3"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "spaces": [
+            "s2",
+            "s1",
+            "s3"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000005-0000-mac"
+        }
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "S1"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "S2"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "s3": {
+              "fields": {
+                "name": "S3"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "spaces": [
+            "s1",
+            "s3",
+            "s2"
+          ]
+        },
+        "orderStamps": {
+          "spaces": "1790000000003-0000-phone"
+        }
+      },
+      "withheld": [
+        "s1"
+      ],
+      "expect": {
+        "entities": {
+          "space": {
+            "s2": {
+              "fields": {
+                "name": "S2"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "s3": {
+              "fields": {
+                "name": "S3"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [],
+        "order": {
+          "spaces": [
+            "s3",
+            "s2"
+          ]
+        }
+      },
+      "swap": true
+    },
+    {
       "name": "merging a snapshot with itself changes nothing (idempotence)",
       "base": {
         "entities": {
