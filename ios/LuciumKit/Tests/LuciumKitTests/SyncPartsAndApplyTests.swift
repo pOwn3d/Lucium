@@ -60,6 +60,19 @@ struct SyncPartsTests {
         #expect(SyncSnapshotParts.parts(of: source, withheld: []) == SyncSnapshotParts.parts(of: source, withheld: []))
     }
 
+    @Test func theSameSnapshotIsCutTheSameWayWhateverTheOrderItWasBuiltIn() {
+        var forward = SyncSnapshot(), backward = SyncSnapshot()
+        let kinds = ["space", "folder", "tab", "favorite", "archived", "setting", "widget"]
+        for kind in kinds { for index in 0..<30 { forward.entities[kind, default: [:]]["e\(index)"] = SyncEntity(fields: ["name": .string("\(kind)\(index)")], stamps: [:]) } }
+        for kind in kinds.reversed() { for index in (0..<30).reversed() { backward.entities[kind, default: [:]]["e\(index)"] = SyncEntity(fields: ["name": .string("\(kind)\(index)")], stamps: [:]) } }
+        for (kind, byID) in forward.entities { forward.tombstones[kind] = Dictionary(uniqueKeysWithValues: byID.keys.map { ($0, "0") }) }
+        for kind in kinds.reversed() { backward.tombstones[kind] = forward.tombstones[kind] }
+        for index in 0..<20 { forward.order["list\(index)"] = ["a"]; forward.orderStamps["list\(index)"] = "0" }
+        for index in (0..<20).reversed() { backward.order["list\(index)"] = ["a"]; backward.orderStamps["list\(index)"] = "0" }
+        #expect(forward == backward)
+        #expect(SyncSnapshotParts.parts(of: forward, withheld: []) == SyncSnapshotParts.parts(of: backward, withheld: []), "a snapshot is always cut the same way")
+    }
+
     @Test func aListWithNoMarkGetsTheMarkZeroOnTheWire() throws {
         var source = SyncSnapshot()
         source.order = ["spaces": []]
@@ -368,6 +381,30 @@ struct SyncApplyTests {
         let outcome = apply(change, to: state)
         #expect(outcome.state == state)
         #expect(outcome.rejected.count >= 5)
+    }
+
+    @Test func anEntityIsNotMadeUnlessThePatchSaysItIsNew() throws {
+        let state = try SyncStateFixtures.sample()
+        let outcome = apply(patch([upsert(.space, "ghost", create: false, fields: ["name": .string("Fantôme"), "emoji": .string("👻")]),
+                                   upsert(.folder, "ghost-f", create: false, fields: ["spaceId": .string("s1"), "name": .string("Fantôme")])]), to: state)
+        #expect(outcome.state == state, "a change to something that is not here is not a creation")
+    }
+
+    @Test func theIdentifierOfAnEntityIsNeverTakenFromItsFields() throws {
+        let state = try SyncStateFixtures.sample()
+        let made = apply(patch([upsert(.folder, "f9", create: true, fields: ["id": .string("hijack"), "spaceId": .string("s1"), "name": .string("Neuf")])]), to: state)
+        #expect(made.state.folders.map(\.id).contains("f9") && !made.state.folders.map(\.id).contains("hijack"))
+        // Even when the patch says the identifier was what the state holds: it is the key of the entity, not a field.
+        let changed = apply(patch([upsert(.space, "s1", fields: ["id": .string("hijack")], expect: ["id": .string("s1")])]), to: state)
+        #expect(changed.state.spaces.map(\.id) == ["s1", "s2"])
+    }
+
+    @Test func aFavouriteOrAnArchivedTabThatArrivesWithNoTitleIsNamedByItsSite() throws {
+        let state = try SyncStateFixtures.sample()
+        let outcome = apply(patch([upsert(.favorite, "fav9", create: true, fields: ["url": .string("https://sans-titre.example/page"), "profileId": .string("default")]),
+                                   upsert(.archived, "a9", create: true, fields: ["spaceId": .string("s1"), "url": .string("https://archive.example/old")])]), to: state)
+        #expect(outcome.state.favorites.first { $0.id == "fav9" }?.title == "sans-titre.example")
+        #expect(outcome.state.archive.first { $0.id == "a9" }?.title == "archive.example")
     }
 
     @Test func anEntityThatExistsAlreadyIsNotMadeAgain() throws {

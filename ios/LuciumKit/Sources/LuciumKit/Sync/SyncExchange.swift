@@ -156,8 +156,9 @@ public struct SyncExchangeBody: SyncSessionBody {
         // A phone that was never modified adopts the Mac's structure (§11.8 [Q3]). "Modified" is about what the person arranges (spaces, folders, pinned tabs,
         // favourites), so only the exchange of the structure is concerned: the settings and the archive go the ordinary way.
         let adopting = await host.isNeverModified() && context.categories.contains(.structure)
-        // A base is used only when both devices hold the same one (§8.2); a phone that adopts the Mac's state has none to speak of.
-        let base: SyncSnapshot? = (!adopting && stored != nil && context.local.baseHash == stored?.hash && context.remote.baseHash == stored?.hash) ? stored?.snapshot : nil
+        // A base is used only when both devices hold the same one (§8.2). A phone that adopts the Mac's state has none to speak of: it said `baseHash: null` in its
+        // `hello` (`baseHash(forMac:)`), so the two hashes cannot be equal.
+        let base: SyncSnapshot? = (stored != nil && context.local.baseHash == stored?.hash && context.remote.baseHash == stored?.hash) ? stored?.snapshot : nil
 
         // freeze
         let state = await host.currentState()

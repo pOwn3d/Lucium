@@ -2973,6 +2973,325 @@
     },
     {
       "expect": {
+        "order": {
+          "spaces": [
+            "s2",
+            "s1"
+          ]
+        },
+        "removals": [],
+        "settings": {},
+        "upserts": []
+      },
+      "frozen": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Secret"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t9": {
+              "fields": {
+                "pinned": true,
+                "spaceId": "s2"
+              },
+              "stamps": {
+                "pinned": "1790000000000-0000-mac",
+                "spaceId": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {
+          "folders:s2:-": [
+            "f9"
+          ],
+          "spaces": [
+            "s1",
+            "s2"
+          ],
+          "tabs:s2:-": [
+            "t9"
+          ]
+        },
+        "orderStamps": {
+          "folders:s2:-": "1790000000000-0000-mac",
+          "spaces": "1790000000000-0000-mac",
+          "tabs:s2:-": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {
+          "folder": {
+            "f9": {
+              "fields": {
+                "name": "Dossier",
+                "spaceId": "s2"
+              },
+              "stamps": {
+                "name": "1790000000004-0000-mac",
+                "spaceId": "1790000000004-0000-mac"
+              }
+            }
+          },
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Secret, renamed"
+              },
+              "stamps": {
+                "name": "1790000000004-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t8": {
+              "fields": {
+                "pinned": true,
+                "spaceId": "s2"
+              },
+              "stamps": {
+                "pinned": "1790000000004-0000-mac",
+                "spaceId": "1790000000004-0000-mac"
+              }
+            },
+            "t9": {
+              "fields": {
+                "anchorUrl": "https://x.example/",
+                "pinned": true,
+                "spaceId": "s2"
+              },
+              "stamps": {
+                "anchorUrl": "1790000000004-0000-mac",
+                "pinned": "1790000000004-0000-mac",
+                "spaceId": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {
+          "folders:s2:-": [
+            "f9"
+          ],
+          "spaces": [
+            "s2",
+            "s1"
+          ],
+          "tabs:s2:-": [
+            "t8",
+            "t9"
+          ]
+        },
+        "orderStamps": {
+          "folders:s2:-": "1790000000000-0000-mac",
+          "spaces": "1790000000000-0000-mac",
+          "tabs:s2:-": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "name": "what belongs to a space set aside is left out even when the merge still holds it",
+      "withheld": [
+        "s2"
+      ]
+    },
+    {
+      "expect": {
+        "order": {},
+        "removals": [
+          {
+            "expect": {
+              "archivedAt": 6,
+              "spaceId": "s1",
+              "title": "Old 2",
+              "url": "https://old2.example/"
+            },
+            "id": "a2",
+            "kind": "archived"
+          }
+        ],
+        "settings": {},
+        "upserts": [
+          {
+            "create": true,
+            "expect": {},
+            "fields": {
+              "profileId": "default",
+              "title": "G",
+              "url": "https://g.example/"
+            },
+            "id": "fav2",
+            "kind": "favorite",
+            "remove": []
+          },
+          {
+            "create": false,
+            "expect": {
+              "title": "Old 1"
+            },
+            "fields": {
+              "title": "Old 1, renamed"
+            },
+            "id": "a1",
+            "kind": "archived",
+            "remove": []
+          },
+          {
+            "create": true,
+            "expect": {},
+            "fields": {
+              "archivedAt": 7,
+              "spaceId": "s1",
+              "title": "Old 3",
+              "url": "https://old3.example/"
+            },
+            "id": "a3",
+            "kind": "archived",
+            "remove": []
+          }
+        ]
+      },
+      "frozen": {
+        "entities": {
+          "archived": {
+            "a1": {
+              "fields": {
+                "archivedAt": 5,
+                "spaceId": "s1",
+                "title": "Old 1",
+                "url": "https://old1.example/"
+              },
+              "stamps": {
+                "archivedAt": "1790000000000-0000-mac",
+                "spaceId": "1790000000000-0000-mac",
+                "title": "1790000000000-0000-mac",
+                "url": "1790000000000-0000-mac"
+              }
+            },
+            "a2": {
+              "fields": {
+                "archivedAt": 6,
+                "spaceId": "s1",
+                "title": "Old 2",
+                "url": "https://old2.example/"
+              },
+              "stamps": {
+                "archivedAt": "1790000000000-0000-mac",
+                "spaceId": "1790000000000-0000-mac",
+                "title": "1790000000000-0000-mac",
+                "url": "1790000000000-0000-mac"
+              }
+            }
+          },
+          "favorite": {
+            "fav1": {
+              "fields": {
+                "profileId": "default",
+                "title": "F",
+                "url": "https://f.example/"
+              },
+              "stamps": {
+                "profileId": "1790000000000-0000-mac",
+                "title": "1790000000000-0000-mac",
+                "url": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "merged": {
+        "entities": {
+          "archived": {
+            "a1": {
+              "fields": {
+                "archivedAt": 5,
+                "spaceId": "s1",
+                "title": "Old 1, renamed",
+                "url": "https://old1.example/"
+              },
+              "stamps": {
+                "archivedAt": "1790000000003-0000-mac",
+                "spaceId": "1790000000003-0000-mac",
+                "title": "1790000000003-0000-mac",
+                "url": "1790000000003-0000-mac"
+              }
+            },
+            "a3": {
+              "fields": {
+                "archivedAt": 7,
+                "spaceId": "s1",
+                "title": "Old 3",
+                "url": "https://old3.example/"
+              },
+              "stamps": {
+                "archivedAt": "1790000000003-0000-mac",
+                "spaceId": "1790000000003-0000-mac",
+                "title": "1790000000003-0000-mac",
+                "url": "1790000000003-0000-mac"
+              }
+            }
+          },
+          "favorite": {
+            "fav1": {
+              "fields": {
+                "profileId": "default",
+                "title": "F",
+                "url": "https://f.example/"
+              },
+              "stamps": {
+                "profileId": "1790000000000-0000-mac",
+                "title": "1790000000000-0000-mac",
+                "url": "1790000000000-0000-mac"
+              }
+            },
+            "fav2": {
+              "fields": {
+                "profileId": "default",
+                "title": "G",
+                "url": "https://g.example/"
+              },
+              "stamps": {
+                "profileId": "1790000000003-0000-mac",
+                "title": "1790000000003-0000-mac",
+                "url": "1790000000003-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {},
+        "orderStamps": {},
+        "tombstones": {}
+      },
+      "name": "an archived tab that arrives, one that changes and one that goes",
+      "withheld": []
+    },
+    {
+      "expect": {
         "order": {},
         "removals": [],
         "settings": {},

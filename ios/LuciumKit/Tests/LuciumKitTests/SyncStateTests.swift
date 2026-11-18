@@ -540,6 +540,20 @@ struct SyncMarkKeeperTests {
         #expect(file.load(device: "phone") == .loaded(keeper.currentBook), "it is written at each change")
     }
 
+    @Test func whatTheStateHoldsThatTheMergeDidNotWriteIsMarkedAsThePhonesOwnAfterwards() throws {
+        let directory = FileManager.default.temporaryDirectory.appending(path: "keeper-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let keeper = SyncMarkKeeper(device: "phone", file: SyncMarksFile(url: directory.appending(path: SyncMarksFile.fileName)), log: { _ in })
+        let state = try SyncStateFixtures.sample()
+        keeper.observe(state, now: now)
+        // The merge decided another name, and the write of it did not happen (the person had changed the field meanwhile): the state still holds its own value.
+        var merged = SyncSnapshot()
+        merged.entities = ["space": ["s1": SyncEntity(fields: ["name": .string("Du Mac")], stamps: ["name": "1790000050000-0001-mac"])]]
+        try keeper.adopt(merged)
+        keeper.observe(state, now: now + 100_000)
+        #expect(keeper.currentBook.stamps(of: "space", id: "s1")["name"]?.hasSuffix("-phone") == true, "the value that stayed is the phone's change: it is marked, and goes out next time")
+    }
+
     @Test func aStateThatDidNotChangeDoesNotRewriteTheFile() throws {
         let (keeper, directory) = keeper()
         defer { try? FileManager.default.removeItem(at: directory) }

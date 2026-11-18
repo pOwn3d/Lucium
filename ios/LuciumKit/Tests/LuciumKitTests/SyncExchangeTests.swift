@@ -82,6 +82,22 @@ struct SyncTestMac: Sendable {
         var merged: SyncMergeResult?
     }
 
+    private struct Message: @unchecked Sendable { let fields: [String: Any]? }
+
+    /// The next message of the phone, or nil when nothing comes within `time` (or the connection ended).
+    static func readWithin(_ mac: SyncFakeMac, _ time: Duration) async -> [String: Any]? {
+        await withTaskGroup(of: Message.self) { group in
+            group.addTask { Message(fields: try? await mac.read().fields) }
+            group.addTask {
+                try? await Task.sleep(for: time)
+                return Message(fields: nil)
+            }
+            let first = await group.next() ?? Message(fields: nil)
+            group.cancelAll()
+            return first.fields
+        }
+    }
+
     static func jsonObject(_ value: JSONValue) throws -> Any {
         try JSONSerialization.jsonObject(with: JSONEncoder().encode(value), options: [.fragmentsAllowed])
     }
@@ -114,7 +130,12 @@ struct SyncTestMac: Sendable {
         let parts = SyncSnapshotParts.parts(of: sent, withheld: withheld)
         for (index, part) in parts.enumerated() {
             try await mac.write("snapshot.part", try Self.jsonObject(.object(part)) as? [String: Any] ?? [:])
-            if index == 0, let code = errorAfterParts { try await mac.write("error", ["code": code.rawValue, "fatal": true]); return seen }
+            if index == 0, let code = errorAfterParts {
+                try await mac.write("error", ["code": code.rawValue, "fatal": true])
+                // Whatever the phone says back is told: an error the Mac sent must not come back to it.
+                if let echoed = await Self.readWithin(mac, .milliseconds(400)), echoed["t"] as? String == "error" { seen.errors.append((echoed["code"] as? String ?? "?", echoed["fatal"] as? Bool ?? false)) }
+                return seen
+            }
             if index == 0, unpairAfterParts { try await mac.write("unpair"); return seen }
             if index == 0, byeAfterParts { try await mac.write("bye"); return seen }
         }
@@ -219,13 +240,14 @@ struct SyncExchangeTests {
     private func macStamp(_ counter: Int) -> String { String(format: "%013ld-%04lx-vector-mac-0000000001", now - 50_000, counter) }
 
     @discardableResult
-    private func session(_ rig: Rig, mac script: SyncTestMac, categories: [SyncCategory] = [.structure], expect: SyncFailure? = nil) async throws -> (SyncSessionReport?, SyncTestMac.Seen) {
+    private func session(_ rig: Rig, mac script: SyncTestMac, categories: [SyncCategory] = [.structure], baseHash override: String?? = nil, expect: SyncFailure? = nil) async throws -> (SyncSessionReport?, SyncTestMac.Seen) {
         let ends = syncLoopback()
         let fake = SyncFakeMac(ends.mac)
         let macTask = Task { try await script.run(fake, now: now) }
         defer { macTask.cancel() }
         let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
-        let baseHash = await rig.body.baseHash(forMac: peer.id)
+        let baseHash: String?
+        if let override { baseHash = override } else { baseHash = await rig.body.baseHash(forMac: peer.id) }
         var report: SyncSessionReport?
         if let expect {
             await #expect(throws: expect) {
@@ -289,6 +311,43 @@ struct SyncExchangeTests {
     /// The Mac's snapshot once it has adopted a merge: the same entities, seeds included.
     private func macSnapshotAfter(merged: SyncSnapshot) -> SyncSnapshot { SyncStateView.base(of: merged) }
 
+    /// Two devices that do not hold the same base merge from none (§8.2): the Mac's mark of a field is later than the phone's change, so a merge from the base (the
+    /// phone changed, the Mac did not) and a merge from none (both "changed": the later mark wins) give different results. The session only goes through when both
+    /// started from none.
+    private func disagreeingBases(phoneSaysNone: Bool) async throws -> (SyncSessionReport?, SyncTestMac.Seen, Rig) {
+        let rig = try rig()
+        let first = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()))
+        let merged = try #require(first.1.merged).snapshot
+        var state = await rig.host.state
+        let index = try #require(state.spaces.firstIndex { $0.id == "m1" })
+        state.spaces[index].name = "Sur le téléphone"
+        await rig.host.set(state: state)
+        var macNow = SyncStateView.base(of: merged)
+        macNow.entities["space"]?["m1"]?.stamps["name"] = String(format: "%013ld-0000-vector-mac-0000000001", now + 600_000)
+        // The base the Mac holds: the phone's own, or another one.
+        var other = SyncSnapshot()
+        other.entities = ["space": ["z": SyncEntity(fields: ["name": .string("Autre")], stamps: ["name": "0"])]]
+        let held = phoneSaysNone ? SyncStateView.base(of: merged) : other
+        let (report, seen) = try await session(rig, mac: SyncTestMac(snapshot: macNow, base: held), baseHash: phoneSaysNone ? .some(nil) : nil)
+        return (report, seen, rig)
+    }
+
+    @Test func aMacThatHoldsAnotherBaseMakesBothMergeFromNone() async throws {
+        let (report, seen, rig) = try await disagreeingBases(phoneSaysNone: false)
+        defer { rig.cleanup() }
+        #expect(report?.outcome == .committed(at: now), "both merged from none: the digests are equal")
+        #expect(seen.phoneResult == seen.merged?.snapshot.digest)
+        #expect(await rig.host.state.spaces.first { $0.id == "m1" }?.name == "Du Mac", "from none the later mark wins")
+    }
+
+    @Test func aPhoneThatSaysItHoldsNoBaseMakesBothMergeFromNone() async throws {
+        let (report, seen, rig) = try await disagreeingBases(phoneSaysNone: true)
+        defer { rig.cleanup() }
+        #expect(report?.outcome == .committed(at: now))
+        #expect(seen.phoneBaseHash is NSNull)
+        #expect(await rig.host.state.spaces.first { $0.id == "m1" }?.name == "Du Mac")
+    }
+
     // MARK: A phone that was never modified
 
     @Test func aPhoneNeverModifiedSendsNoStructureAndAdoptsTheStateOfTheMac() async throws {
@@ -324,6 +383,29 @@ struct SyncExchangeTests {
         let before = await rig.host.state
         _ = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot(), categories: ["settings"]), categories: [.structure, .settings])
         #expect(await rig.host.state.spaces == before.spaces, "the Mac did not tick the structure: nothing of it was exchanged, nothing was adopted")
+        #expect(try #require(await rig.host.summaries.first).adoptedTheMacState == false, "and the person is not told the Mac's state was adopted")
+    }
+
+    @Test func aPhoneNeverModifiedSaysItHoldsNoBaseEvenWhenOneIsStored() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        _ = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()))
+        #expect(await rig.body.baseHash(forMac: peer.id) != nil, "a base is kept after a session")
+        await rig.host.set(neverModified: true)
+        #expect(await rig.body.baseHash(forMac: peer.id) == nil, "a phone that adopts the Mac's state merges from none, and says so")
+    }
+
+    @Test func aSettingThatChangedOnTheMacReachesThePhoneWithNothingElseInThePatch() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["settings"])
+        mac.snapshot.entities = ["setting": ["autoArchiveHours": macEntity(["value": .number(6)])]]
+        mac.snapshot.order = [:]
+        mac.snapshot.orderStamps = [:]
+        _ = try await session(rig, mac: mac, categories: [.settings])
+        guard case .object(let settings)? = await rig.host.state.rest["settings"] else { Issue.record("no settings"); return }
+        #expect(settings["autoArchiveHours"] == .number(6), "a patch that holds only a setting is written")
+        #expect(await rig.host.state.spaces.map(\.id).sorted() == ["s1", "s2"])
     }
 
     // MARK: When the two do not agree
@@ -535,7 +617,8 @@ struct SyncExchangeTests {
         let book = rig.marks.currentBook
         rig.marks.observe(await rig.host.state, now: now + 10_000)
         #expect(rig.marks.currentBook.stamps(of: "space", id: "m1") == book.stamps(of: "space", id: "m1"))
-        #expect(rig.marks.currentBook.stamps(of: "space", id: "m1").values.allSatisfy { $0.hasSuffix("vector-mac-0000000001") })
+        let stamps = rig.marks.currentBook.stamps(of: "space", id: "m1")
+        #expect(!stamps.isEmpty && stamps.values.allSatisfy { $0.hasSuffix("vector-mac-0000000001") }, "the book holds the Mac's own marks for what the Mac wrote")
     }
 
     @Test func theBookDoesNotLookAtTheStateWhileASessionWritesIntoIt() async throws {
@@ -644,6 +727,21 @@ struct SyncExchangeTests {
         let sent = try #require(seen.phoneOpenTabs)
         #expect(sent.compactMap { $0["id"] as? String }.sorted() == ["t1", "t2", "today", "w1"], "every open web page, pinned or not; never the private one")
         #expect(!(await rig.host.state.tabs.contains { $0.id == "mt-open" }), "an announced tab is never written into the state")
+    }
+
+    @Test func aListOfOpenTabsThePhoneDidNotAskForIsIgnoredAndOnlyWebPagesAreKept() async throws {
+        let withoutIt = try rig()
+        defer { withoutIt.cleanup() }
+        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["structure", "openTabs"])
+        mac.openTabs = [SyncOpenTab(id: "x", spaceId: "m1", url: "https://reading.example/", title: "Lu", lastActiveAt: 7), SyncOpenTab(id: "y", spaceId: "m1", url: "file:///etc/passwd", title: "Fichier", lastActiveAt: 8)]
+        // The phone did not tick « Open tabs »: a list that comes anyway is not kept.
+        _ = try await session(withoutIt, mac: mac, categories: [.structure])
+        #expect(try #require(await withoutIt.host.summaries.first).openTabs == nil)
+        // It did: only the web pages of the list are kept.
+        let withIt = try rig()
+        defer { withIt.cleanup() }
+        _ = try await session(withIt, mac: mac, categories: [.structure, .openTabs])
+        #expect(try #require(await withIt.host.summaries.first).openTabs?.map(\.id) == ["x"], "an address that is not a web page is left out")
     }
 
     @Test func theOpenTabsAreNotSentWhenTheMacDidNotTickTheCategory() async throws {
