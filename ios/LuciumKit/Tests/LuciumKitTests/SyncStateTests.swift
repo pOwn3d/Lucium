@@ -526,7 +526,23 @@ struct SyncMarkKeeperTests {
         keeper.observe(state, now: now)
         #expect(keeper.currentBook.stamps(of: "space", id: "s1").isEmpty, "held: nothing is marked")
         _ = keeper.freeze(state, categories: [.structure], withheld: [], base: nil, now: now)
-        #expect(!keeper.currentBook.stamps(of: "space", id: "s1").isEmpty, "a new session never inherits a stale hold")
+        #expect(!keeper.currentBook.stamps(of: "space", id: "s1").isEmpty)
+        var renamed = state
+        renamed.spaces[0].name = "Autre"
+        keeper.observe(renamed, now: now + 9_000)
+        #expect(keeper.currentBook.stamps(of: "space", id: "s1")["name"] == "1790000009000-0000-phone", "a new session never inherits a stale hold: the book follows the state again")
+    }
+
+    @Test func theBookFollowsTheStateAgainOnceTheMergeIsAdopted() throws {
+        let (keeper, directory) = keeper()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        var state = try SyncStateFixtures.sample()
+        keeper.observe(state, now: now)
+        keeper.hold()
+        try keeper.adopt(SyncSnapshot())
+        state.spaces[0].name = "Après la séance"
+        keeper.observe(state, now: now + 5_000)
+        #expect(keeper.currentBook.stamps(of: "space", id: "s1")["name"]?.hasPrefix("1790000005000-") == true, "adopting lets go of the hold: what the state holds is marked again")
     }
 
     @Test func aReleaseMakesTheBookFollowTheStateAgain() throws {

@@ -522,6 +522,14 @@ struct SyncApplyTests {
         #expect(other.state.folders == state.folders, "the folders of another space are not this list's")
     }
 
+    @Test func aListThatDidNotChangeIsLeftAsTheFileHeldIt() throws {
+        var state = try SyncStateFixtures.sample()
+        // The Mac's own entries need not hold every field this version writes: a patch that does not touch the list must not rewrite it.
+        state.rest["folders"] = .array([.object(["id": .string("fx"), "spaceId": .string("s1"), "name": .string("Sans plus")])])
+        let outcome = apply(patch([upsert(.space, "s1", fields: ["name": .string("Boulot")], expect: ["name": .string("Travail")])]), to: state)
+        #expect(outcome.state.rest["folders"] == state.rest["folders"], "the list is written only when it changed")
+    }
+
     @Test func aProfileThatIsNotAnIdentifierBecomesTheDefaultProfile() throws {
         let state = try SyncStateFixtures.sample()
         let outcome = apply(patch([upsert(.space, "s1", fields: ["profileId": .string("not an id!")], expect: ["profileId": .string("work")]),

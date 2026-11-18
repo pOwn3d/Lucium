@@ -430,6 +430,25 @@ struct SyncExchangeTests {
         #expect(rig.bases.get(peerId: peer.id, now: now) == nil)
     }
 
+    @Test func aSessionThatCannotKeepItsMarksFailsAndLetsTheBookFollowTheStateAgain() async throws {
+        let rig = try rig()
+        defer {
+            try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: rig.directory.path)
+            rig.cleanup()
+        }
+        rig.marks.observe(await rig.host.state, now: now)
+        // The folder cannot be written into: the marks of the merge cannot be kept, and the session must not say it is done.
+        try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: rig.directory.path)
+        try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()), expect: SyncFailure(.internal, "the base could not be written"))
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: rig.directory.path)
+        #expect(await rig.host.summaries.isEmpty, "the person is not told 'up to date'")
+        var state = await rig.host.state
+        state.spaces[0].name = "Après l'échec"
+        rig.marks.observe(state, now: now + 50_000)
+        let mark = rig.marks.currentBook.stamps(of: "space", id: state.spaces[0].id)["name"]
+        #expect(mark?.hasPrefix("1790000050000-") == true && mark?.hasSuffix("-vector-phone-000000002") == true, "the book is not held for ever by a session that failed")
+    }
+
     @Test func aCommitThatIsNotTheDigestAgreedIsABadMessageAfterTheStateWasWritten() async throws {
         let rig = try rig()
         defer { rig.cleanup() }
