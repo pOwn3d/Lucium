@@ -99,7 +99,7 @@ Les n° 14 à 22 sont des correctifs sans décision à prendre ; ils n'ont pas �
 
 ## 9. Conformité du chiffrement : réponse proposée au questionnaire d'App Store Connect
 
-**Rien n'a été répondu chez Apple.** Ce qui suit est une proposition pour le chef.
+**Décision du chef de projet, 18 novembre 2026 : « Exemptée, chiffrement d'iOS ».** Les réponses 1 à 4 de §9.3 sont retenues (chiffrement utilisé : oui ; exemption du chiffrement du système : oui ; algorithmes propriétaires ou en plus du système : non) et `ITSAppUsesNonExemptEncryption = false` est dans `ios/Lucium/Info.plist` (carte 488 ; `docs/synchronisation.md` §15). **Rien n'a été répondu chez Apple** : la clé évite la question à l'envoi ; les points de §9.4 restent à vérifier. Le texte ci-dessous est la proposition d'origine de la revue.
 
 ### 9.1 Ce que le code fait (vérifié dans le dépôt)
 
@@ -134,7 +134,7 @@ Dans l'ordre où App Store Connect pose les questions (ordre et formulation **à
 4. **« Algorithmes standard *à la place de ou en plus de* ceux du système ? »** Non : aucun code de chiffrement n'est embarqué dans la build iOS.
 5. **« Disponible en France ? »** À décider (choix de distribution, §10). Si l'app est dans l'exemption du système, Apple ne demande pas de déclaration française d'après la page lue (résumé).
 
-**Clé `ITSAppUsesNonExemptEncryption`.** Elle est **absente** (retirée par la carte 445). Si les réponses 2 à 4 sont confirmées, `false` redevient exact et peut être remise ; **la garde Vitest** (`src/shared/ios-store-listing.test.ts`) qui interdit `false` tant que la synchronisation est dans la build **doit être changée dans la même PR**, avec la preuve de la réponse d'Apple. Tant que ce n'est pas fait, laisser la clé absente : App Store Connect pose alors les questions à chaque envoi.
+**Clé `ITSAppUsesNonExemptEncryption`.** Elle était absente (retirée par la carte 445). **Elle est remise à `false` (carte 488, décision du chef du 18 novembre 2026)** ; la garde Vitest (`src/shared/ios-store-listing.test.ts`) exige désormais `false` et refuse une API de chiffrement ou une bibliothèque qui n'est pas celle du système. La preuve de la réponse d'Apple n'existe pas : la décision est celle du chef.
 
 **Le Mac** n'est pas distribué par l'App Store : les questions d'Apple ne s'y appliquent pas. Il embarque déjà BoringSSL (Chromium) pour HTTPS ; la synchronisation n'ajoute **aucune primitive nouvelle**, seulement un usage de plus de TLS et de HMAC. Le code est public sous GPL-3.0-or-later : d'après la page de BIS lue, du code source public n'est pas soumis à l'EAR, et la notification de l'article 742.15(b)(2) ne vise que la « non-standard cryptography ». **À confirmer par le mainteneur** (pays d'établissement, éventuel rapport annuel pour le binaire de l'App Store).
 
