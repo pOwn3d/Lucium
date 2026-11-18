@@ -115,6 +115,8 @@ These are the settings of the public repository, to apply when it is created. Th
 
     GitHub's documentation (*Troubleshooting required status checks*) says a job skipped by a condition reports "Success", which satisfies a required check; a **workflow** skipped by a path filter leaves its checks "Pending" and blocks the merge. So `ci.yml` and `pr-conventions.yml` have no `paths` or `paths-ignore`, and the names of the seven checks do not change (`src/main/workflow-hygiene.test.ts` holds both).
 
+    To run the macOS jobs on a pull request of documents anyway (a document that a build reads, say), start **CI** by hand on its branch (*Actions*, *CI*, *Run workflow*): a manual run always runs everything.
+
     Other jobs run on every pull request and are **not** in the required checks, because [GOVERNANCE.md](../../GOVERNANCE.md#the-rules-of-main) does not list them: `Scan for Secrets` and `Report unverified findings` (Secret Scanning; the second never fails on a finding), and, on a public repository only, `Dependency review` and the four jobs of CodeQL (`CodeQL (javascript-typescript)`, `CodeQL (actions)`, `CodeQL (c-cpp)`, `CodeQL (swift)`). Read them before merging. Requiring one of them is a change of the rules of `main`: it goes into GOVERNANCE.md and into this table in the same pull request;
   - **require linear history** and **signed commits**;
   - **block force pushes and deletion**.
