@@ -652,7 +652,7 @@ function settingValueProblem(key: string, value: unknown): boolean {
   }
 }
 const holdsLoneSurrogate = (v: unknown): boolean => (typeof v === 'string' ? hasLoneSurrogate(v) : Array.isArray(v) ? v.some(holdsLoneSurrogate) : isObject(v) ? Object.entries(v).some(([k, m]) => hasLoneSurrogate(k) || holdsLoneSurrogate(m)) : false)
-function filterEntity(e: MessageVectors['inbound'][number]['entity']): Filtered {
+function filterEntity(e: NonNullable<MessageVectors['inbound'][number]['entity']>): Filtered {
   if (messageVectors.neverKinds.includes(e.kind)) return { accepted: false, reason: 'never-synced' }
   // Review n° 15 and 16: a text Swift cannot read, and a profile that is not an identifier of the Mac (the key of a list is made of it).
   if (holdsLoneSurrogate(e.fields)) return { accepted: false, reason: 'invalid-value' }
