@@ -149,6 +149,55 @@ final class LockBrowserTests: BrowserCoreTestCase {
         XCTAssertEqual(model.state.tabs.first { $0.id == a.id }?.url, address("/a.html").absoluteString, "the other tab kept its line")
     }
 
+    /// Every sheet and prompt the model presents is listed here by hand: the day a new one is added without closing it, this is the test to extend
+    /// (and the lock block of `src/shared/ios-contract.test.ts` fails first: it reads the sheets of `BrowserScreen`).
+    func testNothingPresentedStaysOverTheLockScreenWhenTheApplicationLocks() async throws {
+        let (model, lock) = await makeLockedModel(owner: Owner())
+        try await load("/a.html", in: model)
+        let turnedOn = await lock.setLockApp(true)
+        XCTAssertTrue(turnedOn)
+        let tab = try XCTUnwrap(model.activeTab)
+
+        model.tabsSheetShown = true
+        model.spacesSheetShown = true
+        model.settingsShown = true
+        model.commandBarShown = true
+        model.downloads.sheetShown = true
+        model.siteDataAsked = "journal.example"
+        model.privacyPrompts.notice = "journal.example does not answer over HTTPS"
+        model.privacyPrompts.refusal = PrivacyPrompts.Refusal(tabId: tab.id, host: "journal.example", http: "http://journal.example/")
+
+        model.lockOnLeaving()
+        XCTAssertTrue(lock.appLocked)
+        XCTAssertFalse(model.tabsSheetShown, "the tabs")
+        XCTAssertFalse(model.spacesSheetShown, "the sheet of the spaces, opened by a long press on a space")
+        XCTAssertFalse(model.settingsShown, "the settings")
+        XCTAssertFalse(model.commandBarShown, "the command bar")
+        XCTAssertFalse(model.downloads.sheetShown, "the downloads")
+        XCTAssertNil(model.siteDataAsked, "the question about a site's data names the site")
+        XCTAssertNil(model.privacyPrompts.notice, "the line about HTTPS names the site")
+        XCTAssertNil(model.privacyPrompts.refusal, "the alert about a refused certificate names the site")
+    }
+
+    func testAPromptAboutThePageDoesNotStayOnceItsSpaceIsLockedButTheSheetOfTheSpacesDoes() async throws {
+        let (model, lock) = await makeLockedModel(owner: Owner())
+        try await load("/a.html", in: model)
+        let tab = try XCTUnwrap(model.activeTab)
+        model.siteDataAsked = "journal.example"
+        model.privacyPrompts.notice = "journal.example does not answer over HTTPS"
+        model.privacyPrompts.refusal = PrivacyPrompts.Refusal(tabId: tab.id, host: "journal.example", http: "http://journal.example/")
+        model.spacesSheetShown = true
+
+        let locked = await lock.setSpace(model.activeSpace.id, guarded: true)
+        XCTAssertTrue(locked)
+        XCTAssertTrue(model.activeSpaceCovered)
+        XCTAssertFalse(lock.appLocked)
+        XCTAssertNil(model.siteDataAsked, "the question names a site of the space that is now locked")
+        XCTAssertNil(model.privacyPrompts.notice)
+        XCTAssertNil(model.privacyPrompts.refusal)
+        XCTAssertTrue(model.spacesSheetShown, "the list of the spaces says \"locked\" and is where the owner opens one: it stays")
+    }
+
     func testALaunchWithTheApplicationLockedLoadsNoPage() async throws {
         let first = await makeModel()
         try await load("/a.html", in: first)
