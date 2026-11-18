@@ -1,0 +1,326 @@
+{
+  "comment": "« Reprendre un onglet » (docs/synchronisation.md §10.4): played by src/shared/sync-resume.test.ts (Mac) and by SyncResumeVectorTests.swift (LuciumKit). The same list gives the same rows, the same reason, the same space and the same age on both devices.",
+  "rows": [
+    {
+      "name": "web pages only, most recent first, the title or the host",
+      "tabs": [
+        {
+          "id": "a",
+          "spaceId": "s1",
+          "url": "https://www.example.com/a",
+          "title": "  Alpha  ",
+          "lastActiveAt": 10
+        },
+        {
+          "id": "b",
+          "spaceId": "s1",
+          "url": "http://news.example.org:8080/",
+          "title": "",
+          "lastActiveAt": 30
+        },
+        {
+          "id": "c",
+          "spaceId": "s2",
+          "url": "ftp://files.example.com/x",
+          "title": "Ftp",
+          "lastActiveAt": 50
+        },
+        {
+          "id": "d",
+          "spaceId": "s2",
+          "url": "javascript:alert(1)",
+          "title": "Script",
+          "lastActiveAt": 60
+        },
+        {
+          "id": "e",
+          "spaceId": "s2",
+          "url": "file:///etc/hosts",
+          "title": "File",
+          "lastActiveAt": 70
+        },
+        {
+          "id": "f",
+          "spaceId": "s2",
+          "url": "data:text/html,hi",
+          "title": "Data",
+          "lastActiveAt": 80
+        },
+        {
+          "id": "g",
+          "spaceId": "s2",
+          "url": "https://",
+          "title": "No host",
+          "lastActiveAt": 90
+        },
+        {
+          "id": "h",
+          "spaceId": "s2",
+          "url": "ws://socket.example.com/",
+          "title": "Socket",
+          "lastActiveAt": 95
+        }
+      ],
+      "expect": [
+        {
+          "id": "b",
+          "title": "news.example.org:8080",
+          "host": "news.example.org:8080",
+          "spaceId": "s1"
+        },
+        {
+          "id": "a",
+          "title": "Alpha",
+          "host": "example.com",
+          "spaceId": "s1"
+        }
+      ]
+    },
+    {
+      "name": "one row per address: the most recent keeps it; a tie goes to the smaller identifier",
+      "tabs": [
+        {
+          "id": "x2",
+          "spaceId": "s1",
+          "url": "https://same.example/",
+          "title": "Second",
+          "lastActiveAt": 5
+        },
+        {
+          "id": "x1",
+          "spaceId": "s1",
+          "url": "https://same.example/",
+          "title": "First",
+          "lastActiveAt": 5
+        },
+        {
+          "id": "y",
+          "spaceId": "s1",
+          "url": "https://same.example/",
+          "title": "Older",
+          "lastActiveAt": 1
+        },
+        {
+          "id": "z",
+          "spaceId": "s1",
+          "url": "https://other.example/",
+          "title": "Other",
+          "lastActiveAt": 5
+        }
+      ],
+      "expect": [
+        {
+          "id": "x1",
+          "title": "First",
+          "host": "same.example",
+          "spaceId": "s1"
+        },
+        {
+          "id": "z",
+          "title": "Other",
+          "host": "other.example",
+          "spaceId": "s1"
+        }
+      ]
+    }
+  ],
+  "availability": [
+    {
+      "paired": false,
+      "categoryOnHere": true,
+      "announcedAt": 5,
+      "listAnnounced": true,
+      "rowCount": 3,
+      "sessionHappened": true,
+      "expect": "not-paired"
+    },
+    {
+      "paired": true,
+      "categoryOnHere": false,
+      "announcedAt": 5,
+      "listAnnounced": true,
+      "rowCount": 3,
+      "sessionHappened": true,
+      "expect": "disabled-here"
+    },
+    {
+      "paired": true,
+      "categoryOnHere": true,
+      "announcedAt": null,
+      "listAnnounced": false,
+      "rowCount": 0,
+      "sessionHappened": false,
+      "expect": "waiting"
+    },
+    {
+      "paired": true,
+      "categoryOnHere": true,
+      "announcedAt": null,
+      "listAnnounced": false,
+      "rowCount": 0,
+      "sessionHappened": true,
+      "expect": "disabled-on-iphone"
+    },
+    {
+      "paired": true,
+      "categoryOnHere": true,
+      "announcedAt": null,
+      "listAnnounced": true,
+      "rowCount": 0,
+      "sessionHappened": true,
+      "expect": "waiting"
+    },
+    {
+      "paired": true,
+      "categoryOnHere": true,
+      "announcedAt": 5,
+      "listAnnounced": true,
+      "rowCount": 0,
+      "sessionHappened": true,
+      "expect": "empty"
+    },
+    {
+      "paired": true,
+      "categoryOnHere": true,
+      "announcedAt": 5,
+      "listAnnounced": true,
+      "rowCount": 2,
+      "sessionHappened": true,
+      "expect": "list"
+    }
+  ],
+  "targetSpace": [
+    {
+      "name": "the space of the tab, when it exists and is open",
+      "rowSpace": "s1",
+      "spaces": [
+        "s1",
+        "s2"
+      ],
+      "active": "s2",
+      "locked": [],
+      "expect": "s1"
+    },
+    {
+      "name": "the space of the tab is locked: the one on screen",
+      "rowSpace": "s1",
+      "spaces": [
+        "s1",
+        "s2"
+      ],
+      "active": "s2",
+      "locked": [
+        "s1"
+      ],
+      "expect": "s2"
+    },
+    {
+      "name": "no such space here: the one on screen",
+      "rowSpace": "gone",
+      "spaces": [
+        "s1",
+        "s2"
+      ],
+      "active": "s2",
+      "locked": [],
+      "expect": "s2"
+    },
+    {
+      "name": "both locked: nowhere",
+      "rowSpace": "s1",
+      "spaces": [
+        "s1",
+        "s2"
+      ],
+      "active": "s2",
+      "locked": [
+        "s1",
+        "s2"
+      ],
+      "expect": null
+    },
+    {
+      "name": "no such space and the one on screen is locked: nowhere",
+      "rowSpace": "gone",
+      "spaces": [
+        "s1",
+        "s2"
+      ],
+      "active": "s2",
+      "locked": [
+        "s2"
+      ],
+      "expect": null
+    }
+  ],
+  "age": [
+    {
+      "at": 1000000,
+      "now": 1000000,
+      "expect": {
+        "unit": "now"
+      }
+    },
+    {
+      "at": 1000000,
+      "now": 1059999,
+      "expect": {
+        "unit": "now"
+      }
+    },
+    {
+      "at": 1000000,
+      "now": 1060000,
+      "expect": {
+        "unit": "minutes",
+        "count": 1
+      }
+    },
+    {
+      "at": 1000000,
+      "now": 1000000,
+      "expect": {
+        "unit": "now"
+      }
+    },
+    {
+      "at": 1000000,
+      "now": 4599999,
+      "expect": {
+        "unit": "minutes",
+        "count": 59
+      }
+    },
+    {
+      "at": 1000000,
+      "now": 4600000,
+      "expect": {
+        "unit": "hours",
+        "count": 1
+      }
+    },
+    {
+      "at": 1000000,
+      "now": 87399999,
+      "expect": {
+        "unit": "hours",
+        "count": 23
+      }
+    },
+    {
+      "at": 1000000,
+      "now": 87400000,
+      "expect": {
+        "unit": "days",
+        "count": 1
+      }
+    },
+    {
+      "at": 5000000,
+      "now": 1000000,
+      "expect": {
+        "unit": "now"
+      }
+    }
+  ]
+}
