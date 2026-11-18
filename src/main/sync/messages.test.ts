@@ -69,6 +69,22 @@ describe('parseMessage: what comes out', () => {
     for (const t of ['__proto__', 'constructor', 'toString', 'hasOwnProperty']) expect(parseMessage(JSON.stringify({ v: 1, t, n: 1 })), t).toEqual({ ok: false, code: 'unknown-type' })
   })
 
+  it('refuses a snapshot part whose kind, id, tombstone, list or aside-list names what a plain object already has: written into a record it would reach the prototype', () => {
+    const stamp = '1790000000000-0000-iphone-device-0000001'
+    const part = (body: Record<string, unknown>): ReturnType<typeof parseMessage> => parseMessage(JSON.stringify({ v: 1, t: 'snapshot.part', n: 1, part: 0, parts: 1, entities: [], ...body }))
+    for (const name of ['__proto__', 'constructor', 'toString', 'hasOwnProperty', 'prototype']) {
+      expect(part({ entities: [{ kind: name, id: 'x', fields: {}, stamps: {} }] }), `kind ${name}`).toEqual({ ok: false, code: 'bad-message' })
+      expect(part({ entities: [{ kind: 'space', id: name, fields: {}, stamps: {} }] }), `id ${name}`).toEqual({ ok: false, code: 'bad-message' })
+      expect(part({ tombstones: [{ kind: name, id: 'x', stamp }] }), `tombstone kind ${name}`).toEqual({ ok: false, code: 'bad-message' })
+      expect(part({ tombstones: [{ kind: 'tab', id: name, stamp }] }), `tombstone id ${name}`).toEqual({ ok: false, code: 'bad-message' })
+      expect(part({ order: { [name]: [] }, orderStamps: {} }), `list ${name}`).toEqual({ ok: false, code: 'bad-message' })
+      expect(part({ order: { spaces: [name] }, orderStamps: {} }), `list member ${name}`).toEqual({ ok: false, code: 'bad-message' })
+      expect(part({ orderStamps: { [name]: stamp } }), `list mark ${name}`).toEqual({ ok: false, code: 'bad-message' })
+      expect(part({ withheld: [name] }), `aside ${name}`).toEqual({ ok: false, code: 'bad-message' })
+    }
+    expect(part({ entities: [{ kind: 'space', id: 's1', fields: {}, stamps: {} }], tombstones: [{ kind: 'tab', id: 't1', stamp }], order: { spaces: ['s1'] }, orderStamps: { spaces: stamp }, withheld: ['s9'] }).ok).toBe(true)
+  })
+
   it('survives a nesting of a hundred thousand levels (it is refused, the stack is not exhausted)', () => {
     const depth = 100_000
     const text = `{"v":1,"t":"bye","n":1,"x":${'['.repeat(depth)}${']'.repeat(depth)}}`

@@ -60,8 +60,16 @@ export const SNAPSHOT_LIMITS = {
 
 export type SnapshotProblem = string
 
-/** A name that is used as a key of a record must not be the one JavaScript reads as the prototype, nor hold a control character. */
-const isKeyName = (key: string, max: number): boolean => key.length >= 1 && key.length <= max && key !== '__proto__' && !/[\u0000-\u001f\u007f]/.test(key) && isNormalized(key)
+/**
+ * Whether a plain object already answers to this name before anyone writes to it: `__proto__`, `constructor`, `toString`, `hasOwnProperty`… Used as a kind or an id,
+ * such a name makes `record[name] ??= {}` take the prototype (or a function of it) for the record and write the next key into it: the prototype of every object of the
+ * process, or `Object` itself, gets a property a stranger chose. The same names read back as a function where a missing entry was expected. Refused wherever a name
+ * becomes a key (the wire, the files, this reader); a name a later version of Object.prototype gains is refused too, because the test is the object itself.
+ */
+export const isInheritedName = (name: string): boolean => name === 'prototype' || name in Object.prototype
+
+/** A name that is used as a key of a record must not be one a plain object already has (`isInheritedName`), nor hold a control character. */
+const isKeyName = (key: string, max: number): boolean => key.length >= 1 && key.length <= max && !isInheritedName(key) && !/[\u0000-\u001f\u007f]/.test(key) && isNormalized(key)
 
 /**
  * A key must be in normalization form C. Swift treats two keys that differ only by their normalization ("é" in one scalar and in two) as one key of a
