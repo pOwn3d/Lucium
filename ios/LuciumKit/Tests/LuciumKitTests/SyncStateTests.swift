@@ -179,6 +179,60 @@ struct SyncStateViewTests {
         #expect(base.entities["widget"]?["w"]?.fields == ["a": .number(1)], "a kind this version does not know goes through whole")
     }
 
+    @Test func theTombstonesOfTheBookGoWithTheCategoriesThatCarryTheirKind() throws {
+        var state = try SyncStateFixtures.sample()
+        var marks = SyncMarkBook(device: "phone")
+        marks.update(SyncStateView.trackedView(of: state), now: now)
+        state.spaces.removeAll { $0.id == "s2" }
+        state.favorites = []
+        marks.update(SyncStateView.trackedView(of: state), now: now + 1000)
+        var merged = SyncSnapshot()
+        merged.tombstones = ["widget": ["w1": "1790000000500-0000-mac"]]
+        marks.adopt(merged)
+        marks.update(SyncStateView.trackedView(of: state), now: now + 2000)
+        let structure = SyncStateView.snapshot(of: state, marks: marks, categories: [.structure], withheld: [], base: nil)
+        #expect(structure.tombstones["widget"] != nil, "a kind this version does not know travels with every category")
+        let settingsOnly = SyncStateView.snapshot(of: state, marks: marks, categories: [.settings], withheld: [], base: nil)
+        #expect(settingsOnly.tombstones["space"] == nil && settingsOnly.tombstones["favorite"] == nil, "a deleted space is told only with the structure")
+        #expect(settingsOnly.tombstones["widget"] != nil)
+        // Deleting a space that was in the structure: its tombstone goes out with the structure.
+        var again = SyncMarkBook(device: "phone")
+        var before = try SyncStateFixtures.sample()
+        again.update(SyncStateView.trackedView(of: before), now: now)
+        before.spaces.removeAll { $0.id == "s2" }
+        again.update(SyncStateView.trackedView(of: before), now: now + 1000)
+        let sent = SyncStateView.snapshot(of: before, marks: again, categories: [.structure], withheld: [], base: nil)
+        #expect(sent.tombstones["space"]?["s2"] == "1790000001000-0000-phone")
+        #expect(SyncStateView.snapshot(of: before, marks: again, categories: [.settings], withheld: [], base: nil).tombstones["space"] == nil)
+    }
+
+    @Test func eachCategoryCarriesItsOwnKindsAndNoOtherOnes() throws {
+        let state = try SyncStateFixtures.sample()
+        var marks = SyncMarkBook(device: "phone")
+        marks.update(SyncStateView.trackedView(of: state), now: now)
+        func kinds(_ categories: Set<SyncCategory>) -> Set<String> {
+            Set(SyncStateView.snapshot(of: state, marks: marks, categories: categories, withheld: [], base: nil).entities.keys)
+        }
+        #expect(kinds([.structure]) == ["space", "folder", "tab", "favorite"])
+        #expect(kinds([.archive]) == ["archived"], "the archive carries no setting")
+        #expect(kinds([.settings]) == ["setting"], "the settings carry no archived tab")
+        #expect(kinds([.openTabs]).isEmpty, "the open tabs are an announcement, never an entity")
+        #expect(kinds([]).isEmpty)
+    }
+
+    @Test func aPhoneThatAdoptsTheMacsStructureSendsNoStructureOfAnyKind() throws {
+        var snapshot = SyncSnapshot()
+        let entity = SyncEntity(fields: ["name": .string("A")], stamps: ["name": "1790000000000-0000-phone"])
+        snapshot.entities = ["space": ["s": entity], "folder": ["f": entity], "tab": ["t": entity], "favorite": ["v": entity], "archived": ["a": entity], "setting": ["sendGpc": entity], "widget": ["w": entity]]
+        snapshot.tombstones = ["space": ["s9": "0"], "tab": ["t9": "0"], "archived": ["a9": "0"], "widget": ["w9": "0"]]
+        snapshot.order = ["spaces": ["s"], "tabs:s:-": ["t"]]
+        snapshot.orderStamps = ["spaces": "0", "tabs:s:-": "0"]
+        let sent = snapshot.withoutStructure()
+        #expect(Set(sent.entities.keys) == ["archived", "setting", "widget"])
+        #expect(Set(sent.tombstones.keys) == ["archived", "widget"], "the deletions of the structure are not told either")
+        #expect(sent.order.isEmpty && sent.orderStamps.isEmpty)
+    }
+
     @Test func theLockedSpacesAreTheOnesTheLockSays() throws {
         let state = try SyncStateFixtures.sample()
         #expect(SyncStateView.withheldSpaces(in: state, isLocked: { $0 == "s2" }) == ["s2"])
@@ -484,6 +538,17 @@ struct SyncMarkKeeperTests {
         #expect(keeper.currentBook.stamps(of: "space", id: "s1")["name"] == "1790000002000-0000-phone")
         let file = SyncMarksFile(url: directory.appending(path: SyncMarksFile.fileName))
         #expect(file.load(device: "phone") == .loaded(keeper.currentBook), "it is written at each change")
+    }
+
+    @Test func aStateThatDidNotChangeDoesNotRewriteTheFile() throws {
+        let (keeper, directory) = keeper()
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let state = try SyncStateFixtures.sample()
+        keeper.observe(state, now: now)
+        let url = directory.appending(path: SyncMarksFile.fileName)
+        let first = try FileManager.default.attributesOfItem(atPath: url.path)[.systemFileNumber] as? NSNumber
+        keeper.observe(state, now: now + 5000)
+        #expect(try FileManager.default.attributesOfItem(atPath: url.path)[.systemFileNumber] as? NSNumber == first, "the file is replaced only when the book changed")
     }
 
     @Test func aBookOfAFileIsTheOneAKeeperStartsWith() throws {

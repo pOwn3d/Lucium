@@ -475,6 +475,41 @@ struct SyncApplyTests {
         #expect(outcome.state.tabs.map(\.id) == ["t1", "t3", "today", "secret", "t2", "today2"], "t2 and t3 swapped places; the Today tabs and the private tab stayed where they were")
     }
 
+    @Test func aFolderListOnlyMovesTheFoldersOfItsOwnLevel() throws {
+        var state = try SyncStateFixtures.sample()
+        // The array holds a child, then two folders of the root: the list of the root orders the two, and the child stays where it is.
+        state.folders = [Folder(id: "child", spaceId: "s1", name: "Enfant", parentId: "f1"), Folder(id: "f1", spaceId: "s1", name: "Réunions"), Folder(id: "f3", spaceId: "s1", name: "Trois")]
+        let outcome = apply(patch(order: ["folders:s1:-": ["f3", "f1"]]), to: state)
+        #expect(outcome.state.folders.map(\.id) == ["child", "f3", "f1"])
+        let other = apply(patch(order: ["folders:s2:-": ["f3", "f1"]]), to: state)
+        #expect(other.state.folders == state.folders, "the folders of another space are not this list's")
+    }
+
+    @Test func aProfileThatIsNotAnIdentifierBecomesTheDefaultProfile() throws {
+        let state = try SyncStateFixtures.sample()
+        let outcome = apply(patch([upsert(.space, "s1", fields: ["profileId": .string("not an id!")], expect: ["profileId": .string("work")]),
+                                   upsert(.favorite, "fav9", create: true, fields: ["url": .string("https://fav9.example/"), "title": .string("F"), "profileId": .string("../x")])]), to: state)
+        #expect(outcome.state.spaces[0].profileId == "default", "a profile names a folder on the disk: anything that is not a plain identifier is the default one")
+        #expect(outcome.state.favorites.first { $0.id == "fav9" }?.profileId == "default")
+    }
+
+    @Test func aStateThatNeverHadTheLibraryListsDoesNotGainThemByBeingPatched() throws {
+        var state = try SyncStateFixtures.sample()
+        state.rest["folders"] = nil
+        state.rest["favorites"] = nil
+        state.rest["archive"] = nil
+        let outcome = apply(patch([upsert(.space, "s1", fields: ["name": .string("Boulot")], expect: ["name": .string("Travail")])]), to: state)
+        #expect(outcome.state.spaces[0].name == "Boulot")
+        #expect(outcome.state.rest["folders"] == nil && outcome.state.rest["favorites"] == nil && outcome.state.rest["archive"] == nil)
+    }
+
+    @Test func aNameThatIsOnlySpacesIsNotAName() throws {
+        let state = try SyncStateFixtures.sample()
+        let outcome = apply(patch([upsert(.space, "s1", fields: ["name": .string("  \n  ")], expect: ["name": .string("Travail")])]), to: state)
+        #expect(outcome.state.spaces[0].name == "Travail")
+        #expect(outcome.rejected.count == 1)
+    }
+
     @Test func aMemberTheOrderDoesNotNameGoesAfterTheOnesItNames() throws {
         let state = try reorderable()
         let outcome = apply(patch(order: ["tabs:s1:-": ["t3"]]), to: state)

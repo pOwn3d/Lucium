@@ -35,6 +35,19 @@ public struct SyncExchangeSummary: Equatable, Sendable {
     public var spacesSetAside: Int
     /// The Mac's open tabs, when "Open tabs" is common: kept in memory by the caller, never written (§10.4).
     public var openTabs: [SyncOpenTab]?
+
+    public init(at: Int, conflicts: [SettledConflict], refusedSent: [SyncInbound.Refused], refusedReceived: [SyncInbound.Refused], rejectedByApply: [String], applied: Bool, adoptedTheMacState: Bool,
+                spacesSetAside: Int, openTabs: [SyncOpenTab]?) {
+        self.at = at
+        self.conflicts = conflicts
+        self.refusedSent = refusedSent
+        self.refusedReceived = refusedReceived
+        self.rejectedByApply = rejectedByApply
+        self.applied = applied
+        self.adoptedTheMacState = adoptedTheMacState
+        self.spacesSetAside = spacesSetAside
+        self.openTabs = openTabs
+    }
 }
 
 /// The part of a session after `hello` (docs/synchronisation.md §8.2 to §8.5), the phone's side. The same flow as the Mac's (`src/main/sync/session.ts`: both run the

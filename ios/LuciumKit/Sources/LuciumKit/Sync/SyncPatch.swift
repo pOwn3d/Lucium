@@ -16,6 +16,15 @@ public struct SyncPatch: Equatable, Sendable {
         public var remove: [String]
         /// What each field named above held when the session froze its snapshot (absent: it was absent): the field is touched only while it still does.
         public var expect: [String: JSONValue]
+
+        public init(kind: SyncFieldClasses.Kind, id: String, create: Bool, fields: [String: JSONValue], remove: [String], expect: [String: JSONValue]) {
+            self.kind = kind
+            self.id = id
+            self.create = create
+            self.fields = fields
+            self.remove = remove
+            self.expect = expect
+        }
     }
 
     public struct Removal: Equatable, Sendable {
@@ -23,6 +32,12 @@ public struct SyncPatch: Equatable, Sendable {
         public var id: String
         /// The synchronised fields the entity had when frozen: it is removed only while it still has exactly these.
         public var expect: [String: JSONValue]
+
+        public init(kind: SyncFieldClasses.Kind, id: String, expect: [String: JSONValue]) {
+            self.kind = kind
+            self.id = id
+            self.expect = expect
+        }
     }
 
     public var upserts: [Upsert] = []
