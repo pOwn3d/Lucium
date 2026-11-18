@@ -673,7 +673,7 @@ Ce qui suit est à ajouter par les cartes 444 et 445, avec la fonction (`docs/io
 7. Le comportement de l'iPhone quand l'application passe en arrière-plan au milieu d'une séance (la connexion est coupée : la séance échoue proprement, et rien n'est écrit tant que `result` n'est pas égal).
 8. Le pare-feu de macOS à la première écoute, pour une build non signée (`docs/ios.md` §13.2), et l'**autorisation du réseau local** de macOS pour une application qui écoute : non lue.
 9. La **conformité du chiffrement** (§15).
-10. Le **délai de commentaire** : `GOVERNANCE.md` demande au moins **7 jours** de commentaire pour un changement important de comportement visible ou d'architecture ; l'*issue* [#42](https://github.com/pOwn3d/Lucium/issues/42) porte sur l'étude iOS. **À décider par le chef de projet** : la phase 2 est-elle couverte par cette *issue*, ou en faut-il une autre avant les cartes 444 et 445 ?
+10. ~~Le **délai de commentaire**~~ (**fait**, décidé par le chef de projet le 18 novembre 2026 : une *issue* à part, et non l'*issue* [#42](https://github.com/pOwn3d/Lucium/issues/42), qui porte sur l'étude iOS). `GOVERNANCE.md` demande au moins **7 jours** de commentaire pour un changement important de comportement visible ou d'architecture. L'*issue* [#90](https://github.com/pOwn3d/Lucium/issues/90), ouverte le 18 novembre 2026, décrit la synchronisation Mac ↔ iPhone, dit que le code est déjà fusionné (désactivé par défaut) avant ce délai, et laisse les commentaires ouverts **jusqu'au 25 novembre 2026**. **Aucune version ne porte la synchronisation avant cette date.** Ce qui reste : lire les commentaires reçus et écrire la décision, avec ses raisons, dans l'*issue*.
 
 ## 18. Choix qui reviennent au chef de projet
 
