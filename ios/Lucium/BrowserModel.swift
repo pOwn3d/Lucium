@@ -20,6 +20,10 @@ final class BrowserModel {
     /// Whether this phone has ever been changed by its person: kept from the first launch, read by the synchronisation at its first exchange (`SyncOrigin`).
     @ObservationIgnored var syncOrigin: SyncOriginKeeper?
 
+    /// A synchronisation session is writing its patch into the state (`applySyncPatch`): the book of marks does not look at the state meanwhile, so that what the Mac
+    /// wrote is not marked as this phone's change.
+    @ObservationIgnored var isApplyingSync = false
+
     var tabsSheetShown = false
     var spacesSheetShown = false
     /// The settings screen (`SettingsScreen`), opened by the gear of the bottom bar and of the iPad's sidebar, and the page it opens on (the list when nil).
@@ -329,6 +333,9 @@ final class BrowserModel {
             report(.state, "the state was not written: \(error)")
         }
         syncOrigin?.observe(state)
+        // The marks of the synchronisation are taken as the state is written (docs/synchronisation.md §9.2): the gesture is marked when it is kept, not when a session
+        // happens to carry it away. Nothing is given to the book while the synchronisation is off or while a session writes.
+        if !isApplyingSync { sync?.stateWritten(state) }
     }
 
     /// Something could not be written. The person keeps browsing; the failure is logged where it happened and kept for the screen and the tests.

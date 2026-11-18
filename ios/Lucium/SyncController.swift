@@ -37,11 +37,23 @@ final class SyncController {
     private(set) var pairingStep: PairingStep = .idle
     /// The settings file could not be read: the synchronisation stays off until the person turns it on again, which writes a new one.
     private(set) var settingsUnreadable = false
+    /// The conflicts the sessions settled, kept 30 days for « Conflit réglé » (§11.7.3). Empty when no exchange is wired (a model with none).
+    private(set) var conflictJournal: [SettledConflict] = []
+    /// The Mac's open tabs, as its last session announced them: in memory only, never written (§10.4). The screen « Reprise » (card 447) reads them.
+    private(set) var macOpenTabs: [SyncOpenTab] = []
+    /// What the last session did, for the page and the log.
+    private(set) var lastExchange: SyncExchangeSummary?
 
     @ObservationIgnored private let file: SyncSettingsFile
     @ObservationIgnored private let identityStore: any SyncIdentityStoring
     @ObservationIgnored private let makeConnector: @Sendable (SyncIdentity) -> any SyncConnecting
     @ObservationIgnored private let body: any SyncSessionBody
+    /// The model's side of an exchange of the data (`SyncModelHost`). Nil in a controller with none: the session then goes as far as `hello`, with `body`.
+    @ObservationIgnored private let exchangeHost: (any SyncExchangeHost)?
+    /// Where the files of the exchange live: the marks, the base of the Mac, the journal of the conflicts. Next to `sync.json`, never inside `state.json`.
+    @ObservationIgnored private let directory: URL
+    @ObservationIgnored private var marks: SyncMarkKeeper?
+    @ObservationIgnored private var journalTooNew = false
     @ObservationIgnored private let deviceName: String
     @ObservationIgnored private let appVersion: String
     @ObservationIgnored private let now: @Sendable () -> Int
@@ -53,9 +65,12 @@ final class SyncController {
 
     init(file: SyncSettingsFile, identityStore: any SyncIdentityStoring = KeychainSyncIdentityStore(),
          makeConnector: @escaping @Sendable (SyncIdentity) -> any SyncConnecting = { NetworkSyncConnector(identity: $0.identity) },
-         body: any SyncSessionBody = SyncNoSessionBody(), deviceName: String = SyncController.defaultDeviceName(), appVersion: String = SyncController.defaultAppVersion(),
-         now: @escaping @Sendable () -> Int = { Int(Date().timeIntervalSince1970 * 1000) }, isAppLocked: @escaping @MainActor () -> Bool = { false }) {
+         body: any SyncSessionBody = SyncNoSessionBody(), exchangeHost: (any SyncExchangeHost)? = nil, deviceName: String = SyncController.defaultDeviceName(),
+         appVersion: String = SyncController.defaultAppVersion(), now: @escaping @Sendable () -> Int = { Int(Date().timeIntervalSince1970 * 1000) },
+         isAppLocked: @escaping @MainActor () -> Bool = { false }) {
         self.file = file
+        self.exchangeHost = exchangeHost
+        directory = file.url.deletingLastPathComponent()
         self.identityStore = identityStore
         self.makeConnector = makeConnector
         self.body = body
@@ -85,11 +100,16 @@ final class SyncController {
         }
         settings = loaded
         status = Self.baseStatus(loaded)
+        if exchangeHost != nil, loaded.mac != nil { loadJournal() }
         if lost {
             status = .identityLost
             save()
         }
     }
+
+    /// The synchronisation is on and a Mac is paired: what the start page says of what leaves the device depends on it (decision of the project lead, 18 November 2026).
+    /// On with no Mac paired, nothing can leave.
+    var isSynchronizing: Bool { settings.enabled && settings.mac != nil }
 
     static func baseStatus(_ settings: SyncSettings) -> SyncStatus {
         guard settings.enabled else { return .off }
@@ -129,6 +149,7 @@ final class SyncController {
         settings.enabled = enabled
         status = Self.baseStatus(settings)
         save()
+        if enabled { catchUp() }
         return true
     }
 
@@ -245,9 +266,20 @@ final class SyncController {
             return
         }
         do {
+            // With the model's host the session exchanges the data (§8.2 to §8.5); without one it goes as far as `hello`. The hash of the base is what the `hello` says: both
+            // devices must hold the same one for the merge to start from it.
+            let sessionBody: any SyncSessionBody
+            var baseHash: String?
+            if let exchangeHost, let keeper = markKeeper() {
+                let exchange = SyncExchangeBody(host: exchangeHost, marks: keeper, bases: SyncBaseStore(directory: directory), now: now)
+                sessionBody = exchange
+                baseHash = await exchange.baseHash(forMac: mac.id)
+            } else {
+                sessionBody = body
+            }
             let report = try await SyncSessionClient.run(connection: connection, peer: mac, device: SyncDeviceInfo(id: deviceId, name: deviceName, platform: .ios),
                                                          categories: settings.categories, appVersion: appVersion, supportedStateVersion: BrowserState.supportedVersion,
-                                                         nonce: Self.randomBytes(16), baseHash: nil, now: now, body: body)
+                                                         nonce: Self.randomBytes(16), baseHash: baseHash, now: now, body: sessionBody)
             let at = now()
             settings.mac?.lastContactAt = at
             if let hosts = report.hosts, !hosts.isEmpty { settings.mac?.hosts = hosts }
@@ -330,6 +362,9 @@ final class SyncController {
 
     private func forgetLocally(becauseKeyIsLost: Bool) {
         sessionTask?.cancel()
+        // What was kept for this Mac goes with it (§12): its base, the marks of this phone, the journal of the conflicts and the tabs it announced. The Mac that is
+        // paired again starts from an empty base, and every field takes a mark of the time it is seen.
+        forgetExchangeFiles(of: settings.mac)
         settings.mac = nil
         status = becauseKeyIsLost ? .identityLost : (settings.enabled ? .noDevice : .off)
         save()
@@ -339,6 +374,88 @@ final class SyncController {
         sessionTask?.cancel()
         pairingTask?.cancel()
         pairingStep = .idle
+    }
+
+    // MARK: The exchange of the data
+
+    /// The book of marks of this phone, made when it is first needed (the switch is on and the phone has its identifier). Nothing is made while the synchronisation is off.
+    private func markKeeper() -> SyncMarkKeeper? {
+        guard exchangeHost != nil, let deviceId = settings.deviceId else { return nil }
+        if let marks { return marks }
+        let keeper = SyncMarkKeeper(device: deviceId, file: SyncMarksFile(url: directory.appending(path: SyncMarksFile.fileName)))
+        marks = keeper
+        return keeper
+    }
+
+    /// The model wrote the state: the marks are taken now (§9.2), while the gesture is fresh. Does nothing while the switch is off.
+    func stateWritten(_ state: BrowserState) {
+        guard settings.enabled, let keeper = markKeeper() else { return }
+        keeper.observe(state, now: now())
+    }
+
+    /// The switch was just turned on: what changed while it was off is marked now (a change cannot be dated better than the moment it is seen).
+    private func catchUp() {
+        guard let exchangeHost, let keeper = markKeeper() else { return }
+        let time = now
+        Task { keeper.observe(await exchangeHost.currentState(), now: time()) }
+    }
+
+    /// A session went through: what it settled goes to the journal, the Mac's open tabs are kept in memory, and the page says what happened.
+    func exchangeDone(_ summary: SyncExchangeSummary) {
+        lastExchange = summary
+        macOpenTabs = summary.openTabs ?? []
+        conflictJournal = SyncConflicts.add(summary.conflicts, to: conflictJournal, now: summary.at)
+        saveJournal()
+        if !summary.refusedSent.isEmpty || !summary.refusedReceived.isEmpty || !summary.rejectedByApply.isEmpty {
+            print("[sync] left aside: \(summary.refusedSent.count) not sent, \(summary.refusedReceived.count) not taken, \(summary.rejectedByApply.count) values not kept")
+        }
+    }
+
+    /// The conflicts of the last session that had any: the content of the screen « Conflit réglé ».
+    var lastConflicts: [SettledConflict] { SyncConflicts.lastSession(conflictJournal) }
+
+    /// « Rétablir » on a line: the version that lost is written back as an ordinary change of the state (it goes out at the next session), and the line goes.
+    func restore(_ change: SyncChange, lineID: String) {
+        guard let exchangeHost else { return }
+        Task {
+            let written = await exchangeHost.restore(change)
+            if !written { print("[sync] nothing was put back for \(lineID): the entity or the list is no longer there, or it was changed since") }
+            conflictJournal = SyncConflicts.remove(lineID, from: conflictJournal)
+            saveJournal()
+        }
+    }
+
+    private var journalFile: SyncJournalFile { SyncJournalFile(url: directory.appending(path: SyncJournalFile.fileName)) }
+
+    private func loadJournal() {
+        let loaded = journalFile.load(now: now())
+        conflictJournal = loaded.entries
+        journalTooNew = loaded.tooNew
+    }
+
+    /// A journal of a newer version is never written over (§11.7.3): the lines of this run stay in memory.
+    private func saveJournal() {
+        guard !journalTooNew else { return }
+        do {
+            try journalFile.save(conflictJournal)
+        } catch {
+            print("[sync] the journal of the conflicts was not written: \(error)")
+        }
+    }
+
+    private func forgetExchangeFiles(of mac: SyncPairedMac?) {
+        guard exchangeHost != nil else { return }
+        macOpenTabs = []
+        lastExchange = nil
+        conflictJournal = []
+        marks = nil
+        let manager = FileManager.default
+        for url in [journalFile.url, directory.appending(path: SyncMarksFile.fileName)] where manager.fileExists(atPath: url.path) {
+            do { try manager.removeItem(at: url) } catch { print("[sync] \(url.lastPathComponent) was not removed: \(error)") }
+        }
+        if let mac {
+            do { try SyncBaseStore(directory: directory).remove(peerId: mac.id) } catch { print("[sync] the base of the Mac was not removed: \(error)") }
+        }
     }
 
     // MARK: Files and randomness
