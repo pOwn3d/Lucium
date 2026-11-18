@@ -55,8 +55,8 @@
 }
 .sidebar button, .sidebar input, .sidebar .scroll, .sidebar .tab, .sidebar .hover-card { -webkit-app-region: no-drag; }
 
-/* Title bar corner: the traffic lights, then the button of the sidebar (32 x 32 at x = 77). */
-.sidebar .toolbar { display: flex; gap: 2px; padding: 0 9px 0 77px; height: 36px; align-items: flex-start; flex: none; }
+/* Title bar corner: the traffic lights, then the button of the sidebar (32 x 32 at x = 77). Without traffic lights (every system but macOS) the room for them is 0 (window-controls.css). */
+.sidebar .toolbar { display: flex; gap: 2px; padding: 0 9px 0 calc(9px + var(--lights-room, 68px)); height: 36px; align-items: flex-start; flex: none; }
 .sidebar .toolbar > * { margin-top: 7px; }
 .sidebar .nav-buttons { display: flex; gap: 1px; margin-left: auto; }
 .sidebar .sidebar-toggle, .sidebar .sidebar-reload-all { width: 32px; height: 32px; margin-top: 7px; color: var(--sb-glyph); }

@@ -1,15 +1,16 @@
 // A part of main() (index.ts), moved out as it was: the gate of « Ouvrir un site comme application ». Called once, where its lines were
 // (after the gates exist, before the automatic update): what it installs comes in the same order as before.
 
-import { BrowserWindow, screen, type WebContents, type WebPreferences } from 'electron'
+import { BrowserWindow, nativeTheme, screen, type WebContents, type WebPreferences } from 'electron'
 import { littleWindowBounds } from '@shared/little-window'
+import { controlsOverlay } from '@shared/window-controls'
 import type { ElectronEngine } from '../engine/electron-engine'
 import type { WindowView } from '../store'
 import { Browser } from './browser'
 import type { FeatureGates } from './feature-gate'
 import type { Surface } from './surface-load'
 import { WebAppWindows, webAppWindowFrame } from './web-apps'
-import { currentPlatform } from '../platform'
+import { currentPlatform, type ControlsOverlay } from '../platform'
 
 export interface WebAppsDeps {
   gates: FeatureGates
@@ -44,6 +45,9 @@ export function installWebApps({ gates, engine, store, browser, windows, trusted
         focusMain,
         createWindow: (id, request) => {
           const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea
+          // Windows: the system's three buttons over the right end of the header. The header is dark or light with the system's scheme (little.css, `.wa`), so
+          // the symbols are, and they follow it when it changes (below).
+          const controls = (): ControlsOverlay => controlsOverlay({ kind: 'app', margin: 0, toolbar: false, split: false, privateBar: false, appearance: nativeTheme.shouldUseDarkColors ? 'dark' : 'light' })
           const aw = new BrowserWindow({
             ...littleWindowBounds(area),
             minWidth: 480,
@@ -51,11 +55,16 @@ export function installWebApps({ gates, engine, store, browser, windows, trusted
             show: false,
             title: request.name,
             backgroundColor: '#17171c',
-            // The lights are centred on the header (WEB_APP_HEADER_HEIGHT); elsewhere the system's title bar stays (the platform layer).
-            ...webAppWindowFrame(currentPlatform()),
+            // The lights are centred on the header (WEB_APP_HEADER_HEIGHT); Windows lays its buttons over it; elsewhere the system's title bar stays (the platform layer).
+            ...webAppWindowFrame(currentPlatform(), controls()),
             webPreferences
           })
           load(aw.webContents, { page: 'littlearc', query: { id, app: '1' } })
+          if (currentPlatform().facts.controlsOverlay) {
+            const follow = (): void => void (!aw.isDestroyed() && currentPlatform().syncControlsOverlay(aw, controls()))
+            nativeTheme.on('updated', follow)
+            aw.once('closed', () => nativeTheme.removeListener('updated', follow))
+          }
           return aw
         }
       })

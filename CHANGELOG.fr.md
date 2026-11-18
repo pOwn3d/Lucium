@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Changements
+
+- **Windows, une seule barre** : les fenêtres du navigateur et celles d’un site ouvert comme application dessinent leur propre barre de titre. Les trois boutons de Windows sont posés sur la barre d’outils, aux couleurs du thème, et un bouton ☰ à son début ouvre le menu. La mini-fenêtre et les Réglages gardent la barre de Windows.
+
 ### Corrections
 
 - **Barre de menus, réouverture d’un onglet fermé** : « Rouvrir le dernier onglet fermé » pouvait rester grisé après l’archivage d’un onglet, quand le menu devait changer pendant sa construction. Un changement demandé pendant une reconstruction est maintenant noté, et le menu est relu une fois en place.

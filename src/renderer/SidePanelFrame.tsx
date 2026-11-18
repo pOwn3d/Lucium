@@ -33,11 +33,11 @@ export function sidePanelKeyWidth(width: number, key: string, panelAtLeft: boole
  * button that closes it, and the edge that sets its width. The edge is a window splitter: dragged, or moved from the keyboard (← →, Home, End),
  * and a screen reader reads the width.
  */
-export function SidePanelFrame({ name, width, margin, panelAtLeft, onClose, onWidth }: { name: string; width: number; margin: number; panelAtLeft: boolean; onClose: () => void; onWidth: (width: number) => void }) {
+export function SidePanelFrame({ name, width, margin, panelAtLeft, lights = true, onClose, onWidth }: { name: string; width: number; margin: number; panelAtLeft: boolean; lights?: boolean; onClose: () => void; onWidth: (width: number) => void }) {
   return (
     <>
-      {/* Mirrored, the header starts under the traffic lights: the title keeps clear of them. */}
-      <div className="side-panel-header" style={{ width, height: SIDE_PANEL_HEADER_HEIGHT, ...(panelAtLeft ? { paddingLeft: 14 + lightsRoom({ sidebarRight: true, x: 8 }) } : {}) }}>
+      {/* Mirrored, the header starts under the traffic lights (where the system has some): the title keeps clear of them. */}
+      <div className="side-panel-header" style={{ width, height: SIDE_PANEL_HEADER_HEIGHT, ...(panelAtLeft ? { paddingLeft: 14 + lightsRoom({ sidebarRight: true, x: 8, lights }) } : {}) }}>
         <span className="side-panel-title">{name}</span>
         <button className="icon" title={t('app.fermer-le-panneau')} aria-label={t('app.fermer-le-panneau')} onClick={onClose}>
           <span aria-hidden="true">✕</span>

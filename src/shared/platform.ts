@@ -23,6 +23,12 @@ export function platformOf(value: unknown): PlatformId {
 export interface PlatformFacts {
   /** Close, minimise and zoom buttons drawn by the system over a window whose title bar is hidden, placed by the application. */
   trafficLights: boolean
+  /**
+   * The three buttons of the system laid over the right end of a window whose title bar the page draws (`titleBarOverlay`: minimise, maximise, close, at
+   * the right, the page leaving the room). Written for Windows. Linux has the option too, but the side of the buttons follows the desktop (a layout
+   * with them at the left exists), which nobody has looked at here: it is off there until a Linux window has been seen with it.
+   */
+  controlsOverlay: boolean
   /** The translucent material behind a window (`BrowserWindow.setVibrancy`). */
   vibrancy: boolean
   /** The Dock (`app.dock`): its icon can be changed. */
@@ -66,6 +72,7 @@ export interface PlatformFacts {
 export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
   darwin: {
     trafficLights: true,
+    controlsOverlay: false,
     vibrancy: true,
     dock: true,
     touchId: true,
@@ -87,6 +94,7 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
   },
   win32: {
     trafficLights: false,
+    controlsOverlay: true,
     vibrancy: false,
     dock: false,
     touchId: false,
@@ -109,6 +117,7 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
   },
   linux: {
     trafficLights: false,
+    controlsOverlay: false,
     vibrancy: false,
     dock: false,
     touchId: false,

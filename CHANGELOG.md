@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Changed
+
+- **Windows, one title bar**: the main window, the other and private windows and the windows of a site opened as an application draw their own title bar. The three buttons of Windows lie over the toolbar, in the colours of the theme, and a ☰ button at its start opens the menu. The mini window and Settings keep the title bar of Windows.
+
 ### Fixed
 
 - **Menu bar, reopening a closed tab**: “Reopen Last Closed Tab” could stay greyed out after a tab was archived, when the menu was asked to change while it was still being built. A change asked during a rebuild is now noted, and the menu is read again once it is in.

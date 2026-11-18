@@ -102,6 +102,8 @@ const MIGRATED: Record<string, { exempt?: RegExp[]; why?: string }> = {
   // Small sheets that never had a colour of the old names to move: listed so that one written in them tomorrow is refused like anywhere else.
   'space-image.css': {},
   'window.css': {},
+  // The buttons of the system over the window (Windows) and the room for the traffic lights: lengths and attributes only.
+  'window-controls.css': {},
   'private.css': {},
   'host-text.css': {},
   'extension-settings.css': {}
@@ -111,7 +113,7 @@ const MIGRATED: Record<string, { exempt?: RegExp[]; why?: string }> = {
 const OUTSIDE_THE_LIST = ['palette.css', 'split-bar.css', 'tokens.css']
 
 /** Custom properties that the TypeScript sets on an element (inline), so that no stylesheet declares them. */
-const SET_BY_SCRIPT = new Set(['--veil', '--veil-color', '--toast-ms', '--notice-ms', '--hue', '--popover-right', '--sb-left', '--hero', '--fr-shadow', '--bg-gradient', '--window-border', '--window-alpha', '--card-outline', '--grain-image', '--grain-opacity', '--sidebar-width', '--p', '--tree-depth', '--tb-side', '--c', '--w', '--x0', '--y0', '--x1', '--y1', '--bx-top', '--v', '--fb-shadow', '--share', '--reload-progress', '--toast-progress', '--grip-x', '--grip-y'])
+const SET_BY_SCRIPT = new Set(['--veil', '--veil-color', '--toast-ms', '--notice-ms', '--hue', '--popover-right', '--sb-left', '--hero', '--fr-shadow', '--bg-gradient', '--window-border', '--window-alpha', '--card-outline', '--grain-image', '--grain-opacity', '--sidebar-width', '--p', '--tree-depth', '--tb-side', '--c', '--w', '--x0', '--y0', '--x1', '--y1', '--bx-top', '--v', '--fb-shadow', '--share', '--reload-progress', '--toast-progress', '--grip-x', '--grip-y', '--card-gap-right'])
 
 const COLOUR = /#[0-9a-f]{3,8}\b|\brgba?\([^)]*\)|\bhsla?\([^)]*\)/gi
 

@@ -5,6 +5,7 @@ import { applyScrollBars } from '@shared/scroll-bars'
 import { followLanguage } from './document-language'
 import { setKeyPlatform } from '@shared/i18n'
 import { platformOf } from '@shared/platform'
+import { markPlatform } from './window-controls'
 
 declare global {
   interface Window {
@@ -114,6 +115,8 @@ export function useSnapshot(): UiSnapshot | null {
     followLanguage(document.documentElement, snapshot.state.settings, navigator.language)
     // The keys named inside the sentences are those of the system the window runs on (shared/key-words.ts), set with the language for the same reason.
     setKeyPlatform(platformOf(snapshot.platform))
+    // The room kept for the traffic lights is macOS's alone: the stylesheets read the system from the root.
+    markPlatform(document.documentElement, platformOf(snapshot.platform))
     // The preferences the user forces (Réglages › Apparence › Accessibilité) are attributes of the root, on every surface that draws a snapshot.
     applyAccessibility(document.documentElement, snapshot.state.settings)
     // « Toujours afficher les barres de défilement » (macOS): the lists that hide their bar draw it (the stylesheets read `:root[data-scrollbars]`).

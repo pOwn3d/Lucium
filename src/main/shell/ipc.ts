@@ -345,6 +345,11 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
     if (MENU_KINDS.has(target?.kind) && typeof target.id === 'string' && !browser.namesLockedTarget({ id: target.id })) showMenu(target, browser, store, win)
   })
 
+  // The button ☰ of the toolbar (Windows: the window has no menu bar): the menu of the application, at the point the button names.
+  on<[unknown]>(Channel.showAppMenu, (anchor) => {
+    browser.popupAppMenu(anchor)
+  })
+
   // The button « Contraste de la page » of the toolbar: a click on it. The tab is the interface's word, so a tab a lock hides is left alone, as for a menu.
   on<[string]>(Channel.toggleReadable, (id) => {
     if (typeof id === 'string' && !browser.namesLockedTarget({ id })) toggleReadableSite(browser, store, id)

@@ -11,6 +11,7 @@ import { readFile, readdir } from 'node:fs/promises'
 import { parsePmsetPercent, parseSysfsCapacity } from '@shared/battery-saver'
 import { effectiveAccelerator, secondAccelerator, type KeyBindings } from '@shared/keybindings'
 import { linksFromArgv, PLATFORM_FACTS, platformOf, revealLabel, settingsLink, splitPathList, type PlatformFacts, type PlatformId, type SettingsPane } from '@shared/platform'
+import type { ControlsOverlay } from '@shared/window-controls'
 import { NO_TOUCH_ID, type TouchIdPort } from '../lock-service'
 import { adaptMenuTemplate } from './menu'
 import { browserDataDir, importAvailable as sourceAvailable, type PathEnv, type SourceFolder } from './paths'
@@ -27,12 +28,7 @@ export interface WindowFrame {
   titleBarOverlay?: { color: string; symbolColor: string; height: number }
 }
 
-/** Colours and height of the buttons the system draws over a window whose title bar is hidden (Windows and Linux). */
-export interface ControlsOverlay {
-  color: string
-  symbolColor: string
-  height: number
-}
+export type { ControlsOverlay }
 
 /** What a window must have for the calls below; `BrowserWindow` has all of them (on its own platform). */
 export interface VibrancyWindow {
@@ -44,6 +40,9 @@ export interface TrafficLightWindow {
 }
 export interface MenuWindow {
   removeMenu(): void
+}
+export interface ControlsWindow {
+  setTitleBarOverlay(options: Partial<ControlsOverlay>): void
 }
 
 /** `systemPreferences`, for the two calls Touch ID needs. */
@@ -76,8 +75,13 @@ const realSeams: Required<PlatformSeams> = {
 export interface Platform {
   readonly id: PlatformId
   readonly facts: PlatformFacts
-  /** The options of a window whose title bar the page draws: macOS keeps the system's three buttons at `trafficLight`; elsewhere the system's own title bar stays unless `overlay` is given. */
+  /**
+   * The options of a window whose title bar the page draws: macOS keeps the system's three buttons at `trafficLight`; Windows lays them over the right end
+   * of the window, in the colours of `overlay`, when it is given (`facts.controlsOverlay`); anywhere else, and without `overlay`, the system's own title bar stays.
+   */
   windowFrame(trafficLight: Point, overlay?: ControlsOverlay): WindowFrame
+  /** Gives the buttons laid over a window (see `windowFrame`) new colours or a new height. False when this system has none (nothing was called). */
+  syncControlsOverlay(win: ControlsWindow, overlay: ControlsOverlay): boolean
   /** Puts the material behind the window ('none' removes it). False when the system has none (nothing was called). */
   applyVibrancy(win: VibrancyWindow, material: string): boolean
   /** Shows or hides the three buttons and puts them at `position`. False when the system has none. */
@@ -137,7 +141,12 @@ export function createPlatform(id: PlatformId, seams: PlatformSeams = {}): Platf
     facts,
     windowFrame: (trafficLight, overlay) => {
       if (facts.trafficLights) return { titleBarStyle: 'hidden', trafficLightPosition: trafficLight }
-      return overlay ? { titleBarStyle: 'hidden', titleBarOverlay: overlay } : {}
+      return overlay && facts.controlsOverlay ? { titleBarStyle: 'hidden', titleBarOverlay: overlay } : {}
+    },
+    syncControlsOverlay: (win, overlay) => {
+      if (!facts.controlsOverlay) return false
+      win.setTitleBarOverlay(overlay)
+      return true
     },
     applyVibrancy: (win, material) => {
       if (!facts.vibrancy) return false

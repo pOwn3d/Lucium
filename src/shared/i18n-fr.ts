@@ -4635,6 +4635,7 @@ export const fr = {
   'toolbar.actualiser': 'Actualiser',
   'toolbar.actualiser-la-page': 'Actualiser la page',
   'toolbar.afficher-la-barre-laterale': 'Afficher la barre latérale',
+  'toolbar.menu-de-lucium': 'Menu de Lucium',
   'toolbar.ajouter-une-vue-scindee': 'Ajouter une vue scindée',
   'toolbar.copier-l-adresse': 'Copier l’adresse',
   'toolbar.fermer-ce-volet': 'Fermer ce volet',

@@ -42,7 +42,9 @@ import { ArchiveBoxGlyph, ChevronDownGlyph, PlusGlyph, ReadLaterGlyph, TidyGlyph
 import { FooterDownloads } from './DownloadStatus'
 import { FooterResources } from './ResourcePanel'
 import { MediaPlayers } from './MediaPlayer'
+import { AppMenuButton } from './AppMenuButton'
 import { SpaceMark } from './SpaceMark'
+import { useControlsOverlay } from './window-controls'
 import { LiveItems } from './LiveRows'
 import { WorkViewTiles } from './WorkViewTiles'
 import { Favicon, FolderBlock, Section, SidebarUiContext, SplitRow, TabRow, markClass, useStableUi, type SidebarUi } from './SidebarRows'
@@ -343,6 +345,8 @@ function SidebarBody({ snapshot, space, right }: { snapshot: UiSnapshot; space: 
   const splitTabIds = new Set(state.splits.flatMap((sp) => sp.tabIds))
   const sidebarVisible = state.settings.sidebarVisible
   const showToolbar = state.settings.showToolbar
+  // Windows: the window has no menu bar, and with the toolbar hidden the button ☰ lives in the first row of the sidebar.
+  const controls = useControlsOverlay()
   const isMac = snapshot.platform === 'darwin'
   // The keys of ⌃⌘S (« Coller ou déplier la barre latérale »), as the user set them, for the bubble of « Plier la barre ».
   const platform = platformOf(snapshot.platform)
@@ -686,6 +690,8 @@ function SidebarBody({ snapshot, space, right }: { snapshot: UiSnapshot; space: 
       >
         <SpaceBackgroundLayer space={space} className="sidebar-background" forceReduceMotion={state.settings.forceReduceMotion} saving={snapshot.batterySaverOn === true} />
         <div className="toolbar">
+          {/* Windows, with the toolbar of the pages hidden: the button ☰ is not in a toolbar, so it starts this row (the menu bar is not there either). */}
+          {controls && !showToolbar && <AppMenuButton className="icon sidebar-menu" />}
           <button
             className="icon sidebar-toggle"
             title={tip(t('sidebar.masquer-la-barre-laterale'), key('toggleSidebar'))}

@@ -614,6 +614,8 @@ export abstract class BrowserBase {
   protected floatingShown = false
   /** The traffic lights last given to the window (`syncTrafficLights`): visibility and position, as one key. */
   protected trafficLightsGiven = ''
+  /** The buttons laid over the window's right end last given to it (`syncControlsOverlay`, Windows), as one key. */
+  protected controlsOverlayGiven = ''
   /** A snapshot was published while the layer of panels was closed, and not sent to it (`publishHere`): it gets the state when a panel opens. */
   protected overlayMissed = false
 

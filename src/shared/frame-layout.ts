@@ -27,12 +27,13 @@ export const DOCK_WIDTH = 56
 /**
  * Distance from the top of the window to the page card. The toolbar takes a row above it (one more under a light bar, for its line). In a
  * mirrored window the traffic lights sit above the page, not in the sidebar, and so they do beside a docked column (narrower than they are):
- * a bare strip keeps them off the page when the toolbar is hidden.
+ * a bare strip keeps them off the page when the toolbar is hidden. With `controls` (the buttons of the system over the right end of the window,
+ * Windows) the strip is there whatever the side of the sidebar: the buttons are always over the card's top right.
  */
-export function stageTop(o: { showToolbar: boolean; toolbarLine: boolean; sidebarRight: boolean; docked?: boolean; margin?: number }): number {
+export function stageTop(o: { showToolbar: boolean; toolbarLine: boolean; sidebarRight: boolean; docked?: boolean; margin?: number; controls?: boolean }): number {
   const margin = o.margin ?? PAGE_MARGIN
   if (o.showToolbar) return margin + (o.toolbarLine ? TOOLBAR_HEIGHT : TOOLBAR_BAR_HEIGHT)
-  return margin + (o.sidebarRight || o.docked === true ? TOOLBAR_BAR_HEIGHT : 0)
+  return margin + (o.controls === true || o.sidebarRight || o.docked === true ? TOOLBAR_BAR_HEIGHT : 0)
 }
 
 export interface FrameInput {
@@ -101,9 +102,12 @@ export function trafficLightsAt(o: { sidebarVisible: boolean; floating: boolean;
   }
 }
 
-/** How much a bar that starts at `x` (window coordinates) must leave empty on its left for the traffic lights; always 0 with the sidebar at the left. */
-export function lightsRoom(o: { sidebarRight: boolean; x: number }): number {
-  return o.sidebarRight ? Math.max(0, LIGHTS_CLEARANCE - o.x) : 0
+/**
+ * How much a bar that starts at `x` (window coordinates) must leave empty on its left for the traffic lights; always 0 with the sidebar at the left, and
+ * on a system that has no traffic lights (`lights: false`: Windows and Linux put their buttons at the right, or leave them to the system's own title bar).
+ */
+export function lightsRoom(o: { sidebarRight: boolean; x: number; lights?: boolean }): number {
+  return o.sidebarRight && o.lights !== false ? Math.max(0, LIGHTS_CLEARANCE - o.x) : 0
 }
 
 /**
@@ -111,19 +115,31 @@ export function lightsRoom(o: { sidebarRight: boolean; x: number }): number {
  * `outer`, what it gives up on the side away from the sidebar: the margin, or the docked panel and its margins), or a column docked at the left (the
  * card starts at its edge). Null when the lights are not over the card: the full sidebar at the left holds them, or hides them with it.
  */
-export function cardLeftUnderLights(o: { sidebarRight: boolean; docked: boolean; outer: number }): number | null {
+export function cardLeftUnderLights(o: { sidebarRight: boolean; docked: boolean; outer: number; lights?: boolean }): number | null {
+  if (o.lights === false) return null
   if (o.sidebarRight) return o.outer
   return o.docked ? DOCK_WIDTH : null
 }
 
 /** The room the toolbar of the page card leaves at its start for the traffic lights (see `cardLeftUnderLights`); 0 when they are not over it. */
-export function toolbarLeading(o: { sidebarRight: boolean; docked: boolean; outer: number }): number {
+export function toolbarLeading(o: { sidebarRight: boolean; docked: boolean; outer: number; lights?: boolean }): number {
   const left = cardLeftUnderLights(o)
   return left === null ? 0 : lightsRoom({ sidebarRight: true, x: left })
 }
 
 /** How much of the window the sidebar's side takes while it is shown: the column of a docked sidebar, else the sidebar's width. */
 export const shownSidebarWidth = (o: { docked: boolean; sidebarWidth: number }): number => (o.docked ? DOCK_WIDTH : o.sidebarWidth)
+
+/**
+ * Distance from the right edge of the window to the right edge of the page card, and so of its toolbar: the window border, the panel docked at that side
+ * (`outer`, with its margins), or the sidebar shown at the right (the column of a docked one). The buttons of the system lie over the last stretch of the
+ * window's right end: the toolbar leaves empty whatever of them is not already outside the card, that is the width of the buttons less this gap
+ * (the stylesheet takes that width from the system, `--controls-w`).
+ */
+export function cardRightGap(o: { sidebarRight: boolean; sidebarVisible: boolean; docked: boolean; sidebarWidth: number; outer: number; margin: number }): number {
+  if (!o.sidebarRight) return o.outer
+  return o.sidebarVisible ? shownSidebarWidth(o) : o.margin
+}
 
 /** The popover of the site control centre ends this far from the window's right edge, 3 px inside the page card. */
 const POPOVER_RIGHT = PAGE_MARGIN + 3

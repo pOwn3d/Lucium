@@ -4625,6 +4625,7 @@ export const en: Record<MessageKey, string> = {
   'toolbar.actualiser': 'Reload',
   'toolbar.actualiser-la-page': 'Reload this page',
   'toolbar.afficher-la-barre-laterale': 'Show sidebar',
+  'toolbar.menu-de-lucium': 'Lucium menu',
   'toolbar.ajouter-une-vue-scindee': 'Add split view',
   'toolbar.copier-l-adresse': 'Copy address',
   'toolbar.fermer-ce-volet': 'Close this pane',

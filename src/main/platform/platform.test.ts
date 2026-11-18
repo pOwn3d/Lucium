@@ -15,9 +15,33 @@ describe('window frame', () => {
   })
 
   it('leaves the system title bar alone elsewhere, unless the buttons are asked for over the page', () => {
-    for (const id of ['win32', 'linux'] as const) {
-      expect(createPlatform(id).windowFrame(LIGHTS)).toEqual({})
-      expect(createPlatform(id).windowFrame(LIGHTS, { color: '#17171c', symbolColor: '#fff', height: 40 })).toEqual({ titleBarStyle: 'hidden', titleBarOverlay: { color: '#17171c', symbolColor: '#fff', height: 40 } })
+    for (const id of ['win32', 'linux'] as const) expect(createPlatform(id).windowFrame(LIGHTS)).toEqual({})
+  })
+
+  it('lays the three buttons of Windows over the page when they are asked for, in the colours and the height given', () => {
+    const overlay = { color: 'rgba(0, 0, 0, 0)', symbolColor: '#f1f2f6', height: 42 }
+    expect(createPlatform('win32').windowFrame(LIGHTS, overlay)).toEqual({ titleBarStyle: 'hidden', titleBarOverlay: overlay })
+  })
+
+  it('keeps the system title bar on Linux even when the buttons are asked for: nobody has seen them there (the side of the buttons follows the desktop)', () => {
+    expect(createPlatform('linux').windowFrame(LIGHTS, { color: '#17171c', symbolColor: '#fff', height: 40 })).toEqual({})
+  })
+})
+
+describe('the buttons laid over a window', () => {
+  const overlay = { color: 'rgba(0, 0, 0, 0)', symbolColor: '#1a1d2b', height: 42 }
+
+  it('are given new colours or a new height on Windows', () => {
+    const win = { setTitleBarOverlay: vi.fn() }
+    expect(createPlatform('win32').syncControlsOverlay(win, overlay)).toBe(true)
+    expect(win.setTitleBarOverlay).toHaveBeenCalledExactlyOnceWith(overlay)
+  })
+
+  it('are never touched elsewhere: nothing is called, and the result says so', () => {
+    for (const id of ['darwin', 'linux'] as const) {
+      const win = { setTitleBarOverlay: vi.fn() }
+      expect(createPlatform(id).syncControlsOverlay(win, overlay)).toBe(false)
+      expect(win.setTitleBarOverlay).not.toHaveBeenCalled()
     }
   })
 })

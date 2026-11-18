@@ -70,6 +70,9 @@ export interface ToolbarInputs {
   readable?: string
   /** The button « Traduction de la page » and its state: the bar must render when it comes or goes, or the translation moves on (also a change of the target). */
   translate?: { state: string; from: string; to: string } | undefined
+  /** The button ☰ (the menu of the application, on a window with no menu bar) and the room left at the bar's end for the buttons of the system: the bar must render when either changes. */
+  menu?: boolean
+  underControls?: boolean
 }
 
 export function sameToolbar(a: ToolbarInputs, b: ToolbarInputs): boolean {
@@ -82,6 +85,8 @@ export function sameToolbar(a: ToolbarInputs, b: ToolbarInputs): boolean {
     a.zoomMark === b.zoomMark &&
     a.sidebarRight === b.sidebarRight &&
     a.leading === b.leading &&
+    (a.menu === true) === (b.menu === true) &&
+    (a.underControls === true) === (b.underControls === true) &&
     a.badges === b.badges &&
     (a.annotate === true) === (b.annotate === true) &&
     a.notesList?.join(' ') === b.notesList?.join(' ') &&

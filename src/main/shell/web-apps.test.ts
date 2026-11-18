@@ -5,6 +5,7 @@ import { WEB_APPS_MAX, type WebAppRequest } from '@shared/web-apps'
 import type { Action } from '@shared/sidebar'
 import type { Engine, Page, PageEvents } from '../engine/types'
 import { frenchSpaces } from '@shared/french-typography'
+import { controlsOverlay } from '@shared/window-controls'
 
 const electron = vi.hoisted(() => ({ ipc: new (require('node:events').EventEmitter)(), clipboard: { writeText: vi.fn(async () => undefined) } }))
 vi.mock('electron', () => ({ ipcMain: electron.ipc, clipboard: electron.clipboard }))
@@ -334,7 +335,19 @@ describe('the title bar of an application window', () => {
     expect(webAppWindowFrame(createPlatform('darwin'))).toEqual({ titleBarStyle: 'hidden', trafficLightPosition: { x: 12, y: Math.round((WEB_APP_HEADER_HEIGHT - 14) / 2) } })
   })
 
-  it('leaves the system title bar on Windows and Linux: a hidden bar there would leave the window with no button to close it', () => {
+  it('leaves the system title bar on Windows and Linux when no buttons are asked for: a hidden bar there would leave the window with no button to close it', () => {
     for (const id of ['win32', 'linux'] as const) expect(webAppWindowFrame(createPlatform(id))).toEqual({})
+  })
+
+  it('lays the three buttons of Windows over the header, as high as the header, in the colours given', () => {
+    const overlay = controlsOverlay({ kind: 'app', margin: 0, toolbar: false, split: false, privateBar: false, appearance: 'dark' })
+    expect(overlay.height).toBe(WEB_APP_HEADER_HEIGHT)
+    expect(webAppWindowFrame(createPlatform('win32'), overlay)).toEqual({ titleBarStyle: 'hidden', titleBarOverlay: overlay })
+  })
+
+  it('keeps the system title bar on Linux and the lights on macOS even when the buttons are asked for', () => {
+    const overlay = controlsOverlay({ kind: 'app', margin: 0, toolbar: false, split: false, privateBar: false, appearance: 'light' })
+    expect(webAppWindowFrame(createPlatform('linux'), overlay)).toEqual({})
+    expect(webAppWindowFrame(createPlatform('darwin'), overlay)).toEqual({ titleBarStyle: 'hidden', trafficLightPosition: { x: 12, y: Math.round((WEB_APP_HEADER_HEIGHT - 14) / 2) } })
   })
 })

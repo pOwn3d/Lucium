@@ -41,6 +41,7 @@ import { createWindowManager, followDockClicks, openExtensionWindows } from './s
 import { installExternalLinks } from './shell/external-links-wiring'
 import { setKeyPlatform, t } from '@shared/i18n'
 import { platformOf } from '@shared/platform'
+import { firstControlsOverlay } from '@shared/window-controls'
 import { WaitingLinks } from '@shared/waiting-links'
 import { followSpellChecking, holdSpellDictionaries } from './shell/page-commands'
 import { MAIN_WINDOW_ID } from './shell/windows'
@@ -243,7 +244,8 @@ async function main(): Promise<void> {
     show: false,
     backgroundColor: '#17171c',
     ...smokeWindowOptions(smoke),
-    ...platform.windowFrame(TRAFFIC_LIGHTS),
+    // Windows: the system's three buttons over the right end of the toolbar (the page draws the rest of the title bar); the layout follows what is behind them.
+    ...platform.windowFrame(TRAFFIC_LIGHTS, firstControlsOverlay(sharedStore.get().settings, { dark: nativeTheme.shouldUseDarkColors })),
     webPreferences
   })
   const overlay = new WebContentsView({ webPreferences })

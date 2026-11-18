@@ -1,0 +1,49 @@
+/* ---- The buttons of the system over the window (Windows) ----
+   The page draws the title bar, and the system lays its three buttons (minimise, maximise, close) over the right end of the window, in the row of the
+   toolbar (window-controls.ts says when: `data-controls="overlay"` on the root). Nothing of Lucium may be under them. How wide they are, the system knows
+   (it depends on its scale and settings): it hands the page the rectangle that is left (`env(titlebar-area-*)`), and the buttons are the rest to its right.
+   No width is written here. Every rule below hangs on the attribute, so a window without the buttons is the one it always was.
+
+   The same file keeps the room for the traffic lights where there are none: `--lights-room` is the width of what the lights take at the start of a header
+   (macOS), the stylesheets give a default for it that is macOS's, and every other system says 0. */
+
+:root[data-platform]:not([data-platform='darwin']) { --lights-room: 0px; }
+
+:root[data-controls='overlay'] {
+  --controls-w: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw));
+  /* The row the buttons cover: the border above the toolbar and the toolbar (the card starts under it, shared/frame-layout.ts `stageTop`). */
+  --controls-h: calc(var(--window-border, 10px) + 32px);
+}
+
+/* The end of the bar of the card: an empty element in its right group, as wide as what of the buttons lies over this bar. The card ends `--card-gap-right`
+   from the window's edge (the border, the docked panel, or the sidebar at the right), the bar keeps 5 px of padding, so the buttons start `--controls-w`
+   from the edge and the group stops short of them by the difference. The address, centred on the bar, measures the group with it. */
+.tb-controls-room { flex: none; width: max(0px, calc(var(--controls-w, 0px) - var(--card-gap-right, 0px) - 5px)); margin-left: -4px; }
+
+/* The address is centred on the bar and takes what the two groups leave (`--tb-side`, measured by the bar). In a narrow strip, such as the pane of a split view,
+   the room for the buttons of the system leaves it nothing: it would overflow, to the right, under them. It is clipped to its room, and put away when that is
+   less than the link glyph and a few letters. */
+:root[data-controls='overlay'] .tb-address { container-type: inline-size; overflow: hidden; }
+@container (max-width: 120px) { :root[data-controls='overlay'] .tb-address-inner { display: none; } }
+
+/* The button ☰ of the bar and of the sidebar's first row. The bar's own `.tb-button` is 32 x 24; in the sidebar it is the size of the buttons next to it (32 x 32, 7 px below the top). */
+.app-menu-button { flex: none; }
+.sidebar .sidebar-menu { width: 32px; height: 32px; margin-top: 7px; color: var(--sb-glyph); }
+.sidebar .sidebar-menu:hover:not(:disabled) { color: var(--text-on-space); }
+
+/* With the toolbar hidden the strip above the page card is bare (the card still starts under the buttons): it drags the window, as the bar would. */
+:root[data-controls='overlay'] .stage-strip { position: absolute; left: 0; right: 0; top: -32px; height: 32px; -webkit-app-region: drag; }
+
+/* The sidebar at the right: the buttons are over its first row, which keeps its end free and is as high as they are, so that what follows it (the address
+   field, with the toolbar hidden) starts below them. The sidebar is flush with the window's edge, so the whole width of the buttons is over it. */
+:root[data-controls='overlay'] .shell.sidebar-right .sidebar .toolbar {
+  height: var(--controls-h);
+  padding-right: calc(9px + var(--controls-w));
+}
+
+/* The panel docked beside the page, at the right (the default layout): its header starts 8 px from the window's edge, in the row of the buttons, so its
+   close button keeps clear of them. */
+:root[data-controls='overlay'] .shell:not(.sidebar-right) .side-panel-header { padding-right: calc(8px + max(0px, var(--controls-w) - 8px)); }
+
+/* An application window (« Ouvrir comme application »): its header is as high as the buttons and keeps the end of its row free. No traffic lights. */
+:root[data-controls='overlay'] .wa-header { padding-left: 10px; padding-right: calc(10px + var(--controls-w)); }

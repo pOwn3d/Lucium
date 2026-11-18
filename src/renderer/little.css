@@ -23,7 +23,7 @@ body.little { background: var(--fixed-17171c); }
 
 /* The header of the mini window: 40 px, the page's icon, title and address, "Ouvrir dans <espace>" and the pin "Garder ouvert". The
    room on the left is the traffic lights'. The whole header drags the window; what can be clicked does not. */
-.la-header { position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 80px; -webkit-app-region: drag; }
+.la-header { position: relative; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 calc(8px + var(--lights-room, 72px)); -webkit-app-region: drag; }
 .la-header button { -webkit-app-region: no-drag; color: inherit; }
 
 .la-field { position: relative; flex: 1; min-width: 96px; height: 32px; box-sizing: border-box; display: flex; align-items: center; gap: 6px; padding: 0 3px 0 8px; border-radius: 10px; background: var(--la-field); }
@@ -125,7 +125,7 @@ body.little-tray { background: transparent; }
 .wa { position: fixed; inset: 0; background: var(--fixed-17171c); color: var(--fixed-d9d8dc); --la-glyph: var(--fixed-787681); --la-hover: var(--fixed-ffffff-08); --la-fg: var(--fixed-d9d8dc); font: 500 13px/1 -apple-system, BlinkMacSystemFont, system-ui, sans-serif; -webkit-font-smoothing: antialiased; user-select: none; }
 @media (prefers-color-scheme: light) { .wa { background: var(--fixed-f1f1f4); color: var(--fixed-2a2a31); --la-glyph: var(--fixed-6a6a74); --la-hover: var(--fixed-000000-08); --la-fg: var(--fixed-2a2a31); } }
 /* The room on the left is the traffic lights'. The header drags the window; what can be clicked does not. */
-.wa-header { box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 78px; -webkit-app-region: drag; }
+.wa-header { box-sizing: border-box; display: flex; align-items: center; gap: 10px; padding: 0 10px 0 calc(10px + var(--lights-room, 68px)); -webkit-app-region: drag; }
 .wa-header button { -webkit-app-region: no-drag; color: inherit; }
 .wa-id { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
 .wa-icon { flex: none; width: 18px; height: 18px; border-radius: 4px; object-fit: contain; }
