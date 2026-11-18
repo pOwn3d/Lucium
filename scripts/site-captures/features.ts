@@ -630,7 +630,8 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
       'tout ce que la fonction montre nomme la boutique d’un autre navigateur (sa ligne et son aide dans les Réglages, la feuille d’installation, la commande ' +
       'qui ouvre la boutique), et la fiche de la boutique est une page de son éditeur, sur Internet : rien à montrer sans ce nom, que le site ne montre pas'
   },
-  setting('fn-battery-saver', 'battery-saver', t('Mode économie de batterie', 'Battery Saver Mode'), 'tools', 'batterySaver', { fold: true, why: 'agit sur batterie, selon l’état du Mac' }),
+  // At the foot of the image: the row of the translation under it names Apple (« Traduire d’abord avec macOS »), which the site does not; settings-rows.test.ts.
+  setting('fn-battery-saver', 'battery-saver', t('Mode économie de batterie', 'Battery Saver Mode'), 'tools', 'batterySaver', { fold: true, why: 'agit sur batterie, selon l’état du Mac', place: 'bottom' }),
   setting('fn-warn-close-window', 'warn-close-window', t('Avertir avant de fermer une fenêtre de plusieurs onglets', 'Warn before closing a window with several tabs'), 'tabs', 'warnBeforeClosingWindow', { patch: { warnBeforeClosingWindow: true }, on: true, why: 'agit au moment de fermer la fenêtre' }),
   setting('fn-applescript', 'applescript', t('Commandes par adresse lucium:// (AppleScript, Raccourcis)', 'lucium:// address commands (AppleScript, Shortcuts)'), 'features', 'urlAutomation', { label: t('Commandes par adresse lucium:// (AppleScript, Raccourcis)', 'Commands by lucium:// address (AppleScript, Shortcuts)'), patch: { urlAutomation: true }, on: true, why: 'les commandes viennent d’une autre application' }),
   direct('fn-whats-new', 'whats-new', t('Nouveautés après une mise à jour', 'What’s new after an update'), t(
