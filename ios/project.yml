@@ -85,6 +85,18 @@ targets:
         GENERATE_INFOPLIST_FILE: YES
         TEST_HOST: "$(BUILT_PRODUCTS_DIR)/Lucium.app/Lucium"
         BUNDLE_LOADER: "$(TEST_HOST)"
+  LuciumUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: LuciumUITests
+    dependencies:
+      - target: Lucium
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.lucium.browser.ios.uitests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_TARGET_NAME: Lucium
 schemes:
   Lucium:
     build:
@@ -94,3 +106,12 @@ schemes:
     test:
       targets:
         - LuciumTests
+  # The tests that drive the application like a person (a real keyboard, real taps). Their own scheme: the heavy ones stay out of `Lucium`'s test run.
+  LuciumUI:
+    build:
+      targets:
+        Lucium: all
+        LuciumUITests: [test]
+    test:
+      targets:
+        - LuciumUITests

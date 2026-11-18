@@ -178,6 +178,18 @@ describe('iOS contract: lock', () => {
     for (const flag of flags) expect(closing, `${flag} is presented by BrowserScreen and not closed when the application locks`).toContain(`${flag} = false`)
   })
 
+  it('closes the iPhone\'s sidebar, the one that slides out from the left edge, when the application locks, and keeps WebKit\'s swipe back off the iPhone', () => {
+    const screen = readFileSync(join(IOS_SOURCES, 'BrowserScreen.swift'), 'utf8')
+    const lock = readFileSync(join(IOS_SOURCES, 'BrowserModel+Lock.swift'), 'utf8')
+    const closing = lock.match(/func closePresentedScreens\(\) \{([\s\S]*?)\n    \}/)?.[1] ?? ''
+    // It is not a sheet, so the check above does not see it: the screen draws it through `EdgeDrawerHost`, and the model closes it with an event.
+    expect(screen, 'BrowserScreen no longer draws the sidebar of the iPhone').toContain('EdgeDrawerHost(')
+    expect(closing, 'the sidebar of the iPhone stays over the lock screen').toContain('drawerEvent(.applicationLocked)')
+    const sleep = readFileSync(join(IOS_SOURCES, 'TabSleep.swift'), 'utf8')
+    expect(sleep, 'the left edge is the sidebar\'s on an iPhone: the swipe back of WebKit is decided by LuciumKit').toContain('allowsBackForwardNavigationGestures = EdgeDrawer.allowsWebKitBackGesture(isPhone: isPhone)')
+    expect(sleep).not.toMatch(/allowsBackForwardNavigationGestures = true/)
+  })
+
   it('carries the Face ID sentence in both languages, and in the project so that the system never stops the application at the first prompt', () => {
     const info = JSON.parse(readFileSync(join(IOS_SOURCES, 'InfoPlist.xcstrings'), 'utf8')) as Catalogue
     const entry = info.strings['NSFaceIDUsageDescription']?.localizations
