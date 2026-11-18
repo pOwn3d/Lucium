@@ -72,9 +72,14 @@ const KNOWN: readonly string[] = [
   'settings-guide.ts RECOMMENDED_AWAY_FROM_DEFAULTS',
   'site-data.ts siteScore',
   'space-image.ts squareCrop',
-  // The merge of the synchronisation (card 446): the session of the Mac (card 444) and of the iPhone (card 445) call them; remove these lines when they do.
+  // The merge of the synchronisation (card 446): the session of the Mac (card 444) and of the iPhone (card 445) call it; remove this line when they do.
+  // The journal of the settled conflicts (card 446): the page « Synchronisation » of the Mac (card 444) and the session of the iPhone (card 445) call these.
+  'sync-conflicts.ts addToJournal',
+  'sync-conflicts.ts lastSession',
+  'sync-conflicts.ts parseJournal',
+  'sync-conflicts.ts removeFromJournal',
+  'sync-conflicts.ts serializeJournal',
   'sync-merge.ts mergeSnapshots',
-  'sync-merge.ts otherSide',
   'tab-state.ts tabStateLegend',
   'tab-tree.ts TREE_INDENT',
   'tab-tree.ts treeDepth',

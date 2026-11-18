@@ -59,6 +59,7 @@ const MIGRATED: Record<string, { exempt?: RegExp[]; why?: string }> = {
   'space-menu.css': {},
   'tidy-panel.css': {},
   'dead-tabs.css': {},
+  'sync-conflict.css': {},
   'toolbar.css': { exempt: [/html\.private/], why: "the bar of a private window is the colour of its theme, in stripes: an identity, not a role" },
   // The spaces: the new-space sheet, "Personnaliser l'espace", "Gérer les espaces", the icon picker, the drawing of the sidebar and the theme panel.
   'spacecreate.css': {},

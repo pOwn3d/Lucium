@@ -4766,6 +4766,236 @@
       "swap": true
     },
     {
+      "name": "a tab put in two different folders: the later mark wins, and the folders are named in what the person is told",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "f2": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Lecture"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "f2": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Lecture"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "folderId": "f1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "folderId": "1790000000003-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "f2": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Lecture"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "folderId": "f2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "folderId": "1790000000007-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "f2": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Lecture"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "folderId": "f2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "folderId": "1790000000007-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "tab",
+            "id": "t1",
+            "field": "folderId",
+            "winner": "remote",
+            "reason": "newer"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
       "name": "merging a snapshot with itself changes nothing (idempotence)",
       "base": {
         "entities": {
