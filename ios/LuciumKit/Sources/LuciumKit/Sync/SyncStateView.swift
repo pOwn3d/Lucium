@@ -153,6 +153,11 @@ public enum SyncStateView {
 
     // MARK: Snapshot
 
+    /// Whether a session with these categories exchanges the kind: the kinds of the categories, and the kinds this version does not know (they cross whatever is ticked, §11.6).
+    public static func isExchanged(kind: String, categories: Set<SyncCategory>) -> Bool {
+        allowedKinds(categories).contains(kind) || (SyncFieldClasses.kind(kind) == nil && kind != "setting")
+    }
+
     /// Whether `kind` is one of the kinds the categories of a session allow.
     private static func allowedKinds(_ categories: Set<SyncCategory>) -> Set<String> {
         var kinds = Set<String>()
