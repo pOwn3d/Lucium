@@ -182,12 +182,38 @@ export function installAppMenus(deps: AppMenuDeps): { refreshMenu: () => void } 
     return `${target.id}|${windowManager.isMainAway()}|${menuKey(shownState(target.store.get(), lock.view()), target.kind === 'private' ? [] : extensionsOfProfile(target.store.get()).map((e) => e.id), target.browser.menuFacts(), sessionStart, `${menuDialogs.isRecordingTrace()}|lock:${lock.isAppLocked()}:${lock.isActive()}:${lock.lockedSpaces().join(',')}|${windowManager.namesKey()}|dock:${dockViews}`)}`
   }
   let shownMenu = menuKeyOfFocused()
+  // A rebuild can be asked again while one is running: a native event raised inside `Menu.setApplicationMenu` (Windows resizes the window for the menu bar),
+  // a listener that changes the state while the template is read, a call made from outside the main thread's own turn. A nested rebuild would install the
+  // newer menu, and the first one would then install its older template over it with the newer key recorded as shown: the entry « Rouvrir le dernier onglet
+  // fermé » stayed greyed out after ⌘W until another change of the key. So a call made meanwhile is only noted, and the key is read again once the menu is in.
+  let rebuilding = false
+  let askedAgain = false
+  const REBUILD_PASSES_MAX = 5
   const refreshMenu = (): void => {
-    const key = menuKeyOfFocused()
-    if (key === shownMenu) return
-    shownMenu = key
-    installMenu()
-    installDockMenu()
+    if (rebuilding) {
+      askedAgain = true
+      return
+    }
+    rebuilding = true
+    try {
+      for (let pass = 1; ; pass++) {
+        askedAgain = false
+        const key = menuKeyOfFocused()
+        if (key === shownMenu) return
+        shownMenu = key
+        installMenu()
+        installDockMenu()
+        if (!askedAgain) return
+        if (pass === REBUILD_PASSES_MAX) {
+          // The state keeps changing under every build: stop here, and let the next change (or call) find the menu behind and build it again.
+          console.warn(`[menu] the menu changed again during each of its ${REBUILD_PASSES_MAX} rebuilds; it is built again at the next change`)
+          shownMenu = ''
+          return
+        }
+      }
+    } finally {
+      rebuilding = false
+    }
   }
   store.subscribe(refreshMenu)
   windowManager.onChange(refreshMenu)

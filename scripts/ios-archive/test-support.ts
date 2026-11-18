@@ -35,6 +35,8 @@ export const stubs: Record<string, string> = {
   xcodebuild: `
 if [ "\${1:-}" = "-version" ]; then echo "Xcode (stand-in)"; exit 0; fi
 echo "xcodebuild $*" >> "$STUB_LOG"
+# The PATH each run was given, one line per run: Xcode starts the "rsync" it finds there (ios-archive-script.test.ts).
+echo "$PATH" >> "$STUB_LOG.path"
 fail="\${STUB_FAIL:-}"
 build=""; archive=""; export_path=""
 for argument in "$@"; do case "$argument" in CURRENT_PROJECT_VERSION=*) build="\${argument#CURRENT_PROJECT_VERSION=}" ;; esac; done

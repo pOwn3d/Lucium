@@ -67,6 +67,12 @@ if [ "$dry" = 0 ]; then
   xcodebuild -version >/dev/null 2>&1 || die "Xcode is not ready: install it, open it once, and point the command line at it (sudo xcode-select -s /Applications/Xcode.app)"
 fi
 
+# Xcode makes the .ipa with /usr/bin/rsync -E (openrsync), which starts the "rsync" found on the PATH. Homebrew's rsync 3.x does not accept it ("--extended-attributes:
+# unknown option") and the export stops with "Copy failed" (seen on the first real send, 18 November 2026). So xcodebuild gets the system folders first. The tool
+# is looked up BEFORE the PATH changes: the one that runs stays the one the user's PATH names (a stand-in in the tests, the selected Xcode on a Mac).
+xcodebuild_bin="$(command -v xcodebuild || true)"
+xcodebuild() { PATH="/usr/bin:/bin:/usr/sbin:/sbin:$PATH" "$xcodebuild_bin" "$@"; }
+
 step() { echo; echo "== $*"; }
 # A command that is run, or, in a dry run, only shown. The arguments are printed so that they can be copied.
 run() {

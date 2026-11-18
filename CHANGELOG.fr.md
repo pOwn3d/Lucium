@@ -24,6 +24,7 @@ Un onglet mis en veille se réveille avec ses pages Précédent et Suivant, une 
 - **Dictionnaires du correcteur, Windows et Linux** : Chromium ne télécharge plus, au premier lancement et correcteur éteint, le dictionnaire de la langue du système depuis son CDN. Une session démarre sans langue : rien n’est téléchargé avant que vous activiez l’orthographe dans le menu Édition.
 - **Fond vidéo, cadrage** : dans « Personnaliser l’espace… », l’image fixe de « Cadrage de la vidéo » était étirée à la largeur du panneau pour une vidéo plus haute que large (les neuf vidéos fournies sont en 9:16), et son cadre sortait de la vidéo. L’image garde maintenant la forme de la vidéo.
 - **Extensions sans service worker** : un clic sur l’icône d’une extension faite de pages seules (une fenêtre contextuelle, pas de worker en arrière-plan) ouvre sa fenêtre tout de suite et non après 10 secondes, et Lucium n’écrit plus d’échec de démarrage pour elle. Il lit le manifeste, qui dit qu’il n’y a aucun worker à attendre.
+- **Barre de menus, réouverture d’un onglet fermé** : « Rouvrir le dernier onglet fermé » pouvait rester grisé après l’archivage d’un onglet, quand le menu devait changer pendant sa construction. Un changement demandé pendant une reconstruction est maintenant noté, et le menu est relu une fois en place.
 
 ## [1.1.3] - 2026-11-17
 
