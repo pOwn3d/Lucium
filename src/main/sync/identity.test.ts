@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { tempDir } from '../temp-dir'
 import { fingerprintOf, keyMatchesCertificate } from './certificate'
-import { IdentityStore } from './identity'
+import { IdentityNotOpenableError, IdentityStore } from './identity'
 import type { SecretBox } from './secret-box'
 
 /** A box that seals by xor-ing with a key of its own: opening what another box sealed fails, as safeStorage does on another machine. */
@@ -68,17 +68,46 @@ describe('IdentityStore', () => {
     expect(existsSync(path)).toBe(false)
   })
 
-  it('replaces an identity it cannot open on this machine (a restored profile), and says so', () => {
+  // Review n° 22: a keychain that refuses for a moment must not make the paired devices forget.
+  it('does not replace an identity it cannot open until it is told to: the file is left as it was, and a key that opens again gives the same identity', () => {
     const log = quiet()
     const path = join(tempDir('lucium-sync-id-'), 'id.json')
     const old = new IdentityStore(path, box(4)).loadOrCreate().identity
-    const store = new IdentityStore(path, box(5))
-    expect(store.load()).toBeNull()
+    const before = readFileSync(path, 'utf8')
+    const refusing = new IdentityStore(path, box(5))
+    expect(refusing.load()).toBeNull()
     expect(log).toHaveBeenCalledWith(expect.stringContaining('cannot be opened on this machine'), expect.anything())
-    const made = store.loadOrCreate()
+    expect(() => refusing.loadOrCreate()).toThrow(IdentityNotOpenableError)
+    expect(readFileSync(path, 'utf8')).toBe(before)
+    // The keychain answers again: it is the same identity, nothing was lost.
+    const again = new IdentityStore(path, box(4)).loadOrCreate()
+    expect(again).toMatchObject({ created: false, replaced: false })
+    expect(again.identity.fingerprint.equals(old.fingerprint)).toBe(true)
+    log.mockRestore()
+  })
+
+  it('replaces an identity it cannot open on this machine (a restored profile) once it is told to, and says so', () => {
+    const log = quiet()
+    const path = join(tempDir('lucium-sync-id-'), 'id.json')
+    const old = new IdentityStore(path, box(4)).loadOrCreate().identity
+    const made = new IdentityStore(path, box(5)).loadOrCreate({ replaceUnopenable: true })
     expect(made).toMatchObject({ created: true, replaced: true })
     expect(made.identity.fingerprint.equals(old.fingerprint)).toBe(false)
     expect(made.identity.deviceId).not.toBe(old.deviceId)
+    log.mockRestore()
+  })
+
+  it('replaces at once a file that is not an identity at all (not ours, a certificate that does not parse, a key that is not the certificate\'s): nothing could make it open later', () => {
+    const log = quiet()
+    const dir = tempDir('lucium-sync-id-')
+    const a = join(dir, 'a.json')
+    const b = join(dir, 'b.json')
+    new IdentityStore(a, box(6)).loadOrCreate()
+    new IdentityStore(b, box(6)).loadOrCreate()
+    writeFileSync(a, JSON.stringify({ ...(JSON.parse(readFileSync(a, 'utf8')) as Record<string, unknown>), sealedKey: (JSON.parse(readFileSync(b, 'utf8')) as { sealedKey: string }).sealedKey }))
+    expect(new IdentityStore(a, box(6)).loadOrCreate()).toMatchObject({ created: true, replaced: true })
+    writeFileSync(b, 'definitely not json')
+    expect(new IdentityStore(b, box(6)).loadOrCreate()).toMatchObject({ created: true, replaced: true })
     log.mockRestore()
   })
 

@@ -6366,6 +6366,7 @@ export const fr = {
   'sync.error.unavailable': 'Cet ordinateur ne peut pas protéger la clé de synchronisation : le trousseau du système n’est pas disponible.',
   'sync.error.port': 'Lucium n’a pas trouvé de port libre pour écouter. Réessayez dans un moment.',
   'sync.error.identity': 'La clé de synchronisation de cet ordinateur n’a pas pu être créée ou lue.',
+  'sync.error.identity-unopenable': 'Le trousseau de macOS n’a pas ouvert la clé de synchronisation de cet ordinateur. Vos iPhone restent appairés : réessayez. Si elle ne s’ouvre toujours pas, une nouvelle clé sera créée et il faudra appairer de nouveau vos iPhone.',
   'sync.error.locked': 'Lucium est verrouillé : déverrouillez-le d’abord.',
   'sync.error.network': 'Cet ordinateur n’a pas d’adresse sur un réseau local. Connectez-le au même réseau Wi-Fi que l’iPhone.',
   'sync.error.internal': 'La synchronisation a rencontré une erreur. Le détail est dans le journal de Lucium.',

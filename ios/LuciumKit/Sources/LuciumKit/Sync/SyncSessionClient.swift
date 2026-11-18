@@ -46,9 +46,41 @@ public struct SyncSessionReport: Equatable, Sendable {
 /// body. It refuses an answer from a device that is not the one the fingerprint was registered for, a state of a newer format, and anything out of order.
 public enum SyncSessionClient {
     /// The highest `stateVersion` of the Mac's format this phone knows how to write (`BrowserState.supportedVersion`); a newer state is not touched (§2).
+    ///
+    /// A session lasts at most `sessionMaximum` (ten minutes, §6.1, §7.5: the Mac holds the same limit): a Mac, or whoever answers in its place, that sends a byte a minute
+    /// keeps every silence short and the session going, and « Synchroniser maintenant » stays « en cours » for ever (review n° 19). Past it the connection is closed and the
+    /// session fails with `timeout`.
     public static func run(connection: SyncConnection, peer: SyncPairedMac, device: SyncDeviceInfo, categories: [SyncCategory], appVersion: String, supportedStateVersion: Int,
-                           nonce: Data, baseHash: String?, now: @Sendable () -> Int, body: any SyncSessionBody,
-                           handshakeTimeout: Duration = SyncLimits.handshakeTimeout, log: @escaping @Sendable (String) -> Void = { print("[sync] \($0)") }) async throws -> SyncSessionReport {
+                           nonce: Data, baseHash: String?, now: @escaping @Sendable () -> Int, body: any SyncSessionBody,
+                           handshakeTimeout: Duration = SyncLimits.handshakeTimeout, sessionMaximum: Duration = SyncLimits.sessionMaximum,
+                           log: @escaping @Sendable (String) -> Void = { print("[sync] \($0)") }) async throws -> SyncSessionReport {
+        try await within(sessionMaximum, closing: connection.transport) {
+            try await exchange(connection: connection, peer: peer, device: device, categories: categories, appVersion: appVersion, supportedStateVersion: supportedStateVersion,
+                               nonce: nonce, baseHash: baseHash, now: now, body: body, handshakeTimeout: handshakeTimeout, log: log)
+        }
+    }
+
+    /// `work`, or `timeout` when `limit` has passed first: the transport is then closed, which ends the read that `work` is waiting on.
+    private static func within<T: Sendable>(_ limit: Duration, closing transport: any SyncTransport, _ work: @escaping @Sendable () async throws -> T) async throws -> T {
+        try await withThrowingTaskGroup(of: T?.self) { group in
+            group.addTask { try await work() }
+            group.addTask {
+                try await Task.sleep(for: limit)
+                return nil
+            }
+            defer { group.cancelAll() }
+            guard let first = try await group.next() else { throw SyncFailure(.internal, "no result") }
+            guard let value = first else {
+                transport.close()
+                throw SyncFailure(.timeout, "the session lasted longer than the time a session may take")
+            }
+            return value
+        }
+    }
+
+    private static func exchange(connection: SyncConnection, peer: SyncPairedMac, device: SyncDeviceInfo, categories: [SyncCategory], appVersion: String, supportedStateVersion: Int,
+                                 nonce: Data, baseHash: String?, now: @Sendable () -> Int, body: any SyncSessionBody, handshakeTimeout: Duration,
+                                 log: @escaping @Sendable (String) -> Void) async throws -> SyncSessionReport {
         let transport = connection.transport
         // The second lock of the pin: the connection was made to the fingerprint registered for the Mac, and nothing else may be on the line.
         guard connection.presentedFingerprint == peer.fingerprint else {
