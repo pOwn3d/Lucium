@@ -136,6 +136,7 @@ final class SyncControllerTests: XCTestCase {
 
     private func pairingMac(secret: Data, phoneFingerprint: Data, refuse: SyncErrorCode? = nil) -> ScriptedConnector.Answer {
         let macFingerprint = self.macFingerprint
+        let wordOfThePhone = self.wordOfThePhone
         return .connect(fingerprint: macFingerprint, mac: { mac in
             let nonce = Data((0..<16).map { UInt8($0) })
             try await mac.write("pair.challenge", ["nonce": SyncEncoding.base64url(nonce)])
