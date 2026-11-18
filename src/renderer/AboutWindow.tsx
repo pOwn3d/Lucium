@@ -3,7 +3,7 @@
 // Nothing is sent anywhere, no account: a link is a word the main process turns into a tab (or the folder of the licences).
 
 import { useEffect, useState } from 'react'
-import { ABOUT_COMPANY, ABOUT_NAME, ABOUT_ROWS, ABOUT_YEAR, aboutEngineLabel, aboutFootnote, aboutReport, aboutTagline, aboutVersionLabel, type AboutEngine } from '@shared/about'
+import { ABOUT_COMPANY, ABOUT_NAME, ABOUT_ROWS, ABOUT_YEAR, aboutCheckNote, aboutEngineLabel, aboutFootnote, aboutReport, aboutTagline, aboutVersionLabel, type AboutEngine } from '@shared/about'
 import { t } from '@shared/i18n'
 import { api } from './api'
 // The logo, in its default version (the icon of the application): Vite gives the file of resources/app-icons its address.
@@ -88,7 +88,7 @@ export function AboutWindow() {
           <button type="button" className="about-btn primary" aria-busy={checking} disabled={checking} onClick={check}>
             {checking ? t('about-window.recherche') : t('about-window.rechercher-les-mises-a-jour')}
           </button>
-          <p className="about-note">{t('about-window.cherche-maintenant-setting', { setting: t('features.rechercher-les-mises-a-jour-automatiquement') })}</p>
+          <p className="about-note">{aboutCheckNote(engine)}</p>
           <div className="about-links">
             {ABOUT_ROWS.map((row) => (
               <button key={row.target} type="button" className="about-btn" aria-label={`${row.label} (${row.detail})`} onClick={() => api().openAbout(row.target)}>

@@ -3,6 +3,7 @@
 // network; an address is only ever followed when the user clicks it, and then it is an ordinary tab of the browser.
 
 import { t } from './i18n'
+import { updatesByHand } from './platform'
 
 export const ABOUT_NAME = 'Lucium'
 export const ABOUT_LICENSE = 'GPL-3.0-or-later'
@@ -101,6 +102,8 @@ export interface AboutEngine {
   chromium: string
   electron: string
   platform: string
+  /** This system has no update installer (Windows, Linux: shared/platform.ts, `updatesByHand`): the window says where to download the latest version instead of naming a setting. Absent on macOS. */
+  updatesByHand?: true
 }
 
 const PLATFORM_NAMES: Readonly<Record<string, string>> = { darwin: 'macOS', win32: 'Windows', linux: 'Linux' }
@@ -108,7 +111,15 @@ const majorOf = (version: unknown): string => (typeof version === 'string' ? (/^
 
 /** What the main process knows (`process.versions`, `process.platform`) as the three words of the window; a version that is not one is left out. */
 export function aboutEngine(versions: { chrome?: unknown; electron?: unknown }, platform: string): AboutEngine {
-  return { chromium: majorOf(versions.chrome), electron: majorOf(versions.electron), platform: PLATFORM_NAMES[platform] ?? platform }
+  return { chromium: majorOf(versions.chrome), electron: majorOf(versions.electron), platform: PLATFORM_NAMES[platform] ?? platform, ...(updatesByHand(platform) ? { updatesByHand: true as const } : {}) }
+}
+
+/**
+ * The note under the button « Rechercher les mises à jour » of the About window. With a background look to switch (macOS, and while the engine is not
+ * known yet) it says the button looks at once whether or not that switch is on; on Windows and Linux, which have no such switch, it says where the button leads.
+ */
+export function aboutCheckNote(engine: AboutEngine | null): string {
+  return engine?.updatesByHand === true ? t('about-window.cette-version-ne-se-met-pas-a-jour') : t('about-window.cherche-maintenant-setting', { setting: t('features.rechercher-les-mises-a-jour-automatiquement') })
 }
 
 /** "Chromium 156 · Electron 45 · macOS": the parts there are. */

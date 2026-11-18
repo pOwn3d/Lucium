@@ -155,10 +155,11 @@ describe('the notes for the review', () => {
   it('say the only encryption is what iOS provides, and no source has a cipher of its own', () => {
     expect(notes).toContain('The encryption is what iOS provides')
     expect(notes).toContain('the app implements no cipher and no protocol of its own')
-    expect(notes).toContain('ITSAppUsesNonExemptEncryption is not set')
+    expect(notes).toContain('ITSAppUsesNonExemptEncryption is false')
     // A cipher, a sealed box or a symmetric key that encrypts would make that answer false. The one symmetric key of the sources is the key of an HMAC: the
-    // proof of a pairing (docs/synchronisation.md §4.4), which authenticates and encrypts nothing.
-    const cipher = /\b(?:CCCrypt|CCCryptorCreate|AES|ChaChaPoly|SealedBox|SecKeyCreateEncryptedData|SecKeyCreateDecryptedData)\b/
+    // proof of a pairing (docs/synchronisation.md §4.4), which authenticates and encrypts nothing. A library of encryption that is not the system's
+    // (CryptoSwift, OpenSSL, libsodium...) is refused by name: it would make the exemption false as well.
+    const cipher = /\b(?:CCCrypt|CCCryptorCreate|AES|ChaChaPoly|SealedBox|SecKeyCreateEncryptedData|SecKeyCreateDecryptedData|CryptoSwift|OpenSSL|libsodium|Sodium|BoringSSL|mbedtls|wolfSSL|CryptoSwiftPackage|RNCryptor)\b/
     const hmacOnly = 'ios/LuciumKit/Sources/LuciumKit/Sync/SyncProof.swift'
     for (const { path, code } of swiftSources()) {
       expect(cipher.test(code), `${path} has a cipher of its own, which the notes for the review deny`).toBe(false)
@@ -168,12 +169,11 @@ describe('the notes for the review', () => {
     expect(proof.match(/\bSymmetricKey\b/g)?.length).toBe(proof.match(/\bHMAC<SHA256>/g)?.length)
   })
 
-  it('do not declare the encryption exempt while the synchronisation is in the build (docs/synchronisation.md §15)', () => {
-    // With the synchronisation the application also opens an encrypted connection to another device and authenticates its messages: Apple's documentation does
-    // not say that such an application stays exempt, and the question is about the build, not about the switch. With the key absent, App Store Connect asks
-    // for each build; the maintainer answers it and the card 448 concludes, and only then does the key come back, with the value the answer gives.
-    expect(existsSync(join(ROOT, 'ios/LuciumKit/Sources/LuciumKit/Sync'))).toBe(true)
-    expect(source('ios/Lucium/Info.plist')).not.toMatch(/<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/)
+  it('declare the encryption exempt, since the application uses only the one of the system (docs/synchronisation.md §15)', () => {
+    // Decision of the project lead, 18 November 2026: HTTPS of WebKit, TLS 1.3 of Network.framework, HMAC-SHA-256 and SHA-256 of CryptoKit, ECDSA P-256 of
+    // Security. The key is what lets App Store Connect skip the question for each build; it is only true while no source has a cipher of its own (the test
+    // above), so the two go together: a source with a cipher fails that test, and a key that is not false fails this one.
+    expect(source('ios/Lucium/Info.plist')).toMatch(/<key>ITSAppUsesNonExemptEncryption<\/key>\s*<false\/>/)
   })
 
   it('name the Face ID text the app declares, and the privacy manifest it ships', () => {

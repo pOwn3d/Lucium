@@ -18,7 +18,7 @@ struct StartView: View {
                     searchField
                     favorites
                     Spacer(minLength: 24)
-                    Text("start.privacy")
+                    Text(privacyNote)
                         .font(.footnote)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -39,6 +39,19 @@ struct StartView: View {
                 LinearGradient(colors: model.colors(of: model.activeSpace).map { $0.opacity(0.35) }, startPoint: .topLeading, endPoint: .bottomTrailing)
             }
             .ignoresSafeArea(.container, edges: .top)
+        }
+    }
+
+    /// The sentence at the foot: nothing leaves the device, unless the synchronisation is on with a Mac (the one exception, said where the person reads it). What it says is
+    /// decided in LuciumKit (`StartPageContent.privacyNote`); the catalogue key it is read by is here.
+    private var privacyNote: LocalizedStringKey {
+        LocalizedStringKey(Self.privacyKey(for: StartPageContent.privacyNote(synchronizing: model.sync?.isSynchronizing ?? false)))
+    }
+
+    static func privacyKey(for note: StartPageContent.PrivacyNote) -> String {
+        switch note {
+        case .staysOnTheDevice: "start.privacy"
+        case .staysExceptToTheMac: "start.privacy.sync"
         }
     }
 

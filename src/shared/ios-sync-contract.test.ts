@@ -348,6 +348,7 @@ interface MessageVectors {
   stamps: { a: string; b: string; expect: -1 | 0 | 1 }[]
   canonical: { name: string; value: unknown; canonical: string; sha256Hex: string }[]
   fieldClasses: Record<string, { synced: string[]; seed: string[]; local: string[] }>
+  searchEngines: string[]
   settingsAllowed: string[]
   settingsNever: string[]
   neverKinds: string[]
@@ -608,7 +609,7 @@ function settingValueProblem(key: string, value: unknown): boolean {
     case 'httpsUpgrade': case 'sendGpc': case 'stripTrackingParams': case 'stripCopiedLinks': return typeof value !== 'boolean'
     case 'protectionBaseline': return value !== 'standard' && value !== 'renforcee'
     case 'autoArchiveHours': return typeof value !== 'number' || !Number.isFinite(value) || value < 0
-    case 'searchUrlTemplate': return !isWebAddress(value) || !(value as string).includes('%s') || (value as string).length > 2048
+    case 'searchUrlTemplate': return typeof value !== 'string' || !messageVectors.searchEngines.includes(value)
     case 'profileNames': return !isObject(value) || !Object.values(value).every((v) => typeof v === 'string')
     default: return true
   }

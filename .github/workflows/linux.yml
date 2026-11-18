@@ -28,8 +28,12 @@ name: Linux
 #     installs the package with apt and starts it, which fails when the profile does not load;
 #   - the E2E suite starts an Electron binary that no profile names: the step "Sandbox" loads the same profile for that binary (scripts/linux-ci.sh);
 #   - an AppImage cannot carry a profile. electron-builder's AppRun adds `--no-sandbox` when `unshare -Ur true` fails, and Lucium refuses that switch
-#     (REFUSED_SWITCHES): started on a machine that restricts user namespaces, it must end with code 1 and say why (the step "AppImage, as the
-#     machine has it"); once the restriction is lifted for the machine, it must start, sandbox on (the step after it). No step passes --no-sandbox.
+#     (REFUSED_SWITCHES): started on a machine that restricts user namespaces, it must say why, on the standard error and in a box on the screen
+#     (src/main/launch-refusal.ts: before `ready` Electron shows no box on Linux, so a person who double-clicked the AppImage saw nothing; the box is
+#     drawn by zenity, started detached, and the application ends at once, so that no process keeps running with the launcher's --no-sandbox); the step
+#     "AppImage, as the machine has it" finds the box on the virtual screen, checks that the application ended by itself with code 1 and left no process,
+#     and closes the box. Once the restriction is
+#     lifted for the machine, it must start, sandbox on (the step after it). No step passes --no-sandbox.
 # `scripts/linux-ci.sh smoke` fails when a process of the application carries --no-sandbox, and when a renderer has no seccomp filter.
 #
 # When it runs: on a pull request that touches the code, the packaging or the tests (not on a documentation-only one), every night at 03:30 UTC
@@ -105,11 +109,12 @@ jobs:
           node --version
           pnpm --version
           bash scripts/linux-ci.sh sandbox-state
-      # The virtual screen, the tools that look at it, and what an AppImage needs to mount itself (libfuse2 is not on Ubuntu 24.04 by default).
+      # The virtual screen, the tools that look at it, what an AppImage needs to mount itself (libfuse2 is not on Ubuntu 24.04 by default), and zenity, which draws
+      # the box of a refused launch (src/main/launch-refusal.ts) as it does on an Ubuntu desktop, where it is installed.
       - name: System packages
         run: |
           sudo apt-get update
-          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb x11-utils libfuse2t64
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb x11-utils libfuse2t64 zenity
       - name: Build
         run: pnpm build
       - name: Package (unsigned, nothing published)
