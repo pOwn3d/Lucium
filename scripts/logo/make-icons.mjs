@@ -7,6 +7,8 @@
 // Written in the repository:
 //   build/icon.icns               the icon of the application (the default version, Clair), every size from 16 to 1024 at 1x and 2x
 //   resources/app-icons/<id>.png  the 512 px icon of each choice of Settings › Icône (ids of shared/icons.ts)
+//   ios/Lucium/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png  the icon of the iPhone and iPad application: the default version as a full-bleed
+//                                 opaque square of 1024 px (App Store Connect refuses transparency and the system rounds the corners itself)
 // Written outside it (out-icons/ by default, which Git ignores; `--out` changes it):
 //   lucium-<id>.png               the same icons at 1024 px
 //   planche.png                   a contact sheet: each version at 256, 64, 32 and 16 px, on a light and on a dark background
@@ -25,6 +27,7 @@ const { chromium } = createRequire(join(root, 'package.json'))('@playwright/test
 
 const APP_ICNS = join(root, 'build/icon.icns')
 const APP_ICONS = join(root, 'resources/app-icons')
+const IOS_ICON = join(root, 'ios/Lucium/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png')
 /** The version the application ships by default (DEFAULT_APP_ICON of shared/icons.ts): the icon of the bundle, the favicons of the site. */
 const DEFAULT_ID = 'clair'
 
@@ -119,6 +122,9 @@ try {
   }
   execFileSync('iconutil', ['-c', 'icns', iconset, '-o', APP_ICNS])
 
+  // The iOS application: one full-bleed square with no alpha channel (colour type 2), no shadow and no rounded corner, which the system masks itself.
+  writeFileSync(IOS_ICON, await png(defaultTheme, 1024, { view: 'tile', shadow: false, corner: 0 }, true))
+
   // The website: the icons at 256 px under their ids, the names of its assets/icons/, then the favicon set from the default version (the tile fills the picture, no shadow).
   mkdirSync(siteDir, { recursive: true })
   for (const theme of FAN_THEMES) writeFileSync(join(siteDir, `${theme.id}.png`), await png(theme, 256))
@@ -141,7 +147,7 @@ try {
   await page.setViewportSize({ width: sheetWidth, height: sheetHeight })
   await page.screenshot({ path: join(out, 'planche.png'), clip: { x: 0, y: 0, width: sheetWidth, height: sheetHeight } })
 
-  console.log(`make-icons: build/icon.icns and resources/app-icons/ (${FAN_THEMES.length} versions) written; the 1024 px versions and planche.png are in ${out}, the site's files in ${siteDir}`)
+  console.log(`make-icons: build/icon.icns, the icon of the iOS application and resources/app-icons/ (${FAN_THEMES.length} versions) written; the 1024 px versions and planche.png are in ${out}, the site's files in ${siteDir}`)
 } finally {
   await browser.close()
   rmSync(work, { recursive: true, force: true })

@@ -26,6 +26,7 @@ Le dessin du logo n'est pas un logiciel libre. **Copyright © 2026 ConsilioWeb, 
 | `scripts/logo/fan-logo.ts` | Le dessin lui-même : les formes, leurs proportions et les huit jeux de couleurs |
 | `build/icon.icns` | L'icône de l'application, rendue depuis le dessin |
 | `resources/app-icons/*.png` | Les huit icônes proposées dans les Réglages, rendues depuis le dessin |
+| `ios/Lucium/Assets.xcassets/AppIcon.appiconset/*.png` | L'icône de l'application iPhone et iPad, rendue depuis le dessin |
 
 Il en va de même des favicons et des images du site tirés du dessin. Le reste de `scripts/logo/` (le script qui rend les icônes, le test qui les contrôle) est du code sous GPL, comme les icônes des menus et de l'interface.
 
@@ -46,7 +47,7 @@ Une build que vous gardez pour vous n'a rien à changer. Dès que vous donnez vo
 | Quoi | Pourquoi | Où c'est aujourd'hui |
 |---|---|---|
 | **Le nom** | On doit pouvoir distinguer votre build de Lucium. | `productName` dans `package.json` et `electron-builder.yml`, les textes de `src/shared/i18n-fr.ts` et `src/shared/i18n-en.ts` |
-| **Le logo et les icônes** | Même raison, et ces fichiers ne sont pas sous GPL. | Votre propre dessin dans `scripts/logo/fan-logo.ts`, puis `pnpm icons:logo`, qui réécrit `build/icon.icns` et `resources/app-icons/` |
+| **Le logo et les icônes** | Même raison, et ces fichiers ne sont pas sous GPL. | Votre propre dessin dans `scripts/logo/fan-logo.ts`, puis `pnpm icons:logo`, qui réécrit `build/icon.icns`, `resources/app-icons/` et l'icône de l'application iOS |
 | **L'identifiant de l'application** | Avec l'identifiant de Lucium, votre build ouvrirait le profil, les entrées du trousseau et les autorisations système d'un Lucium installé. | `appId` dans `electron-builder.yml` (`app.lucium.browser`), les identifiants des auxiliaires dans `native/`, `src/main/vault-keychain.ts` et `src/main/translate/system.ts`, le schéma d'adresse `lucium` |
 | **Le flux de mise à jour** | Le flux de `lucium.app` sert des builds officielles, signées par le mainteneur. Votre build ne doit pas lui demander de mises à jour. | L'adresse donnée à `scripts/build-drm-release.sh --update-feed` et `--test-feed`, et les canaux de `src/main/publish-update.ts`. Une build faite sans ces options ne suit aucun flux. |
 | **Les adresses de contact** | Les signalements sur votre build doivent vous arriver, pas au mainteneur de Lucium. | Les pages de la communauté dans `src/shared/problem-report.ts`, le dépôt et la société dans `src/shared/about.ts`, `contact@lucium.app` dans les documents, les métadonnées du paquet dans `electron-builder.yml` |

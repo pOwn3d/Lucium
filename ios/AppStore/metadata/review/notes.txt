@@ -1,0 +1,35 @@
+Lucium is a web browser for iPhone and iPad. Every web page is shown with WKWebView (WebKit); the app has no other web engine (guideline 2.5.6).
+
+SIGN-IN AND TESTING
+There is no account, sign-in, purchase, subscription or advertising in the app, so no demo account is needed. Open the app: a start page and a bar at the bottom appear. Tap the address field in the bar, type a web address or a search, and the page opens. Nothing else has to be set up.
+
+WHERE TO FIND EACH FEATURE
+- Tabs: the right-hand button of the bottom bar opens the tabs sheet (pinned tabs, folders, tabs of today, archive, favourites). "Privacy", "Lock" and "Licenses" are the last rows of that sheet.
+- Spaces and profiles: the round buttons in the bottom bar are the Spaces; touch and hold one for "Spaces and profiles", where a Space and a profile are created. Two profiles keep separate cookies and website data.
+- Private tab: in the same menu ("New private tab"). Nothing is kept once it is closed.
+- Command bar: the address field. It searches open tabs and favourites and offers commands.
+- Clear the data of one site: touch and hold the address field.
+- Privacy settings: tabs sheet, "Privacy": protection level, HTTPS first, Global Privacy Control signal, removal of tracking parameters.
+- Lock: tabs sheet, "Lock": a Space or the whole app can be locked with Face ID, Touch ID or the device passcode (LocalAuthentication; the app receives only a yes or a no and never a biometric).
+- Licenses and credits: tabs sheet, "Licenses".
+
+THE CONTENT BLOCKER
+The blocker uses WKContentRuleList. The filter lists (public lists of ad and tracker rules) are converted when the app is built and are inside the app: nothing is downloaded, and they change only with an app update. Their authors and licenses are listed in the app (Licenses).
+
+JAVASCRIPT THE APP RUNS IN PAGES (guidelines 2.5.2 and 4.7)
+The app adds its own scripts to pages with WKUserScript, to hide cookie-consent banners and to apply the blocking rules of its lists and its YouTube rules. All of this code is in the app bundle: no script, rule or other code is downloaded, and no native function of the device is exposed to a web page (no script message handler).
+
+NETWORK
+The app makes no connection of its own: no analytics, no crash reporting, no account, no synchronization, no update check, no download of lists. It connects only to the pages the person opens, and loads what those pages load.
+
+APP TRANSPORT SECURITY
+Info.plist sets NSAllowsArbitraryLoadsInWebContent. A browser opens the pages the person asks for, and some are http. With "HTTPS first" the app asks for https:// first and opens the http:// page only if the site refuses the connection or stays silent for 5 seconds, and says so. A page with an invalid certificate is never opened over http without the person's tap. NSAllowsArbitraryLoads is not set.
+
+PRIVACY AND ENCRYPTION
+PrivacyInfo.xcprivacy declares no tracking, no data collected and no tracking domain, and none of the required-reason APIs is called. The privacy label answers "Data Not Collected". The only encryption is what iOS provides for HTTPS (WebKit), and Face ID is used only through LocalAuthentication.
+
+OTHER POINTS
+- No donation or payment button in the app (guideline 3.2.2).
+- The default-browser entitlement is not requested in this version.
+- YouTube loads and plays; the app applies rules of its own against its ads, and the blocking there is partial. Videos protected by DRM may not play.
+- Lucium is free software under the GPL-3.0-or-later with an additional permission that lets the maintainer distribute it through the App Store; the source code is public at https://lucium.app/en/.

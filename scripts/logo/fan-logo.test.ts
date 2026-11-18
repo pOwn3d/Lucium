@@ -16,12 +16,13 @@ interface Picture {
   pixels: Buffer
 }
 
-/** An 8-bit RGBA PNG without interlacing, the only kind scripts/logo/make-icons.mjs writes (it refuses any other), unfiltered. */
-function decodePng(bytes: Buffer): Picture {
+/** An 8-bit PNG without interlacing, RGBA (colour type 6) or, for a full-bleed square, RGB (2): the only kinds scripts/logo/make-icons.mjs writes (it refuses any other). */
+function decodePng(bytes: Buffer, colour: 2 | 6 = 6): Picture {
   expect(bytes.subarray(1, 4).toString('latin1')).toBe('PNG')
   const width = bytes.readUInt32BE(16)
   const height = bytes.readUInt32BE(20)
-  expect({ depth: bytes[24], colour: bytes[25], interlaced: bytes[28] }).toEqual({ depth: 8, colour: 6, interlaced: 0 })
+  expect({ depth: bytes[24], colour: bytes[25], interlaced: bytes[28] }).toEqual({ depth: 8, colour, interlaced: 0 })
+  const channels = colour === 6 ? 4 : 3
   const chunks: Buffer[] = []
   for (let at = 8; at < bytes.length; ) {
     const length = bytes.readUInt32BE(at)
@@ -29,24 +30,28 @@ function decodePng(bytes: Buffer): Picture {
     at += 12 + length
   }
   const raw = inflateSync(Buffer.concat(chunks))
-  const stride = width * 4
-  const pixels = Buffer.alloc(stride * height)
+  const stride = width * channels
+  const unfiltered = Buffer.alloc(stride * height)
   for (let y = 0; y < height; y++) {
     const filter = raw[y * (stride + 1)]
     for (let i = 0; i < stride; i++) {
       const value = raw[y * (stride + 1) + 1 + i]!
-      const left = i >= 4 ? pixels[y * stride + i - 4]! : 0
-      const up = y > 0 ? pixels[(y - 1) * stride + i]! : 0
-      const upLeft = y > 0 && i >= 4 ? pixels[(y - 1) * stride + i - 4]! : 0
+      const left = i >= channels ? unfiltered[y * stride + i - channels]! : 0
+      const up = y > 0 ? unfiltered[(y - 1) * stride + i]! : 0
+      const upLeft = y > 0 && i >= channels ? unfiltered[(y - 1) * stride + i - channels]! : 0
       const paeth = (): number => {
         const p = left + up - upLeft
         const [pa, pb, pc] = [Math.abs(p - left), Math.abs(p - up), Math.abs(p - upLeft)]
         return pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft
       }
       const predictor = filter === 0 ? 0 : filter === 1 ? left : filter === 2 ? up : filter === 3 ? (left + up) >> 1 : paeth()
-      pixels[y * stride + i] = (value + predictor) & 255
+      unfiltered[y * stride + i] = (value + predictor) & 255
     }
   }
+  if (channels === 4) return { width, height, pixels: unfiltered }
+  // An RGB picture has no alpha: every pixel is opaque.
+  const pixels = Buffer.alloc(width * height * 4, 255)
+  for (let i = 0; i < width * height; i++) unfiltered.copy(pixels, i * 4, i * 3, i * 3 + 3)
   return { width, height, pixels }
 }
 
@@ -166,5 +171,20 @@ describe('the pictures made from the drawing', () => {
     expect(pngSizes).toEqual({ ic07: 128, ic08: 256, ic09: 512, ic10: 1024, ic13: 256, ic14: 512 })
     expect(entries.has('ic11') && entries.has('ic12'), '32 px at 2x and 64 px at 2x').toBe(true)
     expectTheme(decodePng(entries.get('ic10')!), FAN_THEMES.find((theme) => theme.id === DEFAULT_APP_ICON)!, 'the 1024 px icon of the application')
+  })
+
+  it('make the icon of the iOS application a full-bleed square of the default version: 1024 px, no alpha channel, the gradient to the corners, the central tab in its colour', () => {
+    const picture = decodePng(readFileSync(join(repo, 'ios/Lucium/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png')), 2)
+    expect([picture.width, picture.height]).toEqual([1024, 1024])
+    const theme = FAN_THEMES.find((candidate) => candidate.id === DEFAULT_APP_ICON)!
+    const at = (x: number, y: number): number[] => [...picture.pixels.subarray((y * 1024 + x) * 4, (y * 1024 + x) * 4 + 3)]
+    // The tile fills the picture: its gradient runs from the top left corner to the bottom right one, with no margin and no rounded corner.
+    expect(close(at(0, 0), rgb(theme.background[0])), `top left corner ${at(0, 0)}`).toBe(true)
+    expect(close(at(1023, 1023), rgb(theme.background[1])), `bottom right corner ${at(1023, 1023)}`).toBe(true)
+    // The middle of the central tab, which sits at (512, 300) of the 1024 canvas of the drawing, at ((300 - 100) / 824 * 1024) once the margin is cut.
+    expect(close(at(512, Math.round(((CENTRE_TAB_POINT.y - LOGO_TILE.y) / LOGO_TILE.size) * 1024)), rgb(theme.rays[2]))).toBe(true)
+    // The catalogue names this picture as the one icon of the application (iOS 26 draws every other size from it).
+    const catalogue = JSON.parse(readFileSync(join(repo, 'ios/Lucium/Assets.xcassets/AppIcon.appiconset/Contents.json'), 'utf8')) as { images: Record<string, string>[] }
+    expect(catalogue.images).toEqual([{ filename: 'AppIcon-1024.png', idiom: 'universal', platform: 'ios', size: '1024x1024' }])
   })
 })

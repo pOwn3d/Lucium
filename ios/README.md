@@ -19,6 +19,7 @@ Lucium/          the application (SwiftUI, WebKit, Localizable.xcstrings, blocke
 Lucium/FilterLists/   the filter lists converted for WebKit, and their registry: generated, not committed (see below)
 Lucium/Guard/    the page guard's runtime and rules: generated from the Mac's sources and committed (see below)
 LuciumTests/     XCTest bundle hosted by the application (runs on a simulator); Fixtures/ is the converted proof list
+AppStore/        what goes into App Store Connect: the texts of the listing in English and French, the notes for the review, and the README that says how the pictures are taken (`scripts/ios-store-shots.sh`) and what to read again before a submission
 ```
 
 ## The filter lists of the blocker

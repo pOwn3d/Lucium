@@ -26,6 +26,7 @@ The drawing of the logo is not free software. **Copyright © 2026 ConsilioWeb, a
 | `scripts/logo/fan-logo.ts` | The drawing itself: the shapes, their proportions and the eight sets of colors |
 | `build/icon.icns` | The icon of the application, rendered from the drawing |
 | `resources/app-icons/*.png` | The eight icons offered in the Settings, rendered from the drawing |
+| `ios/Lucium/Assets.xcassets/AppIcon.appiconset/*.png` | The icon of the iPhone and iPad application, rendered from the drawing |
 
 The same holds for the favicons and the pictures of the site made from the drawing. The rest of `scripts/logo/` (the script that renders the icons, the test that checks them) is code under the GPL, and so are the icons of the menus and of the interface.
 
@@ -46,7 +47,7 @@ A build you keep for yourself needs none of this. As soon as you give your build
 | What | Why | Where it is today |
 |---|---|---|
 | **The name** | People must be able to tell your build from Lucium. | `productName` in `package.json` and `electron-builder.yml`, the texts of `src/shared/i18n-fr.ts` and `src/shared/i18n-en.ts` |
-| **The logo and the icons** | Same reason, and these files are not under the GPL. | Your own drawing in `scripts/logo/fan-logo.ts`, then `pnpm icons:logo`, which writes `build/icon.icns` and `resources/app-icons/` again |
+| **The logo and the icons** | Same reason, and these files are not under the GPL. | Your own drawing in `scripts/logo/fan-logo.ts`, then `pnpm icons:logo`, which writes `build/icon.icns`, `resources/app-icons/` and the icon of the iOS application again |
 | **The application identifier** | With the identifier of Lucium, your build would open the profile, the keychain entries and the system permissions of an installed Lucium. | `appId` in `electron-builder.yml` (`app.lucium.browser`), the identifiers of the helpers in `native/`, `src/main/vault-keychain.ts` and `src/main/translate/system.ts`, the `lucium` address scheme |
 | **The update feed** | The feed on `lucium.app` serves official builds, signed by the maintainer. Your build must not ask it for updates. | The address given to `scripts/build-drm-release.sh --update-feed` and `--test-feed`, and the channels of `src/main/publish-update.ts`. A build made without these options follows no feed. |
 | **The contact addresses** | Reports about your build must reach you, not the maintainer of Lucium. | The community pages in `src/shared/problem-report.ts`, the repository and the company in `src/shared/about.ts`, `contact@lucium.app` in the documents, the package metadata in `electron-builder.yml` |

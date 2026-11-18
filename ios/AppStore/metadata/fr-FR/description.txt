@@ -1,0 +1,24 @@
+Lucium est un navigateur web construit autour des espaces, et privé par défaut.
+
+DES ESPACES, PAS UN SEUL TAS D’ONGLETS
+Gardez le travail, la maison et les projets séparés. Chaque espace a sa couleur, ses onglets, ses onglets épinglés et ses dossiers. Un espace peut utiliser un profil à lui : deux profils ne partagent aucun cookie, donc une connexion faite dans l’un ne vous suit jamais dans l’autre.
+
+UNE BARRE À PORTÉE DE POUCE
+L’adresse, précédent, suivant, vos espaces et vos onglets sont dans une barre en bas de l’écran. La feuille d’onglets montre vos onglets épinglés, vos dossiers et ce que vous avez ouvert aujourd’hui ; les onglets laissés de côté un moment sont archivés au lieu de s’empiler. La barre de commandes trouve un onglet, un favori ou une action pendant que vous tapez.
+
+PRIVÉ PAR DÉFAUT
+• Un bloqueur intégré de publicités, de traqueurs et de bannières de cookies. Ses listes sont dans l’application : rien n’est téléchargé pour bloquer.
+• HTTPS d’abord : Lucium demande l’adresse sécurisée d’un site avant l’adresse simple.
+• Les paramètres de suivi (utm_, fbclid, gclid…) sont retirés des adresses que vous ouvrez.
+• Le signal Global Privacy Control demande aux sites de ne pas vous suivre.
+• Les onglets privés ne gardent rien sur votre appareil.
+• Effacez les données d’un site, et de ce site seulement.
+
+UN VERROU QUI RECONNAÎT VOTRE VISAGE OU VOTRE DOIGT
+Verrouillez un espace, ou toute l’application, avec Face ID, Touch ID ou le code de l’appareil. Un espace verrouillé garde ses onglets cachés et endormis jusqu’à ce que vous le déverrouilliez.
+
+AUCUN COMPTE, AUCUNE TÉLÉMÉTRIE
+Lucium n’a pas de compte, pas de mesure d’audience et pas de rapport de plantage à lui. Vos espaces, vos onglets et vos favoris restent sur votre appareil. C’est un logiciel libre, dont le code source est public.
+
+BON À SAVOIR
+Lucium utilise WebKit, le moteur web d’iOS, comme tout navigateur sur iPhone et iPad. Les extensions faites pour d’autres navigateurs ne sont pas prises en charge, et les vidéos protégées par DRM peuvent ne pas se lire. YouTube fonctionne ; Lucium applique ses propres règles contre ses publicités, mais le site change souvent : le blocage y est partiel.
