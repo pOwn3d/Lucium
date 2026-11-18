@@ -12,10 +12,17 @@ public struct SyncPairingOutcome: Equatable, Sendable {
 /// Nothing is sent before the fingerprint the Mac showed has been compared with the QR's. After that the phone only answers: the Mac sends a nonce
 /// (`pair.challenge`), the phone proves it knows the secret (`pair.request`), the Mac asks its person (`pair.accept`, or an error), and the phone checks the
 /// Mac's proof, which covers both fingerprints. A pairing whose proof is wrong stores nothing.
+///
+/// Then the phone's person decides (§4.6, review n° 9): `confirm` is told the name the Mac gave itself and the code both devices show, and answers whether to pair.
+/// `false` (or no answer in time) sends `error pairing-refused` and keeps nothing; `true` sends `bye`, the Mac keeps the phone and answers `bye`, and only that last
+/// word makes the pairing: a Mac that could not keep the phone answers `error`, and the phone keeps nothing either. `confirm` must come back when its task is cancelled
+/// (the time given to the person, and the cancel of the pairing, both cancel it).
 public enum SyncPairingClient {
     public static func pair(code: SyncPairingCode, connection: SyncConnection, ownFingerprint: Data, device: SyncDeviceInfo, nonce: Data,
                             handshakeTimeout: Duration = SyncLimits.handshakeTimeout, confirmationTimeout: Duration = SyncLimits.pairingConfirmationWait,
-                            onRequestSent: @Sendable () -> Void = {}, log: @escaping @Sendable (String) -> Void = { print("[sync] \($0)") }) async throws -> SyncPairingOutcome {
+                            comparisonTimeout: Duration = SyncPairingCompare.personWait,
+                            onRequestSent: @Sendable () -> Void = {}, confirm: @escaping @Sendable (SyncPairingProposal) async -> Bool,
+                            log: @escaping @Sendable (String) -> Void = { print("[sync] \($0)") }) async throws -> SyncPairingOutcome {
         let transport = connection.transport
         // Whatever ends the pairing but a success leaves no connection open: a Mac that answers `bye` for a challenge, a send that fails or a silence that times out
         // threw out of here with the transport still up, and nothing else closed it.
@@ -52,10 +59,40 @@ public enum SyncPairingClient {
             await channel.close()
             throw SyncFailure(.badProof, "the Mac's proof is not the right one")
         }
-        await channel.sendBestEffort(.bye, why: "the pairing is done")
+        // 5. The phone's person compares the code and decides (§4.6). Nothing has been kept yet, here or on the Mac.
+        guard let comparison = SyncPairingCompare.code(fingerprintMac: connection.presentedFingerprint, fingerprintPhone: ownFingerprint) else {
+            await channel.close()
+            throw SyncFailure(.internal, "no code to compare")
+        }
+        let proposal = SyncPairingProposal(macName: mac.name, code: comparison)
+        guard await Self.answer(within: comparisonTimeout, { await confirm(proposal) }) else {
+            await channel.sendBestEffort(.error(code: .pairingRefused, fatal: true, supported: nil, detail: "the person did not agree to the pairing"), why: "the person refused")
+            await channel.close()
+            throw SyncFailure(.pairingRefused, "the person did not agree to the pairing")
+        }
+        // 6. « Appairer »: a `bye` says yes, and the Mac's own `bye` says it kept the phone, which is what makes the pairing. An `error` in its place is the Mac that could not.
+        try await channel.send(.bye)
+        guard case .bye = try await expectAnswer(channel, timeout: handshakeTimeout) else {
+            await channel.close()
+            throw SyncFailure(.badMessage, "no bye from the Mac")
+        }
         await channel.close()
         done = true
         return SyncPairingOutcome(mac: mac, fingerprint: connection.presentedFingerprint, hosts: SyncCandidates.ordered(hosts))
+    }
+
+    /// What the phone's person answered, or `false` when they gave no answer within `limit` (and when the task that waits is cancelled, which `confirm` is told by the
+    /// caller: it answers `false` then).
+    private static func answer(within limit: Duration, _ ask: @escaping @Sendable () async -> Bool) async -> Bool {
+        await withTaskGroup(of: Bool.self) { group in
+            group.addTask { await ask() }
+            group.addTask {
+                try? await Task.sleep(for: limit)
+                return false
+            }
+            defer { group.cancelAll() }
+            return await group.next() ?? false
+        }
     }
 
     /// The next message, or the failure the Mac announced: an `error` is the Mac saying why it refuses (a spent secret, a refusal of its person…).

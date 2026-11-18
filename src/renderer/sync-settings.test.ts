@@ -194,15 +194,29 @@ describe('the subpage', () => {
     expect(b.requests).toContainEqual({ kind: 'pair-close' })
   })
 
-  it('asks the person, by name, and sends Autoriser or Refuser', async () => {
-    const b = bridge(() => ({ ...ON, confirm: { name: 'iPhone de Camille', remainingMs: 42_000 } }))
+  it('asks the person, by name, with the code to compare and where the request comes from, and sends Autoriser or Refuser', async () => {
+    const b = bridge(() => ({ ...ON, confirm: { name: 'iPhone de Camille', code: 'ABC234', address: '192.168.1.40', waiting: false, remainingMs: 42_000 } }))
     const page = await openPage('#files/sync')
     const box = page.querySelector('[role="alertdialog"]')
     expect((box?.textContent ?? '').replace(/[\u00a0\u202f]/g, ' ')).toContain('Un iPhone nommé « iPhone de Camille » demande à s’appairer')
     expect(box?.textContent).toContain('0:42')
+    expect(box?.querySelector('.sync-code')?.textContent).toBe('ABC234')
+    expect(box?.textContent).toContain('192.168.1.40')
     await click(button(page, 'Autoriser'))
     await click(button(page, 'Refuser'))
     expect(b.requests).toContainEqual({ kind: 'answer', allow: true })
+    expect(b.requests).toContainEqual({ kind: 'answer', allow: false })
+  })
+
+  it('keeps the code on screen while the iPhone is asked, and offers only « Annuler » then', async () => {
+    const b = bridge(() => ({ ...ON, confirm: { name: 'iPhone de Camille', code: 'ABC234', address: '', waiting: true, remainingMs: 30_000 } }))
+    const page = await openPage('#files/sync')
+    const box = page.querySelector('[role="alertdialog"]')
+    expect(box?.querySelector('.sync-code')?.textContent).toBe('ABC234')
+    expect(box?.textContent).toContain(t('sync.confirm-waiting-title'))
+    expect(box?.textContent).not.toContain('Demande venue de l’adresse')
+    expect([...page.querySelectorAll('button')].some((one) => one.textContent === 'Autoriser')).toBe(false)
+    await click(button(page, t('sync.confirm-cancel')))
     expect(b.requests).toContainEqual({ kind: 'answer', allow: false })
   })
 

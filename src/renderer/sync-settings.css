@@ -8,6 +8,8 @@
 .sync-confirm { display: grid; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4); border: 1px solid var(--line-strong); border-radius: var(--r-m); background: var(--surface-raised); }
 .sync-confirm .sync-confirm-title { margin: 0; font-weight: var(--w-semibold); }
 .sync-confirm .sync-confirm-text { margin: 0; user-select: text; overflow-wrap: anywhere; }
+.sync-confirm .sync-confirm-code { margin: 0; user-select: text; }
+.sync-confirm .sync-code { font-family: var(--mono); font-size: 1.25em; letter-spacing: 0.12em; }
 .sync-buttons { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; }
 .sync-notice { color: var(--text-2); }
 .sync-problem { color: var(--danger-ink); }

@@ -11,10 +11,11 @@ import { IdentityStore } from './identity'
 import type { ListenerDeps } from './listener'
 import { WINDOW_MAX_MS, PAIRING_WINDOW_MS } from './limits'
 import { readManualCode, readQr } from './pairing-code'
+import { comparisonCode } from './pairing-compare'
 import { acceptProof, requestProof } from './pairing-proof'
 import { SafeClock } from './safe-clock'
 import type { SecretBox } from './secret-box'
-import { SyncService, SyncServiceError, readableName, type SyncDoor, type SyncServiceDeps } from './sync-service'
+import { SyncService, SyncServiceError, readableAddress, readableName, type SyncDoor, type SyncServiceDeps } from './sync-service'
 import { PORT_MAX, PORT_MIN, SyncStore, type PeerRecord } from './sync-store'
 import { closedOrFailed, connectTls, sleep, testIdentity } from './sync-net.test-support'
 
@@ -367,17 +368,47 @@ describe('SyncService: the question (Autoriser / Refuser)', () => {
     await r.service.startPairing()
     const offer = r.door.deps?.openPairing(Buffer.alloc(32))
     if (!offer) throw new Error('no offer')
-    return { r, answer: offer.confirm({ name }) }
+    return { r, answer: offer.confirm({ name, code: 'ABC234', address: '192.168.1.40' }) }
   }
 
   it('shows the name, counts the minute down, and returns what the person answered', async () => {
     const { r, answer } = await asked()
-    expect(r.service.status().confirm).toEqual({ name: 'iPhone de Camille', remainingMs: 60_000 })
+    // The sheet carries what lets the person tell their iPhone from another: the code the iPhone shows too (review n° 9) and where the request comes from (n° 21).
+    expect(r.service.status().confirm).toEqual({ name: 'iPhone de Camille', code: 'ABC234', address: '192.168.1.40', waiting: false, remainingMs: 60_000 })
     r.time.t += 15_000
     expect(r.service.status().confirm?.remainingMs).toBe(45_000)
     r.service.answer(true)
     expect(await answer).toBe('allow')
-    expect(r.service.status().confirm).toBeNull()
+    // Allowed is not paired: the sheet stays, with the code, while the iPhone's person compares it (§4.6).
+    expect(r.service.status().confirm).toEqual({ name: 'iPhone de Camille', code: 'ABC234', address: '192.168.1.40', waiting: true, remainingMs: 60_000 })
+  })
+
+  it('keeps the sheet while the iPhone is asked, and ends the wait when the person gives up, or when the sheet or the window closes', async () => {
+    for (const giveUp of [(r: Rig) => r.service.answer(false), (r: Rig) => r.service.closePairing(), (r: Rig) => void r.service.closeWindow()]) {
+      const { r, answer } = await asked()
+      r.service.answer(true)
+      await answer
+      const waiting = r.door.deps?.openPairing(Buffer.alloc(32))?.waiting?.({ name: 'x', code: 'ABC234', address: '' })
+      let ended = false
+      void waiting?.then(() => void (ended = true))
+      await sleep(10)
+      expect(ended).toBe(false)
+      // « Autoriser » again does nothing: only giving up counts while the iPhone is asked.
+      r.service.answer(true)
+      expect(r.service.status().confirm?.waiting).toBe(true)
+      giveUp(r)
+      await sleep(10)
+      expect(ended).toBe(true)
+      expect(r.service.status().confirm).toBeNull()
+    }
+  })
+
+  it('does not wait for an iPhone when the sheet is already gone: it counts as the person giving up', async () => {
+    const r = rig()
+    await r.service.setEnabled(true)
+    await r.service.startPairing()
+    const waiting = r.door.deps?.openPairing(Buffer.alloc(32))?.waiting?.({ name: 'x', code: 'ABC234', address: '' })
+    expect(await Promise.race([waiting, sleep(100).then(() => 'still waiting')])).toBeUndefined()
   })
 
   it('returns a refusal when the person refuses', async () => {
@@ -405,7 +436,7 @@ describe('SyncService: the question (Autoriser / Refuser)', () => {
   it('refuses the question it replaces: two iPhones never share one answer', async () => {
     const { r, answer } = await asked('first')
     const offer = r.door.deps?.openPairing(Buffer.alloc(32))
-    const second = offer?.confirm({ name: 'second' })
+    const second = offer?.confirm({ name: 'second', code: 'ABC234', address: '' })
     expect(await answer).toBe('refuse')
     expect(r.service.status().confirm?.name).toBe('second')
     r.service.answer(true)
@@ -416,6 +447,19 @@ describe('SyncService: the question (Autoriser / Refuser)', () => {
     const { r } = await asked('Camille‮gpj.exe\u0007 ')
     expect(r.service.status().confirm?.name).toBe('Camille gpj.exe')
     expect(readableName('⁦hidden⁩')).toBe('hidden')
+  })
+
+  it('shows the address as the system gave it, without what makes it hard to read: no IPv4 written in IPv6, no zone, nothing that is not an address', async () => {
+    const r = rig()
+    await r.service.setEnabled(true)
+    await r.service.startPairing()
+    const offer = r.door.deps?.openPairing(Buffer.alloc(32))
+    void offer?.confirm({ name: 'iPhone', code: 'ABC234', address: '::ffff:192.168.1.40' })
+    expect(r.service.status().confirm?.address).toBe('192.168.1.40')
+    void offer?.confirm({ name: 'iPhone', code: 'ABC234', address: 'fe80::1%en0' })
+    expect(r.service.status().confirm?.address).toBe('fe80::1')
+    expect(readableAddress('10.0.0.5 <>/\n')).toBe('10.0.0.5')
+    expect(readableAddress('1'.repeat(80))).toHaveLength(45)
   })
 })
 
@@ -499,13 +543,22 @@ describe('SyncService: through the real door, over the loopback', () => {
     for (let tries = 0; tries < 100 && r.service.status().confirm === null; tries++) await sleep(10)
     expect(r.service.status().confirm?.name).toBe('iPhone de Camille')
     expect(r.service.status().devices).toEqual([])
+    // The code on the sheet is the one the iPhone computes from the two fingerprints it saw, and the address is the one it connected from.
+    expect(r.service.status().confirm?.code).toBe(comparisonCode(serverFingerprint, phone.fingerprint))
+    expect(r.service.status().confirm?.address).toMatch(/^127\.0\.0\.1$|^::1$/)
     r.service.answer(true)
     const accept = await channel.receive()
     if (accept.t !== 'pair.accept') throw new Error(`expected an accept, got ${accept.t}`)
     // The iPhone checks the Mac's proof, which names the identifier the Mac gives only now.
     expect(accept.proof).toBe(acceptProof({ secret: reading.secret, fingerprintMac: serverFingerprint, fingerprintPhone: phone.fingerprint, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: accept.device.id, idPhone: phone.deviceId }))
+    // Allowed on the Mac is not paired: the sheet waits for the iPhone's person, and nothing is kept yet.
     await sleep(40)
-    expect(r.service.status()).toMatchObject({ justPaired: 'iPhone de Camille', pairing: null, devices: [expect.objectContaining({ id: 'iphone-0000000009', name: 'iPhone de Camille' })] })
+    expect(r.service.status().confirm?.waiting).toBe(true)
+    expect(r.service.status().devices).toEqual([])
+    await channel.send({ t: 'bye' })
+    expect(await channel.receive()).toMatchObject({ t: 'bye' })
+    await sleep(40)
+    expect(r.service.status()).toMatchObject({ justPaired: 'iPhone de Camille', pairing: null, confirm: null, devices: [expect.objectContaining({ id: 'iphone-0000000009', name: 'iPhone de Camille' })] })
     expect(r.store.findByFingerprint(phone.fingerprint.toString('hex'))?.id).toBe('iphone-0000000009')
     socket.destroy()
   })

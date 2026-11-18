@@ -146,8 +146,23 @@ final class SyncControllerTests: XCTestCase {
                                          noncePhone: SyncEncoding.base64urlDecode(request["nonce"] as? String ?? "", characters: 22) ?? Data(), idMac: "mac-test-0000000001", idPhone: device?["id"] as? String ?? "")
             let accept = SyncProof.acceptTag(inputs).map(SyncEncoding.base64url) ?? ""
             try await mac.write("pair.accept", ["device": ["id": "mac-test-0000000001", "name": "Mac de test", "platform": "mac"], "proof": accept, "hosts": ["mac-de-test.local", "192.168.1.20"]])
-            _ = try? await mac.read()
+            // The phone's person compares the code and decides (§4.6): a bye keeps the phone on the Mac, which answers with its own bye; anything else keeps nothing.
+            let word = try? await mac.read()
+            wordOfThePhone.set(word?["t"] as? String)
+            if word?["t"] as? String == "bye" { try? await mac.write("bye") }
         })
+    }
+
+    /// The last word the scripted Mac read from the phone once it had sent its accept.
+    private let wordOfThePhone = Box<String?>(nil)
+
+    /// Pairs while the person of the phone answers the code (§4.6): waits for the sheet to show it, hands the proposal to `check`, then answers.
+    private func pair(_ controller: SyncController, answer: Bool, check: (SyncPairingProposal) -> Void = { _ in }, line: UInt = #line) async throws -> Result<Void, SyncController.PairingFailure> {
+        let pairing = Task { await controller.pair(with: qr(macFingerprint)) }
+        try await waitUntil("the code is shown to the person", { if case .comparing = controller.pairingStep { return true } else { return false } }, line: line)
+        if case .comparing(let proposal) = controller.pairingStep { check(proposal) }
+        controller.answerComparison(answer)
+        return await pairing.value
     }
 
     private func qr(_ fingerprint: Data?) -> SyncPairingCode { SyncPairingCode(fingerprint: fingerprint, secret: secret, port: 49213, hosts: ["mac-de-test.local"]) }
@@ -158,8 +173,14 @@ final class SyncControllerTests: XCTestCase {
         let controller = makeController(connector: connector)
         controller.setEnabled(true)
         // The first connection is the pairing; the next is the session the pairing starts.
-        let result = await controller.pair(with: qr(macFingerprint))
+        let result = try await pair(controller, answer: true, check: { proposal in
+            // The person is shown the name the Mac gave itself and the code both devices compute from the two fingerprints, before anything is kept.
+            XCTAssertEqual(proposal.macName, "Mac de test")
+            XCTAssertEqual(proposal.code, SyncPairingCompare.code(fingerprintMac: self.macFingerprint, fingerprintPhone: phoneFingerprint))
+            XCTAssertNil(controller.settings.mac, "nothing is kept before the person says yes")
+        })
         XCTAssertNil(failure(result), "the pairing went through")
+        XCTAssertEqual(wordOfThePhone.value, "bye")
         connector.set(sessionMac(hello: { Self.helloFromMac() }))
         let mac = try XCTUnwrap(controller.settings.mac)
         XCTAssertEqual(mac.id, "mac-test-0000000001")
@@ -169,6 +190,31 @@ final class SyncControllerTests: XCTestCase {
         XCTAssertEqual(mac.port, 49213)
         XCTAssertEqual(file.load(), .loaded(controller.settings), "the pairing is on the disk")
         XCTAssertEqual(controller.pairingStep, .idle)
+    }
+
+    func testAPersonWhoSaysNoToTheCodeKeepsNothingAndTheMacIsToldItWasRefused() async throws {
+        let phoneFingerprint = try store.loadOrCreate().fingerprint
+        let controller = makeController(connector: ScriptedConnector(pairingMac(secret: secret, phoneFingerprint: phoneFingerprint)))
+        controller.setEnabled(true)
+        let result = try await pair(controller, answer: false)
+        XCTAssertEqual(failure(result), .cancelled, "the person said no: there is nothing to tell them")
+        XCTAssertNil(controller.settings.mac)
+        XCTAssertEqual(controller.status, .noDevice)
+        XCTAssertEqual(controller.pairingStep, .idle)
+        try await waitUntil("the Mac read the refusal", { wordOfThePhone.value != nil })
+        XCTAssertEqual(wordOfThePhone.value, "error")
+    }
+
+    func testAPairingThatIsCancelledWhileTheCodeIsShownKeepsNothing() async throws {
+        let phoneFingerprint = try store.loadOrCreate().fingerprint
+        let controller = makeController(connector: ScriptedConnector(pairingMac(secret: secret, phoneFingerprint: phoneFingerprint)))
+        controller.setEnabled(true)
+        let pairing = Task { await controller.pair(with: qr(macFingerprint)) }
+        try await waitUntil("the code is shown to the person", { if case .comparing = controller.pairingStep { return true } else { return false } })
+        controller.cancelPairing()
+        let result = await pairing.value
+        XCTAssertEqual(failure(result), .cancelled)
+        XCTAssertNil(controller.settings.mac)
     }
 
     func testAWrongOrSpentCodeKeepsNothing() async throws {

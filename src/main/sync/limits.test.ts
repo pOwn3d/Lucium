@@ -1,12 +1,13 @@
 // The limits of src/main/sync/limits.ts are the ones the vectors state (ios/Contracts/sync-*.json): one written on one side only would not fail at the join.
 import { describe, expect, it } from 'vitest'
 import * as limits from './limits'
+import { COMPARISON_CODE_CHARS } from './pairing-compare'
 import { messageVectors, pairingVectors } from './sync-vectors.test-support'
 
 describe('the limits of the synchronisation', () => {
   it('are the figures of the pairing vectors', () => {
     const c = pairingVectors.constants
-    expect({ secretBytes: limits.SECRET_BYTES, nonceBytes: limits.NONCE_BYTES, fingerprintBytes: limits.FINGERPRINT_BYTES, windowMs: limits.PAIRING_WINDOW_MS, maxInvalidProofs: limits.MAX_INVALID_PROOFS, qrMaxChars: limits.QR_MAX_CHARS, qrMaxHosts: limits.MAX_HOSTS }).toEqual(c)
+    expect({ secretBytes: limits.SECRET_BYTES, nonceBytes: limits.NONCE_BYTES, fingerprintBytes: limits.FINGERPRINT_BYTES, windowMs: limits.PAIRING_WINDOW_MS, maxInvalidProofs: limits.MAX_INVALID_PROOFS, qrMaxChars: limits.QR_MAX_CHARS, qrMaxHosts: limits.MAX_HOSTS, comparisonCodeChars: COMPARISON_CODE_CHARS }).toEqual(c)
   })
 
   it('are the figures of the message vectors', () => {

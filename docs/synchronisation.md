@@ -83,9 +83,10 @@ Tout fichier lu est **borné** à la lecture (comme `DATA_FILE_MAX_BYTES` du Mac
 4. Le Mac accepte, **pendant la fenêtre seulement**, une connexion dont l'empreinte est inconnue ; elle n'a le droit de parler que d'appairage (§7.4). Il envoie `pair.challenge` (un nonce de 16 octets).
 5. L'iPhone répond `pair.request` : son identité, son nom, son nonce, et une **preuve** = HMAC-SHA-256 du secret sur la transcription (§4.4).
 6. Le Mac vérifie la preuve **en temps constant** (`crypto.timingSafeEqual`, **vérifié** dans `@types/node`). Preuve fausse : `bad-proof`, la tentative est comptée, la fenêtre reste ouverte. Preuve juste : **le secret est brûlé** (à partir de là, `pairing-used` pour qui le rejoue).
-7. **[Q7, recommandé]** Le Mac affiche « Un iPhone nommé « … » demande à s'appairer » avec **Autoriser** et **Refuser** (60 secondes ; sans réponse, c'est un refus). Refus : `pairing-refused` ; le secret reste brûlé.
-8. Autorisé, le Mac envoie `pair.accept` : son identité, son nom, ses adresses (§5) et **sa preuve** (§4.4). L'iPhone la vérifie ; fausse, il n'enregistre rien.
-9. Chacun **enregistre l'autre** : id, nom, plateforme, empreinte, date. La connexion se ferme (`bye`). L'iPhone ouvre ensuite une **séance normale** (§8) : un seul chemin de code pour la première synchronisation et les suivantes.
+7. **[Q7, recommandé]** Le Mac affiche « Un iPhone nommé « … » demande à s'appairer » avec **Autoriser** et **Refuser** (60 secondes ; sans réponse, c'est un refus), **le code à comparer** (§4.6) et **l'adresse d'où vient la demande** (revue de sécurité, n° 21 : quelqu'un qui a photographié le QR s'appelle « iPhone de … » aussi, et n'est pas à l'adresse de l'iPhone). Refus : `pairing-refused` ; le secret reste brûlé.
+8. Autorisé, le Mac envoie `pair.accept` : son identité, son nom, ses adresses (§5) et **sa preuve** (§4.4), **sans avoir enregistré l'iPhone**. L'iPhone vérifie la preuve ; fausse, il n'enregistre rien. La feuille du Mac reste affichée, avec le code et « Annuler », en attendant l'iPhone.
+9. **Code à comparer** (décision du chef de projet du 18 novembre 2026, « Code à comparer », n° 9 de la revue) : la preuve du Mac juste et **avant d'enregistrer quoi que ce soit**, l'iPhone affiche « Appairer avec « <nom du Mac> » ? Code : XXXXXX » et **Appairer** / **Annuler** (60 secondes ; sans réponse, c'est un refus). **Annuler** : l'iPhone envoie une `error` `pairing-refused` ; le Mac n'enregistre rien ; l'iPhone non plus. **Appairer** : l'iPhone envoie `bye`.
+10. Au `bye` de l'iPhone, le Mac **enregistre l'iPhone** (id, nom, plateforme, empreinte, date) et répond `bye` ; si la liste est pleine, il répond `error` `internal` à la place et l'iPhone n'enregistre rien. Au `bye` du Mac, l'iPhone **enregistre le Mac**. **L'appairage ne s'enregistre donc qu'après l'accord des deux côtés, et le Mac écrit avant que l'iPhone ne revienne.** L'iPhone ouvre ensuite une **séance normale** (§8) : un seul chemin de code pour la première synchronisation et les suivantes.
 
 ### 4.2 Forme du QR
 
@@ -140,6 +141,15 @@ Les empreintes sont les 32 octets, les nonces les 16 octets. Les preuves s'écri
 | **fermé** | la personne ferme la feuille, coupe l'interrupteur, ou le Mac se verrouille | `pairing-closed` |
 
 L'ordre de contrôle d'une demande est : fermé, verrouillé, expiré, brûlé, **puis** la preuve. Une preuve fausse **ne brûle pas** le secret (un voisin ne doit pas pouvoir empêcher l'appairage en frappant à la porte), mais **cinq** le verrouillent ; la personne affiche un nouveau QR. Un secret n'est **jamais réutilisé** : chaque « Ajouter un iPhone » en tire un nouveau. Vecteurs : tableau `secretLifecycle`.
+
+### 4.6 Le code à comparer
+
+Sans lui, une personne qui scanne l'affiche ou le message d'un faux QR (« Ajouter un Mac ») fait épingler à son iPhone le Mac de quelqu'un d'autre, et lui envoie ses espaces, ses dossiers, ses favoris et ses onglets épinglés à la première séance : la confirmation du Mac (étape 7) protège le Mac, pas l'iPhone (revue de sécurité, n° 9). Avec lui, l'iPhone dit **qui** il va épingler avant de le faire, et la personne le compare à ce que **son** Mac affiche.
+
+- **Calcul** : `SHA-256(transcription("lucium-sync/1 pair-compare", empreinteMac, empreinteIphone))` (la transcription du §4.4 : l'étiquette, puis chaque empreinte de 32 octets précédée de sa longueur sur deux octets), les **30 premiers bits**, écrits en **six caractères** de l'alphabet du code à saisir (RFC 4648 : `A–Z`, `2–7` : ni `0`, ni `1`, ni `8`, ni `9` à prendre pour une lettre). Les empreintes sont celles que **chaque appareil a vues dans la poignée de main TLS** (pas celles que l'autre dit avoir) : le Mac en première position, l'iPhone en seconde.
+- **Pourquoi il tient** : un intercepteur tient un certificat à lui vers chaque appareil, donc chaque côté part d'un couple d'empreintes différent et les deux codes diffèrent ; un faux Mac n'a pas de feuille de son côté pour montrer le même code que l'iPhone attend. Le code n'est pas un secret et ne prouve rien tout seul : ce sont les preuves du §4.4 qui prouvent ; le code fait voir à la personne que les deux bouts s'accordent sur **qui parle à qui**. Trente bits suffisent contre un intercepteur qui ne peut pas essayer plus de quelques certificats pendant 2 minutes.
+- **Montré** : sur le Mac dans la feuille « Autoriser / Refuser », puis pendant l'attente de l'iPhone ; sur l'iPhone après la preuve du Mac, avec le nom que le Mac s'est donné (lu comme du texte, jamais reconnu par lui) et deux boutons, **Appairer** et **Annuler**. Les vecteurs `comparisonCode` de `sync-pairing-vectors.json` fixent le calcul, jouées par le code du Mac et par LuciumKit.
+- **Rien n'est écrit avant les deux accords** (étapes 9 et 10 du §4.1) : l'iPhone qui annule, ou se tait, ne laisse rien au Mac ; la personne du Mac qui annule pendant l'attente non plus (`pairing-refused`).
 
 ## 5. Retrouver l'autre appareil
 
@@ -265,7 +275,7 @@ La version du protocole est **négociée par ALPN** : le Mac offre `lucium-sync/
 
 Une connexion est dans **une phase** à la fois, et un message hors phase est un `bad-message` fatal :
 
-- **Appairage** : `pair.challenge` (Mac) → `pair.request` (iPhone) → `pair.accept` (Mac) **ou** `error` → `bye`. Rien d'autre.
+- **Appairage** : `pair.challenge` (Mac) → `pair.request` (iPhone) → `pair.accept` (Mac) **ou** `error` → puis le mot de la personne de l'iPhone, qui compare le code (§4.6) : `bye` (oui) **ou** `error` `pairing-refused` (non) → le Mac répond `bye` (il a enregistré l'iPhone) **ou** `error` `internal` (il n'a pas pu). Rien d'autre. Aucun type de message n'est ajouté : `bye` et `error` sont admis partout.
 - **Séance** : `hello` des deux côtés ; puis, dans chaque sens, une ou plusieurs `snapshot.part`, éventuellement un `open-tabs`, puis `snapshot.end` ; quand **les deux** `snapshot.end` sont reçus, `result` des deux côtés ; si les `digest` sont égaux, chacun applique, puis `commit` ; `bye`. `unpair` et `error` sont permis après `hello`.
 
 Il n'y a **pas d'accusé par message** : TCP et TLS livrent dans l'ordre et sans perte ou la connexion tombe ; l'**exhaustivité** est contrôlée par `parts`, `entityCount` et `digest`. L'accusé de la **séance** est `commit` : l'état « À jour » ne s'affiche que quand le `commit` de l'autre est reçu.
@@ -287,7 +297,7 @@ Il n'y a **pas d'accusé par message** : TCP et TLS livrent dans l'ordre et sans
 | Connexions | 4 + 1 d'appairage |
 | Poignée de main / silence / séance | 10 s / 60 s / 10 min |
 | Séances automatiques | une toutes les 15 s au plus |
-| Appairage | 120 s ; 5 preuves fausses ; 60 s pour confirmer |
+| Appairage | 120 s ; 5 preuves fausses ; 60 s pour confirmer sur le Mac, puis 60 s pour comparer le code sur l'iPhone |
 
 Une borne dépassée **ferme la connexion** avec le code qui convient (`too-large`, `rate-limited`, `timeout`…) ; ce que l'autre côté a déjà envoyé n'est **jamais appliqué à moitié** : l'application (§8.5) n'a lieu qu'après la vérification des résumés.
 
@@ -558,13 +568,13 @@ Les textes sont des **clés des deux catalogues** (`src/shared/i18n-fr.ts` et `i
 
 - Un **interrupteur** « Synchroniser avec mes appareils » (**désactivé**), sous-texte : « Entre votre Mac et votre iPhone, sur votre réseau local. Rien ne passe par un serveur. » ; un bouton **« Ouvrir la synchronisation »** (la fenêtre de 10 minutes du §6.1, avec son compte à rebours, « Prolonger » et « Fermer »).
 - Les **catégories** (§10.1), chacune avec une phrase qui dit ce qu'elle envoie ; « Onglets ouverts » dit : « Ce que vous lisez est envoyé, titres et adresses compris. »
-- La **liste des appareils** : nom, plateforme, **dernière synchronisation** (« il y a 2 min »), **« Oublier »** ; **« Ajouter un iPhone »** (feuille : QR, compte à rebours, adresse, code, bouton « Fermer »).
+- La **liste des appareils** : nom, plateforme, **dernière synchronisation** (« il y a 2 min »), **« Oublier »** ; **« Ajouter un iPhone »** (feuille : QR, compte à rebours, adresse, code, bouton « Fermer »). Quand un iPhone a prouvé qu'il connaît le secret, la feuille « Autoriser / Refuser » dit son nom, **l'adresse d'où vient la demande** et **le code à comparer** (§4.6) ; une fois « Autoriser » touché elle reste, avec le code et « Annuler », jusqu'à ce que la personne de l'iPhone ait confirmé.
 - Une **ligne d'état** (§13.3) et, s'il y en a un, **« Dernier conflit réglé »** (§13.4).
 - Un lien vers ce qui est dit des **connexions** (§14).
 
 ### 13.2 iPhone : la page « Synchronisation » des réglages
 
-Un interrupteur, **« Ajouter un Mac »** (caméra, puis « Saisir un code »), la liste (un Mac), **« Synchroniser maintenant »**, « Oublier ce Mac », la ligne d'état. Le sous-titre « Synchronisé avec le Mac » des espaces (`docs/ios.md` §3) **apparaît** quand la synchronisation est active. Aucune option « Passer par iCloud » (décision du 17 novembre 2026).
+Un interrupteur, **« Ajouter un Mac »** (caméra, puis « Saisir un code » ; une fois la preuve du Mac vérifiée, **« Appairer avec « <nom du Mac> » ? Code : XXXXXX »** avec **Appairer** et **Annuler**, §4.6), la liste (un Mac), **« Synchroniser maintenant »**, « Oublier ce Mac », la ligne d'état. Le sous-titre « Synchronisé avec le Mac » des espaces (`docs/ios.md` §3) **apparaît** quand la synchronisation est active. Aucune option « Passer par iCloud » (décision du 17 novembre 2026).
 
 ### 13.3 États
 
@@ -632,6 +642,7 @@ Ce qui suit est à ajouter par les cartes 444 et 445, avec la fonction (`docs/io
 | Un tiers sur le même Wi-Fi **écoute** | TLS 1.3 (TLS 1.2 jamais proposé) | §6 |
 | Il **s'insère à l'appairage** | secret de 128 bits dans le QR, **1 usage, 2 minutes**, preuve qui couvre les deux empreintes, confirmation sur le Mac [Q7] | §4 |
 | Il **voit le QR** (une épaule, une photo) | usage unique et 2 minutes ; **confirmation sur le Mac** [Q7] ; l'iPhone légitime reçoit « code déjà utilisé » | §4.5 |
+| Il fait **scanner un faux QR** (affiche, message) à la personne | **l'iPhone demande « Appairer avec « … » ? Code : XXXXXX »** après la preuve du Mac et avant d'enregistrer ; le code est celui que le vrai Mac affiche, sinon la personne annule ; rien n'est gardé avant l'accord des deux côtés | §4.6 |
 | Il **rejoue** un message ou un QR | TLS, secret brûlé, nonce de connexion, numéros | §9.1 |
 | Il **se fait passer** pour un appareil appairé | l'empreinte est épinglée ; l'identifiant est lié à l'empreinte | §3.2 |
 | Il envoie un **message énorme ou piégé** | longueur lue avant le contenu, bornes, profondeur, `__proto__` refusé, **rien n'est exécuté** | §7 |
@@ -698,7 +709,7 @@ Trois fichiers dans `ios/Contracts/`, **au format des vecteurs existants** (JSON
 
 | Fichier | Contient |
 |---|---|
-| `sync-pairing-vectors.json` | `proof` (les preuves d'appairage recalculables, avec `mutations`), `qr` (valides et refusés), `manualCode`, `secretLifecycle` (valide, expiré, rejoué, preuve fausse, verrouillé, refusé), `clientChecks` (empreinte fausse), `addressPolicy`, `certificate` (octets à signer et certificat d'exemple) |
+| `sync-pairing-vectors.json` | `proof` (les preuves d'appairage recalculables, avec `mutations`), `qr` (valides et refusés), `manualCode`, `comparisonCode` (le code à comparer, §4.6), `secretLifecycle` (valide, expiré, rejoué, preuve fausse, verrouillé, refusé), `clientChecks` (empreinte fausse), `addressPolicy`, `certificate` (octets à signer et certificat d'exemple) |
 | `sync-message-vectors.json` | `limits`, `frames` (longueurs), `messages` (valide, trop gros, version inconnue, champ inconnu, `__proto__`, hors phase), `sequences` (numéros), `stamps`, `canonical` (formes canoniques et SHA-256), `fieldClasses`, `settingsAllowed`, `settingsNever`, `inbound` (entités écartées) |
 | `sync-merge-vectors.json` | des **cas de fusion** : base, local, distant, résultat attendu, conflits attendus, `swap` (le résultat doit être le même en échangeant local et distant) |
 | `sync-merge-draws.json`, `sync-snapshot-vectors.json`, `sync-conflict-vectors.json` | (carte 446) le **corpus de tirages** et son résultat, ce qu'un instantané reçu doit être, les **lignes du journal et les phrases** de « Conflit réglé » pour chaque conflit des deux fichiers précédents, la conservation du journal (30 jours, 200 lignes) et la lecture d'un fichier hostile |
@@ -747,6 +758,7 @@ Les points où le code a dû choisir, sans changer ce qui est décidé plus haut
 | **Graines** (§10.2) | envoyées **seulement avec une entité que la base de cet appareil avec l'autre ne contient pas** ; la base gardée n'en contient pas | un champ « graine » (la page où un onglet épinglé se trouve) qui changerait à chaque navigation serait sinon un changement à fusionner. Un onglet épinglé que la fusion rend à un appareil qui l'avait supprimé arrive sans graine : il s'ouvre à son `anchorUrl` |
 | **Marques** (§9.2) | un livre de marques (`sync-marks.json`) : le hachage de chaque champ et la marque donnée au moment où l'appareil le voit changer (300 ms après le geste), une marque aussi pour un champ retiré et pour l'ordre de chaque liste, des pierres tombales de 30 jours. **Il suit l'état seulement tant que l'interrupteur est activé** ; au lancement l'identifiant est lu dans le fichier sans ouvrir la clé (pas de demande au trousseau) | ni adresse ni titre dans ce fichier ; rien n'est abonné, rien ne tourne interrupteur coupé |
 | **Écriture** (§8.5) | l'action `sync/apply` : un champ n'est écrit que si l'état tient encore ce qu'il tenait au gel (`expect`), une entité n'est supprimée que si elle est encore telle qu'au gel ; le tout passe par `normalize`, comme un fichier lu au démarrage | ce que la personne a changé pendant la séance est gardé et repart à la séance suivante ; un champ reçu est reborné comme tout autre |
+| **Code à comparer, adresse source** (§4.1, §4.6) | `runPairing` calcule `comparisonCode` des deux empreintes vues dans la poignée de main (`pairing-compare.ts`) et le donne, avec l'adresse source, à la feuille ; après « Autoriser » il envoie `pair.accept` **sans** enregistrer l'iPhone, attend le mot de la personne de l'iPhone (`bye` ou `error`, 60 s : `Channel.allowSilence` allonge le silence toléré pour cette attente) et n'enregistre qu'au `bye`, puis répond `bye` (ou `error` `internal` si la liste est pleine). Le service garde la feuille pendant l'attente (`confirm.waiting`) et la personne peut y renoncer (« Annuler », fermer la feuille ou la fenêtre : `pairing-refused`) | un faux QR scanné faisait épingler le Mac d'un autre par l'iPhone sans qu'il le demande ; le Mac n'écrivait plus l'iPhone **avant** son `pair.accept` pour qu'il ne revienne pas à un Mac qui l'a oublié : il l'écrit maintenant avant son dernier `bye`, que l'iPhone lit avant de revenir (revue de la carte 448, n° 9 et 21 ; décision du chef du 18 nov. : « Code à comparer ») |
 | **Place d'appairage** (§6.1) | une seule ; une connexion qui n'a pas envoyé `pair.request` dans les 3 s qui suivent sa prise de la place la perd au profit du prochain inconnu (coupée, comptée) | un voisin qui ouvre une connexion TLS et se tait gardait la place 60 s (le silence permis), en boucle, tout le temps de la fenêtre : il empêchait l'appairage sans connaître le secret (essayé par la carte 448) |
 | **Application d'un patch** (§8.5) | `sync/apply` travaille sur une copie de chaque liste touchée, avec un index des identifiants, et ne parcourt chaque liste qu'une fois pour les suppressions et une fois pour les ordres | la version qui cherchait dans la liste pour chaque entité tenait le processus principal 3,4 s pour 40 000 créations ; un appareil hostile calcule la même fusion et le résumé concorde : il pouvait relancer ce gel à chaque séance (carte 448). Un test joue 400 patchs tirés au hasard contre l'ancienne version, gardée comme référence |
 | **Une séance à la fois** | une deuxième connexion d'un appareil appairé reçoit `busy` | les marques et la base sont écrites par une seule séance |

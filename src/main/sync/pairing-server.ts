@@ -4,22 +4,32 @@
 //   challenge  the Mac sends a nonce of 16 bytes
 //   request    the iPhone sends its identity, its nonce and a proof; the Mac checks it in constant time against what the QR's secret gives for THIS connection
 //              (both fingerprints and both nonces are in the transcription) and spends the secret on the first right proof
-//   confirm    [Q7] « Un iPhone nommé « … » demande à s'appairer »: Autoriser or Refuser; no answer in a minute is a refusal. The secret is burned in both cases
-//   accept     the Mac writes the iPhone in its list, then sends its identity, its addresses and ITS proof, which the iPhone checks before it writes anything
+//   confirm    [Q7] « Un iPhone nommé « … » demande à s'appairer »: Autoriser or Refuser; no answer in a minute is a refusal. The secret is burned in both cases. The sheet
+//              shows the code to compare (pairing-compare.ts: the same six characters the iPhone shows, review n° 9) and the address the request came from (n° 21)
+//   accept     the Mac sends its identity, its addresses and ITS proof, which the iPhone checks before it writes anything. It has NOT written the iPhone down yet
+//   compare    the iPhone shows « Appairer avec « … » ? Code : … » and its person says yes or no: `bye` is yes, an `error` is no (a minute at most). Both ends keep the
+//              other only after both persons said yes: a code that is not the same on both screens is a pairing nobody wanted (§4.6)
+//   keep       the Mac writes the iPhone in its list and answers `bye`, so that the iPhone that reads it can come back to a Mac that knows it; a list that is full is
+//              told as `internal` instead, and the iPhone keeps nothing
 //
 // The code of an outcome is the one of the catalogue (§7.6); the listener counts the failures per address.
 
 import { randomBytes } from 'node:crypto'
 import { CONFIRM_MS, NONCE_BYTES } from './limits'
+import { comparisonCode } from './pairing-compare'
 import { Channel, ConnectionClosed, ProtocolError } from './channel'
 import { acceptProof, proofMatches, requestProof } from './pairing-proof'
 import type { PairingSecret } from './pairing-secret'
 import type { ErrorCode } from './error-codes'
 import type { PeerRecord } from './sync-store'
 
-/** What the person is asked: the name the iPhone gave itself (shown as text, never trusted to recognise it). */
+/** What the person is asked: the name the iPhone gave itself (shown as text, never trusted to recognise it), the code to compare with the iPhone's screen (§4.6) and the address of the connection. */
 export interface PairingRequestInfo {
   name: string
+  /** Six characters made of the two fingerprints (pairing-compare.ts): the iPhone shows the same ones if it is the device this Mac is talking to. */
+  code: string
+  /** Where the request comes from: the person who photographed the QR is called « iPhone de … » too, and is not at the address of their iPhone. */
+  address: string
 }
 
 export interface PairingContext {
@@ -29,8 +39,15 @@ export interface PairingContext {
   secret: PairingSecret
   /** The fingerprint of the certificate the iPhone presented in the TLS handshake (what is pinned, not what it says). */
   peerFingerprint: Buffer
+  /** The source address of the connection (the system's, not the device's). */
+  peerAddress: string
   /** « Autoriser » or « Refuser » (the sheet of the Settings). A rejected promise is a refusal. */
   confirm: (request: PairingRequestInfo) => Promise<'allow' | 'refuse'>
+  /**
+   * The person allowed and the Mac now waits for the iPhone's person to compare the code and say yes. The promise settles when the Mac's person gives up on it (closes the
+   * sheet, answers « Annuler ») or the window closes: the pairing then ends as a refusal. Absent: nobody can give up, and the wait ends with the iPhone's answer or the time.
+   */
+  waiting?: (request: PairingRequestInfo) => Promise<void>
   /** Keeps the device: throws when the list is full. */
   addPeer: (peer: PeerRecord) => void
   /** The addresses and the `.local` name the iPhone may come back to (already filtered: local only, at most four). */
@@ -90,17 +107,28 @@ export async function runPairing(channel: Channel, ctx: PairingContext): Promise
     if (answer !== 'accepted') return fail(answer === 'bad-proof' ? 'bad-proof' : answer, `the secret answered ${answer}`)
     if (request.device.platform !== 'ios') return fail('bad-message', 'only an iPhone is paired by a code')
 
-    if ((await askPerson(ctx, { name: request.device.name })) !== 'allow') return fail('pairing-refused', 'the person refused')
+    const info: PairingRequestInfo = { name: request.device.name, code: comparisonCode(ctx.device.fingerprint, ctx.peerFingerprint), address: ctx.peerAddress }
+    if ((await askPerson(ctx, info)) !== 'allow') return fail('pairing-refused', 'the person refused')
 
     const peer: PeerRecord = { id: request.device.id, name: request.device.name, platform: 'ios', fingerprint: ctx.peerFingerprint.toString('hex'), pairedAt: ctx.now(), lastSessionAt: null }
+    const proof = acceptProof({ secret: ctx.secret.secret, fingerprintMac: ctx.device.fingerprint, fingerprintPhone: ctx.peerFingerprint, nonceMac, noncePhone, idMac: ctx.device.id, idPhone: request.device.id })
+    await channel.send({ t: 'pair.accept', device: { id: ctx.device.id, name: ctx.device.name, platform: 'mac' }, proof, hosts: ctx.hosts() })
+
+    // The iPhone's person compares the code and decides; nothing is kept before they have said yes (§4.6). The silence the channel puts up with is made as long as the time
+    // they are given, and the Mac's person can still give up.
+    const given = ctx.confirmMs ?? CONFIRM_MS
+    channel.allowSilence(given)
+    const gaveUp = ctx.waiting?.(info).then(() => 'gave-up' as const)
+    const word = await (gaveUp === undefined ? channel.receive() : Promise.race([channel.receive(), gaveUp]))
+    if (word === 'gave-up') return fail('pairing-refused', 'the person gave up while the iPhone was asked')
+    if (word.t === 'error') return { outcome: 'failed', code: word.code, detail: 'the iPhone did not agree to the pairing' }
+    if (word.t !== 'bye') return fail('bad-message', `a ${word.t} is not expected after the accept`)
     try {
       ctx.addPeer(peer)
     } catch (error) {
       console.error('[sync] the iPhone could not be kept in the list of devices:', error)
       return fail('internal', 'the device could not be kept')
     }
-    const proof = acceptProof({ secret: ctx.secret.secret, fingerprintMac: ctx.device.fingerprint, fingerprintPhone: ctx.peerFingerprint, nonceMac, noncePhone, idMac: ctx.device.id, idPhone: request.device.id })
-    await channel.send({ t: 'pair.accept', device: { id: ctx.device.id, name: ctx.device.name, platform: 'mac' }, proof, hosts: ctx.hosts() })
     channel.bye()
     return { outcome: 'paired', peer }
   } catch (error) {

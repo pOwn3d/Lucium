@@ -91,6 +91,9 @@ export interface SessionPorts {
   openTabs?: () => OpenTab[]
 }
 
+/** The source address of a connection as a person reads it: no `::ffff:` in front of an IPv4 address, no zone (`%en0`), and nothing but what an address is made of. */
+export const readableAddress = (address: string): string => address.replace(/^::ffff:/i, '').replace(/%.*$/, '').replace(/[^0-9a-fA-F:.]/g, '').slice(0, 45)
+
 /** A device name as a person reads it: a control character or a mark that turns the text round is a space (a name is shown as written by the other device). */
 export const readableName = (name: string): string => name.replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/g, ' ').trim()
 
@@ -102,7 +105,10 @@ export class SyncService {
   private identityReplaced = false
   private door: SyncDoor | null = null
   private pairing: { secret: PairingSecret; view: Omit<SyncPairingView, 'remainingMs'> } | null = null
-  private confirm: { name: string; until: number; resolve: (decision: 'allow' | 'refuse') => void } | null = null
+  /** The question of [Q7]: asked, then (once the person allowed) waiting for the iPhone's person to compare the code (§4.6). */
+  private confirm: { name: string; code: string; address: string; until: number; waiting: boolean; resolve: (decision: 'allow' | 'refuse') => void } | null = null
+  /** Ends the wait for the iPhone's person when the Mac's gives up on it. */
+  private giveUp: (() => void) | null = null
   private justPaired: string | null = null
   private problem: SyncProblem | null = null
   private readonly limiter: AddressLimiter
@@ -145,7 +151,7 @@ export class SyncService {
       categories: config.categories,
       window: this.window.state(),
       pairing: pairing === null ? null : { ...pairing.view, remainingMs: pairing.secret.remainingMs() },
-      confirm: confirm === null ? null : { name: confirm.name, remainingMs: Math.max(0, confirm.until - this.deps.clock.elapsed()) },
+      confirm: confirm === null ? null : { name: confirm.name, code: confirm.code, address: confirm.address, waiting: confirm.waiting, remainingMs: Math.max(0, confirm.until - this.deps.clock.elapsed()) },
       devices: config.peers.map((peer) => ({ id: peer.id, name: readableName(peer.name), platform: peer.platform, pairedAt: peer.pairedAt, lastSessionAt: peer.lastSessionAt })),
       identityReplaced: this.identityReplaced,
       justPaired: this.justPaired,
@@ -330,7 +336,7 @@ export class SyncService {
       openPairing: () => {
         const pairing = this.livePairing()
         if (pairing === null) return null
-        return { secret: pairing.secret, confirm: (request) => this.ask(request), addPeer: (peer) => this.deps.store.addPeer(peer), hosts: () => ownHosts(this.deps.hostEnv()), now: this.deps.now, ...(this.deps.confirmMs !== undefined ? { confirmMs: this.deps.confirmMs } : {}) }
+        return { secret: pairing.secret, confirm: (request) => this.ask(request), waiting: () => this.waitForPhone(), addPeer: (peer) => this.deps.store.addPeer(peer), hosts: () => ownHosts(this.deps.hostEnv()), now: this.deps.now, ...(this.deps.confirmMs !== undefined ? { confirmMs: this.deps.confirmMs } : {}) }
       },
       runSession: this.deps.runSession ?? (this.deps.session !== undefined ? (channel, peer) => this.exchange(channel, peer, identity.deviceId) : async (channel) => channel.fail('internal', 'the exchange of data is not available yet')),
       onPairingEnded: (outcome) => {
@@ -386,12 +392,23 @@ export class SyncService {
   private ask(request: PairingRequestInfo): Promise<'allow' | 'refuse'> {
     this.resolveConfirm('refuse')
     return new Promise((resolve) => {
-      this.confirm = { name: readableName(request.name), until: this.deps.clock.elapsed() + (this.deps.confirmMs ?? CONFIRM_MS), resolve }
+      this.confirm = { name: readableName(request.name), code: request.code, address: readableAddress(request.address), until: this.deps.clock.elapsed() + (this.deps.confirmMs ?? CONFIRM_MS), waiting: false, resolve }
       this.changed()
     })
   }
 
-  /** « Autoriser » or « Refuser ». With no question open it does nothing (a late click). */
+  /**
+   * The person allowed: the Mac waits for the iPhone's person (§4.6). The sheet stays, with the code and « Annuler »; the promise settles when this Mac's person gives up (« Annuler »,
+   * the sheet or the window closed), which ends the pairing as a refusal. The end of the wait by the iPhone's answer needs nothing here: the pairing ends and clears the sheet.
+   */
+  private waitForPhone(): Promise<void> {
+    return new Promise<void>((resolve) => {
+      if (this.confirm?.waiting !== true) return resolve()
+      this.giveUp = resolve
+    })
+  }
+
+  /** « Autoriser » or « Refuser » (and « Annuler » while the iPhone is asked). With no question open it does nothing (a late click). */
   answer(allow: boolean): void {
     this.begin()
     this.resolveConfirm(allow ? 'allow' : 'refuse')
@@ -401,7 +418,18 @@ export class SyncService {
   private resolveConfirm(decision: 'allow' | 'refuse'): void {
     const open = this.confirm
     if (open === null) return
-    this.confirm = null
+    if (open.waiting) {
+      // The person allowed and the iPhone is being asked: only giving up counts now, and it ends the wait.
+      if (decision === 'refuse') {
+        this.confirm = null
+        const giveUp = this.giveUp
+        this.giveUp = null
+        giveUp?.()
+      }
+      return
+    }
+    // « Autoriser » keeps the sheet, now waiting for the iPhone's person; anything else closes it.
+    this.confirm = decision === 'allow' ? { ...open, waiting: true, until: this.deps.clock.elapsed() + (this.deps.confirmMs ?? CONFIRM_MS), resolve: () => undefined } : null
     open.resolve(decision)
   }
 

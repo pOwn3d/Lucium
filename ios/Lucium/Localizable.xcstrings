@@ -5321,6 +5321,86 @@
         }
       }
     },
+    "sync.pairing.compare.accept": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pair"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appairer"
+          }
+        }
+      }
+    },
+    "sync.pairing.compare.cancel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Annuler"
+          }
+        }
+      }
+    },
+    "sync.pairing.compare.code": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code to compare"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Code à comparer"
+          }
+        }
+      }
+    },
+    "sync.pairing.compare.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The same code must be shown on your Mac. If it is not the same, tap Cancel: this is not your Mac, and nothing is kept."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le même code doit être affiché sur votre Mac. S’il est différent, touchez Annuler : ce n’est pas votre Mac, et rien n’est gardé."
+          }
+        }
+      }
+    },
+    "sync.pairing.compare.title %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pair with “%@”?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appairer avec « %@ » ?"
+          }
+        }
+      }
+    },
     "sync.pairing.connecting": {
       "localizations": {
         "en": {
@@ -5417,6 +5497,22 @@
         }
       }
     },
+    "sync.pairing.not-confirmed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The pairing was not confirmed in time. Nothing was kept."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’appairage n’a pas été confirmé à temps. Rien n’a été gardé."
+          }
+        }
+      }
+    },
     "sync.pairing.scan.hint": {
       "localizations": {
         "en": {
@@ -5502,13 +5598,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "On the Mac, tap “Allow”. It waits 60 seconds."
+            "value": "On the Mac, tap “Allow”. A code then appears here, to compare with the one on the Mac."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sur le Mac, touchez « Autoriser ». Il attend 60 secondes."
+            "value": "Sur le Mac, touchez « Autoriser ». Un code s’affiche alors ici, à comparer avec celui du Mac."
           }
         }
       }

@@ -6,6 +6,14 @@ import Testing
 /// left unwritten when a check fails; the bytes of the proofs are proved by the shared vectors (`SyncPairingContractTests`).
 @Suite("Synchronisation pairing: the phone's half")
 struct SyncPairingFlowTests {
+    /// What the fake Mac read last, written from another task.
+    private final class Received: @unchecked Sendable {
+        private let lock = NSLock()
+        private var value: [String: Any]?
+        func set(_ fields: [String: Any]) { lock.withLock { value = fields } }
+        var fields: [String: Any]? { lock.withLock { value } }
+    }
+
     private let secret = SyncContract.hex("6a1f0c2b9d4e7a35c81b2f0e5d7a9c43")
     private let macFingerprint = SyncContract.hex("d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f")
     private let phoneFingerprint = SyncContract.hex("6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3")
@@ -22,15 +30,25 @@ struct SyncPairingFlowTests {
 
     private func macDevice() -> [String: Any] { ["id": "vector-mac-0000000001", "name": "MacBook de test", "platform": "mac"] }
 
+    /// What the person of the phone was shown, in order (the proposal of §4.6).
+    private final class Shown: @unchecked Sendable {
+        private let lock = NSLock()
+        private var items: [SyncPairingProposal] = []
+        func add(_ item: SyncPairingProposal) { lock.withLock { items.append(item) } }
+        var all: [SyncPairingProposal] { lock.withLock { items } }
+    }
+
     private func pair(_ code: SyncPairingCode, mac script: @escaping @Sendable (SyncFakeMac) async throws -> Void, presented: Data? = nil,
-                      confirmation: Duration = .seconds(2)) async throws -> (SyncPairingOutcome, SyncLoopbackEnd) {
+                      confirmation: Duration = .seconds(2), comparison: Duration = .seconds(2), shown: Shown = Shown(),
+                      person: @escaping @Sendable (SyncPairingProposal) async -> Bool = { _ in true }) async throws -> (SyncPairingOutcome, SyncLoopbackEnd) {
         let ends = syncLoopback()
         let fake = SyncFakeMac(ends.mac)
         let task = Task { try await script(fake) }
         defer { task.cancel() }
         let connection = SyncConnection(transport: ends.phone, presentedFingerprint: presented ?? macFingerprint)
         let outcome = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: phoneFingerprint, device: phone, nonce: phoneNonce,
-                                                       handshakeTimeout: .seconds(2), confirmationTimeout: confirmation)
+                                                       handshakeTimeout: .seconds(2), confirmationTimeout: confirmation, comparisonTimeout: comparison,
+                                                       confirm: { proposal in shown.add(proposal); return await person(proposal) })
         _ = try? await task.value
         return (outcome, ends.phone)
     }
@@ -46,7 +64,10 @@ struct SyncPairingFlowTests {
             #expect(proof == SyncProof.requestTag(macInputs()).map(SyncEncoding.base64url), "the phone's proof is the one the Mac computes")
             let accept = SyncProof.acceptTag(macInputs(secret: acceptProofSecret, fingerprintMac: acceptFingerprintMac)).map(SyncEncoding.base64url) ?? ""
             try await mac.write("pair.accept", ["device": macDevice(), "proof": accept, "hosts": hosts])
-            _ = try? await mac.read()  // the phone's bye
+            // The phone's person compares the code and says yes (a bye); the Mac keeps the phone and answers with its own bye (§4.6).
+            let word = try await mac.read()
+            #expect(word.fields["t"] as? String == "bye")
+            try await mac.write("bye")
         }
     }
 
@@ -91,7 +112,7 @@ struct SyncPairingFlowTests {
         let ends = syncLoopback()
         let connection = SyncConnection(transport: ends.phone, presentedFingerprint: Data(repeating: 0x11, count: 32))
         do {
-            _ = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: phoneFingerprint, device: phone, nonce: phoneNonce)
+            _ = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: phoneFingerprint, device: phone, nonce: phoneNonce, confirm: { _ in true })
             Issue.record("a certificate that is not the code's was accepted")
         } catch let failure as SyncFailure {
             #expect(failure.code == .fingerprintMismatch)
@@ -113,6 +134,114 @@ struct SyncPairingFlowTests {
                 #expect(failure.code == refusal)
             }
         }
+    }
+
+    // MARK: The code to compare (docs/synchronisation.md §4.6, review n° 9)
+
+    @Test func theProofOfTheMacIsFollowedByTheQuestionToItsPersonWithTheNameOfTheMacAndTheCodeBothComputeFromTheFingerprints() async throws {
+        let shown = Shown()
+        let (outcome, _) = try await pair(code, mac: goodMac(), shown: shown)
+        #expect(shown.all == [SyncPairingProposal(macName: "MacBook de test", code: try #require(SyncPairingCompare.code(fingerprintMac: macFingerprint, fingerprintPhone: phoneFingerprint)))])
+        #expect(outcome.mac.id == "vector-mac-0000000001")
+    }
+
+    @Test func nothingIsSentToTheMacBeforeThePersonHasAnsweredAndNothingIsKeptWhenTheyRefuse() async throws {
+        // The person of the phone says no: the Mac gets an error with the code of a refusal, no bye, and the pairing throws instead of returning a Mac to keep.
+        let received = Received()
+        do {
+            _ = try await pair(code, mac: { mac in
+                try await mac.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
+                _ = try await mac.read()
+                let accept = SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? ""
+                try await mac.write("pair.accept", ["device": macDevice(), "proof": accept, "hosts": []])
+                let word = try await mac.read()
+                received.set(word.fields)
+            }, person: { _ in false })
+            Issue.record("a pairing the person refused was kept")
+        } catch let failure as SyncFailure {
+            #expect(failure.code == .pairingRefused)
+        }
+        try await Task.sleep(for: .milliseconds(100))
+        let word = try #require(received.fields)
+        #expect(word["t"] as? String == "error")
+        #expect(word["code"] as? String == "pairing-refused")
+    }
+
+    @Test func aPersonWhoDoesNotAnswerInTimeIsARefusalAndTheConnectionIsClosed() async throws {
+        let ends = syncLoopback()
+        let fake = SyncFakeMac(ends.mac)
+        let task = Task {
+            try await fake.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
+            _ = try await fake.read()
+            try await fake.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []])
+        }
+        defer { task.cancel() }
+        let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
+        do {
+            _ = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: phoneFingerprint, device: phone, nonce: phoneNonce,
+                                                 handshakeTimeout: .seconds(2), confirmationTimeout: .seconds(2), comparisonTimeout: .milliseconds(150),
+                                                 confirm: { _ in
+                                                     try? await Task.sleep(for: .seconds(30))
+                                                     return true
+                                                 })
+            Issue.record("a person who said nothing was taken for a yes")
+        } catch let failure as SyncFailure {
+            #expect(failure.code == .pairingRefused)
+        }
+        #expect(ends.phone.closed)
+    }
+
+    @Test func aMacThatCannotKeepThePhoneAnswersAnErrorInPlaceOfItsByeAndThePhoneKeepsNothing() async throws {
+        do {
+            _ = try await pair(code, mac: { mac in
+                try await mac.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
+                _ = try await mac.read()
+                try await mac.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []])
+                _ = try await mac.read()
+                try await mac.write("error", ["code": "internal", "fatal": true])
+            })
+            Issue.record("a pairing the Mac could not keep was kept")
+        } catch let failure as SyncFailure {
+            #expect(failure.code == .internal)
+        }
+    }
+
+    @Test func aMacThatSaysNothingAfterTheByeIsATimeoutAndTheConnectionIsClosed() async throws {
+        let ends = syncLoopback()
+        let fake = SyncFakeMac(ends.mac)
+        let task = Task {
+            try await fake.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
+            _ = try await fake.read()
+            try await fake.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []])
+            _ = try await fake.read()
+            try await Task.sleep(for: .seconds(5))
+        }
+        defer { task.cancel() }
+        let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
+        do {
+            _ = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: phoneFingerprint, device: phone, nonce: phoneNonce,
+                                                 handshakeTimeout: .milliseconds(200), confirmationTimeout: .seconds(2), confirm: { _ in true })
+            Issue.record("a Mac that never confirmed that it kept the phone was believed")
+        } catch let failure as SyncFailure {
+            #expect(failure.code == .timeout)
+        }
+        #expect(ends.phone.closed)
+    }
+
+    @Test func aWrongProofIsRefusedBeforeThePersonIsAskedAnything() async throws {
+        let shown = Shown()
+        do {
+            _ = try await pair(code, mac: goodMac(acceptProofSecret: Data(repeating: 1, count: 16)), shown: shown)
+            Issue.record("a Mac that does not know the secret was accepted")
+        } catch let failure as SyncFailure {
+            #expect(failure.code == .badProof)
+        }
+        #expect(shown.all.isEmpty, "the person is not asked to compare a code with a Mac that has not proved anything")
+    }
+
+    @Test func theNameOfTheMacIsShownAsTextWithoutWhatTurnsItRoundOrBreaksTheLine() {
+        let proposal = SyncPairingProposal(macName: "MacBook\u{202E}gpj.exe\n de test\u{0007}", code: "ABC234")
+        #expect(proposal.macName == "MacBook gpj.exe  de test")
     }
 
     @Test func aMacThatStaysSilentIsATimeoutAndNotAHang() async throws {
@@ -175,7 +304,7 @@ struct SyncPairingFlowTests {
             let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
             do {
                 _ = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: phoneFingerprint, device: phone, nonce: phoneNonce,
-                                                     handshakeTimeout: .milliseconds(300), confirmationTimeout: .milliseconds(300))
+                                                     handshakeTimeout: .milliseconds(300), confirmationTimeout: .milliseconds(300), confirm: { _ in true })
                 Issue.record("\(name) was accepted")
             } catch let failure as SyncFailure {
                 #expect(failure.code == expected, "\(name)")

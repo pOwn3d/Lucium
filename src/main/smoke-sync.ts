@@ -116,8 +116,12 @@ export async function smokeSync(_ctx: SmokeContext, check: Check): Promise<void>
     check('the person is asked, by name, before the iPhone is kept', lan.status().confirm?.name === 'iPhone de test' && lan.status().devices.length === 0)
     lan.answer(true)
     const accepted = await channel.receive()
+    // The iPhone's person compares the code and says yes (§4.6): nothing is kept before.
+    check('allowed is not paired: the iPhone is not listed before its own person has said yes', accepted.t === 'pair.accept' && lan.status().devices.length === 0 && lan.status().confirm?.waiting === true)
+    await channel.send({ t: 'bye' })
+    const last = await channel.receive()
     await waitFor(() => lan.status().devices.some((d) => d.id === 'iphone-smoke-000001'))
-    check('a pairing goes through end to end: the iPhone is listed once the person allowed it', accepted.t === 'pair.accept' && lan.status().devices.some((d) => d.id === 'iphone-smoke-000001'))
+    check('a pairing goes through end to end: the iPhone is listed once both persons said yes', last.t === 'bye' && lan.status().devices.some((d) => d.id === 'iphone-smoke-000001'))
     socket.destroy()
 
     const stranger = makeDeviceCertificate()

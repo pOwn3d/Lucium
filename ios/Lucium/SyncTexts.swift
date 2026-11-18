@@ -39,6 +39,7 @@ enum SyncTexts {
         case .reach(.localNetworkDenied): "sync.state.local-network-denied"
         case .reach(.fingerprintMismatch): "sync.error.fingerprint-mismatch"
         case .identity: "sync.error.identity"
+        case .notConfirmed: "sync.pairing.not-confirmed"
         case .cancelled: nil
         }
     }

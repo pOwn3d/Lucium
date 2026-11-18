@@ -23,11 +23,13 @@ export interface ProofInputsVector {
 }
 
 export interface PairingVectors {
-  constants: { secretBytes: number; nonceBytes: number; fingerprintBytes: number; windowMs: number; maxInvalidProofs: number; qrMaxChars: number; qrMaxHosts: number }
+  constants: { secretBytes: number; nonceBytes: number; fingerprintBytes: number; windowMs: number; maxInvalidProofs: number; qrMaxChars: number; qrMaxHosts: number; comparisonCodeChars: number }
   proof: (ProofInputsVector & { name: string })[]
   mutations: { of: string; cases: (Partial<ProofInputsVector> & { field: keyof ProofInputsVector; value?: string; valueHex?: string; requestTag: string; acceptTag: string; changesRequestTag: boolean; changesAcceptTag: boolean })[] }
   qr: { valid: { name: string; text: string; expect: { fingerprintHex: string; secretHex: string; port: number; hosts: string[] } }[]; invalid: { name: string; text: string; expect: { code: string } }[] }
   manualCode: { valid: { name: string; input: string; expect: { secretHex: string } }[]; invalid: { name: string; input: string; expect: { code: string } }[] }
+  /** The code both devices show once the Mac's proof is checked (§4.6): the same two fingerprints, the same six characters. */
+  comparisonCode: { name: string; fpMac: string; fpPhone: string; code: string }[]
   secretLifecycle: { name: string; events: { atMs: number; event: 'request' | 'confirm' | 'close'; proof?: 'valid' | 'invalid'; decision?: 'refuse' | 'allow' }[]; expect: string[] }[]
   clientChecks: { name: string; mode: 'qr' | 'manualCode'; expectedFingerprintHex: string | null; presentedFingerprintHex: string; expect: string }[]
   addressPolicy: { host: string; allowed: boolean }[]
