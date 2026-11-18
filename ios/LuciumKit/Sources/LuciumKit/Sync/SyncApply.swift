@@ -393,7 +393,7 @@ public enum SyncApply {
     // MARK: The settings
 
     private static func applySettings(_ values: [String: JSONValue], to state: inout BrowserState, rejected: inout [String]) {
-        let accepted = values.filter { key, value in
+        var accepted = values.filter { key, value in
             guard SyncFieldClasses.settingKeys.contains(key) else { return false }
             if SyncInbound.settingValueIsInvalid(key: key, value: value) {
                 rejected.append("setting \(key): not a value this version keeps")
@@ -401,6 +401,8 @@ public enum SyncApply {
             }
             return true
         }
+        // An engine of search of one's own stays on this device: the engine the other device has does not replace it (docs/synchronisation.md §10.3; review n° 10).
+        if case .object(let current)? = state.rest["settings"], case .string(let own)? = current["searchUrlTemplate"], !SearchEngine.isPreset(own) { accepted["searchUrlTemplate"] = nil }
         guard !accepted.isEmpty else { return }
         // A state with no settings at all is a new profile for the privacy rules: the keys it would be missing are what an earlier profile had (HTTPS first only), so the
         // five a new profile starts with are written first, as `setProfileName` does.

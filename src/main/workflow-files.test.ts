@@ -189,7 +189,12 @@ describe('.github/workflows/smoke-macos.yml', () => {
   it('has the setup of ci.yml, the same in each of its jobs: the local action, which holds the one pinned pnpm/setup', () => {
     const calls = (text: string): number => text.match(/^ {6}- uses: \.\/\.github\/actions\/setup\n/gm)?.length ?? 0
     expect(calls(workflow)).toBe(1)
-    expect(calls(ci)).toBe(ci.match(/^ {4}runs-on: /gm)?.length ?? 0)
+    // "Changed files" is the one job that installs nothing (it asks Git for a list of file names, before any install): the five others each call it.
+    const installing = ci.replace(/^ {2}changes:\n(?: {3,}.*\n|\n)*/m, '')
+    expect(installing).not.toBe(ci)
+    expect(installing.match(/^ {4}runs-on: /gm)).toHaveLength(5)
+    expect(calls(installing)).toBe(5)
+    expect(calls(ci)).toBe(5)
     // No job writes its own copy of the setup: it is read in the action, once.
     expect(workflow).not.toMatch(/uses: pnpm\/setup/)
     expect(ci).not.toMatch(/uses: pnpm\/setup/)

@@ -8,6 +8,7 @@ struct SyncScreen: View {
     @State private var pairing = false
     @State private var forgetting = false
     @State private var identityFailed = false
+    @State private var showingConflicts = false
 
     var body: some View {
         Form {
@@ -19,6 +20,7 @@ struct SyncScreen: View {
             }
             if controller.settings.enabled {
                 macSection
+                if !controller.lastConflicts.isEmpty { conflictsSection }
                 categoriesSection
             }
             Section {
@@ -33,6 +35,9 @@ struct SyncScreen: View {
         .navigationTitle("sync.title")
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $pairing) { SyncPairingSheet(controller: controller) }
+        .sheet(isPresented: $showingConflicts) {
+            SyncConflictScreen(entries: controller.lastConflicts, onClose: { showingConflicts = false }, onRestore: { change, line in controller.restore(change, lineID: line) })
+        }
         .alert("sync.error.identity", isPresented: $identityFailed) { Button("state.notice.ok") {} }
         .confirmationDialog(forgetTitle, isPresented: $forgetting, titleVisibility: .visible) {
             Button("sync.mac.forget", role: .destructive) { controller.forgetMac() }
@@ -70,6 +75,22 @@ struct SyncScreen: View {
             }
         } header: {
             Text("sync.mac.header")
+        }
+    }
+
+    // MARK: « Conflit réglé »
+
+    /// The line that opens « Conflit réglé » (§13.4): shown when the last session that had conflicts settled some, never a question that blocks.
+    @ViewBuilder private var conflictsSection: some View {
+        Section {
+            Button { showingConflicts = true } label: {
+                HStack {
+                    Text("sync.conflicts.last")
+                    Spacer()
+                    Text("conflict.count \(controller.lastConflicts.count)").foregroundStyle(.secondary)
+                }
+            }
+            .frame(minHeight: 44)
         }
     }
 

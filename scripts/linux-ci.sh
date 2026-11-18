@@ -6,7 +6,8 @@
 #   linux-ci.sh sandbox-profile <binary>           Ubuntu 24.04: let that one binary create user namespaces, by an AppArmor profile (what the .deb ships)
 #   linux-ci.sh unrestrict                         Ubuntu 24.04: lift the restriction on user namespaces for the whole machine (a runner is thrown away)
 #   linux-ci.sh smoke <label> <start|refused> <command...>
-#                                                  start the built application, as a user would, and check what happens
+#                                                  start the built application, as a user would, and check what happens (`refused`: the launch
+#                                                  is refused, the line says why on the standard error and a box says it on the screen)
 #
 # The sandbox of Chromium is never switched off: no step of the workflow and no line of this file passes --no-sandbox. `smoke` fails when a process of
 # the application carries it, and when a renderer has no seccomp filter (the proof that the sandbox is on, not only that nobody asked it to be off).
@@ -124,22 +125,58 @@ check_started() {
   fi
 }
 
-# What a refused application must show: it ends by itself with code 1 and says why, before any window.
+# What a refused application must show (an AppImage whose AppRun added --no-sandbox: Lucium refuses it, never runs without the sandbox). Three things: the line
+# that says why on the standard error, before anything else; the end of the application by itself, at once, with code 1; and, since a screen exists, a box that
+# says it to a person who has no terminal, drawn by zenity (which the workflow installs, as an Ubuntu desktop has it) that the application started detached and
+# that outlives it (src/main/launch-refusal.ts: Electron opens no box before `ready` on Linux, which is why the person used to see nothing; and a process that
+# waited would have its GPU process and its network service, which Chromium starts on its own, run without a sandbox, because of the --no-sandbox the launcher
+# gave it). The box waits to be closed and nobody here can click it: the check finds it on the virtual screen by its title, « Lucium cannot start » (the
+# runner's locale is English), checks that nothing of the application is running any more, closes the box with a signal and reads how the application ended.
 check_refused() {
-  local app="$1" log="$2" waited=0 status=0
-  while kill -0 "$app" 2>/dev/null && [ "$waited" -lt 60 ]; do
+  local app="$1" data="$2" log="$3" waited=0 status=0
+  # Counted, not `grep -q` (which stops at the first match and can hand xwininfo a SIGPIPE that `pipefail` reports as a failure).
+  until [ "$(xwininfo -root -tree 2>/dev/null | grep -ci "lucium cannot start" || true)" -gt 0 ]; do
+    if [ "$waited" -ge 60 ]; then
+      fail "no box after ${waited} s: nothing shows why the application refuses to start"
+      return 1
+    fi
     sleep 1
     waited=$((waited + 1))
   done
+  echo "the box that says why appeared after ${waited} s"
+  # The application ends by itself, without waiting for the box, with code 1.
+  local ended=0
+  while kill -0 "$app" 2>/dev/null && [ "$ended" -lt 20 ]; do
+    sleep 1
+    ended=$((ended + 1))
+  done
   if kill -0 "$app" 2>/dev/null; then
-    fail "the application is still running after ${waited} s: it was expected to refuse to start"
+    fail "the application is still running ${ended} s after its box appeared: it must end at once (a process kept alive runs its GPU process and network service without a sandbox)"
     return 1
   fi
   wait "$app" || status=$?
-  echo "the application ended by itself after ${waited} s, exit code $status"
+  echo "the application ended by itself, exit code $status"
   [ "$status" = 1 ] || { fail "exit code $status, expected 1"; return 1; }
   grep -q 'refused: this application does not start with --no-sandbox' "$log" || { fail "the log does not say that --no-sandbox is refused"; return 1; }
   grep -q 'sandbox' "$log" && echo "the refusal names the sandbox"
+  # Nothing of the application is running while the box is shown: no browser process, no page (renderer), no GPU process, no network service. The AppImage's own
+  # runtime is not the application: it serves the image and unmounts it, carries the same command line and stays until the box, which uses the image's libraries
+  # and data, is closed (seen on the runner and in a virtual machine): a process whose program is the .AppImage file itself is left out.
+  local left="" pid argv0
+  for pid in $(run_pids "$data"); do
+    argv0="$(tr '\0' '\n' <"/proc/$pid/cmdline" 2>/dev/null | head -n 1)"
+    case "$argv0" in
+      *.AppImage) ;;
+      *) left="$left $pid" ;;
+    esac
+  done
+  if [ -n "$left" ]; then
+    fail "a process of the application is still running while the box is shown:$left"
+    ps -o pid,args -p "$(echo "$left" | xargs | tr ' ' ',')" | cut -c1-200 || true
+    return 1
+  fi
+  # What closing the box would end with, here by the signal (the box is zenity's: its command line carries the title).
+  pkill -f -- '--title=Lucium cannot start' 2>/dev/null || true
 }
 
 smoke() {
@@ -157,7 +194,7 @@ smoke() {
   echo "== $label: $* (expected: $expect)"
   "$@" "--user-data-dir=$data" --enable-logging=stderr >"$log" 2>&1 &
   app=$!
-  if [ "$expect" = start ]; then check_started "$app" "$data" "$log" || status=$?; else check_refused "$app" "$log" || status=$?; fi
+  if [ "$expect" = start ]; then check_started "$app" "$data" "$log" || status=$?; else check_refused "$app" "$data" "$log" || status=$?; fi
   if [ "$status" -ne 0 ]; then
     echo "---- log of the application ($log), last 60 lines"
     tail -n 60 "$log" || true

@@ -1,3 +1,4 @@
+import LuciumKit
 import XCTest
 @testable import Lucium
 
@@ -29,6 +30,12 @@ final class LocalizationTests: XCTestCase {
         func text(_ key: String, _ language: String) throws -> String { String(localized: String.LocalizationValue(key), bundle: try bundle(language)) }
         XCTAssertEqual(try text("start.privacy", "fr"), "Rien ne quitte cet appareil.")
         XCTAssertEqual(try text("start.privacy", "en"), "Nothing leaves this device.")
+        // With the synchronisation on and a Mac paired, the one exception is said where the person reads it (decision of the project lead, 18 November 2026).
+        XCTAssertEqual(try text("start.privacy.sync", "fr"), "Rien ne quitte cet appareil, sauf vers votre Mac, sur votre réseau.")
+        XCTAssertEqual(try text("start.privacy.sync", "en"), "Nothing leaves this device, except to your Mac, on your network.")
+        // The page reads the sentence that matches what is true, by the key the logic of LuciumKit chose.
+        XCTAssertEqual(StartView.privacyKey(for: StartPageContent.privacyNote(synchronizing: false)), "start.privacy")
+        XCTAssertEqual(StartView.privacyKey(for: StartPageContent.privacyNote(synchronizing: true)), "start.privacy.sync")
         XCTAssertEqual(try text("bar.address.placeholder", "fr"), "Rechercher ou saisir une adresse")
         XCTAssertEqual(try text("bar.address.placeholder", "en"), "Search or enter an address")
         XCTAssertTrue(try text("start.favorites.empty", "fr").contains("Ajouter aux favoris"), "it names the command the sheet's menu offers")
