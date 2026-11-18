@@ -19,7 +19,7 @@ extension BrowserModel {
             // A private tab has no profile: its cookies and storage live in memory and go with its last view (`SpacesModel.swift`).
             configuration.websiteDataStore = privateDataStore()
         } else if let space = state.spaces.first(where: { $0.id == tab.spaceId }) {
-            configuration.websiteDataStore = WKWebsiteDataStore(forIdentifier: ProfileStore.identifier(for: space.profileId))
+            configuration.websiteDataStore = dataStore(forProfile: space.profileId)
         }
         for list in blockers { ContentBlocker.install(list, on: configuration) }
         navigationPolicy.configure(configuration)

@@ -128,6 +128,7 @@ extension BrowserModel {
         } catch {
             return .failure(.invalid(error))
         }
+        profileStores[id] = nil  // WebKit refuses to remove a store somebody still holds
         do {
             try await WKWebsiteDataStore.remove(forIdentifier: ProfileStore.identifier(for: id))
         } catch {
@@ -137,6 +138,19 @@ extension BrowserModel {
         state = next
         scheduleSave()
         return .success(())
+    }
+
+    // MARK: Profile stores
+
+    /// The data store of a profile. It is kept here, not only by the views that use it: WebKit holds the cookies a page has just written in the
+    /// session of the store, and writes them to the disk a moment later. When the last view of a profile goes (a closed or sleeping tab, a deleted
+    /// space) and nothing else holds the store, WebKit drops the session with what it had not written yet, and the person is signed out of a site
+    /// they had just signed in to. The store of a profile is therefore let go only when the profile is removed.
+    func dataStore(forProfile id: String) -> WKWebsiteDataStore {
+        if let store = profileStores[id] { return store }
+        let store = WKWebsiteDataStore(forIdentifier: ProfileStore.identifier(for: id))
+        profileStores[id] = store
+        return store
     }
 
     // MARK: Private tabs
@@ -185,7 +199,7 @@ extension BrowserModel {
     func clearSiteData(host: String) async -> Int {
         guard !activeSpaceCovered else { return 0 }
         let profileId = activeSpace.profileId
-        let store = WKWebsiteDataStore(forIdentifier: ProfileStore.identifier(for: profileId))
+        let store = dataStore(forProfile: profileId)
         let types = WKWebsiteDataStore.allWebsiteDataTypes()
         let matching = await store.dataRecords(ofTypes: types).filter { SiteData.recordMatches($0.displayName, host: host) }
         await store.removeData(ofTypes: types, for: matching)
