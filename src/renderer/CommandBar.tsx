@@ -255,7 +255,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       .syncResume({ kind: 'list' })
       .then(
         (reply) => {
-          if (!stale) setIphone(reply.ok && reply.view.availability === 'list' ? { lines: reply.view.lines, announcedAt: reply.view.announcedAt } : null)
+          if (!stale) setIphone(reply?.ok === true && reply.view.availability === 'list' ? { lines: reply.view.lines, announcedAt: reply.view.announcedAt } : null)
         },
         (error: unknown) => {
           // A convenience: without the list the bar keeps its other lines. The name of the error only.
@@ -411,7 +411,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
         void api()
           .syncResume({ kind: 'open', id: c.resumeId })
           .then((reply) => {
-            if (!reply.ok) console.warn('[command bar] the tab of the iPhone could not be opened')
+            if (reply?.ok !== true) console.warn('[command bar] the tab of the iPhone could not be opened')
           })
           .catch((error: unknown) => console.warn('[command bar] the tab of the iPhone could not be opened:', error instanceof Error ? error.name : typeof error))
         break
