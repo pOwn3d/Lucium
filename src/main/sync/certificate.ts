@@ -50,6 +50,11 @@ export function assembleCertificate(tbs: Buffer, signature: Buffer): Buffer {
 /** The fingerprint of a certificate: the SHA-256 of its DER, 32 bytes. The same figure Node calls `fingerprint256` and Apple's `SecCertificateCopyData` hashes to. */
 export const fingerprintOf = (certificate: Buffer): Buffer => createHash('sha256').update(certificate).digest()
 
+/** The certificate as a PEM text, which is what `tls` takes for `cert` (it does not read a DER buffer): the same bytes, in base64 lines. */
+export function certificatePem(certificate: Buffer): string {
+  return `-----BEGIN CERTIFICATE-----\n${certificate.toString('base64').match(/.{1,64}/g)?.join('\n') ?? ''}\n-----END CERTIFICATE-----\n`
+}
+
 /**
  * A serial: 16 random bytes whose first is between 0x01 and 0x7F, so that the integer is positive and its DER minimal. The first byte is drawn again until it
  * falls in the range (a modulo of a random byte would favour the small values).
