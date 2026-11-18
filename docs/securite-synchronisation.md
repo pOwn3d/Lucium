@@ -1,8 +1,8 @@
 # Revue de sécurité de la synchronisation Mac et iPhone
 
-Rapport de la carte 448 (synchro 6/6), écrit le 18 novembre 2026. Il porte sur le code **déjà fusionné** dans `main` (jusqu'au commit `bb7e8067`) et sur les correctifs de cette carte (tous fusionnés). La spécification est `docs/synchronisation.md` ; ce rapport dit ce que l'attaque a trouvé, ce qui est corrigé, ce qui reste, et propose la réponse au questionnaire d'exportation du chiffrement.
+Rapport de la carte 448 (synchro 6/6), écrit le 18 novembre 2026. Il porte sur le code **déjà fusionné** dans `main` (jusqu'au commit `bb7e8067`) et sur les correctifs de cette carte, puis de la carte 471 (décisions du chef du 18 novembre et points n° 9 à 22 : §8 et §10). La spécification est `docs/synchronisation.md` ; ce rapport dit ce que l'attaque a trouvé, ce qui est corrigé, ce qui reste, et propose la réponse au questionnaire d'exportation du chiffrement.
 
-**Résultat en une phrase.** Aucun défaut ne permet à quelqu'un qui n'est pas appairé de lire ou d'écrire des données, **sauf si la personne scanne un faux QR avec son iPhone** (n° 9) : l'appairage, l'épinglage et le filtre d'adresses tiennent. En revanche, **un appareil appairé hostile pouvait faire plus que ne le dit la spécification** (écrire dans le prototype du processus principal, empoisonner l'horloge, faire supprimer des données, bloquer le processus principal quelques secondes) ; **dix de ces défauts sont corrigés par huit PR** (§10) et **deux points de conception restent ouverts** (n° 9 et n° 10). Le rapport n'est donc **pas encore « sans point bloquant »** : voir la liste des points à décider au §8.
+**Résultat en une phrase.** Aucun défaut ne permet à quelqu'un qui n'est pas appairé de lire ou d'écrire des données : l'appairage, l'épinglage et le filtre d'adresses tiennent, et le faux QR scanné par la personne (n° 9) est fermé par le code à comparer. **Un appareil appairé hostile pouvait faire plus que ne le dit la spécification** (écrire dans le prototype du processus principal, empoisonner l'horloge, faire supprimer des données, bloquer le processus principal quelques secondes) : **les vingt-deux défauts n° 1 à 22 sont corrigés par quatorze PR** (§10 ; le n° 23 est une information acceptée), côté Mac et côté iPhone, chacun avec un test vu échouer sans lui. Les décisions du chef du 18 novembre 2026 (n° 9, 10 et 13) sont appliquées. **Ce qui reste n'est pas un défaut de code** : la relecture du corps de séance de l'iPhone (§6), la conformité du chiffrement (§9, décision du chef) et ce qui ne se vérifie que sur un appareil réel.
 
 ## 1. Périmètre
 
@@ -35,20 +35,20 @@ Gravité : **haute** = un appareil appairé hostile casse le processus ou fait p
 | 6 | basse à moyenne | **iPhone : `SyncEncoding.data(hex:)` arrête l'application** sur un caractère non ASCII (`é`) : un `sync.json` qui en contient un fait planter l'application à chaque lancement. Même fonction : `+f` et `-0` acceptés. | Rejoué : `Fatal error: String index is out of bounds` | **Corrigé**, PR #98 (fusionnée) |
 | 7 | basse | **iPhone : `isLocal` lit une chaîne C.** `fd00::1` puis un octet nul puis `.evil.com` est lu comme `fd00::1`. Pas une sortie du réseau local (le système s'arrête au même octet), mais deux lecteurs liraient autre chose. | Test Swift | **Corrigé**, PR #98 |
 | 8 | basse | **iPhone : l'appairage laisse la connexion ouverte** quand le Mac répond `bye` au lieu du défi, quand un envoi échoue, ou après un délai. | Test Swift | **Corrigé**, PR #98 |
-| 9 | moyenne | **L'iPhone ne demande jamais « s'appairer à quel Mac ? ».** Un faux QR (affiche, message) que la personne scanne dans « Ajouter un Mac » fait épingler le Mac de l'attaquant, puis lancer une séance : espaces, dossiers, favoris et onglets épinglés partent chez lui. La confirmation du §4.1 [Q7] protège le Mac, pas l'iPhone. | Lecture du code (`SyncPairingSheet`, `SyncController`) ; relevé par la relecture, non rejoué | **Non corrigé : décision d'interface** (§8) |
-| 10 | moyenne | **Modèle de recherche reçu : `http` accepté, hôte libre.** Un appareil appairé peut, si la catégorie « réglages » est cochée des deux côtés (non cochée par défaut), rediriger toutes les recherches du Mac vers un serveur de son choix. | Lecture de `inbound-filter.ts` | **Corrigé côté Mac** (décision du chef du 18 nov. : « Moteurs connus seulement »), PR #107 (Mac et iPhone) |
+| 9 | moyenne | **L'iPhone ne demande jamais « s'appairer à quel Mac ? ».** Un faux QR (affiche, message) que la personne scanne dans « Ajouter un Mac » fait épingler le Mac de l'attaquant, puis lancer une séance : espaces, dossiers, favoris et onglets épinglés partent chez lui. La confirmation du §4.1 [Q7] protège le Mac, pas l'iPhone. | Lecture du code (`SyncPairingSheet`, `SyncController`) ; relevé par la relecture, non rejoué | **Corrigé**, PR #111 (décision du chef du 18 nov. : « Code à comparer ») : après la preuve du Mac et avant d'enregistrer, l'iPhone affiche « Appairer avec « nom » ? Code : XXXXXX », la feuille du Mac affiche le même code, rien n'est gardé avant l'accord des deux côtés (spécification §4.6) |
+| 10 | moyenne | **Modèle de recherche reçu : `http` accepté, hôte libre.** Un appareil appairé peut, si la catégorie « réglages » est cochée des deux côtés (non cochée par défaut), rediriger toutes les recherches du Mac vers un serveur de son choix. | Lecture de `inbound-filter.ts` | **Corrigé**, PR #107 (décision du chef du 18 nov. : « Moteurs connus seulement »), Mac et iPhone |
 | 11 | moyenne | **Application d'un patch en temps quadratique.** `applySyncPatch` cherchait dans la liste pour chaque entité : 40 000 créations bloquaient le processus principal 3,4 s (rejoué ici ; 3,9 s et 7 s pour 20 000 dossiers et 20 000 onglets selon la relecture). L'appareil hostile calcule la même fusion, donc les résumés concordent : il pouvait relancer le gel à chaque séance. | Rejoué : 3,4 s contre 91 ms après correctif | **Corrigé**, PR #99 (fusionnée) |
 | 12 | moyenne | **Bornes en octets, pas en valeurs.** Une trame de 30 Mio de tableaux vides imbriqués coûte 8 à 12 s de gel et 1,76 Go de mémoire (la relecture). | Mesure de la relecture, non rejouée ; le calcul (350 000 valeurs au Mio) est de moi | **Corrigé**, PR #100 (fusionnée) : 150 000 valeurs par trame, 2 000 000 par connexion |
-| 13 | moyenne | **Supprimer un espace sur l'iPhone supprime, sur le Mac, ses onglets ouverts** (ceux d'« Aujourd'hui », qui ne se synchronisent pas) sans archive, comme une suppression locale mais sans confirmation sur le Mac. Un appareil hostile peut le faire pour tout ce qu'il connaît. | Rejoué | **Corrigé côté Mac** (décision du chef du 18 nov. : « Archiver avant »), PR à venir ; **le Swift doit faire de même** (carte 452) |
-| 14 | moyenne | **Pierres tombales cumulées sans borne** (198 000 après deux séances) : la séance suivante échoue en `too many tombstones` des deux côtés ; les tombes de genres interdits (`password`…) sont acceptées puis renvoyées. | Relecture, non rejoué | **Non corrigé** |
-| 15 | moyenne (latent) | **Texte avec un substitut isolé** (`\ud83d`) : le Mac en produit (coupe à 60 ou 1000 unités au milieu d'un émoji) et le Swift ne sait pas le lire (`bad-message`) : la séance échoue tant que la valeur est dans l'état. | Relecture, non rejoué | **Non corrigé** |
-| 16 | moyenne (latent) | **Clé de liste `favorites:<profileId>` sans borne ni forme NFC** : le Mac et le Swift peuvent donner deux listes différentes (`divergence`) ; une clé de 510 caractères rend la base illisible. | Relecture, non rejoué | **Non corrigé** |
-| 17 | moyenne | **`MarkBook.adopt` efface les marques et tombes des catégories non échangées** : après une séance sans « réglages », leurs marques repartent de l'heure du moment et leurs suppressions peuvent revenir. | Relecture, non rejoué | **Non corrigé** |
-| 18 | basse | **Une erreur d'heure bloque l'horloge des marques dans le futur pour toujours** (pas d'auto-guérison) ; `Hlc.next` dépasse 13 chiffres à `9999999999999`. Le n° 2 corrige l'entrée par le réseau, pas ce cas. | Raisonnement | **Non corrigé** |
-| 19 | basse | **iPhone : aucune durée maximale de séance** (le Mac applique 10 min ; `SyncLimits.sessionMaximum` n'est lu nulle part côté iPhone) : un pair qui envoie un octet par minute bloque « Synchroniser maintenant ». | Lecture, non rejoué | **Corrigé**, PR à venir (`SyncSessionClient.run` borne la séance à 10 minutes ; le corps de séance de la carte 452 n'a rien à faire, la coupure est autour de lui) |
-| 20 | basse | **JSON : clés dupliquées** (`{"n":1,"n":2}`) : « première gagne » en Swift, « dernière gagne » en JavaScript. Le résumé `result` doit attraper l'écart. | Relevé, non rejoué | **Non corrigé** |
-| 21 | basse | **Le Mac affiche seulement le nom choisi par l'iPhone** dans « Autoriser / Refuser », pas l'adresse source : quelqu'un qui a photographié le QR s'appelle « iPhone de … ». | Lecture | **Non corrigé** (une ligne de plus dans la feuille) |
-| 22 | basse | **Identité remplacée si le trousseau refuse un instant** : `loadOrCreate` écrase l'identité et oublie les appareils appairés. Perte de confort, pas de fuite. | Lecture | **Corrigé côté Mac**, PR à venir (pas de remplacement au premier refus du trousseau) ; l'iPhone ne remplace rien sans « introuvable » : lu, inchangé |
+| 13 | moyenne | **Supprimer un espace sur l'iPhone supprime, sur le Mac, ses onglets ouverts** (ceux d'« Aujourd'hui », qui ne se synchronisent pas) sans archive, comme une suppression locale mais sans confirmation sur le Mac. Un appareil hostile peut le faire pour tout ce qu'il connaît. | Rejoué | **Corrigé**, PR #109 (décision du chef du 18 nov. : « Archiver avant »), Mac et iPhone |
+| 14 | moyenne | **Pierres tombales cumulées sans borne** (198 000 après deux séances) : la séance suivante échoue en `too many tombstones` des deux côtés ; les tombes de genres interdits (`password`…) sont acceptées puis renvoyées. | Relecture, non rejoué | **Corrigé**, PR #112 (genres interdits refusés, 50 000 pierres au plus par côté), Mac et iPhone |
+| 15 | moyenne (latent) | **Texte avec un substitut isolé** (`\ud83d`) : le Mac en produit (coupe à 60 ou 1000 unités au milieu d'un émoji) et le Swift ne sait pas le lire (`bad-message`) : la séance échoue tant que la valeur est dans l'état. | Relecture, non rejoué | **Corrigé**, PR #112 (le Mac coupe sans séparer une paire, et en octets pour les onglets ouverts ; refus des textes à substitut isolé ou de plus de 64 Kio en octets) |
+| 16 | moyenne (latent) | **Clé de liste `favorites:<profileId>` sans borne ni forme NFC** : le Mac et le Swift peuvent donner deux listes différentes (`divergence`) ; une clé de 510 caractères rend la base illisible. | Relecture, non rejoué | **Corrigé**, PR #112 (le profil doit être un identifiant du Mac), Mac et iPhone |
+| 17 | moyenne | **`MarkBook.adopt` efface les marques et tombes des catégories non échangées** : après une séance sans « réglages », leurs marques repartent de l'heure du moment et leurs suppressions peuvent revenir. | Relecture, non rejoué | **Corrigé**, PR #113, Mac et iPhone |
+| 18 | basse | **Une erreur d'heure bloque l'horloge des marques dans le futur pour toujours** (pas d'auto-guérison) ; `Hlc.next` dépasse 13 chiffres à `9999999999999`. Le n° 2 corrige l'entrée par le réseau, pas ce cas. | Raisonnement | **Corrigé**, PR #113 (l'horloge repart de l'heure du jour, les marques trop loin sont refaites), Mac et iPhone |
+| 19 | basse | **iPhone : aucune durée maximale de séance** (le Mac applique 10 min ; `SyncLimits.sessionMaximum` n'est lu nulle part côté iPhone) : un pair qui envoie un octet par minute bloque « Synchroniser maintenant ». | Lecture, non rejoué | **Corrigé**, PR #114 (`SyncSessionClient.run` borne la séance à 10 minutes ; la coupure est autour du corps de séance) |
+| 20 | basse | **JSON : clés dupliquées** (`{"n":1,"n":2}`) : « première gagne » en Swift, « dernière gagne » en JavaScript. Le résumé `result` doit attraper l'écart. | Relevé, non rejoué | **Corrigé**, PR #112 (`hasDuplicateKey` côté Mac, `SyncDuplicateKeys` appelé par `SyncMessageCodec.decode` côté iPhone) |
+| 21 | basse | **Le Mac affiche seulement le nom choisi par l'iPhone** dans « Autoriser / Refuser », pas l'adresse source : quelqu'un qui a photographié le QR s'appelle « iPhone de … ». | Lecture | **Corrigé**, PR #111 (la feuille du Mac dit l'adresse d'où vient la demande, avec le code du n° 9) |
+| 22 | basse | **Identité remplacée si le trousseau refuse un instant** : `loadOrCreate` écrase l'identité et oublie les appareils appairés. Perte de confort, pas de fuite. | Lecture | **Corrigé côté Mac**, PR #114 (pas de remplacement au premier refus du trousseau) ; l'iPhone ne remplace rien sans « introuvable » : lu, inchangé |
 | 23 | information | **iPhone :** un nom `.local` n'est pas revérifié une fois résolu ; en saisie de code l'iPhone présente son certificat à n'importe qui à l'adresse tapée (le secret ne fuit pas : preuve HMAC). | Relevé | Accepté, §5 |
 
 ## 4. Ce que l'attaque n'a pas fait tomber
@@ -86,16 +86,20 @@ Lu en entier et jugé sain, avec la preuve quand elle existe :
 
 ## 7. Pour les cartes voisines
 
-- **Carte 452 (corps de séance iPhone)** : (a) écarter, comme le Mac, les pierres tombales et les marques d'ordre à plus de 7 jours dans le futur (§9.3, PR #94) ; (b) remplacer par la version de la base une entité refusée pour ses marques, son adresse ou sa valeur (§22, PR #97) ; (c) le Mac refuse un genre ou un identifiant qui porte un nom de `Object.prototype` (§7.1, PR #93) : le Swift n'en a pas besoin, mais ne doit pas en produire ; (d) lire `SyncLimits.sessionMaximum` (n° 19) ; (e) refuser les chaînes à substitut isolé (n° 15) ; (f) appliquer la borne de valeurs JSON (150 000 par trame, 2 000 000 par connexion, PR #100).
+- **Carte 452 (corps de séance iPhone, fusionné après ce rapport)** : tout ce que ce paragraphe demandait au Swift est fait par les PR de la carte 471 (§10), avec les mêmes vecteurs que le Mac : marques du futur (PR #94 côté Mac, déjà dans le Swift de la carte 452), version de la base à la place d'une entité refusée (PR #97, idem), borne de valeurs JSON (PR #100, idem), clés écrites deux fois, profils, pierres tombales, marques des catégories non échangées, horloge qui se rétablit, onglets ouverts d'un espace supprimé, moteurs de recherche, durée de séance. **Le corps de séance de l'iPhone n'a pas été relu en entier** (§6).
 - **Carte 447 (reprise d'un onglet)** : la liste reçue est filtrée en `http(s)` (PR #96) ; ne rien ouvrir d'autre que par ce chemin.
 
-## 8. Points à décider avant de dire « sans point bloquant »
+## 8. Décisions du chef, et ce qui en est fait
 
-1. **N° 9, l'iPhone confirme-t-il le Mac ?** Recommandation : après la preuve du Mac et avant d'enregistrer, afficher « Appairer avec « nom » ? » et quatre à six caractères de l'empreinte, **et** montrer les mêmes caractères sur le Mac dans la feuille « Autoriser / Refuser » (n° 21), pour que la personne compare. Texte FR et EN, test.
-2. **N° 10, le modèle de recherche.** Recommandation : ne synchroniser que les moteurs connus (la liste de `settings-guide.ts`) et refuser `http`. Le Swift doit suivre (vecteur `inbound`).
-3. **N° 13.** Recommandation : archiver, ou mettre dans une copie de session, les onglets ouverts d'un espace avant de le supprimer à la demande d'un autre appareil.
+Décisions du 18 novembre 2026, toutes appliquées :
 
-Les n° 14 à 22 sont des correctifs sans décision à prendre ; ils n'ont pas été faits faute de temps dans cette carte et peuvent suivre en PR séparées.
+1. **N° 9, « Code à comparer »** : l'iPhone affiche « Appairer avec « nom » ? Code : XXXXXX » (six caractères tirés des deux empreintes, les mêmes sur la feuille « Autoriser / Refuser » du Mac) ; l'appairage ne s'enregistre qu'après l'accord des deux côtés (PR #111, spécification §4.6). Le n° 21 (adresse source sur la feuille) est dans la même PR.
+2. **N° 10, « Moteurs connus seulement »** : seuls les moteurs que Lucium propose, en `https`, passent par la synchronisation ; un moteur personnalisé reste sur son appareil dans les deux sens (PR #107).
+3. **N° 13, « Archiver avant »** : les onglets ouverts d'un espace supprimé à distance vont dans l'archive (source `sync`) avant la suppression (PR #109).
+
+Les n° 11 et 12 avaient été corrigés par la première passe (PR #99 et #100) ; les n° 14 à 20 et 22 sont corrigés par les PR #112, #113 et #114.
+
+**Écarts de méthode de la carte 471** : (1) les PR #111, #112 et #113 ont reçu, après leur ouverture, des fusions de `main` et des commits de correction de tests ou de types (pas de push forcé) ; (2) un problème hors périmètre mais bloquant a été corrigé à part, PR #121 : sous Windows, le service tirait parfois un port que le système réserve (`EACCES`) et l'ouverture de la porte échouait (les tests de CI échouaient au hasard) ; (3) ce document et `docs/synchronisation.md` sont mis à jour par cette seule PR, pour ne pas faire chevaucher les tableaux de six PR.
 
 ## 9. Conformité du chiffrement : réponse proposée au questionnaire d'App Store Connect
 
@@ -146,7 +150,9 @@ Dans l'ordre où App Store Connect pose les questions (ordre et formulation **à
 4. L'annexe 1 du décret 2007-663 et les pages de l'ANSSI : l'app est-elle dispensée de déclaration en France, et la distribution en France exige-t-elle quelque chose d'Apple.
 5. Si le protocole d'appairage doit être déclaré comme « propriétaire » (§9.3, réserve de la question 3).
 
-## 10. Liste des PR de cette carte
+## 10. Liste des PR
+
+**Carte 448 (première passe)**
 
 | PR | Sujet | État |
 |---|---|---|
@@ -159,4 +165,16 @@ Dans l'ordre où App Store Connect pose les questions (ordre et formulation **à
 | #99 | appliquer un patch en temps linéaire | fusionnée |
 | #100 | borner les valeurs d'un message, pas seulement ses octets | fusionnée |
 
-Chacune a un test qui échoue sans le correctif (mutation vue) et met à jour `docs/synchronisation.md`. Un seul écart de méthode : la branche de la PR #97 a été amendée et poussée de force (`--force-with-lease`) quelques minutes après son premier envoi, avant l'ouverture de la PR, ce que `AGENTS.md` §7 déconseille ; rien d'autre n'était sur cette branche.
+**Carte 471 (décisions du chef et correctifs sans décision), Mac et iPhone**
+
+| PR | Sujet | État |
+|---|---|---|
+| #107 | n° 10 : ne synchroniser que les moteurs de recherche que Lucium propose | fusionnée |
+| #109 | n° 13 : les onglets ouverts d'un espace supprimé à distance vont dans l'archive | fusionnée |
+| #111 | n° 9 et 21 : code à comparer à l'appairage, adresse source sur la feuille, enregistrement après l'accord des deux côtés | fusionnée |
+| #112 | n° 14, 15, 16 et 20 : pierres tombales, substituts isolés et octets, profil, clés écrites deux fois | fusionnée |
+| #113 | n° 17 et 18 : marques des catégories non échangées, horloge qui se rétablit | fusionnée |
+| #114 | n° 19 et 22 : durée de séance de l'iPhone, identité non remplacée au premier refus du trousseau | fusionnée |
+| #121 | hors périmètre, bloquait la CI : un autre port quand le système refuse celui qui est tiré (Windows) | fusionnée |
+
+Chacune a un test qui échoue sans le correctif (mutation vue) ; la méthode, les mutations et ce qui n'a pas été essayé sont dans le compte rendu de la carte. Un seul écart de méthode de la première passe : la branche de la PR #97 a été amendée et poussée de force (`--force-with-lease`) quelques minutes après son premier envoi, avant l'ouverture de la PR, ce que `AGENTS.md` §7 déconseille ; rien d'autre n'était sur cette branche.
