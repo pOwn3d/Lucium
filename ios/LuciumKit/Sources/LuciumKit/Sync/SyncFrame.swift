@@ -8,6 +8,10 @@ public enum SyncLimits {
     public static let maxEntitiesPerPart = 500
     public static let maxParts = 4096
     public static let maxJSONDepth = 32
+    /// How many values (every object, list, text, number, boolean and null) one frame and one whole connection may hold: the bounds in bytes do not bound the work
+    /// (a frame of `[[],[],…]` holds a third of a million values to the mebibyte). The Mac applies the same figures (`MAX_FRAME_VALUES`, `MAX_SESSION_VALUES`).
+    public static let maxFrameValues = 150_000
+    public static let maxSessionValues = 2_000_000
     public static let maxStringBytes = 65_536
     public static let maxDeviceNameCharacters = 80
     public static let maxDeviceIdCharacters = 64
