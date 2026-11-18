@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { setLanguage } from './i18n'
-import { FEED_MAX_BYTES, downloadedVersion, feedAnswer, feedFetchInit, parseFeed, updateOutcome, withdrawnVersions } from './update-check'
+import { DOWNLOAD_PAGES, FEED_MAX_BYTES, downloadPageUrl, downloadedVersion, feedAnswer, feedFetchInit, parseFeed, updateOutcome, withdrawnVersions } from './update-check'
 
 // The order of the versions is tested in versions.test.ts.
 
@@ -265,5 +265,13 @@ describe('downloadedVersion: the version in the release name Squirrel gives', ()
     for (const name of [undefined, null, 42, {}, '', 'Lucium', 'Lucium ', '1.1.3', 'lucium 1.1.3', 'Other 1.1.3', 'Lucium v1.1.3', 'Lucium 1.1.3-beta', 'Lucium 1.1.3+wvcus', 'Lucium 1.1.3 ', ' Lucium 1.1.3', 'Lucium  1.1.3', 'Lucium 1.1.3\n', 'Lucium 1.2.3.4.5', 'Lucium 1..3', 'Lucium 1.1.3 beta']) {
       expect(downloadedVersion(name)).toBeNull()
     }
+  })
+})
+
+describe('the download page of the site, where a version is fetched by hand', () => {
+  it('is the Télécharger page in French and the Download page in English, both https on lucium.app', () => {
+    expect(downloadPageUrl('fr')).toBe('https://lucium.app/telecharger/')
+    expect(downloadPageUrl('en')).toBe('https://lucium.app/en/download/')
+    for (const url of Object.values(DOWNLOAD_PAGES)) expect(url).toMatch(/^https:\/\/lucium\.app\//)
   })
 })

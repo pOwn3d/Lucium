@@ -64,7 +64,7 @@ extension BrowserModel {
     static func launchWithLock() -> BrowserModel {
         let file = LockSettingsFile(url: supportDirectory().appending(path: LockSettingsFile.fileName))
         let model = launch(lock: LockController(authenticator: SystemAuthenticator(), file: file))
-        model.attach(SyncController(file: SyncSettingsFile(url: supportDirectory().appending(path: SyncSettingsFile.fileName)),
+        model.attach(SyncController(file: SyncSettingsFile(url: supportDirectory().appending(path: SyncSettingsFile.fileName)), exchangeHost: SyncModelHost(model: model),
                                     isAppLocked: { [weak model] in model?.lock?.appLocked ?? false }))
         return model
     }

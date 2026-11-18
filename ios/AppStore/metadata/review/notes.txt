@@ -24,7 +24,7 @@ APP TRANSPORT SECURITY
 Info.plist sets NSAllowsArbitraryLoadsInWebContent: some pages a browser opens are http. With "HTTPS first" the app asks for https:// first and opens http:// only if the site refuses or stays silent for 5 seconds, and says so. An invalid certificate never falls back to http without the person's tap. NSAllowsArbitraryLoads is not set.
 
 PRIVACY AND ENCRYPTION
-PrivacyInfo.xcprivacy declares no tracking, no data collected and no tracking domain, and none of the required-reason APIs is called. The privacy label: "Data Not Collected". The encryption is what iOS provides: HTTPS (WebKit) and, for the synchronization with the person's own Mac, TLS 1.3 of Network.framework, plus HMAC-SHA-256 and SHA-256 of CryptoKit to authenticate the pairing; the app implements no cipher and no protocol of its own. ITSAppUsesNonExemptEncryption is not set: export compliance is answered in App Store Connect for each build.
+PrivacyInfo.xcprivacy declares no tracking, no data collected and no tracking domain, and none of the required-reason APIs is called. The privacy label: "Data Not Collected". The encryption is what iOS provides: HTTPS (WebKit) and, for the synchronization with the person's own Mac, TLS 1.3 of Network.framework, plus HMAC-SHA-256 and SHA-256 of CryptoKit to authenticate the pairing; the app implements no cipher and no protocol of its own. ITSAppUsesNonExemptEncryption is false: only the system's encryption is used.
 
 OTHER POINTS
 - No donation or payment button (guideline 3.2.2). The default-browser entitlement is not requested.

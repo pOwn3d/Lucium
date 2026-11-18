@@ -72,6 +72,7 @@ import { createUpdateInstaller, setUpdateInstaller, updateInstaller } from './sh
 import { installPrepareBeforeQuit, installUpdateQuitCheck } from './shell/update-quit-check'
 import { currentUpdateSources } from './shell/update-source'
 import { dropDevelopmentEnv, isBuiltApp, isSmokeRun, readDevelopmentEnv, refusalMessage, refusedSwitches, smokeWindowOptions } from './runtime'
+import { refuseLaunch } from './launch-refusal'
 import { formatMarker } from '@shared/perf-core'
 import { readState, StateStore, WindowView } from './store'
 import { sitesToClearOnQuit } from '@shared/site-clear'
@@ -83,10 +84,12 @@ import { localFileUrl } from '@shared/local-documents'
 
 // The built application starts with none of the switches that hand the profile to the command line (the engine test, the DevTools protocol, the
 // ones that weaken TLS or the keychain: runtime.ts): the launch says which one and ends here, before the instance lock and before anything is read.
+// It ends at once, except for an AppImage whose AppRun added `--no-sandbox` on a screen: a person who double-clicked it has no terminal to read the line
+// in, and Electron opens no box before `ready`, so the end waits for a box of the system (launch-refusal.ts) and nothing else of the launch runs.
 const refused = refusedSwitches(process.argv)
 if (refused.length > 0) {
   console.error(refusalMessage(refused))
-  app.exit(1)
+  refuseLaunch(refused)
 }
 // The engine test: from the sources only (runtime.ts).
 const smoke = isSmokeRun(process.argv)
@@ -158,8 +161,9 @@ app.on('open-file', (event, path) => {
 // A refused launch asks for no lock: it must not take the place of the application, nor hand anything to the one that runs.
 const primaryInstance = refused.length === 0 && isPrimaryInstance(smoke, () => app.requestSingleInstanceLock(), process.argv)
 if (!primaryInstance) {
-  if (smoke || refused.length > 0) app.exit(1)
-  else app.quit()
+  // A refused launch is already on its way out (`refuseLaunch`, above, which may be waiting for its box): it is neither ended twice nor quit as a second instance.
+  if (smoke) app.exit(1)
+  else if (refused.length === 0) app.quit()
 }
 
 // No client certificate of the keychain is presented to a server that asks, and a notice in the window of the page says so (see

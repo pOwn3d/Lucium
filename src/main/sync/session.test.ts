@@ -199,6 +199,49 @@ describe('the categories, the settings, the archive and the open tabs', () => {
     expect(phone.state.settings.lockApp).not.toBe(true)
   })
 
+  // Review n° 10: only the engines of search Lucium offers cross, in both directions; an engine of one's own stays on the device that has it.
+  const OWN_ENGINE = 'https://search.example.com/?q=%s'
+  const BRAVE = 'https://search.brave.com/search?q=%s'
+
+  it('keeps an engine of search of one\'s own on its device: it is not sent, and what the other device has does not replace it', async () => {
+    const mac = new Device(MAC_ID, 'mac', { settings: { searchUrlTemplate: OWN_ENGINE } }, ['settings'])
+    const phone = new Device(PHONE_ID, 'ios', { settings: { searchUrlTemplate: BRAVE } }, ['settings'])
+    mac.edit((s) => s)
+    phone.edit((s) => s, 5000)
+    const result = await sync(mac, phone)
+    expect(result.mac).toMatchObject({ ok: true })
+    expect(result.phone).toMatchObject({ ok: true })
+    expect(mac.state.settings.searchUrlTemplate).toBe(OWN_ENGINE)
+    expect(phone.state.settings.searchUrlTemplate).toBe(BRAVE)
+    // Said and counted, not silent: the device that cannot send its engine lists it among what it did not take.
+    expect(mac.refused.flat()).toContainEqual({ kind: 'setting', id: 'searchUrlTemplate', reason: 'invalid-value' })
+    // And it stays so the next time.
+    const again = await sync(mac, phone)
+    expect(again.mac).toMatchObject({ ok: true })
+    expect(mac.state.settings.searchUrlTemplate).toBe(OWN_ENGINE)
+    expect(phone.state.settings.searchUrlTemplate).toBe(BRAVE)
+  })
+
+  it('lets a known engine cross in both directions, and keeps the engine the other device had when one turns to an engine of its own', async () => {
+    const mac = new Device(MAC_ID, 'mac', { settings: { searchUrlTemplate: 'https://duckduckgo.com/?q=%s' } }, ['settings'])
+    const phone = new Device(PHONE_ID, 'ios', { settings: { searchUrlTemplate: 'https://duckduckgo.com/?q=%s' } }, ['settings'])
+    mac.edit((s) => s)
+    phone.edit((s) => s)
+    await sync(mac, phone)
+    phone.edit((s) => ({ ...s, settings: { ...s.settings, searchUrlTemplate: BRAVE } }))
+    await sync(mac, phone)
+    expect(mac.state.settings.searchUrlTemplate).toBe(BRAVE)
+    // The Mac now types an engine of its own: the phone keeps Brave, the Mac keeps its own, and neither is rewritten by later sessions.
+    mac.edit((s) => ({ ...s, settings: { ...s.settings, searchUrlTemplate: OWN_ENGINE } }))
+    const result = await sync(mac, phone)
+    expect(result.mac).toMatchObject({ ok: true })
+    expect(result.phone).toMatchObject({ ok: true })
+    expect(phone.state.settings.searchUrlTemplate).toBe(BRAVE)
+    expect(mac.state.settings.searchUrlTemplate).toBe(OWN_ENGINE)
+    await sync(mac, phone)
+    expect(phone.state.settings.searchUrlTemplate).toBe(BRAVE)
+    expect(mac.state.settings.searchUrlTemplate).toBe(OWN_ENGINE)
+
   // Review n° 17: a session that does not exchange a category must not forget the marks of that category.
   it('keeps the marks and the tombstones of the categories it did not exchange: the settings and the archive stay as they were marked', async () => {
     const mac = new Device(MAC_ID, 'mac', { settings: { sendGpc: false } }, ['structure'])

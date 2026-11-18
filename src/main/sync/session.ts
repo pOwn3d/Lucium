@@ -23,7 +23,7 @@ import type { ErrorCode } from './error-codes'
 import { CLOCK_SKEW_WARN_MS, MAX_ENTITIES, MAX_ENTITIES_PER_PART, MAX_PARTS, NONCE_BYTES } from './limits'
 import type { BaseStore } from './bases'
 import { hashOfSnapshot } from './bases'
-import { cleanSnapshot, isWebAddress } from './inbound-filter'
+import { cleanSnapshot, isKnownSearchTemplate, isWebAddress } from './inbound-filter'
 import type { MarkBook } from './marks'
 import type { OpenTab, SnapshotPart, WireEntity, WireTombstone } from './messages'
 import { buildPatch, patchIsEmpty } from './patch'
@@ -269,6 +269,9 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     // apply
     if (deps.host.isAppLocked()) return fail('locked', 'the application locked before anything was written')
     const patch = buildPatch(local, merged.snapshot, aside)
+    // An engine of search of one's own stays on this device (§10.3): it is not sent, and the engine the other device has does not replace it. The engine is whatever the
+    // state holds now, not what it held at the freeze: the person may have typed one meanwhile.
+    if (Object.hasOwn(patch.settings, 'searchUrlTemplate') && !isKnownSearchTemplate((deps.host.state().settings as unknown as Record<string, unknown>)['searchUrlTemplate'])) delete patch.settings['searchUrlTemplate']
     if (!patchIsEmpty(patch)) deps.host.apply(patch)
     deps.marks.adopt(merged.snapshot, follows, (kind) => kindIsExchanged(kind, common))
     try {

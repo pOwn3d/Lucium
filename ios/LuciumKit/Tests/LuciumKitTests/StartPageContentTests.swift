@@ -51,3 +51,11 @@ struct StartPageContentTests {
         #expect(content(self.state(favorites: []), isPrivate: true) == .privateTab, "and the private tab is not told to add favourites either")
     }
 }
+
+@Suite("The sentence at the foot of the start page")
+struct StartPagePrivacyNoteTests {
+    @Test func theSentenceSaysNothingLeavesTheDeviceUnlessTheSynchronisationIsOnWithAMac() {
+        #expect(StartPageContent.privacyNote(synchronizing: false) == .staysOnTheDevice)
+        #expect(StartPageContent.privacyNote(synchronizing: true) == .staysExceptToTheMac)
+    }
+}

@@ -29,6 +29,7 @@ const CONDITIONAL: Readonly<Record<string, { count: number; waitsFor: string }>>
   'src/main/importers/import-flow.test.ts': { count: 1, waitsFor: 'Windows: a named pipe is made with mkfifo, which Windows does not have' },
   'src/main/importers/service.test.ts': { count: 4, waitsFor: 'macOS and its plutil (one), and Windows excluded for the three that refuse a file with chmod 000' },
   'src/main/importers/sqlite.test.ts': { count: 2, waitsFor: 'Windows: a named pipe is made with mkfifo, which Windows does not have' },
+  'src/main/launch-refusal.test.ts': { count: 1, waitsFor: 'Windows excluded: the shell command that carries the box of a refused launch (Linux) is run for real with stand-in scripts, and Windows has no /bin/sh' },
   'src/main/make-dmg.test.ts': { count: 1, waitsFor: 'Windows: shasum is a tool of macOS, where the maker of the image runs' },
   'src/main/password-vault-attempts.test.ts': { count: 1, waitsFor: 'Windows: a link needs a privilege there, and a link to itself is not sure to come back as ELOOP' },
   'src/main/perf-script.test.ts': { count: 3, waitsFor: 'a system with ps, then macOS for the real process tree, and not Windows (the script refuses to measure there)' },

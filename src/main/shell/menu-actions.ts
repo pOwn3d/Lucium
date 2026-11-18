@@ -5,11 +5,11 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { app, contentTracing, dialog, net, shell, type BrowserWindow } from 'electron'
 import { importSource } from '@shared/import-sources'
-import type { PlatformId } from '@shared/platform'
+import { updatesByHand, type PlatformId } from '@shared/platform'
 import { browserDataDir, type PathEnv } from '../platform/paths'
 import { exportBookmarks } from './bookmarks-export'
 import { restoredState } from '@shared/sidebar'
-import { feedAnswer, feedFetchInit, updateOutcome, withdrawnVersions, type FeedAnswer } from '@shared/update-check'
+import { downloadPageUrl, feedAnswer, feedFetchInit, updateOutcome, withdrawnVersions, type FeedAnswer } from '@shared/update-check'
 import { UPDATE_NOTICE_MS, droppedUpdateText } from '@shared/auto-update'
 import { unreachableFeedReason } from '@shared/update-install'
 import { feedSignatureCheck } from './update-signature'
@@ -59,6 +59,22 @@ async function readFeed(feed: string): Promise<FeedAnswer> {
 }
 
 /**
+ * Windows and Linux (`updatesByHand`): the build carries no update address and no installer, so there is nothing to read and nothing to configure. The box says so
+ * in plain words, without the name of a setting nobody has, and offers the download page of the site, where the latest version is.
+ */
+async function offerManualUpdates(win: BrowserWindow, current: string): Promise<void> {
+  const { response } = await dialog.showMessageBox(win, {
+    type: 'info',
+    message: t('menu-actions.les-mises-a-jour-se-font-a-la-main'),
+    detail: t('menu-actions.vous-utilisez-lucium-current-telechargez-la-derniere', { current }),
+    buttons: [t('menu-actions.ouvrir-la-page-telecharger'), t('app-update.fermer')],
+    defaultId: 0,
+    cancelId: 1
+  })
+  if (response === 0) await shell.openExternal(downloadPageUrl(getLanguage()))
+}
+
+/**
  * Lucium → Check for Updates… (and the About window's button): reads the feed, if one is configured, and says what it found. A newer version
  * this run can install (update-source.ts: a built application with a built-in feed) is offered with "Télécharger et installer" (app-update.ts);
  * otherwise its download page opens in the browser. A running version the feed lists as withdrawn is told so, with the version to install. Only
@@ -81,6 +97,7 @@ export async function checkForUpdates({ win, browser }: FocusedWindow, settings:
   const outcome = updateOutcome(current, feed, answer)
   switch (outcome.kind) {
     case 'not-configured':
+      if (updatesByHand(process.platform)) return offerManualUpdates(win, current)
       await dialog.showMessageBox(win, {
         type: 'info',
         message: t('menu-actions.la-verification-des-mises-a-jour-n-est-pas'),
