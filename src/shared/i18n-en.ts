@@ -6352,6 +6352,7 @@ export const en: Record<MessageKey, string> = {
   'sync.error.unavailable': 'This computer cannot protect the synchronization key: the system keychain is not available.',
   'sync.error.port': 'Lucium could not find a free port to listen on. Try again in a moment.',
   'sync.error.identity': 'This computer’s synchronization key could not be created or read.',
+  'sync.error.identity-unopenable': 'The macOS keychain did not open this computer’s synchronization key. Your iPhones stay paired: try again. If it still does not open, a new key will be made and you will have to pair your iPhones again.',
   'sync.error.locked': 'Lucium is locked: unlock it first.',
   'sync.error.network': 'This computer has no address on a local network. Connect it to the same Wi-Fi network as the iPhone.',
   'sync.error.internal': 'Synchronization ran into an error. The details are in the Lucium log.',

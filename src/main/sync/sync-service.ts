@@ -21,7 +21,7 @@ import type { MarkBook } from './marks'
 import type { OpenTab } from './messages'
 import { runSession as runExchange, type SessionHost } from './session'
 import { MarkTracker } from './sync-tracker'
-import type { IdentityStore, SyncIdentity } from './identity'
+import { IdentityNotOpenableError, type IdentityStore, type SyncIdentity } from './identity'
 import { SyncListener, type ListenerDeps } from './listener'
 import { manualAddress, manualCode, qrText } from './pairing-code'
 import { PairingSecret } from './pairing-secret'
@@ -100,6 +100,8 @@ const PORT_TRIES = 5
 export class SyncService {
   private identity: SyncIdentity | null = null
   private identityReplaced = false
+  /** How many times the key was found sealed and not opened since the application started: the second time, a new identity is made (review n° 22). */
+  private identityRefusals = 0
   private door: SyncDoor | null = null
   private pairing: { secret: PairingSecret; view: Omit<SyncPairingView, 'remainingMs'> } | null = null
   private confirm: { name: string; until: number; resolve: (decision: 'allow' | 'refuse') => void } | null = null
@@ -227,7 +229,8 @@ export class SyncService {
   private ensureIdentity(): SyncIdentity {
     if (this.identity !== null) return this.identity
     try {
-      const made = this.deps.identities.loadOrCreate()
+      const made = this.deps.identities.loadOrCreate({ replaceUnopenable: this.identityRefusals >= 1 })
+      this.identityRefusals = 0
       this.identity = made.identity
       if (made.replaced) {
         // The old fingerprint is gone with the old key: the devices that were paired to it cannot be recognised any more (§3.3), and what was kept for them goes too.
@@ -239,6 +242,13 @@ export class SyncService {
       }
       return made.identity
     } catch (error) {
+      if (error instanceof IdentityNotOpenableError) {
+        // The keychain did not open the key: the identity and the devices paired to it are kept, and the person is told. If it does not open the next time either (a
+        // profile restored on another machine, a key that is gone), a new identity is made then.
+        this.identityRefusals++
+        console.error('[sync] the key of this Mac could not be opened; the devices stay paired, and a new identity is made if it still cannot be opened next time:', error)
+        return this.fail('identity-unopenable', 'the key could not be opened')
+      }
       console.error('[sync] the identity of this Mac could not be made or read:', error)
       return this.fail('identity', 'the identity could not be made')
     }
