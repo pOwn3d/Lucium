@@ -95,6 +95,11 @@ export interface SessionPorts {
 export const readableName = (name: string): string => name.replace(/[\u0000-\u001f\u007f-\u009f‪-‮⁦-⁩]/g, ' ').trim()
 
 const EADDRINUSE = 'EADDRINUSE'
+/**
+ * What the system says of a port it will not give: taken (`EADDRINUSE`), or refused (`EACCES`). The ports of the dynamic range are never ones that need rights, but Windows keeps
+ * ranges of them for itself (Hyper-V, WinNAT: `netsh int ipv4 show excludedportrange`) and answers `EACCES` for them: the same remedy as for a port that is taken, another one.
+ */
+const PORT_UNAVAILABLE: readonly string[] = [EADDRINUSE, 'EACCES']
 const PORT_TRIES = 5
 
 export class SyncService {
@@ -261,7 +266,7 @@ export class SyncService {
     } catch (error) {
       if (error instanceof SyncServiceError) throw error
       console.error('[sync] the door could not be opened:', error)
-      return this.fail((error as NodeJS.ErrnoException).code === EADDRINUSE ? 'port' : 'internal', 'the door could not be opened')
+      return this.fail(PORT_UNAVAILABLE.includes((error as NodeJS.ErrnoException).code ?? '') ? 'port' : 'internal', 'the door could not be opened')
     }
   }
 
@@ -298,9 +303,9 @@ export class SyncService {
         this.door = door
         return
       } catch (error) {
-        // A port that is taken is replaced by another one, kept for next time; any other reason, or too many tries, is the caller's to show.
-        if ((error as NodeJS.ErrnoException).code !== EADDRINUSE || attempt >= PORT_TRIES) throw error
-        console.warn(`[sync] the port ${port} is taken, trying another one`)
+        // A port that is taken or that the system refuses is replaced by another one, kept for next time; any other reason, or too many tries, is the caller's to show.
+        if (!PORT_UNAVAILABLE.includes((error as NodeJS.ErrnoException).code ?? '') || attempt >= PORT_TRIES) throw error
+        console.warn(`[sync] the port ${port} is taken or refused, trying another one`)
         port = pick()
         this.deps.store.replacePort(port)
       }
