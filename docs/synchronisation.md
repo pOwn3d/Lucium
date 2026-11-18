@@ -280,6 +280,7 @@ Il n'y a **pas d'accusé par message** : TCP et TLS livrent dans l'ordre et sans
 | Entités par partie | 500 |
 | Parties | 4096 |
 | Profondeur JSON | 32 |
+| **Valeurs JSON** (chaque objet, liste, texte, nombre, booléen et `null` compte pour un) | **150 000 par trame, 2 000 000 par connexion** : `too-large` au-delà. Les bornes en octets ne bornent pas le travail : 32 Mio de `[[],[],…]` font plus de 10 millions de valeurs, plus d'un gigaoctet et dix secondes de processus principal arrêté (essayé par la carte 448). Un état réel fait une vingtaine de valeurs par kilo-octet de trame ; 100 000 entités de quinze valeurs en font un million et demi. **Le Swift doit appliquer la même borne** (carte 452) |
 | Chaîne | 65 536 octets |
 | Nom d'appareil | 80 caractères ; identifiant 1 à 64 |
 | Onglets annoncés | 200 |

@@ -9,7 +9,7 @@
 //
 // The same vectors (ios/Contracts/sync-message-vectors.json: `messages`, `sequences`, `transitions`) are played on the iPhone side by LuciumKit.
 
-import { ALPN, MAX_CATEGORIES, MAX_DEVICE_ID_CHARS, MAX_DEVICE_NAME_CHARS, MAX_ENTITIES_PER_PART, MAX_HOSTS, MAX_JSON_DEPTH, MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES, MAX_OPEN_TABS, MAX_PARTS, MAX_STRING_BYTES, PROTOCOL_VERSION } from './limits'
+import { ALPN, MAX_CATEGORIES, MAX_DEVICE_ID_CHARS, MAX_DEVICE_NAME_CHARS, MAX_ENTITIES_PER_PART, MAX_HOSTS, MAX_FRAME_VALUES, MAX_JSON_DEPTH, MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES, MAX_OPEN_TABS, MAX_PARTS, MAX_STRING_BYTES, PROTOCOL_VERSION } from './limits'
 import { isErrorCode, type ErrorCode, type Verdict } from './error-codes'
 import { isInheritedName } from '@shared/sync-snapshot'
 
@@ -80,41 +80,54 @@ export type MessageType = Message['t']
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
 
 /**
- * Whether a parsed value breaks a rule that holds wherever it is (see the head of the file). A `-0` met on the way is written back as `0`. Iterative, with the
- * depth of each node: the top object is at depth 1, and 32 levels are allowed.
+ * Walks a parsed value: how many values it holds (each one counted once), or null when it breaks a rule that holds wherever it is (see the head of the file). A `-0` met on
+ * the way is written back as `0`. Iterative, with the depth of each node: the top object is at depth 1, and 32 levels are allowed.
  */
-function hostile(root: unknown): boolean {
+function walk(root: unknown): number | null {
   const stack: Array<{ value: unknown; depth: number }> = [{ value: root, depth: 1 }]
+  let values = 0
   while (stack.length > 0) {
     const { value, depth } = stack.pop() as { value: unknown; depth: number }
+    values++
     if (typeof value === 'string') {
-      if (Buffer.byteLength(value, 'utf8') > MAX_STRING_BYTES) return true
+      if (Buffer.byteLength(value, 'utf8') > MAX_STRING_BYTES) return null
       continue
     }
     if (typeof value === 'number') {
-      if (!Number.isFinite(value) || Math.abs(value) >= 1e21 || (value !== 0 && Math.abs(value) < 1e-6)) return true
+      if (!Number.isFinite(value) || Math.abs(value) >= 1e21 || (value !== 0 && Math.abs(value) < 1e-6)) return null
       continue
     }
     if (typeof value !== 'object' || value === null) continue
-    if (depth > MAX_JSON_DEPTH) return true
+    if (depth > MAX_JSON_DEPTH) return null
+    // The count stops the walk as soon as it is over the bound of a frame: nothing past it is looked at.
+    if (values > MAX_FRAME_VALUES) return values
     if (Array.isArray(value)) {
       for (let index = 0; index < value.length; index++) {
         const item = value[index] as unknown
-        if (Object.is(item, -0)) value[index] = 0
-        else stack.push({ value: item, depth: depth + 1 })
+        if (Object.is(item, -0)) {
+          value[index] = 0
+          values++
+        } else stack.push({ value: item, depth: depth + 1 })
       }
       continue
     }
-    if (Object.prototype.hasOwnProperty.call(value, '__proto__')) return true
+    if (Object.prototype.hasOwnProperty.call(value, '__proto__')) return null
     const record = value as Record<string, unknown>
     for (const key of Object.keys(record)) {
-      if (Buffer.byteLength(key, 'utf8') > MAX_STRING_BYTES) return true
+      if (Buffer.byteLength(key, 'utf8') > MAX_STRING_BYTES) return null
       const item = record[key]
-      if (Object.is(item, -0)) record[key] = 0
-      else stack.push({ value: item, depth: depth + 1 })
+      if (Object.is(item, -0)) {
+        record[key] = 0
+        values++
+      } else stack.push({ value: item, depth: depth + 1 })
     }
   }
-  return false
+  return values
+}
+
+/** What a connection may still hold in values (`MAX_SESSION_VALUES`): each message read spends its own. */
+export interface ValueBudget {
+  left: number
 }
 
 // ---------- the checks of the fields ----------
@@ -271,7 +284,7 @@ export type Parsed = { ok: true; message: Message } | { ok: false; code: ErrorCo
  * not ours (before the type is looked at), `unknown-type` for a type this version does not speak. A field this version does not know, in a known type, is ignored
  * and does not come out: only the entities of a snapshot keep their unknown fields (§7.1, §11.6).
  */
-export function parseMessage(text: string): Parsed {
+export function parseMessage(text: string, budget?: ValueBudget): Parsed {
   const bad: Parsed = { ok: false, code: 'bad-message' }
   let value: unknown
   try {
@@ -279,7 +292,15 @@ export function parseMessage(text: string): Parsed {
   } catch {
     return bad
   }
-  if (!isObject(value) || hostile(value)) return bad
+  if (!isObject(value)) return bad
+  const values = walk(value)
+  if (values === null) return bad
+  // Too many values for one frame, or for what the connection has left: refused as too large, before the fields are read (a field of a million lists is not read).
+  if (values > MAX_FRAME_VALUES) return { ok: false, code: 'too-large' }
+  if (budget !== undefined) {
+    budget.left -= values
+    if (budget.left < 0) return { ok: false, code: 'too-large' }
+  }
   const { v, t, n } = value
   if (!isInt(n, 1) || typeof t !== 'string' || !Number.isInteger(v)) return bad
   if (v !== PROTOCOL_VERSION) return { ok: false, code: 'unsupported-version' }
