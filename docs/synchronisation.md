@@ -71,8 +71,6 @@ Il complète [docs/ios.md](ios.md) §13, qui est l'étude. En cas d'écart, ce d
 | **Base de fusion** de chaque appareil appairé, **marques** (§9.2), **pierres tombales** (§11.5), journal des conflits (§11.7) | fichiers à côté de `state.json` (jamais dedans : `docs/ios.md` §13.6) | dossier de l'application |
 | **Port d'écoute** | choisi **une fois** au hasard entre 49152 et 65535 à la première activation, gardé dans `sync.json` ; s'il est pris au lancement, un autre est tiré, et l'iPhone se reconnecte par les moyens du §5 | — |
 
-**Une clé que le trousseau n'ouvre pas** (revue de sécurité, n° 22) : sur le Mac, l'identité n'est **pas remplacée au premier refus** — un trousseau qui refuse un instant (une invite refusée, un trousseau verrouillé) emportait sinon tous les appareils appairés, puisqu'une nouvelle identité a une autre empreinte. La page dit « Le trousseau de macOS n'a pas ouvert la clé… Vos iPhone restent appairés : réessayez » ; si la clé ne s'ouvre toujours pas au deuxième essai (un profil restauré sur une autre machine), une nouvelle identité est faite et la page dit qu'il faut appairer de nouveau. Un fichier qui n'est pas une identité du tout (pas de JSON, un certificat illisible, une clé qui n'est pas celle du certificat) est remplacé tout de suite : rien ne pourrait l'ouvrir plus tard. Le trousseau de l'iPhone ne remplace rien sans que la recherche de l'identité dise « introuvable » (`KeychainSyncIdentityStore`, lu et laissé tel quel).
-
 Tout fichier lu est **borné** à la lecture (comme `DATA_FILE_MAX_BYTES` du Mac, `persist.ts`) et traité comme hostile. **Une restauration sur un autre appareil** (sauvegarde de l'iPhone, copie d'un profil du Mac) ne ramène pas la clé : si `sync.json` liste des appareils mais que la clé est absente, l'application oublie la liste et dit qu'il faut se réapparier (§12).
 
 ## 4. Appairage
@@ -287,7 +285,7 @@ Il n'y a **pas d'accusé par message** : TCP et TLS livrent dans l'ordre et sans
 | Nom d'appareil | 80 caractères ; identifiant 1 à 64 |
 | Onglets annoncés | 200 |
 | Connexions | 4 + 1 d'appairage |
-| Poignée de main / silence / séance | 10 s / 60 s / 10 min (**des deux côtés** : `SyncSessionClient.run` coupe la séance de l'iPhone à 10 minutes, `SyncLimits.sessionMaximum`) |
+| Poignée de main / silence / séance | 10 s / 60 s / 10 min |
 | Séances automatiques | une toutes les 15 s au plus |
 | Appairage | 120 s ; 5 preuves fausses ; 60 s pour confirmer |
 
