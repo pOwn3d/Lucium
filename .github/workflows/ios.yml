@@ -22,7 +22,7 @@ name: iOS
 # project must never cost its maintainer anything: workflow-hygiene.test.ts). The simulator is deleted by the script when it ends.
 #
 # Security: `pull_request` (never `pull_request_target`), a read-only token, no secret, nothing written back to the repository, no signing step anywhere
-# (AGENTS.md, section 7): the build runs with CODE_SIGNING_ALLOWED=NO, set by the script, and no certificate or profile exists in the repository.
+# (AGENTS.md, section 7): the simulator build is signed ad hoc by the script (identity "-": no certificate, no team, no profile; the simulator's keychain needs it), and no certificate or profile exists in the repository.
 
 on:
   pull_request:
