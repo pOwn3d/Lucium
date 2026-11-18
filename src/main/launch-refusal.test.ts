@@ -217,9 +217,11 @@ describe('the box as it is started', () => {
     it('hands the box its arguments as they are, whatever they hold, and opens the page when the first button answers 0', () => {
       const box = stand('box-ok', 0)
       const opener = stand('opener-ok', 0)
-      run(box, opener, 'https://lucium.app/en/download/?a=1&b=2', awkward)
+      // The page too is one argument, whatever it holds (the addresses of the site hold none of this: the command does not rely on it).
+      const page = 'https://lucium.app/en/download/?a=1&b=$(touch /tmp/never-made) c;d'
+      run(box, opener, page, awkward)
       expect(recorded(box)).toEqual(['--title=Lucium "cannot" start', "--text=It's $(touch /tmp/never-made) `id` ; a*b", '', 'next line', '--ok-label=Open'])
-      expect(recorded(opener)).toEqual(['https://lucium.app/en/download/?a=1&b=2'])
+      expect(recorded(opener)).toEqual([page])
     })
 
     it('opens nothing when the second button answers 1, or the box is closed another way', () => {
