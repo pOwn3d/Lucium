@@ -1,0 +1,4275 @@
+{
+  "comment": "Shared by src/shared/ios-sync-merge-contract.test.ts (a reference merge written in the test, until the cards of the three-way merge write the real one in src/shared/ and in LuciumKit) and later by LuciumKit. The three-way merge of docs/synchronisation.md §11. A snapshot is {entities: {kind: {id: {fields, stamps}}}, tombstones: {kind: {id: mark}}, order: {list: [id]}, orderStamps: {list: mark}}; `base: null` is the empty base. `expect` names what must hold: `entities` and `tombstones` are compared whole, `conflicts` whole and in the order (kind, id, field), `order` only for the lists it names. `swap: true` means that merging with local and remote exchanged gives the same entities, tombstones and order, and the same conflicts with every `winner` exchanged. A mark is <13 digits of ms>-<4 hex digits of counter>-<device id>, compared as text; \"0\" is the mark of a field that was never stamped. Written by a script: the expectations are written by hand and the test runs them.",
+  "devices": {
+    "mac": "mac",
+    "phone": "phone"
+  },
+  "cases": [
+    {
+      "name": "one side changes a field: it is taken",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Boulot",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000005-0000-phone",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Boulot",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000005-0000-phone",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "two sides change different fields: both are kept",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Pro",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000003-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "🧰"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000004-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Pro",
+                "emoji": "🧰"
+              },
+              "stamps": {
+                "name": "1790000000003-0000-mac",
+                "emoji": "1790000000004-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "the same change on both sides is not a conflict (the larger mark is kept)",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Pro",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000003-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Pro",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000004-0000-phone",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Pro",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000004-0000-phone",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "the same field changed differently: the later mark wins",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Pro",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000003-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Boulot",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000007-0000-phone",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Boulot",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000007-0000-phone",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "field": "name",
+            "winner": "remote",
+            "reason": "newer"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "equal time and counter: the greater device id wins",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "A",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000005-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "B",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000005-0000-phone",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "B",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000005-0000-phone",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "field": "name",
+            "winner": "remote",
+            "reason": "device-id"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "two values with the same mark (never stamped): the greater canonical text wins",
+      "base": null,
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Alpha"
+              },
+              "stamps": {
+                "name": "0"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Beta"
+              },
+              "stamps": {
+                "name": "0"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Beta"
+              },
+              "stamps": {
+                "name": "0"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "field": "name",
+            "winner": "remote",
+            "reason": "value"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "a field removed on one side and untouched on the other: removed (its mark stays)",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions",
+                "icon": "📁"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "icon": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "icon": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions",
+                "icon": "📁"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "icon": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "icon": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "a field removed on one side and changed on the other: the later mark wins",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions",
+                "icon": "📁"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "icon": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "icon": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions",
+                "icon": "🗂"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "icon": "1790000000006-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions",
+                "icon": "🗂"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "icon": "1790000000006-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "folder",
+            "id": "f1",
+            "field": "icon",
+            "winner": "remote",
+            "reason": "newer"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "an entity added on one side only is kept",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "two different entities added on the two sides: the union",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/b"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000002-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/b"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000002-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "the same id added on both sides: merged field by field from an empty base",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "A"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000003-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "B"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000004-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "B"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000004-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "tab",
+            "id": "t1",
+            "field": "customTitle",
+            "winner": "remote",
+            "reason": "newer"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "deleted on one side, untouched on the other: deleted",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t1": "1790000000008-0000-mac"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t1": "1790000000008-0000-mac"
+          }
+        },
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "deleted on one side, modified on the other: kept, the deletion loses",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t1": "1790000000008-0000-mac"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "Gardé"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000006-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "Gardé"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000006-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "tab",
+            "id": "t1",
+            "field": null,
+            "winner": "remote",
+            "reason": "modification-over-deletion"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "deleted on both sides: stays deleted, the larger tombstone mark is kept",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t1": "1790000000008-0000-mac"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t1": "1790000000009-0000-phone"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t1": "1790000000009-0000-phone"
+          }
+        },
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "a folder deleted on one side while a tab moves into it on the other: the folder is kept",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "folder": {
+            "f1": "1790000000007-0000-mac"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "folderId": "f1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "folderId": "1790000000006-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "folderId": "f1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "folderId": "1790000000006-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "folder",
+            "id": "f1",
+            "field": null,
+            "winner": "remote",
+            "reason": "modification-over-deletion"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "a space deleted with its tabs on one side, untouched on the other: all deleted",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Maison",
+                "emoji": "🏠"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t3": {
+              "fields": {
+                "spaceId": "s2",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "space": {
+            "s2": "1790000000008-0000-mac"
+          },
+          "tab": {
+            "t3": "1790000000008-0000-mac"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Maison",
+                "emoji": "🏠"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t3": {
+              "fields": {
+                "spaceId": "s2",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "space": {
+            "s2": "1790000000008-0000-mac"
+          },
+          "tab": {
+            "t3": "1790000000008-0000-mac"
+          }
+        },
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "a tab left in a deleted space is removed and leaves a tombstone (reference repair)",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Maison",
+                "emoji": "🏠"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t3": {
+              "fields": {
+                "spaceId": "s2",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t3": {
+              "fields": {
+                "spaceId": "s2",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "space": {
+            "s2": "1790000000008-0000-mac"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Maison",
+                "emoji": "🏠"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t3": {
+              "fields": {
+                "spaceId": "s2",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "space": {
+            "s2": "1790000000008-0000-mac"
+          },
+          "tab": {
+            "t3": "1790000000001-0000-mac"
+          }
+        },
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "a dangling folder reference is cleared (the tab goes to the root)",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "folderId": "f1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "folderId": "1790000000002-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Réunions"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "folderId": "f1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "folderId": "1790000000002-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "folderId": "f1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "folderId": "1790000000002-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "folder": {
+            "f1": "1790000000007-0000-phone"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "folderId": "1790000000002-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "folder": {
+            "f1": "1790000000007-0000-phone"
+          }
+        },
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "folders that would form a cycle: the parent of the smallest id is cleared",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Un"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "f2": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Deux"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Un",
+                "parentId": "f2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000004-0000-mac"
+              }
+            },
+            "f2": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Deux"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Un"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac"
+              }
+            },
+            "f2": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Deux",
+                "parentId": "f1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000005-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "folder": {
+            "f1": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Un"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000004-0000-mac"
+              }
+            },
+            "f2": {
+              "fields": {
+                "spaceId": "s1",
+                "name": "Deux",
+                "parentId": "f1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "name": "1790000000001-0000-mac",
+                "parentId": "1790000000005-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "unknown fields and unknown kinds go through",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "futureField": {
+                  "a": 1
+                }
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "futureField": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "widget": {
+            "w1": {
+              "fields": {
+                "x": 1
+              },
+              "stamps": {
+                "x": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Pro",
+                "futureField": {
+                  "a": 1
+                }
+              },
+              "stamps": {
+                "name": "1790000000003-0000-mac",
+                "futureField": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "widget": {
+            "w1": {
+              "fields": {
+                "x": 1
+              },
+              "stamps": {
+                "x": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "futureField": {
+                  "a": 1
+                }
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "futureField": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "widget": {
+            "w1": {
+              "fields": {
+                "x": 1
+              },
+              "stamps": {
+                "x": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Pro",
+                "futureField": {
+                  "a": 1
+                }
+              },
+              "stamps": {
+                "name": "1790000000003-0000-mac",
+                "futureField": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "widget": {
+            "w1": {
+              "fields": {
+                "x": 1
+              },
+              "stamps": {
+                "x": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "an unknown field changed on both sides is a conflict like any other",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "T",
+                "futureField": 1
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "futureField": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "T",
+                "futureField": 2
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "futureField": "1790000000003-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "T",
+                "futureField": 3
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "futureField": "1790000000005-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "T",
+                "futureField": 3
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "futureField": "1790000000005-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "field": "futureField",
+            "winner": "remote",
+            "reason": "newer"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "a setting is one register",
+      "base": {
+        "entities": {
+          "setting": {
+            "httpsUpgrade": {
+              "fields": {
+                "value": true
+              },
+              "stamps": {
+                "value": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "setting": {
+            "httpsUpgrade": {
+              "fields": {
+                "value": false
+              },
+              "stamps": {
+                "value": "1790000000005-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "setting": {
+            "httpsUpgrade": {
+              "fields": {
+                "value": true
+              },
+              "stamps": {
+                "value": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "setting": {
+            "httpsUpgrade": {
+              "fields": {
+                "value": false
+              },
+              "stamps": {
+                "value": "1790000000005-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "order: nobody reorders and each side adds: the additions go to the end by birth mark, then id",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t2"
+          ]
+        },
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000005-0000-mac",
+                "pinned": "1790000000005-0000-mac",
+                "anchorUrl": "1790000000005-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t2",
+            "t3"
+          ]
+        },
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t4": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t4"
+              },
+              "stamps": {
+                "spaceId": "1790000000004-0000-mac",
+                "pinned": "1790000000004-0000-mac",
+                "anchorUrl": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t2",
+            "t4"
+          ]
+        },
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000005-0000-mac",
+                "pinned": "1790000000005-0000-mac",
+                "anchorUrl": "1790000000005-0000-mac"
+              }
+            },
+            "t4": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t4"
+              },
+              "stamps": {
+                "spaceId": "1790000000004-0000-mac",
+                "pinned": "1790000000004-0000-mac",
+                "anchorUrl": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [],
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t2",
+            "t4",
+            "t3"
+          ]
+        }
+      },
+      "swap": true
+    },
+    {
+      "name": "order: one side reorders, the other adds: the reordered list is kept, the addition goes to the end",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t2",
+            "t3"
+          ]
+        },
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t3",
+            "t1",
+            "t2"
+          ]
+        },
+        "orderStamps": {
+          "tabs:s1:-": "1790000000005-0000-mac"
+        }
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t4": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t4"
+              },
+              "stamps": {
+                "spaceId": "1790000000004-0000-mac",
+                "pinned": "1790000000004-0000-mac",
+                "anchorUrl": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t2",
+            "t3",
+            "t4"
+          ]
+        },
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t4": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t4"
+              },
+              "stamps": {
+                "spaceId": "1790000000004-0000-mac",
+                "pinned": "1790000000004-0000-mac",
+                "anchorUrl": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [],
+        "order": {
+          "tabs:s1:-": [
+            "t3",
+            "t1",
+            "t2",
+            "t4"
+          ]
+        }
+      },
+      "swap": true
+    },
+    {
+      "name": "order: both reorder: the later mark wins and what the other side added goes to the end",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t2",
+            "t3"
+          ]
+        },
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t5": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t5"
+              },
+              "stamps": {
+                "spaceId": "1790000000004-0000-mac",
+                "pinned": "1790000000004-0000-mac",
+                "anchorUrl": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t2",
+            "t1",
+            "t3",
+            "t5"
+          ]
+        },
+        "orderStamps": {
+          "tabs:s1:-": "1790000000005-0000-mac"
+        }
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t4": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t4"
+              },
+              "stamps": {
+                "spaceId": "1790000000003-0000-mac",
+                "pinned": "1790000000003-0000-mac",
+                "anchorUrl": "1790000000003-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t3",
+            "t2",
+            "t1",
+            "t4"
+          ]
+        },
+        "orderStamps": {
+          "tabs:s1:-": "1790000000007-0000-phone"
+        }
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t4": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t4"
+              },
+              "stamps": {
+                "spaceId": "1790000000003-0000-mac",
+                "pinned": "1790000000003-0000-mac",
+                "anchorUrl": "1790000000003-0000-mac"
+              }
+            },
+            "t5": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t5"
+              },
+              "stamps": {
+                "spaceId": "1790000000004-0000-mac",
+                "pinned": "1790000000004-0000-mac",
+                "anchorUrl": "1790000000004-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "order",
+            "id": "tabs:s1:-",
+            "field": null,
+            "winner": "remote",
+            "reason": "order"
+          }
+        ],
+        "order": {
+          "tabs:s1:-": [
+            "t3",
+            "t2",
+            "t1",
+            "t4",
+            "t5"
+          ]
+        }
+      },
+      "swap": true
+    },
+    {
+      "name": "order: a deleted member leaves the list",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t2",
+            "t3"
+          ]
+        },
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t2": "1790000000008-0000-mac"
+          }
+        },
+        "order": {
+          "tabs:s1:-": [
+            "t1",
+            "t3"
+          ]
+        },
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t2": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t2"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {
+          "tabs:s1:-": [
+            "t3",
+            "t2",
+            "t1"
+          ]
+        },
+        "orderStamps": {
+          "tabs:s1:-": "1790000000006-0000-phone"
+        }
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t1"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            },
+            "t3": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/t3"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t2": "1790000000008-0000-mac"
+          }
+        },
+        "conflicts": [],
+        "order": {
+          "tabs:s1:-": [
+            "t3",
+            "t1"
+          ]
+        }
+      },
+      "swap": true
+    },
+    {
+      "name": "first synchronisation (empty base): the union, a conflict is settled by the mark",
+      "base": null,
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Perso"
+              },
+              "stamps": {
+                "name": "1790000000002-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Seul"
+              },
+              "stamps": {
+                "name": "1790000000002-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Maison"
+              },
+              "stamps": {
+                "name": "1790000000009-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Maison"
+              },
+              "stamps": {
+                "name": "1790000000009-0000-phone"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Seul"
+              },
+              "stamps": {
+                "name": "1790000000002-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "field": "name",
+            "winner": "remote",
+            "reason": "newer"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "empty base: a change newer than the tombstone brings the entity back",
+      "base": null,
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t1": "1790000000005-0000-mac"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "Revenu"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000008-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "Revenu"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000008-0000-phone"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": [
+          {
+            "kind": "tab",
+            "id": "t1",
+            "field": null,
+            "winner": "remote",
+            "reason": "modification-over-deletion"
+          }
+        ]
+      },
+      "swap": true
+    },
+    {
+      "name": "empty base: a tombstone newer than every change deletes the entity",
+      "base": null,
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t1": "1790000000009-0000-mac"
+          }
+        },
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {
+          "tab": {
+            "t1": "1790000000009-0000-mac"
+          }
+        },
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "a space set aside on one side is left out on both sides, with what depends on it",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            },
+            "s2": {
+              "fields": {
+                "name": "Maison",
+                "emoji": "🏠"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t3": {
+              "fields": {
+                "spaceId": "s2",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [
+        "s2"
+      ],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    },
+    {
+      "name": "merging a snapshot with itself changes nothing (idempotence)",
+      "base": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "local": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "X"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000003-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "remote": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "X"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000003-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "order": {},
+        "orderStamps": {}
+      },
+      "withheld": [],
+      "expect": {
+        "entities": {
+          "space": {
+            "s1": {
+              "fields": {
+                "name": "Travail",
+                "emoji": "💼"
+              },
+              "stamps": {
+                "name": "1790000000001-0000-mac",
+                "emoji": "1790000000001-0000-mac"
+              }
+            }
+          },
+          "tab": {
+            "t1": {
+              "fields": {
+                "spaceId": "s1",
+                "pinned": true,
+                "anchorUrl": "https://example.com/a",
+                "customTitle": "X"
+              },
+              "stamps": {
+                "spaceId": "1790000000001-0000-mac",
+                "pinned": "1790000000001-0000-mac",
+                "anchorUrl": "1790000000001-0000-mac",
+                "customTitle": "1790000000003-0000-mac"
+              }
+            }
+          }
+        },
+        "tombstones": {},
+        "conflicts": []
+      },
+      "swap": true
+    }
+  ]
+}

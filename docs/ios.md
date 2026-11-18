@@ -1008,6 +1008,8 @@ Le test du bloqueur contient son propre **témoin** : la même page, sans les r�
 
 ## 13. Phase 2 : synchronisation directe sur le réseau local
 
+**La spécification complète de cette phase est dans [synchronisation.md](synchronisation.md)** (carte 443 : appairage, transport, messages, fusion, vecteurs de contrat ; les écarts avec ce paragraphe y sont listés au §21). Ce paragraphe reste l'étude qui l'a précédée ; en cas d'écart, la spécification prime.
+
 Le chef de projet veut une synchronisation **bidirectionnelle** (une modification sur l'iPhone apparaît sur le Mac et l'inverse). `GOVERNANCE.md` (principe 5) et `AGENTS.md` §5 interdisent une synchronisation qui passe par un service d'une entreprise ou du projet, **iCloud / CloudKit compris**. La voie proposée : **d'appareil à appareil, sur le réseau local, sans serveur**. Elle ne fait pas partie de la première version.
 
 ### 13.1 Ce qu'elle apporte et ce qu'elle coûte
