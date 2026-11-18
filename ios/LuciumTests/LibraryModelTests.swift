@@ -294,6 +294,34 @@ final class LibraryModelTests: BrowserCoreTestCase {
         XCTAssertEqual(model.request(for: "hello world")?.url?.host(), "duckduckgo.com", "another profile keeps its own engine")
     }
 
+    /// What a person sees while typing "youtube" with a YouTube tab and a favourite: the line the Go key runs is the first of the list (as on the Mac),
+    /// not the last under the tabs and the favourites, where it fell out of sight behind the keyboard and let a tab pass for what Go would open.
+    func testTheLineTheGoKeyRunsLeadsTheListWhateverTabsAndFavouritesAnswer() async throws {
+        let model = await makeModel()
+        try await load("/a.html", in: model)
+        model.addFavorite(try XCTUnwrap(model.activeTab))
+        _ = try await openTab("/b.html", in: model)
+
+        // The tabs and the favourites that answer (and a command or two) come under the line, whatever it is.
+        let words = model.commandBarContent(for: "page a", filter: nil).sections
+        guard case .enter(.search)? = words.first else { return XCTFail("words are searched for, and that line comes first: \(words)") }
+        XCTAssertTrue(words.contains(.tabs) && words.contains(.favorites), "the tabs and the favourites answer, under the line: \(words)")
+
+        let host = try XCTUnwrap(address("/a.html").host(percentEncoded: false))
+        let typedAddress = model.commandBarContent(for: " \(host) ", filter: nil).sections
+        guard case .enter(.url)? = typedAddress.first else { return XCTFail("an address is opened, and that line comes first: \(typedAddress)") }
+        XCTAssertTrue(typedAddress.contains(.tabs) && typedAddress.contains(.favorites), "the tabs and the favourites answer, under the line: \(typedAddress)")
+    }
+
+    func testTheLineTheGoKeyRunsIsNotOfferedUnderAFilterOrWithNothingTyped() async throws {
+        let model = await makeModel()
+        try await load("/a.html", in: model)
+        _ = try await openTab("/b.html", in: model)
+        XCTAssertEqual(model.commandBarContent(for: "page", filter: .tabs).sections, [.tabs])
+        XCTAssertFalse(model.commandBarContent(for: "page", filter: .commands).sections.contains { if case .enter = $0 { true } else { false } })
+        XCTAssertNil(model.commandBarContent(for: "   ", filter: nil).enter)
+    }
+
     func testOpeningWhatWasTypedClosesTheBarAndLoadsTheAddress() async throws {
         let model = await makeModel()
         model.commandBarShown = true
