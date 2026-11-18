@@ -96,41 +96,37 @@ struct CommandBar: View {
 
     // MARK: Results
 
-    private var query: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
-    // Every list goes through the model, which knows what the lock hides: the tabs of a locked space are never offered, nor its favourites.
-    private var tabs: [TabItem] { filter == .commands ? [] : model.commandTabs(matching: text) }
-    private var favorites: [Favorite] { filter == nil ? model.commandFavorites(matching: text) : [] }
-    private var commands: [CommandItem] {
-        guard filter != .tabs else { return [] }
-        let all = CommandItem.available(in: model)
-        if filter == .commands { return query.isEmpty ? all : all.filter { Match.score($0.title, query: query) > 0 } }
-        // Among the other answers, a command shows only when what is typed names it (a word start or more).
-        return query.isEmpty ? [] : all.filter { Match.score($0.title, query: query) >= 50 }
-    }
+    /// What the lists say for the text typed, read through the model (which knows what the lock hides) and put in order by `CommandBarLayout`.
+    private var content: CommandBarContent { model.commandBarContent(for: text, filter: filter) }
 
     @ViewBuilder private var results: some View {
-        if !tabs.isEmpty {
-            header("command.section.tabs")
-            ForEach(tabs) { tab in tabRow(tab) }
-        }
-        if !commands.isEmpty {
-            header("command.section.commands")
-            ForEach(commands) { item in commandRow(item) }
-        }
-        if !favorites.isEmpty {
-            header("command.section.favorites")
-            ForEach(favorites) { favorite in favoriteRow(favorite) }
-        }
-        if filter == nil, !query.isEmpty, let resolved = AddressResolver.resolve(query, searchTemplate: model.state.searchTemplate(forSpace: model.activeSpace.id)) {
-            switch resolved {
-            case .url(let address):
-                header("command.section.open")
-                row(icon: AnyView(plainTile(.link)), title: Text(verbatim: AddressResolver.host(of: address).isEmpty ? address : AddressResolver.host(of: address)),
-                    detail: Text(verbatim: address), selected: false) { model.open(query) }
-            case .search:
-                header("command.section.search")
-                row(icon: AnyView(plainTile(.search)), title: Text(verbatim: "« \(query) »"), detail: Text(verbatim: model.searchEngineName), selected: false) { model.open(query) }
+        let content = content
+        ForEach(content.sections) { section in
+            switch section {
+            case .enter(let resolved): enterRow(resolved, query: content.query)
+            case .tabs:
+                header("command.section.tabs")
+                ForEach(content.tabs) { tab in tabRow(tab) }
+            case .commands:
+                header("command.section.commands")
+                ForEach(content.commands) { item in commandRow(item) }
+            case .favorites:
+                header("command.section.favorites")
+                ForEach(content.favorites) { favorite in favoriteRow(favorite) }
             }
+        }
+    }
+
+    /// The line the Go key runs, first in the list and drawn as the one that is chosen (the tint of a chosen row), as the Mac's bar does.
+    @ViewBuilder private func enterRow(_ resolved: ResolvedInput, query: String) -> some View {
+        switch resolved {
+        case .url(let address):
+            header("command.section.open")
+            row(icon: AnyView(plainTile(.link)), title: Text(verbatim: AddressResolver.host(of: address).isEmpty ? address : AddressResolver.host(of: address)),
+                detail: Text(verbatim: address), selected: false, chosen: true) { model.open(query) }
+        case .search:
+            header("command.section.search")
+            row(icon: AnyView(plainTile(.search)), title: Text(verbatim: "« \(query) »"), detail: Text(verbatim: model.searchEngineName), selected: false, chosen: true) { model.open(query) }
         }
     }
 
@@ -187,7 +183,7 @@ struct CommandBar: View {
         .accessibilityElement(children: .combine)
     }
 
-    private func row(icon: AnyView, title: Text, detail: Text?, selected: Bool, trailing: AnyView? = nil, action: @escaping () -> Void) -> some View {
+    private func row(icon: AnyView, title: Text, detail: Text?, selected: Bool, chosen: Bool = false, trailing: AnyView? = nil, action: @escaping () -> Void) -> some View {
         // At the largest sizes of text a row gives its words the whole width: the chip of the space goes under them, and a title may take lines.
         let large = typeSize.isAccessibilitySize
         return Button(action: action) {
@@ -203,7 +199,7 @@ struct CommandBar: View {
             }
             .padding(.horizontal, 12)
             .frame(minHeight: 56)
-            .background(selected ? Color.accentColor.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(selected || chosen ? Color.accentColor.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -235,5 +231,40 @@ struct CommandItem: Identifiable {
             items.append(CommandItem(id: "archive-all", title: String(localized: "tabs.archive-all"), icon: .archive) { $0.archiveToday() })
         }
         return items
+    }
+}
+
+/// What the command bar lists for a text typed: the tabs, commands and favourites that answer, the line the Go key runs, and the order of it all.
+struct CommandBarContent {
+    var query: String
+    var tabs: [TabItem]
+    var commands: [CommandItem]
+    var favorites: [Favorite]
+    var enter: ResolvedInput?
+
+    var sections: [CommandBarSection] {
+        CommandBarLayout.sections(enter: enter, hasTabs: !tabs.isEmpty, hasCommands: !commands.isEmpty, hasFavorites: !favorites.isEmpty)
+    }
+}
+
+extension BrowserModel {
+    /// The lists of the command bar for `text`, under a `filter` or not. Every list goes through the model, which knows what the lock hides: the tabs of
+    /// a locked space are never offered, nor its favourites.
+    func commandBarContent(for text: String, filter: CommandBar.Filter?) -> CommandBarContent {
+        let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tabs = filter == .commands ? [] : commandTabs(matching: text)
+        let favorites = filter == nil ? commandFavorites(matching: text) : []
+        var commands: [CommandItem] = []
+        if filter != .tabs {
+            let all = CommandItem.available(in: self)
+            if filter == .commands {
+                commands = query.isEmpty ? all : all.filter { Match.score($0.title, query: query) > 0 }
+            } else if !query.isEmpty {
+                // Among the other answers, a command shows only when what is typed names it (a word start or more).
+                commands = all.filter { Match.score($0.title, query: query) >= 50 }
+            }
+        }
+        let enter = filter == nil && !query.isEmpty ? AddressResolver.resolve(query, searchTemplate: state.searchTemplate(forSpace: activeSpace.id)) : nil
+        return CommandBarContent(query: query, tabs: tabs, commands: commands, favorites: favorites, enter: enter)
     }
 }
