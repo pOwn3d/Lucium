@@ -18,6 +18,7 @@ import {
   revealLabel,
   settingsLink,
   splitPathList,
+  updatesByHand,
   usesCtrlAlt,
   WINDOWS_DEFAULTS
 } from './platform'
@@ -35,9 +36,24 @@ describe('platformOf', () => {
   })
 })
 
+describe('updatesByHand: which systems have no update installer', () => {
+  it('is false on macOS, which installs an update itself (Squirrel.Mac), and true on Windows and Linux, which carry no update address', () => {
+    expect(updatesByHand('darwin')).toBe(false)
+    expect(updatesByHand('win32')).toBe(true)
+    expect(updatesByHand('linux')).toBe(true)
+  })
+
+  it('counts any other Unix as Linux, and anything that is not a system name (a stand-in snapshot with no platform) as macOS', () => {
+    expect(updatesByHand('freebsd')).toBe(true)
+    expect(updatesByHand(undefined)).toBe(false)
+    expect(updatesByHand(null)).toBe(false)
+    expect(updatesByHand(42)).toBe(false)
+  })
+})
+
 describe('facts', () => {
   it('give macOS everything that was written for it, and the other systems none of the macOS-only ones', () => {
-    for (const key of ['trafficLights', 'vibrancy', 'dock', 'touchId', 'globalMenuBar', 'openWithBundle', 'settingsLinks', 'shareSheet', 'openUrlEvent', 'screenRecordingPermission', 'importSafari', 'importArc'] as const) {
+    for (const key of ['trafficLights', 'vibrancy', 'dock', 'touchId', 'globalMenuBar', 'openWithBundle', 'settingsLinks', 'shareSheet', 'openUrlEvent', 'screenRecordingPermission', 'importSafari', 'importArc', 'selfUpdate'] as const) {
       expect(PLATFORM_FACTS.darwin[key], `darwin ${key}`).toBe(true)
       expect(PLATFORM_FACTS.win32[key], `win32 ${key}`).toBe(false)
       expect(PLATFORM_FACTS.linux[key], `linux ${key}`).toBe(false)

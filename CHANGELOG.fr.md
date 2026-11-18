@@ -10,10 +10,12 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Changements
 
+- **Windows et Linux, mises à jour à la main** : ces versions ne portent pas d’adresse de mises à jour et n’installent rien, et Lucium le dit maintenant. « Rechercher les mises à jour… » et la fenêtre À propos proposent la page de téléchargement de lucium.app, et les Réglages affichent une phrase à la place de l’interrupteur automatique. macOS ne change pas
 - **Windows, une seule barre** : les fenêtres du navigateur et celles d’un site ouvert comme application dessinent leur propre barre de titre. Les trois boutons de Windows sont posés sur la barre d’outils, aux couleurs du thème, et un bouton ☰ à son début ouvre le menu. La mini-fenêtre et les Réglages gardent la barre de Windows.
 
 ### Corrections
 
+- **Linux, AppImage sur Ubuntu 24.04** : lancée depuis le gestionnaire de fichiers, l’AppImage n’ouvrait rien : Ubuntu restreint ce dont le bac à sable a besoin, et Lucium, qui ne s’en passe jamais, ne le disait que dans un terminal. Elle affiche maintenant une boîte qui dit pourquoi et conseille le paquet .deb. Le bac à sable reste toujours actif
 - **Barre de menus, réouverture d’un onglet fermé** : « Rouvrir le dernier onglet fermé » pouvait rester grisé après l’archivage d’un onglet, quand le menu devait changer pendant sa construction. Un changement demandé pendant une reconstruction est maintenant noté, et le menu est relu une fois en place.
 
 ## [1.1.4] - 2026-11-18

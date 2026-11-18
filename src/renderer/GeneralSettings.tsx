@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
 import { UI_SCALE_MAX, UI_SCALE_MIN, UI_SCALE_STEP } from '@shared/ui-scale'
+import { updatesByHand } from '@shared/platform'
 import { api } from './api'
 import { FeatureSwitch } from './FeaturesSettings'
 import { Check, Group, ROW_ICONS, Row, RowIcon, type DrawsRows } from './settings-parts'
@@ -76,18 +77,25 @@ export function DefaultBrowserRow() {
   )
 }
 
-/** The updates (« À propos et mises à jour »): the automatic check, the test channel of a build that carries one, the news after an update. */
+/** The updates (« À propos et mises à jour »): the automatic check (on Windows and Linux, which install nothing, a sentence instead), the test channel of a build that carries one, the news after an update. */
 export function UpdatesSettings({ snapshot, update }: PaneProps) {
   const { settings } = snapshot.state
   return (
     <Group title={t('settings.section-mises-a-jour')}>
-      <Check
-        settingKey="autoUpdate"
-        label={t('features.rechercher-les-mises-a-jour-automatiquement')}
-        hint={t('settings.lucium-verifie-chaque-jour-s-il-existe-une')} more={t('settings.lucium-cherche-une-nouvelle-version-au')}
-        checked={settings.autoUpdate}
-        onChange={(autoUpdate) => update({ autoUpdate })}
-      />
+      {updatesByHand(snapshot.platform) ? (
+        // Windows and Linux carry no update address and no installer: a switch for a check that reads nothing would only mislead. The row says how an update is made instead.
+        <div className="pref-row pref-message" role="status" data-role="updates-by-hand">
+          {t('settings.cette-version-ne-se-met-pas-a-jour-toute-seule')}
+        </div>
+      ) : (
+        <Check
+          settingKey="autoUpdate"
+          label={t('features.rechercher-les-mises-a-jour-automatiquement')}
+          hint={t('settings.lucium-verifie-chaque-jour-s-il-existe-une')} more={t('settings.lucium-cherche-une-nouvelle-version-au')}
+          checked={settings.autoUpdate}
+          onChange={(autoUpdate) => update({ autoUpdate })}
+        />
+      )}
       {/* The choice exists only in a build that carries a test address: the setting picks between the two sealed addresses, never names one. */}
       {snapshot.updateTestChannel === true && (
         <Check

@@ -16,10 +16,12 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Changed
 
+- **Windows and Linux, updates by hand**: these versions carry no update address and install nothing, and Lucium now says so. “Check for Updates…” and the About window offer the download page of lucium.app instead of naming a setting nobody wrote, and Settings shows a sentence in place of the automatic-check switch. macOS is unchanged
 - **Windows, one title bar**: the main window, the other and private windows and the windows of a site opened as an application draw their own title bar. The three buttons of Windows lie over the toolbar, in the colours of the theme, and a ☰ button at its start opens the menu. The mini window and Settings keep the title bar of Windows.
 
 ### Fixed
 
+- **Linux, AppImage on Ubuntu 24.04**: started from the file manager, the AppImage opened nothing: Ubuntu restricts what the sandbox needs, and Lucium, which never runs without it, only said so in a terminal. It now shows a box that says why and advises the .deb package. The sandbox is still never switched off
 - **Menu bar, reopening a closed tab**: “Reopen Last Closed Tab” could stay greyed out after a tab was archived, when the menu was asked to change while it was still being built. A change asked during a rebuild is now noted, and the menu is read again once it is in.
 
 ## [1.1.4] - 2026-11-18

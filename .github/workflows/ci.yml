@@ -1,7 +1,8 @@
 name: CI
 
 # The quality checks of every pull request and of every push to main. Five jobs, and the NAME of each is the name of a required check in the
-# rules of main (docs/community/maintainers.md holds the table: a job renamed here must be renamed there, a test compares the two):
+# rules of main (docs/community/maintainers.md holds the table: a job renamed here must be renamed there, a test compares the two), and a
+# sixth that is no check of main, the one that decides whether the two macOS jobs run (below):
 #
 #   Type check                `pnpm typecheck`: the application, the end-to-end tests, the configuration files and the scripts.
 #   Lint                      `pnpm lint`: oxlint with the short list of rules of .oxlintrc.jsonc, the promises rule read with the types. No formatter.
@@ -9,6 +10,7 @@ name: CI
 #   Unit tests (macOS)        the same on the system the application is made for: the tests that only run on macOS are skipped on Linux.
 #   Build (macOS, unsigned)   `pnpm build` (electron-vite: a broken import, asset or plugin fails here and nowhere above), then the
 #                             application packaged as a folder, unsigned. Nothing of it is kept.
+#   Changed files             not required: lists what the pull request changes, and says whether it is documents only (*.md, docs/).
 #
 # The public site and its tests live in their own repository.
 #
@@ -20,6 +22,18 @@ name: CI
 # private repository at 10 times the Linux rate (free plan: 2,000 included minutes a month, so 200 macOS minutes), and standard runners are
 # free on a public one. Nothing to change when the repository becomes public: they start running by themselves. A required check that is
 # skipped counts as passed, so the rules of main are to be set on the public repository only.
+#
+# The two macOS jobs are also skipped for a pull request that changes documents only: every changed file is a *.md or under docs/ (the same
+# files windows.yml and linux.yml leave out). The macOS runners are the slow ones, and a sentence in a document has nothing to build or to run
+# there; the three jobs on Linux (type check, lint, unit tests) still run, and the tests that read a document (CHANGELOG.md, the READMEs, docs/)
+# are in them. It is a job-level `if:` on the output of the job "Changed files", NOT a `paths-ignore` of the workflow: GitHub's documentation
+# (troubleshooting required status checks) says that a job skipped by a condition reports "Success", which satisfies a required check, whereas
+# a workflow skipped by a path filter leaves its checks "Pending" and blocks the merge. So this workflow has no `paths` and no `paths-ignore`
+# (a test refuses them), every required check keeps its name, and it is only a macOS job that is ever skipped.
+# The condition fails safe: the macOS jobs run unless "Changed files" succeeded and said "documents only" (`!cancelled()` keeps them from being
+# skipped with a job they need that failed, which GitHub also reads as a skip). A push to main, a manual run and a pull request whose
+# merge commit cannot be read always run everything. A new job that the "documents only" rule must not skip goes through `needs: changes`
+# the same way, and a test holds the condition of both macOS jobs.
 #
 # Security: this workflow uses `pull_request` (never `pull_request_target`): code from a fork runs with a read-only token and no
 # secret. Keep it that way. Nothing is signed, nothing is published, nothing is uploaded. In the repository settings, require approval to
@@ -43,6 +57,50 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  # Documents only? Reads the list of the files the pull request changes and publishes one answer for the two macOS jobs. It is no required
+  # check and has no condition: it runs on every event, in seconds, on Linux. The script never fails the job on a doubt: whatever it cannot
+  # tell (not a pull request, no test merge commit, a git error, an empty list) is "not documents only", and the macOS jobs run.
+  changes:
+    name: Changed files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      docs-only: ${{ steps.diff.outputs.docs-only }}
+    steps:
+      # The merge commit of the pull request (what actions/checkout fetches for `pull_request`) with its two parents.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+      - name: Only documents changed?
+        id: diff
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          docs_only=false
+          total=0
+          other=0
+          changed="$(mktemp)"
+          # HEAD is the test merge commit and its first parent the tip of main: the difference is what merging would change in main.
+          # --no-renames lists both ends of a rename, so that a file moved out of src/ into docs/ is not taken for a document.
+          if [ "$EVENT" = pull_request ] && git rev-parse --verify --quiet 'HEAD^2^{commit}' > /dev/null && git diff --name-only --no-renames -z HEAD^1 HEAD > "$changed"; then
+            while IFS= read -r -d '' path; do
+              total=$((total + 1))
+              case "$path" in
+                docs/* | *.md) ;;
+                *) other=$((other + 1)) ;;
+              esac
+            done < "$changed"
+            if [ "$total" -gt 0 ] && [ "$other" -eq 0 ]; then docs_only=true; fi
+            echo "$total file(s) changed, $other outside the documents (*.md, docs/)."
+          else
+            echo "No list of changed files for this event: everything runs."
+          fi
+          rm -f "$changed"
+          echo "docs-only=$docs_only" >> "$GITHUB_OUTPUT"
+
   typecheck:
     name: Type check
     runs-on: ubuntu-latest
@@ -90,7 +148,9 @@ jobs:
 
   unit-macos:
     name: Unit tests (macOS)
-    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
+    needs: changes
+    # Skipped for a pull request of documents only (see the head of the file); it runs when "Changed files" did not succeed.
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs-only != 'true') && (!github.event.repository.private || github.event_name == 'workflow_dispatch') }}
     runs-on: macos-latest
     timeout-minutes: 30
     permissions:
@@ -110,7 +170,9 @@ jobs:
 
   build-macos:
     name: Build (macOS, unsigned)
-    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}
+    needs: changes
+    # Skipped for a pull request of documents only (see the head of the file); it runs when "Changed files" did not succeed.
+    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs-only != 'true') && (!github.event.repository.private || github.event_name == 'workflow_dispatch') }}
     runs-on: macos-latest
     timeout-minutes: 30
     permissions:

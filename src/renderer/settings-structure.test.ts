@@ -268,6 +268,24 @@ describe('what the categories draw', () => {
     expect(update.mock.calls).toEqual([[{ updateChannel: 'test' }], [{ updateChannel: 'stable' }]])
   })
 
+  it('draws no « Rechercher les mises à jour automatiquement » switch on Windows and Linux, which install nothing, but a sentence that says how an update is made; macOS keeps the switch', () => {
+    const sentence = frenchSpaces('Cette version ne se met pas à jour toute seule : téléchargez la dernière sur lucium.app.')
+    for (const platform of ['win32', 'linux']) {
+      const html = markup('about', snapshotWith({}, { platform }))
+      expect(html, platform).not.toContain('data-setting="autoUpdate"')
+      expect(html, platform).not.toContain('Rechercher les mises à jour automatiquement')
+      expect(html, platform).toContain(sentence)
+      // The rest of the group is where it was.
+      expect(html, platform).toContain('data-setting="whatsNewSheet"')
+    }
+    for (const extra of [{ platform: 'darwin' }, {}]) {
+      const html = markup('about', snapshotWith({}, extra))
+      expect(html).toContain('data-setting="autoUpdate"')
+      expect(html).toContain('Rechercher les mises à jour automatiquement')
+      expect(html).not.toContain(sentence)
+    }
+  })
+
   it('no longer sends anyone to Profils, or from Profils to Vie privée, for a setting that has its row in its own category', () => {
     const all = SETTINGS_PAGES.map((pane) => markup(pane, snapshotWith())).join('\n')
     expect(all).not.toContain('Réglages du profil…')

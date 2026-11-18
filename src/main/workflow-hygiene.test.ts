@@ -1,5 +1,5 @@
 import { execFileSync, spawnSync } from 'node:child_process'
-import { globSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { globSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join, matchesGlob } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -381,6 +381,112 @@ describe.skipIf(process.platform === 'win32')('the scripts of the workflows, run
     })
   })
 
+  describe('ci.yml, "Changed files": documents only?', () => {
+    const STEP = 'Only documents changed?'
+    const write = (dir: string, file: string, text = file) => {
+      mkdirSync(dirname(join(dir, file)), { recursive: true })
+      writeFileSync(join(dir, file), text)
+    }
+    /**
+     * The checkout of a pull request is its test merge commit: `change` edits the working tree of a branch cut from the base, main moves on
+     * with a code file of its own, and the branch is merged with --no-ff. The script runs on that merge commit, as it does on the runner.
+     */
+    const detect = (change: (repo: ReturnType<typeof repository>) => void, event = 'pull_request') => {
+      const repo = repository()
+      // src/ holds two files: a branch that moves one of them must not be read by Git as the rename of the whole folder (and conflict with main).
+      for (const file of ['src/main.ts', 'src/other.ts', 'README.md', 'docs/guide.md', 'package.json']) write(repo.dir, file)
+      repo.git('add', '-A')
+      repo.commit('chore: base')
+      repo.git('checkout', '-q', '-b', 'pr')
+      change(repo)
+      repo.git('add', '-A')
+      repo.commit('docs: the change')
+      repo.git('checkout', '-q', 'main')
+      write(repo.dir, 'src/moved-on.ts')
+      repo.git('add', '-A')
+      repo.commit('feat: main moves on after the pull request was cut')
+      repo.git('-c', 'user.name=Ada Lovelace', '-c', 'user.email=ada@example.org', 'merge', '-q', '--no-ff', '-m', 'Merge the pull request', 'pr')
+      return { ...run(repo.dir, event), dir: repo.dir }
+    }
+    const run = (dir: string, event: string) => {
+      const output = join(dir, 'github-output')
+      writeFileSync(output, '')
+      const result = bash(script('ci.yml', 'changes', STEP), dir, { EVENT: event, GITHUB_OUTPUT: output })
+      return { ...result, answers: readFileSync(output, 'utf8').trim().split('\n') }
+    }
+    const answer = (docsOnly: boolean) => ['docs-only=' + String(docsOnly)]
+
+    it('says "documents only" for every kind of document: a *.md anywhere, anything under docs/, a deletion, a name with spaces and accents', () => {
+      const result = detect((repo) => {
+        write(repo.dir, 'README.md', 'a sentence more')
+        write(repo.dir, 'docs/community/new.md')
+        write(repo.dir, 'docs/images/shot.png')
+        write(repo.dir, 'docs/résumé final.md')
+        write(repo.dir, 'native/vault-xpc/NOTES.md')
+        repo.git('rm', '-q', 'docs/guide.md')
+      })
+      expect(result.status).toBe(0)
+      expect(result.out).toContain('6 file(s) changed, 0 outside the documents')
+      expect(result.answers).toEqual(answer(true))
+    })
+
+    it('says "not documents only" as soon as one file is code, and counts what the pull request changes, not what main did meanwhile', () => {
+      const one = (file: string) => detect((repo) => { write(repo.dir, 'README.md', 'a sentence more'); write(repo.dir, file, 'changed') })
+      for (const file of ['src/main.ts', 'package.json', '.github/workflows/ci.yml', 'src/notes.md.ts', 'src/notes.mdx', 'docs-old/script.ts', 'doc/tool.sh', 'src/é.ts', 'ios/App.swift', 'CHANGELOG.txt']) {
+        const result = one(file)
+        expect(result.status, file).toBe(0)
+        expect(result.out, file).toContain('1 outside the documents')
+        expect(result.answers, file).toEqual(answer(false))
+      }
+      // The code file that main gained after the pull request was cut is in no diff of the pull request: a pull request of documents stays one.
+      expect(detect((repo) => write(repo.dir, 'docs/guide.md', 'a sentence more')).answers).toEqual(answer(true))
+    })
+
+    it('does not take a file moved out of the code into docs/ for a document: both ends of a rename are listed', () => {
+      const result = detect((repo) => repo.git('mv', 'src/main.ts', 'docs/main.md'))
+      expect(result.out).toContain('2 file(s) changed, 1 outside the documents')
+      expect(result.answers).toEqual(answer(false))
+      expect(detect((repo) => repo.git('rm', '-q', 'src/main.ts')).answers).toEqual(answer(false))
+    })
+
+    it('runs everything for a push to main, a manual run and a timer, whatever changed', () => {
+      for (const event of ['push', 'workflow_dispatch', 'schedule', '']) {
+        const result = run(detect((repo) => write(repo.dir, 'README.md', 'a sentence more')).dir, event)
+        expect(result.status, event).toBe(0)
+        expect(result.answers, event).toEqual(answer(false))
+      }
+    })
+
+    it('runs everything, and does not fail, on what it cannot tell: no merge commit, no change, no repository', () => {
+      // A checkout that is not a merge commit: its parent is not the tip of main, and the last commit alone is no list of what the pull request
+      // changes (this one touches a document, which a script that read it anyway would call "documents only").
+      const plain = repository()
+      write(plain.dir, 'src/main.ts')
+      write(plain.dir, 'README.md')
+      plain.git('add', '-A')
+      plain.commit('feat: one')
+      write(plain.dir, 'README.md', 'a sentence more')
+      plain.git('add', '-A')
+      plain.commit('docs: two')
+      expect(run(plain.dir, 'pull_request').answers).toEqual(answer(false))
+      // A merge commit that changes nothing.
+      const empty = repository()
+      empty.commit('chore: base')
+      empty.git('checkout', '-q', '-b', 'pr')
+      empty.commit('chore: nothing')
+      empty.git('checkout', '-q', 'main')
+      empty.git('-c', 'user.name=Ada Lovelace', '-c', 'user.email=ada@example.org', 'merge', '-q', '--no-ff', '-m', 'Merge', 'pr')
+      const nothing = run(empty.dir, 'pull_request')
+      expect(nothing.status).toBe(0)
+      expect(nothing.answers).toEqual(answer(false))
+      // No repository at all: git fails, the job must not.
+      const lost = run(folder(), 'pull_request')
+      expect(lost.status).toBe(0)
+      expect(lost.answers).toEqual(answer(false))
+      expect(lost.out).toContain('everything runs')
+    })
+  })
+
   describe('release.yml, the sums', () => {
     const SUM_A = 'a'.repeat(64)
     const SUM_B = '0123456789abcdef'.repeat(4)
@@ -450,6 +556,16 @@ describe('.github/workflows/codeql.yml', () => {
     // The native pieces are built by their own scripts, with nothing installed from npm.
     expect(workflow).not.toMatch(/pnpm|npm /)
     for (const build of ['native/vault-xpc/build.sh', 'native/vault-keychain/build.sh', 'native/system-translate/build.sh']) expect(workflow).toContain(`bash ${build} --arch arm64`)
+  })
+})
+
+describe('.github/workflows/codeql.yml, a pull request of documents only', () => {
+  const workflow = code(read('.github/workflows/codeql.yml'))
+
+  it('is not started for documents only (the filter of windows.yml), while a push to main and the weekly run analyse everything', () => {
+    expect(block(workflow, 'on')).toMatch(/^on:\n {2}push:\n {4}branches: \[main\]\n {2}pull_request:\n {4}branches: \[main\]\n {4}paths-ignore:\n {6}- 'docs\/\*\*'\n {6}- '\*\*\/\*\.md'\n {2}schedule:\n/)
+    expect(workflow.match(/paths-ignore:/g)).toHaveLength(1)
+    expect(code(read('.github/workflows/windows.yml'))).toMatch(/^ {2}pull_request:\n {4}paths-ignore:\n {6}- 'docs\/\*\*'\n {6}- '\*\*\/\*\.md'\n/m)
   })
 })
 
@@ -556,22 +672,43 @@ describe('.github/workflows/ci.yml, the quality checks of a pull request', () =>
     expect(found, name).toHaveLength(1)
     return found[0]?.text ?? ''
   }
-  const MACOS_ONLY_WHEN_PUBLIC = "    if: ${{ !github.event.repository.private || github.event_name == 'workflow_dispatch' }}\n"
+  // Both macOS jobs: skipped while the repository is private, and for a pull request of documents only. Fails safe: they run unless
+  // "Changed files" succeeded and said "documents only" (a skipped job reports "Success" to a required check; a failed `needs` skips it).
+  const MACOS_CONDITION = "    if: ${{ !cancelled() && (needs.changes.result != 'success' || needs.changes.outputs.docs-only != 'true') && (!github.event.repository.private || github.event_name == 'workflow_dispatch') }}\n"
+  const MACOS_NEEDS = '    needs: changes\n'
 
   it('runs on every pull request and on every push to main', () => {
     expect(block(ci, 'on')).toBe('on:\n  push:\n    branches: [main]\n  pull_request:\n  workflow_dispatch:')
   })
 
-  it('has five jobs, each under the name the rules of main require', () => {
-    expect(jobs.map((candidate) => candidate.name)).toEqual(['Type check', 'Lint', 'Unit tests (Linux)', 'Unit tests (macOS)', 'Build (macOS, unsigned)'])
+  it('has the five jobs the rules of main require, each under its name, and one more that is no required check', () => {
+    expect(jobs.map((candidate) => candidate.name)).toEqual(['Changed files', 'Type check', 'Lint', 'Unit tests (Linux)', 'Unit tests (macOS)', 'Build (macOS, unsigned)'])
+    // The names are those of the rules of main (maintainers.md, and the test of the table below): nothing renames one for a convenience of this file.
+    expect(jobs.filter((candidate) => candidate.name !== 'Changed files').map((candidate) => candidate.id)).toEqual(['typecheck', 'lint', 'unit-linux', 'unit-macos', 'build-macos'])
   })
 
-  it('type-checks, lints and runs the unit tests on Linux, in jobs that nothing skips', () => {
+  it('never filters the workflow by path, which would leave a required check "Pending" and block every pull request of documents: only a macOS job is skipped, by an `if`', () => {
+    // GitHub: a workflow skipped by a path filter leaves its checks Pending (merge blocked); a job skipped by a condition reports Success.
+    for (const file of ['ci.yml', 'pr-conventions.yml']) expect(code(read(`.github/workflows/${file}`)), file).not.toMatch(/^\s+(paths|paths-ignore|branches-ignore):/m)
+  })
+
+  it('says, in "Changed files", whether the pull request is documents only: on Linux, never skipped, nothing but the checkout of the merge commit', () => {
+    const text = job('Changed files')
+    expect(text).toMatch(/^ {4}runs-on: ubuntu-latest$/m)
+    expect(text).not.toMatch(/^\s+(if|needs):/m)
+    expect(text).toContain('\n    outputs:\n      docs-only: ${{ steps.diff.outputs.docs-only }}\n')
+    // The merge commit and its two parents, and no token left in the clone: the script reads the list of files and nothing else.
+    expect(text).toContain('\n          fetch-depth: 2\n          persist-credentials: false\n')
+    expect(text).not.toMatch(/\bpnpm\b|\.\/\.github\/actions\/setup|secrets\./)
+    expect(text.match(/\buses:/g)).toHaveLength(1)
+  })
+
+  it('type-checks, lints and runs the unit tests on Linux, in jobs that nothing skips (a pull request of documents only still runs them)', () => {
     for (const [name, command] of [['Type check', 'pnpm typecheck'], ['Lint', 'pnpm lint'], ['Unit tests (Linux)', 'pnpm test']] as const) {
       const text = job(name)
       expect(text, name).toMatch(/^ {4}runs-on: ubuntu-latest$/m)
       expect(text, name).toContain(`\n      - run: ${command}\n`)
-      expect(text, name).not.toMatch(/^\s+if:/m)
+      expect(text, name).not.toMatch(/^\s+(if|needs):/m)
     }
   })
 
@@ -592,15 +729,21 @@ describe('.github/workflows/ci.yml, the quality checks of a pull request', () =>
     expect(ci).not.toMatch(/upload-artifact|--publish (?!never)|package:signed|build:drm/)
   })
 
-  it('skips a macOS job only while the repository is private, and never lets a step fail without failing the job', () => {
-    for (const name of ['Unit tests (macOS)', 'Build (macOS, unsigned)']) expect(job(name), name).toContain(MACOS_ONLY_WHEN_PUBLIC)
-    expect(ci.match(/^\s+if:.*$/gm)).toEqual([MACOS_ONLY_WHEN_PUBLIC.trimEnd(), MACOS_ONLY_WHEN_PUBLIC.trimEnd()])
+  it('skips a macOS job only while the repository is private or for a pull request of documents only, and never lets a step fail without failing the job', () => {
+    for (const name of ['Unit tests (macOS)', 'Build (macOS, unsigned)']) {
+      expect(job(name), name).toContain(MACOS_NEEDS)
+      expect(job(name), name).toContain(MACOS_CONDITION)
+    }
+    // These two conditions are the only `if:` and the only `needs:` of the file: a job that gains one is a job that can be skipped.
+    expect(ci.match(/^\s+if:.*$/gm)).toEqual([MACOS_CONDITION.trimEnd(), MACOS_CONDITION.trimEnd()])
+    expect(ci.match(/^\s+needs:.*$/gm)).toEqual([MACOS_NEEDS.trimEnd(), MACOS_NEEDS.trimEnd()])
     expect(ci).not.toMatch(/continue-on-error|\|\| true|\|\| :|set \+e/)
   })
 
   it('is named, job by job, in the table of the required checks and in the two CONTRIBUTING', () => {
     const conventions = jobsOf(code(read('.github/workflows/pr-conventions.yml'))).map((candidate) => /^ {4}name: (.+)$/m.exec(candidate.text)?.[1])
-    const required = [...jobs.map((candidate) => candidate.name), ...conventions]
+    // "Changed files" is the one job of ci.yml that is no required check, and no table row or CONTRIBUTING line names it.
+    const required = [...jobs.filter((candidate) => candidate.name !== 'Changed files').map((candidate) => candidate.name), ...conventions]
     expect(required).toHaveLength(7)
     const guide = read('docs/community/maintainers.md')
     const table = guide.slice(guide.indexOf('| Required check | Workflow | What it checks |'))
