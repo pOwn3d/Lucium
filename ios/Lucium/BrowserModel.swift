@@ -98,6 +98,8 @@ final class BrowserModel {
     @ObservationIgnored let clock: @MainActor () -> Double
     /// The in-memory data store of the private tabs, while at least one private tab has a view (`SpacesModel.swift`).
     @ObservationIgnored var privateStore: WKWebsiteDataStore?
+    /// The data store of each profile that was used, kept as long as the model lives (`SpacesModel.swift`).
+    @ObservationIgnored var profileStores: [String: WKWebsiteDataStore] = [:]
     @ObservationIgnored var webViews: [String: WKWebView] = [:]
     @ObservationIgnored var observations: [String: [NSKeyValueObservation]] = [:]
     @ObservationIgnored var saveTask: Task<Void, Never>?
