@@ -1,6 +1,6 @@
 // « Sur l'iPhone » (docs/synchronisation.md §10.4): what an iPhone announced at its last session, turned into the lines the command bar shows and into the space a click
 // opens the page in. The twin of ios/LuciumKit/.../Sync/SyncResume.swift: the two read the same vectors (ios/Contracts/sync-resume-vectors.json). Pure: no Electron, no Node,
-// nothing read or written in the state; the list itself lives in the memory of the main process and is forgotten with the window, the lock, the category and the device.
+// nothing read or written in the state; the list itself lives in the memory of the main process and is forgotten with the lock, the quit, the category and the device (not with the window).
 
 import { fold, foldedQuery, scoreFolded } from './command-bar-match'
 import { hostOf } from './url'
@@ -50,6 +50,24 @@ export type ResumeAvailability =
   /** A list came, with nothing in it that a Mac can open. */
   | 'empty'
   | 'list'
+
+/** The key of the sentence that says how to get the list, per reason it is absent; null when it is there. The sentences are in both catalogues (`cmd.iphone-hint-*`). */
+export function resumeHintKey(availability: ResumeAvailability): 'cmd.iphone-hint-not-paired' | 'cmd.iphone-hint-disabled-here' | 'cmd.iphone-hint-waiting' | 'cmd.iphone-hint-disabled-on-iphone' | 'cmd.iphone-hint-empty' | null {
+  switch (availability) {
+    case 'not-paired':
+      return 'cmd.iphone-hint-not-paired'
+    case 'disabled-here':
+      return 'cmd.iphone-hint-disabled-here'
+    case 'waiting':
+      return 'cmd.iphone-hint-waiting'
+    case 'disabled-on-iphone':
+      return 'cmd.iphone-hint-disabled-on-iphone'
+    case 'empty':
+      return 'cmd.iphone-hint-empty'
+    case 'list':
+      return null
+  }
+}
 
 /** `http` and `https` with a host, short enough, and nothing a script, a local file or a data address could be (the check of §10.4, made on the way out too). */
 export function isWebAddress(address: string): boolean {

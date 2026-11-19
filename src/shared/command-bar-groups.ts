@@ -28,6 +28,7 @@ export function candidateGroup(candidate: Candidate): CandidateGroup {
     case 'readlater':
       return 'readlater'
     case 'iphone':
+    case 'iphone-hint':
       return 'iphone'
     case 'history':
       return 'history'

@@ -120,7 +120,7 @@ describe('the service with the exchange of the data', () => {
     expect(readFileSync(join(r.dir, 'sync-marks.json'), 'utf8')).not.toContain('Secret title')
   })
 
-  it('keeps the open tabs of the iPhone in memory only, once the category is ticked on both sides, and forgets them with the window', async () => {
+  it('keeps the open tabs of the iPhone in memory only, once the category is ticked on both sides, and keeps them after the window closes', async () => {
     const r = rig({}, {})
     r.store.setCategory('openTabs', true)
     r.phone.categories.add('openTabs')
@@ -134,7 +134,7 @@ describe('the service with the exchange of the data', () => {
     expect(r.phone.received[0]?.items).toEqual([{ id: 'open-1', spaceId: 'sp-main', url: 'https://reading.example/', title: 'Reading', lastActiveAt: 7 }])
     expect(r.mac.state.tabs).toEqual([])
     await r.service.closeWindow()
-    expect(r.service.openTabsFrom(PHONE_ID)).toEqual([])
+    expect(r.service.openTabsFrom(PHONE_ID)).toEqual(r.phone.openTabs)
   })
 
   describe('the list « Sur l\'iPhone » of the command bar', () => {
@@ -217,10 +217,19 @@ describe('the service with the exchange of the data', () => {
       expect(r.service.resumeSource().paired).toBe(false)
     })
 
-    it('forgets the list with the window', async () => {
+    it('keeps the list, with its age, after the window closes (and still after it closes for another reason than the person)', async () => {
       const r = await withList()
+      const before = r.service.resumeSource()
+      expect(before.announcedAt).not.toBeNull()
       await r.service.closeWindow()
-      // Not even « a session went through »: the next one is waited for, and the iPhone is not said to have sent nothing.
+      expect(r.service.resumeSource()).toEqual(before)
+      await r.service.closeWindow('timeout')
+      expect(r.service.resumeSource().rows).toHaveLength(1)
+    })
+
+    it('forgets the list when Lucium quits', async () => {
+      const r = await withList()
+      await r.service.dispose()
       expect(r.service.resumeSource()).toMatchObject({ announcedAt: null, sessionHappened: false, rows: [] })
     })
   })
