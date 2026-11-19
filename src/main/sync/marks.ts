@@ -244,10 +244,10 @@ export function asideOf(view: TrackedView, spaces: ReadonlySet<string>): Aside {
       const spaceId = view.entities[kind]?.[id]?.['spaceId']
       return typeof spaceId === 'string' && spaces.has(spaceId)
     },
-    // `folders:<space>:<parent>` and `tabs:<space>:<folder>`: the space is the second part of the key.
+    // `folders:<space>:<parent>`, `tabs:<space>:<folder>` and `today:<space>`: the space is the second part of the key.
     list: (key) => {
       const [head, space] = key.split(':')
-      return (head === 'folders' || head === 'tabs') && space !== undefined && spaces.has(space)
+      return (head === 'folders' || head === 'tabs' || head === 'today') && space !== undefined && spaces.has(space)
     }
   }
 }

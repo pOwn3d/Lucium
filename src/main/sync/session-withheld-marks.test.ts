@@ -2,6 +2,7 @@
 // space opens, the changes made on the other device meanwhile must still be older than the ones made here, or newer, as they were.
 import { describe, expect, it } from 'vitest'
 import { reduce } from '@shared/sidebar'
+import { asideOf } from './marks'
 import { Device, MAC_ID, NOW, PHONE_ID, sync } from './session-rig.test-support'
 
 const ctx = { now: NOW, newId: () => 'unused' }
@@ -40,5 +41,11 @@ describe('the marks of a space that a session sets aside', () => {
     await sync(mac, phone)
     expect(mac.state.folders.find((folder) => folder.id === 'F')?.name).toBe('phone-edit')
     expect(phone.state.folders.find((folder) => folder.id === 'F')?.name).toBe('phone-edit')
+  })
+
+  it('names the lists of a set-aside space: its folders, its pinned tabs and its Today tabs', () => {
+    const aside = asideOf({ entities: {}, order: {} }, new Set(['sp-lock']))
+    expect(['folders:sp-lock:-', 'tabs:sp-lock:F', 'today:sp-lock'].map((key) => aside.list(key))).toEqual([true, true, true])
+    expect(['folders:sp-main:-', 'today:sp-main', 'spaces', 'favorites:default'].map((key) => aside.list(key))).toEqual([false, false, false, false])
   })
 })
