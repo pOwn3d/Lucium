@@ -10,10 +10,27 @@ public enum SyncCategory: String, CaseIterable, Codable, Hashable, Sendable {
     case archive
     /// A read-only announcement of the open tabs, for "Resume a tab of the Mac" (§10.4).
     case openTabs
+    /// The tabs of "Today", open and closed on one device and on the other (§27). Not ticked by default [Q9].
+    case todayTabs
 
     /// Decision of the project lead (18 November 2026, [Q2]): only the structure is ticked until the person ticks more. The others are what looks most like a
     /// browsing history, or what changes all the time.
     public static let defaults: [SyncCategory] = [.structure]
+
+    /// The categories a device announces in its `hello`: the ones ticked, except `todayTabs` without `structure`. A Today tab depends on its space (§27.2) and the spaces travel with
+    /// the structure: with the structure alone left out, the merge finds no space for any tab and removes them all, the ones of the other device included. The same rule as the
+    /// Mac's `announcedCategories`.
+    public static func announced(_ ticked: [SyncCategory]) -> [SyncCategory] {
+        ticked.contains(.structure) ? ticked : ticked.filter { $0 != .todayTabs }
+    }
+
+    /// The categories both devices ticked (§8.2), less `todayTabs` when the structure is not among them (the Mac's `commonCategories`): a device that announced the category alone
+    /// would make both merges start from Today tabs with no space.
+    public static func common(mine: [SyncCategory], theirs: [String]) -> Set<SyncCategory> {
+        var common = Set(mine).intersection(theirs.compactMap(SyncCategory.init(rawValue:)))
+        if !common.contains(.structure) { common.remove(.todayTabs) }
+        return common
+    }
 }
 
 /// The Mac this phone is paired with: what is kept of the pairing (§3.3). Not a secret: the fingerprint is public (it is the hash of a certificate), and the

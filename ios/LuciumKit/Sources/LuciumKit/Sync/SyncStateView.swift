@@ -83,6 +83,48 @@ public enum SyncStateView {
     /// The pinned tabs that are synchronised: pinned, and never private.
     static func isSyncedTab(_ tab: TabItem) -> Bool { tab.pinned && !tab.isPrivate }
 
+    /// A tab of a container is an isolation the person wanted: its address does not leave the device (§27.3, condition 1). The phone has no container of its own, but a state that
+    /// came from the Mac may carry the field.
+    static func isInContainer(_ tab: TabItem) -> Bool {
+        if case .string(let name)? = tab.rest["container"] { return !name.isEmpty }
+        return false
+    }
+
+    /// Condition 1 of the admission (§27.3), which is looked at every time, even for a tab already admitted: a Today tab that is not private, not the page of a favourite and not
+    /// in a container.
+    static func isTodayCandidate(_ tab: TabItem) -> Bool { !tab.pinned && !tab.isPrivate && tab.favoriteId == nil && !isInContainer(tab) }
+
+    /// A Today tab as an entity of the kind `todayTab` (§27.2): only the fields the kind types, so that what the phone keeps for itself (the picture, the opener, the tree…) is
+    /// not even looked at. `activeAt` is `lastActiveAt` rounded down to ten minutes: it is not a field of the model.
+    static func entry(ofTodayTab tab: TabItem) -> Entry {
+        var fields: [String: JSONValue] = ["id": .string(tab.id), "spaceId": .string(tab.spaceId), "url": .string(tab.url), "title": .string(tab.title),
+                                           "activeAt": .number(Double(SyncToday.roundActiveAt(tab.lastActiveAt ?? 0)))]
+        for name in ["customTitle", "icon"] { if let value = tab.rest[name], value != .null { fields[name] = value } }
+        return Entry(id: tab.id, fields: fields)
+    }
+
+    /// The shared set of Today tabs at the end of the freeze of a session (§27.3): the tabs already admitted (the book says so) stay, and the others enter when they hold the
+    /// conditions. `locked` are the spaces set aside (condition 2), `now` the time of day in milliseconds (condition 4).
+    public static func admission(of state: BrowserState, admitted: Set<String>, locked: Set<String>, now: Int) -> SyncToday.Admission {
+        let candidates = state.tabs.filter { !$0.pinned }.map { tab -> SyncToday.Candidate in
+            let since = tab.createdAt ?? tab.lastActiveAt ?? Double(now)
+            var candidate = SyncToday.Candidate(id: tab.id, url: tab.url, ageMilliseconds: Int(max(0, min(Double(Int32.max) * 1000, Double(now) - since))), lastActiveAt: tab.lastActiveAt ?? tab.createdAt ?? 0)
+            candidate.isPrivate = tab.isPrivate
+            candidate.isFavoritePage = tab.favoriteId != nil
+            candidate.inContainer = isInContainer(tab)
+            candidate.spaceLocked = locked.contains(tab.spaceId)
+            candidate.admitted = admitted.contains(tab.id)
+            return candidate
+        }
+        return SyncToday.admit(candidates)
+    }
+
+    /// The Today tabs that could enter the shared set but have not: what asks for a session when it appears (§27.12: opening a tab is a change, and the admission itself waits for
+    /// the freeze). Not the ones the conditions refuse for what they are (a blank page, a private tab).
+    static func waitingForAdmission(in state: BrowserState, admitted: Set<String>) -> Set<String> {
+        Set(state.tabs.filter { !admitted.contains($0.id) && isTodayCandidate($0) && SyncInbound.isWebAddress(.string($0.url)) }.map(\.id))
+    }
+
     /// The archived tabs that are sent: the latest `archivePerSpaceSent` of each space, newest first, then by identifier.
     private static func archivedSent(_ state: BrowserState) -> [ArchivedTab] {
         var kept: [String: Int] = [:]
@@ -94,15 +136,21 @@ public enum SyncStateView {
         }
     }
 
-    /// Every synchronised entity of the state, by kind, with all its fields.
-    private static func entries(of state: BrowserState) -> [String: [Entry]] {
+    /// Every synchronised entity of the state, by kind, with all its fields. `admitted` are the ids of the Today tabs in the shared set (§27.3).
+    private static func entries(of state: BrowserState, admitted: Set<String>) -> [String: [Entry]] {
         var out: [String: [Entry]] = [:]
         out["space"] = state.spaces.map(entry(of:))
         out["folder"] = state.folders.map { entry(ofJSON: $0.json, id: $0.id) }
         out["tab"] = state.tabs.filter(isSyncedTab).map(entry(of:))
         out["favorite"] = state.favorites.map(entry(of:))
         out["archived"] = archivedSent(state).map { entry(ofJSON: $0.json, id: $0.id) }
+        out["todayTab"] = todayTabs(of: state, admitted: admitted).map(entry(ofTodayTab:))
         return out
+    }
+
+    /// The Today tabs of the shared set, in the order of the state. A tab that was admitted and became private (or a favourite's page) is out at once, before the next freeze.
+    static func todayTabs(of state: BrowserState, admitted: Set<String>) -> [TabItem] {
+        state.tabs.filter { admitted.contains($0.id) && isTodayCandidate($0) }
     }
 
     /// The fields the book follows: all but the identifier, the seeds and the local ones.
@@ -132,12 +180,14 @@ public enum SyncStateView {
     private static func folderList(_ spaceId: String, _ parentId: String?) -> String { "folders:\(spaceId):\(parentId ?? dash)" }
     private static func tabList(_ spaceId: String, _ folderId: String?) -> String { "tabs:\(spaceId):\(folderId ?? dash)" }
     private static func favoriteList(_ profileId: String?) -> String { "favorites:\(profileId ?? Library.defaultProfile)" }
+    private static func todayList(_ spaceId: String) -> String { "today:\(spaceId)" }
 
     // MARK: Tracked view
 
-    public static func trackedView(of state: BrowserState) -> SyncTrackedView {
+    /// `admitted`: the ids of the Today tabs of the shared set, which the book keeps (§27.3). Without them no Today tab is followed.
+    public static func trackedView(of state: BrowserState, admitted: Set<String> = []) -> SyncTrackedView {
         var view = SyncTrackedView()
-        let all = entries(of: state)
+        let all = entries(of: state, admitted: admitted)
         for kind in SyncFieldClasses.Kind.allCases {
             var byID: [String: [String: JSONValue]] = [:]
             for entry in all[kind.rawValue] ?? [] { byID[entry.id] = followed(kind, entry.fields) }
@@ -148,6 +198,7 @@ public enum SyncStateView {
         for folder in state.folders { view.order[folderList(folder.spaceId, folder.parentId), default: []].append(folder.id) }
         for tab in state.tabs.filter(isSyncedTab) { view.order[tabList(tab.spaceId, tab.folderId), default: []].append(tab.id) }
         for favorite in state.favorites { view.order[favoriteList(favorite.profileId), default: []].append(favorite.id) }
+        for tab in todayTabs(of: state, admitted: admitted) { view.order[todayList(tab.spaceId), default: []].append(tab.id) }
         return view
     }
 
@@ -163,6 +214,7 @@ public enum SyncStateView {
         var kinds = Set<String>()
         if categories.contains(.structure) { kinds.formUnion(["space", "folder", "tab", "favorite"]) }
         if categories.contains(.archive) { kinds.insert("archived") }
+        if categories.contains(.todayTabs) { kinds.insert(SyncToday.kind) }
         if categories.contains(.settings) { kinds.insert("setting") }
         return kinds
     }
@@ -173,8 +225,8 @@ public enum SyncStateView {
     ///   - withheld: the spaces set aside for this session (the locked ones): nothing of them is sent.
     ///   - base: the base of this device with that one: the entities it does not hold are new to the other device, and carry their seed fields.
     public static func snapshot(of state: BrowserState, marks: SyncMarkBook, categories: Set<SyncCategory>, withheld: Set<String>, base: SyncSnapshot?) -> SyncSnapshot {
-        let view = trackedView(of: state)
-        let all = entries(of: state)
+        let view = trackedView(of: state, admitted: marks.admitted)
+        let all = entries(of: state, admitted: marks.admitted)
         let kinds = allowedKinds(categories)
         func isWithheld(kind: String, fields: [String: JSONValue], id: String) -> Bool {
             if kind == "space" { return withheld.contains(id) }
@@ -203,7 +255,7 @@ public enum SyncStateView {
         for (key, ids) in view.order {
             let parts = key.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
             let head = parts[0]
-            let kind = head == "spaces" ? "space" : head == "folders" ? "folder" : head == "tabs" ? "tab" : "favorite"
+            let kind = head == "spaces" ? "space" : head == "folders" ? "folder" : head == "tabs" ? "tab" : head == "today" ? SyncToday.kind : "favorite"
             if !kinds.contains(kind) || (parts.count > 1 && head != "favorites" && withheld.contains(parts[1])) { continue }
             snapshot.order[key] = ids.filter { snapshot.entities[kind]?[$0] != nil }
             snapshot.orderStamps[key] = marks.orderStamp(of: key)
@@ -272,13 +324,15 @@ extension SyncSnapshot {
     static let structureKinds: Set<String> = ["space", "folder", "tab", "favorite"]
 
     /// The snapshot with no space, folder, pinned tab or favourite, nor their tombstones and lists: what a phone that adopts the state of the Mac sends of its structure.
-    /// What is not structure (the settings, the archive, a kind this version does not know) stays.
+    /// What is not structure (the settings, the archive, the Today tabs and their lists, a kind this version does not know) stays: a Today tab the person opened is theirs,
+    /// and "never modified" does not cover them (§27.10: the union with a phone that has none is the adoption).
     func withoutStructure() -> SyncSnapshot {
         var copy = self
+        func isStructureList(_ key: String) -> Bool { SyncMarkBook.listKind(of: key).map(Self.structureKinds.contains) ?? false }
         copy.entities = entities.filter { !Self.structureKinds.contains($0.key) }
         copy.tombstones = tombstones.filter { !Self.structureKinds.contains($0.key) }
-        copy.order = [:]
-        copy.orderStamps = [:]
+        copy.order = order.filter { !isStructureList($0.key) }
+        copy.orderStamps = orderStamps.filter { !isStructureList($0.key) }
         return copy
     }
 }

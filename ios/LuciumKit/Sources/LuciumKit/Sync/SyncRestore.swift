@@ -11,6 +11,7 @@ extension SyncApply {
             case .folder: state.folders.first { SyncCanonical.identical($0.id, id) }.map { SyncStateView.entry(ofJSON: $0.json, id: $0.id).fields }
             case .tab: state.tabs.first { SyncCanonical.identical($0.id, id) }.map { SyncStateView.entry(of: $0).fields }
             case .favorite: state.favorites.first { SyncCanonical.identical($0.id, id) }.map { SyncStateView.entry(of: $0).fields }
+            case .todayTab: state.tabs.first { SyncCanonical.identical($0.id, id) && !$0.pinned }.map { SyncStateView.entry(ofTodayTab: $0).fields }
             case .archived: state.archive.first { SyncCanonical.identical($0.id, id) }.map { SyncStateView.entry(ofJSON: $0.json, id: $0.id).fields }
             }
         }

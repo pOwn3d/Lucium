@@ -48,7 +48,12 @@ struct SyncInboundTests {
         let table = try #require(vectors["fieldClasses"])
         for kind in SyncFieldClasses.Kind.allCases {
             let classes = try #require(SyncFieldClasses.classes[kind])
-            let wanted = try #require(table[kind.rawValue])
+            // The Today tabs are a projection of the tabs of the state: their classes are held by `sync-today-vectors.json` (`SyncTodayVectorTests`), and are in this table only
+            // when the Mac's `FIELD_CLASSES` has them too.
+            guard let wanted = table[kind.rawValue] else {
+                #expect(kind == .todayTab, "\(kind) is missing from the vectors")
+                continue
+            }
             #expect(classes.synced == (wanted["synced"]?.items.compactMap(\.text) ?? []), "\(kind) synced")
             #expect(classes.seed == (wanted["seed"]?.items.compactMap(\.text) ?? []), "\(kind) seed")
             #expect(classes.local == (wanted["local"]?.items.compactMap(\.text) ?? []), "\(kind) local")
@@ -57,7 +62,7 @@ struct SyncInboundTests {
             #expect(Set(all).count == all.count, "\(kind): a field is in two classes")
         }
         guard case .object(let members) = table else { Issue.record("fieldClasses is not an object"); return }
-        #expect(Set(members.keys) == Set(SyncFieldClasses.Kind.allCases.map(\.rawValue)), "a kind of the vectors that this version does not list, or the other way round")
+        #expect(Set(members.keys).subtracting([SyncToday.kind]) == Set(SyncFieldClasses.Kind.allCases.map(\.rawValue)).subtracting([SyncToday.kind]), "a kind of the vectors that this version does not list, or the other way round")
     }
 
     @Test func theClosedListOfSettingsAndTheKindsThatAreNeverSentAreTheOnesOfTheVectors() throws {

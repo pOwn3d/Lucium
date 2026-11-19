@@ -22,17 +22,22 @@ public enum SyncApply {
         public var removedSpaceIDs: [String] = []
         /// The tabs that are no longer in the state (an entity removed, or a tab of a space that went): their web views and files are the application's to drop.
         public var removedTabIDs: [String] = []
+        /// The Today tabs the other device closed, which this device archived (source `sync`, §27.5): a subset of `removedTabIDs`. The application tells the person when one of them
+        /// was on screen.
+        public var closedTabIDs: [String] = []
         /// What the patch asked and was not written, and why (for the log and the tests): a value that does not pass `clean`, an entity that cannot be made.
         public var rejected: [String] = []
         public var changed: Bool
         /// The state the patch would make is more than this version may hold (`maxStateBytes`): nothing was written, and a session that finds it ends instead of adopting the merge.
         public var tooLarge = false
 
-        public init(state: BrowserState, createdSpaceIDs: [String] = [], removedSpaceIDs: [String] = [], removedTabIDs: [String] = [], rejected: [String] = [], changed: Bool = false, tooLarge: Bool = false) {
+        public init(state: BrowserState, createdSpaceIDs: [String] = [], removedSpaceIDs: [String] = [], removedTabIDs: [String] = [], closedTabIDs: [String] = [], rejected: [String] = [],
+                    changed: Bool = false, tooLarge: Bool = false) {
             self.state = state
             self.createdSpaceIDs = createdSpaceIDs
             self.removedSpaceIDs = removedSpaceIDs
             self.removedTabIDs = removedTabIDs
+            self.closedTabIDs = closedTabIDs
             self.rejected = rejected
             self.changed = changed
             self.tooLarge = tooLarge
@@ -72,6 +77,12 @@ public enum SyncApply {
     }
 
     private static func rule(_ kind: SyncFieldClasses.Kind, _ name: String) -> Rule? {
+        // A Today tab is a tab of the state: the same rules for the fields it shares with a pinned one, and `activeAt`, which is a moment.
+        if kind == .todayTab { return name == "activeAt" ? Rule.number : ruleOfKind(.tab, name) }
+        return ruleOfKind(kind, name)
+    }
+
+    private static func ruleOfKind(_ kind: SyncFieldClasses.Kind, _ name: String) -> Rule? {
         switch (kind, name) {
         case (.space, "name"), (.folder, "name"): .name(Library.nameMax)
         case (.space, "emoji"), (.folder, "icon"), (.tab, "icon"): .emoji
@@ -117,6 +128,7 @@ public enum SyncApply {
         case .space: ["id", "name", "emoji", "profileId"].contains(name)
         case .folder: ["id", "spaceId", "name"].contains(name)
         case .tab: ["id", "spaceId", "pinned", "url", "title"].contains(name)
+        case .todayTab: ["id", "spaceId", "url", "title"].contains(name)
         case .favorite: ["id", "url", "title"].contains(name)
         case .archived: ["id", "spaceId", "url", "title", "archivedAt"].contains(name)
         }
@@ -128,6 +140,7 @@ public enum SyncApply {
         case .space: ["id": .string(id), "emoji": .string("✨"), "profileId": .string(BrowserState.defaultProfileId), "theme": SpaceTheme.make(hue: 250)]
         case .folder: ["id": .string(id), "collapsed": .bool(false)]
         case .tab: ["id": .string(id), "pinned": .bool(true), "createdAt": .number(now), "lastActiveAt": .number(now)]
+        case .todayTab: ["id": .string(id), "pinned": .bool(false), "createdAt": .number(now), "lastActiveAt": .number(now)]
         case .favorite: ["id": .string(id), "profileId": .string(Library.defaultProfile)]
         case .archived: ["id": .string(id), "archivedAt": .number(now)]
         }
@@ -140,6 +153,7 @@ public enum SyncApply {
         case .space: return has("name") && has("emoji")
         case .folder: return has("spaceId") && has("name")
         case .tab: return has("spaceId") && (has("url") || has("anchorUrl"))
+        case .todayTab: return has("spaceId") && has("url")
         case .favorite: return has("url")
         case .archived: return has("spaceId") && has("url")
         }
@@ -221,6 +235,78 @@ public enum SyncApply {
         list.append(Slot(id: change.id, fields: fields, original: nil, changed: true))
     }
 
+    // MARK: The Today tabs (§27)
+
+    /// What a Today tab holds as the patch sees it: its fields, and `activeAt` (the projection of `lastActiveAt`), which the field-by-field comparison of `expect` needs.
+    private static func entryForApply(_ tab: TabItem) -> SyncStateView.Entry {
+        let entry = SyncStateView.entry(of: tab)
+        guard !tab.pinned else { return entry }
+        var fields = entry.fields
+        fields["activeAt"] = .number(Double(SyncToday.roundActiveAt(tab.lastActiveAt ?? 0)))
+        return SyncStateView.Entry(id: entry.id, fields: fields)
+    }
+
+    /// A Today tab that comes from the other device, or changes. It is a tab of the state, made at rest: no web view, no connection, nothing loaded until it is opened (§27.12);
+    /// it never becomes the tab on screen (§27.6). The page it is on is a seed (§27.2): copied once, when the tab is made, and never over the page of a tab this device has.
+    /// `activeAt` is not written as a field: the tab was last used, here, at the later of the two moments (§27.5, [Q10]); a tab made takes it as its age and its last use, so that
+    /// the automatic archive treats it the same on both devices.
+    /// `detaching`: the tab was pinned here and the other device detached it (a removal of `tab/<id>` and a creation of `todayTab/<id>` in one patch, `SyncToday.moves`): it stays,
+    /// in its place, and is no longer pinned.
+    private static func upsertToday(_ list: inout [Slot<TabItem>], _ places: inout Positions, change: SyncPatch.Upsert, detaching: Bool, now: Double, rejected: inout [String]) {
+        func reject(_ name: String) { rejected.append("todayTab \(change.id): \(name) is not a value this version keeps") }
+        let byName: ((String, JSONValue), (String, JSONValue)) -> Bool = { SyncCanonical.compare($0.0, $1.0) < 0 }
+        if let at = places[Array(change.id.utf8)] {
+            var fields = list[at].fields
+            var touched = false
+            if detaching {
+                if case .bool(true)? = fields["pinned"] { fields["pinned"] = .bool(false); touched = true }
+                for name in ["anchorUrl", "folderId"] where fields[name] != nil { fields[name] = nil; touched = true }
+            }
+            for (name, value) in change.fields.sorted(by: byName) where name != "id" && name != "url" && name != "title" {
+                if name == "activeAt" {
+                    guard case .number(let received) = value, received.isFinite else { reject(name); continue }
+                    var current = 0.0
+                    if case .number(let number)? = fields["lastActiveAt"] { current = number }
+                    let next = SyncToday.lastActive(local: current, received: received)
+                    if next != current { fields["lastActiveAt"] = .number(next); touched = true }
+                    continue
+                }
+                guard detaching || unchanged(fields, expect: change.expect, names: [name]) else { continue }
+                guard let cleaned = clean(.todayTab, name, value) else { reject(name); continue }
+                if !SyncCanonical.same(fields[name], cleaned) { fields[name] = cleaned; touched = true }
+            }
+            for name in change.remove where name != "activeAt" && !isRequired(.todayTab, name) && unchanged(fields, expect: change.expect, names: [name]) {
+                if fields[name] != nil { fields[name] = nil; touched = true }
+            }
+            if touched { list[at].fields = fields; list[at].changed = true }
+            return
+        }
+        guard change.create else { return }
+        var fields = made(.todayTab, id: change.id, now: now)
+        if case .number(let moment)? = change.fields["activeAt"], moment.isFinite, moment > 0 {
+            fields["createdAt"] = .number(moment)
+            fields["lastActiveAt"] = .number(moment)
+        }
+        for (name, value) in change.fields.sorted(by: byName) where name != "id" && name != "activeAt" {
+            if let cleaned = clean(.todayTab, name, value) { fields[name] = cleaned } else { reject(name) }
+        }
+        if fields["title"] == nil, case .string(let address)? = fields["url"] { fields["title"] = .string(AddressResolver.host(of: address)) }
+        guard isComplete(.todayTab, fields) else {
+            rejected.append("todayTab \(change.id): not made, it lacks a space or an address")
+            return
+        }
+        places[Array(change.id.utf8)] = list.count
+        list.append(Slot(id: change.id, fields: fields, original: nil, changed: true))
+    }
+
+    /// The Today tab the other device closed: it goes to the archive here, as a tab closed by hand does (`archive(tabIds:)`, source `sync`, the id of the entry that of the tab, so that
+    /// an archive that is shared holds it once, §27.5), with the page it is on now. Only if it is still as the session froze it (what the person did since keeps the tab) and not pinned.
+    private static func closing(_ list: [Slot<TabItem>], _ places: Positions, _ removal: SyncPatch.Removal) -> String? {
+        guard let at = places[Array(removal.id.utf8)], unchanged(list[at].fields, expect: removal.expect, names: removal.expect.keys) else { return nil }
+        if case .bool(true)? = list[at].fields["pinned"] { return nil }
+        return removal.id
+    }
+
     /// Marks an entity removed when it is still as it was frozen: it is dropped from the list once, after all the removals (`dropping`), not shifted out of it one by one.
     private static func remove<T>(_ list: [Slot<T>], _ places: inout Positions, dead: inout Set<Int>, _ removal: SyncPatch.Removal) {
         let key = Array(removal.id.utf8)
@@ -244,6 +330,7 @@ public enum SyncApply {
         var folders: [String: [Int]]?
         var tabs: [String: [Int]]?
         var favorites: [String: [Int]]?
+        var today: [String: [Int]]?
     }
 
     private static func grouped<T>(_ list: [Slot<T>], key: ([String: JSONValue]) -> String?) -> [String: [Int]] {
@@ -291,6 +378,17 @@ public enum SyncApply {
                 }
             }
             lists.tabs = reordered(lists.tabs, positions: groups.tabs?[key] ?? [], ids: ids)
+        case "today" where parts.count == 2:
+            if groups.today == nil {
+                groups.today = grouped(lists.tabs) { fields in
+                    guard fields["pinned"] != .bool(true), fields["private"] != .bool(true), fields["favoriteId"] == nil else { return nil }
+                    let space = dash(fields["spaceId"])
+                    return space.contains(":") ? nil : "today:\(space)"
+                }
+            }
+            // Only the tabs the list names: a Today tab that is not shared (the set is full, it is too young) is in no list of the other device, and does not move.
+            let named = Set(ids)
+            lists.tabs = reordered(lists.tabs, positions: (groups.today?[key] ?? []).filter { named.contains(lists.tabs[$0].id) }, ids: ids)
         case "favorites" where parts.count == 2:
             if groups.favorites == nil {
                 groups.favorites = grouped(lists.favorites) { fields in
@@ -311,27 +409,43 @@ public enum SyncApply {
     public static func apply(_ patch: SyncPatch, to state: BrowserState, now: Double) -> Outcome {
         var rejected: [String] = []
         var lists = Lists(spaces: slots(state.spaces, SyncStateView.entry(of:)), folders: slots(state.folders) { SyncStateView.entry(ofJSON: $0.json, id: $0.id) },
-                          tabs: slots(state.tabs, SyncStateView.entry(of:)), favorites: slots(state.favorites, SyncStateView.entry(of:)),
+                          tabs: slots(state.tabs, entryForApply), favorites: slots(state.favorites, SyncStateView.entry(of:)),
                           archive: slots(state.archive) { SyncStateView.entry(ofJSON: $0.json, id: $0.id) })
         var places = (spaces: positions(of: lists.spaces), folders: positions(of: lists.folders), tabs: positions(of: lists.tabs), favorites: positions(of: lists.favorites), archive: positions(of: lists.archive))
+        // A tab that changes list in one patch is a tab that stays (§27.2): pinned or detached by the other device, it keeps its page and its place.
+        let moves = SyncToday.moves(removed: patch.removals.map { ($0.kind.rawValue, $0.id) }, created: patch.upserts.filter(\.create).map { ($0.kind.rawValue, $0.id) })
+        let pinnedThere = Set(moves.filter { $0.to == "tab" }.map(\.id)), detachedThere = Set(moves.filter { $0.to == SyncToday.kind }.map(\.id))
         for change in patch.upserts {
             switch change.kind {
             case .space: upsert(&lists.spaces, &places.spaces, kind: .space, change: change, now: now, rejected: &rejected)
             case .folder: upsert(&lists.folders, &places.folders, kind: .folder, change: change, now: now, rejected: &rejected)
+            case .tab where pinnedThere.contains(change.id) && places.tabs[Array(change.id.utf8)] != nil:
+                // The Today tab this device has is the one the other device pinned: what it sends is now true here whatever the tab held, and the page stays the one it is on.
+                var forced = change
+                forced.fields["url"] = nil
+                forced.fields["title"] = nil
+                if let at = places.tabs[Array(change.id.utf8)] {
+                    for name in Set(forced.fields.keys).union(forced.remove) { forced.expect[name] = lists.tabs[at].fields[name] }
+                }
+                upsert(&lists.tabs, &places.tabs, kind: .tab, change: forced, now: now, rejected: &rejected)
             case .tab: upsert(&lists.tabs, &places.tabs, kind: .tab, change: change, now: now, rejected: &rejected)
+            case .todayTab: upsertToday(&lists.tabs, &places.tabs, change: change, detaching: detachedThere.contains(change.id), now: now, rejected: &rejected)
             case .favorite: upsert(&lists.favorites, &places.favorites, kind: .favorite, change: change, now: now, rejected: &rejected)
             case .archived: upsert(&lists.archive, &places.archive, kind: .archived, change: change, now: now, rejected: &rejected)
             }
         }
         let spacesBefore = Set(lists.spaces.map(\.id))
         var dead = (spaces: Set<Int>(), folders: Set<Int>(), tabs: Set<Int>(), favorites: Set<Int>(), archive: Set<Int>())
+        var closed: [String] = []
         for removal in patch.removals {
             switch removal.kind {
             case .space:
                 // A state is never left with no space: the last one stays, whatever the merge says.
                 if lists.spaces.count - dead.spaces.count > 1 { remove(lists.spaces, &places.spaces, dead: &dead.spaces, removal) }
             case .folder: remove(lists.folders, &places.folders, dead: &dead.folders, removal)
-            case .tab: remove(lists.tabs, &places.tabs, dead: &dead.tabs, removal)
+            case .tab: if !detachedThere.contains(removal.id) { remove(lists.tabs, &places.tabs, dead: &dead.tabs, removal) }
+            // A tab the other device pinned is also removed from "Today" in the same patch (`pinnedThere`): it is pinned here by now (the upserts came first), which `closing` refuses.
+            case .todayTab: if let id = closing(lists.tabs, places.tabs, removal) { closed.append(id) }
             case .favorite: remove(lists.favorites, &places.favorites, dead: &dead.favorites, removal)
             case .archived: remove(lists.archive, &places.archive, dead: &dead.archive, removal)
             }
@@ -352,7 +466,7 @@ public enum SyncApply {
             if case .string(let name)? = slot.fields["profileId"] { profile = name }
             return seen.insert(profile + "\u{0}" + url).inserted
         }
-        return finish(lists, patch: patch, state: state, rejected: rejected)
+        return finish(lists, patch: patch, state: state, closing: closed, now: now, rejected: rejected)
     }
 
     /// The open tabs (the ones of Today: pinned tabs are synchronised, and went with the space on the other device too) of the spaces a patch has removed go to the archive before the
@@ -382,7 +496,7 @@ public enum SyncApply {
     }
 
     /// What the typed lists and the settings become, and what no longer points at anything is cut.
-    private static func finish(_ lists: Lists, patch: SyncPatch, state: BrowserState, rejected: [String]) -> Outcome {
+    private static func finish(_ lists: Lists, patch: SyncPatch, state: BrowserState, closing: [String], now: Double, rejected: [String]) -> Outcome {
         var rejected = rejected
         var next = state
         func fold<T>(_ list: [Slot<T>], _ read: ([String: JSONValue]) -> T?, label: String) -> [T] {
@@ -417,6 +531,9 @@ public enum SyncApply {
         if folders != state.folders { next.folders = folders }
         if favorites != state.favorites { next.favorites = favorites }
         if archive != state.archive { next.archive = archive }
+        // The tabs the other device closed go to the archive by the path of a tab archived by hand (source `sync`); the space that showed one shows the most recently used one left.
+        let closedHere = closing.filter { id in next.tabs.contains { $0.id == id } }
+        if !closedHere.isEmpty { next.archive(tabIds: closedHere, source: .sync, now: now) }
         applySettings(patch.settings, to: &next, rejected: &rejected)
         for id in spaceIDs where next.activeTabBySpace[id] == nil { next.activeTabBySpace[id] = .some(nil) }
         for id in next.activeTabBySpace.keys.filter({ !spaceIDs.contains($0) }) { next.activeTabBySpace[id] = nil }
@@ -424,7 +541,8 @@ public enum SyncApply {
         let tabsNow = Set(next.tabs.map(\.id)), spacesBefore = Set(state.spaces.map(\.id))
         let removedTabs = state.tabs.map(\.id).filter { !tabsNow.contains($0) }
         return Outcome(state: next, createdSpaceIDs: spaces.map(\.id).filter { !spacesBefore.contains($0) },
-                       removedSpaceIDs: state.spaces.map(\.id).filter { !spaceIDs.contains($0) }, removedTabIDs: removedTabs, rejected: rejected, changed: next != state)
+                       removedSpaceIDs: state.spaces.map(\.id).filter { !spaceIDs.contains($0) }, removedTabIDs: removedTabs, closedTabIDs: closedHere.filter { !tabsNow.contains($0) }, rejected: rejected,
+                       changed: next != state)
     }
 
     /// The `parentId` of a folder that is on a loop is cut (the merge cuts the loops of what it gives; this one is for what local folders could add). Each folder walks up its
@@ -499,6 +617,7 @@ extension TabItem {
         guard case .string(let id)? = fields["id"], case .string(let spaceId)? = fields["spaceId"], case .string(let url)? = fields["url"], case .string(let title)? = fields["title"] else { return nil }
         var pinned = false
         if case .bool(let flag)? = fields["pinned"] { pinned = flag }
-        self.init(id: id, spaceId: spaceId, url: url, title: title, pinned: pinned, rest: fields.without(["id", "spaceId", "url", "title", "pinned"]))
+        // `activeAt` is the patch's view of `lastActiveAt` (`entryForApply`): it is not a field of a tab.
+        self.init(id: id, spaceId: spaceId, url: url, title: title, pinned: pinned, rest: fields.without(["id", "spaceId", "url", "title", "pinned", "activeAt"]))
     }
 }

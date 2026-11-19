@@ -546,8 +546,9 @@ final class SyncController {
     func stateWritten(_ state: BrowserState) {
         guard settings.enabled, let keeper = markKeeper() else { return }
         // What is synchronised changed (a space, a folder, a favourite, a pinned tab, a setting that travels): a session follows in 30 seconds, the changes made meanwhile
-        // grouped in it (§8.1). A page that loads, or a tab of Today, is not one.
-        if keeper.observe(state, now: now()), settings.mac != nil, onScreen { requestSession(.localChange) }
+        // grouped in it (§8.1). A page that loads is not one, and neither is a tab of Today unless the category is ticked: then opening or closing one is (§27.12), and a tab
+        // that could be shared is a change as soon as it appears (it enters the shared set at the freeze, once it is twenty seconds old).
+        if keeper.observe(state, now: now(), opening: settings.categories.contains(.todayTabs)), settings.mac != nil, onScreen { requestSession(.localChange) }
     }
 
     /// The switch was just turned on: what changed while it was off is marked now (a change cannot be dated better than the moment it is seen).

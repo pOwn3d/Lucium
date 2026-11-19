@@ -120,6 +120,8 @@ public enum SyncConflicts {
         case "space", "folder": text = string(fields, "name")
         case "tab": text = string(fields, "customTitle") ?? string(fields, "title") ?? string(fields, "anchorUrl")
         case "favorite", "archived": text = string(fields, "title") ?? string(fields, "url")
+        // A tab of "Today" is told by the name the person gave it, never by its title or its address: the journal must not read like a history (§27.8).
+        case "todayTab": text = string(fields, "customTitle")
         default: text = nil
         }
         return text.map { clip($0, Limits.maxLabelChars) }
@@ -448,7 +450,7 @@ public extension SyncConflicts {
     ]
     /// The kinds the catalogues name (a setting is told by the name of the setting: `kind-setting-named`).
     static let kindKeys: [String: String] = [
-        "space": "sync-conflict.kind-space", "folder": "sync-conflict.kind-folder", "tab": "sync-conflict.kind-tab", "favorite": "sync-conflict.kind-favorite",
+        "space": "sync-conflict.kind-space", "folder": "sync-conflict.kind-folder", "tab": "sync-conflict.kind-tab", "todayTab": "sync-conflict.kind-tab", "favorite": "sync-conflict.kind-favorite",
         "archived": "sync-conflict.kind-archived", "order": "sync-conflict.kind-order",
     ]
     /// The settings of the closed list of §10.3.

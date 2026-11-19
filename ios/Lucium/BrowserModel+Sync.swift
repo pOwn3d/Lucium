@@ -27,7 +27,8 @@ extension BrowserModel {
         guard outcome.changed else { return }
         isApplyingSync = true
         defer { isApplyingSync = false }
-        let shown = activeTab?.id
+        let shownTab = activeTab
+        let shown = shownTab?.id
         // The tab on screen, when it goes, takes no picture with it: it would be written for a tab that no longer exists.
         for id in outcome.removedTabIDs {
             if let view = webViews[id] { free(view, tabId: id) }
@@ -38,11 +39,24 @@ extension BrowserModel {
         state = outcome.state
         lock?.reconcile(spaceIds: Set(state.spaces.map(\.id)))  // a space that went leaves the guarded ones
         ensureActiveTab()
+        // The other device closed the tab on screen (§27.5, [Q11]): it was archived by the patch and the space shows the neighbour. The event is for the line that says so.
+        if let shownTab, outcome.closedTabIDs.contains(shownTab.id) {
+            var title = shownTab.title
+            if case .string(let name)? = shownTab.rest["customTitle"], !name.isEmpty { title = name }
+            syncClosedShownTab = SyncClosedShownTab(id: shownTab.id, title: title, closedAt: clock())
+        }
         if activeTab?.id != shown { arrive() }
         // Kept now, not 500 ms from now: the session says `commit` when this is written.
         flush()
         syncOrigin?.observe(state)
     }
+}
+
+/// The tab on screen that the other device closed (`BrowserModel.syncClosedShownTab`). Its address stays in the archive, where « Rouvrir le dernier onglet fermé » finds it.
+struct SyncClosedShownTab: Equatable {
+    let id: String
+    let title: String
+    let closedAt: Double
 }
 
 /// The model, seen by a session (`SyncExchangeHost`): its state, what is locked, and the one place the state is written. It holds the model weakly: a session never keeps

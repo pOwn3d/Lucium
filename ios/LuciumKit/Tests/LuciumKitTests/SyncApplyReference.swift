@@ -117,7 +117,7 @@ enum SyncApplyReference {
         switch kind {
         case .space: ["id", "name", "emoji", "profileId"].contains(name)
         case .folder: ["id", "spaceId", "name"].contains(name)
-        case .tab: ["id", "spaceId", "pinned", "url", "title"].contains(name)
+        case .tab, .todayTab: ["id", "spaceId", "pinned", "url", "title"].contains(name)
         case .favorite: ["id", "url", "title"].contains(name)
         case .archived: ["id", "spaceId", "url", "title", "archivedAt"].contains(name)
         }
@@ -128,7 +128,7 @@ enum SyncApplyReference {
         switch kind {
         case .space: ["id": .string(id), "emoji": .string("✨"), "profileId": .string(BrowserState.defaultProfileId), "theme": SpaceTheme.make(hue: 250)]
         case .folder: ["id": .string(id), "collapsed": .bool(false)]
-        case .tab: ["id": .string(id), "pinned": .bool(true), "createdAt": .number(now), "lastActiveAt": .number(now)]
+        case .tab, .todayTab: ["id": .string(id), "pinned": .bool(true), "createdAt": .number(now), "lastActiveAt": .number(now)]
         case .favorite: ["id": .string(id), "profileId": .string(Library.defaultProfile)]
         case .archived: ["id": .string(id), "archivedAt": .number(now)]
         }
@@ -140,7 +140,7 @@ enum SyncApplyReference {
         switch kind {
         case .space: return has("name") && has("emoji")
         case .folder: return has("spaceId") && has("name")
-        case .tab: return has("spaceId") && (has("url") || has("anchorUrl"))
+        case .tab, .todayTab: return has("spaceId") && (has("url") || has("anchorUrl"))
         case .favorite: return has("url")
         case .archived: return has("spaceId") && has("url")
         }
@@ -280,6 +280,7 @@ enum SyncApplyReference {
             case .tab: upsert(&lists.tabs, kind: .tab, change: change, now: now, rejected: &rejected)
             case .favorite: upsert(&lists.favorites, kind: .favorite, change: change, now: now, rejected: &rejected)
             case .archived: upsert(&lists.archive, kind: .archived, change: change, now: now, rejected: &rejected)
+            case .todayTab: break  // this copy is the apply as it was before the Today tabs: the patches it is given have none
             }
         }
         let spacesBefore = Set(lists.spaces.map(\.id))
@@ -292,6 +293,7 @@ enum SyncApplyReference {
             case .tab: remove(&lists.tabs, removal)
             case .favorite: remove(&lists.favorites, removal)
             case .archived: remove(&lists.archive, removal)
+            case .todayTab: break
             }
         }
         keepOpenTabsOfRemovedSpaces(&lists, removed: spacesBefore.subtracting(lists.spaces.map(\.id)), active: state.activeSpaceId, now: now)
