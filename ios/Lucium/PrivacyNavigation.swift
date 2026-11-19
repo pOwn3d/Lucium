@@ -177,8 +177,14 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
 
     // MARK: Following a load
 
+    func webView(_ webView: WKWebView, didStartProvisionalNavigation navigation: WKNavigation!) {
+        // A new load (a retry, another address, a step back) replaces the screen of the failure that was there.
+        if let tab = tabId(of: webView) { model?.loadFailures[tab] = nil }
+    }
+
     func webView(_ webView: WKWebView, didCommit navigation: WKNavigation!) {
         guard let tab = tabId(of: webView) else { return }
+        model?.loadFailures[tab] = nil
         upgrades.committed(page: tab)
         timers[tab]?.cancel()
         timers[tab] = nil
@@ -192,7 +198,9 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
         let cancelled = Self.isCancellation(failure)
         switch upgrades.failed(page: tab, failedUrl: failed, cancelled: cancelled, certificate: Self.isCertificateFailure(failure)) {
         case .none:
-            // Not an upgrade that failed. The error is the page's to show; the host and the code are kept here for whoever looks for the cause.
+            // Not an upgrade that failed: the tab shows the error screen (`LoadFailureView`), unless the failure is one that gets none (a cancelled
+            // load, an app link, a refused certificate: `LoadFailure.classify`). The host and the code are kept in the log for whoever looks for the cause.
+            if let page = LoadFailure.classify(failure) { model?.loadFailures[tab] = page }
             if !cancelled { print("[privacy] a load of \(AddressResolver.host(of: failed)) failed (\(failure.domain) \(failure.code)), no upgrade was under way for it") }
         case .fellBack(let http):
             timers[tab]?.cancel()
@@ -262,8 +270,17 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
         }
     }
 
+    /// « Try again »: the address that failed is loaded once more, as the person's own load (the loop guard of HTTPS first forgets what it knew).
+    func retry(tab: String) {
+        guard let failure = model?.loadFailures[tab], let address = failure.retryAddress, var request = request(for: address),
+              let view = model?.webViews[tab] else { return }
+        prepare(&request, for: view)
+        view.load(request)
+    }
+
     /// A tab was closed or went to sleep: nothing of it is remembered.
     func forget(tab: String) {
+        model?.loadFailures[tab] = nil
         upgrades.forget(page: tab)
         timers[tab]?.cancel()
         timers[tab] = nil

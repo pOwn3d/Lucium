@@ -77,6 +77,8 @@ final class BrowserModel {
 
     /// What the privacy rules show and ask: a notice, a refused certificate, the settings sheet (`PrivacyNavigation.swift`).
     var privacyPrompts = PrivacyPrompts()
+    /// The tabs whose last main-frame load failed and whose screen says why (`LoadFailureView`), by tab id. Set and cleared by `PrivacyNavigation`.
+    var loadFailures: [String: LoadFailure] = [:]
     /// The navigation delegate of every web view: the privacy rules of the Mac (docs/ios.md, "Vie privée").
     @ObservationIgnored let navigationPolicy = PrivacyNavigation()
 

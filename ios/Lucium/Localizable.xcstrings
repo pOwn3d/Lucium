@@ -6920,6 +6920,310 @@
           }
         }
       }
+    },
+    "loadfailure.bad-address.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This address isn’t valid. Check it, then try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette adresse n’est pas valide. Vérifiez-la, puis réessayez."
+          }
+        }
+      }
+    },
+    "loadfailure.bad-address.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid address"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse non valide"
+          }
+        }
+      }
+    },
+    "loadfailure.cannot-connect.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ refused the connection or can’t be reached from this network. Try again in a moment."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a refusé la connexion ou n’est pas joignable depuis ce réseau. Réessayez dans un instant."
+          }
+        }
+      }
+    },
+    "loadfailure.cannot-connect.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t connect to the site"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion au site impossible"
+          }
+        }
+      }
+    },
+    "loadfailure.connection-lost.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The connection to %@ was lost while the page was loading. Try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La connexion avec %@ s’est interrompue pendant le chargement de la page. Réessayez."
+          }
+        }
+      }
+    },
+    "loadfailure.connection-lost.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection lost"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion interrompue"
+          }
+        }
+      }
+    },
+    "loadfailure.host-not-found.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The address of %@ can’t be found. Check that it’s spelled correctly, then try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’adresse de %@ est introuvable. Vérifiez qu’elle est bien écrite, puis réessayez."
+          }
+        }
+      }
+    },
+    "loadfailure.host-not-found.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site not found"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site introuvable"
+          }
+        }
+      }
+    },
+    "loadfailure.offline.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ can’t be reached because this device isn’t connected to the internet. Check Wi-Fi or mobile data, then try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ est inaccessible : cet appareil n’est pas connecté à Internet. Vérifiez le Wi-Fi ou les données mobiles, puis réessayez."
+          }
+        }
+      }
+    },
+    "loadfailure.offline.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You’re offline"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous êtes hors ligne"
+          }
+        }
+      }
+    },
+    "loadfailure.other.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ couldn’t be loaded. Try again in a moment."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ n’a pas pu être chargé. Réessayez dans un instant."
+          }
+        }
+      }
+    },
+    "loadfailure.other.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The page didn’t load"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La page ne s’est pas chargée"
+          }
+        }
+      }
+    },
+    "loadfailure.retry": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réessayer"
+          }
+        }
+      }
+    },
+    "loadfailure.secure-connection.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ didn’t answer correctly over a secure connection. The site may not support it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ n’a pas répondu correctement en connexion sécurisée. Le site ne la prend peut-être pas en charge."
+          }
+        }
+      }
+    },
+    "loadfailure.secure-connection.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Secure connection failed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion sécurisée impossible"
+          }
+        }
+      }
+    },
+    "loadfailure.timed-out.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ didn’t answer in time. It may be busy, or your connection may be slow."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ n’a pas répondu à temps. Il est peut-être surchargé, ou votre connexion est lente."
+          }
+        }
+      }
+    },
+    "loadfailure.timed-out.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The site took too long"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le site met trop de temps"
+          }
+        }
+      }
+    },
+    "loadfailure.too-many-redirects.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ sent you round in a circle. Clearing the cookies of this site may fix it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ vous a renvoyé en boucle. Supprimer les cookies de ce site peut résoudre le problème."
+          }
+        }
+      }
+    },
+    "loadfailure.too-many-redirects.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many redirects"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trop de redirections"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
