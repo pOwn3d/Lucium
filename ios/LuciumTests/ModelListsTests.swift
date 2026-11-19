@@ -37,6 +37,8 @@ final class ModelListsTests: XCTestCase {
         defer { server.stop() }
 
         let model = BrowserModel.launch(directory: directory.appending(path: "files"), embeddedLists: { try self.proofLists() }, store: store)
+        // The proof list's probe is a path of the site's own, which only « Strict » filters (« Standard » leaves a site's own requests alone, section 6.6).
+        model.updatePrivacy { $0.blockMode = .strict }
         await model.prepare()
         XCTAssertNil(model.blockerFailure)
         XCTAssertTrue(model.listFailures.isEmpty)

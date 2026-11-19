@@ -46,11 +46,13 @@ public enum PrivacyRules {
     }
 }
 
-/// How well protected a profile is, in the words of the Mac's protection levels (`presets.protection`): « Standard » sends no signal and keeps the
-/// addresses as they are, « Renforcée » (enhanced) sends the signal and cleans the addresses opened and copied. The Mac has a third level, « Stricte »,
-/// whose extras (the blocker's strict mode, the fingerprint noise) the iPhone does not have yet.
+/// How well protected a profile is, in the words of the Mac's protection levels (`presets.protection`): « Standard » blocks the ads and trackers, sends
+/// no signal and keeps the addresses as they are; « Renforcée » (enhanced) adds the cookie banners, the signal and the cleaning of the addresses opened and
+/// copied; « Stricte » (strict) adds the blocker's strict mode and its extended rules. The Mac's « Stricte » also puts noise on what a page reads of the
+/// device (`reduceFingerprint`): the iPhone leaves that to WebKit (docs/ios.md, section 4.2), so the level is read without that setting and choosing it
+/// does not write it.
 public enum ProtectionLevel: String, CaseIterable, Sendable {
-    case standard, enhanced
+    case standard, enhanced, strict
 }
 
 /// The privacy settings of a profile, under the names and with the rules of the Mac's `Settings` (`httpsUpgrade`, `sendGpc`, `stripTrackingParams`,
@@ -61,16 +63,44 @@ public struct PrivacySettings: Equatable, Sendable {
     public var sendGpc: Bool
     public var stripTrackingParams: Bool
     public var stripCopiedLinks: Bool
+    /// The ads and trackers are blocked (`blockAds`, and its alias `blockTrackers`, which the Mac writes along with it and reads either of).
+    public var blockAds: Bool
+    /// The cookie banners are removed: their lists, and the style sheet of the consent walls (`blockCookieBanners`).
+    public var blockCookieBanners: Bool
+    /// The elements the lists name (ad slots, banners) are hidden, on top of cancelling their requests (`blockCosmetic`).
+    public var blockCosmetic: Bool
+    /// The extended rules of the lists: the scriptlets of Lucium's own library (`blockScriptlets`). Off by default, as on the Mac.
+    public var blockScriptlets: Bool
+    /// What the blocker does with the requests a page makes to its own site (`blockMode`).
+    public var blockMode: BlockMode
+    /// Sites (and their subdomains) where nothing is blocked (`blockExceptions`).
+    public var blockExceptions: [String]
+    /// « Effacer à la fermeture » (`siteDataClearOnCloseEnabled`, `siteDataClearOnClose`, `siteDataClearOnQuit`).
+    public var clearOnClose: ClearOnClose
 
-    public init(httpsUpgrade: Bool, sendGpc: Bool, stripTrackingParams: Bool, stripCopiedLinks: Bool) {
+    /// What the three keys of « Effacer à la fermeture » hold.
+    public struct ClearOnClose: Equatable, Sendable {
+        public var enabled: Bool
+        /// Sites whose data is erased when the last tab on them closes: the host as the Mac spells it, with its port when it has one.
+        public var sites: [String]
+        /// …and when the application starts again: iOS never tells an application that it quits, so « à la fermeture de l'application » is the next launch.
+        public var onQuit: Bool
+
+        public init(enabled: Bool = false, sites: [String] = [], onQuit: Bool = false) { self.enabled = enabled; self.sites = sites; self.onQuit = onQuit }
+    }
+
+    public init(httpsUpgrade: Bool, sendGpc: Bool, stripTrackingParams: Bool, stripCopiedLinks: Bool, blockAds: Bool = true, blockCookieBanners: Bool = false,
+                blockCosmetic: Bool = true, blockScriptlets: Bool = false, blockMode: BlockMode = .standard, blockExceptions: [String] = [], clearOnClose: ClearOnClose = ClearOnClose()) {
         self.httpsUpgrade = httpsUpgrade; self.sendGpc = sendGpc; self.stripTrackingParams = stripTrackingParams; self.stripCopiedLinks = stripCopiedLinks
+        self.blockAds = blockAds; self.blockCookieBanners = blockCookieBanners; self.blockCosmetic = blockCosmetic; self.blockScriptlets = blockScriptlets
+        self.blockMode = blockMode; self.blockExceptions = blockExceptions; self.clearOnClose = clearOnClose
     }
 
     /// A new profile starts at « Renforcée » (`PROTECTION_OF_NEW_PROFILES`), with HTTPS first on.
-    public static let newProfile = PrivacySettings(httpsUpgrade: true, sendGpc: true, stripTrackingParams: true, stripCopiedLinks: true)
+    public static let newProfile = PrivacySettings(httpsUpgrade: true, sendGpc: true, stripTrackingParams: true, stripCopiedLinks: true, blockCookieBanners: true)
 
-    /// What a profile saved before « Renforcée » was the default has for the four settings it never chose (`PROTECTION_OF_EARLIER_PROFILES`).
-    public static let earlierProfile = PrivacySettings(httpsUpgrade: true, sendGpc: false, stripTrackingParams: false, stripCopiedLinks: false)
+    /// What a profile saved before « Renforcée » was the default has for the settings it never chose (`PROTECTION_OF_EARLIER_PROFILES`).
+    public static let earlierProfile = PrivacySettings(httpsUpgrade: true, sendGpc: false, stripTrackingParams: false, stripCopiedLinks: false, blockCookieBanners: false)
 
     static let settingsKey = "settings"
 
@@ -87,27 +117,55 @@ public struct PrivacySettings: Equatable, Sendable {
             return fallback
         }
         let earlier = Self.earlierProfile
+        // The ads switch and its alias: either one on blocks (`adsBlockingOn`); neither written is the default, on.
+        let ads: Bool
+        switch (settings["blockAds"], settings["blockTrackers"]) {
+        case (.bool(true)?, _), (_, .bool(true)?): ads = true
+        case (.bool(false)?, _), (_, .bool(false)?): ads = false
+        default: ads = true
+        }
+        let mode: BlockMode
+        if case .string(let word)? = settings["blockMode"], let known = BlockMode(rawValue: word) { mode = known } else { mode = .standard }
         self.init(httpsUpgrade: flag("httpsUpgrade", earlier.httpsUpgrade), sendGpc: flag("sendGpc", earlier.sendGpc),
-                  stripTrackingParams: flag("stripTrackingParams", earlier.stripTrackingParams), stripCopiedLinks: flag("stripCopiedLinks", earlier.stripCopiedLinks))
+                  stripTrackingParams: flag("stripTrackingParams", earlier.stripTrackingParams), stripCopiedLinks: flag("stripCopiedLinks", earlier.stripCopiedLinks),
+                  blockAds: ads, blockCookieBanners: flag("blockCookieBanners", earlier.blockCookieBanners), blockCosmetic: flag("blockCosmetic", true),
+                  blockScriptlets: flag("blockScriptlets", false), blockMode: mode, blockExceptions: BlockHost.clean(settings["blockExceptions"]),
+                  clearOnClose: ClearOnClose(enabled: flag("siteDataClearOnCloseEnabled", false), sites: SiteHostEntry.clean(settings["siteDataClearOnClose"]),
+                                             onQuit: flag("siteDataClearOnQuit", false)))
     }
 
     public var options: PrivacyOptions {
         PrivacyOptions(httpsUpgrade: httpsUpgrade, globalPrivacyControl: sendGpc, stripTrackingParams: stripTrackingParams)
     }
 
-    /// The level the three signals add up to, or nil when they match neither (« Personnalisé »: the settings stay as chosen).
+    /// The level the settings add up to, or nil when they match none (« Personnalisé »: the settings stay as chosen). Read as the Mac reads it
+    /// (`presetOf`): the blocker (ads, banners, mode, hiding, extended rules) and the three signals together; HTTPS first and the lists of sites belong to
+    /// no level.
     public var level: ProtectionLevel? {
-        switch (sendGpc, stripTrackingParams, stripCopiedLinks) {
-        case (false, false, false): .standard
-        case (true, true, true): .enhanced
-        default: nil
+        let signals = (sendGpc, stripTrackingParams, stripCopiedLinks)
+        guard blockAds, blockCosmetic else { return nil }
+        switch (signals, blockCookieBanners, blockMode, blockScriptlets) {
+        case ((false, false, false), false, .standard, false): return .standard
+        case ((true, true, true), true, .standard, false): return .enhanced
+        case ((true, true, true), true, .strict, true): return .strict
+        default: return nil
         }
     }
 
-    /// Chooses a level: the three settings it stands for are written together, and HTTPS first stays as it is (it belongs to no level on the Mac).
+    /// Chooses a level: every setting it stands for is written together (the Mac's `presetChange`), and HTTPS first stays as it is (it belongs to no
+    /// level on the Mac). « Stricte » leaves `reduceFingerprint` alone: the iPhone has no such protection to switch on.
     public mutating func choose(_ level: ProtectionLevel) {
-        let on = level == .enhanced
-        sendGpc = on; stripTrackingParams = on; stripCopiedLinks = on
+        let signals = level != .standard
+        blockAds = true; blockCosmetic = true
+        blockCookieBanners = level != .standard
+        blockMode = level == .strict ? .strict : .standard
+        blockScriptlets = level == .strict
+        sendGpc = signals; stripTrackingParams = signals; stripCopiedLinks = signals
+    }
+
+    /// The blocker's switches as the page guard reads them (`GuardSettings`): what is done in the page, and where nothing is.
+    public var guardSettings: GuardSettings {
+        GuardSettings(blockAds: blockAds, blockCookieBanners: blockCookieBanners, blockScriptlets: blockScriptlets, exemptSites: blockExceptions)
     }
 
     /// The address to put on the pasteboard or in a share sheet: without its tracking parameters when `stripCopiedLinks` is on, as the Mac does.
@@ -128,6 +186,17 @@ public struct PrivacySettings: Equatable, Sendable {
         settings["sendGpc"] = .bool(sendGpc)
         settings["stripTrackingParams"] = .bool(stripTrackingParams)
         settings["stripCopiedLinks"] = .bool(stripCopiedLinks)
+        // The ads switch is written with its alias, as the Mac does (`adsBlockingPatch`): the blocker of either side reads either.
+        settings["blockAds"] = .bool(blockAds)
+        settings["blockTrackers"] = .bool(blockAds)
+        settings["blockCookieBanners"] = .bool(blockCookieBanners)
+        settings["blockCosmetic"] = .bool(blockCosmetic)
+        settings["blockScriptlets"] = .bool(blockScriptlets)
+        settings["blockMode"] = .string(blockMode.rawValue)
+        settings["blockExceptions"] = .array(blockExceptions.map(JSONValue.string))
+        settings["siteDataClearOnCloseEnabled"] = .bool(clearOnClose.enabled)
+        settings["siteDataClearOnClose"] = .array(clearOnClose.sites.map(JSONValue.string))
+        settings["siteDataClearOnQuit"] = .bool(clearOnClose.onQuit)
         state.rest[Self.settingsKey] = .object(settings)
     }
 }

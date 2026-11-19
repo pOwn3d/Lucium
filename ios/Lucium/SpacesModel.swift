@@ -198,7 +198,11 @@ extension BrowserModel {
     /// it erased. The pages of that site that are awake reload, to show themselves signed out rather than as they were.
     func clearSiteData(host: String) async -> Int {
         guard !activeSpaceCovered else { return 0 }
-        let profileId = activeSpace.profileId
+        return await eraseSiteData(host: host, profileId: activeSpace.profileId)
+    }
+
+    /// The erasure itself, for a profile: what `clearSiteData` does for the active space, and what « Effacer à la fermeture » does for each of its sites.
+    func eraseSiteData(host: String, profileId: String) async -> Int {
         let store = dataStore(forProfile: profileId)
         let types = WKWebsiteDataStore.allWebsiteDataTypes()
         let matching = await store.dataRecords(ofTypes: types).filter { SiteData.recordMatches($0.displayName, host: host) }

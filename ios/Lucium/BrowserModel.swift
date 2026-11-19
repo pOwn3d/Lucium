@@ -9,7 +9,10 @@ import WebKit
 @MainActor @Observable
 final class BrowserModel {
     /// The state in the shape of the Mac's. Changed here and in `SpacesModel.swift` (spaces, profiles, private tabs), never from a view.
-    var state: BrowserState
+    var state: BrowserState {
+        // A tab that disappears may empty a site of « Effacer à la fermeture » (`BrowserModel+SiteClear.swift`); nothing is looked at while the list is off.
+        didSet { if clearWatch != nil { tabsMayHaveClosed() } }
+    }
 
     /// What is locked (`BrowserModel+Lock.swift`). Nil in a model with no lock (most tests): nothing is covered then.
     var lock: LockController?
@@ -94,10 +97,20 @@ final class BrowserModel {
     @ObservationIgnored let rules: @MainActor () throws -> String
     @ObservationIgnored let embeddedLists: @MainActor () throws -> EmbeddedLists?
     @ObservationIgnored let store: WKContentRuleListStore
-    /// The lists applied to every web view: the embedded ones, or the short built-in one when this copy has none.
-    @ObservationIgnored var blockers: [WKContentRuleList] = []
+    /// The lists the blocker can attach to a web view, each with what it is: the embedded ones, or the short built-in one when this copy has none
+    /// (`BrowserModel+Blocker.swift`). Which of them a view carries depends on the person's switches and on the page.
+    @ObservationIgnored var blockerParts: [BlockerList] = []
+    var blockers: [WKContentRuleList] { blockerParts.map(\.list) }
+    /// The embedded lists, kept to compile the other mode's copy when the person switches the mode.
+    @ObservationIgnored var embedded: EmbeddedLists?
+    /// The mode the network lists in `blockerParts` were compiled for.
+    @ObservationIgnored var compiledBlockerMode: BlockMode = .standard
+    /// The lists each awake view carries now, by view: what `applyBlocker` compares to what the page wants.
+    @ObservationIgnored var attachedBlockers: [ObjectIdentifier: [WKContentRuleList]] = [:]
+    /// True while the lists of the other mode are being compiled (a few seconds, the first time): the settings page says so.
+    var blockerModeBusy = false
     /// The embedded lists that did not compile; the others still block.
-    private(set) var listFailures: [EmbeddedLists.Failure] = []
+    var listFailures: [EmbeddedLists.Failure] = []
     /// What a page is given when it starts (scriptlets, consent-wall style sheet, `PageGuard`), and the rules WebKit reads that go with it (YouTube's ad paths).
     /// Nil when this copy carries no runtime; the application then browses with the blocker's rules alone.
     @ObservationIgnored let makePageGuard: @MainActor (ScriptletTable) throws -> PageGuard?
@@ -105,6 +118,8 @@ final class BrowserModel {
     @ObservationIgnored var guardList: WKContentRuleList?
     /// Why the page guard (or its table of scriptlets) is missing or incomplete, when it is.
     private(set) var guardFailure: Error?
+    /// The tabs as they were at the last change, while « Effacer à la fermeture » has a site to watch (`BrowserModel+SiteClear.swift`); nil when it has none.
+    @ObservationIgnored var clearWatch: [TabItem]?
     @ObservationIgnored var stateFile: StateFile?
     @ObservationIgnored let sideStore: TabSideStore?
     @ObservationIgnored let awakeCap: Int
@@ -150,6 +165,7 @@ final class BrowserModel {
             print("[state] entries that do not read, left out and lost when their list is next written: \(unreadableLibraryEntries.sorted { $0.key < $1.key })")
         }
         ensureActiveTab()
+        refreshClearWatch()
         navigationPolicy.model = self
         downloads.isCovered = { [weak self] space in self?.lock?.covers(space: space) ?? false }
     }
@@ -170,12 +186,14 @@ final class BrowserModel {
     func prepare() async {
         guard !isReady else { return }
         var scriptlets = ScriptletTable()
-        if blockers.isEmpty {
+        if blockerParts.isEmpty {
             do {
                 if let embedded = try embeddedLists() {
                     // The first launch compiles every embedded list (a few seconds); later launches find them in WebKit's store.
-                    let outcome = await embedded.compile(in: store)
-                    blockers = outcome.lists
+                    self.embedded = embedded
+                    compiledBlockerMode = privacySettings.blockMode
+                    let outcome = await embedded.compile(in: store, mode: compiledBlockerMode)
+                    blockerParts = outcome.parts
                     listFailures = outcome.failures
                     do {
                         scriptlets = try embedded.scriptletTable()
@@ -184,10 +202,11 @@ final class BrowserModel {
                         guardFailure = error
                         print("[guard] the scriptlets of the lists could not be read, the page guard runs without them: \(error)")
                     }
-                    if blockers.isEmpty { throw ContentBlocker.BlockerError.missingResource }
+                    if blockerParts.isEmpty { throw ContentBlocker.BlockerError.missingResource }
                 } else {
                     // A copy with no embedded list (a checkout where the build step was not run): the short built-in list stands in.
-                    blockers = [try await ContentBlocker.compile(rules(), identifier: ContentBlocker.builtinIdentifier, in: store)]
+                    let list = try await ContentBlocker.compile(rules(), identifier: ContentBlocker.builtinIdentifier, in: store)
+                    blockerParts = [BlockerList(list: list, part: BlockerPlan.Part(source: .builtin, kind: .network))]
                 }
                 blockerFailure = nil
             } catch {
@@ -197,6 +216,8 @@ final class BrowserModel {
             }
         }
         await preparePageGuard(scriptlets: scriptlets)
+        // The sites of « Effacer à la fermeture » that are to go when the application starts again, before any page of them is loaded.
+        await eraseAtLaunch()
         sideStore?.prune(keeping: state.tabs.map(\.id))
         isReady = true
         if let tab = activeTab { syncFrom(wake(tab)) }
@@ -397,8 +418,11 @@ extension BrowserModel {
         var settings = state.privacy
         change(&settings)
         guard settings != state.privacy else { return }
+        let old = state.privacy
         state.privacy = settings
         navigationPolicy.optionsChanged(on: Array(webViews.values))
+        blockerSwitchesChanged(from: old, to: settings)
+        refreshClearWatch()
         scheduleSave()
     }
 }

@@ -45,10 +45,22 @@ final class PageGuardTests: XCTestCase {
         return table
     }
 
+    /// The switches a test wants, put where the application reads them: the privacy settings of the state (the guard is given them at each page). The
+    /// default `GuardSettings()` is everything on, extended rules included, which no level but « Stricte » stands for.
+    private func switches(_ settings: GuardSettings, on model: BrowserModel) {
+        model.updatePrivacy {
+            $0.blockAds = settings.blockAds
+            $0.blockCookieBanners = settings.blockCookieBanners
+            $0.blockScriptlets = settings.blockScriptlets
+            $0.blockExceptions = settings.exemptSites
+        }
+    }
+
     private func model(hosts: [String] = ["127.0.0.1"], settings: GuardSettings = GuardSettings()) async throws -> BrowserModel {
         let table = try table(for: hosts)
         let model = BrowserModel.launch(directory: directory.appending(path: "files"), embeddedLists: { nil },
                                         pageGuard: { _ in try PageGuard.load(table: table, settings: settings) }, store: store)
+        switches(settings, on: model)
         await model.prepare()
         XCTAssertNil(model.guardFailure)
         return model
@@ -246,6 +258,7 @@ final class PageGuardTests: XCTestCase {
         defer { local.stop() }
         let model = BrowserModel.launch(directory: directory.appending(path: "files"), embeddedLists: { nil },
                                         pageGuard: { _ in try PageGuard.load(table: table) }, store: store)
+        switches(GuardSettings(), on: model)
         await model.prepare()
         let view = try XCTUnwrap(model.webView)
         try await NavigationWaiter().load(in: view) { view.load(URLRequest(url: URL(string: "http://127.0.0.1:\(localPort)/player.html")!)) }
@@ -312,6 +325,7 @@ final class PageGuardTests: XCTestCase {
             var table = ScriptletTable()
             if guarded { try table.merge(Data(#"{"schema":1,"domains":{"127.0.0.1":[["prune-response",["/answer.json","adPlacements playerAds adSlots"]]]}}"#.utf8), category: .ads) }
             let model = BrowserModel.launch(directory: directory.appending(path: guarded ? "g" : "u"), embeddedLists: { nil }, pageGuard: { [table] _ in try PageGuard.load(table: table) }, store: store)
+            switches(GuardSettings(), on: model)
             await model.prepare()
             let view = try XCTUnwrap(model.webView)
             try await NavigationWaiter().load(in: view) { view.load(URLRequest(url: URL(string: "http://127.0.0.1:\(localPort)/reader.html")!)) }

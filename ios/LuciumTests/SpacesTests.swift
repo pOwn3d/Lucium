@@ -344,6 +344,103 @@ final class SpacesTests: BrowserCoreTestCase {
         XCTAssertEqual(none, 0, "nothing left to erase")
     }
 
+    // MARK: « Effacer à la fermeture »
+
+    /// The list of the Mac's `siteDataClearOnClose`: the site is the host with its port, as a page of a local server stands for one.
+    private func clearOnClose(_ model: BrowserModel, enabled: Bool = true, onQuit: Bool = false) {
+        model.updatePrivacy { $0.clearOnClose = .init(enabled: enabled, sites: ["127.0.0.1:\(port)"], onQuit: onQuit) }
+    }
+
+    func testTheLastTabOfAListedSiteErasesItsDataWhenItCloses() async throws {
+        let model = await makeModel()
+        clearOnClose(model)
+        try await load("/a.html", in: model)
+        try await setCookie("a=1", in: model)
+        try await awaitCookies(["a"], of: "work")
+
+        model.close(try XCTUnwrap(model.activeTab))
+        try await awaitCookies([], of: "work")
+    }
+
+    func testTheDataStaysWhileAnotherTabIsOnTheSiteAndGoesWithTheLastOne() async throws {
+        let model = await makeModel()
+        clearOnClose(model)
+        try await load("/a.html", in: model)
+        let first = try XCTUnwrap(model.activeTab)
+        try await setCookie("a=1", in: model)
+        model.newTab()
+        try await load("/b.html", in: model)
+        let second = try XCTUnwrap(model.activeTab)
+        try await awaitCookies(["a"], of: "work")
+
+        model.close(first)
+        try await Task.sleep(for: .seconds(1))
+        let kept = await cookieNames(of: "work")
+        XCTAssertEqual(kept, ["a"], "a tab is still on the site")
+        model.close(second)
+        try await awaitCookies([], of: "work")
+    }
+
+    func testNothingIsErasedWhenTheFunctionIsOffOrTheSiteIsNotOnTheList() async throws {
+        let model = await makeModel()
+        clearOnClose(model, enabled: false)
+        try await load("/a.html", in: model)
+        try await setCookie("a=1", in: model)
+        try await awaitCookies(["a"], of: "work")
+        model.close(try XCTUnwrap(model.activeTab))
+        try await Task.sleep(for: .seconds(1))
+        let off = await cookieNames(of: "work")
+        XCTAssertEqual(off, ["a"], "the switch is off")
+
+        model.updatePrivacy { $0.clearOnClose = .init(enabled: true, sites: ["example.org"], onQuit: false) }
+        try await load("/a.html", in: model)
+        model.close(try XCTUnwrap(model.activeTab))
+        try await Task.sleep(for: .seconds(1))
+        let other = await cookieNames(of: "work")
+        XCTAssertEqual(other, ["a"], "another site is on the list")
+    }
+
+    func testAPageThatGoesToAnotherSiteErasesNothing() async throws {
+        let model = await makeModel()
+        clearOnClose(model)
+        try await load("/a.html", in: model)
+        try await setCookie("a=1", in: model)
+        try await awaitCookies(["a"], of: "work")
+        let view = try XCTUnwrap(model.webView)
+        let other = try XCTUnwrap(URL(string: "http://localhost:\(port)/b.html"))
+        try await NavigationWaiter().load(in: view) { view.load(URLRequest(url: other)) }
+        try await Task.sleep(for: .seconds(1))
+        let kept = await cookieNames(of: "work")
+        XCTAssertEqual(kept, ["a"], "a sign-in goes through other hosts: only a tab that is gone counts")
+    }
+
+    func testTheListIsErasedWhenTheApplicationStartsAgainIfAsked() async throws {
+        let model = await makeModel()
+        clearOnClose(model, onQuit: true)
+        try await load("/a.html", in: model)
+        try await setCookie("a=1", in: model)
+        try await awaitCookies(["a"], of: "work")
+        model.flush()
+
+        // The same folder, a new model: the application starts again.
+        let again = BrowserModel.launch(directory: directory, embeddedLists: { nil })
+        await again.prepare()
+        try await awaitCookies([], of: "work")
+    }
+
+    func testTheListIsKeptAtLaunchWhenOnlyTheCloseIsAsked() async throws {
+        let model = await makeModel()
+        clearOnClose(model, onQuit: false)
+        try await load("/a.html", in: model)
+        try await setCookie("a=1", in: model)
+        try await awaitCookies(["a"], of: "work")
+        model.flush()
+        let again = BrowserModel.launch(directory: directory, embeddedLists: { nil })
+        await again.prepare()
+        let kept = await cookieNames(of: "work")
+        XCTAssertEqual(kept, ["a"])
+    }
+
     func testThereIsNoSiteToClearOnAPrivateOrBlankTab() async throws {
         let model = await makeModel()
         XCTAssertNil(model.siteOfActivePage, "a blank tab is on no site")
