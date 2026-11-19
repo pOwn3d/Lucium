@@ -39,6 +39,31 @@ public enum SyncInbound {
         public let reason: Refusal
     }
 
+    /// What a device sent, cut down to the kinds this session exchanges (§5 [Q2], §11.6): an honest device sends nothing of a category that is not common, so what is left
+    /// out came from one that does not keep to them, and it is not applied (the settings of privacy, the archive, the spaces of a device whose structure is not ticked here).
+    /// The twin of `onlyExchanged` in `src/main/sync/state-view.ts`: the kinds this version does not know cross whatever is ticked, and a list is of the kind it orders.
+    public static func onlyExchanged(_ snapshot: SyncSnapshot, categories: Set<SyncCategory>) -> (snapshot: SyncSnapshot, refused: [Refused]) {
+        var refused: [Refused] = []
+        func kept(_ kind: String) -> Bool { SyncStateView.isExchanged(kind: kind, categories: categories) }
+        func listKept(_ key: String) -> Bool { SyncMarkBook.listKind(of: key).map(kept) ?? true }
+        var result = SyncSnapshot()
+        for (kind, byID) in snapshot.entities {
+            if kept(kind) { result.entities[kind] = byID } else { refused += byID.keys.map { Refused(kind: kind, id: $0, reason: .notSynced) } }
+        }
+        for (kind, byID) in snapshot.tombstones {
+            if kept(kind) { result.tombstones[kind] = byID } else { refused += byID.keys.map { Refused(kind: "tombstone", id: "\(kind)/\($0)", reason: .notSynced) } }
+        }
+        for (key, ids) in snapshot.order {
+            if listKept(key) { result.order[key] = ids } else { refused.append(Refused(kind: "order", id: key, reason: .notSynced)) }
+        }
+        for (key, stamp) in snapshot.orderStamps where listKept(key) { result.orderStamps[key] = stamp }
+        refused.sort { a, b in
+            let kind = SyncCanonical.compare(a.kind, b.kind)
+            return kind != 0 ? kind < 0 : SyncCanonical.compare(a.id, b.id) < 0
+        }
+        return (result, refused)
+    }
+
     public struct Cleaned: Equatable, Sendable {
         public var snapshot: SyncSnapshot
         /// Sorted by kind then id, so that a log line does not depend on the order of a dictionary.

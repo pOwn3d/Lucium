@@ -22,6 +22,12 @@ describe('filterEntity: the vectors of the specification', () => {
 })
 
 describe('filterEntity: what the vectors do not say', () => {
+  it('reads a list of a hundred and fifty thousand values without throwing: the walk of a value does not spread a list on the stack (review, second pass)', () => {
+    // A frame may hold 150 000 values; `stack.push(...list)` raises a RangeError from about 125 000 elements, which ended the session as `internal`.
+    const fields = { name: 'x', extra: Array.from({ length: 149_000 }, () => 0) }
+    expect(() => filterEntity({ kind: 'space', id: 'big', fields })).not.toThrow()
+  })
+
   const setting = (id: string, value: unknown) => filterEntity({ kind: 'setting', id, fields: { value } })
 
   it('refuses every kind of code and every secret by name', () => {

@@ -22,6 +22,8 @@ struct SyncScreen: View {
             }
             if controller.settings.enabled {
                 macSection
+                if controller.settings.mac != nil { intervalSection }
+                if let last = controller.lastExchange, controller.settings.mac != nil { lastExchangeSection(last) }
                 if !controller.lastConflicts.isEmpty { conflictsSection }
                 if let resumeModel, controller.settings.mac != nil { resumeSection(resumeModel) }
                 categoriesSection
@@ -78,6 +80,49 @@ struct SyncScreen: View {
             }
         } header: {
             Text("sync.mac.header")
+        }
+    }
+
+    // MARK: The interval
+
+    /// How often the phone synchronizes by itself while Lucium is on the screen (card 505). The footer says what the system lets it do: nothing in the background.
+    @ViewBuilder private var intervalSection: some View {
+        Section {
+            Picker("sync.interval.picker", selection: Binding(get: { controller.interval }, set: { controller.setInterval($0) })) {
+                ForEach(SyncInterval.allCases) { interval in
+                    Text(Self.title(of: interval)).tag(interval)
+                }
+            }
+            .frame(minHeight: 44)
+        } header: {
+            Text("sync.interval.header")
+        } footer: {
+            Text("sync.interval.footer")
+        }
+    }
+
+    static func title(of interval: SyncInterval) -> LocalizedStringKey {
+        switch interval {
+        case .seconds30: "sync.interval.half-minute"
+        case .minute1: "sync.interval.minute"
+        case .minutes5: "sync.interval.five-minutes"
+        case .minutes15: "sync.interval.quarter-hour"
+        }
+    }
+
+    // MARK: « Dernier échange »
+
+    /// What the last session did, in words: « À jour » alone cannot be told from « nothing crossed » (a category ticked here and not on the Mac crosses nothing). Kept in
+    /// memory with the session, so the section is there from the first exchange of this run on.
+    private func lastExchangeSection(_ last: SyncExchangeSummary) -> some View {
+        let lines = Array(SyncLastExchange.lines(of: last, ticked: controller.settings.categories).enumerated())
+        return Section {
+            ForEach(lines, id: \.offset) { _, line in
+                SyncTexts.lastExchange(line)
+                    .frame(minHeight: 44, alignment: .leading)
+            }
+        } header: {
+            Text("sync.last.header")
         }
     }
 

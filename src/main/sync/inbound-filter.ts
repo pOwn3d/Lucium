@@ -79,8 +79,10 @@ function holdsUnsendableText(root: unknown): boolean {
     const value = stack.pop()
     if (typeof value === 'string') {
       if (unsendable(value)) return true
-    } else if (Array.isArray(value)) stack.push(...value)
-    else if (typeof value === 'object' && value !== null) {
+    } else if (Array.isArray(value)) {
+      // One by one: `push(...value)` spreads the list on the call stack, which a list of about 125 000 elements overflows.
+      for (const item of value) stack.push(item)
+    } else if (typeof value === 'object' && value !== null) {
       for (const [key, member] of Object.entries(value)) {
         if (unsendable(key)) return true
         stack.push(member)

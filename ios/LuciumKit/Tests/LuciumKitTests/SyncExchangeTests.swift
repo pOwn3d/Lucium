@@ -72,6 +72,8 @@ struct SyncTestMac: Sendable {
     var extraPartAfterEnd = false
     /// Says hello and then nothing at all.
     var silentAfterHello = false
+    /// Sends its settings and its archive whatever the categories both ticked (a Mac that does not keep to what it said in its hello), and merges them as it sends them.
+    var ignoresTheCategories = false
 
     struct Seen: @unchecked Sendable {
         var hello: [String: Any] = [:]
@@ -132,8 +134,8 @@ struct SyncTestMac: Sendable {
         let common = Set(categories).intersection(phoneCategories)
         var shown = snapshot
         if !common.contains("structure") { shown = shown.withoutStructure() }
-        if !common.contains("settings") { shown.entities["setting"] = nil }
-        if !common.contains("archive") { shown.entities["archived"] = nil }
+        if !common.contains("settings") && !ignoresTheCategories { shown.entities["setting"] = nil }
+        if !common.contains("archive") && !ignoresTheCategories { shown.entities["archived"] = nil }
         // What the Mac sends is what it would itself accept, with the phone's clock for the marks of the future (`hello.now`).
         let sent = SyncInbound.clean(shown, now: theirs.fields["now"] as? Int ?? now, base: (hash != nil && phoneHash == hash) ? base : nil).snapshot
         let parts = SyncSnapshotParts.parts(of: sent, withheld: withheld)
@@ -417,6 +419,36 @@ struct SyncExchangeTests {
         guard case .object(let settings)? = await rig.host.state.rest["settings"] else { Issue.record("no settings"); return }
         #expect(settings["autoArchiveHours"] == .number(6), "a patch that holds only a setting is written")
         #expect(await rig.host.state.spaces.map(\.id).sorted() == ["s1", "s2"])
+    }
+
+    @Test func theSettingsAndTheArchiveOfAMacThatDoesNotKeepToTheCategoriesAreNotTaken() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["structure"])
+        mac.ignoresTheCategories = true
+        mac.snapshot.entities["setting"] = ["httpsUpgrade": macEntity(["value": .bool(false)]), "sendGpc": macEntity(["value": .bool(true)])]
+        mac.snapshot.entities["archived"] = ["planted": macEntity(["spaceId": .string("m1"), "url": .string("https://planted.example/"), "title": .string("planted"), "archivedAt": .number(1)])]
+        let before = await rig.host.state
+        // Only the structure is common. The Mac merges what it sent, the settings included; the phone merges what is common, and the two do not reach the same snapshot.
+        _ = try? await session(rig, mac: mac, categories: [.structure])
+        let after = await rig.host.state
+        #expect(after.rest["settings"] == before.rest["settings"], "the privacy settings of the phone are not the Mac's to change when the category is not ticked")
+        #expect(after.archive == before.archive)
+        #expect(after.spaces == before.spaces, "and nothing is written at all when the two devices do not agree")
+    }
+
+    @Test func whatIsLeftOutOfACategoryThatIsNotCommonIsTheKindsAndTheListsOfIt() {
+        var received = macSnapshot()
+        received.entities["setting"] = ["httpsUpgrade": macEntity(["value": .bool(false)])]
+        received.entities["archived"] = ["a9": macEntity(["spaceId": .string("m1"), "url": .string("https://x.example/")])]
+        received.entities["unknown-kind"] = ["u1": macEntity(["x": .number(1)])]
+        received.tombstones = ["tab": ["gone": macStamp(2)], "archived": ["old": macStamp(2)]]
+        let kept = SyncInbound.onlyExchanged(received, categories: [.settings])
+        #expect(kept.snapshot.entities.keys.sorted() == ["setting", "unknown-kind"], "the structure and the archive are not common; a kind this version does not know crosses")
+        #expect(kept.snapshot.tombstones.isEmpty)
+        #expect(kept.snapshot.order.isEmpty && kept.snapshot.orderStamps.isEmpty, "the lists and the deletions of the structure go with it")
+        #expect(kept.refused.contains { $0.kind == "space" && $0.id == "m1" && $0.reason == .notSynced })
+        #expect(SyncInbound.onlyExchanged(received, categories: [.structure, .settings, .archive]).snapshot == received, "everything that is common stays")
     }
 
     @Test func anEntityThatCannotTravelBecauseOfItsMarkIsNotTakenForADeletion() async throws {
@@ -937,6 +969,93 @@ struct SyncExchangeTests {
         let (_, seen) = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()), categories: [.structure, .openTabs])
         #expect(seen.phoneOpenTabs == nil)
         #expect(try #require(await rig.host.summaries.first).openTabs == nil)
+    }
+
+    // MARK: The first real trial (19 November 2026, card 494)
+
+    /// The phone of the first real trial: the three spaces of a first launch, each with a profile of its own, a day old.
+    private func phoneOfTheTrial() -> BrowserState {
+        func space(_ id: String, _ name: String, _ emoji: String, hue: Double) -> Space { Space(id: id, name: name, emoji: emoji, profileId: id, rest: ["theme": SpaceTheme.make(hue: hue)]) }
+        return BrowserState(revision: 2, spaces: [space("work", "Travail", "💼", hue: 250), space("home", "Maison", "🏠", hue: 30), space("projects", "Projets", "🧩", hue: 175)],
+                            activeSpaceId: "work", activeTabBySpace: ["work": nil, "home": nil, "projects": nil])
+    }
+
+    /// The Mac of the trial, new: its three default spaces, and « Perso », which the person made there.
+    private func macOfTheTrial() -> SyncSnapshot {
+        func space(_ id: String, _ name: String, _ emoji: String, _ profile: String, hue: Double) -> SyncEntity {
+            macEntity(["name": .string(name), "emoji": .string(emoji), "profileId": .string(profile), "theme": SpaceTheme.make(hue: hue)])
+        }
+        var snapshot = SyncSnapshot()
+        snapshot.entities = ["space": ["home": space("home", "Maison", "🏠", "home", hue: 30), "work": space("work", "Travail", "💼", "work", hue: 250), "projects": space("projects", "Projets", "🧩", "projects", hue: 175),
+                                       "a5217766-0743-4472-b55f-c623fecfe910": space("a5217766-0743-4472-b55f-c623fecfe910", "Perso", "🏠", "default", hue: 250)]]
+        snapshot.order = ["spaces": ["home", "work", "projects", "a5217766-0743-4472-b55f-c623fecfe910"]]
+        snapshot.orderStamps = ["spaces": macStamp(12)]
+        return snapshot
+    }
+
+    @Test func aSpaceMadeOnANewMacReachesAPhoneThatHadTheDefaultSpacesBefore() async throws {
+        let rig = try rig(state: phoneOfTheTrial())
+        defer { rig.cleanup() }
+        // The phone saw its own state a day before the Mac was even installed (the marks are older than the Mac's).
+        rig.marks.observe(await rig.host.state, now: now - 43_000_000)
+        let (report, seen) = try await session(rig, mac: SyncTestMac(snapshot: macOfTheTrial()))
+        #expect(report?.outcome == .committed(at: now))
+        #expect(seen.phoneResult == seen.merged?.snapshot.digest && seen.phoneCommit == seen.merged?.snapshot.digest)
+        let state = await rig.host.state
+        #expect(Set(state.spaces.map(\.id)) == ["home", "work", "projects", "a5217766-0743-4472-b55f-c623fecfe910"], "the phone shows the four spaces of the Mac")
+        #expect(state.spaces.first { $0.id == "a5217766-0743-4472-b55f-c623fecfe910" }?.name == "Perso")
+        let summary = try #require(await rig.host.summaries.first)
+        #expect(summary.applied && summary.rejectedByApply.isEmpty && summary.refusedReceived.isEmpty && summary.refusedSent.isEmpty)
+        #expect(summary.categories == [.structure] && summary.taken >= 1, "the summary says what crossed and how much the phone took")
+    }
+
+    /// What the person of the first trial could not see: the phone ticked more than the Mac did, so only the structure crossed, and nothing on the page said so.
+    @Test func theSummaryNamesTheCategoriesThatCrossedAndTheOnesThePhoneTickedAlone() async throws {
+        let rig = try rig(state: phoneOfTheTrial())
+        defer { rig.cleanup() }
+        rig.marks.observe(await rig.host.state, now: now - 43_000_000)
+        let ticked: [SyncCategory] = [.structure, .settings, .archive]
+        _ = try await session(rig, mac: SyncTestMac(snapshot: macOfTheTrial()), categories: ticked)
+        let summary = try #require(await rig.host.summaries.first)
+        #expect(summary.categories == [.structure], "the Mac ticked the structure only")
+        #expect(SyncLastExchange.lines(of: summary, ticked: ticked) == [.exchanged([.structure]), .notExchanged([.settings, .archive]), .received(summary.taken)])
+    }
+
+    @Test func theCountOfWhatThePhoneTookAddsTheSettingsAndTheRemovalsToTheEntitiesMade() async throws {
+        let rig = try rig(state: phoneOfTheTrial())
+        defer { rig.cleanup() }
+        rig.marks.observe(await rig.host.state, now: now - 43_000_000)
+        var snapshot = macOfTheTrial()
+        snapshot.entities["setting"] = ["httpsUpgrade": macEntity(["value": .bool(true)])]
+        var mac = SyncTestMac(snapshot: snapshot, categories: ["structure", "settings"])
+        _ = try await session(rig, mac: mac, categories: [.structure, .settings])
+        let first = try #require(await rig.host.patches.first)
+        #expect(first.settings.count == 1)
+        #expect(try #require(await rig.host.summaries.first).taken == first.upserts.count + first.removals.count + 1, "the setting counts with the entities")
+        // Then the Mac removes « Perso »: the removal counts too.
+        let merged = SyncStateView.base(of: try #require(await rig.bases.get(peerId: peer.id, now: now)).snapshot)
+        var after = merged
+        after.entities["space"]?["a5217766-0743-4472-b55f-c623fecfe910"] = nil
+        after.order["spaces"] = after.order["spaces"]?.filter { $0 != "a5217766-0743-4472-b55f-c623fecfe910" }
+        after.orderStamps["spaces"] = macStamp(40)
+        after.tombstones["space"] = ["a5217766-0743-4472-b55f-c623fecfe910": macStamp(41)]
+        mac = SyncTestMac(snapshot: after, base: merged, categories: ["structure", "settings"])
+        _ = try await session(rig, mac: mac, categories: [.structure, .settings])
+        let second = try #require(await rig.host.patches.last)
+        #expect(second.removals.count == 1)
+        #expect(try #require(await rig.host.summaries.last).taken == second.upserts.count + 1 + second.settings.count)
+    }
+
+    @Test func aSecondSessionWithNothingNewSaysSoInsteadOfLeavingTheLineEmpty() async throws {
+        let rig = try rig(state: phoneOfTheTrial())
+        defer { rig.cleanup() }
+        rig.marks.observe(await rig.host.state, now: now - 43_000_000)
+        let first = try await session(rig, mac: SyncTestMac(snapshot: macOfTheTrial()))
+        let merged = try #require(first.1.merged).snapshot
+        _ = try await session(rig, mac: SyncTestMac(snapshot: SyncStateView.base(of: merged), base: SyncStateView.base(of: merged)))
+        let summary = try #require(await rig.host.summaries.last)
+        #expect(summary.taken == 0 && !summary.applied)
+        #expect(SyncLastExchange.lines(of: summary, ticked: [.structure]) == [.exchanged([.structure]), .nothingNew])
     }
 }
 
