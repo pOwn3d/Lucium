@@ -1076,6 +1076,20 @@ La carte 507 écrit **le contrat seulement** : des fonctions pures et les vecteu
 
 **Vérifié** : l'identifiant d'onglet du Mac est aléatoire (§27.2). **Preuve** : chaque garde de `sync-today.ts` et de `SyncToday.swift` (le plafond, la condition de chaque refus, l'admission collante, l'arrondi, le plafond de la porte, la coupure du titre, le classement, la version de la base, les deux sens du déplacement) et les quatre lignes de la fusion ont été **retirées ou inversées une à une** : au moins un vecteur échoue chaque fois (Vitest et `swift test`) ; une seule inversion ne change rien (`>=` à la place de `>` sur le plafond de la porte : `slice` rend le même résultat, c'est une mutation équivalente).
 
+### 27.17 Ce que la carte 508 a précisé en l'écrivant (le Mac)
+
+La carte 508 branche le contrat sur le Mac (PR #143). Les points qui touchent **les deux appareils** :
+
+| Sujet | Règle | Pourquoi |
+|---|---|---|
+| **`todayTabs` sans `structure`** | un appareil **n'annonce `todayTabs` que si `structure` est aussi cochée**, et la catégorie n'est **commune que si `structure` l'est** (le Mac applique les deux règles) | un onglet dépend de son espace (§27.2) et les espaces voyagent avec la structure : sans elle la fusion ne trouve aucun espace et **retire tous les onglets** (§11.7.1), ceux de l'appareil d'abord. L'iPhone doit annoncer de la même façon, et l'interface (carte d'interface) ne doit pas laisser cocher l'une sans l'autre. Le même trou existe pour `archive` seule : hors périmètre, non corrigé |
+| **Un onglet revient sans sa page** | l'application du patch reprend l'adresse et le titre de **l'entrée d'archive de même identifiant** (§27.5), et la consomme ; sans entrée, l'onglet n'est pas créé (un onglet sans adresse n'en est pas un) | « fermé ici, lu là » (§27.9) : les graines ne partent qu'avec une entité **nouvelle pour l'autre appareil**, donc l'appareil qui a fermé reçoit l'onglet sans adresse |
+| **Fermeture reçue d'un onglet affiché** [Q11] | l'onglet va à l'archive (source `sync`), le voisin est affiché ; la session prévient l'interface par `onShownTabsClosed` (identifiant, espace, « à l'écran ») : la ligne « Fermé sur l'iPhone » est celle de la carte d'interface | l'événement existe côté Mac, rien ne le dessine encore |
+| **Déplacement** | l'onglet est converti **en place** (il garde sa page et son historique, les graines de la création ne sont pas écrites) ; seulement tant qu'il est tel que la séance l'a gelé | §27.2 |
+| **Liste `today:<espace>`** | ne range que les onglets **nommés** : ceux d'« Aujourd'hui » qui ne sont pas partagés gardent leur place | §27.3 |
+| **Livre des marques** | **format 2** (il porte les onglets admis, genre `todayTab`) ; un livre de format 1 est lu ; un format plus récent est mis de côté (le cas de la base perdue, §11.8) | §27.13 laissait la décision à la carte d'implémentation |
+| **Mini-fenêtre** | ses pages ne sont pas dans l'état de la barre latérale (pages de `LittleWindow`) : **jamais partagées** | à vérifier en §27.7 : vérifié |
+
 ## 28. Ce que la carte 505 a changé (synchronisation automatique, 19 novembre 2026)
 
 **La demande du chef de projet, mot pour mot** : « je suis obligé d'aller sur mon téléphone, d'aller dans les réglages, de faire synchronisation, synchroniser maintenant, ensuite d'aller dans Lucium, d'aller dans synchroniser et de faire fenêtre de synchronisation. Moi je veux que ça soit automatique, que par exemple toutes les 30 secondes, 1 minute, peu importe, il faudrait qu'on puisse définir d'ailleurs le temps, que ça synchronise et que ça soit bidirectionnel, ce qui veut dire que si je supprime quelque chose sur mon Mac, cela supprime sur l'iPhone, et si je la supprime de l'iPhone, cela le supprime sur du Mac. » **Précisions du même jour** : la synchronisation ne tourne que quand Lucium est ouvert **des deux côtés** (voulu) ; sur le même réseau local ; en connexion sécurisée (le TLS mutuel épinglé est gardé en entier) ; **jamais** de cookies, de sessions, de mots de passe ni de connexion automatique aux sites ; intervalle de **1 minute par défaut** (30 s, 1 min, 5 min, 15 min).
