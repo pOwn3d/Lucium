@@ -1,9 +1,9 @@
-// Settings › Téléchargements et fichiers › Synchronisation (docs/synchronisation.md §13.1): the switch, the window the person opens by hand, what is synchronised,
+// Settings › Téléchargements et fichiers › Synchronisation (docs/synchronisation.md §13.1): the switch, whether this Mac is listening for its iPhone, what is synchronised,
 // the devices, and the sheet that adds an iPhone (a QR, the address and a code to type, then the question « Autoriser / Refuser » when the iPhone asks).
 //
 // The synchronisation lives in the main process (src/main/sync/): this page holds no key and no secret of its own. It asks (`api().sync`), it draws the state it is
-// given, and it asks again once a second while it is on screen (the countdowns). Leaving the page, by the way back or by another page, closes the window: the
-// Mac listens only while this page is open and the person has opened the window (§6.1). The state is asked for only while the page is drawn.
+// given, and it asks again once a second while it is on screen (the countdowns). The Mac listens for as long as the switch is on, Lucium is unlocked and an iPhone is
+// paired (§6.1): nothing here opens or closes it, and leaving the page only closes the sheet of a pairing. The state is asked for only while the page is drawn.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getLanguage, t } from '@shared/i18n'
@@ -64,7 +64,7 @@ function useSync(watch: boolean) {
     return () => {
       live.current = false
       clearInterval(timer)
-      // The page is left: the window closes with it (the main process does the same when the Settings window itself closes).
+      // The page is left: the sheet of a pairing closes with it (the main process does the same when the Settings window itself closes).
       void api()
         .sync({ kind: 'leave' })
         .catch((error: unknown) => console.warn('[sync] leaving the page could not be told:', error))
@@ -90,7 +90,7 @@ function QrDrawing({ text }: { text: string }) {
 /** The row of the page « Fichiers » that opens the subpage: its state, read once when the page is drawn (no polling, no window is opened for it). */
 export function SyncEntry({ snapshot }: { snapshot: UiSnapshot }) {
   const { status } = useSync(false)
-  const summary = status === null ? '' : syncSummary({ enabled: status.enabled, devices: status.devices.length, windowOpen: status.window.open })
+  const summary = status === null ? '' : syncSummary({ enabled: status.enabled, devices: status.devices.length, listening: status.listening })
   return <SubpageEntry id="sync" snapshot={snapshot} summary={summary} />
 }
 
@@ -108,25 +108,8 @@ function Panel() {
       </Group>
       {on && (
         <>
-          <Group title={t('sync.window-title')} footnote={t('sync.window-open-hint')}>
-            {status.window.open ? (
-              <Row label={<span role="timer">{t('sync.window-remaining', { time: countdown(status.window.remainingMs) })}</span>}>
-                <span className="sync-buttons">
-                  <button type="button" className="button" onClick={() => void ask({ kind: 'prolong' })}>
-                    {t('sync.window-prolong')}
-                  </button>
-                  <button type="button" className="button" onClick={() => void ask({ kind: 'close-window' })}>
-                    {t('sync.window-close')}
-                  </button>
-                </span>
-              </Row>
-            ) : (
-              <Row label={<span className="muted">{t('sync.window-closed')}</span>}>
-                <button type="button" className="button" onClick={() => void ask({ kind: 'open-window' })}>
-                  {t('sync.window-open-button')}
-                </button>
-              </Row>
-            )}
+          <Group title={t('sync.listening-title')} footnote={t('sync.listening-hint')}>
+            <Row label={<span className={status.listening ? 'sync-notice' : 'muted'} role="status">{t(status.listening ? 'sync.listening-on' : status.devices.length > 0 ? 'sync.listening-failed' : 'sync.listening-off')}</span>} />
           </Group>
           <Group title={t('sync.categories-title')} footnote={t('sync.categories-never')}>
             {SYNC_CATEGORIES.map((category) => (

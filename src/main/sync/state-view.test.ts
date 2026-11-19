@@ -171,25 +171,33 @@ describe('openTabsOf (§10.4)', () => {
     expect(openTabsOf(state, (id) => id === 'locked').map((tab) => tab.id)).toEqual(['b', 'a'])
   })
 
-  it('writes what the message allows: the address up to 4096 bytes, the title up to 300 characters, the time as a whole number', () => {
-    const long = { ...state, tabs: [{ ...state.tabs[0]!, url: `https://x.example/${'a'.repeat(5000)}`, title: 'T'.repeat(400), lastActiveAt: 7.9 }] }
+  it('writes what the message allows: the title up to 300 characters, the time as a whole number', () => {
+    const long = { ...state, tabs: [{ ...state.tabs[0]!, title: 'T'.repeat(400), lastActiveAt: 7.9 }] }
     const [tab] = openTabsOf(long, () => false)
-    expect(tab?.url.length).toBe(4096)
     expect(tab?.title.length).toBe(300)
     expect(tab?.lastActiveAt).toBe(7)
   })
 
-  it('does not cut a title or an address in the middle of an emoji: a lone surrogate is not text, and Swift refuses the whole message that holds one (review n° 15)', () => {
-    const emoji = '\u{1F600}'
-    const long = { ...state, tabs: [{ ...state.tabs[0]!, url: `https://x.example/${'a'.repeat(4077)}${emoji}`, title: `${'T'.repeat(299)}${emoji}` }] }
-    const [tab] = openTabsOf(long, () => false)
-    expect(tab?.title).toBe('T'.repeat(299))
-    expect(tab?.url.length).toBe(4095)
-    expect(hasLoneSurrogate(`${tab?.title}${tab?.url}`)).toBe(false)
+  it('leaves out a tab whose address is longer than 4096 bytes, and keeps one at the bound: an address cut is another page, which the other device would show and open (review, second pass)', () => {
+    const at = `https://x.example/${'a'.repeat(4096 - 'https://x.example/'.length)}`
+    const over = `${at}a`
+    const wide = `https://x.example/${'é'.repeat(2040)}`
+    expect(Buffer.byteLength(at, 'utf8')).toBe(4096)
+    expect(Buffer.byteLength(wide, 'utf8')).toBeGreaterThan(4096)
+    const tabs = [at, over, wide].map((url, n) => ({ ...state.tabs[0]!, id: `u${n}`, url, lastActiveAt: 9 - n }))
+    expect(openTabsOf({ ...state, tabs }, () => false).map((tab) => [tab.id, tab.url])).toEqual([['u0', at]])
   })
 
-  it('cuts the title and the address to the BYTES the message allows, not to as many UTF-16 units: a title of 300 non-ASCII characters is 900 bytes, and the message holding it was refused', () => {
-    const wide = { ...state, tabs: [{ ...state.tabs[0]!, url: `https://x.example/${'é'.repeat(5000)}`, title: '日本語のタイトル'.repeat(60), lastActiveAt: 7 }] }
+  it('does not cut a title in the middle of an emoji: a lone surrogate is not text, and Swift refuses the whole message that holds one (review n° 15)', () => {
+    const emoji = '\u{1F600}'
+    const long = { ...state, tabs: [{ ...state.tabs[0]!, title: `${'T'.repeat(299)}${emoji}` }] }
+    const [tab] = openTabsOf(long, () => false)
+    expect(tab?.title).toBe('T'.repeat(299))
+    expect(hasLoneSurrogate(`${tab?.title}`)).toBe(false)
+  })
+
+  it('cuts the title to the BYTES the message allows, not to as many UTF-16 units: a title of 300 non-ASCII characters is 900 bytes, and the message holding it was refused', () => {
+    const wide = { ...state, tabs: [{ ...state.tabs[0]!, title: '日本語のタイトル'.repeat(60), lastActiveAt: 7 }] }
     const [tab] = openTabsOf(wide, () => false)
     expect(Buffer.byteLength(tab?.title ?? '', 'utf8')).toBeLessThanOrEqual(MAX_OPEN_TAB_TITLE_BYTES)
     expect(Buffer.byteLength(tab?.url ?? '', 'utf8')).toBeLessThanOrEqual(MAX_OPEN_TAB_URL_BYTES)

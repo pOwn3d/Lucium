@@ -21,8 +21,8 @@ describe('the limits of the synchronisation', () => {
     }).toEqual(v)
   })
 
-  it('open the synchronisation window for ten minutes at most, and the pairing for two', () => {
-    expect(limits.WINDOW_MAX_MS).toBe(10 * 60_000)
+  it('keep the pairing to two minutes (the listening itself has no deadline: it has conditions, §6.1)', () => {
+    expect('WINDOW_MAX_MS' in limits).toBe(false)
     expect(limits.PAIRING_WINDOW_MS).toBe(2 * 60_000)
     expect(limits.CONFIRM_MS).toBe(60_000)
     expect(limits.ALPN).toBe('lucium-sync/1')

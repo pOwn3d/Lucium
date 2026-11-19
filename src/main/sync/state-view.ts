@@ -13,7 +13,7 @@ import { ZERO_STAMP, type SyncEntity, type SyncFields, type SyncSnapshot } from 
 import { ARCHIVE_PER_SPACE_SENT, FIELD_CLASSES, SYNCED_SETTINGS, isKind, type EntityKind } from './field-classes'
 import { cutBytes } from '@shared/state-clean'
 import { MAX_OPEN_TABS, MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES } from './limits'
-import { earlier, type MarkBook, type TrackedView } from './marks'
+import { earlier, listKindOf, type MarkBook, type TrackedView } from './marks'
 
 type Entity = object
 
@@ -99,6 +99,38 @@ const kindsOfCategories = (categories: ReadonlySet<SyncCategory>): ReadonlySet<s
 /** Whether a session with these categories exchanges the kind: the kinds of the categories, and the kinds this version does not know (they cross whatever is ticked, §11.6). */
 export const kindIsExchanged = (kind: string, categories: ReadonlySet<SyncCategory>): boolean => kindsOfCategories(categories).has(kind) || (!isKind(kind) && kind !== 'setting')
 
+/**
+ * What a device sent, cut down to the kinds this session exchanges (§5 [Q2], §11.6): an honest device sends nothing of a category that is not common, so what is left out
+ * here came from one that does not keep to them, and it is not applied (the settings of privacy, the archive, the spaces of a device whose structure is not ticked here).
+ * The kinds this version does not know cross whatever is ticked, as they do in `kindIsExchanged`; a list is of the kind it orders.
+ */
+export function onlyExchanged(snapshot: SyncSnapshot, categories: ReadonlySet<SyncCategory>): { snapshot: SyncSnapshot; refused: Array<{ kind: string; id: string; reason: 'not-synced' }> } {
+  const refused: Array<{ kind: string; id: string; reason: 'not-synced' }> = []
+  const kindKept = (kind: string): boolean => kindIsExchanged(kind, categories)
+  const listKept = (key: string): boolean => {
+    const kind = listKindOf(key)
+    return kind === null || kindKept(kind)
+  }
+  const entities: SyncSnapshot['entities'] = {}
+  for (const [kind, byId] of Object.entries(snapshot.entities)) {
+    if (kindKept(kind)) entities[kind] = byId
+    else for (const id of Object.keys(byId)) refused.push({ kind, id, reason: 'not-synced' })
+  }
+  const tombstones: SyncSnapshot['tombstones'] = {}
+  for (const [kind, byId] of Object.entries(snapshot.tombstones)) {
+    if (kindKept(kind)) tombstones[kind] = byId
+    else for (const id of Object.keys(byId)) refused.push({ kind: 'tombstone', id: `${kind}/${id}`, reason: 'not-synced' })
+  }
+  const order: SyncSnapshot['order'] = {}
+  for (const [key, ids] of Object.entries(snapshot.order)) {
+    if (listKept(key)) order[key] = ids
+    else refused.push({ kind: 'order', id: key, reason: 'not-synced' })
+  }
+  const orderStamps: SyncSnapshot['orderStamps'] = {}
+  for (const [key, stamp] of Object.entries(snapshot.orderStamps)) if (listKept(key)) orderStamps[key] = stamp
+  return { snapshot: { entities, tombstones, order, orderStamps }, refused }
+}
+
 /** The snapshot a session freezes and sends. The marks must be up to date (`MarkBook.update`) before it is made. */
 export function snapshotOf(state: SidebarState, marks: MarkBook, options: SnapshotOptions): SyncSnapshot {
   const view = trackedViewOf(state)
@@ -161,11 +193,12 @@ export function baseOf(merged: SyncSnapshot): SyncSnapshot {
 /** A text with each lone surrogate written as U+FFFD (`String.prototype.toWellFormed`, which the compiler's library does not list yet). */
 const wellFormed = (text: string): string => text.replace(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g, '\uFFFD')
 
-/** The tabs announced to the other device when « Onglets ouverts » is common (§10.4): web pages the person has open, never a private tab, never a tab of a locked space, the latest 200. */
+/** The tabs announced to the other device when « Onglets ouverts » is common (§10.4): web pages the person has open, never a private tab, never a tab of a locked space, a tab whose address is over the bound of the message, the latest 200. */
 export function openTabsOf(state: SidebarState, isSpaceLocked: (spaceId: string) => boolean): Array<{ id: string; spaceId: string; url: string; title: string; lastActiveAt: number }> {
   return state.tabs
-    .filter((tab) => tab.private !== true && /^https?:\/\//i.test(tab.url) && !isSpaceLocked(tab.spaceId))
+    // An address longer than the message allows is left out, not cut: a cut address is another page, which the other device would show and open (as the iPhone does).
+    .filter((tab) => tab.private !== true && /^https?:\/\//i.test(tab.url) && Buffer.byteLength(tab.url, 'utf8') <= MAX_OPEN_TAB_URL_BYTES && !isSpaceLocked(tab.spaceId))
     .sort((a, b) => b.lastActiveAt - a.lastActiveAt || (a.id < b.id ? -1 : 1))
     .slice(0, MAX_OPEN_TABS)
-    .map((tab) => ({ id: tab.id, spaceId: tab.spaceId, url: cutBytes(tab.url, MAX_OPEN_TAB_URL_BYTES), title: cutBytes(wellFormed(tab.title), MAX_OPEN_TAB_TITLE_BYTES), lastActiveAt: Math.max(0, Math.trunc(tab.lastActiveAt)) }))
+    .map((tab) => ({ id: tab.id, spaceId: tab.spaceId, url: tab.url, title: cutBytes(wellFormed(tab.title), MAX_OPEN_TAB_TITLE_BYTES), lastActiveAt: Math.max(0, Math.trunc(tab.lastActiveAt)) }))
 }

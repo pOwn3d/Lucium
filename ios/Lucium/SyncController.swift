@@ -9,8 +9,10 @@ import UIKit
 /// connection and tells the screen.
 ///
 /// Off by default, and while it is off nothing runs: no identity is made, no connection is opened, nothing is asked of the system. Turning it on makes
-/// the identity (the first time), and from then on a session starts only when the person asks for one, when Lucium is opened or comes back to the front, and
-/// the rules of `SyncScheduler` allow it (not while the application is locked, not twice in 15 seconds, never two at once).
+/// the identity (the first time), and from then on a session starts when the person asks for one, when Lucium is opened or comes back to the front, after a change of
+/// what is synchronised, and **by itself at the interval the person chose while Lucium is on the screen** (card 505, docs/synchronisation.md §8.1), always within the rules
+/// of `SyncScheduler` (not while the application is locked, not twice in 15 seconds, never two at once). In the background nothing runs: iOS suspends the application, and no
+/// background task is promised. After three sessions in a row that did not go through (the Mac is off, elsewhere, locked) the interval slows down (`SyncAutoSchedule`).
 @MainActor @Observable
 final class SyncController {
     /// Where a pairing is, for the sheet that shows it.
@@ -74,14 +76,28 @@ final class SyncController {
     @ObservationIgnored private var comparisonShown = false
     @ObservationIgnored private var comparisonDeclined = false
     @ObservationIgnored private var lastStart: ContinuousClock.Instant?
-    @ObservationIgnored private let clock = ContinuousClock()
+    /// The instant now, for the 15 seconds between two sessions (a test moves it without waiting).
+    @ObservationIgnored private let instant: @Sendable () -> ContinuousClock.Instant
+    /// The application is on the screen: the automatic sessions run only then (iOS suspends it otherwise).
+    @ObservationIgnored private var onScreen = false
+    /// The loop that opens a session at each due time while the application is on the screen.
+    @ObservationIgnored private var intervalTask: Task<Void, Never>?
+    /// How long the loop waits (a test gives a clock that does not wait).
+    @ObservationIgnored private let sleeper: @Sendable (Duration) async throws -> Void
+    /// Sessions in a row that did not go through (the Mac absent, silent, locked, or the session cut): the interval slows down from the third (`SyncAutoSchedule`). Reset by a
+    /// session that goes through, by the return to the front and by « Synchroniser maintenant ».
+    @ObservationIgnored private(set) var consecutiveFailures = 0
 
     init(file: SyncSettingsFile, identityStore: any SyncIdentityStoring = KeychainSyncIdentityStore(),
          makeConnector: @escaping @Sendable (SyncIdentity) -> any SyncConnecting = { NetworkSyncConnector(identity: $0.identity) },
          body: any SyncSessionBody = SyncNoSessionBody(), exchangeHost: (any SyncExchangeHost)? = nil, deviceName: String = SyncController.defaultDeviceName(),
          appVersion: String = SyncController.defaultAppVersion(), now: @escaping @Sendable () -> Int = { Int(Date().timeIntervalSince1970 * 1000) },
-         isAppLocked: @escaping @MainActor () -> Bool = { false }) {
+         isAppLocked: @escaping @MainActor () -> Bool = { false },
+         sleeper: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+         instant: @escaping @Sendable () -> ContinuousClock.Instant = { ContinuousClock.now }) {
         self.file = file
+        self.sleeper = sleeper
+        self.instant = instant
         self.exchangeHost = exchangeHost
         directory = file.url.deletingLastPathComponent()
         self.identityStore = identityStore
@@ -162,8 +178,58 @@ final class SyncController {
         settings.enabled = enabled
         status = Self.baseStatus(settings)
         save()
-        if enabled { catchUp() }
+        if enabled {
+            catchUp()
+            startIntervalLoop()
+        }
         return true
+    }
+
+    // MARK: The interval
+
+    /// The interval the person chose, for the page.
+    var interval: SyncInterval { settings.interval }
+
+    /// Another interval: kept in the file, and the loop starts its wait again with it (a longer one does not keep the shorter one's due time).
+    func setInterval(_ interval: SyncInterval) {
+        guard interval != settings.interval else { return }
+        settings.interval = interval
+        save()
+        startIntervalLoop()
+    }
+
+    /// Opens a session at each due time while the application is on the screen, with a Mac paired and the switch on. One loop at a time; it ends when the application leaves the
+    /// screen, when the switch is turned off and when the Mac is forgotten. The wait follows the interval chosen and the failures in a row (`SyncAutoSchedule`).
+    private func startIntervalLoop() {
+        intervalTask?.cancel()
+        intervalTask = nil
+        guard onScreen, settings.enabled, settings.mac != nil else { return }
+        let sleep = sleeper
+        intervalTask = Task { [weak self] in
+            while !Task.isCancelled {
+                guard let delay = self?.nextDelay() else { return }
+                do { try await sleep(delay) } catch { return }  // cancelled: the application left the screen, or another loop took over
+                guard !Task.isCancelled, let self, self.onScreen else { return }
+                await self.intervalTick()
+            }
+        }
+    }
+
+    private func stopIntervalLoop() {
+        intervalTask?.cancel()
+        intervalTask = nil
+    }
+
+    private func nextDelay() -> Duration { SyncAutoSchedule.delay(interval: settings.interval, consecutiveFailures: consecutiveFailures) }
+
+    /// One due time: a session is asked for (the scheduler may refuse it) and the loop waits for it to end before it counts the next wait.
+    private func intervalTick() async {
+        requestSession(.interval)
+        await sessionTask?.value
+    }
+
+    private func noteSession(wentThrough: Bool) {
+        consecutiveFailures = wentThrough ? 0 : consecutiveFailures + 1
     }
 
     func setCategory(_ category: SyncCategory, on: Bool) {
@@ -202,7 +268,10 @@ final class SyncController {
         let result = await task.value
         pairingTask = nil
         pairingStep = .idle
-        if case .success = result { requestSession(.manual) }
+        if case .success = result {
+            requestSession(.manual)
+            startIntervalLoop()
+        }
         return result
     }
 
@@ -280,7 +349,8 @@ final class SyncController {
 
     /// Asks for a session; the rules of the scheduler say whether and when it starts.
     func requestSession(_ trigger: SyncScheduler.Trigger) {
-        let since = lastStart.map { clock.now - $0 }
+        if trigger == .manual { consecutiveFailures = 0 }
+        let since = lastStart.map { instant() - $0 }
         let decision = SyncScheduler.decide(trigger, enabled: settings.enabled, hasMac: settings.mac != nil, appLocked: isAppLocked(), running: status == .running, sinceLastStart: since)
         guard case .start(let delay) = decision else { return }
         // A request that arrives while another waits to start replaces it: they are grouped (§8.1).
@@ -294,7 +364,20 @@ final class SyncController {
     }
 
     func launched() { requestSession(.launch) }
-    func becameActive() { requestSession(.foreground) }
+
+    /// The application is on the screen: a session is asked for (the scheduler groups it, §8.1) and the automatic sessions start, from a count of failures that starts again.
+    func becameActive() {
+        onScreen = true
+        consecutiveFailures = 0
+        requestSession(.foreground)
+        startIntervalLoop()
+    }
+
+    /// The application left the screen: iOS is about to suspend it, so the automatic sessions stop here (nothing is promised in the background, §8.1).
+    func leftScreen() {
+        onScreen = false
+        stopIntervalLoop()
+    }
 
     private func runSession() async {
         guard settings.enabled, let mac = settings.mac, let fingerprint = mac.fingerprint, let deviceId = settings.deviceId, !isAppLocked() else { return }
@@ -308,10 +391,11 @@ final class SyncController {
         } catch {
             print("[sync] the identity could not be read: \(error)")
             status = .failed(.internal)
+            noteSession(wentThrough: false)
             return
         }
         status = .running
-        lastStart = clock.now
+        lastStart = instant()
         let reach = await SyncReacher.connect(hosts: mac.hosts, port: UInt16(mac.port), pin: .fingerprint(fingerprint), using: makeConnector(identity))
         // A session that was cancelled (the application was locked, the switch turned off) is not a failure of the Mac: the state goes back to what it was.
         if Task.isCancelled {
@@ -321,6 +405,7 @@ final class SyncController {
         }
         guard case .connected(let connection) = reach else {
             if case .failed(let why) = reach { status = Self.status(for: why) }
+            noteSession(wentThrough: false)
             return
         }
         do {
@@ -342,6 +427,7 @@ final class SyncController {
             settings.mac?.lastContactAt = at
             if let hosts = report.hosts, !hosts.isEmpty { settings.mac?.hosts = hosts }
             save()
+            noteSession(wentThrough: true)
             if report.clockSkew {
                 status = .clockSkew
             } else if case .committed(let when) = report.outcome {
@@ -356,8 +442,12 @@ final class SyncController {
                 // The Mac does not know this phone any more (it was forgotten there): this side forgets it too (§12).
                 forgetLocally(becauseKeyIsLost: false)
                 status = .failed(.notPaired)
-            case .locked: status = .waiting
-            default: status = .failed(failure.code)
+            case .locked:
+                status = .waiting
+                noteSession(wentThrough: false)
+            default:
+                status = .failed(failure.code)
+                noteSession(wentThrough: false)
             }
         } catch {
             if Task.isCancelled {
@@ -366,6 +456,7 @@ final class SyncController {
             }
             print("[sync] the session was interrupted: \(error)")
             status = .interrupted
+            noteSession(wentThrough: false)
         }
     }
 
@@ -421,6 +512,8 @@ final class SyncController {
 
     private func forgetLocally(becauseKeyIsLost: Bool) {
         sessionTask?.cancel()
+        stopIntervalLoop()
+        consecutiveFailures = 0
         // What was kept for this Mac goes with it (§12): its base, the marks of this phone, the journal of the conflicts and the tabs it announced. The Mac that is
         // paired again starts from an empty base, and every field takes a mark of the time it is seen.
         forgetExchangeFiles(of: settings.mac)
@@ -431,6 +524,8 @@ final class SyncController {
 
     private func stopEverything() {
         forgetOpenTabs()
+        stopIntervalLoop()
+        consecutiveFailures = 0
         sessionTask?.cancel()
         pairingTask?.cancel()
         pairingStep = .idle
@@ -450,7 +545,9 @@ final class SyncController {
     /// The model wrote the state: the marks are taken now (§9.2), while the gesture is fresh. Does nothing while the switch is off.
     func stateWritten(_ state: BrowserState) {
         guard settings.enabled, let keeper = markKeeper() else { return }
-        keeper.observe(state, now: now())
+        // What is synchronised changed (a space, a folder, a favourite, a pinned tab, a setting that travels): a session follows in 30 seconds, the changes made meanwhile
+        // grouped in it (§8.1). A page that loads, or a tab of Today, is not one.
+        if keeper.observe(state, now: now()), settings.mac != nil, onScreen { requestSession(.localChange) }
     }
 
     /// The switch was just turned on: what changed while it was off is marked now (a change cannot be dated better than the moment it is seen).
