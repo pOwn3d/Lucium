@@ -37,6 +37,14 @@ struct BottomBar: View {
         .padding(.bottom, Gap.xs)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
+        // Pull the bar up: the tabs come out (card 679). Simultaneous, so that a tap on a button still works; `BarPull` decides which drags count.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 12).onEnded { drag in
+                if BarPull.opensTabs(dx: drag.translation.width, dy: drag.translation.height, velocityY: drag.velocity.height) {
+                    model.tabsSheetShown = true
+                }
+            }
+        )
     }
 
     private var addressPill: some View {
