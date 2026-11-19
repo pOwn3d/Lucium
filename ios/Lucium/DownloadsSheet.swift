@@ -10,8 +10,8 @@ struct DownloadStrip: View {
     var body: some View {
         if let strip = downloads.strip {
             Button { downloads.sheetShown = true } label: {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: Gap.xs) {
+                    HStack(spacing: Gap.s) {
                         text(of: strip).font(.footnote).lineLimit(1).truncationMode(.middle)
                         Spacer(minLength: 0)
                         if case .running(_, _, let more) = strip, more > 0 { Text(verbatim: "+\(more)").font(.footnote).foregroundStyle(.secondary) }
@@ -23,7 +23,7 @@ struct DownloadStrip: View {
                 .padding(.horizontal, 14)
                 .padding(.vertical, 6)
                 .frame(minHeight: 44)
-                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12))
+                .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: Radius.l))
             }
             .buttonStyle(.plain)
             .accessibilityElement(children: .combine)
@@ -96,7 +96,7 @@ struct DownloadsSheet: View {
         .onTapGesture { if let file { preview = file } }
         .swipeActions(edge: .trailing) {
             Button("downloads.delete", role: .destructive) { downloads.deleteFile(item.id) }
-            Button("downloads.remove") { downloads.remove(item.id) }.tint(.gray)
+            Button("downloads.remove") { downloads.remove(item.id) }.tint(Color.neutralAction)
         }
     }
 
@@ -114,7 +114,7 @@ struct DownloadsSheet: View {
             }
         case .finished: Text("download.done \(received)")
         case .failed:
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Gap.hair) {
                 Text("download.failed")
                 if let failure = item.failure { Text(verbatim: failure) }
             }

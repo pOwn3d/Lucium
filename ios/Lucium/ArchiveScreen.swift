@@ -42,7 +42,7 @@ struct ArchiveScreen: View {
 
     private func row(_ entry: ArchivedTab) -> some View {
         Button { model.restore(entry) } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: Gap.m) {
                 SiteTile(address: entry.url, size: 22)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: entry.title.isEmpty ? AddressResolver.host(of: entry.url) : entry.title).font(.subheadline).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)

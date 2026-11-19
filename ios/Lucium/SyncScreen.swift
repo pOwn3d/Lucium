@@ -148,7 +148,7 @@ struct SyncScreen: View {
                 // what the page shows is what goes.
                 let blocked = category.needsStructure && !controller.isOn(.structure)
                 Toggle(isOn: Binding(get: { controller.isOn(category) && !blocked }, set: { controller.setCategory(category, on: $0) })) {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: Gap.hair) {
                         Text(Self.title(of: category))
                         Text(blocked ? Self.needs(of: category) : Self.detail(of: category)).font(.footnote).foregroundStyle(.secondary)
                     }

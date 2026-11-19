@@ -17,9 +17,9 @@ struct SidebarLayout: View {
             }
             PageCard(model: model, sidebarShown: $sidebarShown)
                 .padding(.leading, sidebarShown ? 0 : 8)
-                .padding(.trailing, 8)
+                .padding(.trailing, Gap.s)
                 .padding(.top, 6)
-                .padding(.bottom, 8)
+                .padding(.bottom, Gap.s)
         }
         .background { SidebarGround(model: model) }
         .ignoresSafeArea(.container, edges: .bottom)
@@ -72,7 +72,7 @@ struct PageCard: View {
             PageArea(model: model)
         }
         .background(Color(.systemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
         .shadow(color: Color.primary.opacity(0.12), radius: 1.5, y: 1)
     }
 
@@ -163,7 +163,7 @@ struct Sidebar: View {
     // MARK: Top
 
     private var topRow: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: Gap.hair) {
             ChromeButton(icon: .sidebar, label: "sidebar.hide") { sidebarShown = false }
             Spacer(minLength: 0)
             ChromeButton(icon: .back, label: "bar.back", enabled: model.canGoBack, action: model.goBack)
@@ -180,12 +180,12 @@ struct Sidebar: View {
     @ViewBuilder private var favoritesGrid: some View {
         let favorites = content.favorites
         if !favorites.isEmpty {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Gap.s), count: 4), spacing: Gap.s) {
                 ForEach(favorites) { favorite in FavoriteTile(model: model, favorite: favorite, height: 50, fill: Color.primary.opacity(0.07)) }
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 4)
-            .padding(.bottom, 8)
+            .padding(.horizontal, Gap.m)
+            .padding(.top, Gap.xs)
+            .padding(.bottom, Gap.s)
         }
     }
 
@@ -208,7 +208,7 @@ struct Sidebar: View {
                 Spacer(minLength: 0)
                 IconView(.chevron, size: 14).rotationEffect(.degrees(90)).foregroundStyle(.secondary)
             }
-            .padding(.horizontal, 8)
+            .padding(.horizontal, Gap.s)
             .frame(minHeight: 44)
             .contentShape(Rectangle())
         }
@@ -270,7 +270,7 @@ struct Sidebar: View {
         let today = content.today
         if !today.isEmpty {
             // The largest text leaves no room for the button beside the title (the iPhone's sidebar has it too): it goes under it.
-            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: 2)) : AnyLayout(HStackLayout())
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Gap.hair)) : AnyLayout(HStackLayout())
             layout {
                 sectionTitle(Text("tabs.today \(today.count)"))
                 if !typeSize.isAccessibilitySize { Spacer() }
@@ -353,18 +353,18 @@ struct Sidebar: View {
     // MARK: Bottom
 
     private var bottomRow: some View {
-        HStack(spacing: 2) {
+        HStack(spacing: Gap.hair) {
             ChromeButton(icon: .archive, label: "archive.title") { archiveShown = true }
             ChromeButton(icon: .download, label: "page.downloads") { model.downloads.sheetShown = true }
             // The gear takes the place of the "More" menu, whose three rows (privacy, lock, licenses) are pages of the settings now.
             ChromeButton(icon: .settings, label: "settings.title") { model.openSettings() }
             // Few spaces sit at the right edge; more than the row holds scroll.
             ViewThatFits(in: .horizontal) {
-                HStack(spacing: 2) {
+                HStack(spacing: Gap.hair) {
                     Spacer(minLength: 0)
                     spaceButtons
                 }
-                ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 2) { spaceButtons } }
+                ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: Gap.hair) { spaceButtons } }
             }
         }
         .padding(.horizontal, 10)
@@ -429,8 +429,8 @@ struct SidebarTabRow: View {
                     .accessibilityLabel(Text("tabs.close"))
             }
         }
-        .padding(.trailing, 4)
-        .background(shown ? Color.accentColor.opacity(0.24) : Color.clear, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.trailing, Gap.xs)
+        .background(shown ? Color.accentColor.opacity(0.24) : Color.clear, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(shown ? .isSelected : [])
         .tabActions(tab, model: model)
@@ -452,7 +452,7 @@ struct SidebarFolderRow: View {
                 IconView(.folder, size: 20)
                 if typeSize.isAccessibilitySize {
                     // The largest text leaves a name no room beside its count (the iPhone's sidebar has it too): the count goes under the name.
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: Gap.hair) {
                         Text(verbatim: folder.name).font(.subheadline).lineLimit(3)
                         Text("folder.tabs \(count)").font(.footnote).foregroundStyle(.secondary)
                     }
@@ -465,7 +465,7 @@ struct SidebarFolderRow: View {
                 IconView(.chevron, size: 14).rotationEffect(.degrees(isExpanded ? 90 : 0)).foregroundStyle(.secondary)
             }
             .padding(.leading, 10 + CGFloat(depth) * 18)
-            .padding(.trailing, 8)
+            .padding(.trailing, Gap.s)
             .frame(minHeight: 42)
             .contentShape(Rectangle())
         }

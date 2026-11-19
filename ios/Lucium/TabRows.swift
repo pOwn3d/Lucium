@@ -17,9 +17,9 @@ struct TabRowView: View {
 
     var body: some View {
         let shown = model.isShown(tab)
-        HStack(spacing: 12) {
+        HStack(spacing: Gap.m) {
             Button { model.openTab(tab) } label: {
-                HStack(spacing: 12) {
+                HStack(spacing: Gap.m) {
                     SiteTile(address: tab.url, size: 22)
                     if tab.isPrivate { ProjectIcon(name: .privateMask, size: 18).foregroundStyle(Color.secondary) }
                     VStack(alignment: .leading, spacing: 1) {
@@ -86,15 +86,15 @@ private struct TabActions: ViewModifier {
         content
             .swipeActions(edge: .leading) {
                 if tab.pinned {
-                    Button { model.unpin(tab) } label: { Label { Text("tabs.unpin") } icon: { IconView(.pin) } }.tint(.indigo)
+                    Button { model.unpin(tab) } label: { Label { Text("tabs.unpin") } icon: { IconView(.pin) } }.tint(Color.pinned)
                 } else if !tab.isBlank {
-                    Button { model.pin(tab) } label: { Label { Text("tabs.pin") } icon: { IconView(.pin) } }.tint(.indigo)
+                    Button { model.pin(tab) } label: { Label { Text("tabs.pin") } icon: { IconView(.pin) } }.tint(Color.pinned)
                 }
             }
             .swipeActions(edge: .trailing) {
                 Button(role: .destructive) { model.close(tab) } label: { Label { Text("tabs.close") } icon: { IconView(.close) } }
                 if !tab.isBlank {
-                    Button { model.archive(tab) } label: { Label { Text("tabs.archive") } icon: { IconView(.archive) } }.tint(.orange)
+                    Button { model.archive(tab) } label: { Label { Text("tabs.archive") } icon: { IconView(.archive) } }.tint(Color.archiving)
                 }
             }
             .contextMenu {
@@ -130,7 +130,7 @@ struct FolderRowView: View {
 
     var body: some View {
         Button(action: open) {
-            HStack(spacing: 12) {
+            HStack(spacing: Gap.m) {
                 IconView(.folder, size: 22).foregroundStyle(.secondary)
                 Text(verbatim: folder.name).font(.subheadline).lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
                 Spacer(minLength: 8)
@@ -157,8 +157,8 @@ struct FavoriteTile: View {
             SiteTile(address: favorite.url, size: 26)
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
-                .background(fill, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay { if model.isShown(favorite) { RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.accentColor, lineWidth: 2) } }
+                .background(fill, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+                .overlay { if model.isShown(favorite) { RoundedRectangle(cornerRadius: Radius.l, style: .continuous).strokeBorder(Color.accentColor, lineWidth: Stroke.ring) } }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

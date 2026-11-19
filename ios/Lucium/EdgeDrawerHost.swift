@@ -68,7 +68,7 @@ struct EdgeDrawerHost<Page: View>: View {
 
     /// The page, dimmed: a tap on it puts the sidebar away. Nothing for VoiceOver (the "escape" action and the hide button do it).
     private var scrim: some View {
-        Color.black.opacity(0.32 * progress)
+        Color.scrim.opacity(progress)
             .ignoresSafeArea()
             .contentShape(Rectangle())
             .onTapGesture { put(.tappedPage) }
@@ -81,7 +81,7 @@ struct EdgeDrawerHost<Page: View>: View {
             .frame(maxHeight: .infinity)
             .background { SidebarGround(model: model) }
             .overlay(alignment: .trailing) { Rectangle().fill(Color.primary.opacity(0.12)).frame(width: 1).ignoresSafeArea() }
-            .shadow(color: Color.black.opacity(0.28 * progress), radius: 14)
+            .shadow(color: Color.shadow.opacity(progress), radius: 14)
             // The shadow goes with it: nothing of the sidebar is left at the edge when it is away.
             .offset(x: -(1 - progress) * (width + 24))
             .accessibilityElement(children: .contain)

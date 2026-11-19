@@ -39,7 +39,7 @@ struct SyncPairingSheet: View {
                     compareSection(proposal)
                 } else if working {
                     Section {
-                        HStack(spacing: 12) {
+                        HStack(spacing: Gap.m) {
                             ProgressView()
                             Text(controller.pairingStep == .waitingForMac ? "sync.pairing.waiting" : "sync.pairing.connecting")
                         }
@@ -53,7 +53,7 @@ struct SyncPairingSheet: View {
                     typeSection
                 }
                 if let message, !working {
-                    Section { Text(message).foregroundStyle(.red).accessibilityAddTraits(.isStaticText) }
+                    Section { Text(message).foregroundStyle(Color.danger).accessibilityAddTraits(.isStaticText) }
                 }
                 if !working { shareTodaySection }
                 Section { Text("sync.pairing.footer").font(.footnote).foregroundStyle(.secondary) }
@@ -73,7 +73,7 @@ struct SyncPairingSheet: View {
         let possible = controller.isOn(.structure)
         Section {
             Toggle(isOn: Binding(get: { shareToday && possible }, set: { shareToday = $0 })) {
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Gap.hair) {
                     Text("sync.pairing.share-today")
                     Text(possible ? "sync.pairing.share-today.hint" : "sync.category.today-tabs.needs").font(.footnote).foregroundStyle(.secondary)
                 }
@@ -91,7 +91,7 @@ struct SyncPairingSheet: View {
         Section {
             Text("sync.pairing.compare.title \(proposal.macName)")
                 .font(.headline)
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Gap.xs) {
                 Text("sync.pairing.compare.code")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
@@ -118,7 +118,7 @@ struct SyncPairingSheet: View {
             Section {
                 QRScannerView { text in scanned(text) }
                     .frame(height: 300)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .clipShape(RoundedRectangle(cornerRadius: Radius.l))
                     .accessibilityLabel(Text("sync.pairing.camera.label"))
             } footer: {
                 Text("sync.pairing.scan.hint")

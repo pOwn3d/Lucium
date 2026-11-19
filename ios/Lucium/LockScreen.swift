@@ -32,7 +32,7 @@ struct LockScreen: View {
     let unlock: () -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: Gap.l) {
             Spacer(minLength: 0)
             LockGlyph()
                 .stroke(.primary, style: StrokeStyle(lineWidth: 3, lineCap: .round, lineJoin: .round))
@@ -46,7 +46,7 @@ struct LockScreen: View {
             if let notice = lock.notice { Text(notice.text).font(.footnote).foregroundStyle(.secondary).multilineTextAlignment(.center) }
             Spacer(minLength: 0)
         }
-        .padding(24)
+        .padding(Gap.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(.systemBackground))
     }

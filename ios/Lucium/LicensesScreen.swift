@@ -62,7 +62,7 @@ private struct FilterListRow: View {
         let license = list.license.text(forLanguageCode: language)
         let copy = list.fetchedDate?.formatted(.dateTime.day().month(.abbreviated).year().locale(locale)) ?? list.fetchedAt
         let rules = list.rules.formatted(.number.locale(locale))
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: Gap.xs) {
             Text(list.title.text(forLanguageCode: language)).font(.headline)
             Text("licenses.list.author \(author)")
             Text("licenses.list.license \(license)")
@@ -72,7 +72,7 @@ private struct FilterListRow: View {
             if let terms = URL(string: list.licenseUrl) { Link("licenses.list.terms", destination: terms) }
         }
         .font(.subheadline)
-        .padding(.vertical, 2)
+        .padding(.vertical, Gap.hair)
     }
 }
 

@@ -10,8 +10,8 @@ struct SyncClosedBanner: View {
 
     var body: some View {
         if let event = model.syncClosedShownTab {
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: Gap.s) {
+                VStack(alignment: .leading, spacing: Gap.hair) {
                     Text("sync.closed-shown.title \(event.title)").font(.subheadline.weight(.semibold)).lineLimit(2)
                     Text("sync.closed-shown.detail").font(.footnote).foregroundStyle(.secondary)
                 }
@@ -26,7 +26,7 @@ struct SyncClosedBanner: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(Text("sync.closed-shown.dismiss"))
             }
-            .padding(.leading, 12)
+            .padding(.leading, Gap.m)
             .background(.bar)
             .overlay(alignment: .bottom) { Divider() }
             .accessibilityElement(children: .contain)
