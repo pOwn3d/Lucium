@@ -25,7 +25,7 @@ final class BrowserModel {
     @ObservationIgnored var isApplyingSync = false
 
     /// The tab that was on screen when the other device closed it, as the last session wrote it (docs/synchronisation.md §27.5, [Q11]): it was archived here and the neighbour is
-    /// shown. The line « Fermé sur le Mac » (card LUC-147) reads this and clears it once it has been shown; nothing else does.
+    /// shown. The line « Fermé sur le Mac », which the interface change that follows adds, reads this and clears it once it has been shown; nothing else does.
     var syncClosedShownTab: SyncClosedShownTab?
 
     var tabsSheetShown = false

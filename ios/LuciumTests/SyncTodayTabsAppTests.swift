@@ -59,7 +59,7 @@ final class SyncTodayTabsAppTests: BrowserCoreTestCase {
         let entry = try XCTUnwrap(model.state.archive.first { $0.id == "closed-there" })
         XCTAssertEqual(entry.source, ArchivedTab.Source.sync.rawValue)
         XCTAssertEqual(entry.url, address("/b.html").absoluteString)
-        let event = try XCTUnwrap(model.syncClosedShownTab, "the line « Fermé sur le Mac » has what it needs (card LUC-147)")
+        let event = try XCTUnwrap(model.syncClosedShownTab, "the line « Fermé sur le Mac » has what it needs")
         XCTAssertEqual(event.id, "closed-there")
         XCTAssertEqual(event.title, closedTab.title)
     }

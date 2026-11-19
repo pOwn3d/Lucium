@@ -80,7 +80,7 @@ enum SyncTexts {
         case .settings: String(localized: "sync.category.settings")
         case .archive: String(localized: "sync.category.archive")
         case .openTabs: String(localized: "sync.category.open-tabs")
-        // The name of the category is a text of card LUC-147 (with its row and the box at pairing); the page does not list it yet, so no one reads this.
+        // The name of the category is a text of the interface change that follows (with its row and the box at pairing); the page does not list it yet, so no one reads this.
         case .todayTabs: category.rawValue
         }
     }
