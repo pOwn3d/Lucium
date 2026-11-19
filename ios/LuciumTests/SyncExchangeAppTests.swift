@@ -111,6 +111,10 @@ final class SyncExchangeAppTests: BrowserCoreTestCase {
         let summary = try XCTUnwrap(controller.lastExchange, "the session said nothing to the controller")
         XCTAssertTrue(summary.applied, "what the Mac sent was written")
         XCTAssertFalse(summary.adoptedTheMacState)
+        // What the page says of the exchange comes from the same summary: the categories that crossed and what the phone took (a space and a folder here).
+        XCTAssertEqual(summary.categories, [.structure])
+        XCTAssertGreaterThanOrEqual(summary.taken, 2)
+        XCTAssertEqual(SyncLastExchange.lines(of: summary, ticked: controller.settings.categories).first, .exchanged([.structure]))
     }
 
     final class Recorder: @unchecked Sendable {

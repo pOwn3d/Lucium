@@ -5321,6 +5321,166 @@
         }
       }
     },
+    "sync.last.exchanged %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exchanged: %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échangé : %@."
+          }
+        }
+      }
+    },
+    "sync.last.exchanged.none": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No category in common with the Mac: nothing was exchanged."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune catégorie en commun avec le Mac : rien n’a été échangé."
+          }
+        }
+      }
+    },
+    "sync.last.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last exchange"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dernier échange"
+          }
+        }
+      }
+    },
+    "sync.last.left-aside %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item from the Mac was not taken."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items from the Mac were not taken."
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld élément du Mac n’a pas été pris."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld éléments du Mac n’ont pas été pris."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sync.last.not-exchanged %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not exchanged, because it is not ticked on the Mac: %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas échangé, car non coché sur le Mac : %@."
+          }
+        }
+      }
+    },
+    "sync.last.nothing-new": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing new: both devices already held the same thing."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien de nouveau : les deux appareils avaient déjà la même chose."
+          }
+        }
+      }
+    },
+    "sync.last.received %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item received from the Mac."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items received from the Mac."
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld élément reçu du Mac."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld éléments reçus du Mac."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "sync.limits": {
       "localizations": {
         "en": {

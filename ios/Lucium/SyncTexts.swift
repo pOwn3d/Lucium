@@ -72,4 +72,31 @@ enum SyncTexts {
         case .identityLost: return Text("sync.state.identity-lost")
         }
     }
+
+    /// The name of a category, as the list of the page writes it.
+    static func categoryName(_ category: SyncCategory) -> String {
+        switch category {
+        case .structure: String(localized: "sync.category.structure")
+        case .settings: String(localized: "sync.category.settings")
+        case .archive: String(localized: "sync.category.archive")
+        case .openTabs: String(localized: "sync.category.open-tabs")
+        }
+    }
+
+    /// One line of « Dernier échange » (the lines are worked out in LuciumKit, `SyncLastExchange`).
+    static func lastExchange(_ line: SyncLastExchange.Line) -> Text {
+        func names(_ categories: [SyncCategory]) -> String { categories.map(categoryName).joined(separator: ", ") }
+        switch line {
+        case .exchanged(let categories):
+            if categories.isEmpty { return Text("sync.last.exchanged.none") }
+            let list = names(categories)
+            return Text("sync.last.exchanged \(list)")
+        case .notExchanged(let categories):
+            let list = names(categories)
+            return Text("sync.last.not-exchanged \(list)")
+        case .received(let count): return Text("sync.last.received \(count)")
+        case .nothingNew: return Text("sync.last.nothing-new")
+        case .leftAside(let count): return Text("sync.last.left-aside \(count)")
+        }
+    }
 }
