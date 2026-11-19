@@ -63,7 +63,7 @@ struct TabsSheet: View {
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         // The colours of the theme are strong (they colour a whole window on the Mac); under text they are laid pale on the ground, as on the mockup.
-        .background(LinearGradient(colors: model.colors(of: model.activeSpace).map { $0.opacity(0.35) }, startPoint: .topLeading, endPoint: .bottomTrailing), ignoresSafeAreaEdges: .top)
+        .background { SpaceGradient(colors: model.colors(of: model.activeSpace)).ignoresSafeArea(edges: .top) }
     }
 
     private func spacePill(_ space: Space) -> some View {

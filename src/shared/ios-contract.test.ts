@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { contrastRatio } from './contrast'
 import { LOCKED_SPACES_MAX } from './lock'
 import { isProfileId, newProfileId, PRIVATE_PROFILE_ID } from './profiles'
 import { themeFromHue, themeHue } from './theme'
@@ -37,6 +38,7 @@ interface ThemeVectors {
   theme: { hue: number; saturation?: number; baseColors: string[]; themeHue: number }[]
   newProfileId: { name: string; existing: string[]; expect: string }[]
   profileId: { id: string; valid: boolean }[]
+  contrast: { foreground: string; background: string; ratio: number }[]
 }
 
 const themeVectors = JSON.parse(readFileSync(join(__dirname, '../../ios/Contracts/theme-vectors.json'), 'utf8')) as ThemeVectors
@@ -57,6 +59,11 @@ describe('iOS contract: spaces and profiles', () => {
   // The Swift side adds the id of the private window to the taken ones (`reservedProfileId`), as `takenProfileIds` does here.
   it.each(themeVectors.newProfileId)('newProfileId($name, $existing)', ({ name, existing, expect: expected }) => {
     expect(newProfileId(name, [...existing, PRIVATE_PROFILE_ID])).toBe(expected)
+  })
+
+  // The tint behind the lists is held to the Mac's threshold with the same arithmetic (ios/LuciumKit TintContrast).
+  it.each(themeVectors.contrast)('contrastRatio($foreground, $background)', ({ foreground, background, ratio }) => {
+    expect(contrastRatio(foreground, background)).toBeCloseTo(ratio, 2)
   })
 
   it.each(themeVectors.profileId)('isProfileId($id) is $valid', ({ id, valid }) => {
