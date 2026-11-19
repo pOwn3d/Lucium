@@ -323,8 +323,8 @@ async function main(): Promise<void> {
   setLockService(lock)
   lock.start()
   app.on('will-quit', () => lock.stop())
-  // Settings › Téléchargements et fichiers › Synchronisation: the service holds a switch that is OFF and opens nothing until the person turns it on and opens the window by
-  // hand (docs/synchronisation.md §6.1). A lock closes the window; the quit closes the door.
+  // Settings › Téléchargements et fichiers › Synchronisation: the service holds a switch that is OFF and opens nothing until the person turns it on. Switched on and with an
+  // iPhone paired, the Mac listens for as long as Lucium is unlocked (docs/synchronisation.md §6.1): a lock closes the door and an unlock opens it; the quit closes it.
   const sync = createSyncService({
     userData: app.getPath('userData'),
     isLocked: () => lock.isAppLocked(),
@@ -339,7 +339,7 @@ async function main(): Promise<void> {
   })
   setSyncService(sync)
   sync.start()
-  lock.subscribe(() => void sync.lockChanged().catch((error: unknown) => console.error('[sync] the window could not be closed when the application locked:', error)))
+  lock.subscribe(() => void sync.lockChanged().catch((error: unknown) => console.error('[sync] the door could not be set as it should be when the application locked or unlocked:', error)))
   app.on('will-quit', () => void sync.dispose().catch((error: unknown) => console.error('[sync] the door could not be closed at the quit:', error)))
   // What costs something while it runs (timers, listeners, requests) is tied to its setting by these gates and stops with it (docs/fonctions.md).
   const gates = new FeatureGates(store)

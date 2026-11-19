@@ -1,11 +1,14 @@
-// The synchronisation with the iPhone as the Settings page sees it (docs/synchronisation.md §13.1): one object that owns the switch, the window, the pairing sheet
+// The synchronisation with the iPhone as the Settings page sees it (docs/synchronisation.md §13.1): one object that owns the switch, the listening, the pairing sheet
 // and the list of devices, and that the IPC channel (shell/sync-ipc.ts) drives. It holds the pieces of src/main/sync/ together and decides nothing they do not:
 //
-//   - the switch is OFF by default; turning it on makes the identity (key sealed by the system, certificate) and opens NOTHING: the Mac listens only while the
-//     person has opened the window by hand, ten minutes at most [Q5];
-//   - « Ajouter un iPhone » opens the window if it is not open, draws a secret, and builds the QR and the code; the sheet is the secret's life (two minutes);
+//   - the switch is OFF by default; turning it on makes the identity (key sealed by the system, certificate);
+//   - the Mac LISTENS (the door is open) exactly while the switch is on, the application is unlocked, and an iPhone is paired or a pairing is open (§6.1, decided by the
+//     project lead on 19 November 2026: automatic synchronisation). `reconcileListening` is the one place that decides it, and every event that can change the answer
+//     (the switch, the lock, a device paired or forgotten, a pairing that ends or expires, the launch) calls it;
+//   - « Ajouter un iPhone » opens the door if it is not open, draws a secret, and builds the QR and the code; the sheet is the secret's life (two minutes), and the door
+//     closes with it when no iPhone is paired;
 //   - when an iPhone proves it holds the secret, the person is asked: Autoriser or Refuser, and no answer in a minute is a refusal [Q7];
-//   - the window and the pairing close when the page is left, when the switch is cut, and when the application locks;
+//   - the pairing closes when the page is left, when the switch is cut, and when the application locks (the door closes with them);
 //   - « Oublier » removes a device and cuts what it has open at once (§12).
 //
 // The exchange of data itself (the session, §8) is a flow handed in (`runSession`): until it exists, a device that connects is told `internal`, honestly.
@@ -32,7 +35,7 @@ import { isResumeId, resumeRows, type ResumeRow, type ResumeTab } from '@shared/
 import type { SafeClock } from './safe-clock'
 import type { SecretBox } from './secret-box'
 import { PORT_MAX, PORT_MIN, type PeerRecord, type SyncStore } from './sync-store'
-import { SyncWindow, type WindowCloseReason } from './sync-window'
+import { SyncListening, type ListeningCloseReason } from './sync-listening'
 
 /** What a request of the page could not do, with the word the page says it with. */
 export class SyncServiceError extends Error {
@@ -77,7 +80,8 @@ export interface SyncServiceDeps {
   /** Tests only: the source addresses that may connect (the loopback). Nothing else widens the filter of §6.2. */
   allowSource?: ListenerDeps['allowSource']
   confirmMs?: number
-  windowMaxMs?: number
+  /** How long after a pairing ends the door is looked at again (a test shortens it): the refusal the iPhone is owed must leave before the door can close. */
+  settleMs?: number
 }
 
 export interface SessionPorts {
@@ -120,7 +124,11 @@ export class SyncService {
   private justPaired: string | null = null
   private problem: SyncProblem | null = null
   private readonly limiter: AddressLimiter
-  private readonly window: SyncWindow
+  private readonly listening: SyncListening
+  /** The decisions of `reconcileListening` run one after the other: two at once could open and close the door in the wrong order. */
+  private reconciling: Promise<void> = Promise.resolve()
+  private pairingTimer: NodeJS.Timeout | null = null
+  private settleTimer: NodeJS.Timeout | null = null
   private marks: MarkBook | null = null
   private marksStore: MarkStore | null = null
   private bases: BaseStore | null = null
@@ -134,12 +142,10 @@ export class SyncService {
 
   constructor(private readonly deps: SyncServiceDeps) {
     this.limiter = new AddressLimiter(() => deps.clock.elapsed())
-    this.window = new SyncWindow({
+    this.listening = new SyncListening({
       door: { start: () => this.startDoor(), stop: () => this.stopDoor() },
-      elapsed: () => deps.clock.elapsed(),
-      ...(deps.windowMaxMs !== undefined ? { maxMs: deps.windowMaxMs } : {}),
       onChange: (state, reason) => {
-        if (!state.open && reason !== undefined) this.windowClosed()
+        if (!state.open && reason !== undefined) this.doorClosed()
         this.changed()
       }
     })
@@ -159,8 +165,8 @@ export class SyncService {
       available: this.deps.box.available(),
       enabled: config.enabled,
       categories: config.categories,
-      window: this.window.state(),
-      pairing: pairing === null ? null : { ...pairing.view, remainingMs: pairing.secret.remainingMs() },
+      listening: this.listening.state().open,
+      pairing: pairing === null || pairing.view.qr === '' ? null : { ...pairing.view, remainingMs: pairing.secret.remainingMs() },
       confirm: confirm === null ? null : { name: confirm.name, code: confirm.code, address: confirm.address, waiting: confirm.waiting, remainingMs: Math.max(0, confirm.until - this.deps.clock.elapsed()) },
       devices: config.peers.map((peer) => ({ id: peer.id, name: readableName(peer.name), platform: peer.platform, pairedAt: peer.pairedAt, lastSessionAt: peer.lastSessionAt })),
       identityReplaced: this.identityReplaced,
@@ -172,8 +178,41 @@ export class SyncService {
 
   /** The pairing whose secret still lives; one that has expired is dropped here, so that the sheet closes by itself. */
   private livePairing(): NonNullable<SyncService['pairing']> | null {
-    if (this.pairing !== null && this.pairing.secret.remainingMs() === 0) this.pairing = null
+    if (this.pairing !== null && this.pairing.secret.remainingMs() === 0) this.dropExpiredPairing()
     return this.pairing
+  }
+
+  /** The secret ran out: the sheet goes, and the door with it when nobody is paired (a Mac with no iPhone listens only for the two minutes of a pairing, §4.1, §6.1). */
+  private dropExpiredPairing(): void {
+    this.pairing = null
+    this.clearPairingTimer()
+    this.resolveConfirm('refuse')
+    this.reconcileLater(0)
+  }
+
+  private clearPairingTimer(): void {
+    if (this.pairingTimer !== null) clearTimeout(this.pairingTimer)
+    this.pairingTimer = null
+  }
+
+  /** The door is looked at again when the secret is due to run out: nobody asks the page for its state for this to happen. */
+  private armPairingTimer(): void {
+    this.clearPairingTimer()
+    const wait = (): number => (this.pairing?.secret.remainingMs() ?? 0) + 50
+    const fire = (): void => {
+      this.pairingTimer = null
+      if (this.pairing === null) return
+      if (this.pairing.secret.remainingMs() > 0) {
+        // The safe clock has not counted it all yet (a sleep, a clock put back): look again later rather than close early.
+        this.pairingTimer = setTimeout(fire, wait())
+        this.pairingTimer.unref()
+        return
+      }
+      this.dropExpiredPairing()
+      this.changed()
+    }
+    this.pairingTimer = setTimeout(fire, wait())
+    this.pairingTimer.unref()
   }
 
   /** Every request of the page starts here: what the last one left behind is forgotten, except what is shown once. */
@@ -190,7 +229,10 @@ export class SyncService {
 
   // ---------- the switch and the categories ----------
 
-  /** Turns the synchronisation on or off. On: the identity is made (the key sealed); nothing opens. Off: the window and the pairing close first. */
+  /**
+   * Turns the synchronisation on or off. On: the identity is made (the key sealed), and the Mac listens when an iPhone is already paired (the devices are kept while it is
+   * off). Off: the pairing and the door close.
+   */
   async setEnabled(on: boolean): Promise<void> {
     this.begin()
     if (on) {
@@ -198,10 +240,12 @@ export class SyncService {
       const identity = this.ensureIdentity()
       this.deps.store.setEnabled(true)
       this.startTracking(identity.deviceId)
+      await this.reconcileListening()
     } else {
-      await this.window.close('switch-off')
-      this.forgetAnnounced()
       this.deps.store.setEnabled(false)
+      this.closePairingSheet()
+      await this.reconcileListening()
+      this.forgetAnnounced()
       this.stopTracking()
     }
     this.changed()
@@ -215,6 +259,9 @@ export class SyncService {
     if (!this.deps.store.config().enabled) return
     const device = this.deps.identities.peekDeviceId()
     if (device !== null) this.startTracking(device)
+    // The Mac listens from the launch when an iPhone is paired (and the application is not locked: the unlock opens the door). The key is opened by the system's
+    // keychain for this; a refusal is logged and shown on the page, never thrown into the launch.
+    this.reconcileLater(0)
   }
 
   private startTracking(deviceId: string): void {
@@ -271,20 +318,55 @@ export class SyncService {
     }
   }
 
-  // ---------- the window ----------
+  // ---------- the listening ----------
 
-  async openWindow(): Promise<void> {
-    this.begin()
-    await this.open()
-    this.changed()
+  /**
+   * Whether the Mac must listen now (§6.1): the switch is on, the application is unlocked, and an iPhone is paired or a pairing is open. Anything else and no port is open.
+   * An application that is locked never listens, whatever else is true.
+   */
+  private wantsToListen(): boolean {
+    if (!this.deps.store.config().enabled || this.deps.isLocked()) return false
+    return this.deps.store.peers().length > 0 || this.livePairing() !== null
   }
 
-  private async open(): Promise<void> {
-    if (!this.deps.store.config().enabled) this.fail('internal', 'the synchronisation is off')
-    if (this.deps.isLocked()) this.fail('locked', 'the application is locked')
-    this.ensureIdentity()
+  private whyNotListening(): ListeningCloseReason {
+    if (!this.deps.store.config().enabled) return 'switch-off'
+    return this.deps.isLocked() ? 'locked' : 'no-device'
+  }
+
+  /**
+   * Opens or closes the door so that it matches `wantsToListen`. Calls are run one after the other. A refusal of the system (the port, the key) is the caller's to see: it
+   * is told as a problem of the page, and the door stays closed until the next event asks again.
+   */
+  reconcileListening(): Promise<void> {
+    const run = this.reconciling.then(async () => {
+      if (this.wantsToListen()) await this.openDoor()
+      else await this.listening.close(this.whyNotListening())
+    })
+    // The chain goes on whatever one decision gave: that decision's error is the one `run` carries to its caller, and the callers that do not wait log it (`reconcileLater`).
+    this.reconciling = run.then(
+      () => undefined,
+      () => undefined
+    )
+    return run
+  }
+
+  /** The decision, made later and with nobody waiting: the error is logged with its context, and the page shows the problem. */
+  private reconcileLater(delayMs: number): void {
+    const run = (): void => void this.reconcileListening().catch((error: unknown) => console.error('[sync] the listening could not be set as it should be:', error))
+    if (delayMs <= 0) return run()
+    if (this.settleTimer !== null) clearTimeout(this.settleTimer)
+    this.settleTimer = setTimeout(() => {
+      this.settleTimer = null
+      run()
+    }, delayMs)
+    this.settleTimer.unref()
+  }
+
+  private async openDoor(): Promise<void> {
     try {
-      await this.window.open()
+      this.ensureIdentity()
+      await this.listening.open()
     } catch (error) {
       if (error instanceof SyncServiceError) throw error
       console.error('[sync] the door could not be opened:', error)
@@ -292,30 +374,19 @@ export class SyncService {
     }
   }
 
-  prolong(): void {
-    this.begin()
-    this.window.prolong()
-    this.changed()
-  }
-
-  async closeWindow(reason: WindowCloseReason = 'manual'): Promise<void> {
-    this.begin()
-    await this.window.close(reason)
-    this.changed()
-  }
-
-  /** The page was left (another page, the window closed): the window closes with it (§6.1). */
+  /** The page was left (another page, the window closed): the sheet of the pairing goes with it; the listening does not depend on the page. */
   async leave(): Promise<void> {
-    await this.window.close('page-closed')
+    this.closePairingSheet()
+    await this.reconcileListening()
   }
 
-  /** The application locked or unlocked: a lock closes the window and the sheet. */
+  /** The application locked or unlocked: a lock closes the door and the sheet, an unlock opens the door again when an iPhone is paired. */
   async lockChanged(): Promise<void> {
     if (this.deps.isLocked()) {
       // What the iPhone had open is what a person reads: it does not stay in memory behind a lock.
       this.forgetAnnounced()
-      await this.window.close('locked')
     }
+    await this.reconcileListening()
   }
 
   private async startDoor(): Promise<void> {
@@ -344,9 +415,9 @@ export class SyncService {
     await door?.stop()
   }
 
-  /** The window has closed, for whatever reason: nobody can be asked or paired any more. */
-  private windowClosed(): void {
-    // The list of the iPhone's open tabs is not forgotten here: it stays in memory after the window, with its age, until the lock, the quit, the unticked category or the forgotten device.
+  /** The door has closed, for whatever reason: nobody can be asked or paired any more. */
+  private doorClosed(): void {
+    // The list of the iPhone's open tabs is not forgotten here: it stays in memory after the door closes, with its age, until the lock, the quit, the unticked category or the forgotten device.
     this.pairing?.secret.close()
     this.pairing = null
     this.resolveConfirm('refuse')
@@ -370,6 +441,9 @@ export class SyncService {
           this.pairing = null
         } else if (outcome.code === 'pairing-refused') this.pairing = null
         this.resolveConfirm('refuse')
+        // A pairing that ended with nobody paired closes the door, but not before the answer the iPhone is owed has left: closing the door drops its connection.
+        if (this.pairing === null) this.clearPairingTimer()
+        this.reconcileLater(this.deps.settleMs ?? 2000)
         this.changed()
       },
       ...(this.deps.allowSource !== undefined ? { allowSource: this.deps.allowSource } : {})
@@ -378,22 +452,39 @@ export class SyncService {
 
   // ---------- the pairing ----------
 
-  /** « Ajouter un iPhone »: opens the window if it is not open, draws a secret, and builds what the sheet shows. */
+  /** « Ajouter un iPhone »: draws a secret (which makes the Mac listen if it was not), and builds what the sheet shows. */
   async startPairing(): Promise<void> {
     this.begin()
-    await this.open()
+    if (!this.deps.store.config().enabled) this.fail('internal', 'the synchronisation is off')
+    if (this.deps.isLocked()) this.fail('locked', 'the application is locked')
     const identity = this.ensureIdentity()
+    // The secret exists before the door opens: with nobody paired the door opens for it (`wantsToListen`). The sheet is not shown (`status`) until its QR is built, and a
+    // pairing that cannot be shown leaves nothing behind: no secret, no open door.
+    const secret = new PairingSecret(randomBytes(SECRET_BYTES), () => this.deps.clock.elapsed())
+    this.pairing?.secret.close()
+    this.pairing = { secret, view: { qr: '', code: '', address: '' } }
+    try {
+      await this.reconcileListening()
+      this.pairing = { secret, view: this.pairingView(identity, secret) }
+    } catch (error) {
+      this.closePairingSheet()
+      this.reconcileLater(0)
+      throw error
+    }
+    this.armPairingTimer()
+    this.changed()
+  }
+
+  /** What the sheet shows: the QR, the code to type and the address. Fails (and says why) when this Mac has no address of the local network or the code cannot be drawn. */
+  private pairingView(identity: SyncIdentity, secret: PairingSecret): Omit<SyncPairingView, 'remainingMs'> {
     const port = this.door?.port() ?? null
     const hosts = ownHosts(this.deps.hostEnv())
     if (port === null || hosts.length === 0) return this.fail('network', 'this Mac has no address of the local network')
-    this.pairing?.secret.close()
-    const secret = new PairingSecret(randomBytes(SECRET_BYTES), () => this.deps.clock.elapsed())
     const fingerprint = identity.fingerprint
     if (fingerprint.length !== FINGERPRINT_BYTES) this.fail('internal', 'the fingerprint is not 32 bytes')
     // The encoder takes 213 bytes: a long list of addresses loses its last ones, never the first (the name, then the IPv4 addresses).
     let text: string | null = null
-    let used = hosts.length
-    for (; used >= 1; used--) {
+    for (let used = hosts.length; used >= 1; used--) {
       const candidate = qrText({ fingerprint, secret: secret.secret, port, hosts: hosts.slice(0, used) })
       if (!('error' in encodeQr(candidate))) {
         text = candidate
@@ -401,15 +492,21 @@ export class SyncService {
       }
     }
     if (text === null) this.fail('internal', 'the code cannot be drawn')
-    this.pairing = { secret, view: { qr: text as string, code: manualCode(secret.secret), address: manualAddress(hosts[0] as string, port) } }
-    this.changed()
+    return { qr: text as string, code: manualCode(secret.secret), address: manualAddress(hosts[0] as string, port) }
+  }
+
+  /** The sheet and its secret are gone, and the question with them. The door is the caller's to look at again. */
+  private closePairingSheet(): void {
+    this.pairing?.secret.close()
+    this.pairing = null
+    this.clearPairingTimer()
+    this.resolveConfirm('refuse')
   }
 
   closePairing(): void {
     this.begin()
-    this.pairing?.secret.close()
-    this.pairing = null
-    this.resolveConfirm('refuse')
+    this.closePairingSheet()
+    this.reconcileLater(0)
     this.changed()
   }
 
@@ -461,7 +558,7 @@ export class SyncService {
   // ---------- the devices ----------
 
   /** « Oublier »: the device is removed, and what it has open is cut at once. */
-  forget(id: string): void {
+  forget(id: string, settleMs = 0): void {
     this.begin()
     const peer = this.deps.store.peers().find((one) => one.id === id)
     if (peer === undefined) return
@@ -470,6 +567,8 @@ export class SyncService {
     this.announced.delete(id)
     this.sessionSeen.delete(id)
     this.door?.dropPeer(peer.fingerprint)
+    // The last device gone, the door closes (`wantsToListen`). When the device itself said it forgot the Mac, in its own session, the door waits for the answer it is owed.
+    this.reconcileLater(settleMs)
     this.changed()
   }
 
@@ -532,7 +631,7 @@ export class SyncService {
         hosts: () => ownHosts(this.deps.hostEnv()),
         ...(ports.openTabs !== undefined ? { openTabs: ports.openTabs } : {}),
         onOpenTabs: (id, items) => void this.announced.set(id, { items, at: this.deps.now() }),
-        onUnpair: (id) => this.forget(id),
+        onUnpair: (id) => this.forget(id, this.deps.settleMs ?? 2000),
         onRefused: (id, refused) => console.warn(`[sync] ${refused.length} entities of ${id} were not taken (${[...new Set(refused.map((one) => one.reason))].join(', ')})`),
         onDone: (id, at) => {
           store.touchSession(id, at)
@@ -552,7 +651,11 @@ export class SyncService {
   /** The application quits: the door is closed with it. */
   async dispose(): Promise<void> {
     this.stopTracking()
-    await this.window.close('manual')
+    this.clearPairingTimer()
+    if (this.settleTimer !== null) clearTimeout(this.settleTimer)
+    this.settleTimer = null
+    await this.reconciling
+    await this.listening.close('quit')
     this.forgetAnnounced()
   }
 }
