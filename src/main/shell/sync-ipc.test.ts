@@ -14,7 +14,7 @@ import { handleSyncRequest, handleSyncResume, registerSyncIpc } from './sync-ipc
 
 type Handler = (event: { sender: object }, raw: unknown) => Promise<SyncReply>
 
-const STATUS: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false }, window: { open: false, remainingMs: 0 }, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
+const STATUS: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
 
 /** A service that records what it is asked, and answers the state it was given. */
 function fakeService(over: Partial<Record<keyof SyncService, unknown>> = {}) {
@@ -24,9 +24,6 @@ function fakeService(over: Partial<Record<keyof SyncService, unknown>> = {}) {
     status: () => STATUS,
     setEnabled: async (on: boolean) => record('setEnabled')(on),
     setCategory: record('setCategory'),
-    openWindow: async () => record('openWindow')(),
-    prolong: record('prolong'),
-    closeWindow: async (reason: string) => record('closeWindow')(reason),
     startPairing: async () => record('startPairing')(),
     closePairing: record('closePairing'),
     answer: record('answer'),
@@ -105,9 +102,6 @@ describe('the channel of the synchronisation page: what each request does', () =
     [{ kind: 'enable', on: true }, [['setEnabled', true]]],
     [{ kind: 'enable', on: false }, [['setEnabled', false]]],
     [{ kind: 'category', category: 'openTabs', on: true }, [['setCategory', 'openTabs', true]]],
-    [{ kind: 'open-window' }, [['openWindow']]],
-    [{ kind: 'prolong' }, [['prolong']]],
-    [{ kind: 'close-window' }, [['closeWindow', 'manual']]],
     [{ kind: 'pair-start' }, [['startPairing']]],
     [{ kind: 'pair-close' }, [['closePairing']]],
     [{ kind: 'answer', allow: true }, [['answer', true]]],
@@ -125,11 +119,11 @@ describe('the channel of the synchronisation page: what each request does', () =
 describe('handleSyncRequest: what a failure says', () => {
   it.each(['unavailable', 'port', 'identity', 'locked', 'network', 'internal'] as const)('tells a failure named `%s` in the words of the catalogue, with the state', async (problem) => {
     const { service } = fakeService({
-      openWindow: async () => {
+      startPairing: async () => {
         throw new SyncServiceError(problem, 'x')
       }
     })
-    const reply = await handleSyncRequest(service, { kind: 'open-window' })
+    const reply = await handleSyncRequest(service, { kind: 'pair-start' })
     expect(reply).toEqual({ ok: false, message: t(`sync.error.${problem}`), status: STATUS })
     expect(t(`sync.error.${problem}`)).not.toBe(`sync.error.${problem}`)
   })

@@ -1,4 +1,4 @@
-// The synchronisation as the Settings page drives it (docs/synchronisation.md §13.1): the switch, the window, the pairing sheet, the question, the devices.
+// The synchronisation as the Settings page drives it (docs/synchronisation.md §13.1): the switch, the listening, the pairing sheet, the question, the devices.
 // The door is a stand-in for most tests (what matters is when it opens and closes); one test goes through the real listener with real TLS over the loopback.
 import { randomBytes } from 'node:crypto'
 import { join } from 'node:path'
@@ -9,7 +9,7 @@ import { tempDir } from '../temp-dir'
 import { Channel } from './channel'
 import { IdentityStore } from './identity'
 import type { ListenerDeps } from './listener'
-import { WINDOW_MAX_MS, PAIRING_WINDOW_MS } from './limits'
+import { PAIRING_WINDOW_MS } from './limits'
 import { readManualCode, readQr } from './pairing-code'
 import { comparisonCode } from './pairing-compare'
 import { acceptProof, requestProof } from './pairing-proof'
@@ -56,6 +56,7 @@ function rig(over: Partial<SyncServiceDeps> = {}, available = true): Rig {
     now: () => 1_790_000_000_000 + time.t,
     isLocked: () => locked.on,
     onChange: () => void changes.count++,
+    settleMs: 0,
     pickPort: (() => {
       let next = PORT_MIN + 1000
       return () => next++
@@ -87,19 +88,33 @@ function rig(over: Partial<SyncServiceDeps> = {}, available = true): Rig {
 const taken = (): NodeJS.ErrnoException => Object.assign(new Error('listen EADDRINUSE'), { code: 'EADDRINUSE' })
 const iphone = (n: number, extra: Partial<PeerRecord> = {}): PeerRecord => ({ id: `iphone-${n}`, name: `iPhone ${n}`, platform: 'ios', fingerprint: n.toString(16).padStart(64, '0'), pairedAt: 1_790_000_000_000, lastSessionAt: null, ...extra })
 
-describe('SyncService: off by default, and the switch opens nothing', () => {
-  it('starts off, with nothing paired, no window and no sheet', () => {
+/** The Mac listens when the switch is on, the application is unlocked and an iPhone is paired (§6.1): pair one if none is, and let the service settle the door. */
+async function listen(r: Rig): Promise<void> {
+  if (r.store.peers().length === 0) r.store.addPeer(iphone(1))
+  await r.service.reconcileListening()
+}
+
+describe('SyncService: off by default, and when the Mac listens (§6.1)', () => {
+  it('starts off, with nothing paired, not listening and no sheet', () => {
     const { service } = rig()
-    expect(service.status()).toMatchObject({ available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false }, window: { open: false, remainingMs: 0 }, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, problem: null })
+    expect(service.status()).toMatchObject({ available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, problem: null })
   })
 
-  it('turns on without opening the door: the Mac listens only when the person opens the window [Q5]', async () => {
+  it('turns on with no iPhone paired without opening the door: nobody to wait for, no port', async () => {
     const r = rig()
     await r.service.setEnabled(true)
     expect(r.service.status().enabled).toBe(true)
     expect(r.door.starts).toEqual([])
-    expect(r.service.status().window.open).toBe(false)
+    expect(r.service.status().listening).toBe(false)
     expect(r.store.config().enabled).toBe(true)
+  })
+
+  it('listens as soon as it is turned on when an iPhone is paired (the devices are kept while it is off)', async () => {
+    const r = rig()
+    r.store.addPeer(iphone(1))
+    await r.service.setEnabled(true)
+    expect(r.door.starts).toHaveLength(1)
+    expect(r.service.status().listening).toBe(true)
   })
 
   it('refuses to turn on when the system cannot seal a key, says why, and stays off', async () => {
@@ -109,23 +124,87 @@ describe('SyncService: off by default, and the switch opens nothing', () => {
     expect(r.store.config().enabled).toBe(false)
   })
 
-  it('refuses to open a window while the switch is off', async () => {
+  it('does not listen while the switch is off, whatever is paired, and a pairing cannot be started', async () => {
     const r = rig()
-    await expect(r.service.openWindow()).rejects.toBeInstanceOf(SyncServiceError)
+    r.store.addPeer(iphone(1))
+    await r.service.reconcileListening()
+    expect(r.door.starts).toEqual([])
+    await expect(r.service.startPairing()).rejects.toBeInstanceOf(SyncServiceError)
     expect(r.door.starts).toEqual([])
   })
 
-  it('closes the window, then turns off, when the switch is cut; the paired devices are kept', async () => {
+  it('closes the door, then turns off, when the switch is cut; the paired devices are kept', async () => {
     const r = rig()
     r.store.addPeer(iphone(1))
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     expect(r.door.currentPort).not.toBeNull()
     await r.service.setEnabled(false)
     expect(r.door.stops).toBe(1)
     expect(r.door.currentPort).toBeNull()
-    expect(r.service.status()).toMatchObject({ enabled: false, window: { open: false } })
+    expect(r.service.status()).toMatchObject({ enabled: false, listening: false })
     expect(r.service.status().devices).toHaveLength(1)
+  })
+
+  it('listens from the launch when the switch is on and an iPhone is paired, with nobody having opened anything', async () => {
+    const r = rig()
+    r.store.addPeer(iphone(1))
+    r.store.setEnabled(true)
+    r.service.start()
+    await r.service.reconcileListening()
+    expect(r.door.starts).toHaveLength(1)
+    expect(r.service.status().listening).toBe(true)
+  })
+
+  it('does not listen at the launch when the switch is off, nor when no iPhone is paired', async () => {
+    const off = rig()
+    off.store.addPeer(iphone(1))
+    off.service.start()
+    await off.service.reconcileListening()
+    expect(off.door.starts).toEqual([])
+    const nobody = rig()
+    nobody.store.setEnabled(true)
+    nobody.service.start()
+    await nobody.service.reconcileListening()
+    expect(nobody.door.starts).toEqual([])
+  })
+
+  it('does not listen at the launch while the application is locked, and listens when it is unlocked', async () => {
+    const r = rig()
+    r.store.addPeer(iphone(1))
+    r.store.setEnabled(true)
+    r.locked.on = true
+    r.service.start()
+    await r.service.reconcileListening()
+    expect(r.door.starts).toEqual([])
+    r.locked.on = false
+    await r.service.lockChanged()
+    expect(r.door.starts).toHaveLength(1)
+    expect(r.service.status().listening).toBe(true)
+  })
+
+  it('stops listening when the last iPhone is forgotten, and keeps listening while another is paired', async () => {
+    const r = rig()
+    r.store.addPeer(iphone(1))
+    r.store.addPeer(iphone(2))
+    await r.service.setEnabled(true)
+    r.service.forget('iphone-1')
+    await r.service.reconcileListening()
+    expect(r.service.status().listening).toBe(true)
+    expect(r.door.stops).toBe(0)
+    r.service.forget('iphone-2')
+    await r.service.reconcileListening()
+    expect(r.service.status().listening).toBe(false)
+    expect(r.door.stops).toBe(1)
+  })
+
+  it('listens with no deadline: a day later the door is the same one, still open', async () => {
+    const r = rig()
+    await r.service.setEnabled(true)
+    await listen(r)
+    r.time.t += 24 * 3_600_000
+    expect(r.service.status().listening).toBe(true)
+    expect(r.door.stops).toBe(0)
+    expect(r.door.starts).toHaveLength(1)
   })
 
   it('keeps a category ticked or not, and refuses one that does not exist', async () => {
@@ -192,24 +271,26 @@ describe('SyncService: off by default, and the switch opens nothing', () => {
   })
 })
 
-describe('SyncService: the window', () => {
-  it('opens on a stored port in the dynamic range, for ten minutes', async () => {
+describe('SyncService: the door', () => {
+  it('opens on a stored port in the dynamic range', async () => {
     const r = rig()
     await r.service.setEnabled(true)
-    await r.service.openWindow()
+    await listen(r)
     expect(r.door.starts).toHaveLength(1)
     expect(r.door.starts[0]).toBeGreaterThanOrEqual(PORT_MIN)
     expect(r.door.starts[0]).toBeLessThanOrEqual(PORT_MAX)
     expect(r.store.config().port).toBe(r.door.starts[0])
-    expect(r.service.status().window).toEqual({ open: true, remainingMs: WINDOW_MAX_MS })
+    expect(r.service.status().listening).toBe(true)
   })
 
   it('opens again on the same port next time', async () => {
     const r = rig()
     await r.service.setEnabled(true)
-    await r.service.openWindow()
-    await r.service.closeWindow()
-    await r.service.openWindow()
+    await listen(r)
+    r.locked.on = true
+    await r.service.lockChanged()
+    r.locked.on = false
+    await r.service.lockChanged()
     expect(r.door.starts[1]).toBe(r.door.starts[0])
   })
 
@@ -218,10 +299,10 @@ describe('SyncService: the window', () => {
     const r = rig()
     r.door.failStart.push(taken(), taken())
     await r.service.setEnabled(true)
-    await r.service.openWindow()
+    await listen(r)
     expect(r.door.starts).toHaveLength(1)
     expect(r.store.config().port).toBe(r.door.starts[0])
-    expect(r.service.status().window.open).toBe(true)
+    expect(r.service.status().listening).toBe(true)
     warn.mockRestore()
   })
 
@@ -231,10 +312,10 @@ describe('SyncService: the window', () => {
     const refused = (): NodeJS.ErrnoException => Object.assign(new Error('listen EACCES: permission denied'), { code: 'EACCES' })
     r.door.failStart.push(refused(), refused())
     await r.service.setEnabled(true)
-    await r.service.openWindow()
+    await listen(r)
     expect(r.door.starts).toHaveLength(1)
     expect(r.store.config().port).toBe(r.door.starts[0])
-    expect(r.service.status().window.open).toBe(true)
+    expect(r.service.status().listening).toBe(true)
     warn.mockRestore()
   })
 
@@ -244,7 +325,7 @@ describe('SyncService: the window', () => {
     const r = rig()
     for (let n = 0; n < 6; n++) r.door.failStart.push(Object.assign(new Error('listen EACCES'), { code: 'EACCES' }))
     await r.service.setEnabled(true)
-    await expect(r.service.openWindow()).rejects.toMatchObject({ problem: 'port' })
+    await expect(listen(r)).rejects.toMatchObject({ problem: 'port' })
     warn.mockRestore()
     log.mockRestore()
   })
@@ -255,8 +336,8 @@ describe('SyncService: the window', () => {
     const r = rig()
     for (let n = 0; n < 6; n++) r.door.failStart.push(taken())
     await r.service.setEnabled(true)
-    await expect(r.service.openWindow()).rejects.toMatchObject({ problem: 'port' })
-    expect(r.service.status()).toMatchObject({ window: { open: false }, problem: 'port' })
+    await expect(listen(r)).rejects.toMatchObject({ problem: 'port' })
+    expect(r.service.status()).toMatchObject({ listening: false, problem: 'port' })
     warn.mockRestore()
     log.mockRestore()
   })
@@ -267,7 +348,7 @@ describe('SyncService: the window', () => {
     const r = rig()
     for (let n = 0; n < 6; n++) r.door.failStart.push(taken())
     await r.service.setEnabled(true)
-    await expect(r.service.openWindow()).rejects.toMatchObject({ problem: 'port' })
+    await expect(listen(r)).rejects.toMatchObject({ problem: 'port' })
     expect(r.service.status().problem).toBe('port')
     expect(r.service.status().problem).toBe('port')
     r.service.setCategory('archive', true)
@@ -281,57 +362,51 @@ describe('SyncService: the window', () => {
     const r = rig()
     r.door.failStart.push(Object.assign(new Error('EMFILE'), { code: 'EMFILE' }))
     await r.service.setEnabled(true)
-    await expect(r.service.openWindow()).rejects.toMatchObject({ problem: 'internal' })
+    await expect(listen(r)).rejects.toMatchObject({ problem: 'internal' })
     expect(log).toHaveBeenCalledWith(expect.stringContaining('could not be opened'), expect.anything())
     log.mockRestore()
   })
 
-  it('does not open while the application is locked', async () => {
+  it('does not open while the application is locked, whatever is paired', async () => {
     const r = rig()
     await r.service.setEnabled(true)
     r.locked.on = true
-    await expect(r.service.openWindow()).rejects.toMatchObject({ problem: 'locked' })
+    await listen(r)
+    expect(r.door.starts).toEqual([])
+    await expect(r.service.startPairing()).rejects.toMatchObject({ problem: 'locked' })
     expect(r.door.starts).toEqual([])
   })
 
-  it('closes when the application locks, and not when it is unlocked', async () => {
+  it('closes when the application locks, and opens again when it is unlocked', async () => {
     const r = rig()
     await r.service.setEnabled(true)
-    await r.service.openWindow()
+    await listen(r)
     await r.service.lockChanged()
-    expect(r.service.status().window.open).toBe(true)
+    expect(r.service.status().listening).toBe(true)
     r.locked.on = true
     await r.service.lockChanged()
-    expect(r.service.status().window.open).toBe(false)
+    expect(r.service.status().listening).toBe(false)
     expect(r.door.stops).toBe(1)
+    r.locked.on = false
+    await r.service.lockChanged()
+    expect(r.service.status().listening).toBe(true)
+    expect(r.door.starts).toHaveLength(2)
   })
 
-  it('closes when the page is left', async () => {
+  it('is not closed by the page being left: the listening does not depend on the page', async () => {
     const r = rig()
     await r.service.setEnabled(true)
-    await r.service.openWindow()
+    await listen(r)
     await r.service.leave()
-    expect(r.service.status().window.open).toBe(false)
-    expect(r.door.stops).toBe(1)
-    await r.service.leave()
-    expect(r.door.stops).toBe(1)
-  })
-
-  it('prolongs for ten minutes again', async () => {
-    const r = rig()
-    await r.service.setEnabled(true)
-    await r.service.openWindow()
-    r.time.t += 400_000
-    expect(r.service.status().window.remainingMs).toBe(WINDOW_MAX_MS - 400_000)
-    r.service.prolong()
-    expect(r.service.status().window.remainingMs).toBe(WINDOW_MAX_MS)
+    expect(r.service.status().listening).toBe(true)
+    expect(r.door.stops).toBe(0)
   })
 
   it('tells the page at every change', async () => {
     const r = rig()
     const before = r.changes.count
     await r.service.setEnabled(true)
-    await r.service.openWindow()
+    await listen(r)
     expect(r.changes.count).toBeGreaterThan(before + 1)
   })
 })
@@ -345,10 +420,10 @@ describe('SyncService: the sheet of « Ajouter un iPhone »', () => {
     return r
   }
 
-  it('opens the window if it is closed, and gives the QR, the code and the address', async () => {
+  it('opens the door if it is closed (nobody is paired yet), and gives the QR, the code and the address', async () => {
     const r = await withSheet()
-    const { pairing, window } = r.service.status()
-    expect(window.open).toBe(true)
+    const { pairing, listening } = r.service.status()
+    expect(listening).toBe(true)
     expect(pairing).not.toBeNull()
     const reading = readQr(pairing?.qr ?? '')
     expect(reading.ok).toBe(true)
@@ -415,10 +490,11 @@ describe('SyncService: the sheet of « Ajouter un iPhone »', () => {
     expect(r.door.deps?.openPairing(Buffer.alloc(32))).toBeNull()
   })
 
-  it('closes with the window', async () => {
+  it('closes with the door (the application locks)', async () => {
     const r = await withSheet()
     const secret = r.door.deps?.openPairing(Buffer.alloc(32))?.secret
-    await r.service.closeWindow()
+    r.locked.on = true
+    await r.service.lockChanged()
     expect(r.service.status().pairing).toBeNull()
     expect(secret?.attempt(() => true)).toBe('pairing-closed')
   })
@@ -426,7 +502,7 @@ describe('SyncService: the sheet of « Ajouter un iPhone »', () => {
   it('offers no pairing to the door when no sheet is open: a stranger is refused', async () => {
     const r = rig()
     await r.service.setEnabled(true)
-    await r.service.openWindow()
+    await listen(r)
     expect(r.door.deps?.openPairing(Buffer.alloc(32))).toBeNull()
   })
 })
@@ -453,8 +529,8 @@ describe('SyncService: the question (Autoriser / Refuser)', () => {
     expect(r.service.status().confirm).toEqual({ name: 'iPhone de Camille', code: 'ABC234', address: '192.168.1.40', waiting: true, remainingMs: 60_000 })
   })
 
-  it('keeps the sheet while the iPhone is asked, and ends the wait when the person gives up, or when the sheet or the window closes', async () => {
-    for (const giveUp of [(r: Rig) => r.service.answer(false), (r: Rig) => r.service.closePairing(), (r: Rig) => void r.service.closeWindow()]) {
+  it('keeps the sheet while the iPhone is asked, and ends the wait when the person gives up, or when the sheet or the door closes', async () => {
+    for (const giveUp of [(r: Rig) => r.service.answer(false), (r: Rig) => r.service.closePairing(), (r: Rig) => void ((r.locked.on = true), r.service.lockChanged())]) {
       const { r, answer } = await asked()
       r.service.answer(true)
       await answer
@@ -493,12 +569,13 @@ describe('SyncService: the question (Autoriser / Refuser)', () => {
     expect(() => r.service.answer(true)).not.toThrow()
   })
 
-  it('refuses when the sheet is closed, and when the window is closed', async () => {
+  it('refuses when the sheet is closed, and when the door is closed', async () => {
     const first = await asked()
     first.r.service.closePairing()
     expect(await first.answer).toBe('refuse')
     const second = await asked()
-    await second.r.service.closeWindow()
+    second.r.locked.on = true
+    await second.r.service.lockChanged()
     expect(await second.answer).toBe('refuse')
     expect(second.r.service.status().confirm).toBeNull()
   })
@@ -533,6 +610,111 @@ describe('SyncService: the question (Autoriser / Refuser)', () => {
   })
 })
 
+describe('SyncService: the door and the pairing of a Mac with nobody paired (two minutes, then it closes)', () => {
+  it('closes the door when the secret runs out and nobody was paired, and says so to the page', async () => {
+    const r = rig()
+    await r.service.setEnabled(true)
+    await r.service.startPairing()
+    expect(r.service.status().listening).toBe(true)
+    r.time.t += PAIRING_WINDOW_MS + 1
+    // The page asks its state: the expired secret is dropped there, and the door is looked at again.
+    expect(r.service.status().pairing).toBeNull()
+    await r.service.reconcileListening()
+    expect(r.service.status().listening).toBe(false)
+    expect(r.door.stops).toBe(1)
+  })
+
+  it('closes the door by itself when the secret runs out, with nobody asking the page for its state', async () => {
+    vi.useFakeTimers()
+    try {
+      const r = rig()
+      await r.service.setEnabled(true)
+      await r.service.startPairing()
+      r.time.t += PAIRING_WINDOW_MS + 1
+      await vi.advanceTimersByTimeAsync(PAIRING_WINDOW_MS + 100)
+      await r.service.reconcileListening()
+      expect(r.door.stops).toBe(1)
+      expect(r.service.status().listening).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps the door open after the secret runs out when an iPhone is paired', async () => {
+    const r = rig()
+    r.store.addPeer(iphone(1))
+    await r.service.setEnabled(true)
+    await r.service.startPairing()
+    r.time.t += PAIRING_WINDOW_MS + 1
+    expect(r.service.status().pairing).toBeNull()
+    await r.service.reconcileListening()
+    expect(r.service.status().listening).toBe(true)
+    expect(r.door.stops).toBe(0)
+  })
+
+  it('closes the door with the sheet when nobody is paired, and keeps it when an iPhone is', async () => {
+    const alone = rig()
+    await alone.service.setEnabled(true)
+    await alone.service.startPairing()
+    alone.service.closePairing()
+    await alone.service.reconcileListening()
+    expect(alone.service.status().listening).toBe(false)
+    const withPhone = rig()
+    withPhone.store.addPeer(iphone(1))
+    await withPhone.service.setEnabled(true)
+    await withPhone.service.startPairing()
+    withPhone.service.closePairing()
+    await withPhone.service.reconcileListening()
+    expect(withPhone.service.status().listening).toBe(true)
+  })
+
+  it('leaves no door open when the sheet cannot be shown (no address of the local network)', async () => {
+    const r = rig()
+    r.hosts.list = []
+    r.hosts.hostname = 'x'
+    await r.service.setEnabled(true)
+    await expect(r.service.startPairing()).rejects.toMatchObject({ problem: 'network' })
+    await r.service.reconcileListening()
+    expect(r.service.status()).toMatchObject({ listening: false, pairing: null })
+    expect(r.door.deps?.openPairing(Buffer.alloc(32)) ?? null).toBeNull()
+  })
+
+  it('keeps listening after an iPhone was paired: the door is the one of the pairing, and it stays', async () => {
+    const r = rig()
+    await r.service.setEnabled(true)
+    await r.service.startPairing()
+    r.store.addPeer(iphone(1))
+    r.door.deps?.onPairingEnded?.({ outcome: 'paired', peer: iphone(1) })
+    await r.service.reconcileListening()
+    expect(r.service.status()).toMatchObject({ listening: true, pairing: null })
+    expect(r.door.stops).toBe(0)
+  })
+
+  it('waits a moment after a refused pairing before closing the door: the refusal the iPhone is owed must leave first', async () => {
+    const r = rig({ settleMs: 80 })
+    await r.service.setEnabled(true)
+    await r.service.startPairing()
+    r.door.deps?.onPairingEnded?.({ outcome: 'failed', code: 'pairing-refused', detail: 'x' })
+    await sleep(30)
+    expect(r.door.stops).toBe(0)
+    expect(r.service.status().listening).toBe(true)
+    await sleep(200)
+    expect(r.door.stops).toBe(1)
+    expect(r.service.status().listening).toBe(false)
+  })
+
+  it('waits a moment too when an iPhone says, in its own session, that it forgot this Mac', async () => {
+    const r = rig({ settleMs: 80 })
+    r.store.addPeer(iphone(1))
+    await r.service.setEnabled(true)
+    r.service.forget('iphone-1', 80)
+    await sleep(30)
+    expect(r.door.stops).toBe(0)
+    await sleep(200)
+    expect(r.door.stops).toBe(1)
+  })
+})
+
 describe('SyncService: a pairing that ends, and the devices', () => {
   it('shows the iPhone that was paired once, closes the sheet, and the next request forgets it', async () => {
     const r = rig()
@@ -540,7 +722,7 @@ describe('SyncService: a pairing that ends, and the devices', () => {
     await r.service.startPairing()
     r.door.deps?.onPairingEnded?.({ outcome: 'paired', peer: iphone(1, { name: 'iPhone de Camille' }) })
     expect(r.service.status()).toMatchObject({ justPaired: 'iPhone de Camille', pairing: null })
-    r.service.prolong()
+    r.service.setCategory('archive', true)
     expect(r.service.status().justPaired).toBeNull()
   })
 
@@ -559,7 +741,6 @@ describe('SyncService: a pairing that ends, and the devices', () => {
     r.store.addPeer(iphone(1))
     r.store.addPeer(iphone(2))
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     expect(r.service.status().devices.map((d) => d.id)).toEqual(['iphone-1', 'iphone-2'])
     r.service.forget('iphone-1')
     expect(r.service.status().devices.map((d) => d.id)).toEqual(['iphone-2'])
@@ -572,7 +753,6 @@ describe('SyncService: a pairing that ends, and the devices', () => {
     const r = rig()
     r.store.addPeer(iphone(1))
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     expect(r.door.deps?.findPeer(iphone(1).fingerprint)?.id).toBe('iphone-1')
     r.service.forget('iphone-1')
     expect(r.door.deps?.findPeer(iphone(1).fingerprint)).toBeUndefined()
@@ -581,7 +761,7 @@ describe('SyncService: a pairing that ends, and the devices', () => {
   it('hands the door, for a connection, a session that says the exchange is not there yet (it is not, and it does not pretend)', async () => {
     const r = rig()
     await r.service.setEnabled(true)
-    await r.service.openWindow()
+    await listen(r)
     const failed: Array<[string, string]> = []
     await r.door.deps?.runSession({ fail: (code: string, detail: string) => void failed.push([code, detail]) } as unknown as Channel, iphone(1))
     expect(failed).toEqual([['internal', expect.stringContaining('not available yet')]])
@@ -657,13 +837,14 @@ describe('SyncService: through the real door, over the loopback', () => {
   it('refuses a stranger, and a device that is not paired, while no sheet is open', async () => {
     const r = rig({ makeDoor: undefined, allowSource: () => true })
     await r.service.setEnabled(true)
-    await r.service.openWindow()
+    await listen(r)
     const port = r.store.config().port as number
     const { socket } = await connectTls(port, testIdentity('stranger-0000000001'))
     const first = await new Promise<string>((resolve) => void socket.once('data', (d: Buffer) => resolve(d.subarray(4).toString())))
     expect(first).toContain('not-paired')
     socket.destroy()
-    await r.service.closeWindow()
+    r.service.forget('iphone-1')
+    await r.service.reconcileListening()
     await sleep(30)
     await expect(connectTls(port, testIdentity('stranger-0000000002'))).rejects.toBeDefined()
   })
@@ -673,7 +854,6 @@ describe('SyncService: through the real door, over the loopback', () => {
     const phone = testIdentity('iphone-0000000007')
     r.store.addPeer({ id: phone.deviceId, name: 'iPhone', platform: 'ios', fingerprint: phone.fingerprint.toString('hex'), pairedAt: 1, lastSessionAt: null })
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     const { socket } = await connectTls(r.store.config().port as number, phone)
     const text = await new Promise<string>((resolve) => void socket.once('data', (d: Buffer) => resolve(d.subarray(4).toString())))
     expect(text).toContain('internal')

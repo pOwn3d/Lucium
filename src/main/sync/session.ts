@@ -27,7 +27,7 @@ import { cleanSnapshot, isKnownSearchTemplate, isWebAddress } from './inbound-fi
 import { asideOf, type MarkBook } from './marks'
 import type { OpenTab, SnapshotPart, WireEntity, WireTombstone } from './messages'
 import { buildPatch, patchIsEmpty } from './patch'
-import { baseOf, follows, kindIsExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
+import { baseOf, follows, kindIsExchanged, onlyExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 import { randomBytes } from 'node:crypto'
 
 /** What a session needs of the state of the device. */
@@ -255,7 +255,9 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     )
     const form = parseSnapshot(JSON.parse(canonicalJson(received.snapshot)))
     if ('problem' in form) return fail('bad-message', `the snapshot is not well formed: ${form.problem}`)
-    const cleaned = cleanSnapshot(form.snapshot, deps.now(), base)
+    const exchanged = onlyExchanged(form.snapshot, common)
+    if (exchanged.refused.length > 0) deps.onRefused?.(peerId, exchanged.refused)
+    const cleaned = cleanSnapshot(exchanged.snapshot, deps.now(), base)
     if (cleaned.refused.length > 0) deps.onRefused?.(peerId, cleaned.refused)
 
     // merge, compare

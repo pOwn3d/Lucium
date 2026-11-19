@@ -1,6 +1,6 @@
 // The synchronisation service made from the real pieces of the Mac (docs/synchronisation.md §3.3): the data folder of the application, the sealing of `safeStorage`,
-// the host name and the network interfaces of the system. Called once at the launch (main/index.ts). Making the service opens nothing and reads two small files at most:
-// the switch is OFF until the person turns it on, and the Mac listens only while they have opened the window by hand (§6.1).
+// the host name and the network interfaces of the system. Called once at the launch (main/index.ts). Making the service opens nothing (the launch, `start()`, looks at whether it must listen) and reads two small files at most:
+// the switch is OFF until the person turns it on, and the Mac listens only when it is on, the application is unlocked and an iPhone is paired (§6.1).
 
 import { hostname, networkInterfaces } from 'node:os'
 import { join } from 'node:path'

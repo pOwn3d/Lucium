@@ -40,15 +40,6 @@ export async function handleSyncRequest(service: SyncService, request: SyncReque
       case 'category':
         service.setCategory(request.category, request.on)
         break
-      case 'open-window':
-        await service.openWindow()
-        break
-      case 'prolong':
-        service.prolong()
-        break
-      case 'close-window':
-        await service.closeWindow('manual')
-        break
       case 'pair-start':
         await service.startPairing()
         break

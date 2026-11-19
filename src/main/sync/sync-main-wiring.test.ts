@@ -1,5 +1,5 @@
-// What closes the Mac's door is wired where the application starts (docs/synchronisation.md §6.1): a lock, the quit and the Settings window that closes each shut the
-// synchronisation window. These are read from the source of the launch, as the other wiring tests do, because the launch itself needs Electron.
+// What closes the Mac's door is wired where the application starts (docs/synchronisation.md §6.1): a lock and an unlock set the door, the quit shuts it, the launch opens it when an iPhone is paired, and the Settings window
+// that closes takes the sheet of a pairing with it. These are read from the source of the launch, as the other wiring tests do, because the launch itself needs Electron.
 
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -25,12 +25,16 @@ describe('the synchronisation at the launch (main/index.ts)', () => {
     expect(index).toMatch(/setSyncService\(sync\)\s+sync\.start\(\)/)
   })
 
-  it('closes the window when the application locks, and says so in the log if it cannot', () => {
+  it('sets the door when the application locks or unlocks, and says so in the log if it cannot', () => {
     expect(index).toMatch(/lock\.subscribe\(\(\) => void sync\.lockChanged\(\)\.catch\(/)
   })
 
   it('closes the door at the quit', () => {
     expect(index).toMatch(/app\.on\('will-quit', \(\) => void sync\.dispose\(\)\.catch\(/)
+  })
+
+  it('starts the service at the launch, so that a Mac with an iPhone paired listens without anyone opening a page', () => {
+    expect(index).toMatch(/setSyncService\(sync\)\s+sync\.start\(\)/)
   })
 
   it('makes the service after the lock, which it asks, and before any window is shown', () => {
@@ -39,7 +43,7 @@ describe('the synchronisation at the launch (main/index.ts)', () => {
 })
 
 describe('the Settings window (main/shell/own-windows-wiring.ts)', () => {
-  it('closes the synchronisation window with itself, and says so in the log if it cannot', () => {
+  it('tells the service the page is gone when it closes with itself (the sheet of a pairing goes), and says so in the log if it cannot', () => {
     expect(read('shell/own-windows-wiring.ts')).toMatch(/onClosed: \(\) => void getSyncService\(\)\?\.leave\(\)\.catch\(/)
   })
 })

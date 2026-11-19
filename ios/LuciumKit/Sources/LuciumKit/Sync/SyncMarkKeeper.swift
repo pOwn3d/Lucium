@@ -30,16 +30,19 @@ public final class SyncMarkKeeper: @unchecked Sendable {
     }
 
     /// The state was written: the book is brought up to it and written. A write that fails is told in the log and tried again at the next change: the marks are in
-    /// memory meanwhile.
-    public func observe(_ state: BrowserState, now: Int) {
+    /// memory meanwhile. True when what is synchronised changed since the last look (a tab opened in Today or a page loaded is not): the phone then asks for a session
+    /// (§8.1, « après un changement local »).
+    @discardableResult
+    public func observe(_ state: BrowserState, now: Int) -> Bool {
         lock.lock()
         defer { lock.unlock() }
-        if holding { return }
+        if holding { return false }
         let view = SyncStateView.trackedView(of: state)
-        if view == lastView { return }
+        if view == lastView { return false }
         book.update(view, now: now)
         lastView = view
         save()
+        return true
     }
 
     /// The snapshot a session freezes: the book is brought up to the state first, so that no change of the person lacks its mark.
