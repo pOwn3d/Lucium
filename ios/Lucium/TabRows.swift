@@ -28,7 +28,7 @@ struct TabRowView: View {
                         detail(shown: shown).font(.caption).foregroundStyle(.secondary).lineLimit(typeSize.isAccessibilitySize ? 2 : 1)
                     }
                     Spacer(minLength: 8)
-                    if shown && tab.pinned { IconView(.check, size: 18).foregroundStyle(Color.accentColor) }
+                    if shown && tab.pinned { IconView(.check, size: 18).foregroundStyle(.accentText) }
                 }
                 .frame(minHeight: 48)
                 .contentShape(Rectangle())
@@ -158,7 +158,7 @@ struct FavoriteTile: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: height)
                 .background(fill, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
-                .overlay { if model.isShown(favorite) { RoundedRectangle(cornerRadius: Radius.l, style: .continuous).strokeBorder(Color.accentColor, lineWidth: Stroke.ring) } }
+                .overlay { if model.isShown(favorite) { RoundedRectangle(cornerRadius: Radius.l, style: .continuous).strokeBorder(.accentFill, lineWidth: Stroke.ring) } }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

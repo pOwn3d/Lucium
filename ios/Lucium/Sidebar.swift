@@ -249,7 +249,7 @@ struct Sidebar: View {
             Spacer()
             Button { folderName = ""; folderEdit = .new(parent: nil) } label: { IconView(.folderPlus, size: 20).frame(width: 44, height: 32).contentShape(Rectangle()) }
                 .buttonStyle(.plain)
-                .foregroundStyle(Color.accentColor)
+                .foregroundStyle(.accentText)
                 .accessibilityLabel(Text("folder.new"))
         }
         .sidebarRow()
@@ -430,7 +430,7 @@ struct SidebarTabRow: View {
             }
         }
         .padding(.trailing, Gap.xs)
-        .background(shown ? Color.accentColor.opacity(0.24) : Color.clear, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+        .background(shown ? AnyShapeStyle(.accentFill.opacity(0.24)) : AnyShapeStyle(Color.clear), in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
         .accessibilityElement(children: .contain)
         .accessibilityAddTraits(shown ? .isSelected : [])
         .tabActions(tab, model: model)

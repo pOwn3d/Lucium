@@ -43,6 +43,10 @@ final class DesignTokensTests: XCTestCase {
         XCTAssertEqual(Self.violations(of: hand, in: try Self.sources()), [], "use a role of Tokens.swift (Color.danger, .success, .pinned…) or the system's semantic colours")
     }
 
+    func testTheAccentIsTheOneOfTheSpaceNeverTheFixedOneOfTheCatalogue() throws {
+        XCTAssertEqual(Self.violations(of: #"Color\.accentColor|\.tint\(\.accentColor\)|\.accentColor\b"#, in: try Self.sources()), [], "use .accentFill / .accentText / .onAccent (SpaceAccentStyle.swift): they follow the hue of the space")
+    }
+
     func testTheScanSeesAViolation() {
         let sample = [(name: "Sample.swift", lines: ["Text(\"x\").foregroundStyle(.red)", "RoundedRectangle(cornerRadius: 12)", "Color.accentColor // Color.red"])]
         XCTAssertEqual(Self.violations(of: #"cornerRadius:\s*[0-9]"#, in: sample).count, 1)

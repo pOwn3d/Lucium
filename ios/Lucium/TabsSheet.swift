@@ -171,7 +171,7 @@ struct TabsSheet: View {
                 Spacer()
                 Button { nameText = ""; namingFolder = true } label: { IconView(.folderPlus, size: 20).frame(width: 44, height: 32).contentShape(Rectangle()) }
                     .buttonStyle(.plain)
-                    .foregroundStyle(Color.accentColor)
+                    .foregroundStyle(.accentText)
                     .accessibilityLabel(Text("folder.new"))
             }
         }
@@ -221,10 +221,10 @@ struct TabsSheet: View {
                     IconView(.plus, size: 18)
                     Text("tabs.new").fontWeight(.semibold)
                 }
-                // The text takes the colour of the ground (white on the accent in the light scheme, black on the lighter accent in the dark one).
-                .foregroundStyle(Color(.systemBackground))
+                // The ink is the one of the accent (white in the light scheme, a near-black blue on the lighter accent in the dark one), 4.5:1 at every hue.
+                .foregroundStyle(.onAccent)
                 .frame(maxWidth: .infinity, minHeight: 46)
-                .background(Color.accentColor, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+                .background(.accentFill, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
             }
             .buttonStyle(.plain)
             .disabled(model.activeSpaceCovered)

@@ -21,6 +21,8 @@ struct SpacesSheet: View {
 struct SpacesList: View {
     @Bindable var model: BrowserModel
     let close: () -> Void
+    @Environment(\.spaceHue) private var spaceHue
+    @Environment(\.colorScheme) private var scheme
     @State private var adding = false
     @State private var editing: String?  // the id of the space being changed
     @State private var askingProfileName = false
@@ -105,14 +107,14 @@ struct SpacesList: View {
                     Text(model.tabCount(in: space).map(Self.count) ?? "lock.sheet.short").font(.footnote).foregroundStyle(Color.secondary)
                 }
                 Spacer(minLength: 0)
-                if selected { ProjectIcon(name: .check).foregroundStyle(Color.accentColor) }
+                if selected { ProjectIcon(name: .check).foregroundStyle(.accentText) }
             }
             .frame(minHeight: 44)
         }
         .accessibilityAddTraits(selected ? .isSelected : [])
         .swipeActions(edge: .trailing) {
             if model.spaces.count > 1, !model.isCovered(space) { Button("spaces.delete", role: .destructive) { deletion = space } }
-            Button("spaces.edit") { editing = space.id }.tint(.accentColor)
+            Button("spaces.edit") { editing = space.id }.tint(Color(SpaceAccent.accent(hue: spaceHue, dark: scheme == .dark)))
         }
     }
 
@@ -143,7 +145,7 @@ struct SpacesList: View {
                 ProjectIcon(name: icon).frame(width: 36, height: 36)
                 Text(title)
             }
-            .foregroundStyle(accent ? Color.accentColor : Color.primary)
+            .foregroundStyle(accent ? AnyShapeStyle(.accentText) : AnyShapeStyle(.primary))
             .frame(minHeight: 44)
         }
     }
@@ -199,7 +201,7 @@ struct SpaceForm: View {
                     ForEach(choices, id: \.self) { candidate in
                         Button { emoji = candidate } label: {
                             Text(candidate).font(.title2).frame(maxWidth: .infinity, minHeight: 44)
-                                .background(candidate == emoji ? Color.accentColor.opacity(0.2) : Color.clear, in: RoundedRectangle(cornerRadius: Radius.s))
+                                .background(candidate == emoji ? AnyShapeStyle(.accentFill.opacity(0.2)) : AnyShapeStyle(Color.clear), in: RoundedRectangle(cornerRadius: Radius.s))
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(candidate == emoji ? .isSelected : [])
@@ -212,7 +214,7 @@ struct SpaceForm: View {
                         let number = ordinal(index)
                         Button { hue = candidate } label: {
                             Circle().fill(swatch(forHue: candidate)).frame(width: 30, height: 30)
-                                .overlay { if hue == candidate { Circle().strokeBorder(Color.accentColor, lineWidth: Stroke.ring).padding(-3) } }
+                                .overlay { if hue == candidate { Circle().strokeBorder(.accentFill, lineWidth: Stroke.ring).padding(-3) } }
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.plain)
