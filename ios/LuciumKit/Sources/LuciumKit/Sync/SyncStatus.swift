@@ -10,7 +10,7 @@ public enum SyncStatus: Equatable, Sendable {
     case noDevice
     /// On, a Mac is paired, and there has been no session yet.
     case idle
-    /// The Mac refused the connection: it is on this network but its synchronisation window is closed (or the Mac is locked). Not an error (§8.1).
+    /// The Mac refused the connection or did not answer where it was: it is not listening (Lucium closed or locked there, the synchronisation off there, no phone paired there). Not an error (§8.1).
     case waiting
     /// No address of the Mac answered.
     case unreachable
@@ -44,6 +44,8 @@ public enum SyncStatus: Equatable, Sendable {
 public enum SyncScheduler {
     public enum Trigger: Equatable, Sendable {
         case launch, foreground, localChange, manual
+        /// The chosen interval has run out while the application is on the screen (card 505).
+        case interval
     }
 
     public enum Decision: Equatable, Sendable {
@@ -63,7 +65,7 @@ public enum SyncScheduler {
         // The person's own request is never held back by the 15-second rule, only by the fact that a session is open.
         if trigger != .manual, let since = sinceLastStart, since < SyncLimits.minimumAutomaticInterval { return .skip(.tooSoon) }
         switch trigger {
-        case .launch, .manual: return .start(after: .zero)
+        case .launch, .manual, .interval: return .start(after: .zero)
         case .foreground: return .start(after: .seconds(5))
         case .localChange: return .start(after: .seconds(30))
         }
