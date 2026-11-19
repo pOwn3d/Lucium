@@ -5321,66 +5321,18 @@
         }
       }
     },
-    "sync.interval.15m": {
+    "sync.interval.five-minutes": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "15 minutes"
+            "value": "Every 5 minutes"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "15 minutes"
-          }
-        }
-      }
-    },
-    "sync.interval.1m": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 minute"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "1 minute"
-          }
-        }
-      }
-    },
-    "sync.interval.30s": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "30 seconds"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "30 secondes"
-          }
-        }
-      }
-    },
-    "sync.interval.5m": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "5 minutes"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "5 minutes"
+            "value": "Toutes les 5 minutes"
           }
         }
       }
@@ -5401,6 +5353,22 @@
         }
       }
     },
+    "sync.interval.half-minute": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every 30 seconds"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les 30 secondes"
+          }
+        }
+      }
+    },
     "sync.interval.header": {
       "localizations": {
         "en": {
@@ -5417,18 +5385,50 @@
         }
       }
     },
-    "sync.interval.picker": {
+    "sync.interval.minute": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Synchronize every"
+            "value": "Every minute"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Synchroniser toutes les"
+            "value": "Chaque minute"
+          }
+        }
+      }
+    },
+    "sync.interval.picker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pace"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rythme"
+          }
+        }
+      }
+    },
+    "sync.interval.quarter-hour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every 15 minutes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les 15 minutes"
           }
         }
       }

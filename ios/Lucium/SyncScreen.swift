@@ -103,10 +103,10 @@ struct SyncScreen: View {
 
     static func title(of interval: SyncInterval) -> LocalizedStringKey {
         switch interval {
-        case .seconds30: "sync.interval.30s"
-        case .minute1: "sync.interval.1m"
-        case .minutes5: "sync.interval.5m"
-        case .minutes15: "sync.interval.15m"
+        case .seconds30: "sync.interval.half-minute"
+        case .minute1: "sync.interval.minute"
+        case .minutes5: "sync.interval.five-minutes"
+        case .minutes15: "sync.interval.quarter-hour"
         }
     }
 
