@@ -505,6 +505,35 @@ describe('what a session checks before it writes', () => {
     expect(out).not.toMatchObject({ code: 'clock-skew' })
   })
 
+  it('says in its hello the port it listens on now, so that an iPhone paired before a fallback of the port finds it again (review n° 38); the iPhone says no port', async () => {
+    const mac = new Device(MAC_ID, 'mac', {})
+    const sockets = await socketPair()
+    const macChannel = new Channel(sockets.server, { phase: 'session', role: 'mac' })
+    const phoneChannel = new Channel(sockets.client, { phase: 'session', role: 'ios' })
+    const running = mac.run(macChannel, PHONE_ID)
+    const hello = await phoneChannel.receive()
+    expect(hello).toMatchObject({ t: 'hello', hosts: ['mac.local'], port: 49213 })
+    await phoneChannel.send({ t: 'error', code: 'internal', fatal: true } as never)
+    const left = setTimeout(() => phoneChannel.destroy(), 400)
+    await running
+    clearTimeout(left)
+    sockets.close()
+    const phone = new Device(PHONE_ID, 'ios', {})
+    const other = await socketPair()
+    const phoneSide = new Channel(other.client, { phase: 'session', role: 'mac' })
+    const macSide = new Channel(other.server, { phase: 'session', role: 'ios' })
+    const runningPhone = phone.run(phoneSide, MAC_ID)
+    const phoneHello = await macSide.receive()
+    expect(phoneHello.t).toBe('hello')
+    expect(phoneHello).not.toHaveProperty('port')
+    expect(phoneHello).not.toHaveProperty('hosts')
+    await macSide.send({ t: 'error', code: 'internal', fatal: true } as never)
+    const leftPhone = setTimeout(() => macSide.destroy(), 400)
+    await runningPhone
+    clearTimeout(leftPhone)
+    other.close()
+  })
+
   async function hostileError(code: string, fatal: boolean): Promise<SessionResult> {
     const mac = new Device(MAC_ID, 'mac', {})
     const sockets = await socketPair()

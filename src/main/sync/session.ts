@@ -52,6 +52,8 @@ export interface SessionDeps {
   appVersion: string
   stateVersion: number
   hosts: () => string[]
+  /** The port this Mac listens on now (review n° 38), said in `hello` so that an iPhone paired before a fallback of the port finds the Mac again. Mac only. */
+  port?: () => number
   merge?: typeof mergeSnapshots
   /** The tabs announced to the other device, when the category `openTabs` is common. */
   openTabs?: () => OpenTab[]
@@ -257,7 +259,7 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
       stateVersion: deps.stateVersion,
       appVersion: deps.appVersion,
       now: deps.now(),
-      ...(deps.device.platform === 'mac' ? { hosts: deps.hosts() } : {})
+      ...(deps.device.platform === 'mac' ? { hosts: deps.hosts(), ...(deps.port !== undefined ? { port: deps.port() } : {}) } : {})
     })
     const warn = (code: ErrorCode): void => deps.onWarning?.(peerId, code)
     const hello = await expect(channel, 'hello', warn)

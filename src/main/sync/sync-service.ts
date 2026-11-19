@@ -413,6 +413,16 @@ export class SyncService {
     }
   }
 
+  /**
+   * The port the door listens on now (review n° 38): the one the door is on, which is not always the one of the QR (a port that is taken or refused is replaced, §6.1). Said to
+   * the iPhone in `pair.accept` and in every `hello`, so that it does not keep a port that no longer answers. A door that is not up has no port to say: nothing runs then.
+   */
+  private currentPort(): number {
+    const port = this.door?.port() ?? this.deps.store.config().port
+    if (port === null || port === undefined) throw new Error('the Mac has no port to say: the door is not open')
+    return port
+  }
+
   private async stopDoor(): Promise<void> {
     const door = this.door
     this.door = null
@@ -436,7 +446,7 @@ export class SyncService {
       openPairing: () => {
         const pairing = this.livePairing()
         if (pairing === null) return null
-        return { secret: pairing.secret, confirm: (request) => this.ask(request), waiting: () => this.waitForPhone(), addPeer: (peer) => this.deps.store.addPeer(peer), hosts: () => ownHosts(this.deps.hostEnv()), now: this.deps.now, ...(this.deps.confirmMs !== undefined ? { confirmMs: this.deps.confirmMs } : {}) }
+        return { secret: pairing.secret, confirm: (request) => this.ask(request), waiting: () => this.waitForPhone(), addPeer: (peer) => this.deps.store.addPeer(peer), hosts: () => ownHosts(this.deps.hostEnv()), port: () => this.currentPort(), now: this.deps.now, ...(this.deps.confirmMs !== undefined ? { confirmMs: this.deps.confirmMs } : {}) }
       },
       runSession: this.deps.runSession ?? (this.deps.session !== undefined ? (channel, peer) => this.exchange(channel, peer, identity.deviceId) : async (channel) => channel.fail('internal', 'the exchange of data is not available yet')),
       onPairingEnded: (outcome) => {
@@ -633,6 +643,7 @@ export class SyncService {
         appVersion: ports.appVersion,
         stateVersion: ports.stateVersion,
         hosts: () => ownHosts(this.deps.hostEnv()),
+        port: () => this.currentPort(),
         ...(ports.openTabs !== undefined ? { openTabs: ports.openTabs } : {}),
         onOpenTabs: (id, items) => void this.announced.set(id, { items, at: this.deps.now() }),
         ...(ports.onShownTabsClosed !== undefined ? { onShownTabsClosed: ports.onShownTabsClosed } : {}),

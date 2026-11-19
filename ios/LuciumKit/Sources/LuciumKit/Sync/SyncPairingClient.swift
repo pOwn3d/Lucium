@@ -5,6 +5,8 @@ public struct SyncPairingOutcome: Equatable, Sendable {
     public let mac: SyncDeviceInfo
     public let fingerprint: Data
     public let hosts: [String]
+    /// The port the Mac listens on now, as `pair.accept` says it (review n° 38): the one to keep, whatever the QR said.
+    public let port: Int
 }
 
 /// The phone's half of the pairing (docs/synchronisation.md §4.1, steps 3 to 9), over a connection that has finished its TLS handshake.
@@ -55,7 +57,7 @@ public enum SyncPairingClient {
         guard case .pairNonce(let macCodeNonce) = try await expectAnswer(channel, timeout: handshakeTimeout) else { throw SyncFailure(.badMessage, "no code nonce") }
         try await channel.send(.pairReveal(nonce: codeNonce))
         // 4. The Mac's person answers, which may take a minute.
-        guard case .pairAccept(let mac, let proof, let hosts) = try await expectAnswer(channel, timeout: confirmationTimeout) else { throw SyncFailure(.badMessage, "no accept") }
+        guard case .pairAccept(let mac, let proof, let hosts, let port) = try await expectAnswer(channel, timeout: confirmationTimeout) else { throw SyncFailure(.badMessage, "no accept") }
         guard mac.platform == .mac else {
             await channel.close()
             throw SyncFailure(.badMessage, "the answer does not come from a Mac")
@@ -85,7 +87,7 @@ public enum SyncPairingClient {
         }
         await channel.close()
         done = true
-        return SyncPairingOutcome(mac: mac, fingerprint: connection.presentedFingerprint, hosts: SyncCandidates.ordered(hosts))
+        return SyncPairingOutcome(mac: mac, fingerprint: connection.presentedFingerprint, hosts: SyncCandidates.ordered(hosts), port: port)
     }
 
     /// What the phone's person answered, or `false` when they gave no answer within `limit` (and when the task that waits is cancelled, which `confirm` is told by the

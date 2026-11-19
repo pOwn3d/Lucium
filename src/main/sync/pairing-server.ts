@@ -57,6 +57,8 @@ export interface PairingContext {
   addPeer: (peer: PeerRecord) => void
   /** The addresses and the `.local` name the iPhone may come back to (already filtered: local only, at most four). */
   hosts: () => string[]
+  /** The port this Mac listens on now (review n° 38): the iPhone keeps it for its next sessions, whatever the QR said. */
+  port: () => number
   now: () => number
   /** How long the person has to answer; a test shortens it. */
   confirmMs?: number
@@ -134,7 +136,7 @@ export async function runPairing(channel: Channel, ctx: PairingContext): Promise
 
     const peer: PeerRecord = { id: request.device.id, name: request.device.name, platform: 'ios', fingerprint: ctx.peerFingerprint.toString('hex'), pairedAt: ctx.now(), lastSessionAt: null }
     const proof = acceptProof({ secret: ctx.secret.secret, fingerprintMac: ctx.device.fingerprint, fingerprintPhone: ctx.peerFingerprint, nonceMac, noncePhone, idMac: ctx.device.id, idPhone: request.device.id })
-    await channel.send({ t: 'pair.accept', device: { id: ctx.device.id, name: ctx.device.name, platform: 'mac' }, proof, hosts: ctx.hosts() })
+    await channel.send({ t: 'pair.accept', device: { id: ctx.device.id, name: ctx.device.name, platform: 'mac' }, proof, hosts: ctx.hosts(), port: ctx.port() })
 
     // The iPhone's person compares the code and decides; nothing is kept before they have said yes (§4.6). The silence the channel puts up with is made as long as the time
     // they are given, and the Mac's person can still give up.

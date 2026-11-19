@@ -12,12 +12,19 @@ struct SyncSessionFlowTests {
     }
     private let nonce = Data(repeating: 9, count: 16)
 
+    /// A `hello` made outside the closure that sends it: JSON values of a test, written once and only read.
+    private struct HelloBox: @unchecked Sendable {
+        let fields: [String: Any]
+        init(_ fields: [String: Any]) { self.fields = fields }
+    }
+
     /// The `hello` a Mac sends, with what a test wants to change.
     private func macHello(id: String = "vector-mac-0000000001", platform: String = "mac", categories: [String] = ["structure", "settings"], stateVersion: Int = 1, now: Int = 1_790_000_000_000,
-                          hosts: [String]? = ["mac-de-test.local", "192.168.1.20"], baseHash: Any = NSNull()) -> [String: Any] {
+                          hosts: [String]? = ["mac-de-test.local", "192.168.1.20"], port: Any? = 49213, baseHash: Any = NSNull()) -> [String: Any] {
         var fields: [String: Any] = ["device": ["id": id, "name": "MacBook de test", "platform": platform], "nonce": SyncEncoding.base64url(Data(repeating: 3, count: 16)), "categories": categories,
                                      "baseHash": baseHash, "stateVersion": stateVersion, "appVersion": "1.2.0", "now": now]
         if let hosts { fields["hosts"] = hosts }
+        if let port { fields["port"] = port }
         return fields
     }
 
@@ -135,6 +142,24 @@ struct SyncSessionFlowTests {
         #expect(report.hosts == ["mac-de-test.local", "192.168.1.20"], "no public address, no DNS name, the .local name first")
         let (duplicates, _) = try await run(mac: goodMac(hello: macHello(hosts: ["192.168.1.20", "192.168.1.20", "mac-de-test.local", "mac-de-test.local"])))
         #expect(duplicates.hosts == ["mac-de-test.local", "192.168.1.20"], "each address once")
+    }
+
+    @Test func theMacsHelloGivesThePortItListensOnNowAndAPortThatIsNotOneEndsTheSessionAsABadMessage() async throws {
+        // Review n° 38: the stored port is kept in step with what the Mac says. A hello without one (the form of a Mac that does not say) leaves it alone.
+        let (report, _) = try await run(mac: goodMac(hello: macHello(port: 51_234)))
+        #expect(report.port == 51_234)
+        let (none, _) = try await run(mac: goodMac(hello: macHello(port: nil)))
+        #expect(none.port == nil)
+        for bad: Any in [0, 65_536, 4.5, "49213"] {
+            let shown = String(describing: bad)
+            let hello = HelloBox(macHello(port: bad))
+            do {
+                _ = try await run(mac: goodMac(hello: hello.fields))
+                Issue.record("a hello with the port \(shown) was taken")
+            } catch let failure as SyncFailure {
+                #expect(failure.code == .badMessage)
+            }
+        }
     }
 
     @Test func aHelloWithNoAddressesLeavesTheStoredOnesAlone() async throws {

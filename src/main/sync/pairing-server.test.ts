@@ -55,6 +55,7 @@ function setup(over: Partial<PairingContext> & { decision?: 'allow' | 'refuse' |
     },
     addPeer: (peer) => void added.push(peer),
     hosts: () => ['macbook-de-test.local', '192.168.1.20'],
+    port: () => 49213,
     now: () => 1_790_000_000_000,
     waiting: () => {
       waited.push(1)
@@ -152,6 +153,8 @@ describe('runPairing: a pairing that goes through', () => {
     if (reply.t !== 'pair.accept') throw new Error(`expected an accept, got ${reply.t}`)
     expect(reply.device).toEqual({ id: 'mac-device-0000000001', name: 'MacBook de test', platform: 'mac' })
     expect(reply.hosts).toEqual(['macbook-de-test.local', '192.168.1.20'])
+    // The port the Mac listens on now (review n° 38): the iPhone keeps it, whatever the QR said.
+    expect(reply.port).toBe(49213)
     // The iPhone checks the Mac's proof with the nonces of THIS connection: it is not a proof that another connection could replay.
     const expected = acceptProof({ secret: s.secret.secret, fingerprintMac: MAC_FP, fingerprintPhone: PHONE_FP, nonceMac: Buffer.from(challenge, 'base64url'), noncePhone, idMac: 'mac-device-0000000001', idPhone: 'iphone-0000000001' })
     expect(proofMatches(reply.proof, expected)).toBe(true)

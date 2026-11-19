@@ -306,7 +306,7 @@ final class SyncNetworkTests: XCTestCase {
                 try await mac.write("pair.nonce", ["nonce": SyncEncoding.base64url(Data(repeating: 0x61, count: 16))])
                 _ = try await mac.read()
                 let accept = SyncProof.acceptTag(inputs).map(SyncEncoding.base64url) ?? ""
-                try await mac.write("pair.accept", ["device": ["id": "mac-test-0000000001", "name": "Mac de test", "platform": "mac"], "proof": accept, "hosts": ["mac-de-test.local"]])
+                try await mac.write("pair.accept", ["device": ["id": "mac-test-0000000001", "name": "Mac de test", "platform": "mac"], "proof": accept, "hosts": ["mac-de-test.local"], "port": 49213])
                 // The phone's person says yes (§4.6): a bye, which the Mac answers with its own once it has kept the phone.
                 let word = try await mac.read()
                 if word["t"] as? String == "bye" { try await mac.write("bye") }

@@ -36,6 +36,8 @@ public struct SyncSessionReport: Equatable, Sendable {
     public let outcome: SyncBodyOutcome
     /// The Mac's current addresses, to replace the stored ones (§5); nil when it gave none.
     public let hosts: [String]?
+    /// The port the Mac says it listens on (review n° 38), or nil when its hello did not say.
+    public let port: Int?
     /// The clocks differ by more than five minutes (§9.3): a warning, not a failure.
     public let clockSkew: Bool
     public let categories: Set<SyncCategory>
@@ -123,6 +125,6 @@ public enum SyncSessionClient {
         }
         await channel.sendBestEffort(.bye, why: "the session is done")
         await channel.close()
-        return SyncSessionReport(outcome: outcome, hosts: remote.hosts.map(SyncCandidates.ordered), clockSkew: skew, categories: common, macAppVersion: remote.appVersion)
+        return SyncSessionReport(outcome: outcome, hosts: remote.hosts.map(SyncCandidates.ordered), port: remote.port, clockSkew: skew, categories: common, macAppVersion: remote.appVersion)
     }
 }

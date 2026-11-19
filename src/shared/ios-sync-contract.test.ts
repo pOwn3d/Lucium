@@ -459,14 +459,16 @@ const device = (d: unknown): boolean =>
 const entity = (e: unknown): boolean =>
   isObject(e) && typeof e['kind'] === 'string' && e['kind'].length > 0 && e['kind'].length <= 64 && typeof e['id'] === 'string' && e['id'].length > 0 && e['id'].length <= 128 && isObject(e['fields']) && isObject(e['stamps']) && Object.values(e['stamps']).every((s) => typeof s === 'string')
 const optionalList = (v: unknown, max: number): boolean => v === undefined || textList(v, max, 128)
+/** A TCP port: a whole number from 1 to 65535 (docs/synchronisation.md §7.3, review n° 38). */
+const isPort = (v: unknown): boolean => isInt(v, 1) && (v as number) <= 65535
 
 const SHAPES: Record<string, (m: Record<string, unknown>) => boolean> = {
-  hello: (m) => device(m['device']) && typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']) && textList(m['categories'], L['maxCategories'] as number, 32) && (m['baseHash'] === null || (typeof m['baseHash'] === 'string' && HEX(32).test(m['baseHash']))) && isInt(m['stateVersion'], 1) && isText(m['appVersion'], 32) && isInt(m['now']) && (m['hosts'] === undefined || textList(m['hosts'], L['maxHosts'] as number, 253)),
+  hello: (m) => device(m['device']) && typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']) && textList(m['categories'], L['maxCategories'] as number, 32) && (m['baseHash'] === null || (typeof m['baseHash'] === 'string' && HEX(32).test(m['baseHash']))) && isInt(m['stateVersion'], 1) && isText(m['appVersion'], 32) && isInt(m['now']) && (m['hosts'] === undefined || textList(m['hosts'], L['maxHosts'] as number, 253)) && (m['port'] === undefined || isPort(m['port'])),
   'pair.challenge': (m) => typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']),
   'pair.request': (m) => device(m['device']) && typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']) && typeof m['proof'] === 'string' && B64U(43).test(m['proof']) && typeof m['commit'] === 'string' && B64U(43).test(m['commit']),
   'pair.nonce': (m) => typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']),
   'pair.reveal': (m) => typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']),
-  'pair.accept': (m) => device(m['device']) && typeof m['proof'] === 'string' && B64U(43).test(m['proof']) && textList(m['hosts'], L['maxHosts'] as number, 253),
+  'pair.accept': (m) => device(m['device']) && typeof m['proof'] === 'string' && B64U(43).test(m['proof']) && textList(m['hosts'], L['maxHosts'] as number, 253) && isPort(m['port']),
   'snapshot.part': (m) => isInt(m['part']) && isInt(m['parts'], 1) && (m['parts'] as number) <= (L['maxParts'] as number) && (m['part'] as number) < (m['parts'] as number) && Array.isArray(m['entities']) && m['entities'].length <= (L['maxEntitiesPerPart'] as number) && m['entities'].every(entity) && (m['tombstones'] === undefined || (Array.isArray(m['tombstones']) && m['tombstones'].every((t) => isObject(t) && typeof t['kind'] === 'string' && typeof t['id'] === 'string' && typeof t['stamp'] === 'string'))) && (m['order'] === undefined || (isObject(m['order']) && Object.values(m['order']).every((l) => textList(l, 100000, 128)))) && (m['orderStamps'] === undefined || (isObject(m['orderStamps']) && Object.values(m['orderStamps']).every((s) => typeof s === 'string'))) && optionalList(m['withheld'], 10000),
   'snapshot.end': (m) => isInt(m['entityCount']) && typeof m['digest'] === 'string' && HEX(32).test(m['digest']),
   'open-tabs': (m) => Array.isArray(m['items']) && m['items'].length <= (L['maxOpenTabs'] as number) && m['items'].every((t) => isObject(t) && typeof t['id'] === 'string' && typeof t['spaceId'] === 'string' && isText(t['url'], L['maxOpenTabUrlBytes'] as number) && isText(t['title'], L['maxOpenTabTitleBytes'] as number) && isInt(t['lastActiveAt'])),

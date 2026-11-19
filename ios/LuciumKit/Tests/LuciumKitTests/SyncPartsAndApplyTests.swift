@@ -195,7 +195,7 @@ struct SyncSessionMessagesTests {
         #expect(throws: SyncFailure.self) { try SyncMessageCodec.encode(.snapshotPart(.array([])), number: 1) }
         #expect(throws: SyncFailure.self) { try SyncMessageCodec.encode(.pairChallenge(nonce: Data(count: 16)), number: 1) }
         #expect(throws: SyncFailure.self) { try SyncMessageCodec.encode(.pairNonce(nonce: Data(count: 16)), number: 1) }
-        #expect(throws: SyncFailure.self) { try SyncMessageCodec.encode(.pairAccept(device: SyncDeviceInfo(id: "m", name: "Mac", platform: .mac), proof: Data(count: 32), hosts: []), number: 1) }
+        #expect(throws: SyncFailure.self) { try SyncMessageCodec.encode(.pairAccept(device: SyncDeviceInfo(id: "m", name: "Mac", platform: .mac), proof: Data(count: 32), hosts: [], port: 49213), number: 1) }
     }
 }
 
