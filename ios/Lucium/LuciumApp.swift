@@ -8,6 +8,8 @@ struct LuciumApp: App {
     var body: some Scene {
         WindowGroup {
             BrowserScreen(model: model)
+                // A link from another application (the default-browser requirement, docs/ios.md §9.4): cold start and running application alike.
+                .onOpenURL { model.receive($0) }
         }
     }
 }

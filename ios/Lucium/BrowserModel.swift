@@ -14,6 +14,9 @@ final class BrowserModel {
     /// What is locked (`BrowserModel+Lock.swift`). Nil in a model with no lock (most tests): nothing is covered then.
     var lock: LockController?
 
+    /// A link received from another application that waits for the lock (`BrowserModel+ExternalLink.swift`). Only the last one is kept, and never written to disk.
+    @ObservationIgnored var pendingExternalAddress: String?
+
     /// The synchronisation with the Mac (`SyncController`). Nil in a model with none (most tests): the settings list has no page for it then.
     var sync: SyncController?
 

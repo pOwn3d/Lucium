@@ -28,6 +28,7 @@ extension BrowserModel {
             closePagePrompts()
         }
         if isReady, let tab = activeTab { syncFrom(wake(tab)) } else { syncFrom(nil) }
+        openPendingExternalLink()
     }
 
     /// Every sheet, cover and prompt of `BrowserScreen`, closed: none may stay over the lock screen (they name sites, tabs and spaces, and the settings hold
