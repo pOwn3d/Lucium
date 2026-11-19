@@ -52,7 +52,9 @@ public struct SyncAside: Sendable {
 }
 
 public struct SyncMarkBook: Equatable, Sendable {
-    public static let version = 1
+    /// 2: the book also holds the ids of the Today tabs admitted to the shared set (§27.3). A book of version 1 is read as one with none admitted; an application that only knows
+    /// version 1 starts its book again from a file of version 2, which is a base lost for the marks and never a loss of data (§11.8).
+    public static let version = 2
     /// A deletion is kept thirty days (§11.5).
     public static let tombstoneMilliseconds = 30 * 24 * 60 * 60 * 1000
 
@@ -72,6 +74,8 @@ public struct SyncMarkBook: Equatable, Sendable {
     private(set) var entities: [String: [String: [String: FieldMark]]]
     private(set) var tombstones: [String: [String: String]]
     private(set) var orders: [String: OrderMark]
+    /// The Today tabs of the shared set (§27.3): the admission is sticky, so it is kept here, by device, and not recomputed from the state.
+    public private(set) var admitted: Set<String>
 
     public init(device: String) {
         self.device = device
@@ -79,6 +83,7 @@ public struct SyncMarkBook: Equatable, Sendable {
         entities = [:]
         tombstones = [:]
         orders = [:]
+        admitted = []
     }
 
     // MARK: The clock
@@ -99,6 +104,7 @@ public struct SyncMarkBook: Equatable, Sendable {
         case "folders": "folder"
         case "tabs": "tab"
         case "favorites": "favorite"
+        case "today": SyncToday.kind
         default: nil
         }
     }
@@ -235,7 +241,12 @@ public struct SyncMarkBook: Equatable, Sendable {
         }
         orders = lists
         for stamp in merged.orderStamps.values { observe(stamp) }
+        // A Today tab that came from the other device is in the shared set from now on: without it the next look would see it as absent from the view and mark it deleted (§27.3).
+        if exchanged(SyncToday.kind) { admitted.formUnion(merged.entities[SyncToday.kind]?.keys.map { $0 } ?? []) }
     }
+
+    /// The shared set of Today tabs, as `SyncToday.admit` gave it at the end of a freeze.
+    public mutating func admit(_ ids: Set<String>) { admitted = ids }
 
     // MARK: The file
 
@@ -257,12 +268,13 @@ public struct SyncMarkBook: Equatable, Sendable {
             "entities": .object(entityObject),
             "tombstones": .object(tombstones.mapValues { .object($0.mapValues { .string($0) }) }),
             "orders": .object(orders.mapValues { .object(["hash": .string($0.hash), "stamp": .string($0.stamp)]) }),
+            "admitted": .array(admitted.sorted { SyncCanonical.compare($0, $1) < 0 }.map { .string($0) }),
         ])
     }
 
     /// A book from a file's JSON, or nil when it is not one of this version's. A file is hostile: every part is checked for its kind, and every mark for its form.
     static func read(_ value: JSONValue, device: String) -> SyncMarkBook? {
-        guard case .object(let root) = value, case .number(let version)? = root["version"], version == Double(Self.version), case .object(let clock)? = root["clock"],
+        guard case .object(let root) = value, case .number(let version)? = root["version"], version == 1 || version == Double(Self.version), case .object(let clock)? = root["clock"],
               case .number(let ms)? = clock["ms"], case .number(let counter)? = clock["counter"], ms.isFinite, counter.isFinite, ms >= 0, counter >= 0, ms < 1e15, counter <= 0xFFFF,
               case .object(let entityObject)? = root["entities"], case .object(let tombstoneObject)? = root["tombstones"], case .object(let orderObject)? = root["orders"] else { return nil }
         var book = SyncMarkBook(device: device)
@@ -293,6 +305,15 @@ public struct SyncMarkBook: Equatable, Sendable {
         for (key, rawOrder) in orderObject {
             guard case .object(let mark) = rawOrder, case .string(let hash)? = mark["hash"], case .string(let stamp)? = mark["stamp"], SyncStamp.isValid(stamp) else { return nil }
             book.orders[key] = OrderMark(hash: hash, stamp: stamp)
+        }
+        switch root["admitted"] {
+        case nil: if version != 1 { return nil }  // only a book of version 1 has no list of admitted Today tabs
+        case .array(let ids)?:
+            for id in ids {
+                guard case .string(let text) = id, (1...128).contains(text.utf16.count) else { return nil }
+                book.admitted.insert(text)
+            }
+        default: return nil
         }
         return book
     }

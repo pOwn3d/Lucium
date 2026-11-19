@@ -10,6 +10,8 @@ public final class SyncMarkKeeper: @unchecked Sendable {
     private let lock = NSLock()
     private var book: SyncMarkBook
     private var lastView: SyncTrackedView?
+    /// The Today tabs that could enter the shared set, as of the last look: a new one is a change that asks for a session (§27.12).
+    private var lastWaiting: Set<String> = []
     /// A session is writing what the merge decided into the state: looking at the state now would mark what the Mac wrote as the phone's own change. Until `adopt`.
     private var holding = false
     private let file: SyncMarksFile
@@ -32,13 +34,20 @@ public final class SyncMarkKeeper: @unchecked Sendable {
     /// The state was written: the book is brought up to it and written. A write that fails is told in the log and tried again at the next change: the marks are in
     /// memory meanwhile. True when what is synchronised changed since the last look (a tab opened in Today or a page loaded is not): the phone then asks for a session
     /// (§8.1, « après un changement local »).
+    /// `opening`: the person ticked the Today tabs here, so a tab that could be shared and is not yet (it enters at the next freeze, after twenty seconds) is a change too.
     @discardableResult
-    public func observe(_ state: BrowserState, now: Int) -> Bool {
+    public func observe(_ state: BrowserState, now: Int, opening: Bool = false) -> Bool {
         lock.lock()
         defer { lock.unlock() }
         if holding { return false }
-        let view = SyncStateView.trackedView(of: state)
-        if view == lastView { return false }
+        var opened = false
+        if opening {
+            let waiting = SyncStateView.waitingForAdmission(in: state, admitted: book.admitted)
+            opened = !waiting.subtracting(lastWaiting).isEmpty
+            lastWaiting = waiting
+        }
+        let view = SyncStateView.trackedView(of: state, admitted: book.admitted)
+        if view == lastView { return opened }
         book.update(view, now: now)
         lastView = view
         save()
@@ -51,7 +60,11 @@ public final class SyncMarkKeeper: @unchecked Sendable {
         defer { lock.unlock() }
         // A new session never inherits a hold that a session before it left behind: the book follows the state again.
         holding = false
-        let view = SyncStateView.trackedView(of: state)
+        // The shared set of Today tabs is decided here, once the freeze starts and only when the category is common: the admission is sticky, so what enters stays until the tab goes.
+        if categories.contains(.todayTabs) {
+            book.admit(Set(SyncStateView.admission(of: state, admitted: book.admitted, locked: withheld, now: now).admitted))
+        }
+        let view = SyncStateView.trackedView(of: state, admitted: book.admitted)
         if view != lastView {
             book.update(view, now: now)
             lastView = view

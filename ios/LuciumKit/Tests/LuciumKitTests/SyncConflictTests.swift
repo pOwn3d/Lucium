@@ -299,7 +299,7 @@ struct SyncConflictTests {
     @Test func theTablesOfKeysNameEveryFieldKindAndSettingOnceAndNothingElse() {
         #expect(SyncConflicts.fieldKeys.count == 25)
         #expect(Set(SyncConflicts.fieldKeys.values).count == 25)
-        #expect(SyncConflicts.kindKeys.keys.sorted() == ["archived", "favorite", "folder", "order", "space", "tab"])
+        #expect(SyncConflicts.kindKeys.keys.sorted() == ["archived", "favorite", "folder", "order", "space", "tab", "todayTab"])
         #expect(SyncConflicts.settingKeys.count == 8)
         #expect(SyncConflicts.fieldKeys["constructor"] == nil)
     }

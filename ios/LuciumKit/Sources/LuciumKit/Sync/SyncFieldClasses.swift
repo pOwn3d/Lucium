@@ -8,9 +8,10 @@ import Foundation
 ///   - local: never sent (a file that only exists on the device, a runtime flag, the clock of the last use…).
 /// A field a LATER version added is in no class and crosses as opaque (§11.6): that is the rule for entities, never for settings.
 public enum SyncFieldClasses {
-    /// The five kinds of entity this version knows how to write into its state. `setting` is a sixth kind of the snapshot, with its own closed list.
+    /// The six kinds of entity this version knows how to write into its state. `setting` is a seventh kind of the snapshot, with its own closed list. `todayTab` is the open
+    /// tabs of "Today" (§27): a projection of the tabs of the state that are not pinned, admitted by `SyncToday.admit`, and not a list of the state of its own.
     public enum Kind: String, CaseIterable, Sendable {
-        case space, folder, tab, favorite, archived
+        case space, folder, tab, favorite, archived, todayTab
     }
 
     public struct Classes: Equatable, Sendable {
@@ -26,6 +27,7 @@ public enum SyncFieldClasses {
                       local: ["image", "faviconUrl", "deadKept", "autoReload", "container", "windowKey", "openerId", "parentId", "treeCollapsed", "favoriteId", "createdAt", "lastActiveAt", "private"]),
         .favorite: Classes(synced: ["id", "url", "title", "profileId"], seed: [], local: ["faviconUrl"]),
         .archived: Classes(synced: ["id", "spaceId", "url", "title", "archivedAt", "source", "pinned", "anchorUrl", "folderId"], seed: [], local: ["history", "container"]),
+        .todayTab: SyncToday.fieldClasses,
     ]
 
     /// The closed list of settings (§10.3): nothing is "every setting but these".

@@ -7,7 +7,7 @@ import Foundation
 ///
 ///   - a kind that is code or a secret is refused (`never-synced`), whatever the device says;
 ///   - a setting is accepted only if it is in the closed list and its value is one this version would write (`not-synced`, `invalid-value`);
-///   - a tab is accepted only if it is pinned and not private (`not-pinned`, `private`): the Today tabs are not entities;
+///   - a tab is accepted only if it is pinned and not private (`not-pinned`, `private`); the Today tabs are another kind, `todayTab`, judged by `SyncToday.gate` (§27.4, §27.7);
 ///   - an address is accepted only if it is an http or https address (`invalid-url`): a page, never a script or a file;
 ///   - the fields of the class "local" are taken off: a device does not tell this one what its local files are;
 ///   - the search engine is accepted only if it is one of those the Mac offers (`SearchEngine.presets`, all https): an engine of one's own stays where it is, and a device cannot send
@@ -26,6 +26,7 @@ public enum SyncInbound {
         case invalidURL = "invalid-url"
         case futureMark = "future-mark"
         case tooManyTombstones = "too-many-tombstones"
+        case tooManyTodayTabs = "too-many-today-tabs"
     }
 
     public enum Verdict: Equatable, Sendable {
@@ -143,6 +144,8 @@ public enum SyncInbound {
             return .accepted(fields: ["value": fields["value"] ?? .null])
         }
         guard let known = SyncFieldClasses.kind(kind), let classes = SyncFieldClasses.classes[known] else { return .accepted(fields: fields) }
+        // A Today tab is judged for what is its own (an address, a value, how many, and the local fields taken off) by `SyncToday.gate`, which `clean` calls on all of them at once.
+        if known == .todayTab { return .accepted(fields: fields) }
         // The key of a list is made of the profile (`favorites:<profile>`): an identifier of the Mac, or nothing.
         if known == .space || known == .favorite, let profile = fields["profileId"] {
             guard case .string(let text) = profile, BrowserState.isProfileId(text) else { return .refused(.invalidValue) }
@@ -185,6 +188,7 @@ public enum SyncInbound {
     public static func clean(_ snapshot: SyncSnapshot, now: Int, base: SyncSnapshot? = nil) -> Cleaned {
         var refused: [Refused] = []
         var entities: [String: [String: SyncEntity]] = [:]
+        var todayTabs: [String: SyncEntity] = [:]
         for (kind, byID) in snapshot.entities {
             for (id, entity) in byID {
                 let verdict: Verdict = isInTheFuture(entity, now: now) ? .refused(.futureMark) : filter(kind: kind, id: id, fields: entity.fields)
@@ -192,12 +196,27 @@ public enum SyncInbound {
                 case .refused(let reason):
                     refused.append(Refused(kind: kind, id: id, reason: reason))
                     if standsInAsInTheBase.contains(reason), let before = base?.entities[kind]?[id] { entities[kind, default: [:]][id] = before }
+                case .accepted(let fields) where kind == SyncToday.kind:
+                    todayTabs[id] = SyncEntity(fields: fields, stamps: entity.stamps)
                 case .accepted(let fields):
                     var stamps = entity.stamps
                     if let known = SyncFieldClasses.kind(kind), let classes = SyncFieldClasses.classes[known] {
                         stamps = stamps.filter { !classes.local.contains($0.key) }
                     }
                     entities[kind, default: [:]][id] = SyncEntity(fields: fields, stamps: stamps)
+                }
+            }
+        }
+        if !todayTabs.isEmpty {
+            // What is left of the Today tabs after the generic checks goes through the door of the kind (§27.4, §27.7); the entities it hands back are those it let through,
+            // and, for one it refused that the base holds, the base's own (the rule of §22).
+            let gate = SyncToday.gate(todayTabs, base: base?.entities[SyncToday.kind])
+            for (id, entity) in gate.entities { entities[SyncToday.kind, default: [:]][id] = entity }
+            for one in gate.refused {
+                switch one.reason {
+                case .invalidURL: refused.append(Refused(kind: SyncToday.kind, id: one.id, reason: .invalidURL))
+                case .invalidValue: refused.append(Refused(kind: SyncToday.kind, id: one.id, reason: .invalidValue))
+                case .tooManyTodayTabs: refused.append(Refused(kind: SyncToday.kind, id: one.id, reason: .tooManyTodayTabs))
                 }
             }
         }

@@ -10,6 +10,8 @@ public enum SyncCategory: String, CaseIterable, Codable, Hashable, Sendable {
     case archive
     /// A read-only announcement of the open tabs, for "Resume a tab of the Mac" (§10.4).
     case openTabs
+    /// The tabs of "Today", open and closed on one device and on the other (§27). Not ticked by default [Q9].
+    case todayTabs
 
     /// Decision of the project lead (18 November 2026, [Q2]): only the structure is ticked until the person ticks more. The others are what looks most like a
     /// browsing history, or what changes all the time.

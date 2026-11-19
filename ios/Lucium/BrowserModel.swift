@@ -24,6 +24,10 @@ final class BrowserModel {
     /// wrote is not marked as this phone's change.
     @ObservationIgnored var isApplyingSync = false
 
+    /// The tab that was on screen when the other device closed it, as the last session wrote it (docs/synchronisation.md §27.5, [Q11]): it was archived here and the neighbour is
+    /// shown. The line « Fermé sur le Mac » (card LUC-147) reads this and clears it once it has been shown; nothing else does.
+    var syncClosedShownTab: SyncClosedShownTab?
+
     var tabsSheetShown = false
     /// The sidebar that slides out from the left edge of an iPhone (`EdgeDrawerHost`). Only changed through `drawerEvent(_:)`, which knows what opens it and
     /// what closes it (`EdgeDrawer.isOpen(after:wasOpen:)`, in `LuciumKit`).
