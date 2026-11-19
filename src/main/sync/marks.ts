@@ -183,11 +183,17 @@ export class MarkBook {
    * The state now holds what the merge decided: the book takes the marks of the merged snapshot, so that the next `update` sees nothing new in what came from the other
    * device (it would otherwise mark it as this device's change, and send it back). Fields the book does not follow (seeds, local) are left out.
    */
-  adopt(merged: SyncSnapshot, follows: (kind: string, field: string) => boolean, exchanged: (kind: string) => boolean = () => true): void {
+  adopt(merged: SyncSnapshot, follows: (kind: string, field: string) => boolean, exchanged: (kind: string) => boolean = () => true, aside: Aside = NOTHING_ASIDE): void {
     // What the session did not exchange (a category that was not ticked on both devices) is not in the merged snapshot, and is not forgotten with it: its marks and its
     // tombstones stay as they were, or its fields would take a mark of the moment at the next look and its deletions could come back (review n° 17).
     const entities: MarksFile['entities'] = {}
     for (const [kind, byKind] of Object.entries(this.entities)) if (!exchanged(kind)) entities[kind] = byKind
+    // What the session set aside (the spaces that are locked: nothing of them was sent or taken) is not in the merged snapshot either: its marks stay too, or the changes the
+    // other device made meanwhile would win over the ones made here once the space opens, or the reverse (second pass of the review).
+    for (const [kind, byId] of Object.entries(this.entities)) {
+      if (!exchanged(kind)) continue
+      for (const [id, record] of Object.entries(byId)) if (aside.entity(kind, id) && merged.entities[kind]?.[id] === undefined) (entities[kind] ??= {})[id] = record
+    }
     for (const [kind, byId] of Object.entries(merged.entities)) {
       for (const [id, entity] of Object.entries(byId)) {
         const record: Record<string, FieldMark> = {}
@@ -209,6 +215,7 @@ export class MarkBook {
     for (const [key, order] of Object.entries(this.orders)) {
       const kind = listKindOf(key)
       if (kind !== null && !exchanged(kind)) orders[key] = order
+      else if (aside.list(key) && merged.order[key] === undefined) orders[key] = order
     }
     for (const [key, ids] of Object.entries(merged.order)) orders[key] = { hash: hashOf(ids), stamp: merged.orderStamps[key] ?? ZERO_STAMP }
     this.orders = orders
@@ -217,6 +224,31 @@ export class MarkBook {
 
   toJSON(): MarksFile {
     return { version: MARKS_VERSION, clock: this.clock.state(), entities: this.entities, tombstones: this.tombstones, orders: this.orders }
+  }
+}
+
+/** What a session set aside, as `adopt` is told: whether an entity, or a list, belongs to a space that was not exchanged. */
+export interface Aside {
+  entity: (kind: string, id: string) => boolean
+  list: (key: string) => boolean
+}
+
+const NOTHING_ASIDE: Aside = { entity: () => false, list: () => false }
+
+/** The marks that a session keeps for the spaces it set aside: an entity of such a space (or the space itself), and the lists that order what is in one. */
+export function asideOf(view: TrackedView, spaces: ReadonlySet<string>): Aside {
+  if (spaces.size === 0) return NOTHING_ASIDE
+  return {
+    entity: (kind, id) => {
+      if (kind === 'space') return spaces.has(id)
+      const spaceId = view.entities[kind]?.[id]?.['spaceId']
+      return typeof spaceId === 'string' && spaces.has(spaceId)
+    },
+    // `folders:<space>:<parent>`, `tabs:<space>:<folder>` and `today:<space>`: the space is the second part of the key.
+    list: (key) => {
+      const [head, space] = key.split(':')
+      return (head === 'folders' || head === 'tabs' || head === 'today') && space !== undefined && spaces.has(space)
+    }
   }
 }
 

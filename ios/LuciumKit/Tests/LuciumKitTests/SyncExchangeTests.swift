@@ -630,6 +630,19 @@ struct SyncExchangeTests {
         #expect(summary.spacesSetAside == 1)
     }
 
+    @Test func theMarksOfALockedSpaceAreKeptThroughTheSessionThatSetItAside() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        await rig.host.set(locked: ["s2"])
+        // The book follows the state: the locked space and what is in it have marks before the session.
+        let state = await rig.host.state
+        _ = rig.marks.freeze(state, categories: [.structure], withheld: ["s2"], base: nil, now: now - 10_000)
+        let before = rig.marks.currentBook.stamps(of: "space", id: "s2")
+        #expect(before["name"] != nil)
+        _ = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()))
+        #expect(rig.marks.currentBook.stamps(of: "space", id: "s2") == before, "a session that did not take the space does not forget when its fields were changed: opened, a change made on the Mac meanwhile would win over it")
+    }
+
     @Test func aStateThatWouldGrowPastWhatThePhoneKeepsIsNotWrittenAndTheMergeIsNotAdopted() async throws {
         let rig = try rig()
         defer { rig.cleanup() }

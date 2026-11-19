@@ -25,7 +25,7 @@ import { CLOCK_SKEW_WARN_MS, MAX_ENTITIES, MAX_ENTITIES_PER_PART, MAX_PARTS, NON
 import type { BaseStore } from './bases'
 import { hashOfSnapshot } from './bases'
 import { cleanSnapshot, isKnownSearchTemplate, isWebAddress } from './inbound-filter'
-import type { MarkBook } from './marks'
+import { asideOf, type MarkBook } from './marks'
 import type { OpenTab, SnapshotPart, WireEntity, WireTombstone } from './messages'
 import { buildPatch, patchIsEmpty } from './patch'
 import { admittedTodayTabs, baseOf, follows, kindIsExchanged, onlyExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
@@ -322,7 +322,7 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
       const closed = shownTabsClosed(before, deps.host.state(), patch)
       if (closed.length > 0) deps.onShownTabsClosed?.(peerId, closed)
     }
-    deps.marks.adopt(merged.snapshot, follows, (kind) => kindIsExchanged(kind, common))
+    deps.marks.adopt(merged.snapshot, follows, (kind) => kindIsExchanged(kind, common), asideOf(trackedViewOf(deps.host.state()), aside))
     try {
       deps.bases.save(peerId, baseOf(merged.snapshot), deps.now())
       deps.saveMarks()
