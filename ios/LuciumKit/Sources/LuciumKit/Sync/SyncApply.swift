@@ -25,14 +25,17 @@ public enum SyncApply {
         /// What the patch asked and was not written, and why (for the log and the tests): a value that does not pass `clean`, an entity that cannot be made.
         public var rejected: [String] = []
         public var changed: Bool
+        /// The state the patch would make is more than this version may hold (`maxStateBytes`): nothing was written, and a session that finds it ends instead of adopting the merge.
+        public var tooLarge = false
 
-        public init(state: BrowserState, createdSpaceIDs: [String] = [], removedSpaceIDs: [String] = [], removedTabIDs: [String] = [], rejected: [String] = [], changed: Bool = false) {
+        public init(state: BrowserState, createdSpaceIDs: [String] = [], removedSpaceIDs: [String] = [], removedTabIDs: [String] = [], rejected: [String] = [], changed: Bool = false, tooLarge: Bool = false) {
             self.state = state
             self.createdSpaceIDs = createdSpaceIDs
             self.removedSpaceIDs = removedSpaceIDs
             self.removedTabIDs = removedTabIDs
             self.rejected = rejected
             self.changed = changed
+            self.tooLarge = tooLarge
         }
     }
 
