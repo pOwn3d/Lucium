@@ -11,6 +11,20 @@ const ALLOWED_SCHEMES = new Set(['http', 'https', 'file'])
 const LOCAL_HOST = /^(localhost|\d{1,3}(\.\d{1,3}){3}|\[[0-9a-f:]+\])(:\d+)?(\/.*)?$/i
 const DOMAIN_LIKE = /^[^\s/@]+\.[a-z]{2,}(:\d+)?([/?#].*)?$/i
 
+/** Names that never leave the machine or the local network: no certificate authority signs for them (`isUpgradableHost` reads the same list). */
+const LOCAL_ONLY_SUFFIXES = ['.localhost', '.local', '.internal', '.lan', '.home', '.home.arpa', '.localdomain', '.intranet', '.corp']
+
+/** Whether a host name (no port) ends in one of the names of a local network. */
+export function hasLocalOnlySuffix(hostname: string): boolean {
+  const host = hostname.toLowerCase().replace(/\.$/, '')
+  return LOCAL_ONLY_SUFFIXES.some((suffix) => host.endsWith(suffix))
+}
+
+/** The host of something typed without a scheme (`homeassistant.local:8123/x` gives `homeassistant.local`). */
+function typedHost(text: string): string {
+  return text.replace(/[/?#].*$/, '').replace(/:\d+$/, '')
+}
+
 /**
  * Turns what the user typed in the command bar into a navigable URL or a search.
  * Only http(s) and file URLs are navigated to: `javascript:` and friends fall back to a search. An address typed with its scheme stays an address
@@ -30,6 +44,9 @@ export function resolveInput(input: string, searchTemplate: string): ResolvedInp
   // What only looks like an address (`javascript:x.com`, a port past 65535) and is none once a scheme is put before it is words to search for.
   if (!/\s/.test(text)) {
     if (LOCAL_HOST.test(text) && URL.canParse(`http://${text}`)) return { kind: 'url', url: `http://${text}` }
+    // A name of the local network (`homeassistant.local:8123`) is typed for a device that speaks plain HTTP: no certificate authority signs for it, so
+    // https:// could only fail (a blank page, in the first iPhone builds). An explicit `https://` is left as typed.
+    if (DOMAIN_LIKE.test(text) && hasLocalOnlySuffix(typedHost(text)) && URL.canParse(`http://${text}`)) return { kind: 'url', url: `http://${text}` }
     if (DOMAIN_LIKE.test(text) && URL.canParse(`https://${text}`)) return { kind: 'url', url: `https://${text}` }
   }
   return search(text, searchTemplate)
