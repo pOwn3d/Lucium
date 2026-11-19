@@ -11,6 +11,8 @@ public struct TabSideStore: Sendable {
     public enum Kind: String, CaseIterable, Sendable {
         case interaction = "state"
         case thumbnail = "jpg"
+        /// How the person asked the page to be shown (`PageDisplay`): a few bytes of JSON.
+        case display = "display"
     }
 
     /// A page's state or picture beyond this is not kept (a runaway page must not fill the phone).

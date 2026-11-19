@@ -34,6 +34,7 @@ extension BrowserModel {
         view.isFindInteractionEnabled = true
         webViews[tab.id] = view
         observe(view, tabId: tab.id)
+        view.pageZoom = display(of: tab).zoomFactor
         restore(tab, into: view)
         return view
     }

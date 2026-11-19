@@ -257,6 +257,7 @@ Légende : **reprise** = même comportement ; **adaptée** = même but, autre mo
 | Traduction locale (Bergamot) | **absente** | modèles lourds, moteur propre ; Apple fournit sa traduction dans Safari seulement (**non vérifié** pour une API de page web) |
 | Résumé de page par Ollama | **absente** | pas de serveur Ollama sur un iPhone ; l'exception du principe 2 (modèle local, sur l'ordinateur de l'utilisateur) ne s'y applique pas |
 | Recherche dans la page, lecteur, mode lisible | **adaptée** | recherche : `UIFindInteraction` ; mode lisible : Readability embarqué (déjà une dépendance du Mac) |
+| Version pour ordinateur, taille du texte de la page | **adaptée, faite** (carte 667) | menu ⋯ de la barre du bas. **Par onglet**, pas par site (le zoom du Mac est un réglage de site : ici le choix suit l'onglet, y compris au réveil et au redémarrage). `PageDisplay` (`LuciumKit`) : 11 pas de 50 à 300 % (les bornes du zoom de site du Mac), `WKWebView.pageZoom` ; « Version pour ordinateur » = `preferredContentMode = .desktop`, demandé à chaque navigation par `PrivacyNavigation` et la page est rechargée au changement. **iPhone seulement** : l'iPad demande déjà la version ordinateur. Gardé dans le dossier de l'onglet (`<empreinte>.display`, jamais dans `state.json`, que le Mac ne connaît pas et qu'une synchronisation pourrait écraser) ; un onglet privé ne l'écrit pas. Vérifié sur simulateur, pas sur appareil |
 | Outils de développement | **absente** | l'inspecteur de Safari sur un Mac (`isInspectable`, iOS 16.4, activé dans la maquette) suffit |
 | Extensions Chromium, Chrome Web Store | **absente** | impossible sur WebKit ; voir `WKWebExtension` plus haut |
 | Retouches (CSS/JS par site) | **absente** en v1 | du JavaScript de l'utilisateur exécuté dans les pages : à faire relire contre la règle 2.5.2 avant (§9.1) ; une Retouche « CSS seul » est possible plus tard |
@@ -761,6 +762,9 @@ Ce que le chef de projet colle dans App Store Connect (§10.2) est dans le dép�
 | Un vecteur changé échoue **des deux côtés** | l'ordre attendu de l'archive inversé | `ios-library-contract.test.ts` et `LibraryVectorTests` |
 | *Noyau — application (XCTest sur simulateur, 14 mutations)* | | |
 | Aucune vue avant que le bloqueur soit prêt | garde `isReady` retirée | `testNoPageIsMadeBeforeTheBlockerIsReadyAndTheFirstTabHasIt` |
+| La version pour ordinateur est demandée à la navigation de l'onglet, et à lui seul | `contentMode(ofTab:)` renvoie toujours `.recommended` | `testTheDesktopVersionIsAskedForTheTabAndOnlyForIt` |
+| La taille du texte suit l'onglet au réveil | `view.pageZoom = display(of: tab).zoomFactor` retiré de `wake` | `testTheDisplayFollowsTheTabThroughSleepAndRestart` |
+| Un onglet privé n'écrit pas son affichage | garde `isPrivate` retirée de `keep` | `testAPrivateTabKeepsItsDisplayInMemoryOnly` |
 | L'état de la page est rendu à WebKit | `view.interactionState = saved` retiré | `testASleepingTabWakesWhereItLeftOffWithItsHistory` |
 | L'état gardé ne sert qu'une fois | le fichier n'est plus retiré à la lecture | `testASleepingTabWakesWhereItLeftOffWithItsHistory` |
 | Un verdict de sommeil n'est pas pris avant un `await` | `await` ajouté entre le verdict et l'action (c'était le défaut de la première version : le test l'avait trouvé, un onglet montré entre-temps était libéré) | `testASleepingTabWakesWhereItLeftOffWithItsHistory` |

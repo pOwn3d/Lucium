@@ -113,6 +113,14 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
 
     // MARK: Deciding
 
+    /// Every navigation also says which version of the site is asked for: the desktop one when the person chose it for this tab (iPhone only: the
+    /// iPad already asks for desktop sites). WebKit reads the preference of the answer for this navigation, a reload included.
+    func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction, preferences: WKWebpagePreferences) async -> (WKNavigationActionPolicy, WKWebpagePreferences) {
+        let policy = await self.webView(webView, decidePolicyFor: action)
+        if let tab = tabId(of: webView), let model { preferences.preferredContentMode = model.contentMode(ofTab: tab) }
+        return (policy, preferences)
+    }
+
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
         let policy = await decide(webView, action)
         // A page that is let through is given what the page guard runs in it (the scriptlets and the style sheet of its site, `PageGuard`). One that
