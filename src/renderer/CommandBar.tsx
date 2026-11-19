@@ -10,7 +10,7 @@ import { activeTab } from '@shared/sidebar'
 import { activeProfileId } from '@shared/profiles'
 import { hostOf } from '@shared/url'
 import { api, useSnapshot } from './api'
-import type { ResumeLine } from '@shared/sync-resume'
+import type { ResumeAvailability, ResumeLine } from '@shared/sync-resume'
 import { BarClipboardButtons, barNoticeText } from './BarClipboard'
 import { applyPaste, copyFromBar, noticeClock, pasteToBar, type BarClipNotice } from './bar-clipboard'
 import { ICONS, glyph } from './command-icons'
@@ -89,7 +89,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
   const [history, setHistory] = useState<HistoryEntry[]>([])
   const [suggestions, setSuggestions] = useState<string[]>([])
   // The tabs an iPhone announced (« Sur l'iPhone »): asked for once when the bar opens, titles and hosts only. Nothing until the main process answers.
-  const [iphone, setIphone] = useState<{ lines: readonly ResumeLine[]; announcedAt: number | null } | null>(null)
+  const [iphone, setIphone] = useState<{ lines: readonly ResumeLine[]; announcedAt: number | null; availability: ResumeAvailability } | null>(null)
   const input = useRef<HTMLInputElement>(null)
   // After a deletion the bar stops completing, as a browser's address field does, until the next letter typed.
   const [typing, setTyping] = useState(true)
@@ -255,7 +255,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       .syncResume({ kind: 'list' })
       .then(
         (reply) => {
-          if (!stale) setIphone(reply?.ok === true ? { lines: reply.view.lines, announcedAt: reply.view.announcedAt } : null)
+          if (!stale) setIphone(reply?.ok === true ? { lines: reply.view.lines, announcedAt: reply.view.announcedAt, availability: reply.view.availability } : null)
         },
         (error: unknown) => {
           // A convenience: without the list the bar keeps its other lines. The name of the error only.
@@ -406,6 +406,9 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       case 'bookmark':
         void act.dispatch({ type: 'bookmark/open', id: c.bookmarkId })
         break
+      case 'iphone-hint':
+        // A sentence: nothing to open, the bar stays.
+        return
       case 'iphone':
         // The main process holds the address and the space: only the line is named. A refusal (the list was forgotten meanwhile, a space is locked) is said in the log, not hidden.
         void api()

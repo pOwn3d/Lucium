@@ -15,7 +15,7 @@ import type { NamedWindow } from './window-names'
 import type { WindowSidebar } from './window-sidebar'
 import type { PlatformId } from './platform'
 import { t } from './i18n'
-import type { ResumeLine } from './sync-resume'
+import type { ResumeAvailability, ResumeLine } from './sync-resume'
 import { COMMAND_BAR_CARD } from './command-bar-surface'
 import type { Candidate } from './command-bar-types'
 import { onePerSplit, MAX_TABS, tabCandidate, actionCandidates, jotCandidate, spaceCandidates, MAX_ARCHIVED, readLaterCandidates, bookmarkCandidates, iphoneCandidates, MAX_BANG_HINTS, MAX_SUGGESTIONS, MAX_HISTORY, searchOnlyActions, tabSearchActions, autoReloadActions, readLaterActions, containerActions, MAX_CONTAINER_ACTIONS, libraryActions, notesActions, webStoreActions, privacyActions, passwordActions, markdownActions, readableActions, shareActions, sessionActions, sessionCandidates, workViewCandidates, asideActions, lockActions, layoutActions, windowSidebarActions, webPanelCandidates, moveCandidates, paneCandidates, extensionCandidates, windowCandidates } from './command-bar-sources'
@@ -148,7 +148,7 @@ export function rankCandidates(
   history: HistoryEntry[] = [],
   suggestions: string[] = [],
   extensions: readonly ExtensionInfo[] = [],
-  options: { private?: boolean; windows?: readonly NamedWindow[]; newTab?: boolean; windowSidebar?: WindowSidebar; platform?: PlatformId; iphone?: { lines: readonly ResumeLine[]; announcedAt: number | null; now: number } } = {}
+  options: { private?: boolean; windows?: readonly NamedWindow[]; newTab?: boolean; windowSidebar?: WindowSidebar; platform?: PlatformId; iphone?: { lines: readonly ResumeLine[]; announcedAt: number | null; availability: ResumeAvailability; now: number } } = {}
 ): Candidate[] {
   const q = query.trim()
   const { suggestHistory, suggestTabs, suggestArchive, suggestReadLater } = state.settings

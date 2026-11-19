@@ -21,7 +21,7 @@ import { isReadableWebPage, siteReadableOf, type ReadableMode } from './readable
 import type { Candidate, CommandAction } from './command-bar-types'
 import { actionDetail } from './command-bar-shortcuts'
 import type { PlatformId } from './platform'
-import { matchResume, resumeAge, type ResumeAge, type ResumeLine } from './sync-resume'
+import { matchResume, resumeAge, resumeHintKey, type ResumeAge, type ResumeAvailability, type ResumeLine } from './sync-resume'
 import { fold, matchScore, byScore, nameScore } from './command-bar-match'
 
 export const MAX_TABS = 6
@@ -538,8 +538,13 @@ export function windowCandidates(q: string, windows: readonly NamedWindow[] | un
  * The tabs an iPhone announced that the text names (title or host), the best first, five at most: « Sur l'iPhone ». The bar lists nothing for no text (`rankCandidates` returns before the sources): the section answers a
  * search, as its twin on the iPhone does (« Sur le Mac »). `now` is the clock of the bar, for the age of the list.
  */
-export function iphoneCandidates(q: string, iphone: { lines: readonly ResumeLine[]; announcedAt: number | null; now: number }): Candidate[] {
-  if (iphone.announcedAt === null) return []
+export function iphoneCandidates(q: string, iphone: { lines: readonly ResumeLine[]; announcedAt: number | null; availability: ResumeAvailability; now: number }): Candidate[] {
+  if (iphone.announcedAt === null) {
+    // No list: the one sentence for the reason, only when the text names the section (« iphone »), so that nobody without an iPhone reads it while typing something else.
+    const hint = resumeHintKey(iphone.availability)
+    if (hint === null || nameScore(t('cmd.groupe-sur-iphone'), q) === 0) return []
+    return [{ kind: 'iphone-hint', id: 'iphone-hint', label: t(hint), detail: t('cmd.groupe-sur-iphone') }]
+  }
   const age = resumeAge(iphone.announcedAt, iphone.now)
   return matchResume(iphone.lines, q, MAX_IPHONE).map((line): Candidate => ({ kind: 'iphone', id: `iphone:${line.id}`, label: line.title, detail: iphoneDetail(line.host, age), resumeId: line.id }))
 }

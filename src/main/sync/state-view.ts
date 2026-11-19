@@ -158,11 +158,12 @@ export function baseOf(merged: SyncSnapshot): SyncSnapshot {
   return { ...merged, entities }
 }
 
-/** The tabs announced to the other device when « Onglets ouverts » is common (§10.4): web pages the person has open, never a private tab, never a tab of a locked space, the latest 200. */
+/** The tabs announced to the other device when « Onglets ouverts » is common (§10.4): web pages the person has open, never a private tab, never a tab of a locked space, a tab whose address is over the bound of the message, the latest 200. */
 export function openTabsOf(state: SidebarState, isSpaceLocked: (spaceId: string) => boolean): Array<{ id: string; spaceId: string; url: string; title: string; lastActiveAt: number }> {
   return state.tabs
-    .filter((tab) => tab.private !== true && /^https?:\/\//i.test(tab.url) && !isSpaceLocked(tab.spaceId))
+    // An address longer than the message allows is left out, not cut: a cut address is another page, which the other device would show and open (as the iPhone does).
+    .filter((tab) => tab.private !== true && /^https?:\/\//i.test(tab.url) && Buffer.byteLength(tab.url, 'utf8') <= MAX_OPEN_TAB_URL_BYTES && !isSpaceLocked(tab.spaceId))
     .sort((a, b) => b.lastActiveAt - a.lastActiveAt || (a.id < b.id ? -1 : 1))
     .slice(0, MAX_OPEN_TABS)
-    .map((tab) => ({ id: tab.id, spaceId: tab.spaceId, url: cutBytes(tab.url, MAX_OPEN_TAB_URL_BYTES), title: cutBytes(tab.title, MAX_OPEN_TAB_TITLE_BYTES), lastActiveAt: Math.max(0, Math.trunc(tab.lastActiveAt)) }))
+    .map((tab) => ({ id: tab.id, spaceId: tab.spaceId, url: tab.url, title: cutBytes(tab.title, MAX_OPEN_TAB_TITLE_BYTES), lastActiveAt: Math.max(0, Math.trunc(tab.lastActiveAt)) }))
 }

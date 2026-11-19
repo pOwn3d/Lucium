@@ -346,7 +346,7 @@ export class SyncService {
 
   /** The window has closed, for whatever reason: nobody can be asked or paired any more. */
   private windowClosed(): void {
-    this.forgetAnnounced()
+    // The list of the iPhone's open tabs is not forgotten here: it stays in memory after the window, with its age, until the lock, the quit, the unticked category or the forgotten device.
     this.pairing?.secret.close()
     this.pairing = null
     this.resolveConfirm('refuse')
@@ -553,6 +553,7 @@ export class SyncService {
   async dispose(): Promise<void> {
     this.stopTracking()
     await this.window.close('manual')
+    this.forgetAnnounced()
   }
 }
 
