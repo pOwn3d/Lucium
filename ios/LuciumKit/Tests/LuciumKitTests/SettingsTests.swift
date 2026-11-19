@@ -7,13 +7,13 @@ struct SettingsLayoutTests {
     @Test func theSectionsAreListedInTheOrderOfTheDecision() {
         let groups = SettingsLayout.groups(lockAvailable: true)
         #expect(groups.map(\.section) == [.navigation, .privacy, .spaces, .about])
-        #expect(groups.flatMap(\.rows) == [.searchEngine, .privacy, .lock, .spaces, .licenses])
+        #expect(groups.flatMap(\.rows) == [.searchEngine, .privacy, .passwords, .lock, .spaces, .licenses])
     }
 
     @Test func aCopyWithNoLockHasNoLockRowAndKeepsItsPrivacySection() {
         let groups = SettingsLayout.groups(lockAvailable: false)
         #expect(!groups.flatMap(\.rows).contains(.lock))
-        #expect(groups.first { $0.section == .privacy }?.rows == [.privacy])
+        #expect(groups.first { $0.section == .privacy }?.rows == [.privacy, .passwords])
     }
 
     @Test func theSynchronisationIsNotShownUntilThePhaseTwoGivesItAPage() {

@@ -160,7 +160,7 @@ final class SettingsScreenshotTests: BrowserCoreTestCase {
     /// The list and every page, on a phone, in light, in both languages.
     func testEveryPageOfTheSettingsDrawsOnAPhone() async throws {
         let model = await model()
-        let pages: [(String, SettingsRow?)] = [("list", nil), ("search", .searchEngine), ("privacy", .privacy), ("lock", .lock), ("spaces", .spaces), ("licenses", .licenses)]
+        let pages: [(String, SettingsRow?)] = [("list", nil), ("search", .searchEngine), ("privacy", .privacy), ("passwords", .passwords), ("lock", .lock), ("spaces", .spaces), ("licenses", .licenses)]
         for language in ["fr", "en"] {
             for (name, row) in pages {
                 model.settingsStart = row
