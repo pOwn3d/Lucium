@@ -71,6 +71,11 @@ public struct SyncMarkBook: Equatable, Sendable {
 
     public let device: String
     public private(set) var clock: SyncClock
+    /// The latest time (ms) of a mark that came in from another device, kept with the clock (review n° 35). The time of day alone cannot tell a clock that WAS wrong and was put
+    /// right (the marks of this device are ahead of it, and every other device refuses them: review n° 18) from a clock that IS wrong and went back (the marks are right, the time
+    /// of day is behind). The other device can: its marks are made at its own time. A mark that comes in is never more than a week ahead of what this device's clock said when it
+    /// came (§9.3), so this is a bound the other device set, not one it can push. The Mac keeps the same (`Hlc.peer` of `marks.ts`).
+    public private(set) var peer: Int = 0
     private(set) var entities: [String: [String: [String: FieldMark]]]
     private(set) var tombstones: [String: [String: String]]
     private(set) var orders: [String: OrderMark]
@@ -113,9 +118,12 @@ public struct SyncMarkBook: Equatable, Sendable {
     /// or at the end of what thirteen digits hold, was wrong (the time of day was put right since, or the file was spoilt): every other device refuses marks that far ahead, so
     /// staying on them would shut this device out of the synchronisation for ever. It starts over from the time of day (review n° 18).
     public mutating func next(now: Int) -> String {
-        if clock.milliseconds > now + Self.futureMilliseconds || clock.milliseconds >= Self.maxMilliseconds { clock = SyncClock() }
-        if now > clock.milliseconds {
-            clock = SyncClock(milliseconds: now, counter: 0)
+        // Measured against the time of day, or against the other device when it is ahead of it: a clock put back by more than a week no longer takes the marks back with it
+        // (review n° 35), while marks that are ahead of both are still the ones of a clock that was wrong (review n° 18).
+        let reference = self.reference(now: now)
+        if clock.milliseconds > reference + Self.futureMilliseconds || clock.milliseconds >= Self.maxMilliseconds { clock = SyncClock() }
+        if reference > clock.milliseconds {
+            clock = SyncClock(milliseconds: reference, counter: 0)
         } else if clock.counter >= 0xFFFF {
             clock = SyncClock(milliseconds: clock.milliseconds + 1, counter: 0)
         } else {
@@ -124,9 +132,20 @@ public struct SyncMarkBook: Equatable, Sendable {
         return format(clock)
     }
 
+    /// The time the marks are measured against: the time of day, or the latest mark seen from another device when the time of day is behind it.
+    func reference(now: Int) -> Int { max(now, peer) }
+
+    /// The device identifier of a mark (what follows `<ms>-<counter>-`).
+    private static func device(of stamp: String) -> Substring? {
+        let bytes = Array(stamp.utf8)
+        guard bytes.count >= 19, SyncClock.parse(stamp) != nil else { return nil }
+        return Substring(String(decoding: bytes[19...], as: UTF8.self))
+    }
+
     /// A mark that came in: the clock is never behind it.
     public mutating func observe(_ stamp: String) {
         guard let seen = SyncClock.parse(stamp) else { return }
+        if Self.device(of: stamp).map(String.init) != device { peer = max(peer, seen.milliseconds) }
         if seen.milliseconds > clock.milliseconds || (seen.milliseconds == clock.milliseconds && seen.counter > clock.counter) { clock = seen }
     }
 
@@ -142,7 +161,7 @@ public struct SyncMarkBook: Equatable, Sendable {
     public mutating func update(_ view: SyncTrackedView, now: Int) {
         // A mark more than a week ahead of the time of day was made while the clock was wrong (review n° 18): no other device accepts it, so the thing it marks would never leave
         // this one. It is marked again, as a change of now.
-        let limit = now + Self.futureMilliseconds
+        let limit = reference(now: now) + Self.futureMilliseconds
         func tooFar(_ stamp: String) -> Bool { (SyncClock.parse(stamp)?.milliseconds ?? 0) > limit }
         for (kind, byID) in view.entities {
             var known = entities[kind] ?? [:]
@@ -264,7 +283,7 @@ public struct SyncMarkBook: Equatable, Sendable {
         }
         return .object([
             "version": .number(Double(Self.version)),
-            "clock": .object(["ms": .number(Double(clock.milliseconds)), "counter": .number(Double(clock.counter))]),
+            "clock": .object(["ms": .number(Double(clock.milliseconds)), "counter": .number(Double(clock.counter))].merging(peer > 0 ? ["peer": .number(Double(peer))] : [:]) { $1 }),
             "entities": .object(entityObject),
             "tombstones": .object(tombstones.mapValues { .object($0.mapValues { .string($0) }) }),
             "orders": .object(orders.mapValues { .object(["hash": .string($0.hash), "stamp": .string($0.stamp)]) }),
@@ -279,6 +298,8 @@ public struct SyncMarkBook: Equatable, Sendable {
               case .object(let entityObject)? = root["entities"], case .object(let tombstoneObject)? = root["tombstones"], case .object(let orderObject)? = root["orders"] else { return nil }
         var book = SyncMarkBook(device: device)
         book.clock = SyncClock(milliseconds: Int(ms), counter: Int(counter))
+        // A file written before review n° 35 has no `peer`, and one that has a spoilt one is read as having none.
+        if case .number(let seen)? = clock["peer"], seen.isFinite, seen >= 0, seen < 1e15 { book.peer = Int(seen) }
         for (kind, rawKind) in entityObject {
             guard case .object(let byID) = rawKind else { return nil }
             for (id, rawEntity) in byID {

@@ -72,6 +72,70 @@ describe('Hlc: a clock that was wrong comes back (review n° 18)', () => {
   })
 })
 
+describe('Hlc: a clock that goes back is not a clock that was wrong (review n° 35)', () => {
+  const DAY = 86_400_000
+  const peerMark = (ms: number): string => `${String(ms).padStart(13, '0')}-0000-iphone-1`
+
+  it('does not take the marks back with a time of day that went back by more than a week, once the other device has shown the time it is at', () => {
+    const clock = new Hlc('mac')
+    clock.next(NOW)
+    clock.observe(peerMark(NOW))
+    // The time of day is put back by thirty days: the marks of this device stay where they were, and go on after them. Before, they restarted from the time of day and lost
+    // every conflict against what the iPhone had changed in between.
+    const next = clock.next(NOW - 30 * DAY)
+    expect(compareStamps(next, '1790000000000-0000-mac')).toBeGreaterThan(0)
+    expect(next.slice(0, 13)).toBe(String(NOW))
+  })
+
+  it('still starts over from the time of day when the marks are ahead of the time of day AND of the other device: a clock that was wrong (review n° 18)', () => {
+    const clock = new Hlc('mac')
+    clock.observe(peerMark(NOW))
+    clock.next(NOW + 3 * 365 * DAY)
+    expect(clock.next(NOW)).toBe('1790000000000-0000-mac')
+  })
+
+  it('does not count a mark of its own as a mark of the other device, and a mark that is not one at all counts for nothing', () => {
+    const clock = new Hlc('mac')
+    clock.observe('1790000000000-0003-mac')
+    clock.observe('not a mark')
+    expect(clock.peerSeen()).toBe(0)
+    clock.observe(peerMark(NOW - 5))
+    expect(clock.peerSeen()).toBe(NOW - 5)
+    clock.observe(peerMark(NOW - 10))
+    expect(clock.peerSeen()).toBe(NOW - 5)
+  })
+
+  it('does not redo the marks of a book either: its fields keep the marks they had when the time of day goes back, and are still redone when it was the marks that were wrong', () => {
+    const book = new MarkBook('mac')
+    book.update(view({ space: { s1: { name: 'A' } } }), NOW)
+    const before = book.stampsOf('space', 's1')['name']
+    book.clock.observe(peerMark(NOW))
+    book.update(view({ space: { s1: { name: 'A' } } }), NOW - 30 * DAY)
+    expect(book.stampsOf('space', 's1')['name']).toBe(before)
+    // The same book without the other device's word: the marks look like a clock that was wrong, and are made again (review n° 18).
+    const alone = new MarkBook('mac')
+    alone.update(view({ space: { s1: { name: 'A' } } }), NOW)
+    alone.update(view({ space: { s1: { name: 'A' } } }), NOW - 30 * DAY)
+    expect(alone.stampsOf('space', 's1')['name']).not.toBe(before)
+    expect(alone.stampsOf('space', 's1')['name']?.slice(0, 13)).toBe(String(NOW - 30 * DAY))
+  })
+
+  it('is kept with the clock in the file, and a file without it is read as having none', () => {
+    const book = new MarkBook('mac')
+    book.update(view({ space: { s1: { name: 'A' } } }), NOW)
+    expect(book.toJSON().clock).not.toHaveProperty('peer')
+    book.clock.observe(peerMark(NOW - 1_000))
+    const again = new MarkBook('mac', JSON.parse(JSON.stringify(book)) as never)
+    expect(again.clock.peerSeen()).toBe(NOW - 1_000)
+    expect(again.toJSON()).toEqual(book.toJSON())
+    const spoilt = JSON.parse(JSON.stringify(book)) as { clock: { peer: unknown } }
+    spoilt.clock.peer = 'later'
+    expect(new MarkBook('mac', spoilt as never).clock.peerSeen()).toBe(0)
+    spoilt.clock.peer = -5
+    expect(new MarkBook('mac', spoilt as never).clock.peerSeen()).toBe(0)
+  })
+})
+
 describe('MarkBook.update: marks that are too far ahead are made again (review n° 18)', () => {
   const FAR = NOW + 3 * 365 * 86_400_000
 

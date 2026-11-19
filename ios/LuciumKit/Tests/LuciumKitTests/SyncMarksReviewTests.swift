@@ -80,4 +80,67 @@ struct SyncMarksReviewTests {
         steady.update(view(["space": ["s1": ["name": .string("A")]]], order: ["spaces": ["s1"]]), now: now)
         #expect(steady == before)
     }
+
+    // MARK: n° 35, a clock that goes back
+
+    @Test func aTimeOfDayThatWentBackByMoreThanAWeekDoesNotTakeTheMarksBackOnceTheOtherDeviceHasShownItsTime() {
+        let day = 86_400_000
+        var clock = SyncMarkBook(device: "mac")
+        _ = clock.next(now: now)
+        clock.observe(mark(now, "iphone-1"))
+        let next = clock.next(now: now - 30 * day)
+        #expect(next > mark(now, "mac"), "the mark goes on after the ones already made, it does not restart from the time of day")
+        let startOfNext: String = String(next.prefix(13))
+        #expect(startOfNext == String(now))
+        // Marks ahead of the time of day AND of the other device are still the ones of a clock that was wrong (review n° 18).
+        var wrong = SyncMarkBook(device: "mac")
+        wrong.observe(mark(now, "iphone-1"))
+        _ = wrong.next(now: now + 3 * 365 * day)
+        #expect(wrong.next(now: now) == mark(now, "mac"))
+    }
+
+    @Test func aMarkOfItsOwnIsNotTheOtherDevicesAndAMarkThatIsNotOneCountsForNothing() {
+        var book = SyncMarkBook(device: "mac")
+        book.observe(mark(now, "mac"))
+        book.observe("not a mark")
+        #expect(book.peer == 0)
+        book.observe(mark(now - 5, "iphone-1"))
+        #expect(book.peer == now - 5)
+        book.observe(mark(now - 10, "iphone-1"))
+        #expect(book.peer == now - 5)
+    }
+
+    @Test func theMarksOfABookKeepTheirMarksWhenTheTimeOfDayGoesBackAndAreStillMadeAgainWhenTheMarksWereTheWrongOnes() {
+        let day = 86_400_000
+        let one = view(["space": ["s1": ["name": .string("A")]]])
+        var book = SyncMarkBook(device: "mac")
+        book.update(one, now: now)
+        let before = book.stamps(of: "space", id: "s1")["name"]
+        book.observe(mark(now, "iphone-1"))
+        book.update(one, now: now - 30 * day)
+        #expect(book.stamps(of: "space", id: "s1")["name"] == before)
+        var alone = SyncMarkBook(device: "mac")
+        alone.update(one, now: now)
+        alone.update(one, now: now - 30 * day)
+        #expect(alone.stamps(of: "space", id: "s1")["name"] != before)
+        let remade: String = alone.stamps(of: "space", id: "s1")["name"] ?? ""
+        let expectedStart: String = String(now - 30 * day)
+        #expect(String(remade.prefix(13)) == expectedStart)
+    }
+
+    @Test func theOtherDevicesTimeIsKeptWithTheClockInTheFileAndAFileWithoutItOrWithASpoiltOneIsReadAsHavingNone() throws {
+        var book = SyncMarkBook(device: "mac")
+        book.update(view(["space": ["s1": ["name": .string("A")]]]), now: now)
+        guard case .object(let plain) = book.json(), case .object(let plainClock)? = plain["clock"] else { Issue.record("no clock"); return }
+        #expect(plainClock["peer"] == nil, "nothing is written when there is nothing to keep")
+        book.observe(mark(now - 1_000, "iphone-1"))
+        let again = try #require(SyncMarkBook.read(book.json(), device: "mac"))
+        #expect(again.peer == now - 1_000)
+        guard case .object(var root) = book.json(), case .object(var clock)? = root["clock"] else { Issue.record("no clock"); return }
+        for spoilt: JSONValue in [.string("later"), .number(-5), .number(1e20)] {
+            clock["peer"] = spoilt
+            root["clock"] = .object(clock)
+            #expect(try #require(SyncMarkBook.read(.object(root), device: "mac")).peer == 0)
+        }
+    }
 }
