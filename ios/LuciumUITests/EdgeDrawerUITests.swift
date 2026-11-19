@@ -141,4 +141,28 @@ final class EdgeDrawerUITests: XCTestCase {
             app.terminate()
         }
     }
+
+    /// The appearance setting, as the simulator draws it: the list, the page, then the whole application in each choice. Pictures are attached to the
+    /// result (and written to `LUCIUM_UI_SHOTS` when it is set, to be read by the person who asked for them).
+    func testPicturesOfTheAppearanceSetting() {
+        for (language, settings, appearance, dark, light) in [("en", "Settings", "Appearance", "Dark", "Light"), ("fr", "Réglages", "Apparence", "Sombre", "Clair")] {
+            let app = launch(language: language)
+            let gear = app.buttons[settings].firstMatch
+            XCTAssertTrue(gear.waitForExistence(timeout: 5), "\(language): the gear of the bottom bar")
+            gear.tap()
+            let row = app.staticTexts[appearance].firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 3), "\(language): the settings list has the appearance row")
+            attach(app, "settings-\(language)")
+            row.tap()
+            let darkRow = app.buttons[dark].firstMatch
+            XCTAssertTrue(darkRow.waitForExistence(timeout: 3))
+            darkRow.tap()
+            sleep(1)
+            attach(app, "appearance-dark-\(language)")
+            app.buttons[light].firstMatch.tap()
+            sleep(1)
+            attach(app, "appearance-light-\(language)")
+            app.terminate()
+        }
+    }
 }

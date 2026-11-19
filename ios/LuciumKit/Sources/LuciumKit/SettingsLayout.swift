@@ -2,6 +2,8 @@ import Foundation
 
 /// A page the settings screen opens (docs/ios.md, "Les réglages"): one row of the list, one screen behind it.
 public enum SettingsRow: String, CaseIterable, Identifiable, Hashable, Sendable {
+    /// System, light or dark for the whole application (the Mac's `interfaceAppearance`).
+    case appearance
     /// The search engine of the profile of the space on screen.
     case searchEngine
     /// How long an idle Today tab waits before it is archived, and how many tabs keep a live page.
@@ -35,7 +37,7 @@ public enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Senda
     /// The rows of the section, in the order they are listed.
     public var rows: [SettingsRow] {
         switch self {
-        case .navigation: [.searchEngine, .tabs]
+        case .navigation: [.searchEngine, .tabs, .appearance]
         case .privacy: [.privacy, .passwords, .lock]
         case .spaces: [.spaces]
         case .sync: [.sync]

@@ -7,7 +7,7 @@ struct SettingsLayoutTests {
     @Test func theSectionsAreListedInTheOrderOfTheDecision() {
         let groups = SettingsLayout.groups(lockAvailable: true)
         #expect(groups.map(\.section) == [.navigation, .privacy, .spaces, .about, .reset])
-        #expect(groups.flatMap(\.rows) == [.searchEngine, .tabs, .privacy, .passwords, .lock, .spaces, .about, .licenses, .reset])
+        #expect(groups.flatMap(\.rows) == [.searchEngine, .tabs, .appearance, .privacy, .passwords, .lock, .spaces, .about, .licenses, .reset])
     }
 
     @Test func aCopyWithNoLockHasNoLockRowAndKeepsItsPrivacySection() {
