@@ -1118,7 +1118,7 @@ La limite « les deux appareils ouverts, au même endroit » est un **écart ass
 | Étape | Contenu | Remarque |
 |---|---|---|
 | 2a | Espaces, thèmes, favoris, onglets épinglés, dossiers, réglages communs | le noyau ; sûr |
-| 2b | Onglets « Aujourd'hui » et **« Reprendre un onglet du Mac »** (`Reprise`) | l'adresse et le titre seulement |
+| 2b | Onglets « Aujourd'hui » : d'abord **« Reprendre un onglet du Mac »** (`Reprise`, annonce en lecture seule) ; **depuis le 19 novembre 2026, de vrais onglets partagés** (ouvrir ou fermer sur l'un le fait sur l'autre : [synchronisation.md](synchronisation.md) §27) | l'adresse et le titre copiés une seule fois, aucune page rechargée |
 | 2c | Retouches | **arrivent désactivées**, jamais exécutées sans geste explicite ; peut-être absentes de l'iPhone (§4.3) |
 | 2d | Historique | opt-in, volumineux, à borner (la maquette l'affiche : décision à confirmer) |
 | jamais | **Mots de passe** | la ligne « Mots de passe » de la maquette **n'est pas reprise** : le coffre du Mac est chiffré par le trousseau du Mac, une copie vers un autre appareil est un autre projet de sécurité |

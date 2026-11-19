@@ -11,7 +11,7 @@ Sans lui, une personne qui scanne l'affiche ou le message d'un faux QR (« Ajout
 - **Rien n'est écrit avant les deux accords** (étapes 9 et 10 du §4.1) : l'iPhone qui annule, ou se tait, ne laisse rien au Mac ; la personne du Mac qui annule pendant l'attente non plus (`pairing-refused`).
 
 
-Spécification de la synchronisation directe entre le Mac et l'iPhone, sur le réseau local, sans serveur ni compte. Elle est écrite par la carte 443 et sert les cartes 444 (Mac), 445 (iPhone), 446 (fusion), 447 (reprise d'un onglet) et 448 (revue de sécurité). Ce document dit ce que le code doit faire, et les vecteurs de contrat (§19) tiennent d'accord le Mac et l'iPhone. **État de la carte 444 (Mac)** : sont écrits, testés et câblés l'écoute et le filtre d'adresses (§6), l'appairage et sa confirmation (§4), l'identité et le certificat (§3, §6.3), la fenêtre de synchronisation (§6.1), la page des Réglages et son canal IPC (§13.1), la ligne du README (§14) **et la séance d'échange (§8 : instantané, marques, filtre des entités reçues, action `sync/apply`)**, qui utilise la fusion à trois voies (§11) de la carte 446 : en TypeScript (`src/shared/sync-merge.ts`, `sync-canonical.ts`, `sync-snapshot.ts`) et en Swift (`ios/LuciumKit/Sources/LuciumKit/SyncMerge.swift`, `SyncCanonical.swift`, `SyncSnapshot.swift`), jouées contre les mêmes vecteurs. Le journal des conflits (§11.7.3), les phrases de « Conflit réglé » (§13.4) (`src/shared/sync-conflicts.ts`, `SyncConflicts.swift`), la feuille du Mac (`src/renderer/SyncConflictSheet.tsx`) et l'écran de l'iPhone (`ios/Lucium/SyncConflictScreen.swift`) sont de la carte 446 ; la séance rend les conflits réglés dans son résultat (`conflicts`), mais **ne les inscrit pas encore au journal et ne montre pas encore la feuille** : c'est ce qui reste à brancher. Ce que ces choix précisent est au §22. Rien de tout cela n'a été vu à l'œuvre avec un iPhone : la carte 445 (iPhone) n'est pas fusionnée et le contrôle du moteur (`src/main/smoke-sync.ts`) est écrit, pas lancé. La carte 452 (corps de séance de l'iPhone) est décrite au §23. La carte 447 (reprise d'un onglet du Mac, côté iPhone) est décrite au §24. La carte 448 reste à faire.
+Spécification de la synchronisation directe entre le Mac et l'iPhone, sur le réseau local, sans serveur ni compte. Elle est écrite par la carte 443 et sert les cartes 444 (Mac), 445 (iPhone), 446 (fusion), 447 (reprise d'un onglet) et 448 (revue de sécurité). Ce document dit ce que le code doit faire, et les vecteurs de contrat (§19) tiennent d'accord le Mac et l'iPhone. **État de la carte 444 (Mac)** : sont écrits, testés et câblés l'écoute et le filtre d'adresses (§6), l'appairage et sa confirmation (§4), l'identité et le certificat (§3, §6.3), la fenêtre de synchronisation (§6.1), la page des Réglages et son canal IPC (§13.1), la ligne du README (§14) **et la séance d'échange (§8 : instantané, marques, filtre des entités reçues, action `sync/apply`)**, qui utilise la fusion à trois voies (§11) de la carte 446 : en TypeScript (`src/shared/sync-merge.ts`, `sync-canonical.ts`, `sync-snapshot.ts`) et en Swift (`ios/LuciumKit/Sources/LuciumKit/SyncMerge.swift`, `SyncCanonical.swift`, `SyncSnapshot.swift`), jouées contre les mêmes vecteurs. Le journal des conflits (§11.7.3), les phrases de « Conflit réglé » (§13.4) (`src/shared/sync-conflicts.ts`, `SyncConflicts.swift`), la feuille du Mac (`src/renderer/SyncConflictSheet.tsx`) et l'écran de l'iPhone (`ios/Lucium/SyncConflictScreen.swift`) sont de la carte 446 ; la séance rend les conflits réglés dans son résultat (`conflicts`), mais **ne les inscrit pas encore au journal et ne montre pas encore la feuille** : c'est ce qui reste à brancher. Ce que ces choix précisent est au §22. Rien de tout cela n'a été vu à l'œuvre avec un iPhone : la carte 445 (iPhone) n'est pas fusionnée et le contrôle du moteur (`src/main/smoke-sync.ts`) est écrit, pas lancé. La carte 452 (corps de séance de l'iPhone) est décrite au §23. La carte 447 (reprise d'un onglet du Mac, côté iPhone) est décrite au §24. La carte 448 reste à faire. **La carte 504 (§27) fait des onglets d'« Aujourd'hui » de vraies entités partagées** (décision du 19 novembre 2026) : conception seulement, aucun code ; elle remplace l'annonce en lecture seule du §10.4 d'origine.
 
 Il complète [docs/ios.md](ios.md) §13, qui est l'étude. En cas d'écart, ce document prime ; les écarts voulus sont listés au §21.
 
@@ -26,7 +26,7 @@ Il complète [docs/ios.md](ios.md) §13, qui est l'étude. En cas d'écart, ce d
 
 | Question | Réponse |
 |---|---|
-| Quoi | Une synchronisation **dans les deux sens** des espaces, dossiers, favoris et onglets épinglés (et, si la personne les coche, de l'archive et de quelques réglages) entre **son** Mac et **son** iPhone |
+| Quoi | Une synchronisation **dans les deux sens** des espaces, dossiers, favoris et onglets épinglés (et, si la personne les coche, des onglets d'« Aujourd'hui », de l'archive et de quelques réglages) entre **son** Mac et **son** iPhone |
 | Par où | **Le réseau local seulement**, d'appareil à appareil. Aucun serveur, aucun compte, aucun service d'une entreprise (iCloud compris) : `GOVERNANCE.md` principe 5 et `AGENTS.md` §5 |
 | Qui parle à qui | **Le Mac écoute, l'iPhone se connecte.** Le Mac n'ouvre jamais de connexion vers l'iPhone |
 | Quand | **Désactivée par défaut**, des deux côtés. **Le Mac n'écoute que pendant une fenêtre de synchronisation que la personne ouvre elle-même** (10 minutes au plus, §6.1) ; pendant ce temps l'iPhone se synchronise à l'ouverture de l'application, au retour au premier plan et sur demande ; les deux sont sur le même réseau |
@@ -339,7 +339,7 @@ L'iPhone ouvre une séance : au **lancement**, au **retour au premier plan** (5 
 1. **Figer** : chaque appareil prend un **instantané** de sa vue synchronisable (§10), restreinte aux **catégories communes**, et le garde en mémoire. Les modifications que la personne fait pendant la séance **ne changent pas** cet instantané.
 2. **`hello`** : chacun envoie le sien. Les catégories sont l'**intersection** (une catégorie ne passe que si les deux l'ont cochée). Si `baseHash` diffère, ou est `null` d'un côté : **pas de base commune**, la fusion se fait à base vide (§11.8). Si l'`stateVersion` de l'autre est **supérieure** à celle que l'appareil sait écrire : `state-too-new`.
 3. **`snapshot.part`** : chacun envoie son instantané complet (§8.3), puis **`snapshot.end`**.
-4. **`open-tabs`**, entre `hello` et `snapshot.end`, si la catégorie `openTabs` est commune (§10.4).
+4. **`open-tabs`**, entre `hello` et `snapshot.end`, si la catégorie `openTabs` est commune (§10.4 d'origine). **Remplacé** : les onglets d'« Aujourd'hui » sont des entités du genre `todayTab` dans l'instantané (§27.2), et le message `open-tabs` est retiré si [Q8] = A (§27.11).
 
 L'envoi de l'instantané **complet** à chaque séance est un choix de simplicité (quelques milliers d'entités tiennent en quelques centaines de Kio). Un envoi par différences, par résumé de chaque entité, pourra s'ajouter plus tard par une capacité de plus dans `hello` ; il n'est pas dans la v1.
 
@@ -356,7 +356,7 @@ L'instantané est :
 }
 ```
 
-Genres : `space`, `folder`, `tab` (épinglés seulement), `favorite`, `archived`, `setting`. Sur le fil, les entités voyagent en **éléments** `{ "kind", "id", "fields", "stamps" }` répartis dans les `snapshot.part`. Un même `(kind, id)` **deux fois** dans un instantané est un `bad-message`. `fields` contient **les champs synchronisés et tous les champs inconnus** de l'entité (§10.2, §11.6) ; `stamps` a une marque par champ, **y compris** pour un champ qui a été retiré (absent de `fields`) ; **un champ absent dont la marque serait « zéro » n'a pas d'entrée** (elle ne dirait rien, et deux appareils ne l'écriraient pas pareil). **Sur le fil**, chaque `snapshot.part` porte ses entités, une liste de pierres tombales `{ "kind", "id", "stamp" }` et, comme objets, les morceaux de `order` et d'`orderStamps` qu'elle apporte ; l'instantané assemblé est celui de la forme ci-dessus.
+Genres : `space`, `folder`, `tab` (épinglés seulement), `todayTab` (les onglets d'« Aujourd'hui », catégorie `todayTabs`, §27), `favorite`, `archived`, `setting`. Sur le fil, les entités voyagent en **éléments** `{ "kind", "id", "fields", "stamps" }` répartis dans les `snapshot.part`. Un même `(kind, id)` **deux fois** dans un instantané est un `bad-message`. `fields` contient **les champs synchronisés et tous les champs inconnus** de l'entité (§10.2, §11.6) ; `stamps` a une marque par champ, **y compris** pour un champ qui a été retiré (absent de `fields`) ; **un champ absent dont la marque serait « zéro » n'a pas d'entrée** (elle ne dirait rien, et deux appareils ne l'écriraient pas pareil). **Sur le fil**, chaque `snapshot.part` porte ses entités, une liste de pierres tombales `{ "kind", "id", "stamp" }` et, comme objets, les morceaux de `order` et d'`orderStamps` qu'elle apporte ; l'instantané assemblé est celui de la forme ci-dessus.
 
 ### 8.4 Forme canonique et résumé
 
@@ -370,7 +370,7 @@ Le `digest` d'un instantané est le **SHA-256, en hexadécimal minuscule, de sa 
    - il calcule le **patch** entre son instantané figé et le fusionné ;
    - il l'applique à l'état **courant** par le réducteur (`src/shared/sidebar.ts` côté Mac : une action `sync/apply`, **une seule**, qui ne touche que ce que le patch nomme) ; une entité que la personne a changée **depuis** l'instantané garde son changement local : la séance suivante le propagera ;
    - il **nettoie** ce qui entre comme à la lecture d'un fichier (`parseStateText`, `state-clean.ts` : chaque champ reçu est reborné ; une entité invalide est **écartée**, comptée et journalisée, jamais fatale) ; une adresse reçue n'est acceptée que si les règles de lecture de l'état l'acceptent (la carte 444 nomme les fonctions de `state-clean.ts` qui s'en chargent) ;
-   - **une suppression d'espace venue de l'autre appareil n'emporte pas sans trace les onglets ouverts de celui-ci** : ceux d'« Aujourd'hui » de l'espace supprimé (ni épinglés, ni privés, ni une page interne), qui ne se synchronisent pas, vont d'abord dans **l'archive** (source `sync`), dans l'espace où la personne se trouve, à défaut le premier qui reste ; une suppression faite sur place demande, elle, la confirmation de la personne (revue de sécurité, n° 13) ;
+   - **une suppression d'espace venue de l'autre appareil n'emporte pas sans trace les onglets ouverts de celui-ci** : ceux d'« Aujourd'hui » de l'espace supprimé (ni épinglés, ni privés, ni une page interne), **qu'ils soient partagés (§27) ou non** (la fusion retire ceux qui pendent, §11.7), vont d'abord dans **l'archive** (source `sync`), dans l'espace où la personne se trouve, à défaut le premier qui reste ; une suppression faite sur place demande, elle, la confirmation de la personne (revue de sécurité, n° 13) ;
    - il met à jour la **base** de cet appareil appairé (= l'instantané fusionné), **dans la même écriture** que l'état ;
    - il envoie **`commit`**.
 4. La séance est **terminée** quand le `commit` de l'autre est reçu. Si la connexion tombe avant : « Échange interrompu » ; la base et l'état sont **déjà cohérents** localement ; à la séance suivante, `baseHash` peut différer, et le repli du §11.8 s'applique sans perdre de suppression (les pierres tombales servent à ça).
@@ -421,7 +421,8 @@ La personne coche ce qui voyage ; **une catégorie ne passe que si les deux appa
 | `structure` | espaces, dossiers, favoris, onglets **épinglés** | oui | **coché** |
 | `settings` | les huit réglages de §10.3 | oui | **non coché** |
 | `archive` | onglets archivés (au plus **500 par espace**, les plus récents) | oui | **non coché** |
-| `openTabs` | annonce des onglets ouverts (« Reprise », §10.4) | **non** (jamais écrits dans l'état de l'autre) | **non coché** |
+| `todayTabs` | les **onglets d'« Aujourd'hui »** : ouverture, fermeture, espace, ordre, nom et icône (§27) ; **remplace** `openTabs` [Q8] | oui (genre `todayTab`) | **non coché** [Q9] |
+| ~~`openTabs`~~ | ~~annonce des onglets ouverts (« Reprise »)~~ : **retirée** si [Q8] = A ; historique au §10.4 | — | — |
 
 Réservées, **pas dans la v1** : `library` (signets, « À lire plus tard » ; l'iPhone ne les a pas encore, `docs/ios.md` §4.1), `sessions`. Un genre ou un champ **inconnu** d'une version plus récente traverse sans être lu (§11.6).
 
@@ -440,6 +441,7 @@ Chaque champ d'un genre est **une et une seule** de ces trois classes :
 | `space` | `id`, `name`, `emoji`, `theme`, `profileId`, `hideHeader`, `iconKind`, `iconLetter`, `iconColor`, `iconRound` | — | `image`, `background` (des fichiers qui n'existent que sur l'appareil), `webPanels` |
 | `folder` | `id`, `spaceId`, `name`, `parentId`, `atBottom`, `atTodayStart`, `noWake`, `icon` | `collapsed` | `live` (le flux d'un dossier vivant se télécharge sur l'appareil) |
 | `tab` (épinglé) | `id`, `spaceId`, `pinned`, `anchorUrl`, `customTitle`, `icon`, `folderId`, `keepAwake` | `url`, `title` (la page où l'on est et son titre changent à chaque navigation : bruit) | `image`, `faviconUrl`, `deadKept`, `autoReload`, `container`, `windowKey`, `openerId`, `parentId`, `treeCollapsed`, `favoriteId`, `createdAt`, `lastActiveAt`, `private` |
+| `todayTab` (§27.2) | `id`, `spaceId`, `customTitle`, `icon`, `activeAt` (projection de `lastActiveAt`, arrondie à 10 minutes) | `url`, `title` (copiés à l'entrée dans l'ensemble partagé) | tous les autres champs de `TabItem` (dont `container`, `windowKey`, `parentId`, `lastActiveAt`) |
 | `favorite` | `id`, `url`, `title`, `profileId` | — | `faviconUrl` (un cache) |
 | `archived` | `id`, `spaceId`, `url`, `title`, `archivedAt`, `source`, `pinned`, `anchorUrl`, `folderId` | — | `history`, `container` |
 | `setting` | `value` | — | — |
@@ -459,9 +461,13 @@ Un réglage ne se synchronise **que s'il est dans cette liste** (rien n'est « t
 
 Une valeur reçue est **rebornée comme à la lecture d'un fichier** (`cleanPrivacySettings`, `mergeSettings`) : un booléen qui n'en est pas un, un nombre hors bornes, une chaîne trop longue sont écartés. Une valeur est **un seul registre** : `profileNames` (un dictionnaire) est tranché **en entier**, pas clé par clé. **`profiles`** (les réglages propres à un profil) n'est **pas** synchronisé en v1. La liste **ne grandit que par une pull request qui change ce document et ses vecteurs** (`settingsAllowed`, `settingsNever`).
 
-### 10.4 Les onglets ouverts : une annonce, pas une fusion
+### 10.4 Les onglets ouverts : une annonce, pas une fusion (décision du 18 novembre 2026, **remplacée le 19 novembre 2026**)
 
-Les onglets d'« Aujourd'hui » **ne sont pas des entités** : ouvrir 80 onglets sur un appareil ne doit pas en ouvrir 80 sur l'autre. La catégorie `openTabs` envoie seulement une **liste en lecture seule** (`open-tabs`, §7.3) : adresse, titre, espace, dernière activité, **200 au plus**, `http` et `https` seulement **à l'envoi et à la réception** (l'appareil qui reçoit écarte, compte et journalise tout autre onglet annoncé : un script, un fichier local, une adresse de données ; essayé par la carte 448), **jamais** un onglet privé, jamais un onglet d'un espace verrouillé [Q4]. L'autre appareil la garde **en mémoire seulement** (jamais écrite) et la montre dans « Reprendre un onglet du Mac » (carte 447). Toucher une ligne **ouvre un onglet local** avec cette adresse, par le chemin ordinaire d'ouverture d'adresse ; rien d'autre n'est copié. La liste est **vidée** à la fin de la séance et quand l'appareil est oublié. Les titres et adresses des onglets ouverts sont ce qui ressemble le plus à un historique : d'où le défaut **non coché** [Q2].
+> **Remplacé par le §27.** Le 19 novembre 2026, après le deuxième essai réel (« j'ai pas les onglets du jour qui se synchronisent » → « Vrais onglets partagés »), le chef de projet a décidé que les onglets d'« Aujourd'hui » **sont** des entités partagées : ouvrir ou fermer un onglet sur un appareil le fait sur l'autre à la séance suivante. La catégorie `todayTabs` et le genre `todayTab` (§27) prennent la place de ce qui suit, que [Q8] retire si le chef suit la recommandation. Le texte d'origine est gardé **pour l'historique de la décision** ; il n'est plus la règle.
+
+*Texte d'origine (18 novembre 2026).* Les onglets d'« Aujourd'hui » **ne sont pas des entités** : ouvrir 80 onglets sur un appareil ne doit pas en ouvrir 80 sur l'autre. La catégorie `openTabs` envoie seulement une **liste en lecture seule** (`open-tabs`, §7.3) : adresse, titre, espace, dernière activité, **200 au plus**, `http` et `https` seulement **à l'envoi et à la réception** (l'appareil qui reçoit écarte, compte et journalise tout autre onglet annoncé : un script, un fichier local, une adresse de données ; essayé par la carte 448), **jamais** un onglet privé, jamais un onglet d'un espace verrouillé [Q4]. L'autre appareil la garde **en mémoire seulement** (jamais écrite) et la montre dans « Reprendre un onglet du Mac » (carte 447). Toucher une ligne **ouvre un onglet local** avec cette adresse, par le chemin ordinaire d'ouverture d'adresse ; rien d'autre n'est copié. La liste est **vidée** à la fin de la séance et quand l'appareil est oublié. Les titres et adresses des onglets ouverts sont ce qui ressemble le plus à un historique : d'où le défaut **non coché** [Q2].
+
+**Ce qui est resté vrai** : la limite de 200, `http` et `https` seulement à l'envoi **et** à la réception, jamais un onglet privé, jamais un onglet d'un espace verrouillé [Q4], le défaut **non coché**, et la raison de la prudence (titres et adresses = ce qui ressemble le plus à un historique) : le §27 les reprend, avec ce qu'il ajoute (§27.8).
 
 ### 10.5 Ce qui n'est **jamais** synchronisé
 
@@ -516,7 +522,7 @@ La marque du champ fusionné est celle de la valeur retenue (ou la plus grande d
 
 ### 11.4 L'ordre
 
-L'ordre d'affichage est un **registre par liste**, pas un champ par entité. Une liste est une suite d'identifiants dont la clé est composée du genre et de son conteneur : `spaces` ; `folders:<espace>:<parent ou ->` ; `tabs:<espace>:<dossier ou ->` (épinglés) ; `favorites:<profil>`. (`archived` n'a pas d'ordre : la liste suit `archivedAt`.) Pour une liste `k`, avec `membres` = les entités fusionnées qui en font partie :
+L'ordre d'affichage est un **registre par liste**, pas un champ par entité. Une liste est une suite d'identifiants dont la clé est composée du genre et de son conteneur : `spaces` ; `folders:<espace>:<parent ou ->` ; `tabs:<espace>:<dossier ou ->` (épinglés) ; `today:<espace>` (les onglets d'« Aujourd'hui », §27.2) ; `favorites:<profil>`. (`archived` n'a pas d'ordre : la liste suit `archivedAt`.) Pour une liste `k`, avec `membres` = les entités fusionnées qui en font partie :
 
 1. `restreindre(liste)` = la liste sans ce qui n'est pas dans `membres` et sans doublon.
 2. Un côté a **réordonné** si, parmi les identifiants communs à sa liste et à celle de la base, leur **ordre relatif** diffère de celui de la base.
@@ -572,7 +578,7 @@ Les textes sont des **clés des deux catalogues** (`src/shared/i18n-fr.ts` et `i
 ### 13.1 Mac : la page « Synchronisation » des Réglages
 
 - Un **interrupteur** « Synchroniser avec mes appareils » (**désactivé**), sous-texte : « Entre votre Mac et votre iPhone, sur votre réseau local. Rien ne passe par un serveur. » ; un bouton **« Ouvrir la synchronisation »** (la fenêtre de 10 minutes du §6.1, avec son compte à rebours, « Prolonger » et « Fermer »).
-- Les **catégories** (§10.1), chacune avec une phrase qui dit ce qu'elle envoie ; « Onglets ouverts » dit : « Ce que vous lisez est envoyé, titres et adresses compris. »
+- Les **catégories** (§10.1), chacune avec une phrase qui dit ce qu'elle envoie ; « Onglets d'Aujourd'hui » dit : « Les titres et les adresses de vos onglets d'Aujourd'hui sont envoyés à l'autre appareil. » (§27.8) ; **[Q9]** : la feuille « Autoriser » porte en plus une case décochée « Partager aussi les onglets d'Aujourd'hui »
 - La **liste des appareils** : nom, plateforme, **dernière synchronisation** (« il y a 2 min »), **« Oublier »** ; **« Ajouter un iPhone »** (feuille : QR, compte à rebours, adresse, code, bouton « Fermer »). Quand un iPhone a prouvé qu'il connaît le secret, la feuille « Autoriser / Refuser » dit son nom, **l'adresse d'où vient la demande** et **le code à comparer** (§4.6) ; une fois « Autoriser » touché elle reste, avec le code et « Annuler », jusqu'à ce que la personne de l'iPhone ait confirmé.
 - Une **ligne d'état** (§13.3) et, s'il y en a un, **« Dernier conflit réglé »** (§13.4).
 - Un lien vers ce qui est dit des **connexions** (§14).
@@ -595,7 +601,7 @@ Un interrupteur, **« Ajouter un Mac »** (caméra, puis « Saisir un code » ; 
 | Horloge | `clock-skew` | `sync.state.clockSkew` |
 | Erreur | un code fatal du §7.6 | `sync.error.<code>` |
 
-**« Dernier échange » (iPhone).** « À jour » seul ne dit pas ce qui a traversé : une catégorie cochée sur l'iPhone et pas sur le Mac ne passe pas, et les onglets d'« Aujourd'hui » ne passent jamais (seuls les onglets épinglés, avec « Espaces et dossiers », et la liste de « Reprendre un onglet du Mac », avec « Onglets ouverts »). Le premier essai réel (19 novembre 2026, carte 494) a montré un iPhone qui avait bien reçu l'espace « Perso » du Mac, sans que la page le dise. Une section **« Dernier échange »**, tant que l'application n'a pas été relancée (le résumé est gardé en mémoire avec la séance), dit : les catégories **échangées** (celles que les deux appareils ont cochées), celles **pas échangées parce que non cochées sur le Mac**, le nombre d'éléments **reçus du Mac** (entités faites ou changées, supprimées, réglages écrits) ou « rien de nouveau », et le nombre d'éléments du Mac **non pris** (refusés à l'entrée ou par l'écriture de l'état). Les lignes sont calculées dans LuciumKit (`SyncLastExchange`), les phrases sont les clés `sync.last.*`.
+**« Dernier échange » (iPhone).** « À jour » seul ne dit pas ce qui a traversé : une catégorie cochée sur l'iPhone et pas sur le Mac ne passe pas, et les onglets d'« Aujourd'hui » ne passent que si « Onglets d'Aujourd'hui » est cochée **des deux côtés** (§27 ; au premier essai réel, 19 novembre 2026, ils ne passaient pas du tout : seuls les onglets épinglés, avec « Espaces et dossiers », et la liste de « Reprendre un onglet du Mac », avec « Onglets ouverts »). Le premier essai réel (19 novembre 2026, carte 494) a montré un iPhone qui avait bien reçu l'espace « Perso » du Mac, sans que la page le dise. Une section **« Dernier échange »**, tant que l'application n'a pas été relancée (le résumé est gardé en mémoire avec la séance), dit : les catégories **échangées** (celles que les deux appareils ont cochées), celles **pas échangées parce que non cochées sur le Mac**, le nombre d'éléments **reçus du Mac** (entités faites ou changées, supprimées, réglages écrits) ou « rien de nouveau », et le nombre d'éléments du Mac **non pris** (refusés à l'entrée ou par l'écriture de l'état). Les lignes sont calculées dans LuciumKit (`SyncLastExchange`), les phrases sont les clés `sync.last.*`.
 
 Chaque code du §7.6 a **un texte et une action** (par exemple `pairing-expired` : « Ce code a expiré. Affichez-en un nouveau sur le Mac. » ; `fingerprint-mismatch` : « Ce n'est pas le Mac du code. » ; `state-too-new` : « L'autre Lucium est plus récent : mettez celui-ci à jour. » ; `divergence` : « Les deux appareils ne s'accordent pas : rien n'a été changé. » ). Un texte **ne montre jamais** un secret, un nom d'hôte brut ni une empreinte entière.
 
@@ -615,11 +621,11 @@ Ce qui suit est à ajouter par les cartes 444 et 445, avec la fonction (`docs/io
 
 **Tableau du Mac** (anglais) :
 
-> | **Synchronization with your own iPhone**, once you have paired it: your spaces, folders, favorites and pinned tabs (and, only if you tick them, a short list of settings, archived tabs and a list of your open tabs), in an encrypted exchange (TLS 1.3, each device holds the other's key) **with your iPhone only, on the local network, in both directions**. Nothing goes through a server, an account or the internet; the Mac refuses any connection from an address that is not private, and passwords, locks, cookies and history are never sent | only while the switch is on and you have opened the synchronization window on the Mac (10 minutes at most, closed when you quit the page or lock Lucium) and your paired iPhone asks; a pairing opens for 2 minutes at your click | the “Synchronization” page of the Settings (**off**; the path is written by the card that creates the page) |
+> | **Synchronization with your own iPhone**, once you have paired it: your spaces, folders, favorites and pinned tabs (and, only if you tick them, a short list of settings, archived tabs and your Today tabs), in an encrypted exchange (TLS 1.3, each device holds the other's key) **with your iPhone only, on the local network, in both directions**. Nothing goes through a server, an account or the internet; the Mac refuses any connection from an address that is not private, and passwords, locks, cookies and history are never sent | only while the switch is on and you have opened the synchronization window on the Mac (10 minutes at most, closed when you quit the page or lock Lucium) and your paired iPhone asks; a pairing opens for 2 minutes at your click | the “Synchronization” page of the Settings (**off**; the path is written by the card that creates the page) |
 
 (français) :
 
-> | **Synchronisation avec votre iPhone**, une fois appairé : vos espaces, dossiers, favoris et onglets épinglés (et, seulement si vous les cochez, une courte liste de réglages, les onglets archivés et la liste de vos onglets ouverts), dans un échange chiffré (TLS 1.3, chaque appareil garde la clé de l'autre) **avec votre iPhone seulement, sur le réseau local, dans les deux sens**. Rien ne passe par un serveur, un compte ou Internet ; le Mac refuse toute connexion venue d'une adresse qui n'est pas privée, et les mots de passe, les verrous, les cookies et l'historique ne sont jamais envoyés | seulement quand l'interrupteur est activé, que vous avez ouvert la fenêtre de synchronisation sur le Mac (10 minutes au plus, fermée quand vous quittez la page ou verrouillez Lucium) et que votre iPhone appairé le demande ; un appairage s'ouvre 2 minutes à votre clic | la page « Synchronisation » des Réglages (**désactivée** ; le chemin est écrit par la carte qui crée la page) |
+> | **Synchronisation avec votre iPhone**, une fois appairé : vos espaces, dossiers, favoris et onglets épinglés (et, seulement si vous les cochez, une courte liste de réglages, les onglets archivés et vos onglets d'Aujourd'hui), dans un échange chiffré (TLS 1.3, chaque appareil garde la clé de l'autre) **avec votre iPhone seulement, sur le réseau local, dans les deux sens**. Rien ne passe par un serveur, un compte ou Internet ; le Mac refuse toute connexion venue d'une adresse qui n'est pas privée, et les mots de passe, les verrous, les cookies et l'historique ne sont jamais envoyés | seulement quand l'interrupteur est activé, que vous avez ouvert la fenêtre de synchronisation sur le Mac (10 minutes au plus, fermée quand vous quittez la page ou verrouillez Lucium) et que votre iPhone appairé le demande ; un appairage s'ouvre 2 minutes à votre clic | la page « Synchronisation » des Réglages (**désactivée** ; le chemin est écrit par la carte qui crée la page) |
 
 **Tableau de la version iOS** : la ligne « Search suggestions, site icons, synchronization: not in the iOS code yet » perd le mot « synchronization » et gagne la sienne, symétrique : l'échange **avec votre Mac** sur le réseau local, **seulement** quand la synchronisation est activée et l'application ouverte, **désactivée** par défaut, avec son interrupteur dans la page « Synchronisation » des réglages de l'application. Chaque ligne dit ce qui est échangé et avec qui, et que rien n'est envoyé à un tiers.
 
@@ -741,7 +747,7 @@ Trois fichiers dans `ios/Contracts/`, **au format des vecteurs existants** (JSON
 | **444 : Mac** | `src/main/sync/` : identité (§3), écoute et filtre (§6.1–6.2), certificat (§6.3), appairage (§4), séance (§8), `sync/apply` dans le réducteur, page Réglages et **canal IPC validé** (une validation et un test par message), textes des deux langues, **ligne du README** (§14), test de classement des champs (§10.2), **mutations** des gardes (taille, adresse, preuve, épinglage) ; la **fenêtre de synchronisation** du §6.1 (ouverture, compte à rebours, fermeture, aucun port ouvert hors fenêtre) et son test [Q5] |
 | **445 : iPhone** | `NWConnection` épinglé (§6.4), identité par `SecItemAdd`, QR (`AVFoundation` ou `VisionKit`) et saisie du code (§4.3), `Info.plist` (`NSLocalNetworkUsageDescription`, `NSCameraUsageDescription`), Réglages, textes, ligne du README iOS ; **pas de `NWBrowser`** si [Q1] = A |
 | **446 : fusion** | `fusion` (§11) en TypeScript (`src/shared/`) **et** en Swift (`LuciumKit`), la forme canonique du §8.4 en Swift, **les mêmes vecteurs des deux côtés**, les propriétés du §11.9 sur des états tirés au hasard, l'écran « Conflit réglé » et le journal du §11.7 : **fait** : le journal, les phrases, la feuille du Mac et l'écran de l'iPhone ; **monter** la feuille et l'écran dans les pages « Synchronisation » et brancher « Rétablir » sur l'état reste à 444 et 445 |
-| **447 : reprise** | l'écran « Reprise » et la source « Sur le Mac » de la barre de commandes, sur l'annonce du §10.4 : **fait côté iPhone** (§24) ; le sens inverse, « Sur l'iPhone » dans la barre de commandes du Mac : carte 490 (§25) |
+| **447 : reprise** | **(remplacée par le §27 si [Q8] = A)** l'écran « Reprise » et la source « Sur le Mac » de la barre de commandes, sur l'annonce du §10.4 : **fait côté iPhone** (§24) ; le sens inverse, « Sur l'iPhone » dans la barre de commandes du Mac : carte 490 (§25) |
 | **448 : revue** | relire ce document **et** le code contre §16 ; refaire les essais du §17 dans Electron 45.2.1 et sur appareil ; la **conformité du chiffrement** (§15) ; rapport **sans point bloquant** |
 
 ## 21. Écarts avec `docs/ios.md` §13
@@ -753,7 +759,7 @@ Trois fichiers dans `ios/Contracts/`, **au format des vecteurs existants** (JSON
 | §13.2 point 3 : `checkServerIdentity` | vérification de l'empreinte à `secureConnection` / `secureConnect` | `checkServerIdentity` compare un nom d'hôte ; `rejectUnauthorized: false` avec un certificat auto-signé (§6.1) |
 | §13.2 point 6 : « fenêtre de synchronisation ouverte » | **repris à la lettre** : une fenêtre que la personne ouvre, 10 minutes au plus [Q5] | l'option la plus sûre (aucun port ouvert hors fenêtre) ; elle coûte un geste sur le Mac |
 | §13.3 étape 2c : Retouches reçues désactivées | **pas envoyées du tout** en v1 | du code : une revue à part (§10.5) |
-| §13.3 étape 2b : onglets d'« Aujourd'hui » | une **annonce** en lecture seule, pas une fusion | ouvrir 80 onglets ici ne doit pas en ouvrir 80 là (§10.4) |
+| §13.3 étape 2b : onglets d'« Aujourd'hui » | d'abord (18 nov.) une **annonce** en lecture seule, pas une fusion ; **depuis le 19 novembre 2026 : des entités partagées** (genre `todayTab`, catégorie `todayTabs`), l'adresse copiée une seule fois et une page jamais rechargée | décision du chef (« Vrais onglets partagés ») ; l'ouverture de 80 onglets reste bornée par le plafond de 200 et la copie unique (§27) |
 | §13.3 étape 2d : historique | **jamais** tant que l'iPhone n'en a pas | rien à fusionner (§10.5) |
 | §13.4 : « le plus récent gagne (horodatage relevé par l'appareil qui l'a vu) » | **marques hybrides** par champ, produites à l'écriture de l'état (§9.2) | l'heure d'une synchronisation n'est pas celle du geste |
 | §13.4 : « une suppression face à une modification : la modification gagne » | repris, et **étendu** : entrer dans un conteneur supprimé compte comme une modification | le cas « Réunions » de la maquette (§11.2) |
@@ -786,7 +792,7 @@ Les points où le code a dû choisir, sans changer ce qui est décidé plus haut
 | **Marques du futur** (§9.3) | `cleanSnapshot` écarte, en plus des entités, les pierres tombales et les listes (avec leur marque d'ordre) dont la marque dépasse l'heure locale de plus de 7 jours ; la porte s'applique aussi à l'instantané que cet appareil envoie, avec l'heure de l'autre (`hello.now`) | les deux fusions doivent partir des mêmes entrées ; une marque de l'an 2286 tirait l'horloge des marques du Mac (`MarkBook.adopt` la retient) |
 | **Avertissement d'horloge** (§9.3) | un `error` non fatal (`clock-skew`) est noté et la séance continue ; un `error` fatal l'arrête avec son code | |
 | **Fichiers** (§3.3) | `sync.json`, `sync-identity.json`, `sync-marks.json`, `sync-base-<id>.json` (un par appareil, 30 jours), à côté de `state.json` | aucun export, aucune sauvegarde ni copie de session ne les emporte |
-| **Onglets ouverts** (§10.4) | annoncés (au plus 200, adresses web, jamais privés ni d'un espace verrouillé) seulement si la catégorie est commune ; gardés **en mémoire** par le service (`openTabsFrom`, `resumeSource`), oubliés au verrouillage, à la fermeture de Lucium, à la décoche de la catégorie, à l'arrêt de la synchronisation et avec l'appareil (pas avec la fenêtre : §26) | la carte 447 les montre sur l'iPhone, la carte 490 dans la barre de commandes du Mac (§25) |
+| **Onglets ouverts** (§10.4 **d'origine, remplacé par le §27** si [Q8] = A) | annoncés (au plus 200, adresses web, jamais privés ni d'un espace verrouillé) seulement si la catégorie est commune ; gardés **en mémoire** par le service (`openTabsFrom`, `resumeSource`), oubliés au verrouillage, à la fermeture de Lucium, à la décoche de la catégorie, à l'arrêt de la synchronisation et avec l'appareil (pas avec la fenêtre : §26) | la carte 447 les montre sur l'iPhone, la carte 490 dans la barre de commandes du Mac (§25) |
 
 **Ce que les tests ne montrent pas** : un échange avec le vrai code de l'iPhone (carte 445), un réseau réel, un grand état de plusieurs milliers d'entités sur un appareil, le comportement de `safeStorage` au premier usage.
 
@@ -808,7 +814,7 @@ Le corps de séance de l'iPhone (§8.2 à §8.5) est `SyncExchangeBody` (LuciumK
 | **Graines** (§10.2) | comme le Mac (§22) : envoyées seulement avec une entité que la base ne contient pas ; la base gardée n'en contient pas | un onglet épinglé change de page à chaque navigation |
 | **Écriture** (§8.5) | `SyncApply` : un champ n'est écrit que si l'état tient encore ce qu'il tenait au gel ; une entité n'est retirée que si elle est encore telle qu'au gel ; chaque valeur reçue est rebornée comme à la lecture d'un fichier (nom, émoji, adresse web, profil, type) et ce que l'état ne type pas (`rest`) est gardé tel quel ; une entité sans nom ou sans adresse n'est pas créée ; ce qui pointe vers un espace ou un dossier disparu est coupé ; **un état n'est jamais laissé sans espace** | ce que la personne change pendant la séance est gardé et repart à la séance suivante |
 | **Réglages** | une clé hors de la liste fermée (§10.3) ou une valeur que cette version n'écrirait pas n'est pas écrite ; un état **sans** réglages reçoit d'abord les cinq d'un nouveau profil | sans eux, des réglages partiels se liraient comme ceux d'un ancien profil (HTTPS d'abord, rien d'autre) et la protection baisserait sans un mot |
-| **Onglets ouverts** (§10.4) | reçus et gardés en mémoire (`SyncExchangeSummary.openTabs`), jamais écrits ; envoyés quand la catégorie est commune : pages web ouvertes (épinglées ou non), jamais un onglet privé ni d'un espace verrouillé, 200 au plus, une adresse de plus de 4096 octets laissée de côté (coupée, ce serait une autre page), un titre coupé à 300 octets ; à la réception, seules les pages web sont gardées, avec un identifiant et un identifiant d'espace de 128 caractères au plus, comme le Mac (#96) | la page « Synchronisation » promet que « ce que vous lisez est envoyé » |
+| **Onglets ouverts** (§10.4 **d'origine, remplacé par le §27** si [Q8] = A) | reçus et gardés en mémoire (`SyncExchangeSummary.openTabs`), jamais écrits ; envoyés quand la catégorie est commune : pages web ouvertes (épinglées ou non), jamais un onglet privé ni d'un espace verrouillé, 200 au plus, une adresse de plus de 4096 octets laissée de côté (coupée, ce serait une autre page), un titre coupé à 300 octets ; à la réception, seules les pages web sont gardées, avec un identifiant et un identifiant d'espace de 128 caractères au plus, comme le Mac (#96) | la page « Synchronisation » promet que « ce que vous lisez est envoyé » |
 | **Marques** (§9.2) | relevées à l'écriture de l'état (`SyncMarkKeeper.observe`) tant que la synchronisation est activée, et au gel de chaque séance ; adoptées à la fin d'une séance réussie (ce que la fusion a écrit n'est pas renvoyé comme un changement de l'iPhone) | sur l'iPhone l'écriture de l'état attend 500 ms (§9.2) |
 | **Adresses** (§8.5) | « adresse web » = `http(s)://` suivi d'un hôte que `URL(string:)` lit ; le Mac demande `URL.canParse`. Les deux lisent pareil toute adresse qu'une personne ouvre ; une adresse exotique que l'un seul lit est refusée de ce côté seul, ce que les empreintes de la séance transforment en `divergence` (rien n'est écrit), jamais en état faux | deux analyseurs d'adresse ne sont pas le même code |
 
@@ -818,7 +824,7 @@ Le corps de séance de l'iPhone (§8.2 à §8.5) est `SyncExchangeBody` (LuciumK
 
 ## 24. Ce que la carte 447 a précisé en l'écrivant (reprendre un onglet du Mac, côté iPhone)
 
-Écrit pour la carte 447. La logique est dans `LuciumKit` (`Sync/SyncResume.swift`, `swift test`) ; l'application ajoute `BrowserModel+Resume.swift`, `ResumeScreen.swift`, la source de `CommandBar.swift` et les lignes de `SyncController`. **Rien n'est écrit** : la liste est celle de §10.4, en mémoire.
+Écrit pour la carte 447. La logique est dans `LuciumKit` (`Sync/SyncResume.swift`, `swift test`) ; l'application ajoute `BrowserModel+Resume.swift`, `ResumeScreen.swift`, la source de `CommandBar.swift` et les lignes de `SyncController`. **Rien n'est écrit** : la liste est celle de §10.4, en mémoire. **Remplacé par le §27 si [Q8] = A** (ce que cette carte a fait est retiré ; le texte est gardé comme historique).
 
 | Sujet | Ce qui est fait | Pourquoi |
 |---|---|---|
@@ -835,7 +841,7 @@ Le corps de séance de l'iPhone (§8.2 à §8.5) est `SyncExchangeBody` (LuciumK
 
 ## 25. Ce que la carte 490 a précisé en l'écrivant (« Sur l'iPhone », barre de commandes du Mac)
 
-Décision du chef de projet du 18 novembre 2026. La logique pure est `src/shared/sync-resume.ts`, **jumelle de `SyncResume.swift`** : les deux jouent les mêmes vecteurs (`ios/Contracts/sync-resume-vectors.json` : lignes, raison, espace cible, âge ; `sync-resume.test.ts` et `SyncResumeVectorTests.swift`). Le service garde la liste (`SyncService.resumeSource`), la barre la demande par un canal à elle (`lucium:sync-resume`, `src/main/shell/sync-ipc.ts`). **Rien n'est écrit dans l'état** et aucune connexion nouvelle n'existe : la liste est celle que l'iPhone a déjà annoncée.
+Décision du chef de projet du 18 novembre 2026. La logique pure est `src/shared/sync-resume.ts`, **jumelle de `SyncResume.swift`** : les deux jouent les mêmes vecteurs (`ios/Contracts/sync-resume-vectors.json` : lignes, raison, espace cible, âge ; `sync-resume.test.ts` et `SyncResumeVectorTests.swift`). Le service garde la liste (`SyncService.resumeSource`), la barre la demande par un canal à elle (`lucium:sync-resume`, `src/main/shell/sync-ipc.ts`). **Rien n'est écrit dans l'état** et aucune connexion nouvelle n'existe : la liste est celle que l'iPhone a déjà annoncée. **Remplacé par le §27 si [Q8] = A** (historique).
 
 | Sujet | Ce qui est fait | Pourquoi |
 |---|---|---|
@@ -851,7 +857,7 @@ Décision du chef de projet du 18 novembre 2026. La logique pure est `src/shared
 
 ## 26. Ce que la carte 491 a changé (liste gardée après la fenêtre, phrase « comment l'activer »)
 
-Décision du chef de projet du 18 novembre 2026 (« La garder en mémoire »), suite du §25.
+Décision du chef de projet du 18 novembre 2026 (« La garder en mémoire »), suite du §25. **Remplacé par le §27 si [Q8] = A** (historique).
 
 | Sujet | Ce qui est fait | Pourquoi |
 |---|---|---|
@@ -860,3 +866,188 @@ Décision du chef de projet du 18 novembre 2026 (« La garder en mémoire »), s
 | **La phrase** | quand la liste est absente et que le texte tapé nomme la section (« iphone »), une ligne **sans action** sous « Sur l'iPhone » dit **comment l'activer**, une phrase par raison (`resumeAvailability` : `not-paired`, `disabled-here`, `waiting`, `disabled-on-iphone`, `empty` ; clés `cmd.iphone-hint-*`, FR et EN) | rien n'est dit à qui tape autre chose, ni à qui n'a pas d'iPhone ; la raison était déjà calculée |
 
 **Ce que les tests ne montrent pas** : une vraie barre de commandes ouverte et un vrai iPhone (aucune fenêtre ouverte).
+
+## 27. Onglets d'« Aujourd'hui » partagés (carte 504)
+
+**Décision du chef de projet, le 19 novembre 2026**, après le deuxième essai réel (« j'ai pas les onglets du jour qui se synchronisent » → « Vrais onglets partagés ») : les onglets d'« Aujourd'hui » deviennent de vrais onglets partagés. **Ouvrir ou fermer un onglet sur un appareil le fait sur l'autre, à la séance suivante.** Cette section **remplace** le §10.4 d'origine (une annonce en lecture seule, décidée le 18 novembre : l'historique est gardé au §10.4). Elle est écrite pour le fonctionnement **automatique** décidé le même jour (carte 505 : le Mac écoute tant que la synchronisation est activée, l'iPhone synchronise à un intervalle réglable de 30 s, 1 min, 5 min ou 15 min ; §6.1 et [Q5] sont réécrits par cette carte, pas ici) : un onglet arrive donc **au plus un intervalle après**, tant que l'application de l'iPhone est ouverte. **Les rôles ne changent pas** : l'iPhone est le client, le Mac le serveur (§3.1). **Rien de ce qui suit n'est écrit en code** : c'est la conception ; les cartes d'implémentation viennent après les réponses du chef.
+
+**Étiquettes.** Les choix qui reviennent au chef sont **[Q8] à [Q14]** (tableau du §27.14, posés en commentaires `[question]` sur la carte 504 ; [Q14] est le choix de la navigation, voir §27.10). Chaque paragraphe qui en dépend porte son étiquette, avec **la recommandation** ; une réponse différente ne change que ce paragraphe. **Vérifié** et **à vérifier** gardent le sens de l'en-tête : ce qui est dit du code a été lu dans le dépôt le 19 novembre 2026 ; ce qui n'a pas été lu est marqué « à vérifier ».
+
+### 27.1 En bref
+
+| Question | Réponse |
+|---|---|
+| Quoi | L'**ouverture** et la **fermeture** d'un onglet d'« Aujourd'hui », son **espace**, son **ordre**, le **nom** et l'**icône** que la personne lui a donnés. **Pas la page où l'on est** : l'adresse et le titre sont copiés une fois, à l'arrivée de l'onglet [Q14] |
+| Catégorie | **Une nouvelle**, `todayTabs`, « Onglets d'Aujourd'hui », **non cochée par défaut** [Q9] ; elle remplace « Onglets ouverts » [Q8] |
+| Entité | un nouveau genre, **`todayTab`**, une liste d'ordre par espace, `today:<espace>`, des pierres tombales à la fermeture |
+| Une fermeture reçue | **range l'onglet dans l'archive** de l'autre appareil (source `sync`) : rien n'est supprimé sans trace [Q11] |
+| Jamais | un onglet **privé**, d'une **fenêtre privée**, d'un **espace verrouillé** [Q4], d'un **conteneur**, la page d'un **favori**, une page qui n'est pas en `http` ou `https`, un onglet **au-delà du plafond de 200** [Q12] |
+| Chargement | **aucune page n'est rechargée** : un onglet reçu arrive **endormi**, sans connexion réseau, et ne charge qu'à son ouverture |
+| Protocole | **version 1 inchangée** ; un appareil qui ne connaît pas la catégorie ne la reçoit pas (§27.13) |
+
+### 27.2 Le modèle : l'entité « onglet d'Aujourd'hui »
+
+Un onglet d'« Aujourd'hui » est un onglet **ni épinglé, ni privé, ni la page d'un favori** (`isListedTab`, `model.ts`). Il devient une entité du genre **`todayTab`**, de la forme du §8.3 (`fields` et une marque par champ, §9.2). Le genre est **distinct** de `tab` (les onglets épinglés, catégorie `structure`) : les deux catégories se cochent séparément et un genre ne passe que si sa catégorie est commune (§10.1).
+
+| Champ | Classe (§10.2) | Pourquoi |
+|---|---|---|
+| `id` | synchronisé (clé) | **stable** : l'identifiant que chaque appareil donne déjà à l'onglet (aléatoire ; l'iPhone écrit `UUID().uuidString.lowercased()`). **À vérifier** : que l'identifiant d'onglet du Mac est aussi aléatoire, sinon deux appareils pourraient donner le même à deux onglets. Il reste le même sur les deux appareils tant que l'onglet existe, et c'est aussi l'identifiant de son entrée d'archive (§27.5) |
+| `spaceId` | synchronisé | un onglet déplacé dans un autre espace suit |
+| `customTitle` | synchronisé | le nom que la personne a donné à l'onglet |
+| `icon` | synchronisé | l'émoji choisi |
+| `activeAt` | synchronisé, **projection** | le moment de la dernière utilisation, **arrondi à 10 minutes** (§27.5) ; ce n'est pas un champ du modèle d'onglet : c'est `lastActiveAt` arrondi, et recevoir un `activeAt` plus grand que le sien fait écrire `lastActiveAt = max(local, reçu)` |
+| `url`, `title` | **graine** | l'adresse et le titre **au moment où l'onglet entre dans l'ensemble partagé** (§27.3), **copiés une fois** puis locaux : la page change à chaque navigation, c'est du bruit [Q14]. Comme pour les onglets épinglés (§22), **la base n'en garde pas** : une adresse ou un titre n'est pas écrit dans les fichiers de la synchronisation |
+| tous les autres champs de `TabItem` | **local** | `image`, `faviconUrl`, `deadKept`, `autoReload`, `container`, `windowKey`, `openerId`, `parentId`, `treeCollapsed` (l'arbre des onglets n'est pas partagé), `favoriteId`, `createdAt`, `lastActiveAt`, `private`, `keepAwake` |
+
+- **Marques** : par champ, comme tout le reste (§9.2) ; relevées à l'écriture de l'état, **au moment où l'appareil voit le changement**. **Pierre tombale** : l'onglet qui **quitte** « Aujourd'hui » (fermé, archivé à la main ou automatiquement, épinglé, espace supprimé) donne `(todayTab, id, marque)` gardée **30 jours** (§11.5) : l'identifiant seul, jamais une adresse.
+- **Ordre** : un registre par liste, clé `today:<espace>` (§11.4) ; les onglets arrivés de l'autre côté vont à la fin, triés par marque de naissance. **Avec l'arbre des onglets activé** (`tabTree`), l'ordre reçu n'est qu'un point de départ : l'arbre remet ses branches en place (`settleTree`).
+- **À l'arrivée**, l'onglet est créé **endormi** (§27.12), avec `createdAt` et `lastActiveAt` égaux à l'`activeAt` reçu (un onglet vieux de onze heures arrive vieux de onze heures : l'archivage automatique le traite alors pareil des deux côtés, §27.5), dans l'espace nommé, **sans jamais changer l'onglet ni l'espace affichés** (§27.6).
+- **Épingler, détacher** : épingler un onglet d'« Aujourd'hui » fait **disparaître** `todayTab/<id>` et **apparaître** `tab/<id>` (même identifiant). L'application du patch lit « une suppression de `todayTab` et une création de `tab` du même identifiant, dans le même patch » comme **un déplacement** : l'onglet reste, change de liste, garde sa page. Le détacher est le même cas en sens inverse. Sans cette règle, une suppression et une création se croiseraient sur un seul onglet. **Si `structure` n'est pas commune**, épingler fait quitter l'ensemble partagé : l'autre appareil le **ferme** (il va à son archive) ; le §27.9 en tient un vecteur.
+
+### 27.3 Qui est partagé : l'admission
+
+Un onglet **entre** dans l'ensemble partagé quand, **à la fin du gel d'une séance dont la catégorie `todayTabs` est commune**, il tient **toutes** ces conditions :
+
+1. un onglet d'« Aujourd'hui » d'une **fenêtre normale** (§27.7) ; ni privé, ni la page d'un favori, ni d'un **conteneur** (un conteneur est un isolement voulu : son adresse ne quitte pas l'appareil ; choix de conception, jamais vu par le chef) ;
+2. son espace n'est **pas verrouillé** [Q4] ;
+3. son adresse est en `http` ou `https`, avec un hôte, de **4096 octets au plus** (une adresse plus longue est laissée de côté, jamais coupée : une adresse coupée est une autre page) ;
+4. il est ouvert **depuis 20 secondes au moins** : un onglet de passage (une fenêtre d'authentification, une redirection) ne part pas, et le titre n'est plus celui d'une page en cours de chargement ;
+5. il y a de la **place** (§27.4).
+
+**L'admission est collante.** Les conditions 3 et 4 ne sont regardées **qu'à l'entrée** : une fois admis, l'onglet reste dans l'instantané **tant qu'il existe dans « Aujourd'hui »**, quelle que soit la page où il va (une page interne, une page trop longue). Sinon sa navigation le ferait **disparaître de l'instantané**, et la fusion lit « absent d'un côté, dans la base » comme une **fermeture** (§11.2) : l'autre appareil le fermerait. **Pour la même raison**, ni le plafond, ni un verrou posé plus tard, ne retirent un onglet de l'instantané : le verrou le met de côté (`withheld`, §18), il ne le supprime pas.
+
+**Où est tenue l'admission** : dans le livre des marques de l'appareil (§22, `sync-marks.json`), **par appareil et non par appairé** ; un onglet admis suit l'état tant que l'interrupteur est activé, comme les autres entités. Un onglet admis puis fermé **pendant qu'aucune séance n'a lieu** donne sa pierre tombale à la lecture suivante de l'état (§9.2), comme n'importe quelle suppression.
+
+### 27.4 Plafond [Q12]
+
+**Recommandation (A) : 200 onglets partagés au plus, par appareil ; un onglet de plus reste local.** Le chiffre est celui de l'annonce du §7.5 (200). L'appareil garde **au plus 200** onglets admis à la fois ; un onglet qui n'entre pas est **« non partagé »** : il reste où il est, **sans jamais disparaître de nulle part**, et il est admis dès qu'une place se libère (celui qui a servi le plus récemment d'abord, puis l'identifiant). La page dit « 37 onglets d'Aujourd'hui ne sont pas partagés (limite : 200) ».
+
+- Deux appareils qui admettent chacun 200 donnent **jusqu'à 400** onglets dans l'ensemble fusionné : c'est voulu (un plafond sur le résultat obligerait la fusion, fonction pure des mêmes entrées des deux côtés, à choisir quel onglet retirer, c'est-à-dire à le **supprimer** : voir §27.3).
+- **La porte d'entrée** (`cleanSnapshot` côté Mac, `SyncInbound.clean` côté iPhone) refuse en plus **plus de 500 entités `todayTab` dans un instantané** : les mieux classées (par `activeAt` décroissant, puis identifiant) sont gardées, les autres écartées, comptées, journalisées (`too-many-today-tabs`), jamais fatales ; une entité écartée qui est dans la base est **remplacée par sa version de la base** (la règle du §22, « Entité refusée qui est dans la base »), pour que l'écart ne soit pas lu comme une suppression. Un appareil honnête n'y arrive jamais.
+- **Options.** (A) ce qui précède. (B) le même mécanisme à **500** : plus de confort pour qui garde beaucoup d'onglets, un instantané plus gros (environ 150 Kio, bien sous la trame de 1 Mio ; **à mesurer**). (C) **aucun plafond propre** : au-delà de 200 la catégorie s'arrête avec une erreur (`too-many-tabs`) jusqu'à ce que la personne ferme des onglets : plus simple, plus brutal.
+
+### 27.5 Archivage automatique et fermeture [Q10] [Q11]
+
+Un onglet **quitte** « Aujourd'hui » par la croix, ⌘W, « Archiver tout » (`today/clear`), l'**archivage automatique** (`archive/sweep` sur le Mac, `sweepIdleTabs` sur l'iPhone : un onglet resté inactif plus longtemps que le délai de son profil, 12 h par défaut ; le balayage tourne toutes les 10 minutes sur le Mac), la suppression de son espace. **Tous ces cas sont la même chose pour la synchronisation** : l'onglet n'est plus dans l'instantané, donc la fusion rend une **fermeture** à l'autre appareil. Dans tous les cas, côté appareil, l'onglet est déjà **archivé** (le Mac comme l'iPhone mettent l'onglet fermé dans l'archive, avec l'identifiant de l'onglet).
+
+| Question | Réponse |
+|---|---|
+| Un onglet **archivé** sur l'un : **fermé** ou **archivé** sur l'autre ? | **Archivé** [Q11]. Une fermeture reçue appelle **le même chemin que l'archivage local** (`archiveTabs`, `archive(tabIds:)`), source **`sync`** (celle que le §8.5 utilise déjà pour un espace supprimé), avec **l'adresse que l'onglet a alors sur cet appareil** : si la personne a navigué ici, la page où elle est va à l'archive, **rien n'est perdu**. « Rouvrir le dernier onglet fermé » la rend. Une page interne ou privée, que l'archive n'accepte pas, est seulement retirée |
+| Doublons dans l'archive quand `archive` est aussi commune | **Aucun** : l'identifiant d'une entrée d'archive est celui de l'onglet **des deux côtés** (`archiveTabs` : `id: t.id` ; `archive(tabIds:)` : `id: tab.id`). L'entrée écrite par l'appareil qui ferme et celle de l'appareil qui reçoit sont **la même entité `archived`** ; seuls `source` et `archivedAt` diffèrent, tranchés par marque, sans conséquence |
+| Restaurer depuis l'archive | crée un **nouvel onglet, d'un nouvel identifiant** : c'est une ouverture, il est partagé comme un autre |
+| Qui balaie, et sur quelle activité ? | **Chaque appareil balaie de son côté**, avec son délai (le réglage `autoArchiveHours` voyage si « Réglages » est coché, §10.3). **Le défaut recommandé [Q10 : A]** : l'activité est **partagée en gros** par `activeAt` (arrondi à 10 minutes) et le balayage lit `max(lastActiveAt, activeAt reçu)`. Ainsi un onglet lu sur l'iPhone n'est pas balayé par le Mac qui ne l'a pas vu : sans cela, **un onglet que l'on lit sur l'iPhone se ferait fermer** par le Mac à la séance suivante, ce qui est le défaut du cas d'usage |
+| Fermé ici **pendant qu'il est lu** là | `activeAt` plus récent que la base est **une modification** : la fusion garde l'onglet (la suppression perd face à une modification, §11.2). L'appareil qui avait fermé le **retrouve**. **`activeAt` ne bouge que lorsque la personne choisit l'onglet ou y navigue**, pas quand l'application revient au premier plan sur l'onglet déjà affiché, ni pendant qu'elle le lit : sinon une fermeture ne tiendrait jamais sur un iPhone qui montre l'onglet |
+| Séance déclenchée par un `activeAt` seul | **non** : le changement d'activité attend la séance suivante, de la même façon qu'une navigation |
+
+**[Q10] — Options.** (A) l'activité est **partagée en gros** (recommandé). (B) chaque appareil balaie **sur sa seule activité** : rien de plus n'est partagé, mais un onglet lu sur un appareil est fermé par l'autre. (C) les onglets **partagés ne sont plus balayés** : la personne les ferme elle-même, et le plafond (§27.4) se remplit d'onglets oubliés.
+
+**[Q11] — L'onglet affiché au moment de la fermeture.** (A) il est **fermé comme les autres** et l'appareil montre le voisin, avec une ligne « Fermé sur le Mac » (recommandé : le même résultat sur les deux appareils, la page est dans l'archive). (B) il est **gardé**, et revient donc sur l'autre appareil à la séance suivante (le tableau du §27.9, « ouvert ici, fermé là », devient un va-et-vient). (C) il est gardé **jusqu'à ce que la personne le quitte**, puis fermé : plus doux, un état de plus à garder en mémoire de la séance.
+
+### 27.6 L'onglet actif : pas synchronisé
+
+L'onglet affiché et l'espace affiché (`activeTabBySpace`, `activeSpaceId`) **restent propres à l'appareil** (§10.5, inchangé). Ouvrir un onglet sur le Mac **ne le montre pas** sur l'iPhone : il s'ajoute à la liste ; une séance **ne change jamais** l'onglet ni l'espace que la personne regarde. **Seule exception**, [Q11] : l'onglet affiché est lui-même fermé à distance.
+
+### 27.7 Fenêtres privées, espaces verrouillés, adresses
+
+| Cas | Règle |
+|---|---|
+| **Fenêtre privée** (Mac), onglet privé | **jamais** : aucune ligne dans l'instantané, aucune demande de la fenêtre (`isSyncedTab` exclut déjà `private`) ; la synchronisation n'est pas pour elle |
+| **Espaces verrouillés** [Q4] | la règle de [Q4] **ne change pas** : les onglets de l'espace sont **mis de côté** (`withheld` retire de la fusion l'espace et tout ce qui en dépend par `spaceId`) ; rien n'en est envoyé, rien n'en est appliqué tant qu'il est verrouillé. Une fermeture reçue pour un onglet d'un espace verrouillé **attend** le déverrouillage. Au déverrouillage, l'espace n'a pas de base : ses onglets sont des **ajouts des deux côtés** (§18, §11.8) |
+| **`http` et `https` seulement**, **à l'envoi et à la réception** | à l'envoi (admission, §27.3) ; à la réception, une entité `todayTab` dont l'adresse n'est pas une page web avec un hôte, ou dépasse 4096 octets, est refusée (`invalid-url`) comme l'adresse d'un onglet épinglé (§22) : remplacée par sa version de la base si elle y est, sinon écartée. Un titre dépasse 300 octets : coupé **sans séparer une paire de substituts** (`cutBytes`) |
+| **Mini-fenêtre** (le Mac) | ses onglets ne sont pas des onglets de fenêtre normale : **non partagés**. **À vérifier** par la carte Mac : où vit l'état d'une mini-fenêtre |
+| **Fenêtres indépendantes** (`independentWindows`) | un onglet est partagé quelle que soit sa fenêtre ; `windowKey` reste local. Un onglet reçu arrive dans **la première fenêtre** (celle sans `windowKey`) |
+
+### 27.8 Vie privée : ce que cela ajoute
+
+Titres et adresses des onglets ouverts sont **ce qui ressemble le plus à un historique** (§10.4). Ils partaient déjà dans l'annonce `open-tabs`, mais **en lecture seule et en mémoire**. Ce que cette section ajoute, et ce qu'elle n'ajoute pas :
+
+- **Ce qui part** : pour chaque onglet partagé, **l'adresse et le titre à l'entrée** (graines), l'espace, le nom et l'icône que la personne a donnés, l'**ordre**, et `activeAt` (le moment de la dernière utilisation, à 10 minutes près : [Q10]). **Vers l'appareil appairé seulement**, par le même canal chiffré (§6).
+- **Ce qui n'est pas écrit sur disque par la synchronisation** : **aucune adresse, aucun titre** (la base n'en garde pas, §27.2 ; le livre des marques garde des empreintes, §22 ; une pierre tombale est un identifiant et une marque). **Le journal des conflits** (§11.7.3) ne garde **jamais l'adresse ni le titre** d'un onglet d'« Aujourd'hui » : la ligne dit « Onglet », ou le nom que la personne lui a donné. L'adresse d'un onglet fermé n'est gardée que par **l'archive de l'appareil**, qui existe déjà et que la personne peut vider (le « Rien n'est gardé » de la maquette n'est pas modifié).
+- **Ce que l'on peut déduire des pierres tombales** (30 jours) : combien d'onglets ont été fermés et quand, pas leur contenu.
+- **Le défaut reste non coché** [Q9] ; la page dit **en une phrase** ce qui part : « Les titres et les adresses de vos onglets d'Aujourd'hui sont envoyés à l'autre appareil. »
+- **Rien de nouveau n'est envoyé hors de l'appareil appairé** : pas d'appel réseau, pas de ligne de plus dans le tableau des connexions de ce point de vue, mais **la ligne du README change de mot** (§27.15).
+
+**[Q9] — Valeur par défaut de la catégorie.** (A) **non cochée**, une phrase sur la page (la réponse du chef à [Q2] reste telle quelle : « le mieux le plus secure »). (B) **non cochée, mais proposée une fois** : la feuille « Autoriser » du Mac et la feuille « Appairer » de l'iPhone portent une case « Partager aussi les onglets d'Aujourd'hui », **décochée** : la personne dit oui ou non au moment où elle s'appaire, au lieu de découvrir la catégorie après coup (le deuxième essai a montré qu'elle ne la cherche pas). Chaque appareil garde **sa** case (les deux doivent être cochées, §10.1) : c'est deux gestes, mais faits à l'appairage, sous les yeux de la même personne. (C) **cochée par défaut** : rompt [Q2]. **Recommandation : B.**
+
+### 27.9 Conflits
+
+La fusion du §11 s'applique **sans règle propre** : les cas ci-dessous sont des cas de ses règles, que les vecteurs du §27.13 tiennent.
+
+| Situation | Résultat |
+|---|---|
+| **Fermé ici, navigué là** | **La fermeture gagne.** Une navigation n'est **pas un changement d'un champ suivi** (`url` est une graine) : l'onglet est « intact » de l'autre côté, il est supprimé (§11.2). La page où il était va à l'**archive** de l'appareil où l'on a navigué (§27.5) : rien n'est perdu |
+| **Fermé ici, lu là** (`activeAt` plus récent que la base) | **L'onglet est gardé** : une modification gagne une suppression (§11.2). Résumé de conflit : « Gardé sur les deux appareils » (§13.4) |
+| **Fermé ici, déplacé, renommé ou changé d'icône là** | **L'onglet est gardé**, tel que l'autre côté l'a (même règle) |
+| **Fermé des deux côtés** | absent ; les pierres tombales se réunissent |
+| **Ouvert sur les deux, même adresse** | **deux onglets** : deux identifiants, deux entités, aucune fusion par adresse [Q13] |
+| **Renommé des deux côtés** | la **marque la plus grande** gagne, comme pour un espace (§11.3) |
+| **Épinglé ici, fermé là** | l'épinglage (`tab/<id>`) est une **création** : l'onglet revient **épinglé** sur les deux appareils (si `structure` est commune) ; c'est un geste de la personne, plus récent que la fermeture |
+| **Réordonné des deux côtés** | la liste dont la marque d'ordre est la plus grande (§11.4) |
+
+### 27.10 Premier échange [Q13] [Q14]
+
+La **base est vide** (première séance, base perdue, plus de 30 jours, ou **première fois que la catégorie est commune**) : **l'union** des deux listes (§11.8), chaque onglet est un ajout, aucun conflit. Le plafond (§27.4) s'applique à ce que **chaque appareil** envoie : un Mac qui a 300 onglets en partage les **200** dont il s'est servi le plus récemment, les autres restent locaux.
+
+- **Un iPhone jamais modifié** (§11.8) **adopte aussi les onglets du Mac** : son instantané de `todayTab` est vide comme celui de la structure, quand `todayTabs` est commune. Le drapeau « jamais modifié » passe à faux dès que la personne ouvre un onglet : **l'adoption ne retire jamais un onglet qu'elle a ouvert**. Une page vide (page de démarrage) n'est pas partageable de toute façon (§27.3).
+- **Doublons d'adresse** : une même page ouverte sur les deux appareils donne **deux onglets**. **Options.** (A) **aucun dédoublonnage** (recommandé) : l'union ne perd rien, les deux copies sont à fermer, et une fusion « par adresse » obligerait le premier échange à **fermer** un onglet de la personne sans qu'elle l'ait demandé. (B) **dédoublonner au premier échange seulement** : même espace et même adresse exacte : un seul est gardé (le plus récemment utilisé), l'autre est archivé ; plus propre, mais la fermeture n'est plus un geste de la personne.
+- **Si la base est perdue plus tard** (§11.5), ce qui avait été fermé sur un appareil et qui est resté ouvert sur l'autre **revient** : l'écran d'état le dit déjà.
+- **Navigation reprise ou non [Q14].** (A) **non** : l'adresse est copiée à l'ouverture seulement (recommandé : pas de rechargement, pas de flux d'adresses de plus, aucun conflit sur l'adresse). Conséquence **assumée** : deux copies d'un même onglet peuvent montrer deux pages, celle de l'appareil où l'on a navigué en dernier n'étant pas reprise par l'autre. (B) **oui, sur un onglet endormi seulement** : l'adresse devient un champ synchronisé (dernière navigation gagnante) ; un onglet éveillé n'est jamais navigué par la synchronisation. Plus fidèle à « mêmes onglets », mais chaque navigation devient un changement à échanger, à départager et à journaliser, et le flux des pages vues devient un historique d'adresses de plus. Passer de A à B plus tard ne change que la classe d'un champ (§10.2).
+
+### 27.11 « Reprendre un onglet du Mac » [Q8]
+
+**Recommandation (A) : supprimé.** Avec des onglets partagés, la liste en lecture seule ne sert plus : ce qu'elle montrait est déjà dans « Aujourd'hui ». **Aucune version publiée ne porte la synchronisation** (§17, point 10) : retirer maintenant coûte peu, retirer plus tard coûterait une migration.
+
+- **Ce qui disparaît** : la catégorie `openTabs` (§10.1), le message `open-tabs` (§7.3, §7.4, §7.5, §8.2 point 4), l'écran « Reprise » et la source « Sur le Mac » (cartes 447 et 452, §24), la source « Sur l'iPhone » de la barre de commandes du Mac et son canal `lucium:sync-resume` (carte 490, §25), la mémoire de la liste après la fenêtre et sa phrase (carte 491, §26), les vecteurs `sync-resume-vectors.json`, `openTabsOf`, `SyncResume`, `sync-resume.ts`. Les §24, §25 et §26 restent **comme l'historique de ce qui a été fait** ; chacun porte une ligne qui dit qu'il est remplacé.
+- **Ce qui est lu avec tolérance** : une valeur `openTabs` dans un fichier `sync.json` d'une version de développement est **ignorée** (jamais une erreur). **Un appareil de développement qui l'annoncerait encore** ne la partage avec personne : la nouvelle version ne la connaît pas, l'intersection du §8.2 l'exclut, `open-tabs` n'est donc jamais envoyé.
+- **Options.** (A) ce qui précède. (B) **garder les deux** : « Onglets ouverts » reste un mode léger (voir sans importer), la ligne de catégorie devient à **trois états** (rien / voir les onglets de l'autre appareil / les partager) ; quand `todayTabs` et `openTabs` sont communes, `open-tabs` n'est **pas** envoyé. Plus de code à tenir et à tester (les trois écrans existants), pour qui veut voir sans que rien ne s'ouvre ni ne se ferme.
+
+### 27.12 Performances
+
+- **Pas de rechargement.** Un onglet reçu est créé **endormi** : sans vue web ni connexion, avec son titre et son adresse ; il ne charge qu'à son ouverture. **À vérifier** : le Mac sait créer un onglet d'« Aujourd'hui » endormi avec une adresse (il le fait pour les onglets épinglés, `awake: false`, et pour ses endormis) ; l'iPhone sait garder un onglet sans vue web (`TabSleep`, `WebViewHost`) et n'en crée qu'à l'ouverture. Aucune icône n'est chargée pour un onglet endormi. Un onglet **navigué** n'est jamais rechargé par la synchronisation (l'adresse est une graine, [Q14]). Fermer un onglet éveillé est la fermeture ordinaire.
+- **Taille.** Un instantané de 200 onglets : environ 200 entités de quelques champs, de l'ordre de 60 Kio, quinze valeurs JSON par entité, soit trois mille valeurs sur les 150 000 permises par trame (§7.5). **À mesurer** avec 200 onglets réels.
+- **Fréquence.** Avec des séances toutes les 30 secondes (carte 505), un instantané complet par séance (§8.2) coûte une poignée de main TLS et deux fois cette taille, **même quand rien n'a changé**. L'**envoi par différences** que le §8.2 prévoit « plus tard » devient alors le premier chantier de performance ; il n'est **pas** dans cette carte, et la mesure ci-dessus dit s'il est nécessaire.
+- **Déclencheurs.** Une séance « après un changement local » (§8.1) ne se déclenche que sur un changement **d'un champ suivi** : l'ouverture, la fermeture, le déplacement, un nom, une icône ; **ni une navigation, ni `activeAt` seul** (§27.5), sinon chaque page lue ferait une séance.
+- **Application.** Les créations d'un échange (200 à la première séance) passent par **un seul** `sync/apply`, **une seule** écriture de l'état et un seul affichage, avec l'application en temps linéaire du §22 ; **à mesurer** avec 200 créations. Les onglets créés ne chargent rien : le coût est celui de l'état, pas celui des pages.
+- **Livre des marques et pierres tombales.** Quatre marques par onglet, environ 200 onglets admis ; une centaine de fermetures par jour donne quelque trois mille pierres tombales sur 30 jours, très sous la borne de 50 000 (§7.5).
+
+### 27.13 Compatibilité : une catégorie que l'autre appareil ne connaît pas
+
+- **La version du protocole reste 1** : « ajouter un champ ou une catégorie ne change pas la version » (§7.2). `hello.categories` est une liste de textes de 32 caractères au plus, **quel que soit leur contenu** (`messages.ts`) : un appareil qui ne connaît pas `todayTabs` **ne l'annonce pas** et **ignore** celle de l'autre. L'intersection du §8.2 l'exclut : **ni `todayTab`, ni `today:<espace>` n'est envoyé**, l'échange continue comme avant pour le reste.
+- **Ce que dit la page** : une catégorie cochée ici et absente de l'intersection dit « Pas cochée sur l'autre appareil, ou son Lucium est plus ancien » (le `hello` ne dit pas laquelle des deux : il donne la liste des catégories **cochées**, et `appVersion`). Le « Dernier échange » de l'iPhone (§13.3) dit déjà « pas échangées parce que non cochées sur le Mac » ; la phrase gagne ce second cas.
+- **Un genre inconnu** (`todayTab` chez un appareil plus ancien) traverse sans être lu (§11.6) : cela ne peut arriver que si l'autre en a envoyé sans que la catégorie soit commune, ce qu'un appareil honnête ne fait pas.
+- **Aucun changement du format d'état** (`stateVersion` inchangée) : `todayTab` n'est jamais dans `state.json`, c'est une projection des onglets. **Seul le livre des marques** gagne les onglets admis : son numéro de format augmente ; ce qu'une version plus ancienne fait d'un livre d'un format plus récent (le garder tel quel, comme le journal du §11.7.3, ou en refaire un à partir de l'état, ce qui revient à une base perdue, §11.8) est **à décider par la carte d'implémentation**.
+- **Les vecteurs** (§19) gagnent `sync-today-vectors.json` : admission (conditions, collante, plafond, délai de 20 s), classement `fieldClasses` du genre `todayTab` (**et** la projection `activeAt`), cas de fusion du §27.9 (y compris le déplacement épinglé ↔ Aujourd'hui et la suppression face à `activeAt`), cas de la porte d'entrée (`invalid-url`, `too-many-today-tabs`), l'archivage à la réception et l'identifiant d'entrée d'archive. Joués par Vitest contre le vrai code du Mac et par LuciumKit contre le Swift ; **sans ces vecteurs, une seule règle différente d'un côté donne `divergence`** (§8.5).
+
+### 27.14 Choix qui reviennent au chef de projet (carte 504)
+
+Posés en commentaires `[question]` de la carte 504. **Les réponses ne sont pas encore données** : le texte ci-dessus suit la recommandation.
+
+| | Choix | Recommandé | Où |
+|---|---|---|---|
+| **Q8** | Que devient « Reprendre un onglet du Mac » | **Supprimé** (la liste en lecture seule n'a plus d'objet) | §27.11 |
+| **Q9** | Valeur par défaut de la catégorie | **Non cochée, proposée une fois à l'appairage** (case décochée sur chaque appareil) | §27.8 |
+| **Q10** | Archivage automatique des onglets partagés | **Activité partagée en gros** (`activeAt`, 10 minutes) ; un balayage ferme chez l'autre | §27.5 |
+| **Q11** | Une fermeture reçue, et l'onglet qui est affiché | **Archivé même s'il est affiché**, avec une ligne qui le dit | §27.5 |
+| **Q12** | Plafond | **200 par appareil**, au-delà **local** (jamais supprimé) | §27.4 |
+| **Q13** | Premier échange : doublons d'adresse | **Union sans dédoublonnage** | §27.10 |
+| **Q14** | La navigation d'un onglet partagé est-elle reprise sur l'autre appareil | **Non** : adresse copiée à l'ouverture seulement | §27.10 |
+
+### 27.15 Ce qui change ailleurs dans ce document
+
+| Passage | Changement |
+|---|---|
+| §10.1, tableau | la ligne `openTabs` devient `todayTabs` [Q8] |
+| §10.2, tableau | le genre `todayTab` |
+| §10.4 | réécrit : la décision du 18 novembre y est gardée comme historique, remplacée le 19 novembre |
+| §8.2 point 4, §8.3, §7.3 à §7.5 | le message `open-tabs` est retiré si [Q8] = A ; le genre `todayTab` s'ajoute aux genres |
+| §8.5 (espace supprimé à distance) | les onglets d'« Aujourd'hui » de l'espace supprimé sont **déjà** archivés par la règle : elle vaut pour les onglets partagés comme pour les autres |
+| §11.4 | les listes `today:<espace>` |
+| §13.1, §13.3 | la phrase de la catégorie ; le « Dernier échange » ne dit plus que les onglets d'« Aujourd'hui » ne passent jamais |
+| §14 | la ligne du README : « et vos onglets d'Aujourd'hui », au lieu de « la liste de vos onglets ouverts » ; **le README lui-même est changé par la carte d'implémentation, dans le même commit que la fonction** (`AGENTS.md` §5) |
+| §21 | la ligne « étape 2b » |
+| §22 à §26 | des lignes qui disent « remplacé par §27 » (si [Q8] = A) |
+| `docs/ios.md` §13.3 | la ligne 2b |
+
+**Ce qui ne change pas** : [Q4] (espaces mis de côté), [Q2] pour les autres catégories, [Q3] (union), la fusion et ses propriétés (§11.9), les bornes des messages (§7), le chiffrement, l'appairage, les rôles du Mac et de l'iPhone, l'onglet affiché. **Ce que cette section ne dit pas** : le fonctionnement automatique (écoute du Mac, intervalle de l'iPhone), qui est de la carte 505.
+
+**Ce que les tests ne montrent pas** : rien de cette section n'est encore écrit en code ; rien n'a été essayé avec un iPhone.
