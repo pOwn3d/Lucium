@@ -213,6 +213,8 @@ extension BrowserState {
         counts["folders"] = Library.unreadable(rest["folders"], as: Folder.self)
         counts["favorites"] = Library.unreadable(rest["favorites"], as: Favorite.self)
         counts["archive"] = Library.unreadable(rest["archive"], as: ArchivedTab.self)
+        counts["readLater"] = Library.unreadable(rest["readLater"], as: ReadLaterItem.self)
+        counts["bookmarks"] = Library.unreadable(rest["bookmarks"], as: Bookmark.self)
         return counts.filter { $0.value > 0 }
     }
 }

@@ -1,0 +1,50 @@
+{
+  "comment": "Played by src/shared/ios-contract.test.ts against the Mac (bookmarks.ts, read-later.ts) and by KeepsakesTests against LuciumKit. Limits are checked there too.",
+  "keys": [
+    { "input": "https://Exemple.fr", "expect": "https://exemple.fr/" },
+    { "input": "https://exemple.fr/", "expect": "https://exemple.fr/" },
+    { "input": "https://a.example:443/x", "expect": "https://a.example/x" },
+    { "input": "http://a.example:80", "expect": "http://a.example/" },
+    { "input": "http://a.example:8080/p?q=1#f", "expect": "http://a.example:8080/p?q=1#f" },
+    { "input": "https://HOST.example/Path/A?Q=B", "expect": "https://host.example/Path/A?Q=B" }
+  ],
+  "webAddresses": [
+    { "input": "https://example.com/page", "expect": true },
+    { "input": "HTTP://example.com", "expect": true },
+    { "input": "ftp://example.com", "expect": false },
+    { "input": "javascript:alert(1)", "expect": false },
+    { "input": "file:///etc/hosts", "expect": false },
+    { "input": "about:blank", "expect": false },
+    { "input": "example.com", "expect": false },
+    { "input": "https://", "expect": false }
+  ],
+  "bookmarks": [
+    { "id": "b1", "url": "https://swift.example/guide", "title": "Guide de Swift", "tags": ["code", "Référence"], "note": "à relire" },
+    { "id": "b2", "url": "https://cuisine.example/tarte", "title": "Tarte aux pommes", "tags": ["cuisine"] },
+    { "id": "b3", "url": "https://velo.example/", "title": "Vélo en ville", "tags": ["Code", "ville"] }
+  ],
+  "filters": [
+    { "query": "", "tags": [], "expect": ["b1", "b2", "b3"] },
+    { "query": "guide", "tags": [], "expect": ["b1"] },
+    { "query": "VELO", "tags": [], "expect": ["b3"] },
+    { "query": "relire", "tags": [], "expect": ["b1"] },
+    { "query": "#ref", "tags": [], "expect": ["b1"] },
+    { "query": "#", "tags": [], "expect": ["b1", "b2", "b3"] },
+    { "query": "tarte pommes", "tags": [], "expect": ["b2"] },
+    { "query": "tarte velo", "tags": [], "expect": [] },
+    { "query": "", "tags": ["CODE"], "expect": ["b1", "b3"] },
+    { "query": "ville", "tags": ["code"], "expect": ["b3"] },
+    { "query": "", "tags": ["code", "cuisine"], "expect": [] }
+  ],
+  "readLater": [
+    { "id": "r1", "url": "https://article.example/long", "title": "Un long article" },
+    { "id": "r2", "url": "https://blog.example/été", "title": "L’été à Lyon" }
+  ],
+  "readLaterFilters": [
+    { "query": "", "expect": ["r1", "r2"] },
+    { "query": "ETE", "expect": ["r2"] },
+    { "query": "  article ", "expect": ["r1"] },
+    { "query": "blog.example", "expect": ["r2"] },
+    { "query": "zzz", "expect": [] }
+  ]
+}
