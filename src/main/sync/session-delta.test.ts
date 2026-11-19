@@ -211,6 +211,14 @@ describe('the order of a session by differences', () => {
     expect((await run(third.mac, third.phone, { phone: claims })).mac).toMatchObject({ ok: false, code: 'bad-message' })
   })
 
+  it('refuses a removal in a whole snapshot: a snapshot that does not say it is a difference has nothing to take out of a base', async () => {
+    const { mac, phone } = await ready()
+    phone.differences = false
+    const removes: Tamper = (body) => (body.t === 'snapshot.part' ? [{ ...body, removedLists: ['spaces'] } as Outgoing] : [body])
+    expect((await run(mac, phone, { phone: removes })).mac).toMatchObject({ ok: false, code: 'bad-message' })
+    expect(mac.applied).toEqual([])
+  })
+
   it('refuses a `snapshot.check` in a session of whole snapshots', async () => {
     const { mac, phone } = await ready()
     phone.differences = false

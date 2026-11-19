@@ -1389,6 +1389,17 @@ La version du protocole (§7.2) **ne change pas** : `diff` est un champ de plus 
 
 `ios/Contracts/sync-delta-vectors.json` (§19) : des cas écrits à la main (aucun changement, entité changée, ajoutée, retirée, pierre tombale ajoutée et purgée, liste réordonnée, liste vidée, genre inconnu, catégorie qui n'est plus commune), les **60 tirages** de `sync-merge-draws.json` (la différence de leur instantané local avec leur base, en forme canonique), et les **échecs de reconstruction** (retrait d'une entité qui n'est pas dans la base, écriture et retrait du même `(genre, id)`, condensat faux). Joués par Vitest (`sync-delta.ts`) **et** par LuciumKit (`SyncDelta.swift`) : la même différence octet pour octet, la même reconstruction, les mêmes échecs. Les tests de séance (`session-delta.test.ts`, Swift `SyncDeltaSessionTests`) jouent : le chemin heureux (et sa taille), le repli (condensat faux, base qui diffère, base absente d'un côté), l'ordre des messages et l'égalité des bases et des états avec une séance entière. Les mutations vues échouer sont dans le compte rendu de la carte.
 
-### 31.10 Mesures (harnais `scripts/sync-interop/run.sh`, 200 onglets d'« Aujourd'hui » par appareil)
+### 31.10 Mesures (harnais `scripts/sync-interop/run.sh`, 200 onglets d'« Aujourd'hui » par appareil, 400 entités par instantané)
 
-À remplir avec les chiffres de la carte (avant / après).
+Même machine, même harnais (`testMeasuresWith200TodayTabsOnEachDevice`), TLS 1.3 réel, le vrai `SyncService` du Mac sous Node et le vrai `SyncController` de l'application sur un simulateur sans fenêtre ; **avant** = `origin/main` (5c1d2037), **après** = cette carte. Octets : ce que le processus de l'application écrit et lit sur le réseau.
+
+| Séance | Avant (envoyés / reçus) | Après (envoyés / reçus) | Durée avant → après |
+|---|---|---|---|
+| **sans aucun changement** (ce que fait l'intervalle de 30 s presque tout le temps) | 93 046 / 93 053 o | **911 / 918 o** (−99 %) | 213 → 205 ms |
+| **avec un changement** (un onglet fermé de chaque côté) | 92 926 / 92 933 o | **3 562 / 3 967 o** (−96 %) | 207 → 211 ms |
+| première séance, 200 onglets de chaque côté (pas de base : entière) | 82 644 / 81 569 o | 82 653 / 81 578 o (+9 o : le champ `diff` du `hello`) | — |
+| un iPhone vide adopte les 200 onglets du Mac (entière) | 1 071 / 81 569 o | 1 080 / 81 578 o | 249 → 247 ms |
+
+À une séance toutes les 30 secondes, les ≈ 10 Mio par heure et par sens du §30.3 deviennent **≈ 0,1 Mio** (séances sans changement) ; avec un onglet fermé à chaque séance, ≈ 0,4 Mio. Le temps d'une séance ne baisse pas (205 ms contre 213) : il est fait de la poignée de main TLS et des allers-retours, pas du volume. Les applications (`sync/apply`) sont les mêmes : 13 ms sur l'iPhone et 1,4 ms sur le Mac avec un changement de chaque côté. Les 911 octets d'une séance sans changement sont l'enveloppe des messages (`hello`, première partie vide avec `base` et `withheld`, `snapshot.end`, `snapshot.check`, `result`, `commit`, `bye`) dans chaque sens. Le plafond de 200 onglets, la fermeture des deux côtés et les catégories sont joués par le même essai, qui échoue maintenant si une séance sans changement dépasse 20 Kio.
+
+**Ce que ces mesures ne disent pas** : la batterie d'un vrai iPhone, la latence d'un vrai Wi-Fi (comme au §30.3) ; ni le coût CPU de la comparaison des entités avec la base, négligeable ici (400 entités, de l'ordre de la milliseconde, non mesuré à part).
