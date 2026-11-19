@@ -330,7 +330,7 @@ final class SyncController {
                                                           onRequestSent: { Task { @MainActor in if self.pairingStep == .connecting { self.pairingStep = .waitingForMac } } },
                                                           confirm: { proposal in await self.compare(proposal) })
             let hosts = outcome.hosts.isEmpty ? SyncCandidates.ordered(code.hosts) : outcome.hosts
-            settings.mac = SyncPairedMac(id: outcome.mac.id, name: outcome.mac.name, fingerprintHex: SyncEncoding.hex(outcome.fingerprint), port: Int(code.port), hosts: hosts, pairedAt: now())
+            settings.mac = SyncPairedMac(id: outcome.mac.id, name: outcome.mac.name, fingerprintHex: SyncEncoding.hex(outcome.fingerprint), port: outcome.port, hosts: hosts, pairedAt: now())
             status = .idle
             save()
             return .success(())
@@ -426,6 +426,8 @@ final class SyncController {
             let at = now()
             settings.mac?.lastContactAt = at
             if let hosts = report.hosts, !hosts.isEmpty { settings.mac?.hosts = hosts }
+            // The port the Mac listens on now (review n° 38), when its hello said one a port can be.
+            if let port = report.port, (1...65_535).contains(port) { settings.mac?.port = port }
             save()
             noteSession(wentThrough: true)
             if report.clockSkew {

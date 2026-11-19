@@ -51,14 +51,15 @@ interface Envelope {
   n: number
 }
 
-export type Hello = Envelope & { t: 'hello'; device: DeviceInfo; nonce: string; categories: string[]; baseHash: string | null; stateVersion: number; appVersion: string; now: number; hosts?: string[] }
+export type Hello = Envelope & { t: 'hello'; device: DeviceInfo; nonce: string; categories: string[]; baseHash: string | null; stateVersion: number; appVersion: string; now: number; hosts?: string[]; port?: number }
 export type PairChallenge = Envelope & { t: 'pair.challenge'; nonce: string }
 export type PairRequest = Envelope & { t: 'pair.request'; device: DeviceInfo; nonce: string; proof: string; commit: string }
 /** The Mac's code nonce, sent after the commitment of the iPhone and a right proof (§4.7). */
 export type PairNonce = Envelope & { t: 'pair.nonce'; nonce: string }
 /** The iPhone's code nonce, which must open its commitment (§4.7). */
 export type PairReveal = Envelope & { t: 'pair.reveal'; nonce: string }
-export type PairAccept = Envelope & { t: 'pair.accept'; device: DeviceInfo; proof: string; hosts: string[] }
+/** `port` is the port this Mac listens on NOW (review n° 38): the one of the QR may have been replaced since (a port taken or refused falls back to another one). */
+export type PairAccept = Envelope & { t: 'pair.accept'; device: DeviceInfo; proof: string; hosts: string[]; port: number }
 export type SnapshotPart = Envelope & {
   t: 'snapshot.part'
   part: number
@@ -190,6 +191,8 @@ export interface ValueBudget {
 // ---------- the checks of the fields ----------
 
 const isInt = (value: unknown, min = 0): value is number => Number.isInteger(value) && (value as number) >= min
+/** A TCP port: a whole number from 1 to 65535. */
+const isPort = (value: unknown): value is number => isInt(value, 1) && value <= 65535
 const DEVICE_ID = /^[A-Za-z0-9_-]{1,64}$/
 const NONCE = /^[A-Za-z0-9_-]{22}$/
 const PROOF = /^[A-Za-z0-9_-]{43}$/
@@ -258,7 +261,8 @@ const readHello: Reader<Hello> = (m) => {
   if (baseHash !== null && (typeof baseHash !== 'string' || !HEX_32.test(baseHash))) return null
   if (!isInt(m['stateVersion'], 1) || !textBytes(m['appVersion'], 32) || !isInt(m['now'])) return null
   if (m['hosts'] !== undefined && !textList(m['hosts'], MAX_HOSTS, 253)) return null
-  return { device, nonce: m['nonce'], categories: m['categories'], baseHash, stateVersion: m['stateVersion'], appVersion: m['appVersion'], now: m['now'], ...(m['hosts'] !== undefined ? { hosts: m['hosts'] } : {}) }
+  if (m['port'] !== undefined && !isPort(m['port'])) return null
+  return { device, nonce: m['nonce'], categories: m['categories'], baseHash, stateVersion: m['stateVersion'], appVersion: m['appVersion'], now: m['now'], ...(m['hosts'] !== undefined ? { hosts: m['hosts'] } : {}), ...(m['port'] !== undefined ? { port: m['port'] } : {}) }
 }
 
 const readPairRequest: Reader<PairRequest> = (m) => {
@@ -271,8 +275,8 @@ const readPairRequest: Reader<PairRequest> = (m) => {
 
 const readPairAccept: Reader<PairAccept> = (m) => {
   const device = readDevice(m['device'])
-  if (device === null || typeof m['proof'] !== 'string' || !PROOF.test(m['proof']) || !textList(m['hosts'], MAX_HOSTS, 253)) return null
-  return { device, proof: m['proof'], hosts: m['hosts'] }
+  if (device === null || typeof m['proof'] !== 'string' || !PROOF.test(m['proof']) || !textList(m['hosts'], MAX_HOSTS, 253) || !isPort(m['port'])) return null
+  return { device, proof: m['proof'], hosts: m['hosts'], port: m['port'] }
 }
 
 const readSnapshotPart: Reader<SnapshotPart> = (m) => {

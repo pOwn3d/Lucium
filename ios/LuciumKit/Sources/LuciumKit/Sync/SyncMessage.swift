@@ -36,8 +36,10 @@ public struct SyncHello: Equatable, Sendable {
     public let now: Int
     /// The Mac's current addresses and `.local` name, at most four (§5). Nil from the phone.
     public let hosts: [String]?
+    /// The port the Mac listens on now (review n° 38). Nil from the phone.
+    public let port: Int?
 
-    public init(device: SyncDeviceInfo, nonce: Data, categories: [String], baseHash: String?, stateVersion: Int, appVersion: String, now: Int, hosts: [String]? = nil) {
+    public init(device: SyncDeviceInfo, nonce: Data, categories: [String], baseHash: String?, stateVersion: Int, appVersion: String, now: Int, hosts: [String]? = nil, port: Int? = nil) {
         self.device = device
         self.nonce = nonce
         self.categories = categories
@@ -46,6 +48,7 @@ public struct SyncHello: Equatable, Sendable {
         self.appVersion = appVersion
         self.now = now
         self.hosts = hosts
+        self.port = port
     }
 }
 
@@ -60,7 +63,8 @@ public enum SyncMessage: Equatable, Sendable {
     case pairNonce(nonce: Data)
     /// The phone's code nonce (§4.7), which must open its commitment.
     case pairReveal(nonce: Data)
-    case pairAccept(device: SyncDeviceInfo, proof: Data, hosts: [String])
+    /// `port` is the port the Mac listens on now (review n° 38): the one of the QR may have been replaced since.
+    case pairAccept(device: SyncDeviceInfo, proof: Data, hosts: [String], port: Int)
     case snapshotPart(JSONValue)
     case snapshotEnd(entityCount: Int, digest: String)
     case openTabs(JSONValue)
@@ -232,6 +236,12 @@ public enum SyncMessageCodec {
         }
     }
 
+    /// A TCP port: a whole number from 1 to 65535 (§7.3, review n° 38).
+    static func port(_ value: JSONValue?) -> Int? {
+        guard let number = integer(value, minimum: 1), number <= 65_535 else { return nil }
+        return number
+    }
+
     private static func integer(_ value: JSONValue?, minimum: Int) -> Int? {
         guard case .number(let number)? = value, number.isFinite, number == number.rounded(), abs(number) < 9_007_199_254_740_992, Int(number) >= minimum else { return nil }
         return Int(number)
@@ -298,7 +308,12 @@ public enum SyncMessageCodec {
                 guard let list = texts(raw, max: SyncLimits.maxHosts, maxCharacters: 253) else { return nil }
                 hosts = list
             }
-            return .hello(SyncHello(device: device, nonce: nonce, categories: categories, baseHash: baseHash, stateVersion: stateVersion, appVersion: appVersion, now: now, hosts: hosts))
+            var port: Int?
+            if let raw = fields["port"] {
+                guard let number = Self.port(raw) else { return nil }
+                port = number
+            }
+            return .hello(SyncHello(device: device, nonce: nonce, categories: categories, baseHash: baseHash, stateVersion: stateVersion, appVersion: appVersion, now: now, hosts: hosts, port: port))
         case "pair.challenge":
             return nonce(fields["nonce"]).map { .pairChallenge(nonce: $0) }
         case "pair.request":
@@ -310,8 +325,9 @@ public enum SyncMessageCodec {
         case "pair.reveal":
             return nonce(fields["nonce"]).map { .pairReveal(nonce: $0) }
         case "pair.accept":
-            guard let device = device(fields["device"]), let proof = proof(fields["proof"]), let hosts = texts(fields["hosts"], max: SyncLimits.maxHosts, maxCharacters: 253) else { return nil }
-            return .pairAccept(device: device, proof: proof, hosts: hosts)
+            guard let device = device(fields["device"]), let proof = proof(fields["proof"]), let hosts = texts(fields["hosts"], max: SyncLimits.maxHosts, maxCharacters: 253),
+                  let port = Self.port(fields["port"]) else { return nil }
+            return .pairAccept(device: device, proof: proof, hosts: hosts, port: port)
         case "snapshot.part":
             return snapshotPartIsWellFormed(fields) ? .snapshotPart(whole) : nil
         case "snapshot.end":
@@ -391,6 +407,7 @@ public enum SyncMessageCodec {
             members["appVersion"] = .string(hello.appVersion)
             members["now"] = .number(Double(hello.now))
             if let hosts = hello.hosts { members["hosts"] = .array(hosts.map { .string($0) }) }
+            if let port = hello.port { members["port"] = .number(Double(port)) }
         case .pairRequest(let device, let nonce, let proof, let commit):
             members["device"] = deviceValue(device)
             members["nonce"] = .string(SyncEncoding.base64url(nonce))

@@ -63,9 +63,11 @@ final class SyncControllerTests: XCTestCase {
         return SyncSettings(enabled: enabled, categories: [.structure, .archive], deviceId: "phone-test-000000001", mac: mac)
     }
 
-    nonisolated private static func helloFromMac(now: Int = 1_790_000_000_000, hosts: [String] = ["mac-de-test.local", "192.168.1.30"], id: String = "mac-test-0000000001") -> [String: Any] {
-        ["device": ["id": id, "name": "Mac de test", "platform": "mac"], "nonce": SyncEncoding.base64url(Data(repeating: 3, count: 16)), "categories": ["structure"], "baseHash": NSNull(),
+    nonisolated private static func helloFromMac(now: Int = 1_790_000_000_000, hosts: [String] = ["mac-de-test.local", "192.168.1.30"], id: String = "mac-test-0000000001", port: Int? = nil) -> [String: Any] {
+        var fields: [String: Any] = ["device": ["id": id, "name": "Mac de test", "platform": "mac"], "nonce": SyncEncoding.base64url(Data(repeating: 3, count: 16)), "categories": ["structure"], "baseHash": NSNull(),
          "stateVersion": 1, "appVersion": "1.2.0", "now": now, "hosts": hosts]
+        if let port { fields["port"] = port }
+        return fields
     }
 
     private func sessionMac(hello: @escaping @Sendable () -> [String: Any]) -> ScriptedConnector.Answer {
@@ -151,7 +153,7 @@ final class SyncControllerTests: XCTestCase {
             let inputs = SyncProofInputs(secret: secret, fingerprintMac: macFingerprint, fingerprintPhone: phoneFingerprint, nonceMac: nonce,
                                          noncePhone: SyncEncoding.base64urlDecode(request["nonce"] as? String ?? "", characters: 22) ?? Data(), idMac: "mac-test-0000000001", idPhone: device?["id"] as? String ?? "")
             let accept = SyncProof.acceptTag(inputs).map(SyncEncoding.base64url) ?? ""
-            try await mac.write("pair.accept", ["device": ["id": "mac-test-0000000001", "name": "Mac de test", "platform": "mac"], "proof": accept, "hosts": ["mac-de-test.local", "192.168.1.20"]])
+            try await mac.write("pair.accept", ["device": ["id": "mac-test-0000000001", "name": "Mac de test", "platform": "mac"], "proof": accept, "hosts": ["mac-de-test.local", "192.168.1.20"], "port": 51_000])
             // The phone's person compares the code and decides (§4.6): a bye keeps the phone on the Mac, which answers with its own bye; anything else keeps nothing.
             let word = try? await mac.read()
             wordOfThePhone.value = word?["t"] as? String
@@ -199,7 +201,7 @@ final class SyncControllerTests: XCTestCase {
         XCTAssertEqual(mac.name, "Mac de test")
         XCTAssertEqual(mac.fingerprint, macFingerprint)
         XCTAssertEqual(mac.hosts, ["mac-de-test.local", "192.168.1.20"])
-        XCTAssertEqual(mac.port, 49213)
+        XCTAssertEqual(mac.port, 51_000, "the port the Mac says in its accept, not the one of the QR (49213): review n° 38")
         XCTAssertEqual(file.load(), .loaded(controller.settings), "the pairing is on the disk")
         XCTAssertEqual(controller.pairingStep, .idle)
     }
@@ -290,6 +292,16 @@ final class SyncControllerTests: XCTestCase {
         XCTAssertEqual(controller.settings.mac?.lastContactAt, 1_790_000_000_000)
         XCTAssertEqual(connector.attempts.first, "mac-de-test.local:49213", "the .local name first")
         XCTAssertEqual(file.load(), .loaded(controller.settings))
+    }
+
+    func testTheMacsHelloKeepsTheStoredPortInStepWithTheOneItListensOn() async throws {
+        // Review n° 38: the port of the QR may have been replaced since; the Mac says the one it listens on now, and the phone keeps it.
+        let connector = ScriptedConnector(sessionMac(hello: { Self.helloFromMac(port: 51_234) }))
+        let controller = try paired(connector)
+        controller.requestSession(.manual)
+        try await waitUntil("the session ends") { controller.status != .idle && controller.status != .running }
+        XCTAssertEqual(controller.settings.mac?.port, 51_234)
+        XCTAssertEqual(file.load(), .loaded(controller.settings), "and it is on the disk")
     }
 
     func testADriftOfTheClocksIsAWarning() async throws {

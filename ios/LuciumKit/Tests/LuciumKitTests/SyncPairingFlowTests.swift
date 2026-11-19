@@ -75,7 +75,7 @@ struct SyncPairingFlowTests {
             #expect(reveal["t"] as? String == "pair.reveal")
             #expect(reveal["nonce"] as? String == SyncEncoding.base64url(phoneCodeNonce), "the phone reveals the nonce its commitment was made of")
             let accept = SyncProof.acceptTag(macInputs(secret: acceptProofSecret, fingerprintMac: acceptFingerprintMac)).map(SyncEncoding.base64url) ?? ""
-            try await mac.write("pair.accept", ["device": macDevice(), "proof": accept, "hosts": hosts])
+            try await mac.write("pair.accept", ["device": macDevice(), "proof": accept, "hosts": hosts, "port": 49213])
             // The phone's person compares the code and says yes (a bye); the Mac keeps the phone and answers with its own bye (§4.6).
             let word = try await mac.read()
             #expect(word.fields["t"] as? String == "bye")
@@ -89,6 +89,46 @@ struct SyncPairingFlowTests {
         #expect(outcome.mac.name == "MacBook de test")
         #expect(outcome.fingerprint == macFingerprint)
         #expect(outcome.hosts == ["mac-de-test.local", "192.168.1.20"], "a public address or a DNS name given by a Mac is not kept")
+    }
+
+    @Test func thePortTheMacKeepsIsTheOneItSaysInItsAcceptNotTheOneOfTheQR() async throws {
+        // Review n° 38: the port of the QR may have been replaced since it was drawn (a port taken or refused); the Mac says the one it listens on now.
+        let received = Received()
+        let (outcome, _) = try await pair(code, mac: { mac in
+            try await mac.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
+            _ = try await mac.read()
+            _ = try await giveNonce(mac)
+            try await mac.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": [], "port": 51_111])
+            received.set(try await mac.read().fields)
+            try await mac.write("bye")
+        })
+        #expect(code.port == 49213 && outcome.port == 51_111)
+    }
+
+    private enum BadPort: String, CaseIterable, Sendable { case absent, zero, tooBig, fraction, text }
+
+    @Test func anAcceptWithoutAPortOrWithAPortThatIsNotOneIsAMalformedMessage() async throws {
+        for bad in BadPort.allCases {
+            do {
+                _ = try await pair(code, mac: { mac in
+                    try await mac.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
+                    _ = try await mac.read()
+                    _ = try await giveNonce(mac)
+                    var fields: [String: Any] = ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []]
+                    switch bad {
+                    case .absent: break
+                    case .zero: fields["port"] = 0
+                    case .tooBig: fields["port"] = 65_536
+                    case .fraction: fields["port"] = 49_213.5
+                    case .text: fields["port"] = "49213"
+                    }
+                    try await mac.write("pair.accept", fields)
+                })
+                Issue.record("an accept with the port \(bad.rawValue) was taken")
+            } catch let failure as SyncFailure {
+                #expect(failure.code == .badMessage, "\(bad.rawValue)")
+            }
+        }
     }
 
     @Test func aPairingWithATypedCodeLearnsTheFingerprintAndTheProofCoversIt() async throws {
@@ -107,7 +147,7 @@ struct SyncPairingFlowTests {
                 _ = try await mac.read()
                 _ = try await giveNonce(mac)
                 let forged = SyncProof.acceptTag(macInputs())  // computed over the Mac's fingerprint, not over the intruder's
-                try await mac.write("pair.accept", ["device": macDevice(), "proof": forged.map(SyncEncoding.base64url) ?? "", "hosts": []])
+                try await mac.write("pair.accept", ["device": macDevice(), "proof": forged.map(SyncEncoding.base64url) ?? "", "hosts": [], "port": 49213])
             }, presented: intruder)
         }
     }
@@ -159,7 +199,7 @@ struct SyncPairingFlowTests {
             let request = try await mac.read()
             received.set(request.fields)
             revealed.set(try await giveNonce(mac))
-            try await mac.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []])
+            try await mac.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": [], "port": 49213])
             _ = try await mac.read()
             try await mac.write("bye")
         })
@@ -180,7 +220,7 @@ struct SyncPairingFlowTests {
             _ = try await fake.read()
             afterRequest.set(["sent": ends.phone.sent])
             // The accept comes straight after the request: the form from before the commitment.
-            try await fake.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []])
+            try await fake.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": [], "port": 49213])
         }
         defer { task.cancel() }
         let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
@@ -206,7 +246,7 @@ struct SyncPairingFlowTests {
             _ = try await mac.read()
             try await mac.write("pair.nonce", ["nonce": SyncEncoding.base64url(Data(repeating: 0x5a, count: 16))])
             _ = try await mac.read()
-            try await mac.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []])
+            try await mac.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": [], "port": 49213])
             _ = try await mac.read()
             try await mac.write("bye")
         }, shown: shownB)
@@ -248,7 +288,7 @@ struct SyncPairingFlowTests {
                 _ = try await mac.read()
                 _ = try await giveNonce(mac)
                 let accept = SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? ""
-                try await mac.write("pair.accept", ["device": macDevice(), "proof": accept, "hosts": []])
+                try await mac.write("pair.accept", ["device": macDevice(), "proof": accept, "hosts": [], "port": 49213])
                 let word = try await mac.read()
                 received.set(word.fields)
             }, person: { _ in false })
@@ -269,7 +309,7 @@ struct SyncPairingFlowTests {
             try await fake.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
             _ = try await fake.read()
             _ = try await giveNonce(fake)
-            try await fake.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []])
+            try await fake.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": [], "port": 49213])
         }
         defer { task.cancel() }
         let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
@@ -293,7 +333,7 @@ struct SyncPairingFlowTests {
                 try await mac.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
                 _ = try await mac.read()
                 _ = try await giveNonce(mac)
-                try await mac.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []])
+                try await mac.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": [], "port": 49213])
                 _ = try await mac.read()
                 try await mac.write("error", ["code": "internal", "fatal": true])
             })
@@ -310,7 +350,7 @@ struct SyncPairingFlowTests {
             try await fake.write("pair.challenge", ["nonce": SyncEncoding.base64url(macNonce)])
             _ = try await fake.read()
             _ = try await giveNonce(fake)
-            try await fake.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": []])
+            try await fake.write("pair.accept", ["device": macDevice(), "proof": SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? "", "hosts": [], "port": 49213])
             _ = try await fake.read()
             try await Task.sleep(for: .seconds(5))
         }
@@ -418,7 +458,7 @@ struct SyncPairingFlowTests {
                 _ = try await mac.read()
                 _ = try await giveNonce(mac)
                 let proof = SyncProof.acceptTag(macInputs()).map(SyncEncoding.base64url) ?? ""
-                try await mac.write("pair.accept", ["device": ["id": "vector-mac-0000000001", "name": "Not a Mac", "platform": "ios"], "proof": proof, "hosts": []])
+                try await mac.write("pair.accept", ["device": ["id": "vector-mac-0000000001", "name": "Not a Mac", "platform": "ios"], "proof": proof, "hosts": [], "port": 49213])
             })
             Issue.record("a phone answered as a Mac")
         } catch let failure as SyncFailure {

@@ -300,6 +300,7 @@ describe('SyncListener: a pairing', () => {
       confirm: async () => decision,
       addPeer: (peer) => void (r.paired.push(peer), r.peers.set(peer.fingerprint, peer)),
       hosts: () => ['macbook-de-test.local'],
+      port: () => 49213,
       now: () => 1_790_000_000_000,
       confirmMs: 200
     }

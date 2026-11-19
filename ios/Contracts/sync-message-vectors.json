@@ -201,10 +201,40 @@
         "hosts": [
           "mac-de-test.local",
           "192.168.1.20"
-        ]
+        ],
+        "port": 49213
       },
       "expect": {
         "ok": true
+      }
+    },
+    {
+      "name": "a hello from a Mac with a port that is not one (0, 65536, a fraction, a text) is refused",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "MacBook Pro de test",
+          "platform": "mac"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure"
+        ],
+        "baseHash": null,
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "hosts": [
+          "mac-de-test.local"
+        ],
+        "port": 65536
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
       }
     },
     {
@@ -1160,7 +1190,159 @@
         "proof": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A",
         "hosts": [
           "mac-de-test.local"
+        ],
+        "port": 49213
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a pair.accept without the port the Mac listens on (the form from before review n° 38)",
+      "message": {
+        "v": 1,
+        "t": "pair.accept",
+        "n": 2,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "Mac",
+          "platform": "mac"
+        },
+        "proof": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A",
+        "hosts": [
+          "mac-de-test.local"
         ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.accept with the port 0",
+      "message": {
+        "v": 1,
+        "t": "pair.accept",
+        "n": 2,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "Mac",
+          "platform": "mac"
+        },
+        "proof": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A",
+        "hosts": [
+          "mac-de-test.local"
+        ],
+        "port": 0
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.accept with the port 65536",
+      "message": {
+        "v": 1,
+        "t": "pair.accept",
+        "n": 2,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "Mac",
+          "platform": "mac"
+        },
+        "proof": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A",
+        "hosts": [
+          "mac-de-test.local"
+        ],
+        "port": 65536
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.accept with a port that is a fraction",
+      "message": {
+        "v": 1,
+        "t": "pair.accept",
+        "n": 2,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "Mac",
+          "platform": "mac"
+        },
+        "proof": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A",
+        "hosts": [
+          "mac-de-test.local"
+        ],
+        "port": 49213.5
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.accept with a port that is a text",
+      "message": {
+        "v": 1,
+        "t": "pair.accept",
+        "n": 2,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "Mac",
+          "platform": "mac"
+        },
+        "proof": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A",
+        "hosts": [
+          "mac-de-test.local"
+        ],
+        "port": "49213"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.accept with the port 65535",
+      "message": {
+        "v": 1,
+        "t": "pair.accept",
+        "n": 2,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "Mac",
+          "platform": "mac"
+        },
+        "proof": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A",
+        "hosts": [
+          "mac-de-test.local"
+        ],
+        "port": 65535
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a pair.accept with the port 1",
+      "message": {
+        "v": 1,
+        "t": "pair.accept",
+        "n": 2,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "Mac",
+          "platform": "mac"
+        },
+        "proof": "G6oxLqricA5cSlJjprY4ZHH_O6BCrz8atm7RuHhbC0A",
+        "hosts": [
+          "mac-de-test.local"
+        ],
+        "port": 1
       },
       "expect": {
         "ok": true

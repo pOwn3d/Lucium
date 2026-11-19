@@ -116,6 +116,7 @@ export class Device {
       appVersion: '1.2.0',
       stateVersion: this.stateVersion,
       hosts: () => ['mac.local'],
+      port: () => 49213,
       ...(this.merge !== undefined ? { merge: this.merge } : {}),
       openTabs: () => this.openTabs,
       onOpenTabs: (peer, items) => void this.received.push({ peer, items }),
