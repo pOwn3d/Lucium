@@ -40,6 +40,9 @@ public enum AddressResolver {
     /// keeps a port that is not the default one of the scheme and writes an IPv6 address between brackets.
     public static func host(of address: String) -> String {
         guard let components = URLComponents(string: address), var host = components.host, !host.isEmpty else { return "" }
+        // The name the system loads: `URLComponents.host` gives an internationalised name in its Unicode form (`аррӏе.com`, which reads as a well-known site), `URL.host`
+        // gives the ASCII one (`xn--80ak6aa92e.com`) that the Mac's `URL.host` gives and that the page really is at.
+        if let ascii = URL(string: address)?.host, !ascii.isEmpty { host = ascii }
         if host.contains(":"), !host.hasPrefix("[") { host = "[\(host)]" }
         if host.hasPrefix("www.") { host = String(host.dropFirst(4)) }
         let defaultPort = ["http": 80, "https": 443][components.scheme?.lowercased() ?? ""]

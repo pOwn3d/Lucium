@@ -37,6 +37,9 @@
     { "input": "https://example.com:8443/x", "expect": "example.com:8443" },
     { "input": "https://example.com:443/x", "expect": "example.com" },
     { "input": "http://[::1]:8080/", "expect": "[::1]:8080" },
+    { "input": "https://аррӏе.com/", "expect": "xn--80ak6aa92e.com" },
+    { "input": "http://xn--80ak6aa92e.com/", "expect": "xn--80ak6aa92e.com" },
+    { "input": "https://www.münchen.de:8443/x", "expect": "xn--mnchen-3ya.de:8443" },
     { "input": "about:blank", "expect": "" },
     { "input": "not a url", "expect": "" }
   ]

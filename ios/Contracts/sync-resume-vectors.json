@@ -124,6 +124,17 @@
       ]
     }
     ,{
+      "name": "the host shown is the ASCII one the page is really at: an internationalised name is not written in Unicode, where a lookalike reads as a well-known site",
+      "tabs": [
+        { "id": "i1", "spaceId": "s1", "url": "https://аррӏе.com/login", "title": "", "lastActiveAt": 3 },
+        { "id": "i2", "spaceId": "s1", "url": "https://www.münchen.de:8443/", "title": "Stadt", "lastActiveAt": 2 }
+      ],
+      "expect": [
+        { "id": "i1", "title": "xn--80ak6aa92e.com", "host": "xn--80ak6aa92e.com", "spaceId": "s1" },
+        { "id": "i2", "title": "Stadt", "host": "xn--mnchen-3ya.de:8443", "spaceId": "s1" }
+      ]
+    }
+    ,{
       "name": "one row per identifier too: two tabs with the same identifier are one line (the most recent keeps it), so that a list never holds two lines of one name",
       "tabs": [
         { "id": "d", "spaceId": "s1", "url": "https://first.example/", "title": "Old", "lastActiveAt": 1 },
