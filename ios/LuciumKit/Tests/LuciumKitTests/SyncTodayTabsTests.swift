@@ -52,6 +52,15 @@ struct SyncTodayTabsTests {
         #expect(try JSONDecoder().decode(SyncSettings.self, from: Data(older.utf8)).categories == [.structure, .todayTabs])
     }
 
+    @Test func todayTabsAreAnnouncedAndTakenAsCommonOnlyWithTheStructure() {
+        #expect(SyncCategory.announced([.todayTabs]) == [] && SyncCategory.announced([.todayTabs, .archive]) == [.archive])
+        #expect(SyncCategory.announced([.structure, .todayTabs]) == [.structure, .todayTabs])
+        #expect(SyncCategory.common(mine: [.structure, .todayTabs], theirs: ["todayTabs"]) == [], "the other device announced the category without the structure")
+        #expect(SyncCategory.common(mine: [.structure, .todayTabs], theirs: ["structure", "todayTabs"]) == [.structure, .todayTabs])
+        #expect(SyncCategory.common(mine: [.todayTabs], theirs: ["structure", "todayTabs"]) == [], "ticked here without the structure")
+        #expect(SyncCategory.common(mine: [.structure], theirs: ["structure", "todayTabs"]) == [.structure])
+    }
+
     // MARK: The shared set
 
     @Test func aTabEntersAfterTwentySecondsAndOnlyWhenTheCategoryIsCommon() throws {
@@ -501,6 +510,24 @@ struct SyncTodayTabsTests {
         snapshot.order["today:s1"] = ["m1"]
         snapshot.orderStamps["today:s1"] = at
         return snapshot
+    }
+
+    @Test func theHelloLeavesTodayTabsOutWhenTheStructureIsNotTicked() async throws {
+        let rig = try rig([tab("mine")])
+        defer { rig.cleanup() }
+        let ends = syncLoopback()
+        let fake = SyncFakeMac(ends.mac)
+        let at = now
+        let macTask = Task { try await SyncTestMac(snapshot: SyncSnapshot(), categories: ["structure", "todayTabs"]).run(fake, now: at) }
+        defer { macTask.cancel() }
+        let connection = SyncConnection(transport: ends.phone, presentedFingerprint: macFingerprint)
+        _ = try await SyncSessionClient.run(connection: connection, peer: peer, device: phone, categories: [.todayTabs, .archive], appVersion: "0.1.0", supportedStateVersion: 1, nonce: Data(repeating: 9, count: 16),
+                                            baseHash: nil, now: { at }, body: rig.body, handshakeTimeout: .seconds(2))
+        let seen = try await macTask.value
+        #expect(seen.hello["categories"] as? [String] == ["archive"])
+        #expect(seen.phone.entities[SyncToday.kind] == nil, "nothing of the Today tabs was sent")
+        let state = await rig.host.state
+        #expect(state.tabs.contains { $0.id == "mine" }, "and the phone's own tab is not removed")
     }
 
     @Test func aTabOpenedOnTheMacArrivesAndAClosingOnTheMacArchivesIt() async throws {

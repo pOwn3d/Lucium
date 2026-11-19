@@ -88,7 +88,7 @@ public enum SyncSessionClient {
             throw SyncFailure(.fingerprintMismatch, "the certificate shown is not the one registered")
         }
         let channel = SyncChannel(transport: transport, phase: .session, log: log)
-        let local = SyncHello(device: device, nonce: nonce, categories: categories.map(\.rawValue), baseHash: baseHash, stateVersion: supportedStateVersion, appVersion: appVersion, now: now())
+        let local = SyncHello(device: device, nonce: nonce, categories: SyncCategory.announced(categories).map(\.rawValue), baseHash: baseHash, stateVersion: supportedStateVersion, appVersion: appVersion, now: now())
         try await channel.send(.hello(local))
         let first = try await channel.receive(timeout: handshakeTimeout)
         let remote: SyncHello
@@ -111,7 +111,7 @@ public enum SyncSessionClient {
             await channel.close()
             throw SyncFailure(.stateTooNew, "the Mac's state is version \(remote.stateVersion)")
         }
-        let common = Set(categories).intersection(remote.categories.compactMap(SyncCategory.init(rawValue:)))
+        let common = SyncCategory.common(mine: categories, theirs: remote.categories)
         let skew = abs(remote.now - local.now) > SyncLimits.clockSkewWarningMilliseconds
         let context = SyncSessionContext(mac: remote.device, categories: common, local: local, remote: remote)
         let outcome: SyncBodyOutcome
