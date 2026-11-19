@@ -8,6 +8,8 @@ import SwiftUI
 struct SettingsScreen: View {
     @Bindable var model: BrowserModel
     @State private var path: [SettingsRow]
+    @State private var confirmingReset = false
+    @Environment(\.locale) private var locale
 
     init(model: BrowserModel) {
         self.model = model
@@ -22,6 +24,8 @@ struct SettingsScreen: View {
                         ForEach(group.rows) { row in rowView(row) }
                     } header: {
                         if let title = Self.title(of: group.section) { Text(title) }
+                    } footer: {
+                        footer(of: group.section)
                     }
                 }
             }
@@ -46,6 +50,14 @@ struct SettingsScreen: View {
         case .spaces: "settings.section.spaces"
         case .sync: nil
         case .about: "settings.section.about"
+        case .reset: nil
+        }
+    }
+
+    @ViewBuilder private func footer(of section: SettingsSection) -> some View {
+        switch section {
+        case .reset: Text(model.changedSettingsRows.isEmpty ? "settings.reset.none" : "settings.reset.footer")
+        default: EmptyView()
         }
     }
 
@@ -67,6 +79,19 @@ struct SettingsScreen: View {
             link(row, "licenses.title") { EmptyView() }
         case .sync:
             link(row, "sync.title") { Text(model.sync?.settings.enabled == true ? "settings.lock.on" : "settings.lock.off") }
+        case .about:
+            link(row, "settings.about.title") { EmptyView() }
+        case .reset:
+            // Destructive and one tap away from the list: it asks first, and says what it leaves alone.
+            Button("settings.reset.button", role: .destructive) { confirmingReset = true }
+                .frame(minHeight: 44)
+                .disabled(model.changedSettingsRows.isEmpty)
+                .confirmationDialog("settings.reset.confirm.title", isPresented: $confirmingReset, titleVisibility: .visible) {
+                    Button("settings.reset.confirm.action", role: .destructive) { model.resetSettings() }
+                    Button("tabs.cancel", role: .cancel) {}
+                } message: {
+                    Text("settings.reset.confirm.message \(model.profileTitle)")
+                }
         }
     }
 
@@ -74,7 +99,12 @@ struct SettingsScreen: View {
     /// larger texts (`LabeledContent`).
     private func link<Value: View>(_ row: SettingsRow, _ title: LocalizedStringKey, @ViewBuilder value: () -> Value) -> some View {
         NavigationLink(value: row) {
-            LabeledContent { value() } label: { Text(title) }
+            LabeledContent {
+                HStack(spacing: 8) {
+                    value()
+                    if model.changedSettingsRows.contains(row) { ChangedMark() }
+                }
+            } label: { Text(title) }
                 .frame(minHeight: 44)
         }
     }
@@ -91,7 +121,49 @@ struct SettingsScreen: View {
         case .licenses: LicensesScreen()
         case .sync:
             if let sync = model.sync { SyncScreen(controller: sync) }
+        case .about: AboutScreen(languageCode: locale.language.languageCode?.identifier)
+        case .reset: EmptyView()
         }
+    }
+}
+
+/// The dot that says a row's page is no longer at its original value. A dot alone says nothing to VoiceOver and little to a person who does not see
+/// the colour, so it carries the word "Changed" (read after the value) and is a plain shape, not a text that would wrap with the larger sizes.
+private struct ChangedMark: View {
+    var body: some View {
+        Circle()
+            .fill(Color.accentColor)
+            .frame(width: 8, height: 8)
+            .accessibilityLabel(Text("settings.changed"))
+    }
+}
+
+/// The version of the application and the two pages of the project's site. The version is read from the bundle, so it is never written twice. The links
+/// open in Safari, on the tap and not before: nothing is sent by the application itself.
+struct AboutScreen: View {
+    let languageCode: String?
+
+    var body: some View {
+        List {
+            Section {
+                LabeledContent("settings.about.version") { Text(verbatim: Self.versionText).textSelection(.enabled) }
+                    .frame(minHeight: 44)
+                Link("settings.about.site", destination: AboutLinks.site(languageCode: languageCode)).frame(minHeight: 44)
+                Link("settings.about.help", destination: AboutLinks.help(languageCode: languageCode)).frame(minHeight: 44)
+            } footer: {
+                Text("settings.about.footer")
+            }
+        }
+        .navigationTitle("settings.about.title")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// "1.1.2 (34)": the marketing version and the build, as the App Store shows them.
+    static var versionText: String {
+        let info = Bundle.main.infoDictionary
+        let version = info?["CFBundleShortVersionString"] as? String ?? "?"
+        guard let build = info?["CFBundleVersion"] as? String else { return version }
+        return "\(version) (\(build))"
     }
 }
 

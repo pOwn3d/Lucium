@@ -64,6 +64,33 @@ final class SettingsModelTests: BrowserCoreTestCase {
         XCTAssertEqual(model.searchChoice, .inherited)
     }
 
+    func testTheResetPutsTheEngineAndPrivacyBackKeepsTheRestAndIsWrittenToTheFile() async throws {
+        let model = await makeModel()
+        XCTAssertTrue(model.changedSettingsRows.isEmpty, "a copy nobody touched has nothing marked")
+        model.chooseSearchEngine(.engine(Self.brave))
+        var privacy = model.privacySettings
+        privacy.choose(.standard)
+        model.state.privacy = privacy
+        XCTAssertEqual(model.changedSettingsRows, [.searchEngine, .privacy])
+
+        model.resetSettings()
+        XCTAssertTrue(model.changedSettingsRows.isEmpty)
+        XCTAssertEqual(model.searchChoice, .inherited)
+        XCTAssertEqual(model.privacySettings, .newProfile)
+        XCTAssertEqual(model.request(for: "hello")?.url?.host(), "duckduckgo.com")
+        let file = directory.appending(path: StateFile.fileName)
+        try await eventually("the reset is written to the state file") {
+            (try? String(contentsOf: file, encoding: .utf8))?.contains("search.brave.com") == false
+        }
+    }
+
+    func testTheSettingsListCarriesTheAboutPageAndTheResetButton() async throws {
+        let model = await makeModel()
+        let rows = SettingsScreen.groups(for: model).flatMap(\.rows)
+        XCTAssertTrue(rows.contains(.about) && rows.contains(.reset))
+        XCTAssertFalse(AboutScreen.versionText.isEmpty)
+    }
+
     func testTheGearOpensTheListAndAPageIsOpenedByNamingIt() async throws {
         let model = await makeModel()
         model.openSettings()
@@ -151,7 +178,9 @@ final class SettingsScreenshotTests: BrowserCoreTestCase {
 
     private func check(_ name: String, _ image: UIImage, file: StaticString = #filePath, line: UInt = #line) throws {
         XCTAssertGreaterThan(try colours(in: image), 8, "\(name) drew (almost) nothing", file: file, line: line)
-        guard let folder = ProcessInfo.processInfo.environment["LUCIUM_SCREENSHOTS_DIR"], !folder.isEmpty else { return }
+        // `scripts/ios-check.sh` names its folder `LUCIUM_SHOTS`; `LUCIUM_SCREENSHOTS_DIR` is the one the other drawings of the suite read.
+        let environment = ProcessInfo.processInfo.environment
+        guard let folder = [environment["LUCIUM_SCREENSHOTS_DIR"], environment["LUCIUM_SHOTS"]].compactMap({ $0 }).first(where: { !$0.isEmpty }) else { return }
         let directory = URL(fileURLWithPath: folder, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         try XCTUnwrap(image.pngData(), file: file, line: line).write(to: directory.appending(path: "settings-\(name).png"))
@@ -160,7 +189,7 @@ final class SettingsScreenshotTests: BrowserCoreTestCase {
     /// The list and every page, on a phone, in light, in both languages.
     func testEveryPageOfTheSettingsDrawsOnAPhone() async throws {
         let model = await model()
-        let pages: [(String, SettingsRow?)] = [("list", nil), ("search", .searchEngine), ("privacy", .privacy), ("passwords", .passwords), ("lock", .lock), ("spaces", .spaces), ("licenses", .licenses)]
+        let pages: [(String, SettingsRow?)] = [("list", nil), ("search", .searchEngine), ("privacy", .privacy), ("passwords", .passwords), ("lock", .lock), ("spaces", .spaces), ("licenses", .licenses), ("about", .about)]
         for language in ["fr", "en"] {
             for (name, row) in pages {
                 model.settingsStart = row

@@ -6,8 +6,8 @@ import Testing
 struct SettingsLayoutTests {
     @Test func theSectionsAreListedInTheOrderOfTheDecision() {
         let groups = SettingsLayout.groups(lockAvailable: true)
-        #expect(groups.map(\.section) == [.navigation, .privacy, .spaces, .about])
-        #expect(groups.flatMap(\.rows) == [.searchEngine, .privacy, .passwords, .lock, .spaces, .licenses])
+        #expect(groups.map(\.section) == [.navigation, .privacy, .spaces, .about, .reset])
+        #expect(groups.flatMap(\.rows) == [.searchEngine, .privacy, .passwords, .lock, .spaces, .about, .licenses, .reset])
     }
 
     @Test func aCopyWithNoLockHasNoLockRowAndKeepsItsPrivacySection() {
@@ -23,7 +23,7 @@ struct SettingsLayoutTests {
 
     @Test func theSynchronisationHasItsPlaceBetweenTheSpacesAndTheLicences() {
         let groups = SettingsLayout.groups(lockAvailable: true, syncAvailable: true)
-        #expect(groups.map(\.section) == [.navigation, .privacy, .spaces, .sync, .about])
+        #expect(groups.map(\.section) == [.navigation, .privacy, .spaces, .sync, .about, .reset])
         #expect(groups.first { $0.section == .sync }?.rows == [.sync])
     }
 
@@ -269,5 +269,70 @@ struct SearchContractTests {
             #expect((written["profiles"] ?? .object([:])) == vector.after.profiles, "\(vector.name): profiles")
             #expect(chosen.searchTemplate(forProfile: vector.profile) == vector.effective, "\(vector.name): effective engine")
         }
+    }
+}
+
+// MARK: - Rétablir les réglages, and the "modified" mark
+
+@Suite("Settings screen: reset and modified mark")
+struct SettingsDefaultsTests {
+    @Test func aStateNeverTouchedHasNothingModifiedAndTheResetWritesNothing() {
+        var fresh = state()
+        #expect(SettingsDefaults.changedRows(in: fresh, profileId: "work").isEmpty)
+        #expect(SettingsDefaults.changedRows(in: fresh, profileId: "default").isEmpty)
+        let before = fresh
+        #expect(!SettingsDefaults.reset(&fresh, profileId: "work"))
+        #expect(fresh == before)
+    }
+
+    @Test func theMarkNamesTheRowsThatMovedAndNoOther() {
+        var moved = state()
+        moved.chooseSearchEngine(.engine(brave), forProfile: "work")
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "work") == [.searchEngine])
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "home").isEmpty, "another profile's engine is not this list's")
+        moved.privacy.choose(.standard)
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "work") == [.searchEngine, .privacy])
+    }
+
+    @Test func theResetPutsTheEngineAndThePrivacyBackAndNothingElse() {
+        var moved = state(settings: ["blockAds": .bool(true), "profileNames": .object(["work": .string("Bureau")]),
+                                     "profiles": .object(["work": .object(["downloadDir": .string("/Users/me/Work"), "searchUrlTemplate": .string(brave)])])])
+        moved.privacy = PrivacySettings(httpsUpgrade: false, sendGpc: false, stripTrackingParams: false, stripCopiedLinks: false)
+        let spaces = moved.spaces
+        #expect(SettingsDefaults.reset(&moved, profileId: "work"))
+        #expect(moved.searchChoice(forProfile: "work") == .inherited)
+        #expect(ownKeys(of: moved, profile: "work") == ["downloadDir": .string("/Users/me/Work")], "the profile's other keys stay")
+        #expect(moved.privacy == .newProfile)
+        #expect(settings(of: moved)["blockAds"] == .bool(true))
+        #expect(settings(of: moved)["profileNames"] == .object(["work": .string("Bureau")]))
+        #expect(moved.spaces == spaces)
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "work").isEmpty)
+        #expect(!SettingsDefaults.reset(&moved, profileId: "work"), "a second reset changes nothing")
+    }
+
+    @Test func theDefaultProfilesOriginalEngineIsDuckDuckGo() {
+        var moved = state()
+        moved.chooseSearchEngine(.engine(google), forProfile: "default")
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "default") == [.searchEngine])
+        #expect(SettingsDefaults.reset(&moved, profileId: "default"))
+        #expect(moved.searchTemplate(forProfile: "default") == duck)
+    }
+
+    @Test func aResetOnAnUnknownProfileStillRestoresThePrivacy() {
+        var moved = state()
+        moved.privacy.choose(.standard)
+        #expect(SettingsDefaults.reset(&moved, profileId: "nobody"))
+        #expect(moved.privacy == .newProfile)
+    }
+}
+
+@Suite("Settings screen: about links")
+struct AboutLinksTests {
+    @Test func theLinksAreTheProjectsSiteInTheLanguageOfTheInterface() {
+        #expect(AboutLinks.site(languageCode: "fr").absoluteString == "https://lucium.app/")
+        #expect(AboutLinks.site(languageCode: "en").absoluteString == "https://lucium.app/en/")
+        #expect(AboutLinks.help(languageCode: "fr").absoluteString == "https://lucium.app/communaute/")
+        #expect(AboutLinks.help(languageCode: "en").absoluteString == "https://lucium.app/en/community/")
+        #expect(AboutLinks.help(languageCode: nil).absoluteString == "https://lucium.app/en/community/", "any other language reads the English site")
     }
 }

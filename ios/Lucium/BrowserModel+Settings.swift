@@ -28,6 +28,18 @@ extension BrowserModel {
         scheduleSave()
     }
 
+    /// The rows of the settings list whose page is no longer at its original value, for the profile on screen: they carry the "Changed" mark.
+    var changedSettingsRows: Set<SettingsRow> { SettingsDefaults.changedRows(in: state, profileId: settingsProfileId) }
+
+    /// "Rétablir les réglages": the search engine of the profile on screen and the privacy settings go back to their original values. Nothing else moves
+    /// (`SettingsDefaults`); a list with nothing changed writes nothing.
+    func resetSettings() {
+        var next = state
+        guard SettingsDefaults.reset(&next, profileId: settingsProfileId) else { return }
+        state = next
+        scheduleSave()
+    }
+
     /// What the settings list says of the protection level, for the row that opens the privacy page.
     var privacyLevelSummary: LocalizedStringKey {
         switch privacySettings.level {

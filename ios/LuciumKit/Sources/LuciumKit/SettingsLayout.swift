@@ -16,13 +16,17 @@ public enum SettingsRow: String, CaseIterable, Identifiable, Hashable, Sendable 
     case sync
     /// The licence of the application and the credits of the filter lists it carries.
     case licenses
+    /// The version, and the links to the site and to the help.
+    case about
+    /// Not a page: "Rétablir les réglages", a button that asks before it puts the search engine and the privacy settings back.
+    case reset
 
     public var id: String { rawValue }
 }
 
 /// A block of the settings list.
 public enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Sendable {
-    case navigation, privacy, spaces, sync, about
+    case navigation, privacy, spaces, sync, about, reset
 
     public var id: String { rawValue }
 
@@ -33,7 +37,8 @@ public enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Senda
         case .privacy: [.privacy, .passwords, .lock]
         case .spaces: [.spaces]
         case .sync: [.sync]
-        case .about: [.licenses]
+        case .about: [.about, .licenses]
+        case .reset: [.reset]
         }
     }
 }
@@ -63,4 +68,12 @@ public enum SettingsLayout {
             return rows.isEmpty ? nil : SettingsGroup(section: section, rows: rows)
         }
     }
+}
+
+/// The two pages of the project's site the About page links to, in the language of the interface. The addresses are the Mac's (`DOWNLOAD_PAGES`'s site and
+/// `PROBLEM_SITE_URLS` in `src/shared`): the site, and the community page where a question is asked without an account. They are here and nowhere else.
+/// There is no donation link: the App Store review notes promise none (guideline 3.2.2).
+public enum AboutLinks {
+    public static func site(languageCode: String?) -> URL { URL(string: languageCode == "fr" ? "https://lucium.app/" : "https://lucium.app/en/")! }
+    public static func help(languageCode: String?) -> URL { URL(string: languageCode == "fr" ? "https://lucium.app/communaute/" : "https://lucium.app/en/community/")! }
 }
