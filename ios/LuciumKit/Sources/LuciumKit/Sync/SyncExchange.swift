@@ -202,7 +202,12 @@ public struct SyncExchangeBody: SyncSessionBody {
 
         // receive, check
         let (received, openTabs) = try await receiveSnapshot(channel, takeOpenTabs: context.categories.contains(.openTabs))
-        let cleaned = SyncInbound.clean(received.snapshot, now: now(), base: base)
+        let exchanged = SyncInbound.onlyExchanged(received.snapshot, categories: context.categories)
+        var cleaned = SyncInbound.clean(exchanged.snapshot, now: now(), base: base)
+        cleaned.refused = (cleaned.refused + exchanged.refused).sorted { a, b in
+            let kind = SyncCanonical.compare(a.kind, b.kind)
+            return kind != 0 ? kind < 0 : SyncCanonical.compare(a.id, b.id) < 0
+        }
         if !cleaned.refused.isEmpty { log("not taken: \(cleaned.refused.count) entities (\(Dictionary(grouping: cleaned.refused, by: \.reason.rawValue).mapValues(\.count)))") }
 
         // merge, compare
