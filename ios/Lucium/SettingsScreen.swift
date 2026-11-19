@@ -87,7 +87,7 @@ struct SettingsScreen: View {
         case .spaces: SpacesList(model: model) { model.settingsShown = false }
         case .licenses: LicensesScreen()
         case .sync:
-            if let sync = model.sync { SyncScreen(controller: sync, resumeModel: model) }
+            if let sync = model.sync { SyncScreen(controller: sync) }
         }
     }
 }

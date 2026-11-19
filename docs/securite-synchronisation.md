@@ -25,6 +25,8 @@ Relu :
 
 ## 3. Trouvailles
 
+> **Note (carte 511, 19 novembre 2026).** La liste en lecture seule des onglets ouverts (« Reprendre un onglet du Mac », « Sur l'iPhone », message `open-tabs`) est retirée du code, Mac et iPhone (`docs/synchronisation.md` §27.11). Les trouvailles n° 4, 26, 30 et 34 qui la concernent restent ci-dessous **comme l'historique** : leurs corrections portaient sur du code qui n'existe plus ; ce qui reste vrai est que le message `open-tabs`, s'il arrive d'un appareil de développement, est ignoré et journalisé sans erreur de séance.
+
 Gravité : **haute** = un appareil appairé hostile casse le processus ou fait perdre des données ; **moyenne** = déni de service, ou défaut de conception ; **basse** = robustesse, ou rien d'exploitable aujourd'hui.
 
 | N° | Gravité | Trouvaille | Preuve | État |

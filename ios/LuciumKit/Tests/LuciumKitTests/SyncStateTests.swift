@@ -264,7 +264,6 @@ struct SyncStateViewTests {
         #expect(kinds([.structure]) == ["space", "folder", "tab", "favorite"])
         #expect(kinds([.archive]) == ["archived"], "the archive carries no setting")
         #expect(kinds([.settings]) == ["setting"], "the settings carry no archived tab")
-        #expect(kinds([.openTabs]).isEmpty, "the open tabs are an announcement, never an entity")
         #expect(kinds([]).isEmpty)
     }
 
@@ -285,34 +284,6 @@ struct SyncStateViewTests {
         let state = try SyncStateFixtures.sample()
         #expect(SyncStateView.withheldSpaces(in: state, isLocked: { $0 == "s2" }) == ["s2"])
         #expect(SyncStateView.withheldSpaces(in: state, isLocked: { _ in false }).isEmpty)
-    }
-
-    @Test func theOpenTabsAreWebPagesOfTheOpenSpacesNeverPrivateTheLatestTwoHundred() throws {
-        var state = try SyncStateFixtures.sample()
-        var tabs: [TabItem] = []
-        for index in 0..<250 {
-            var tab = TabItem(id: "w\(index)", spaceId: "s1", url: "https://site.example/\(index)", title: "Page \(index)")
-            tab.lastActiveAt = Double(index)
-            tabs.append(tab)
-        }
-        var privateTab = TabItem(id: "p", spaceId: "s1", url: "https://private.example/", title: "Private")
-        privateTab.rest["private"] = .bool(true)
-        privateTab.lastActiveAt = 10_000
-        var locked = TabItem(id: "l", spaceId: "s2", url: "https://locked.example/", title: "Locked")
-        locked.lastActiveAt = 10_001
-        var file = TabItem(id: "f", spaceId: "s1", url: "file:///etc/passwd", title: "File")
-        file.lastActiveAt = 10_002
-        var long = TabItem(id: "long", spaceId: "s1", url: "https://long.example/" + String(repeating: "a", count: 5000), title: "Long")
-        long.lastActiveAt = 10_003
-        var wide = TabItem(id: "wide", spaceId: "s1", url: "https://wide.example/", title: String(repeating: "é", count: 400))
-        wide.lastActiveAt = 10_004
-        state.tabs = tabs + [privateTab, locked, file, long, wide]
-        let open = SyncStateView.openTabs(of: state, isSpaceLocked: { $0 == "s2" })
-        #expect(open.count == 200)
-        #expect(open.first?.id == "wide", "the latest first")
-        #expect(!open.contains { ["p", "l", "f", "long"].contains($0.id) })
-        #expect(open.first?.title.utf8.count == 300, "a title is cut to the bytes the message allows, on a character")
-        #expect(open.last?.id == "w51", "250 tabs and the latest 200 kept: the oldest kept is the 52nd")
     }
 }
 

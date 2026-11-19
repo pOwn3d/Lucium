@@ -23,10 +23,4 @@ struct CommandBarLayoutTests {
         #expect(CommandBarLayout.sections(enter: nil, hasTabs: true, hasCommands: true, hasFavorites: true) == [.tabs, .commands, .favorites])
         #expect(CommandBarLayout.sections(enter: nil, hasTabs: false, hasCommands: false, hasFavorites: false).isEmpty)
     }
-
-    @Test func theTabsOfTheMacComeAfterTheTabsOfThePhone() {
-        #expect(CommandBarLayout.sections(enter: address, hasTabs: true, hasCommands: true, hasFavorites: true, hasMac: true) == [.enter(address), .tabs, .mac, .commands, .favorites])
-        #expect(CommandBarLayout.sections(enter: nil, hasTabs: false, hasCommands: false, hasFavorites: false, hasMac: true) == [.mac])
-        #expect(CommandBarLayout.sections(enter: nil, hasTabs: true, hasCommands: false, hasFavorites: false) == [.tabs], "a bar with no source of the Mac lists none")
-    }
 }

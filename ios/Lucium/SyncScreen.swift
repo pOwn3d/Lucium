@@ -5,8 +5,6 @@ import SwiftUI
 /// words. Everything here goes through `SyncController`; nothing runs while the switch is off.
 struct SyncScreen: View {
     @Bindable var controller: SyncController
-    /// The model that opens a page of « Reprise »; nil in a test of the page alone.
-    var resumeModel: BrowserModel?
     @State private var pairing = false
     @State private var forgetting = false
     @State private var identityFailed = false
@@ -25,7 +23,6 @@ struct SyncScreen: View {
                 if controller.settings.mac != nil { intervalSection }
                 if let last = controller.lastExchange, controller.settings.mac != nil { lastExchangeSection(last) }
                 if !controller.lastConflicts.isEmpty { conflictsSection }
-                if let resumeModel, controller.settings.mac != nil { resumeSection(resumeModel) }
                 categoriesSection
             }
             Section {
@@ -126,16 +123,6 @@ struct SyncScreen: View {
         }
     }
 
-    // MARK: « Reprise »
-
-    /// The way to « Reprendre un onglet du Mac »: always there once a Mac is paired, and the screen says what is missing when the list is not there.
-    private func resumeSection(_ model: BrowserModel) -> some View {
-        Section {
-            NavigationLink { ResumeScreen(model: model) } label: { Text("resume.title") }
-                .frame(minHeight: 44)
-        }
-    }
-
     // MARK: « Conflit réglé »
 
     /// The line that opens « Conflit réglé » (§13.4): shown when the last session that had conflicts settled some, never a question that blocks.
@@ -181,7 +168,6 @@ struct SyncScreen: View {
         case .structure: "sync.category.structure"
         case .settings: "sync.category.settings"
         case .archive: "sync.category.archive"
-        case .openTabs: "sync.category.open-tabs"
         case .todayTabs: "sync.category.today-tabs"
         }
     }
@@ -196,7 +182,6 @@ struct SyncScreen: View {
         case .structure: "sync.category.structure.detail"
         case .settings: "sync.category.settings.detail"
         case .archive: "sync.category.archive.detail"
-        case .openTabs: "sync.category.open-tabs.detail"
         case .todayTabs: "sync.category.today-tabs.detail"
         }
     }

@@ -188,6 +188,16 @@ struct SyncSettingsTests {
         #expect(settings.categories == [.structure, .archive])
     }
 
+    @Test func theRetiredCategoryOpenTabsOfADevelopmentFileIsIgnoredAndNotWrittenBack() throws {
+        let json = #"{"version":1,"enabled":true,"categories":["structure","openTabs","archive"]}"#
+        let settings = try JSONDecoder().decode(SyncSettings.self, from: Data(json.utf8))
+        #expect(settings.categories == [.structure, .archive])
+        let written = String(decoding: try JSONEncoder().encode(settings), as: UTF8.self)
+        #expect(!written.contains("openTabs"))
+        #expect(SyncCategory.allCases.map(\.rawValue) == ["structure", "settings", "archive", "todayTabs"])
+        #expect(SyncCategory.common(mine: [.structure], theirs: ["structure", "openTabs"]) == [.structure], "a Mac that still announces it shares nothing more")
+    }
+
     @Test func aRestoreThatBroughtTheFileButNotTheKeyForgetsTheMac() {
         var settings = SyncSettings(enabled: true, deviceId: "AbCdEfGhIjKlMnOpQrStUv", mac: mac)
         let keptWithKey = settings.reconcile(identityPresent: true)

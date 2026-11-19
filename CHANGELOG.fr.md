@@ -7,7 +7,6 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Ajouts
 
 - **Synchronisation avec votre iPhone** : Réglages › Téléchargements et fichiers › Synchronisation appaire un iPhone par code QR ou à saisir, avec Autoriser ou Refuser sur le Mac. Désactivée par défaut. Une fois appairé, l’iPhone se synchronise seul, chaque minute ou à votre rythme, suppressions comprises. Cookies et mots de passe ne sont jamais envoyés.
-- **« Sur l’iPhone » dans la barre de commandes** : quand « Onglets ouverts » est cochée sur les deux appareils, les onglets ouverts de votre iPhone répondent à ce que vous tapez. Un clic les ouvre dans un nouvel onglet, dans l’espace de même nom s’il n’est pas verrouillé.
 
 ### Changements
 

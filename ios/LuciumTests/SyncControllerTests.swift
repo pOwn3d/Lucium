@@ -126,12 +126,12 @@ final class SyncControllerTests: XCTestCase {
 
     func testTheCategoriesAreKeptInTheOrderOfTheCatalogue() throws {
         let controller = makeController(connector: ScriptedConnector(.fail(.timedOut)))
-        controller.setCategory(.openTabs, on: true)
+        controller.setCategory(.archive, on: true)
         controller.setCategory(.settings, on: true)
         controller.setCategory(.structure, on: false)
-        XCTAssertEqual(controller.settings.categories, [.settings, .openTabs])
+        XCTAssertEqual(controller.settings.categories, [.settings, .archive])
         XCTAssertFalse(controller.isOn(.structure))
-        XCTAssertEqual(makeController(connector: ScriptedConnector(.fail(.timedOut))).settings.categories, [.settings, .openTabs])
+        XCTAssertEqual(makeController(connector: ScriptedConnector(.fail(.timedOut))).settings.categories, [.settings, .archive])
     }
 
     func testTodayTabsAreTickedOnlyWithTheStructureAndGoWithIt() throws {

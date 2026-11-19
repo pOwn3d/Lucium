@@ -45,12 +45,6 @@ final class SyncController {
     private(set) var settingsUnreadable = false
     /// The conflicts the sessions settled, kept 30 days for « Conflit réglé » (§11.7.3). Empty when no exchange is wired (a model with none).
     private(set) var conflictJournal: [SettledConflict] = []
-    /// The Mac's open tabs, as its last session announced them: in memory only, never written (§10.4). The screen « Reprise » (card 447) reads them.
-    private(set) var macOpenTabs: [SyncOpenTab] = []
-    /// When the session that brought `macOpenTabs` ended (milliseconds). Nil while there is no list: none came yet, or it was forgotten.
-    private(set) var macOpenTabsAt: Int?
-    /// Whether the last session carried a list at all: a Mac that has not ticked « Open tabs » sends none, which « Reprise » tells apart from an empty one.
-    private(set) var lastSessionCarriedOpenTabs = false
     /// What the last session did, for the page and the log.
     private(set) var lastExchange: SyncExchangeSummary?
 
@@ -239,23 +233,8 @@ final class SyncController {
         // Always in the order of the catalogue, so that the file does not depend on the order of the person's taps.
         guard let categories = SyncCategory.ticked(settings.categories, category: category, on: on) else { return false }
         settings.categories = categories
-        if category == .openTabs, !on { forgetOpenTabs() }
         save()
         return true
-    }
-
-    /// The Mac's open tabs are in memory only (§10.4): they go with the lock, with the category being turned off, and with the Mac.
-    func forgetOpenTabs() {
-        macOpenTabs = []
-        macOpenTabsAt = nil
-    }
-
-    /// What « Reprise » and the source « Sur le Mac » of the command bar show: the rows, and why there are none when there are none.
-    var resumeRows: [SyncResume.Row] { settings.enabled && isOn(.openTabs) ? SyncResume.rows(from: macOpenTabs) : [] }
-
-    var resumeAvailability: SyncResume.Availability {
-        SyncResume.availability(paired: settings.enabled && settings.mac != nil, categoryOnHere: isOn(.openTabs), announcedAt: macOpenTabsAt,
-                                listAnnounced: lastSessionCarriedOpenTabs, rowCount: resumeRows.count, sessionHappened: lastExchange != nil)
     }
 
     func isOn(_ category: SyncCategory) -> Bool { settings.categories.contains(category) }
@@ -470,7 +449,6 @@ final class SyncController {
 
     /// The application has just been locked: whatever is open is closed (docs/synchronisation.md §8.1: no session while it is locked, and a locked space is not sent).
     func applicationLocked() {
-        forgetOpenTabs()
         sessionTask?.cancel()
         pairingTask?.cancel()
     }
@@ -531,7 +509,6 @@ final class SyncController {
     }
 
     private func stopEverything() {
-        forgetOpenTabs()
         stopIntervalLoop()
         consecutiveFailures = 0
         sessionTask?.cancel()
@@ -566,15 +543,9 @@ final class SyncController {
         Task { keeper.observe(await exchangeHost.currentState(), now: time()) }
     }
 
-    /// A session went through: what it settled goes to the journal, the Mac's open tabs are kept in memory, and the page says what happened.
+    /// A session went through: what it settled goes to the journal, and the page says what happened.
     func exchangeDone(_ summary: SyncExchangeSummary) {
-        // The summary is kept without the list: the list has one home (`macOpenTabs`), so that forgetting it forgets it everywhere.
-        var kept = summary
-        kept.openTabs = nil
-        lastExchange = kept
-        macOpenTabs = summary.openTabs ?? []
-        macOpenTabsAt = summary.openTabs == nil ? nil : summary.at
-        lastSessionCarriedOpenTabs = summary.openTabs != nil
+        lastExchange = summary
         conflictJournal = SyncConflicts.add(summary.conflicts, to: conflictJournal, now: summary.at)
         saveJournal()
         if !summary.refusedSent.isEmpty || !summary.refusedReceived.isEmpty || !summary.rejectedByApply.isEmpty {
@@ -615,8 +586,6 @@ final class SyncController {
     }
 
     private func forgetExchangeFiles(of mac: SyncPairedMac?) {
-        forgetOpenTabs()
-        lastSessionCarriedOpenTabs = false
         guard exchangeHost != nil else { return }
         lastExchange = nil
         conflictJournal = []

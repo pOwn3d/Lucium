@@ -3,8 +3,7 @@ import SwiftUI
 
 /// The command bar (mockup `Commandes`): a full screen opened by the address pill. What is typed finds the open tabs (of every space, each with
 /// its space), the commands, the favourites of the profile, and ends with what Enter does: open the address, or search with the engine of the
-/// profile. The sources are the ones the Mac's bar has that the iPhone has too (docs/ios.md, §4.1): "On the Mac" is the list of tabs the Mac announced at its
-/// last session (docs/synchronisation.md §10.4); not "History" (the iPhone keeps none yet), which the drawing shows.
+/// profile. The sources are the ones the Mac's bar has that the iPhone has too (docs/ios.md, §4.1), not "History" (the iPhone keeps none yet), which the drawing shows.
 struct CommandBar: View {
     @Bindable var model: BrowserModel
     @State private var text: String
@@ -12,7 +11,7 @@ struct CommandBar: View {
     @FocusState private var focused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    enum Filter { case commands, tabs, mac }
+    enum Filter { case commands, tabs }
 
     /// `text` and `filter` are what the bar opens with: nothing, for the person; something, for the tests that look at a screen.
     init(model: BrowserModel, text: String = "", filter: Filter? = nil) {
@@ -70,7 +69,6 @@ struct CommandBar: View {
         HStack(spacing: 8) {
             chip(.commands, icon: .commands, title: "command.filter.commands")
             chip(.tabs, icon: .tabs, title: "command.filter.tabs")
-            if model.offersMacSource { chip(.mac, icon: .link, title: "command.filter.mac") }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
@@ -108,9 +106,6 @@ struct CommandBar: View {
             case .tabs:
                 header("command.section.tabs")
                 ForEach(content.tabs) { tab in tabRow(tab) }
-            case .mac:
-                header("command.section.mac")
-                ForEach(content.macTabs) { row in macRow(row) }
             case .commands:
                 header("command.section.commands")
                 ForEach(content.commands) { item in commandRow(item) }
@@ -119,22 +114,6 @@ struct CommandBar: View {
                 ForEach(content.favorites) { favorite in favoriteRow(favorite) }
             }
         }
-        if filter == .mac, content.macTabs.isEmpty { macNotice }
-    }
-
-    /// Under the filter « On the Mac », when the list has nothing to show: why, in a sentence that says what to do.
-    private var macNotice: some View {
-        Text(ResumeTexts.notice(model.resumeAvailability, matching: !content.query.isEmpty))
-            .font(.subheadline)
-            .foregroundStyle(.secondary)
-            .padding(.horizontal, 12)
-            .padding(.top, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func macRow(_ resume: SyncResume.Row) -> some View {
-        row(icon: AnyView(SiteTile(address: resume.url, size: 28)), title: Text(verbatim: resume.title), detail: Text(verbatim: resume.host), selected: false,
-            trailing: model.resumeSpaceShown(of: resume).map { AnyView(spaceChip($0)) }) { model.resume(resume) }
     }
 
     /// The line the Go key runs, first in the list and drawn as the one that is chosen (the tint of a chosen row), as the Mac's bar does.
@@ -249,12 +228,10 @@ struct CommandBarContent {
     var tabs: [TabItem]
     var commands: [CommandItem]
     var favorites: [Favorite]
-    /// The tabs the Mac announced that the text names.
-    var macTabs: [SyncResume.Row] = []
     var enter: ResolvedInput?
 
     var sections: [CommandBarSection] {
-        CommandBarLayout.sections(enter: enter, hasTabs: !tabs.isEmpty, hasCommands: !commands.isEmpty, hasFavorites: !favorites.isEmpty, hasMac: !macTabs.isEmpty)
+        CommandBarLayout.sections(enter: enter, hasTabs: !tabs.isEmpty, hasCommands: !commands.isEmpty, hasFavorites: !favorites.isEmpty)
     }
 }
 
@@ -263,9 +240,8 @@ extension BrowserModel {
     /// a locked space are never offered, nor its favourites.
     func commandBarContent(for text: String, filter: CommandBar.Filter?) -> CommandBarContent {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let tabs = filter == .commands || filter == .mac ? [] : commandTabs(matching: text)
+        let tabs = filter == .commands ? [] : commandTabs(matching: text)
         let favorites = filter == nil ? commandFavorites(matching: text) : []
-        let macTabs = filter == nil || filter == .mac ? commandMacTabs(matching: text, filtered: filter == .mac) : []
         var commands: [CommandItem] = []
         if filter != .tabs {
             let all = CommandItem.available(in: self)
@@ -277,6 +253,6 @@ extension BrowserModel {
             }
         }
         let enter = filter == nil && !query.isEmpty ? AddressResolver.resolve(query, searchTemplate: state.searchTemplate(forSpace: activeSpace.id)) : nil
-        return CommandBarContent(query: query, tabs: tabs, commands: commands, favorites: favorites, macTabs: macTabs, enter: enter)
+        return CommandBarContent(query: query, tabs: tabs, commands: commands, favorites: favorites, enter: enter)
     }
 }
