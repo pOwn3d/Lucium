@@ -12,7 +12,7 @@ extension BrowserModel {
     /// of the state, so a colour here is read, never written in the source.
     func colors(of space: Space) -> [Color] {
         let hex = space.themeColors.prefix(2)
-        let colors = hex.map { Color(.sRGB, red: Double($0.red) / 255, green: Double($0.green) / 255, blue: Double($0.blue) / 255, opacity: 1) }
+        let colors = hex.map { Color($0) }
         return colors.isEmpty ? [Color(.systemGray3), Color(.systemGray4)] : colors
     }
 

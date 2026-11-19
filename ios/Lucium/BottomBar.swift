@@ -10,7 +10,7 @@ struct BottomBar: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        VStack(spacing: 4) {
+        VStack(spacing: Gap.xs) {
             DownloadStrip(downloads: model.downloads)
             HStack(spacing: 6) {
                 // The sidebar button (card 664) is in this row: the row below already holds seven buttons. It is the iPhone's (the iPad has its own toggle).
@@ -23,7 +23,7 @@ struct BottomBar: View {
                 addressPill
                 barButton(.settings, label: "settings.title", enabled: true) { model.openSettings() }
             }
-            HStack(spacing: 2) {
+            HStack(spacing: Gap.hair) {
                 ForEach(model.spaces) { space in spaceButton(space) }
                 Spacer(minLength: 0)
                 barButton(.back, label: "bar.back", enabled: model.canGoBack, action: model.goBack)
@@ -33,8 +33,8 @@ struct BottomBar: View {
             }
         }
         .padding(.horizontal, 10)
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        .padding(.top, Gap.s)
+        .padding(.bottom, Gap.xs)
         .background(.bar)
         .overlay(alignment: .top) { Divider() }
     }
@@ -63,7 +63,7 @@ struct BottomBar: View {
             .accessibilityLabel(Text(model.isLoading ? "bar.stop" : "bar.reload"))
         }
         .frame(height: 44)
-        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
         .contextMenu {
             if let site = model.siteOfActivePage {
                 Button("sitedata.menu \(site)") { model.siteDataAsked = site }

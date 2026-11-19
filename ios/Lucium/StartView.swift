@@ -14,7 +14,7 @@ struct StartView: View {
         // text, a landscape phone) scrolls.
         GeometryReader { geometry in
             ScrollView {
-                VStack(spacing: 24) {
+                VStack(spacing: Gap.xl) {
                     searchField
                     favorites
                     Spacer(minLength: 24)
@@ -24,9 +24,9 @@ struct StartView: View {
                         .multilineTextAlignment(.center)
                         .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 24)
-                .padding(.bottom, 16)
+                .padding(.horizontal, Gap.l)
+                .padding(.top, Gap.xl)
+                .padding(.bottom, Gap.l)
                 // A wide window (an iPad) keeps the page as wide as a phone's, centred: four tiles across 800 points would be four large slabs.
                 .frame(maxWidth: 560, minHeight: geometry.size.height, alignment: .top)
                 .frame(maxWidth: .infinity)
@@ -71,10 +71,10 @@ struct StartView: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.vertical, Gap.s)
             .frame(minHeight: 48)
-            .background(card, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.primary.opacity(0.1), lineWidth: 1) }
+            .background(card, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: Radius.l, style: .continuous).strokeBorder(Color.primary.opacity(0.1), lineWidth: Stroke.hairline) }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -83,7 +83,7 @@ struct StartView: View {
     @ViewBuilder private var favorites: some View {
         switch model.startPage {
         case .favorites(let favorites):
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: StartPageContent.columns), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Gap.s), count: StartPageContent.columns), spacing: Gap.s) {
                 ForEach(favorites) { favorite in FavoriteTile(model: model, favorite: favorite, height: 60, fill: card) }
             }
             // One group for VoiceOver, named: the tiles are read as its members, by their titles.
@@ -95,9 +95,9 @@ struct StartView: View {
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .padding(.horizontal, 8)
+                .padding(.horizontal, Gap.s)
         case .privateTab:
-            HStack(spacing: 8) {
+            HStack(spacing: Gap.s) {
                 ProjectIcon(name: .privateMask, size: 18)
                 Text("spaces.private.detail").font(.subheadline).multilineTextAlignment(.leading)
             }

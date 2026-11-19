@@ -36,13 +36,12 @@ struct SpacePastille: View {
             .font(.system(size: size * 0.5))
             .frame(width: size, height: size)
             .background(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())
-            .overlay { if selected { Circle().strokeBorder(Color.accentColor, lineWidth: 2).padding(-3) } }
+            .overlay { if selected { Circle().strokeBorder(Color.accentColor, lineWidth: Stroke.ring).padding(-3) } }
             .accessibilityHidden(true)
     }
 }
 
 /// A swatch of the colour picker of a space: the colour of a hue.
 func swatch(forHue hue: Double) -> Color {
-    let hex = SpaceTheme.swatch(hue: hue)
-    return Color(.sRGB, red: Double(hex.red) / 255, green: Double(hex.green) / 255, blue: Double(hex.blue) / 255, opacity: 1)
+    Color(SpaceTheme.swatch(hue: hue))
 }

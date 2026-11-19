@@ -29,21 +29,21 @@ struct SyncConflictScreen: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Gap.m) {
+                VStack(alignment: .leading, spacing: Gap.xs) {
                     Text(verbatim: word("sync-conflict.title")).font(.title3.weight(.bold)).accessibilityAddTraits(.isHeader)
                     Text(verbatim: word("sync-conflict.subtitle")).font(.subheadline).foregroundStyle(.secondary)
                     Text("conflict.count \(entries.count)").font(.footnote).foregroundStyle(.secondary)
                 }
-                .padding(.bottom, 4)
+                .padding(.bottom, Gap.xs)
                 ForEach(entries, id: \.id) { entry in card(entry) }
                 Button(action: onClose) {
                     Text(verbatim: word("sync-conflict.ok")).font(.body.weight(.semibold)).frame(maxWidth: .infinity, minHeight: 44)
                 }
                 .buttonStyle(.borderedProminent)
-                .padding(.top, 4)
+                .padding(.top, Gap.xs)
             }
-            .padding(16)
+            .padding(Gap.l)
         }
     }
 
@@ -81,7 +81,7 @@ struct SyncConflictScreen: View {
             }
             .accessibilityElement(children: .combine)
             ForEach(view.rows, id: \.platform) { row in
-                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: Gap.s) {
                     Text(verbatim: SyncConflictTexts.deviceName(row.platform))
                         .font(.caption.weight(.semibold)).padding(.horizontal, 6).padding(.vertical, 1).background(Color(.tertiarySystemFill), in: Capsule())
                     Text(verbatim: say(row.text)).font(.subheadline).foregroundStyle(row.kept ? .primary : .secondary)
@@ -91,7 +91,7 @@ struct SyncConflictScreen: View {
                 .accessibilityElement(children: .combine)
             }
             HStack(alignment: .firstTextBaseline, spacing: 6) {
-                IconView(.check, size: 14).foregroundStyle(.green).accessibilityHidden(true)
+                IconView(.check, size: 14).foregroundStyle(Color.success).accessibilityHidden(true)
                 Text(verbatim: say(view.outcome)).font(.subheadline.weight(.semibold))
             }
             if view.compare {
@@ -109,7 +109,7 @@ struct SyncConflictScreen: View {
             if open { compare(entry, view) }
         }
         .padding(14)
-        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: 14))
+        .background(Color(.secondarySystemBackground), in: RoundedRectangle(cornerRadius: Radius.xl))
     }
 
     private func compare(_ entry: SettledConflict, _ view: ConflictView) -> some View {
@@ -124,17 +124,17 @@ struct SyncConflictScreen: View {
             }
             Text(verbatim: word("sync-conflict.explain-restore")).font(.footnote).foregroundStyle(.secondary)
         }
-        .padding(.top, 4)
+        .padding(.top, Gap.xs)
     }
 
     private func version(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(alignment: .leading, spacing: Gap.hair) {
             Text(verbatim: word(title)).font(.caption.weight(.semibold)).foregroundStyle(.secondary)
             Text(verbatim: value).font(.body)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
-        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 10))
+        .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: Radius.m))
         .accessibilityElement(children: .combine)
     }
 }

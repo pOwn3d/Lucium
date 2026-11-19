@@ -55,12 +55,12 @@ struct SiteTile: View {
         let host = AddressResolver.host(of: address)
         let letter = TileStyle.letter(forHost: host)
         let size = size * min(factor, 1.5)
-        RoundedRectangle(cornerRadius: size * 0.27, style: .continuous)
+        RoundedRectangle(cornerRadius: Radius.tile(size: size), style: .continuous)
             .fill(letter == nil ? AnyShapeStyle(.fill.tertiary) : AnyShapeStyle(Color("tile-\(TileStyle.colorIndex(forHost: host))")))
             .frame(width: size, height: size)
             .overlay {
                 if let letter {
-                    Text(verbatim: letter).font(.system(size: size * 0.5, weight: .bold)).foregroundStyle(.white)
+                    Text(verbatim: letter).font(.system(size: size * 0.5, weight: .bold)).foregroundStyle(Color.onTile)
                 } else {
                     IconView(.plus, size: size * 0.55).foregroundStyle(.secondary)
                 }

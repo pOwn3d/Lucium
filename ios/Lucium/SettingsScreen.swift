@@ -128,7 +128,7 @@ struct SearchEngineScreen: View {
     /// A choice: its name, and a check on the one that is in force. VoiceOver reads it as selected.
     private func row(_ title: Text, selected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: Gap.m) {
                 title.foregroundStyle(Color.primary)
                 Spacer(minLength: 8)
                 if selected { IconView(.check).foregroundStyle(Color.accentColor) }

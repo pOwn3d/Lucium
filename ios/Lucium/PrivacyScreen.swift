@@ -84,8 +84,8 @@ private struct PrivacyPromptsModifier: ViewModifier {
                     Text(verbatim: notice)
                         .font(.footnote)
                         .padding(10)
-                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-                        .padding(.horizontal, 12)
+                        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.l))
+                        .padding(.horizontal, Gap.m)
                         .onTapGesture { model.privacyPrompts.notice = nil }
                         .accessibilityAddTraits(.isStaticText)
                 }

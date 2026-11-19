@@ -26,6 +26,10 @@ LuciumUITests/   XCUITest bundle that drives the application like a person (a re
 AppStore/        what goes into App Store Connect: the texts of the listing in English and French, the notes for the review, and the README that says how the pictures are taken (`scripts/ios-store-shots.sh`) and what to read again before a submission
 ```
 
+## Design tokens
+
+`Lucium/Tokens.swift` is the iOS counterpart of `src/renderer/tokens.css`: radii (`Radius.s/m/l/xl`), gaps (`Gap.*`), line widths (`Stroke.*`) and the roles of colour (`Color.danger`, `.success`, `.pinned`, `.archiving`, `.neutralAction`, scrim and shadow), on top of the system colours and `AccentColor`. A view names a role, never a number or a colour of its own: `LuciumKitTests/DesignTokensTests.swift` (`swift test`, like `stylesheets.test.ts`) refuses a literal corner radius, a hex value and a named colour (`.red`, `Color.black`…) in any other file of `Lucium/`. The accent and the radii follow the Mac's roles; the accent from the space's hue is a later card.
+
 ## The filter lists of the blocker
 
 The blocker carries the lists of the Mac (EasyList, EasyPrivacy, uBlock filters…), converted to WebKit's content rules and embedded: nothing is downloaded on the phone, and they change with the application only. They are other people's work and are not committed: `node scripts/ios-filter-lists.mjs` fetches them from their public addresses, converts them (`scripts/ios-filter-lists/`), and writes `Lucium/FilterLists/` with a registry of where each comes from, which the application shows on its licenses screen. Without that folder the application runs with a short built-in list; a build that is handed out needs it. `node scripts/ios-filter-lists.mjs --from DIR` reads `DIR/<id>.txt` instead of fetching. With the folder present, `scripts/ios-check.sh` also compiles every list with WebKit. Details: [docs/ios.md](../docs/ios.md), section 6.3 (in French).

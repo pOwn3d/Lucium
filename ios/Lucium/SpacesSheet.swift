@@ -97,9 +97,9 @@ struct SpacesList: View {
             model.selectSpace(space.id)
             close()
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: Gap.m) {
                 SpacePastille(space: space, colors: model.colors(of: space), selected: selected)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Gap.hair) {
                     // A name is data, never looked up in the catalogue. Colours are given as colours: a style such as `.primary` would take the tint of the button.
                     Text(verbatim: space.name).foregroundStyle(Color.primary).fontWeight(.semibold)
                     Text(model.tabCount(in: space).map(Self.count) ?? "lock.sheet.short").font(.footnote).foregroundStyle(Color.secondary)
@@ -119,12 +119,12 @@ struct SpacesList: View {
     private var privateSection: some View {
         Section {
             Button { model.newPrivateTab() } label: {
-                HStack(spacing: 12) {
+                HStack(spacing: Gap.m) {
                     ProjectIcon(name: .privateMask, size: 18)
                         .foregroundStyle(Color(.systemBackground))
                         .frame(width: 36, height: 36)
                         .background(Color(.label), in: Circle())
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: Gap.hair) {
                         Text("spaces.private").foregroundStyle(Color.primary)
                         Text("spaces.private.detail").font(.footnote).foregroundStyle(Color.secondary)
                     }
@@ -139,7 +139,7 @@ struct SpacesList: View {
 
     private func row(icon: ProjectIcon.Name, title: LocalizedStringKey, accent: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            HStack(spacing: 12) {
+            HStack(spacing: Gap.m) {
                 ProjectIcon(name: icon).frame(width: 36, height: 36)
                 Text(title)
             }
@@ -199,7 +199,7 @@ struct SpaceForm: View {
                     ForEach(choices, id: \.self) { candidate in
                         Button { emoji = candidate } label: {
                             Text(candidate).font(.title2).frame(maxWidth: .infinity, minHeight: 44)
-                                .background(candidate == emoji ? Color.accentColor.opacity(0.2) : Color.clear, in: RoundedRectangle(cornerRadius: 8))
+                                .background(candidate == emoji ? Color.accentColor.opacity(0.2) : Color.clear, in: RoundedRectangle(cornerRadius: Radius.s))
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(candidate == emoji ? .isSelected : [])
@@ -212,7 +212,7 @@ struct SpaceForm: View {
                         let number = ordinal(index)
                         Button { hue = candidate } label: {
                             Circle().fill(swatch(forHue: candidate)).frame(width: 30, height: 30)
-                                .overlay { if hue == candidate { Circle().strokeBorder(Color.accentColor, lineWidth: 2).padding(-3) } }
+                                .overlay { if hue == candidate { Circle().strokeBorder(Color.accentColor, lineWidth: Stroke.ring).padding(-3) } }
                                 .frame(maxWidth: .infinity, minHeight: 44)
                         }
                         .buttonStyle(.plain)
@@ -232,7 +232,7 @@ struct SpaceForm: View {
                     Text("spaces.form.profile.explain")
                 }
             }
-            if let failure { Section { Text(SpacesList.message(of: failure)).foregroundStyle(.red) } }
+            if let failure { Section { Text(SpacesList.message(of: failure)).foregroundStyle(Color.danger) } }
         }
         .navigationTitle(mode == .add ? LocalizedStringKey("spaces.new.space") : LocalizedStringKey("spaces.edit"))
         .navigationBarTitleDisplayMode(.inline)

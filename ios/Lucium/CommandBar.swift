@@ -28,8 +28,8 @@ struct CommandBar: View {
             chips
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) { results }
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 24)
+                    .padding(.horizontal, Gap.s)
+                    .padding(.bottom, Gap.xl)
             }
             .scrollDismissesKeyboard(.interactively)
         }
@@ -41,7 +41,7 @@ struct CommandBar: View {
 
     private var field: some View {
         HStack(spacing: 10) {
-            HStack(spacing: 8) {
+            HStack(spacing: Gap.s) {
                 IconView(.search, size: 18).foregroundStyle(.secondary)
                 TextField("bar.address.placeholder", text: $text)
                     .font(.body)
@@ -53,27 +53,27 @@ struct CommandBar: View {
                     .onSubmit { model.open(text) }
                     .accessibilityLabel(Text("bar.address.placeholder"))
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, Gap.m)
             .frame(height: 48)
-            .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Color.accentColor, lineWidth: 2) }
+            .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+            .overlay { RoundedRectangle(cornerRadius: Radius.l, style: .continuous).strokeBorder(Color.accentColor, lineWidth: Stroke.ring) }
             Button("command.cancel") { model.commandBarShown = false }
                 .frame(minHeight: 44)
         }
-        .padding(.leading, 16)
-        .padding(.trailing, 12)
-        .padding(.top, 4)
+        .padding(.leading, Gap.l)
+        .padding(.trailing, Gap.m)
+        .padding(.top, Gap.xs)
     }
 
     private var chips: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Gap.s) {
             chip(.commands, icon: .commands, title: "command.filter.commands")
             chip(.tabs, icon: .tabs, title: "command.filter.tabs")
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 12)
-        .padding(.bottom, 4)
+        .padding(.horizontal, Gap.l)
+        .padding(.top, Gap.m)
+        .padding(.bottom, Gap.xs)
     }
 
     private func chip(_ value: Filter, icon: Icon, title: LocalizedStringKey) -> some View {
@@ -84,10 +84,10 @@ struct CommandBar: View {
                 Text(title).font(.footnote)
             }
             .foregroundStyle(on ? Color.accentColor : Color.secondary)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, Gap.m)
             .frame(height: 36)
             .background(on ? Color.accentColor.opacity(0.14) : Color(.systemBackground), in: Capsule())
-            .overlay { Capsule().strokeBorder(on ? Color.accentColor : Color.primary.opacity(0.1), lineWidth: 1) }
+            .overlay { Capsule().strokeBorder(on ? Color.accentColor : Color.primary.opacity(0.1), lineWidth: Stroke.hairline) }
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
@@ -135,9 +135,9 @@ struct CommandBar: View {
             .tracking(0.6)
             .textCase(.uppercase)
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 12)
-            .padding(.top, 12)
-            .padding(.bottom, 4)
+            .padding(.horizontal, Gap.m)
+            .padding(.top, Gap.m)
+            .padding(.bottom, Gap.xs)
             .accessibilityAddTraits(.isHeader)
     }
 
@@ -165,7 +165,7 @@ struct CommandBar: View {
 
     private func plainTile(_ icon: Icon) -> some View {
         IconView(icon, size: 16).foregroundStyle(.secondary).frame(width: 28, height: 28)
-            .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+            .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: Radius.s, style: .continuous))
     }
 
     /// The space a tab is in: its pastille (the emoji on the colours of its theme), the name beside.
@@ -175,19 +175,19 @@ struct CommandBar: View {
         // At the largest sizes of text a row gives its words the whole width: the chip of the space goes under them, and a title may take lines.
         let large = typeSize.isAccessibilitySize
         return Button(action: action) {
-            HStack(alignment: large ? .top : .center, spacing: 12) {
+            HStack(alignment: large ? .top : .center, spacing: Gap.m) {
                 icon
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Gap.hair) {
                     title.font(.body).lineLimit(large ? 4 : 1)
                     if let detail { detail.font(.footnote).foregroundStyle(.secondary).lineLimit(large ? 3 : 1) }
-                    if large, let trailing { trailing.padding(.top, 4) }
+                    if large, let trailing { trailing.padding(.top, Gap.xs) }
                 }
                 Spacer(minLength: 8)
                 if !large { trailing }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, Gap.m)
             .frame(minHeight: 56)
-            .background(selected || chosen ? Color.accentColor.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(selected || chosen ? Color.accentColor.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
