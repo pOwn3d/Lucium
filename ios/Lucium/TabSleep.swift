@@ -30,6 +30,8 @@ extension BrowserModel {
         // The left edge is the sidebar's on an iPhone: going back is the button of the bottom bar (the iPad keeps WebKit's swipe).
         view.allowsBackForwardNavigationGestures = EdgeDrawer.allowsWebKitBackGesture(isPhone: isPhone)
         view.isInspectable = true
+        // The system's find bar (UIFindInteraction): the entry of the page menu opens it; it also answers ⌘F on an iPad keyboard.
+        view.isFindInteractionEnabled = true
         webViews[tab.id] = view
         observe(view, tabId: tab.id)
         restore(tab, into: view)

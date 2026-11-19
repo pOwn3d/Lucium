@@ -2953,6 +2953,22 @@
         }
       }
     },
+    "page.find": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Find in page"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chercher dans la page"
+          }
+        }
+      }
+    },
     "page.more": {
       "localizations": {
         "en": {

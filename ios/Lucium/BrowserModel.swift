@@ -108,6 +108,8 @@ final class BrowserModel {
     /// The data store of each profile that was used, kept as long as the model lives (`SpacesModel.swift`).
     @ObservationIgnored var profileStores: [String: WKWebsiteDataStore] = [:]
     @ObservationIgnored var webViews: [String: WKWebView] = [:]
+    /// How the find bar is shown. A seam for tests: a find bar needs a real window scene, which a test host does not give.
+    @ObservationIgnored var presentFind: (UIFindInteraction) -> Void = { $0.presentFindNavigator(showingReplace: false) }
     @ObservationIgnored var observations: [String: [NSKeyValueObservation]] = [:]
     @ObservationIgnored var saveTask: Task<Void, Never>?
     @ObservationIgnored var thumbnailCache: [String: UIImage] = [:]
