@@ -111,7 +111,13 @@ struct PageArea: View {
             // No page is loaded for it, so it does not wait for the blocker.
             StartView(model: model)
         } else if let view = model.webView {
-            WebViewHost(webView: view).id(model.activeTab?.id)
+            ZStack {
+                WebViewHost(webView: view).id(model.activeTab?.id)
+                // The load failed: the screen says why, over the web view (which keeps the page that was there, for a step back).
+                if let tab = model.activeTab?.id, let failure = model.loadFailures[tab] {
+                    LoadFailureView(failure: failure, retry: { model.navigationPolicy.retry(tab: tab) })
+                }
+            }
         } else {
             Color(.systemBackground)  // until the blocker is ready no page is made, so that none loads unfiltered
         }

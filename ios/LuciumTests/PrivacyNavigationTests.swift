@@ -193,6 +193,46 @@ final class PrivacyNavigationTests: BrowserCoreTestCase {
         XCTAssertNotNil(model.privacyPrompts.notice, "the person was not told")
     }
 
+    // MARK: The screen of a page that did not load
+
+    func testAPageThatCannotLoadGetsAnErrorScreenThatRetryAndANewLoadClear() async throws {
+        let closed = try LocalServer(routes: [:])
+        let closedPort = try await closed.start()
+        closed.stop()
+        let model = await makeModel()
+        let view = try XCTUnwrap(model.webView)
+        let tab = try XCTUnwrap(model.activeTab).id
+        let dead = "http://127.0.0.1:\(closedPort)/x"
+        model.addressText = dead
+        model.submitAddress()
+        try await eventually("the error screen is on", timeout: .seconds(20), { model.loadFailures[tab] != nil })
+        let failure = try XCTUnwrap(model.loadFailures[tab])
+        XCTAssertEqual(failure.kind, .cannotConnect)
+        XCTAssertEqual(failure.retryAddress, dead)
+
+        // « Try again » loads the same address: the screen goes while it loads, and comes back as the site still does not answer.
+        model.navigationPolicy.retry(tab: tab)
+        try await eventually("the retry loaded the address again", timeout: .seconds(20), { model.loadFailures[tab] != nil && !view.isLoading })
+        XCTAssertEqual(model.loadFailures[tab]?.retryAddress, dead)
+
+        // Another address replaces the screen.
+        try await go("/a.html", in: model)
+        XCTAssertNil(model.loadFailures[tab], "a page that loaded leaves no error screen behind")
+    }
+
+    func testACancelledLoadAndARefusedCertificateLeaveNoErrorScreen() async throws {
+        let model = await makeModel()
+        let view = try XCTUnwrap(model.webView)
+        let tab = try XCTUnwrap(model.activeTab).id
+        let url = URL(string: "https://example.org/")!
+        for code in [NSURLErrorCancelled, NSURLErrorServerCertificateUntrusted] {
+            model.navigationPolicy.webView(view, didFailProvisionalNavigation: nil, withError: NSError(domain: NSURLErrorDomain, code: code, userInfo: [NSURLErrorFailingURLErrorKey: url]))
+            XCTAssertNil(model.loadFailures[tab], "\(code) has no error screen")
+        }
+        model.navigationPolicy.webView(view, didFailProvisionalNavigation: nil, withError: NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet, userInfo: [NSURLErrorFailingURLErrorKey: url]))
+        XCTAssertEqual(model.loadFailures[tab]?.kind, .offline)
+    }
+
     /// WebKit gives no way to make a certificate invalid here, so the failure is handed to the delegate as WebKit reports it.
     func testARefusedCertificateIsShownAndTheHttpAddressOpensOnlyOnTheClick() async throws {
         let model = await makeModel()
