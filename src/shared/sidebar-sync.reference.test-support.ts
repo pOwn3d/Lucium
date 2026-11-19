@@ -9,7 +9,8 @@ import { SYNCED_SETTING_KEYS, archiveOpenTabsOfRemovedSpaces, type PatchKind, ty
 
 type Entity = Record<string, unknown>
 
-const COLLECTION = { space: 'spaces', folder: 'folders', tab: 'tabs', favorite: 'favorites', archived: 'archive' } as const
+// `todayTab` is only here for the type: the oracle is played on the five kinds it knew, and never on the shared Today tabs (their own tests are in sidebar-sync-today.test.ts).
+const COLLECTION = { space: 'spaces', folder: 'folders', tab: 'tabs', todayTab: 'tabs', favorite: 'favorites', archived: 'archive' } as const
 
 /** A key that is never written to an object: it would reach the prototype. */
 const UNSAFE = new Set(['__proto__', 'constructor', 'prototype'])
@@ -22,6 +23,8 @@ function made(kind: PatchKind, id: string, now: number): Entity {
       return { id, spaceId: '', name: '', collapsed: false }
     case 'tab':
       return { id, spaceId: '', url: '', title: '', pinned: true, createdAt: now, lastActiveAt: now }
+    case 'todayTab':
+      return { id, spaceId: '', url: '', title: '', pinned: false, createdAt: now, lastActiveAt: now }
     case 'favorite':
       // On the default profile unless the fields say another one: a favourite with no profile would be given to every profile in use (`normalize`).
       return { id, url: '', title: '', profileId: 'default' }

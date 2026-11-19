@@ -56,7 +56,7 @@ function reasonOf(a: string, b: string): ConflictReason {
 }
 
 // What belongs to what: the dependents of a space, and of a folder.
-const SPACE_DEPENDENTS: readonly (readonly [string, string])[] = [['folder', 'spaceId'], ['tab', 'spaceId'], ['archived', 'spaceId']]
+const SPACE_DEPENDENTS: readonly (readonly [string, string])[] = [['folder', 'spaceId'], ['tab', 'spaceId'], ['archived', 'spaceId'], ['todayTab', 'spaceId']]
 const FOLDER_DEPENDENTS: readonly (readonly [string, string])[] = [['folder', 'parentId'], ['tab', 'folderId'], ['archived', 'folderId']]
 
 const ref = (fields: SyncFields, name: string): string | null => {
@@ -81,6 +81,8 @@ function listKeyOf(kind: string, fields: SyncFields): string | null {
       return `folders:${ref(fields, 'spaceId') ?? '-'}:${ref(fields, 'parentId') ?? '-'}`
     case 'tab':
       return `tabs:${ref(fields, 'spaceId') ?? '-'}:${ref(fields, 'folderId') ?? '-'}`
+    case 'todayTab':
+      return `today:${ref(fields, 'spaceId') ?? '-'}`
     case 'favorite':
       return `favorites:${ref(fields, 'profileId') ?? '-'}`
     default:
@@ -101,7 +103,7 @@ function withoutSpaces(snapshot: SyncSnapshot, spaces: ReadonlySet<string>): Syn
     const kept: Record<string, SyncEntity> = {}
     for (const [id, entity] of Object.entries(byId)) {
       const space = ref(entity.fields, 'spaceId')
-      const belongs = (kind === 'space' && spaces.has(id)) || ((kind === 'folder' || kind === 'tab' || kind === 'archived') && space !== null && spaces.has(space))
+      const belongs = (kind === 'space' && spaces.has(id)) || ((kind === 'folder' || kind === 'tab' || kind === 'archived' || kind === 'todayTab') && space !== null && spaces.has(space))
       if (belongs) (dropped[kind] ??= new Set()).add(id)
       else kept[id] = entity
     }
@@ -252,7 +254,7 @@ export function mergeSnapshots(baseIn: SyncSnapshot | null, localIn: SyncSnapsho
   // §11.7.1: what belongs to a space that is not there is removed, and leaves a tombstone marked with its own latest change (a later change elsewhere brings
   // it back, and it is removed again: that is what makes the merge idempotent).
   const spaceIds = new Set(Object.keys(entities['space'] ?? {}))
-  for (const kind of ['folder', 'tab', 'archived']) {
+  for (const kind of ['folder', 'tab', 'archived', 'todayTab']) {
     const byId = entities[kind]
     if (byId === undefined) continue
     for (const [id, entity] of Object.entries(byId)) {

@@ -13,7 +13,7 @@ import { BaseStore } from './bases'
 import { Channel } from './channel'
 import { MarkBook } from './marks'
 import { runSession, type SessionDeps, type SessionResult } from './session'
-import { trackedViewOf } from './state-view'
+import { admittedTodayTabs, trackedViewOf } from './state-view'
 import { socketPair } from './sync-net.test-support'
 
 export const MAC_ID = 'mac-device-0000000001'
@@ -53,6 +53,8 @@ export class Device {
   appLocked = false
   stateVersion = 1
   openTabs: Array<{ id: string; spaceId: string; url: string; title: string; lastActiveAt: number }> = []
+  /** The tabs a session closed that were the selected one of their space (§27.5). */
+  shownClosed: Array<{ id: string; spaceId: string; onScreen: boolean }[]> = []
   received: Array<{ peer: string; items: unknown[] }> = []
   refused: Array<Array<{ kind: string; id: string; reason: string }>> = []
   unpaired: string[] = []
@@ -82,7 +84,12 @@ export class Device {
   edit(change: (state: SidebarState) => SidebarState, advanceMs = 1000): void {
     this.clock += advanceMs
     this.state = change(this.state)
-    this.marks.update(trackedViewOf(this.state), this.clock)
+    this.marks.update(trackedViewOf(this.state, this.admitted()), this.clock)
+  }
+
+  /** The Today tabs the book holds, as the tracker follows them between two sessions (§27.3: only a session admits a new one). */
+  admitted(): ReadonlySet<string> {
+    return admittedTodayTabs(this.state, { book: this.marks, now: this.clock, admitNew: false, isSpaceLocked: () => false })
   }
 
   private deps(): SessionDeps {
@@ -114,6 +121,7 @@ export class Device {
       onOpenTabs: (peer, items) => void this.received.push({ peer, items }),
       onUnpair: (peer) => void this.unpaired.push(peer),
       onRefused: (_peer, refused) => void this.refused.push(refused),
+      onShownTabsClosed: (_peer, tabs) => void this.shownClosed.push(tabs),
       onDone: (peer) => void this.done.push(peer),
       onWarning: (_peer, code) => void this.warnings.push(code)
     }
@@ -138,4 +146,4 @@ export async function sync(mac: Device, phone: Device): Promise<{ mac: SessionRe
 }
 
 /** What the two devices must agree on after a session: every synchronised entity with its synchronised fields, and the order of every list. */
-export const synced = (device: Device): ReturnType<typeof trackedViewOf> => trackedViewOf(device.state)
+export const synced = (device: Device): ReturnType<typeof trackedViewOf> => trackedViewOf(device.state, device.admitted())

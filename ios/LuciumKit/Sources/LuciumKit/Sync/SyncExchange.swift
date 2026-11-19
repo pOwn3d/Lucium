@@ -231,6 +231,8 @@ public struct SyncExchangeBody: SyncSessionBody {
         // From the write to the adoption of the merge the book does not look at the state: what the Mac wrote is not a change of the phone.
         marks.hold()
         if !patch.isEmpty { applied = await host.apply(patch) }
+        // A state that would grow past what this version reads back is not written, and the merge is not adopted: the base and the marks stay as they were, and the session ends.
+        if applied?.tooLarge == true { throw SyncFailure(.tooLarge, "the state would be larger than this phone keeps") }
         do {
             let written = await host.currentState()
             try marks.adopt(merged.snapshot, exchanged: { SyncStateView.isExchanged(kind: $0, categories: context.categories) }, aside: SyncAside.of(SyncStateView.trackedView(of: written), spaces: Set(aside)))

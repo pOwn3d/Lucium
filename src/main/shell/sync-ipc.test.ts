@@ -14,7 +14,7 @@ import { handleSyncRequest, handleSyncResume, registerSyncIpc } from './sync-ipc
 
 type Handler = (event: { sender: object }, raw: unknown) => Promise<SyncReply>
 
-const STATUS: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
+const STATUS: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
 
 /** A service that records what it is asked, and answers the state it was given. */
 function fakeService(over: Partial<Record<keyof SyncService, unknown>> = {}) {

@@ -7,10 +7,11 @@
 //
 // Nothing here reads the disk or the clock; both are pure functions of what they are given.
 
-import type { SidebarState } from '@shared/model'
+import { isListedTab, type SidebarState } from '@shared/model'
 import type { SyncCategory } from '@shared/sync-ipc'
 import { ZERO_STAMP, type SyncEntity, type SyncFields, type SyncSnapshot } from '@shared/sync-snapshot'
-import { ARCHIVE_PER_SPACE_SENT, FIELD_CLASSES, SYNCED_SETTINGS, isKind, type EntityKind } from './field-classes'
+import { admitTabs, roundActiveAt, TODAY_TAB_KIND, type TodayCandidate } from '@shared/sync-today'
+import { ARCHIVE_PER_SPACE_SENT, SYNCED_SETTINGS, classesOf, isKind, type SyncKind } from './field-classes'
 import { cutBytes } from '@shared/state-clean'
 import { MAX_OPEN_TABS, MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES } from './limits'
 import { earlier, listKindOf, type MarkBook, type TrackedView } from './marks'
@@ -20,21 +21,21 @@ type Entity = object
 const record = (entity: Entity): Record<string, unknown> => entity as Record<string, unknown>
 
 /** The fields the book follows: all but the identifier, the seeds, the local ones and what is `undefined` (a field that is not there is not a field). */
-function followedFields(kind: EntityKind, entity: Entity): Record<string, unknown> {
-  const classes = FIELD_CLASSES[kind]
+function followedFields(kind: SyncKind, entity: Entity): Record<string, unknown> {
+  const classes = classesOf(kind)
   return Object.fromEntries(Object.entries(record(entity)).filter(([name, value]) => name !== 'id' && value !== undefined && !classes.local.includes(name) && !classes.seed.includes(name)))
 }
 
 /** The seed fields of an entity: copied when it is created on the other device, then local. */
-function seedFields(kind: EntityKind, entity: Entity): Record<string, unknown> {
-  return Object.fromEntries(FIELD_CLASSES[kind].seed.flatMap((name) => (record(entity)[name] !== undefined ? [[name, record(entity)[name]]] : [])))
+function seedFields(kind: SyncKind, entity: Entity): Record<string, unknown> {
+  return Object.fromEntries(classesOf(kind).seed.flatMap((name) => (record(entity)[name] !== undefined ? [[name, record(entity)[name]]] : [])))
 }
 
 /** Whether the book follows a field of an entity of this kind: what `adopt` is told. Fields of a kind this version does not know are followed as they come. */
 export const follows = (kind: string, field: string): boolean => {
   if (kind === 'setting') return field === 'value'
   if (!isKind(kind)) return true
-  const classes = FIELD_CLASSES[kind]
+  const classes = classesOf(kind)
   return field !== 'id' && !classes.local.includes(field) && !classes.seed.includes(field)
 }
 
@@ -44,6 +45,8 @@ const DASH = '-'
 const folderList = (spaceId: string, parentId: string | undefined): string => `folders:${spaceId}:${parentId ?? DASH}`
 const tabList = (spaceId: string, folderId: string | undefined): string => `tabs:${spaceId}:${folderId ?? DASH}`
 const favoriteList = (profileId: string | undefined): string => `favorites:${profileId ?? 'default'}`
+/** The key of the list the shared Today tabs of a space are in (§27.2). */
+const todayList = (spaceId: string): string => `today:${spaceId}`
 
 /** The pinned tabs that are synchronised: pinned, and never private. */
 const isSyncedTab = (tab: SidebarState['tabs'][number]): boolean => tab.pinned && tab.private !== true
@@ -59,8 +62,45 @@ function archivedSent(state: SidebarState): SidebarState['archive'] {
   })
 }
 
-export function trackedViewOf(state: SidebarState): TrackedView {
-  const entities: TrackedView['entities'] = { space: {}, folder: {}, tab: {}, favorite: {}, archived: {}, setting: {} }
+/** A Today tab as the synchronisation sees it: the tab, and `activeAt`, which is its last use rounded down to ten minutes (§27.2) and not a field of the model. */
+const todayProjection = (tab: SidebarState['tabs'][number]): Entity => ({ ...tab, activeAt: roundActiveAt(tab.lastActiveAt) })
+
+export interface AdmissionInputs {
+  /** The book of marks: it says which tabs are admitted already (§27.3: the admission is kept there, by device). */
+  book: Pick<MarkBook, 'knows'>
+  now: number
+  /** Whether the session lets new tabs in (the category `todayTabs` is common): without it only the tabs that are admitted already stay in the set. */
+  admitNew: boolean
+  isSpaceLocked: (spaceId: string) => boolean
+}
+
+/**
+ * The Today tabs of the shared set (§27.3, §27.4): the tabs the book holds stay whatever page they are on (the admission is sticky) unless they stop being what a shared tab
+ * is (private, a favourite's page, in a container), and, when `admitNew`, the tabs that hold the conditions of entry come in while there is room. A pinned tab is not a
+ * Today tab. What decides is `admitTabs`, the function the vectors play.
+ */
+export function admittedTodayTabs(state: SidebarState, inputs: AdmissionInputs): ReadonlySet<string> {
+  const candidates: TodayCandidate[] = []
+  for (const tab of state.tabs) {
+    if (tab.pinned) continue
+    const admitted = inputs.book.knows(TODAY_TAB_KIND, tab.id)
+    if (!admitted && !inputs.admitNew) continue
+    candidates.push({
+      id: tab.id,
+      url: tab.url,
+      ageMs: inputs.now - tab.createdAt,
+      lastActiveAt: tab.lastActiveAt,
+      ...(tab.private === true ? { private: true } : {}),
+      ...(!isListedTab(tab) ? { favorite: true } : {}),
+      ...(tab.container !== undefined ? { container: true } : {}),
+      ...(admitted ? { admitted: true } : { spaceLocked: inputs.isSpaceLocked(tab.spaceId) })
+    })
+  }
+  return new Set(admitTabs(candidates).admitted)
+}
+
+export function trackedViewOf(state: SidebarState, admittedToday: ReadonlySet<string> = new Set()): TrackedView {
+  const entities: TrackedView['entities'] = { space: {}, folder: {}, tab: {}, todayTab: {}, favorite: {}, archived: {}, setting: {} }
   const order: TrackedView['order'] = { spaces: state.spaces.map((space) => space.id) }
   for (const space of state.spaces) (entities['space'] as Record<string, Record<string, unknown>>)[space.id] = followedFields('space', space)
   for (const folder of state.folders) {
@@ -70,6 +110,10 @@ export function trackedViewOf(state: SidebarState): TrackedView {
   for (const tab of state.tabs.filter(isSyncedTab)) {
     ;(entities['tab'] as Record<string, Record<string, unknown>>)[tab.id] = followedFields('tab', tab)
     ;(order[tabList(tab.spaceId, tab.folderId)] ??= []).push(tab.id)
+  }
+  for (const tab of state.tabs.filter((one) => admittedToday.has(one.id) && !one.pinned)) {
+    ;(entities[TODAY_TAB_KIND] as Record<string, Record<string, unknown>>)[tab.id] = followedFields(TODAY_TAB_KIND, todayProjection(tab))
+    ;(order[todayList(tab.spaceId)] ??= []).push(tab.id)
   }
   for (const favorite of state.favorites) {
     ;(entities['favorite'] as Record<string, Record<string, unknown>>)[favorite.id] = followedFields('favorite', favorite)
@@ -84,6 +128,8 @@ export function trackedViewOf(state: SidebarState): TrackedView {
 export interface SnapshotOptions {
   /** The categories both devices ticked. */
   categories: ReadonlySet<SyncCategory>
+  /** The Today tabs of the shared set (`admittedTodayTabs`); none when it is not given. */
+  admittedToday?: ReadonlySet<string>
   /** The spaces set aside for this session (the locked ones): nothing of them is sent. */
   withheld: ReadonlySet<string>
   /** The base of this device with that one: the entities it does not hold are new to the other device, and carry their seed fields. */
@@ -92,9 +138,9 @@ export interface SnapshotOptions {
 
 const STRUCTURE_KINDS: readonly string[] = ['space', 'folder', 'tab', 'favorite']
 
-/** The kinds a session exchanges, for the categories both devices ticked (`structure`, `archive`, `settings`: what `snapshotOf` sends). */
+/** The kinds a session exchanges, for the categories both devices ticked (`structure`, `todayTabs`, `archive`, `settings`: what `snapshotOf` sends). */
 const kindsOfCategories = (categories: ReadonlySet<SyncCategory>): ReadonlySet<string> =>
-  new Set<string>([...(categories.has('structure') ? STRUCTURE_KINDS : []), ...(categories.has('archive') ? ['archived'] : []), ...(categories.has('settings') ? ['setting'] : [])])
+  new Set<string>([...(categories.has('structure') ? STRUCTURE_KINDS : []), ...(categories.has('todayTabs') ? [TODAY_TAB_KIND] : []), ...(categories.has('archive') ? ['archived'] : []), ...(categories.has('settings') ? ['setting'] : [])])
 
 /** Whether a session with these categories exchanges the kind: the kinds of the categories, and the kinds this version does not know (they cross whatever is ticked, §11.6). */
 export const kindIsExchanged = (kind: string, categories: ReadonlySet<SyncCategory>): boolean => kindsOfCategories(categories).has(kind) || (!isKind(kind) && kind !== 'setting')
@@ -133,13 +179,15 @@ export function onlyExchanged(snapshot: SyncSnapshot, categories: ReadonlySet<Sy
 
 /** The snapshot a session freezes and sends. The marks must be up to date (`MarkBook.update`) before it is made. */
 export function snapshotOf(state: SidebarState, marks: MarkBook, options: SnapshotOptions): SyncSnapshot {
-  const view = trackedViewOf(state)
+  const admittedToday = options.admittedToday ?? new Set<string>()
+  const view = trackedViewOf(state, admittedToday)
   const kinds = new Set<string>(kindsOfCategories(options.categories))
   const withheldSpace = (kind: string, fields: Record<string, unknown>, id: string): boolean => (kind === 'space' ? options.withheld.has(id) : typeof fields['spaceId'] === 'string' && options.withheld.has(fields['spaceId']))
   const byId: Record<string, Record<string, Entity>> = {
     space: Object.fromEntries(state.spaces.map((one) => [one.id, one])),
     folder: Object.fromEntries(state.folders.map((one) => [one.id, one])),
     tab: Object.fromEntries(state.tabs.filter(isSyncedTab).map((one) => [one.id, one])),
+    todayTab: Object.fromEntries(state.tabs.filter((one) => admittedToday.has(one.id) && !one.pinned).map((one) => [one.id, todayProjection(one)])),
     favorite: Object.fromEntries(state.favorites.map((one) => [one.id, one])),
     archived: Object.fromEntries(archivedSent(state).map((one) => [one.id, one]))
   }
@@ -165,7 +213,7 @@ export function snapshotOf(state: SidebarState, marks: MarkBook, options: Snapsh
   const orderStamps: SyncSnapshot['orderStamps'] = {}
   for (const [key, ids] of Object.entries(view.order)) {
     const [head, space] = key.split(':')
-    const kind = head === 'spaces' ? 'space' : head === 'folders' ? 'folder' : head === 'tabs' ? 'tab' : 'favorite'
+    const kind = head === 'spaces' ? 'space' : head === 'folders' ? 'folder' : head === 'tabs' ? 'tab' : head === 'today' ? TODAY_TAB_KIND : 'favorite'
     if (!kinds.has(kind) || (space !== undefined && head !== 'favorites' && options.withheld.has(space))) continue
     order[key] = ids.filter((id) => entities[kind]?.[id] !== undefined)
     orderStamps[key] = marks.orderStampOf(key)
@@ -190,6 +238,9 @@ export function baseOf(merged: SyncSnapshot): SyncSnapshot {
   return { ...merged, entities }
 }
 
+/** A text with each lone surrogate written as U+FFFD (`String.prototype.toWellFormed`, which the compiler's library does not list yet). */
+const wellFormed = (text: string): string => text.replace(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g, '\uFFFD')
+
 /** The tabs announced to the other device when « Onglets ouverts » is common (§10.4): web pages the person has open, never a private tab, never a tab of a locked space, a tab whose address is over the bound of the message, the latest 200. */
 export function openTabsOf(state: SidebarState, isSpaceLocked: (spaceId: string) => boolean): Array<{ id: string; spaceId: string; url: string; title: string; lastActiveAt: number }> {
   return state.tabs
@@ -197,5 +248,5 @@ export function openTabsOf(state: SidebarState, isSpaceLocked: (spaceId: string)
     .filter((tab) => tab.private !== true && /^https?:\/\//i.test(tab.url) && Buffer.byteLength(tab.url, 'utf8') <= MAX_OPEN_TAB_URL_BYTES && !isSpaceLocked(tab.spaceId))
     .sort((a, b) => b.lastActiveAt - a.lastActiveAt || (a.id < b.id ? -1 : 1))
     .slice(0, MAX_OPEN_TABS)
-    .map((tab) => ({ id: tab.id, spaceId: tab.spaceId, url: tab.url, title: cutBytes(tab.title, MAX_OPEN_TAB_TITLE_BYTES), lastActiveAt: Math.max(0, Math.trunc(tab.lastActiveAt)) }))
+    .map((tab) => ({ id: tab.id, spaceId: tab.spaceId, url: tab.url, title: cutBytes(wellFormed(tab.title), MAX_OPEN_TAB_TITLE_BYTES), lastActiveAt: Math.max(0, Math.trunc(tab.lastActiveAt)) }))
 }

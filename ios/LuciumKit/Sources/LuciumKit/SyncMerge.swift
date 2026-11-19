@@ -139,7 +139,7 @@ public enum SyncMerge {
         // §11.7.1: what belongs to a space that is not there is removed, and leaves a tombstone marked with its own latest change (a later change elsewhere
         // brings it back, and it is removed again: that is what makes the merge idempotent).
         let spaceIDs = Set((result.entities["space"] ?? [:]).keys.map(Key.init))
-        for kind in ["folder", "tab", "archived"] {
+        for kind in ["folder", "tab", "archived", "todayTab"] {
             guard let byID = result.entities[kind] else { continue }
             for (id, entity) in byID {
                 if let space = reference(entity.fields, "spaceId"), spaceIDs.contains(Key(space)) { continue }
@@ -234,6 +234,7 @@ public enum SyncMerge {
         case "space": return "spaces"
         case "folder": return "folders:\(reference(fields, "spaceId") ?? "-"):\(reference(fields, "parentId") ?? "-")"
         case "tab": return "tabs:\(reference(fields, "spaceId") ?? "-"):\(reference(fields, "folderId") ?? "-")"
+        case "todayTab": return "today:\(reference(fields, "spaceId") ?? "-")"
         case "favorite": return "favorites:\(reference(fields, "profileId") ?? "-")"
         default: return nil
         }
@@ -250,7 +251,7 @@ public enum SyncMerge {
             var kept: [String: SyncEntity] = [:]
             for (id, entity) in byID {
                 let space = reference(entity.fields, "spaceId")
-                let belongs = (kind == "space" && spaces.contains(Key(id))) || ((kind == "folder" || kind == "tab" || kind == "archived") && space != nil && spaces.contains(Key(space!)))
+                let belongs = (kind == "space" && spaces.contains(Key(id))) || ((kind == "folder" || kind == "tab" || kind == "archived" || kind == "todayTab") && space != nil && spaces.contains(Key(space!)))
                 if belongs { dropped[kind, default: []].insert(Key(id)) } else { kept[id] = entity }
             }
             entities[kind] = kept
@@ -282,7 +283,7 @@ public enum SyncMerge {
                 }
             }
         }
-        scan("space", [("folder", "spaceId"), ("tab", "spaceId"), ("archived", "spaceId")])
+        scan("space", [("folder", "spaceId"), ("tab", "spaceId"), ("archived", "spaceId"), ("todayTab", "spaceId")])
         scan("folder", [("folder", "parentId"), ("tab", "folderId"), ("archived", "folderId")])
         return entered
     }

@@ -6,6 +6,7 @@
 // new field does not travel by default. A field a LATER version added crosses as opaque (§11.6) and is not in this table.
 
 import { SYNCED_SETTING_KEYS } from '@shared/sidebar-sync'
+import { TODAY_TAB_FIELD_CLASSES, TODAY_TAB_KIND } from '@shared/sync-today'
 
 export type EntityKind = 'space' | 'folder' | 'tab' | 'favorite' | 'archived'
 
@@ -27,9 +28,27 @@ export const FIELD_CLASSES: Readonly<Record<EntityKind, FieldClass>> = {
   archived: { synced: ['id', 'spaceId', 'url', 'title', 'archivedAt', 'source', 'pinned', 'anchorUrl', 'folderId'], seed: [], local: ['history', 'container'] }
 }
 
+/** The five kinds of the shared vectors (`sync-message-vectors.json`): the ones `FIELD_CLASSES` types. */
 export const KINDS: readonly EntityKind[] = ['space', 'folder', 'tab', 'favorite', 'archived']
 
-export const isKind = (value: string): value is EntityKind => (KINDS as readonly string[]).includes(value)
+/**
+ * Every kind of entity this version writes into the state: the five above and `todayTab` (§27.2), a projection of the open tabs of Today. Its classes are not in
+ * `FIELD_CLASSES`, which is the table of the shared message vectors; they are those of the contract (`TODAY_TAB_FIELD_CLASSES`), with the fields only a pinned tab has counted
+ * as local, so that a device cannot set them on a Today tab.
+ */
+export type SyncKind = EntityKind | typeof TODAY_TAB_KIND
+export const SYNC_KINDS: readonly SyncKind[] = [...KINDS, TODAY_TAB_KIND]
+
+export const isKind = (value: string): value is SyncKind => (SYNC_KINDS as readonly string[]).includes(value)
+
+const TODAY_CLASSES: FieldClass = {
+  synced: TODAY_TAB_FIELD_CLASSES.synced,
+  seed: TODAY_TAB_FIELD_CLASSES.seed,
+  local: [...TODAY_TAB_FIELD_CLASSES.local, ...TODAY_TAB_FIELD_CLASSES.notApplicable]
+}
+
+/** The classes of the fields of a kind. */
+export const classesOf = (kind: SyncKind): FieldClass => (kind === TODAY_TAB_KIND ? TODAY_CLASSES : FIELD_CLASSES[kind])
 
 /** The kinds that are code or secrets: never sent, never taken, whatever a device says (§10.5). */
 export const NEVER_KINDS: readonly string[] = ['boost', 'userScript', 'extension', 'password', 'vault', 'lock', 'history', 'cookie', 'session']

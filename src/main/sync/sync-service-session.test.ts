@@ -30,7 +30,7 @@ interface Rig {
   service: SyncService
   dir: string
   store: SyncStore
-  mac: { state: SidebarState; listeners: Array<() => void>; applied: SyncPatch[] }
+  mac: { state: SidebarState; listeners: Array<() => void>; applied: SyncPatch[]; shownClosed: Array<{ id: string; spaceId: string; onScreen: boolean }[]> }
   phone: Device
   phoneTls: ReturnType<typeof testIdentity>
   time: { t: number }
@@ -42,7 +42,7 @@ function rig(macSeed: Parameters<typeof stateOf>[0], phoneSeed: Parameters<typeo
   const dir = tempDir('lucium-sync-exchange-')
   const time = { t: 0 }
   const locked = { v: false }
-  const mac: Rig['mac'] = { state: stateOf(macSeed), listeners: [], applied: [] }
+  const mac: Rig['mac'] = { state: stateOf(macSeed), listeners: [], applied: [], shownClosed: [] }
   const store = new SyncStore(join(dir, 'sync.json'))
   const ports: SessionPorts = {
     host: {
@@ -59,6 +59,7 @@ function rig(macSeed: Parameters<typeof stateOf>[0], phoneSeed: Parameters<typeo
     basesDir: dir,
     appVersion: '1.2.0',
     stateVersion: 1,
+    onShownTabsClosed: (_peer, tabs) => void mac.shownClosed.push(tabs),
     openTabs: () => [{ id: 'open-1', spaceId: 'sp-main', url: 'https://reading.example/', title: 'Reading', lastActiveAt: 7 }]
   }
   const service = new SyncService({
@@ -118,6 +119,26 @@ describe('the service with the exchange of the data', () => {
     expect(JSON.stringify(r.mac.state)).not.toContain('hash')
     const { readFileSync } = await import('node:fs')
     expect(readFileSync(join(r.dir, 'sync-marks.json'), 'utf8')).not.toContain('Secret title')
+  })
+
+  it('shares the Today tabs once the category is ticked on both sides, and tells the interface when the iPhone closed the tab the Mac was showing (§27.5, [Q11])', async () => {
+    const old = 1_790_000_000_000 - 120_000
+    const r = rig({ tabs: [{ id: 't-a', spaceId: 'sp-main', pinned: false, createdAt: old, lastActiveAt: old }, { id: 't-b', spaceId: 'sp-main', pinned: false, createdAt: old, lastActiveAt: old }] }, {})
+    r.store.setCategory('todayTabs', true)
+    r.phone.categories.add('todayTabs')
+    await r.service.setEnabled(true)
+    r.phone.edit((s) => s)
+    await phoneSession(r, macDeviceId(r))
+    await sleep(30)
+    expect(r.phone.state.tabs.filter((t) => !t.pinned).map((t) => t.id)).toEqual(['t-a', 't-b'])
+    // The Mac shows t-a; the person closes it on the iPhone.
+    r.mac.state = reduce(r.mac.state, { type: 'tab/select', id: 't-a' }, { now: old, newId: () => 'made' })
+    r.phone.edit((s) => reduce(s, { type: 'tab/archive', id: 't-a' }, { now: r.phone.clock, newId: () => 'made' }))
+    await phoneSession(r, macDeviceId(r))
+    await sleep(30)
+    expect(r.mac.state.tabs.map((t) => t.id)).toEqual(['t-b'])
+    expect(r.mac.state.archive[0]).toMatchObject({ id: 't-a', source: 'sync' })
+    expect(r.mac.shownClosed).toEqual([[{ id: 't-a', spaceId: 'sp-main', onScreen: true }]])
   })
 
   it('keeps the open tabs of the iPhone in memory only, once the category is ticked on both sides, and keeps them after the session, for as long as the Mac listens', async () => {

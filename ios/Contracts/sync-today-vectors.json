@@ -1,0 +1,5289 @@
+{
+  "comment": "The shared Today tabs of docs/synchronisation.md §27 (card 507). Read by src/shared/ios-sync-today-contract.test.ts (played against src/shared/sync-today.ts and the merge of src/shared/sync-merge.ts) and by LuciumKit (SyncTodayVectorTests, against SyncToday.swift and SyncMerge.swift). Sections: limits; fieldClasses (the classes of todayTab, §27.2); address (§27.3 condition 3, §27.7); activeAt (§27.2, §27.5); admission (§27.3, §27.4: the conditions, the sticky admission, the cap; a case's `cap` replaces the 200 of `limits` so that a vector stays small); gate (the door of §27.4: invalid-url, invalid-value, too-many-today-tabs; a case's `limit` replaces the 500 of `limits`); moves (pinning and detaching, §27.2); merge (cases of the format of sync-merge-vectors.json: the conflicts of §27.9, the first exchange of §27.10, a locked space of §27.7; in `expect.order` a null means that the list is absent). The closing of a tab on the other device (an archive entry with the id of the tab, source sync, §27.5) is not here: it belongs to the cards that write the Mac and the phone.",
+  "limits": {
+    "todayTabCap": 200,
+    "todayTabGate": 500,
+    "urlMaxBytes": 4096,
+    "titleMaxBytes": 300,
+    "minAgeMs": 20000,
+    "activeAtStepMs": 600000
+  },
+  "fieldClasses": {
+    "todayTab": {
+      "synced": [
+        "id",
+        "spaceId",
+        "customTitle",
+        "icon",
+        "activeAt"
+      ],
+      "seed": [
+        "url",
+        "title"
+      ],
+      "local": [
+        "image",
+        "faviconUrl",
+        "deadKept",
+        "autoReload",
+        "container",
+        "windowKey",
+        "openerId",
+        "parentId",
+        "treeCollapsed",
+        "favoriteId",
+        "createdAt",
+        "lastActiveAt",
+        "private",
+        "keepAwake"
+      ],
+      "notApplicable": [
+        "pinned",
+        "anchorUrl",
+        "folderId"
+      ]
+    }
+  },
+  "address": [
+    {
+      "name": "https page",
+      "url": "https://example.com/a",
+      "expect": true
+    },
+    {
+      "name": "http page",
+      "url": "http://example.com/",
+      "expect": true
+    },
+    {
+      "name": "scheme in capitals",
+      "url": "HTTPS://EXAMPLE.COM/",
+      "expect": true
+    },
+    {
+      "name": "ftp",
+      "url": "ftp://example.com/file",
+      "expect": false
+    },
+    {
+      "name": "a script",
+      "url": "javascript:alert(1)",
+      "expect": false
+    },
+    {
+      "name": "a file",
+      "url": "file:///etc/hosts",
+      "expect": false
+    },
+    {
+      "name": "the blank page",
+      "url": "about:blank",
+      "expect": false
+    },
+    {
+      "name": "a page of Lucium",
+      "url": "lucium://settings",
+      "expect": false
+    },
+    {
+      "name": "a data address",
+      "url": "data:text/html,hi",
+      "expect": false
+    },
+    {
+      "name": "no host",
+      "url": "https://",
+      "expect": false
+    },
+    {
+      "name": "empty",
+      "url": "",
+      "expect": false
+    },
+    {
+      "name": "4096 bytes, ASCII",
+      "url": "https://a.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expect": true
+    },
+    {
+      "name": "4097 bytes, ASCII",
+      "url": "https://a.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "expect": false
+    },
+    {
+      "name": "4096 bytes, fewer characters (UTF-8 counts bytes)",
+      "url": "https://a.example/ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé",
+      "expect": true
+    },
+    {
+      "name": "4097 bytes, fewer characters than the limit",
+      "url": "https://a.example/éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééa",
+      "expect": false
+    }
+  ],
+  "activeAt": {
+    "round": [
+      {
+        "lastActiveAt": 0,
+        "expect": 0
+      },
+      {
+        "lastActiveAt": -5,
+        "expect": 0
+      },
+      {
+        "lastActiveAt": 599999,
+        "expect": 0
+      },
+      {
+        "lastActiveAt": 600000,
+        "expect": 600000
+      },
+      {
+        "lastActiveAt": 1790000000000,
+        "expect": 1789999800000
+      },
+      {
+        "lastActiveAt": 1790000999999,
+        "expect": 1790000400000
+      },
+      {
+        "lastActiveAt": 1790001000000,
+        "expect": 1790001000000
+      }
+    ],
+    "lastActive": [
+      {
+        "local": 100,
+        "received": 200,
+        "expect": 200
+      },
+      {
+        "local": 200,
+        "received": 100,
+        "expect": 200
+      },
+      {
+        "local": 300,
+        "received": 300,
+        "expect": 300
+      },
+      {
+        "local": 0,
+        "received": 600000,
+        "expect": 600000
+      }
+    ]
+  },
+  "admission": [
+    {
+      "name": "an ordinary tab, open for a minute, enters",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a"
+        ],
+        "refused": []
+      }
+    },
+    {
+      "name": "a private tab does not enter",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "private": true
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "private"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a tab of a private window does not enter",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "privateWindow": true
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "private-window"
+          }
+        ]
+      }
+    },
+    {
+      "name": "the page of a favourite does not enter",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "favorite": true
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "favorite"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a tab of a container does not enter",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "container": true
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "container"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a tab of a locked space does not enter",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "spaceLocked": true
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "space-locked"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a script is not a web page",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "javascript:alert(1)",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "not-web-address"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a file is not a web page",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "file:///etc/hosts",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "not-web-address"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an address of 4097 bytes is left out, never cut",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "url-too-long"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an address of 4096 bytes enters",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a"
+        ],
+        "refused": []
+      }
+    },
+    {
+      "name": "a tab open for 19.999 s is of passage",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 19999,
+          "lastActiveAt": 1790000000000
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "too-young"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a tab open for 20 s enters",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 20000,
+          "lastActiveAt": 1790000000000
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a"
+        ],
+        "refused": []
+      }
+    },
+    {
+      "name": "sticky: a tab already admitted stays on an internal page",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "about:blank",
+          "ageMs": 0,
+          "lastActiveAt": 1790000000000,
+          "admitted": true
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a"
+        ],
+        "refused": []
+      }
+    },
+    {
+      "name": "sticky: a tab already admitted stays on an address that is too long",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a"
+        ],
+        "refused": []
+      }
+    },
+    {
+      "name": "sticky: a lock set later does not take the tab out (the merge sets the space aside)",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "spaceLocked": true,
+          "admitted": true
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a"
+        ],
+        "refused": []
+      }
+    },
+    {
+      "name": "sticky: a tab already admitted that became private is out",
+      "cap": 3,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "private": true,
+          "admitted": true
+        }
+      ],
+      "expect": {
+        "admitted": [],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "private"
+          }
+        ]
+      }
+    },
+    {
+      "name": "full: the most recently used take the places, then the id",
+      "cap": 2,
+      "candidates": [
+        {
+          "id": "e",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000900
+        },
+        {
+          "id": "d",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000900
+        },
+        {
+          "id": "c",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000900
+        },
+        {
+          "id": "b",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000100
+        },
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000500
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "c",
+          "d"
+        ],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "full"
+          },
+          {
+            "id": "b",
+            "reason": "full"
+          },
+          {
+            "id": "e",
+            "reason": "full"
+          }
+        ]
+      }
+    },
+    {
+      "name": "full: a tab already admitted keeps its place and uses one",
+      "cap": 2,
+      "candidates": [
+        {
+          "id": "old",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1,
+          "admitted": true
+        },
+        {
+          "id": "n1",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 30
+        },
+        {
+          "id": "n2",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 20
+        },
+        {
+          "id": "n3",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 10
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "n1",
+          "old"
+        ],
+        "refused": [
+          {
+            "id": "n2",
+            "reason": "full"
+          },
+          {
+            "id": "n3",
+            "reason": "full"
+          }
+        ]
+      }
+    },
+    {
+      "name": "full: never a removal, the tabs already admitted stay above the cap",
+      "cap": 1,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true
+        },
+        {
+          "id": "b",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true
+        },
+        {
+          "id": "c",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true
+        },
+        {
+          "id": "d",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 9999999999999
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a",
+          "b",
+          "c"
+        ],
+        "refused": [
+          {
+            "id": "d",
+            "reason": "full"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a place that is free is taken as soon as there is a tab for it",
+      "cap": 2,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true
+        },
+        {
+          "id": "b",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000
+        },
+        {
+          "id": "c",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000001
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a",
+          "c"
+        ],
+        "refused": [
+          {
+            "id": "b",
+            "reason": "full"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a tab refused for what it is does not take a place",
+      "cap": 1,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 9999999999999,
+          "private": true
+        },
+        {
+          "id": "b",
+          "url": "https://a.example/",
+          "ageMs": 1,
+          "lastActiveAt": 9999999999998
+        },
+        {
+          "id": "c",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "c"
+        ],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "private"
+          },
+          {
+            "id": "b",
+            "reason": "too-young"
+          }
+        ]
+      }
+    }
+  ],
+  "gate": [
+    {
+      "name": "an entity that is in order passes as it is",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "customTitle": "Notes",
+            "icon": "📝"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "customTitle": "1790000000001-0000-mac",
+            "icon": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "customTitle": "Notes",
+              "icon": "📝"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "customTitle": "1790000000001-0000-mac",
+              "icon": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": []
+      }
+    },
+    {
+      "name": "a new entity carries its seeds, the address and the title",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "url": "https://example.com/a",
+            "title": "Example"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "url": "1790000000001-0000-mac",
+            "title": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "url": "https://example.com/a",
+              "title": "Example"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "url": "1790000000001-0000-mac",
+              "title": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": []
+      }
+    },
+    {
+      "name": "the fields of the class local are taken off, with their marks",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "createdAt": 1,
+            "lastActiveAt": 2,
+            "private": false,
+            "windowKey": "w",
+            "faviconUrl": "https://x/f.ico"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000002-0000-mac",
+            "createdAt": "1790000000003-0000-mac",
+            "lastActiveAt": "1790000000003-0000-mac",
+            "private": "1790000000003-0000-mac",
+            "windowKey": "1790000000003-0000-mac",
+            "faviconUrl": "1790000000003-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000002-0000-mac"
+            }
+          }
+        },
+        "refused": []
+      }
+    },
+    {
+      "name": "a field this version does not know crosses (§11.6)",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "futureField": {
+              "a": 1
+            }
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "futureField": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "futureField": {
+                "a": 1
+              }
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "futureField": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": []
+      }
+    },
+    {
+      "name": "a script is refused, and the entity is dropped when the base does not hold it",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "url": "javascript:alert(1)"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "url": "1790000000001-0000-mac"
+          }
+        },
+        "t2": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "customTitle": "Notes",
+            "icon": "📝"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "customTitle": "1790000000001-0000-mac",
+            "icon": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t2": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "customTitle": "Notes",
+              "icon": "📝"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "customTitle": "1790000000001-0000-mac",
+              "icon": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": [
+          {
+            "id": "t1",
+            "reason": "invalid-url"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a file address is refused: the base's version stands in, so that the gap is not read as a closing",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "url": "file:///etc/hosts"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "url": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1789999800000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1789999800000
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": [
+          {
+            "id": "t1",
+            "reason": "invalid-url"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an address of 4097 bytes is refused",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "url": "https://a.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "url": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {},
+        "refused": [
+          {
+            "id": "t1",
+            "reason": "invalid-url"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an address of 4096 bytes passes",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "url": "https://a.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "url": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "url": "https://a.example/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "url": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": []
+      }
+    },
+    {
+      "name": "an address that is not a text is refused",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "url": 5
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "url": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {},
+        "refused": [
+          {
+            "id": "t1",
+            "reason": "invalid-url"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a title of 300 bytes passes",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "title": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "title": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": []
+      }
+    },
+    {
+      "name": "a title of more than 300 bytes is cut, on a boundary of characters",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "title": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "title": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "title": "éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "title": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": []
+      }
+    },
+    {
+      "name": "a title is cut without splitting a four-byte character",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa😀"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "title": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "title": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": []
+      }
+    },
+    {
+      "name": "a title that is not a text is refused",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "title": 3
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "title": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {},
+        "refused": [
+          {
+            "id": "t1",
+            "reason": "invalid-value"
+          }
+        ]
+      }
+    },
+    {
+      "name": "an activeAt that is not a number is refused",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": "soon"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {},
+        "refused": [
+          {
+            "id": "t1",
+            "reason": "invalid-value"
+          }
+        ]
+      }
+    },
+    {
+      "name": "a negative activeAt is refused",
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": -1
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {},
+        "refused": [
+          {
+            "id": "t1",
+            "reason": "invalid-value"
+          }
+        ]
+      }
+    },
+    {
+      "name": "too many: the best ranked are kept, newest first then the id (limit 3)",
+      "limit": 3,
+      "entities": {
+        "t6": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790002200000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        },
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790001000000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        },
+        "t2": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790001600000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        },
+        "t3": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790002200000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        },
+        "t4": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790002800000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        },
+        "t5": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790003400000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t5": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790003400000
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac"
+            }
+          },
+          "t4": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790002800000
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac"
+            }
+          },
+          "t3": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790002200000
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": [
+          {
+            "id": "t1",
+            "reason": "too-many-today-tabs"
+          },
+          {
+            "id": "t2",
+            "reason": "too-many-today-tabs"
+          },
+          {
+            "id": "t6",
+            "reason": "too-many-today-tabs"
+          }
+        ]
+      }
+    },
+    {
+      "name": "too many: an entity that is dropped and is in the base is given back as the base holds it",
+      "limit": 2,
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790001000000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        },
+        "t2": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790001600000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        },
+        "t3": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790002200000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1789999800000
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "expect": {
+        "entities": {
+          "t3": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790002200000
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac"
+            }
+          },
+          "t2": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790001600000
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac"
+            }
+          },
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1789999800000
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": [
+          {
+            "id": "t1",
+            "reason": "too-many-today-tabs"
+          }
+        ]
+      }
+    },
+    {
+      "name": "exactly the limit: nothing is refused",
+      "limit": 3,
+      "entities": {
+        "t1": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "customTitle": "Notes",
+            "icon": "📝"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "customTitle": "1790000000001-0000-mac",
+            "icon": "1790000000001-0000-mac"
+          }
+        },
+        "t2": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "customTitle": "Notes",
+            "icon": "📝"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "customTitle": "1790000000001-0000-mac",
+            "icon": "1790000000001-0000-mac"
+          }
+        },
+        "t3": {
+          "fields": {
+            "spaceId": "s1",
+            "activeAt": 1790000400000,
+            "customTitle": "Notes",
+            "icon": "📝"
+          },
+          "stamps": {
+            "spaceId": "1790000000001-0000-mac",
+            "activeAt": "1790000000001-0000-mac",
+            "customTitle": "1790000000001-0000-mac",
+            "icon": "1790000000001-0000-mac"
+          }
+        }
+      },
+      "base": null,
+      "expect": {
+        "entities": {
+          "t1": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "customTitle": "Notes",
+              "icon": "📝"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "customTitle": "1790000000001-0000-mac",
+              "icon": "1790000000001-0000-mac"
+            }
+          },
+          "t2": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "customTitle": "Notes",
+              "icon": "📝"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "customTitle": "1790000000001-0000-mac",
+              "icon": "1790000000001-0000-mac"
+            }
+          },
+          "t3": {
+            "fields": {
+              "spaceId": "s1",
+              "activeAt": 1790000400000,
+              "customTitle": "Notes",
+              "icon": "📝"
+            },
+            "stamps": {
+              "spaceId": "1790000000001-0000-mac",
+              "activeAt": "1790000000001-0000-mac",
+              "customTitle": "1790000000001-0000-mac",
+              "icon": "1790000000001-0000-mac"
+            }
+          }
+        },
+        "refused": []
+      }
+    }
+  ],
+  "moves": [
+    {
+      "name": "pinning: todayTab/x removed and tab/x created is one move",
+      "removed": [
+        {
+          "kind": "todayTab",
+          "id": "x"
+        }
+      ],
+      "created": [
+        {
+          "kind": "tab",
+          "id": "x"
+        }
+      ],
+      "expect": [
+        {
+          "id": "x",
+          "from": "todayTab",
+          "to": "tab"
+        }
+      ]
+    },
+    {
+      "name": "detaching: tab/x removed and todayTab/x created is one move",
+      "removed": [
+        {
+          "kind": "tab",
+          "id": "x"
+        }
+      ],
+      "created": [
+        {
+          "kind": "todayTab",
+          "id": "x"
+        }
+      ],
+      "expect": [
+        {
+          "id": "x",
+          "from": "tab",
+          "to": "todayTab"
+        }
+      ]
+    },
+    {
+      "name": "a closing alone (or a pinning while structure is not common) is no move",
+      "removed": [
+        {
+          "kind": "todayTab",
+          "id": "x"
+        }
+      ],
+      "created": [],
+      "expect": []
+    },
+    {
+      "name": "an opening alone is no move",
+      "removed": [],
+      "created": [
+        {
+          "kind": "todayTab",
+          "id": "x"
+        }
+      ],
+      "expect": []
+    },
+    {
+      "name": "a pinned tab created while another id is removed is no move",
+      "removed": [
+        {
+          "kind": "todayTab",
+          "id": "y"
+        }
+      ],
+      "created": [
+        {
+          "kind": "tab",
+          "id": "x"
+        }
+      ],
+      "expect": []
+    },
+    {
+      "name": "two ids at once, sorted",
+      "removed": [
+        {
+          "kind": "todayTab",
+          "id": "b"
+        },
+        {
+          "kind": "tab",
+          "id": "a"
+        }
+      ],
+      "created": [
+        {
+          "kind": "tab",
+          "id": "b"
+        },
+        {
+          "kind": "todayTab",
+          "id": "a"
+        }
+      ],
+      "expect": [
+        {
+          "id": "a",
+          "from": "tab",
+          "to": "todayTab"
+        },
+        {
+          "id": "b",
+          "from": "todayTab",
+          "to": "tab"
+        }
+      ]
+    },
+    {
+      "name": "a kind that is not a tab is no move",
+      "removed": [
+        {
+          "kind": "todayTab",
+          "id": "x"
+        }
+      ],
+      "created": [
+        {
+          "kind": "folder",
+          "id": "x"
+        }
+      ],
+      "expect": []
+    }
+  ],
+  "merge": {
+    "devices": {
+      "mac": "mac",
+      "phone": "phone"
+    },
+    "cases": [
+      {
+        "name": "closed here, navigated there: the closing wins (a navigation is no tracked field)",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "closed here, read there (activeAt later): the tab is kept",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790004000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000007-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790004000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000007-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [
+            {
+              "kind": "todayTab",
+              "id": "t1",
+              "field": null,
+              "winner": "remote",
+              "reason": "modification-over-deletion"
+            }
+          ],
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "closed here, moved to another space there: the tab is kept, in that space",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "s2"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "s2"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s2",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000007-0000-phone",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t2"
+            ],
+            "today:s2": [
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "s2"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s2",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000007-0000-phone",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [
+            {
+              "kind": "todayTab",
+              "id": "t1",
+              "field": null,
+              "winner": "remote",
+              "reason": "modification-over-deletion"
+            }
+          ],
+          "order": {
+            "today:s1": [
+              "t2"
+            ],
+            "today:s2": [
+              "t1"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "closed here, renamed there: the tab is kept, with its name",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "customTitle": "Lecture"
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac",
+                  "customTitle": "1790000000007-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "customTitle": "Lecture"
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac",
+                  "customTitle": "1790000000007-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [
+            {
+              "kind": "todayTab",
+              "id": "t1",
+              "field": null,
+              "winner": "remote",
+              "reason": "modification-over-deletion"
+            }
+          ],
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "closed here, given an icon there: the tab is kept, with its icon",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "icon": "📚"
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac",
+                  "icon": "1790000000007-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "icon": "📚"
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac",
+                  "icon": "1790000000007-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [
+            {
+              "kind": "todayTab",
+              "id": "t1",
+              "field": null,
+              "winner": "remote",
+              "reason": "modification-over-deletion"
+            }
+          ],
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "closed on both devices: absent, the greater tombstone is kept",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000006-0000-phone"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000006-0000-phone"
+            }
+          },
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "first exchange, the same address on both devices: two tabs, no merge by address",
+        "base": null,
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "mac-1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.com/a",
+                  "title": "Example"
+                },
+                "stamps": {
+                  "spaceId": "1790000000003-0000-mac",
+                  "activeAt": "1790000000003-0000-mac",
+                  "url": "1790000000003-0000-mac",
+                  "title": "1790000000003-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "mac-1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000003-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "phone-1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.com/a",
+                  "title": "Example"
+                },
+                "stamps": {
+                  "spaceId": "1790000000004-0000-phone",
+                  "activeAt": "1790000000004-0000-phone",
+                  "url": "1790000000004-0000-phone",
+                  "title": "1790000000004-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "phone-1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000004-0000-phone"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "mac-1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.com/a",
+                  "title": "Example"
+                },
+                "stamps": {
+                  "spaceId": "1790000000003-0000-mac",
+                  "activeAt": "1790000000003-0000-mac",
+                  "url": "1790000000003-0000-mac",
+                  "title": "1790000000003-0000-mac"
+                }
+              },
+              "phone-1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.com/a",
+                  "title": "Example"
+                },
+                "stamps": {
+                  "spaceId": "1790000000004-0000-phone",
+                  "activeAt": "1790000000004-0000-phone",
+                  "url": "1790000000004-0000-phone",
+                  "title": "1790000000004-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "mac-1",
+              "phone-1"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "first exchange: the union of both lists, ordered by birth then id, no conflict",
+        "base": null,
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "m2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.com/m2"
+                },
+                "stamps": {
+                  "spaceId": "1790000000003-0000-mac",
+                  "activeAt": "1790000000003-0000-mac",
+                  "url": "1790000000003-0000-mac"
+                }
+              },
+              "m1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000,
+                  "url": "https://example.com/m1"
+                },
+                "stamps": {
+                  "spaceId": "1790000000004-0000-mac",
+                  "activeAt": "1790000000004-0000-mac",
+                  "url": "1790000000004-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "m2",
+              "m1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000003-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "p1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.org/p1"
+                },
+                "stamps": {
+                  "spaceId": "1790000000002-0000-phone",
+                  "activeAt": "1790000000002-0000-phone",
+                  "url": "1790000000002-0000-phone"
+                }
+              },
+              "p2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000,
+                  "url": "https://example.org/p2"
+                },
+                "stamps": {
+                  "spaceId": "1790000000003-0000-phone",
+                  "activeAt": "1790000000003-0000-phone",
+                  "url": "1790000000003-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "p1",
+              "p2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000002-0000-phone"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "m2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.com/m2"
+                },
+                "stamps": {
+                  "spaceId": "1790000000003-0000-mac",
+                  "activeAt": "1790000000003-0000-mac",
+                  "url": "1790000000003-0000-mac"
+                }
+              },
+              "m1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000,
+                  "url": "https://example.com/m1"
+                },
+                "stamps": {
+                  "spaceId": "1790000000004-0000-mac",
+                  "activeAt": "1790000000004-0000-mac",
+                  "url": "1790000000004-0000-mac"
+                }
+              },
+              "p1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.org/p1"
+                },
+                "stamps": {
+                  "spaceId": "1790000000002-0000-phone",
+                  "activeAt": "1790000000002-0000-phone",
+                  "url": "1790000000002-0000-phone"
+                }
+              },
+              "p2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000,
+                  "url": "https://example.org/p2"
+                },
+                "stamps": {
+                  "spaceId": "1790000000003-0000-phone",
+                  "activeAt": "1790000000003-0000-phone",
+                  "url": "1790000000003-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "p1",
+              "m2",
+              "p2",
+              "m1"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "first exchange, a phone never modified adopts the tabs of the Mac (its Today snapshot is empty)",
+        "base": null,
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "m2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.com/m2"
+                },
+                "stamps": {
+                  "spaceId": "1790000000003-0000-mac",
+                  "activeAt": "1790000000003-0000-mac",
+                  "url": "1790000000003-0000-mac"
+                }
+              },
+              "m1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000,
+                  "url": "https://example.com/m1"
+                },
+                "stamps": {
+                  "spaceId": "1790000000004-0000-mac",
+                  "activeAt": "1790000000004-0000-mac",
+                  "url": "1790000000004-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "m2",
+              "m1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000003-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {},
+          "tombstones": {},
+          "order": {},
+          "orderStamps": {}
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "m2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "url": "https://example.com/m2"
+                },
+                "stamps": {
+                  "spaceId": "1790000000003-0000-mac",
+                  "activeAt": "1790000000003-0000-mac",
+                  "url": "1790000000003-0000-mac"
+                }
+              },
+              "m1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000,
+                  "url": "https://example.com/m1"
+                },
+                "stamps": {
+                  "spaceId": "1790000000004-0000-mac",
+                  "activeAt": "1790000000004-0000-mac",
+                  "url": "1790000000004-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "m2",
+              "m1"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "renamed on both devices: the greater mark wins",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "customTitle": "Mac name"
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac",
+                  "customTitle": "1790000000005-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "customTitle": "Phone name"
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac",
+                  "customTitle": "1790000000008-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000,
+                  "customTitle": "Phone name"
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac",
+                  "customTitle": "1790000000008-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [
+            {
+              "kind": "todayTab",
+              "id": "t1",
+              "field": "customTitle",
+              "winner": "remote",
+              "reason": "newer"
+            }
+          ],
+          "order": {}
+        },
+        "swap": true
+      },
+      {
+        "name": "reordered here, opened there: the reorder is kept and the new tab goes to the end",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t2",
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000005-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t3": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000006-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2",
+              "t3"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t3": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000006-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "t2",
+              "t1",
+              "t3"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "reordered on both devices: the list with the greater mark wins",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t2",
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000005-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t3": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000006-0000-phone"
+                }
+              },
+              "t4": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000007-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t4",
+              "t3",
+              "t2",
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000009-0000-phone"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t3": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000006-0000-phone"
+                }
+              },
+              "t4": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000007-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [
+            {
+              "kind": "order",
+              "id": "today:s1",
+              "field": null,
+              "winner": "remote",
+              "reason": "order"
+            }
+          ],
+          "order": {
+            "today:s1": [
+              "t4",
+              "t3",
+              "t2",
+              "t1"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "pinned here, intact there: the tab changes list (todayTab removed, tab added)",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "tab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "pinned": true,
+                  "anchorUrl": "https://example.com/a"
+                },
+                "stamps": {
+                  "spaceId": "1790000000005-0000-mac",
+                  "pinned": "1790000000005-0000-mac",
+                  "anchorUrl": "1790000000005-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ],
+            "tabs:s1:-": [
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac",
+            "tabs:s1:-": "1790000000005-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "tab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "pinned": true,
+                  "anchorUrl": "https://example.com/a"
+                },
+                "stamps": {
+                  "spaceId": "1790000000005-0000-mac",
+                  "pinned": "1790000000005-0000-mac",
+                  "anchorUrl": "1790000000005-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "t2"
+            ],
+            "tabs:s1:-": [
+              "t1"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "pinned here, closed there: the tab comes back pinned on both devices",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "tab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "pinned": true,
+                  "anchorUrl": "https://example.com/a"
+                },
+                "stamps": {
+                  "spaceId": "1790000000005-0000-mac",
+                  "pinned": "1790000000005-0000-mac",
+                  "anchorUrl": "1790000000005-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ],
+            "tabs:s1:-": [
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac",
+            "tabs:s1:-": "1790000000005-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000006-0000-phone"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "tab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "pinned": true,
+                  "anchorUrl": "https://example.com/a"
+                },
+                "stamps": {
+                  "spaceId": "1790000000005-0000-mac",
+                  "pinned": "1790000000005-0000-mac",
+                  "anchorUrl": "1790000000005-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000006-0000-phone"
+            }
+          },
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "t2"
+            ],
+            "tabs:s1:-": [
+              "t1"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "detached here, intact there: the tab changes list (tab removed, todayTab added)",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "tab": {
+              "p1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "pinned": true,
+                  "anchorUrl": "https://example.com/a"
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "pinned": "1790000000001-0000-mac",
+                  "anchorUrl": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "tabs:s1:-": [
+              "p1"
+            ]
+          },
+          "orderStamps": {
+            "tabs:s1:-": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "p1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000005-0000-mac",
+                  "activeAt": "1790000000005-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "tab": {
+              "p1": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "p1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000005-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "tab": {
+              "p1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "pinned": true,
+                  "anchorUrl": "https://example.com/a"
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "pinned": "1790000000001-0000-mac",
+                  "anchorUrl": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "tabs:s1:-": [
+              "p1"
+            ]
+          },
+          "orderStamps": {
+            "tabs:s1:-": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "p1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000005-0000-mac",
+                  "activeAt": "1790000000005-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "tab": {
+              "p1": "1790000000005-0000-mac"
+            }
+          },
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "p1"
+            ],
+            "tabs:s1:-": null
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "no base: a tombstone removes the tab it is later than, and loses to a later change",
+        "base": null,
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac",
+              "t2": "1790000000005-0000-mac"
+            }
+          },
+          "order": {},
+          "orderStamps": {}
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000003-0000-phone",
+                  "activeAt": "1790000000003-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000009-0000-phone",
+                  "activeAt": "1790000000009-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000009-0000-phone"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000009-0000-phone",
+                  "activeAt": "1790000000009-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t1": "1790000000005-0000-mac"
+            }
+          },
+          "conflicts": [
+            {
+              "kind": "todayTab",
+              "id": "t2",
+              "field": null,
+              "winner": "remote",
+              "reason": "modification-over-deletion"
+            }
+          ],
+          "order": {
+            "today:s1": [
+              "t2"
+            ]
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "read there, unchanged here: the later activeAt is taken, no conflict",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790004000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000007-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1",
+              "t2"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790004000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000007-0000-phone"
+                }
+              },
+              "t2": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790001000000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [],
+          "order": {}
+        },
+        "swap": true
+      },
+      {
+        "name": "a locked space is set aside: its Today tabs and their list are in no input and not in the result",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "s2"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "a": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "b": {
+                "fields": {
+                  "spaceId": "s2",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "a"
+            ],
+            "today:s2": [
+              "b"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac",
+            "today:s2": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "s2"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "a": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "b": {
+                "fields": {
+                  "spaceId": "s2",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "a"
+            ],
+            "today:s2": [
+              "b"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac",
+            "today:s2": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "s2"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "a": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "b": {
+                "fields": {
+                  "spaceId": "s2",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              },
+              "c": {
+                "fields": {
+                  "spaceId": "s2",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000004-0000-phone",
+                  "activeAt": "1790000000004-0000-phone"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "a"
+            ],
+            "today:s2": [
+              "b",
+              "c"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac",
+            "today:s2": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [
+          "s2"
+        ],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "a": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "a"
+            ],
+            "today:s2": null
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "a Today tab of a space that is not there is removed, and leaves a tombstone",
+        "base": null,
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {},
+          "orderStamps": {}
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t9": {
+                "fields": {
+                  "spaceId": "s9",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000006-0000-phone",
+                  "activeAt": "1790000000008-0000-phone"
+                }
+              },
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s9": [
+              "t9"
+            ],
+            "today:s1": [
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s9": "1790000000006-0000-phone",
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "todayTab": {
+              "t9": "1790000000008-0000-phone"
+            }
+          },
+          "conflicts": [],
+          "order": {
+            "today:s1": [
+              "t1"
+            ],
+            "today:s9": null
+          }
+        },
+        "swap": true
+      },
+      {
+        "name": "a space deleted here, a Today tab moved into it there: the space is kept",
+        "base": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "s2"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s1": [
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "local": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s1",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000001-0000-mac",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {
+            "space": {
+              "s2": "1790000000005-0000-mac"
+            }
+          },
+          "order": {
+            "today:s1": [
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s1": "1790000000001-0000-mac"
+          }
+        },
+        "remote": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "s2"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s2",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000006-0000-phone",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "order": {
+            "today:s2": [
+              "t1"
+            ]
+          },
+          "orderStamps": {
+            "today:s2": "1790000000006-0000-phone"
+          }
+        },
+        "withheld": [],
+        "expect": {
+          "entities": {
+            "space": {
+              "s1": {
+                "fields": {
+                  "name": "s1"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              },
+              "s2": {
+                "fields": {
+                  "name": "s2"
+                },
+                "stamps": {
+                  "name": "1790000000001-0000-mac"
+                }
+              }
+            },
+            "todayTab": {
+              "t1": {
+                "fields": {
+                  "spaceId": "s2",
+                  "activeAt": 1790000400000
+                },
+                "stamps": {
+                  "spaceId": "1790000000006-0000-phone",
+                  "activeAt": "1790000000001-0000-mac"
+                }
+              }
+            }
+          },
+          "tombstones": {},
+          "conflicts": [
+            {
+              "kind": "space",
+              "id": "s2",
+              "field": null,
+              "winner": "remote",
+              "reason": "modification-over-deletion"
+            }
+          ],
+          "order": {
+            "today:s1": null,
+            "today:s2": [
+              "t1"
+            ]
+          }
+        },
+        "swap": true
+      }
+    ]
+  }
+}

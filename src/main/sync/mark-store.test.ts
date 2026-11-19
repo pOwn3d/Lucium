@@ -1,5 +1,5 @@
 // `sync-marks.json` (marks.ts): kept beside the state, read as hostile input, never silently discarded.
-import { existsSync, readdirSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { tempDir } from '../temp-dir'
@@ -30,6 +30,17 @@ describe('MarkStore', () => {
     expect(again.clock.next(1_790_000_000_000) > (again.stampsOf('space', 's1')['name'] as string)).toBe(true)
   })
 
+  it('writes the format 2 (the Today tabs the book holds, §27.3), and still reads a book of the format 1, which held none', () => {
+    const dir = tempDir('lucium-sync-marks-')
+    const path = join(dir, 'sync-marks.json')
+    new MarkStore(path).save(book())
+    expect(JSON.parse(readFileSync(path, 'utf8')).version).toBe(2)
+    const old = { ...JSON.parse(readFileSync(path, 'utf8')), version: 1 }
+    writeFileSync(path, JSON.stringify(old))
+    expect(new MarkStore(path).load('mac').stampsOf('space', 's1')['name']).toBe(book().stampsOf('space', 's1')['name'])
+    expect(readdirSync(dir)).toEqual(['sync-marks.json'])
+  })
+
   it('writes a file only its owner reads', () => {
     const dir = tempDir('lucium-sync-marks-')
     const path = join(dir, 'sync-marks.json')
@@ -40,8 +51,8 @@ describe('MarkStore', () => {
   it.each([
     ['not JSON', 'nope'],
     ['a list', '[]'],
-    ['another version', JSON.stringify({ version: 2 })],
-    ['another version of an otherwise good file', JSON.stringify({ version: 2, clock: { ms: 1, counter: 0 }, entities: {}, tombstones: {}, orders: {} })],
+    ['another version', JSON.stringify({ version: 3 })],
+    ['another version of an otherwise good file', JSON.stringify({ version: 3, clock: { ms: 1, counter: 0 }, entities: {}, tombstones: {}, orders: {} })],
     ['no clock', JSON.stringify({ version: 1, entities: {}, tombstones: {}, orders: {} })],
     ['a clock that is not numbers', JSON.stringify({ version: 1, clock: { ms: 'x', counter: 0 }, entities: {}, tombstones: {}, orders: {} })],
     ['no entities', JSON.stringify({ version: 1, clock: { ms: 1, counter: 0 }, tombstones: {}, orders: {} })]

@@ -12,6 +12,7 @@ actor SyncTestHost: SyncExchangeHost {
     var appLocked = false
     var neverModified = false
     var beforeApply: (@Sendable (inout BrowserState) -> Void)?
+    var stateLimit = SyncApply.maxStateBytes
     private(set) var patches: [SyncPatch] = []
     private(set) var outcomes: [SyncApply.Outcome] = []
     private(set) var summaries: [SyncExchangeSummary] = []
@@ -28,7 +29,7 @@ actor SyncTestHost: SyncExchangeHost {
     func apply(_ patch: SyncPatch) -> SyncApply.Outcome {
         beforeApply?(&state)
         patches.append(patch)
-        let outcome = SyncApply.apply(patch, to: state, now: now)
+        let outcome = SyncApply.apply(patch, to: state, now: now, maxStateBytes: stateLimit)
         state = outcome.state
         outcomes.append(outcome)
         return outcome
@@ -45,6 +46,7 @@ actor SyncTestHost: SyncExchangeHost {
     func set(locked: Set<String>) { self.locked = locked }
     func set(appLocked: Bool) { self.appLocked = appLocked }
     func set(neverModified: Bool) { self.neverModified = neverModified }
+    func set(stateLimit: Int) { self.stateLimit = stateLimit }
     func set(beforeApply: (@Sendable (inout BrowserState) -> Void)?) { self.beforeApply = beforeApply }
 }
 
@@ -639,6 +641,34 @@ struct SyncExchangeTests {
         #expect(before["name"] != nil)
         _ = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()))
         #expect(rig.marks.currentBook.stamps(of: "space", id: "s2") == before, "a session that did not take the space does not forget when its fields were changed: opened, a change made on the Mac meanwhile would win over it")
+    }
+
+    @Test func aStateThatWouldGrowPastWhatThePhoneKeepsIsNotWrittenAndTheMergeIsNotAdopted() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        // The limit stands for the 32 MiB of the state: the Mac's entities weigh more than the phone's state may after the session.
+        await rig.host.set(stateLimit: 3_000)
+        var mac = SyncTestMac(snapshot: macSnapshot())
+        mac.snapshot.entities["tab"]?["mt"] = macEntity(["spaceId": .string("m1"), "pinned": .bool(true), "anchorUrl": .string("https://mac.example/"), "url": .string("https://mac.example/page"), "title": .string("Mac"),
+                                                          "unknownByThisVersion": .string(String(repeating: "x", count: 5_000))])
+        let before = await rig.host.state
+        let baseBefore = rig.bases.get(peerId: peer.id, now: now)?.hash
+        _ = try? await session(rig, mac: mac)
+        #expect(await rig.host.state == before, "nothing was written")
+        #expect(rig.bases.get(peerId: peer.id, now: now)?.hash == baseBefore, "and the merge was not adopted: the next session starts from the same base")
+        #expect(await rig.host.outcomes.last?.tooLarge == true)
+        #expect(await rig.host.summaries.isEmpty, "the session did not go through")
+    }
+
+    @Test func aPatchWhoseStateCannotBeEncodedIsNotWritten() {
+        var state = (try? SyncStateFixtures.sample()) ?? BrowserState()
+        state.spaces[0].rest["theme"] = .number(.infinity)
+        var patch = SyncPatch()
+        patch.upserts.append(.init(kind: .space, id: "s2", create: false, fields: ["name": .string("Autre")], remove: [], expect: ["name": .string("Maison")]))
+        var logged: [String] = []
+        let outcome = SyncApply.apply(patch, to: state, now: 1, maxStateBytes: SyncApply.maxStateBytes) { logged.append($0) }
+        #expect(outcome.tooLarge && !outcome.changed && outcome.state == state, "what cannot be saved is not written")
+        #expect(logged.count == 1 && logged[0].contains("cannot be encoded"), "and the reason is told")
     }
 
     @Test func aSpaceTheMacSetAsideIsNotWrittenEither() async throws {

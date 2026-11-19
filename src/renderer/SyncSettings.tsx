@@ -27,7 +27,8 @@ export function countdown(ms: number): string {
 const when = (ms: number): string => new Date(ms).toLocaleString(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' })
 
 /** Getters: the texts are looked up when the page draws, in the language chosen then. */
-const CATEGORY_TEXT: Record<SyncCategory, { label: () => string; hint: () => string }> = {
+// `todayTabs` has none yet: its row, its sentence and its box at the pairing come with the interface card, and a category with no text is not drawn.
+const CATEGORY_TEXT: Partial<Record<SyncCategory, { label: () => string; hint: () => string }>> = {
   structure: { label: () => t('sync.category-structure'), hint: () => t('sync.category-structure-hint') },
   settings: { label: () => t('sync.category-settings'), hint: () => t('sync.category-settings-hint') },
   archive: { label: () => t('sync.category-archive'), hint: () => t('sync.category-archive-hint') },
@@ -112,9 +113,10 @@ function Panel() {
             <Row label={<span className={status.listening ? 'sync-notice' : 'muted'} role="status">{t(status.listening ? 'sync.listening-on' : status.devices.length > 0 ? 'sync.listening-failed' : 'sync.listening-off')}</span>} />
           </Group>
           <Group title={t('sync.categories-title')} footnote={t('sync.categories-never')}>
-            {SYNC_CATEGORIES.map((category) => (
-              <Check key={category} label={CATEGORY_TEXT[category].label()} hint={CATEGORY_TEXT[category].hint()} checked={status.categories[category]} onChange={(checked) => void ask({ kind: 'category', category, on: checked })} />
-            ))}
+            {SYNC_CATEGORIES.flatMap((category) => {
+              const text = CATEGORY_TEXT[category]
+              return text === undefined ? [] : [<Check key={category} label={text.label()} hint={text.hint()} checked={status.categories[category]} onChange={(checked) => void ask({ kind: 'category', category, on: checked })} />]
+            })}
           </Group>
           <Group title={t('sync.devices-title')}>
             {status.devices.length === 0 && <Row label={<span className="muted">{t('sync.devices-none')}</span>} />}

@@ -7,8 +7,11 @@
 //   - an entity that arrives is made with the defaults the model needs, then its fields; and then the whole state goes through `normalize`, which is the door every
 //     state read from a file goes through: every field is cleaned and rebounded, an address that cannot be loaded drops its entity, a reference that points at nothing
 //     is cut, and a state with no space gets one;
-//   - the lists are reordered group by group (the spaces, the folders of a folder, the pinned tabs of a folder, the favourites of a profile), in the places the members
-//     already hold, so that what is not synchronised (the Today tabs) does not move;
+//   - the lists are reordered group by group (the spaces, the folders of a folder, the pinned tabs of a folder, the favourites of a profile, and the shared Today tabs of a
+//     space), in the places the members already hold, so that what is not synchronised (a Today tab that is not shared) does not move;
+//   - a Today tab (`todayTab`, §27) arrives asleep: it is made with the fields the patch gives and nothing else, and never becomes the tab or the space on screen; it
+//     leaves by the archive (source `sync`, the id of the tab as the id of the entry: §27.5, [Q11]), as it would if it were closed here; a removal of `todayTab/<id>` with a
+//     creation of `tab/<id>` in the same patch (or the other way round) is one tab changing list (`todayMoves`): it stays, and keeps its page;
 //   - the settings are the closed list of docs/synchronisation.md §10.3, and nothing else;
 //   - a space the patch removes does not take its open tabs with it: they go to the archive first (source `sync`), because they are not synchronised, so the other device,
 //     which deleted the space, cannot have meant to close them (review n° 13).
@@ -22,8 +25,10 @@ import { tabName, type SidebarState } from './model'
 import type { Ctx, Action } from './sidebar-actions'
 import { normalize } from './sidebar-state'
 import { ARCHIVE_LIMIT } from './state-clean'
+import { archiveTabs } from './sidebar-helpers'
+import { lastActiveFrom, roundActiveAt, todayMoves, TODAY_TAB_KIND } from './sync-today'
 
-export type PatchKind = 'space' | 'folder' | 'tab' | 'favorite' | 'archived'
+export type PatchKind = 'space' | 'folder' | 'tab' | 'todayTab' | 'favorite' | 'archived'
 
 /** The settings a patch may set: the closed list of §10.3. A key outside it is ignored, whatever the patch says. */
 export const SYNCED_SETTING_KEYS = ['httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'protectionBaseline', 'autoArchiveHours', 'searchUrlTemplate', 'profileNames'] as const
@@ -58,7 +63,10 @@ export interface SyncPatch {
 
 type Entity = Record<string, unknown>
 
-const COLLECTION = { space: 'spaces', folder: 'folders', tab: 'tabs', favorite: 'favorites', archived: 'archive' } as const
+const COLLECTION = { space: 'spaces', folder: 'folders', tab: 'tabs', todayTab: 'tabs', favorite: 'favorites', archived: 'archive' } as const
+
+/** The fields a patch may give a Today tab (§27.2): the synchronised ones and the seeds. Nothing else is written, whatever the patch says (`pinned` would make it another kind). */
+const TODAY_FIELDS: ReadonlySet<string> = new Set(['spaceId', 'customTitle', 'icon', 'url', 'title'])
 
 /** A key that is never written to an object: it would reach the prototype. */
 const UNSAFE = new Set(['__proto__', 'constructor', 'prototype'])
@@ -71,12 +79,30 @@ function made(kind: PatchKind, id: string, now: number): Entity {
       return { id, spaceId: '', name: '', collapsed: false }
     case 'tab':
       return { id, spaceId: '', url: '', title: '', pinned: true, createdAt: now, lastActiveAt: now }
+    case 'todayTab':
+      return { id, spaceId: '', url: '', title: '', pinned: false, createdAt: now, lastActiveAt: now }
     case 'favorite':
       // On the default profile unless the fields say another one: a favourite with no profile would be given to every profile in use (`normalize`).
       return { id, url: '', title: '', profileId: 'default' }
     case 'archived':
       return { id, spaceId: '', url: '', title: '', archivedAt: now }
   }
+}
+
+/** A Today tab as the session saw it: the tab and its `activeAt`, the last use rounded down (§27.2), which is not a field of the model. */
+const todayView = (entity: Entity): Entity => ({ ...entity, activeAt: roundActiveAt(entity['lastActiveAt'] as number) })
+
+/** The entity as a patch of this kind compares it with what it froze. */
+const viewOf = (kind: PatchKind, entity: Entity): Entity => (kind === TODAY_TAB_KIND ? todayView(entity) : entity)
+
+/**
+ * `field` set on a Today tab: `activeAt` is the last use of the other device, and the tab keeps the later of the two (§27.5, [Q10]: a tab read there is not swept here); the
+ * other fields are the tab's own. A name that is not a field of a Today tab is left out.
+ */
+function setTodayField(entity: Entity, name: string, value: unknown): void {
+  if (name === 'activeAt') {
+    if (typeof value === 'number' && Number.isFinite(value) && value > 0) entity['lastActiveAt'] = lastActiveFrom(entity['lastActiveAt'] as number, value)
+  } else if (TODAY_FIELDS.has(name)) entity[name] = value
 }
 
 /** Whether the entity still holds, for every name in `expect` and `names`, what the session froze. */
@@ -93,11 +119,28 @@ interface Working {
  * entities used to walk and copy the list for each of them, which held the main process for seconds (a device that sends them is not stopped by its digest: it works out the
  * same merge).
  */
-function upsert(work: Working, change: PatchUpsert, now: number): void {
+function upsert(work: Working, change: PatchUpsert, now: number, archived?: Map<string, Entity>): void {
   const at = work.index.get(change.id)
   if (at === undefined) {
     if (!change.create) return
     const entity = made(change.kind, change.id, now)
+    if (change.kind === TODAY_TAB_KIND) {
+      // A tab that comes from the other device is as old, and as recently used, as it says (§27.2): the sweep treats it as it would there. No other field of the model is its own to give.
+      for (const [name, value] of Object.entries(change.fields)) if (name !== 'activeAt') setTodayField(entity, name, value)
+      const seen = change.fields['activeAt']
+      if (typeof seen === 'number' && Number.isFinite(seen) && seen > 0) entity['createdAt'] = entity['lastActiveAt'] = seen
+      // A tab that was closed here and kept there (§27.9: it was read there meanwhile) comes back with no page, the other device sends the seeds of new entities only: it is
+      // the page the archive of this device kept when it closed it (the entry has the id of the tab, §27.5), and the entry goes, as with « Rouvrir ».
+      const kept = entity['url'] === '' ? archived?.get(change.id) : undefined
+      if (kept !== undefined) {
+        entity['url'] = kept['url']
+        entity['title'] = kept['title']
+        archived?.delete(change.id)
+      }
+      work.index.set(change.id, work.list.length)
+      work.list.push(entity)
+      return
+    }
     for (const [name, value] of Object.entries(change.fields)) if (!UNSAFE.has(name) && name !== 'id') entity[name] = value
     // A pinned tab that comes back without the page it was on (the other device kept it, this one deleted it and the merge gave it back: its seed fields are sent only with
     // a new entity) opens at the page it returns to.
@@ -110,6 +153,15 @@ function upsert(work: Working, change: PatchUpsert, now: number): void {
     return
   }
   const entity = { ...(work.list[at] as Entity) }
+  // A patch of a Today tab does not touch a pinned tab with that id (a tab that changes list is `moveBetweenLists`).
+  if (change.kind === TODAY_TAB_KIND && entity['pinned'] === true) return
+  if (change.kind === TODAY_TAB_KIND) {
+    const seen = todayView(entity)
+    for (const [name, value] of Object.entries(change.fields)) if (unchanged(seen, change.expect, [name])) setTodayField(entity, name, value)
+    for (const name of change.remove) if (name !== 'activeAt' && TODAY_FIELDS.has(name) && unchanged(seen, change.expect, [name])) delete entity[name]
+    work.list[at] = entity
+    return
+  }
   for (const [name, value] of Object.entries(change.fields)) if (!UNSAFE.has(name) && name !== 'id' && unchanged(entity, change.expect, [name])) entity[name] = value
   for (const name of change.remove) if (!UNSAFE.has(name) && name !== 'id' && unchanged(entity, change.expect, [name])) delete entity[name]
   work.list[at] = entity
@@ -124,6 +176,7 @@ function groupOf(key: string): ((collection: 'spaces' | 'folders' | 'tabs' | 'fa
   if (head === 'spaces' && rest.length === 0 && last === undefined) return (collection) => collection === 'spaces'
   if (head === 'folders' && last !== undefined) return (collection, entity) => collection === 'folders' && entity['spaceId'] === middle && dash(entity['parentId']) === last
   if (head === 'tabs' && last !== undefined) return (collection, entity) => collection === 'tabs' && entity['pinned'] === true && entity['private'] !== true && entity['spaceId'] === middle && dash(entity['folderId']) === last
+  if (head === 'today' && last !== undefined) return (collection, entity) => collection === 'tabs' && entity['pinned'] !== true && entity['private'] !== true && entity['favoriteId'] === undefined && entity['spaceId'] === key.slice('today:'.length)
   if (head === 'favorites' && rest.length === 0 && last !== undefined) return (collection, entity) => collection === 'favorites' && (typeof entity['profileId'] === 'string' ? entity['profileId'] : 'default') === last
   return null
 }
@@ -131,7 +184,7 @@ function groupOf(key: string): ((collection: 'spaces' | 'folders' | 'tabs' | 'fa
 /** The collection a list key orders. */
 const collectionOf = (key: string): 'spaces' | 'folders' | 'tabs' | 'favorites' | null => {
   const head = key.split(':')[0]
-  return head === 'spaces' || head === 'folders' || head === 'tabs' || head === 'favorites' ? head : null
+  return head === 'today' ? 'tabs' : head === 'spaces' || head === 'folders' || head === 'tabs' || head === 'favorites' ? head : null
 }
 
 /** The key of the list an entity of a collection is a member of (the inverse of `groupOf`), or null when it is in none: an id with a colon cannot be told from the key. */
@@ -146,8 +199,9 @@ function groupKeyOf(collection: 'spaces' | 'folders' | 'tabs' | 'favorites', ent
       return typeof spaceId === 'string' && !parent.includes(':') ? `folders:${spaceId}:${parent}` : null
     }
     case 'tabs': {
+      if (entity['pinned'] !== true) return entity['private'] !== true && entity['favoriteId'] === undefined && typeof spaceId === 'string' ? `today:${spaceId}` : null
       const folder = dash(entity['folderId'])
-      return entity['pinned'] === true && entity['private'] !== true && typeof spaceId === 'string' && !folder.includes(':') ? `tabs:${spaceId}:${folder}` : null
+      return entity['private'] !== true && typeof spaceId === 'string' && !folder.includes(':') ? `tabs:${spaceId}:${folder}` : null
     }
     case 'favorites': {
       const profile = typeof entity['profileId'] === 'string' ? entity['profileId'] : 'default'
@@ -205,6 +259,41 @@ export function archiveOpenTabsOfRemovedSpaces(draft: Record<string, unknown>, g
   draft['archive'] = [...entries, ...older].slice(0, ARCHIVE_LIMIT)
 }
 
+/**
+ * The tabs that change list in this patch (`todayMoves`, §27.2): a pinned tab that is detached becomes a Today tab, a Today tab that is pinned becomes a pinned one, in place:
+ * the tab keeps its page and its history (the seeds of the creation are not written over what this device has). Only while the tab is still as the session froze it (the
+ * removal's `expect`); otherwise nothing changes, and the next session sends what the person did. Gives the `kind/id` of every creation and removal it has taken care of.
+ */
+function moveBetweenLists(open: () => Working, patch: SyncPatch): ReadonlySet<string> {
+  const handled = new Set<string>()
+  const moves = todayMoves(patch.removals, patch.upserts.filter((one) => one.create))
+  if (moves.length === 0) return handled
+  const work = open()
+  for (const move of moves) {
+    const removal = patch.removals.find((one) => one.id === move.id && one.kind === move.from)
+    const creation = patch.upserts.find((one) => one.create && one.id === move.id && one.kind === move.to)
+    const at = work.index.get(move.id)
+    const entity = at === undefined ? undefined : work.list[at]
+    if (removal === undefined || creation === undefined || at === undefined || entity === undefined || !unchanged(viewOf(move.from, entity), removal.expect, Object.keys(removal.expect))) continue
+    const next = { ...entity }
+    if (move.to === 'tab') {
+      for (const [name, value] of Object.entries(creation.fields)) if (!UNSAFE.has(name) && name !== 'id' && name !== 'url' && name !== 'title') next[name] = value
+      next['pinned'] = true
+      // The anchor a pinned tab returns to: the one the other device gave, else the page this device is on.
+      if (typeof next['anchorUrl'] !== 'string') next['anchorUrl'] = next['url']
+    } else {
+      delete next['anchorUrl']
+      delete next['folderId']
+      next['pinned'] = false
+      for (const [name, value] of Object.entries(creation.fields)) if (name !== 'url' && name !== 'title') setTodayField(next, name, value)
+    }
+    work.list[at] = next
+    handled.add(`${move.to}/${move.id}`)
+    handled.add(`${move.from}/${move.id}`)
+  }
+  return handled
+}
+
 /** The state after a patch. A patch that changes nothing gives back the state it was given. */
 export function applySyncPatch(state: SidebarState, patch: SyncPatch, ctx: Ctx): SidebarState {
   const draft: Record<string, unknown> = { ...state }
@@ -223,28 +312,49 @@ export function applySyncPatch(state: SidebarState, patch: SyncPatch, ctx: Ctx):
     }
     return work
   }
-  for (const change of patch.upserts) upsert(open(COLLECTION[change.kind]), change, ctx.now)
-  // An entity is removed when it is still as it was frozen; every entity of that id goes, as before, but the list is walked once.
+  // A tab that changes list (pinned or detached) is the same tab: it is converted in place, and neither the creation nor the removal that say so are applied again.
+  const moved = moveBetweenLists(() => open('tabs'), patch)
+  // The pages the archive keeps, by tab id: only read for a Today tab that comes back without its page.
+  const archived = patch.upserts.some((change) => change.create && change.kind === TODAY_TAB_KIND && change.fields['url'] === undefined) ? new Map(state.archive.map((entry) => [entry.id, entry as unknown as Entity])) : undefined
+  for (const change of patch.upserts) if (!(change.create && moved.has(`${change.kind}/${change.id}`))) upsert(open(COLLECTION[change.kind]), change, ctx.now, archived)
+  if (archived !== undefined && archived.size < state.archive.length) draft['archive'] = state.archive.filter((entry) => archived.has(entry.id))
+  // An entity is removed when it is still as it was frozen; every entity of that id goes, as before, but the list is walked once. A Today tab is not removed: it is archived.
   const removed = new Map<(typeof COLLECTION)[PatchKind], Set<unknown>>()
+  const closing = new Set<unknown>()
   for (const removal of patch.removals) {
+    if (moved.has(`${removal.kind}/${removal.id}`)) continue
     const name = COLLECTION[removal.kind]
     const work = open(name)
     const at = work.index.get(removal.id)
     const entity = at === undefined ? undefined : work.list[at]
-    if (entity === undefined || !unchanged(entity, removal.expect, Object.keys(removal.expect))) continue
+    if (entity === undefined || !unchanged(viewOf(removal.kind, entity), removal.expect, Object.keys(removal.expect))) continue
+    if (removal.kind === TODAY_TAB_KIND) {
+      // A pinned tab with that id is not a Today tab to close.
+      if (entity['pinned'] === true) continue
+      closing.add(removal.id)
+      continue
+    }
     const ids = removed.get(name) ?? new Set<unknown>()
     ids.add(removal.id)
     removed.set(name, ids)
   }
   for (const [name, ids] of removed) draft[name] = lists()[name].filter((one) => !ids.has(one['id']))
-  archiveOpenTabsOfRemovedSpaces(draft, removed.get('spaces') ?? new Set(), ctx)
+  // A Today tab closed on the other device goes to the archive as it is here, with the page it is on (§27.5): nothing is lost. Those of a space the patch removes are taken by
+  // `archiveOpenTabsOfRemovedSpaces` below, into the space the person is in.
+  const goneSpaces = removed.get('spaces') ?? new Set<unknown>()
+  const leaving = lists().tabs.filter((tab) => closing.has(tab['id']) && !goneSpaces.has(tab['spaceId'])).map((tab) => tab['id'] as string)
+  if (leaving.length > 0) Object.assign(draft, archiveTabs(draft as unknown as SidebarState, leaving, 'sync', ctx))
+  archiveOpenTabsOfRemovedSpaces(draft, goneSpaces, ctx)
   const positions = new Map<string, Map<string, number[]>>()
   for (const [key, ids] of Object.entries(patch.order)) {
     const collection = collectionOf(key)
     if (collection === null || groupOf(key) === null || !Array.isArray(ids)) continue
     const list = (positions.has(collection) ? draft[collection] : (draft[collection] = [...(draft[collection] as Entity[])])) as Entity[]
     if (!positions.has(collection)) positions.set(collection, positionsByList(collection, list))
-    reorder(list, positions.get(collection)?.get(key) ?? [], ids)
+    const members = positions.get(collection)?.get(key) ?? []
+    // The shared Today tabs are some of the Today tabs of the space: the others (a tab not yet shared) keep their places, the named ones are put in order in theirs.
+    const named = key.startsWith('today:') ? new Set(ids) : null
+    reorder(list, named === null ? members : members.filter((at) => named.has((list[at] as Entity)['id'] as string)), ids)
   }
   // A profile lists a page once among its favourites (the same rule as `favorite/add`): two devices that each added the same page under another id keep the first.
   const seen = new Set<string>()

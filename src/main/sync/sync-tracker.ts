@@ -4,7 +4,7 @@
 
 import type { SidebarState } from '@shared/model'
 import type { MarkBook } from './marks'
-import { trackedViewOf } from './state-view'
+import { admittedTodayTabs, trackedViewOf } from './state-view'
 
 export const TRACK_DELAY_MS = 300
 
@@ -54,7 +54,12 @@ export class MarkTracker {
 
   /** The book is brought up to the state and written. A write that fails is told in the log and tried again at the next change: the marks are in memory meanwhile. */
   catchUp(): void {
-    this.deps.marks.update(trackedViewOf(this.deps.state()), this.deps.now())
+    const state = this.deps.state()
+    const now = this.deps.now()
+    // Outside a session nothing new is admitted (§27.3: that happens at the freeze of a session whose category is common): the book follows the Today tabs it holds, so that
+    // one that is closed meanwhile leaves its tombstone at once, with the mark of the gesture.
+    const admittedToday = admittedTodayTabs(state, { book: this.deps.marks, now, admitNew: false, isSpaceLocked: () => false })
+    this.deps.marks.update(trackedViewOf(state, admittedToday), now)
     try {
       this.deps.save()
     } catch (error) {

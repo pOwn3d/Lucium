@@ -4,14 +4,17 @@
 import { existsSync } from 'node:fs'
 import { replaceFileDurably } from '../durable-write'
 import { readTextBounded, setAsideOrHold, DATA_FILE_MAX_BYTES } from '../persist'
-import { MarkBook, type MarksFile } from './marks'
+import { MarkBook, MARKS_VERSION, type MarksFile } from './marks'
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
+
+/** The formats this version reads: the one it writes, and the 1 that had no Today tabs in it (a book of 1 is a book of 2 that admitted none). */
+const READABLE_VERSIONS: readonly unknown[] = [1, MARKS_VERSION]
 
 /** The file as a book, or throws on a file that is not one of this version's. The depth of what it holds is the one `MarkBook` writes: kind → id → field → mark. */
 function parse(text: string, device: string): MarkBook {
   const raw: unknown = JSON.parse(text)
-  if (!isObject(raw) || raw['version'] !== 1) throw new Error('not a marks file of this version')
+  if (!isObject(raw) || !READABLE_VERSIONS.includes(raw['version'])) throw new Error('not a marks file of this version')
   const clock = raw['clock']
   if (!isObject(clock) || !Number.isFinite(clock['ms']) || !Number.isFinite(clock['counter'])) throw new Error('no clock')
   for (const part of ['entities', 'tombstones', 'orders']) if (!isObject(raw[part])) throw new Error(`no ${part}`)

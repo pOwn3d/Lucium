@@ -16,7 +16,7 @@ describe('SyncStore: the defaults', () => {
     const { path } = fresh()
     const config = new SyncStore(path).config()
     expect(config.enabled).toBe(false)
-    expect(config.categories).toEqual({ structure: true, settings: false, archive: false, openTabs: false })
+    expect(config.categories).toEqual({ structure: true, settings: false, archive: false, openTabs: false, todayTabs: false })
     expect(config.categories).toEqual(DEFAULT_CATEGORIES)
     expect(config.port).toBeNull()
     expect(config.peers).toEqual([])
@@ -42,7 +42,7 @@ describe('SyncStore: what is kept', () => {
     store.setCategory('structure', false)
     const again = new SyncStore(path).config()
     expect(again.enabled).toBe(true)
-    expect(again.categories).toEqual({ structure: false, settings: false, archive: false, openTabs: true })
+    expect(again.categories).toEqual({ structure: false, settings: false, archive: false, openTabs: true, todayTabs: false })
   })
 
   // A POSIX mode: Windows keeps none.
@@ -139,7 +139,7 @@ describe('SyncStore: what is kept', () => {
 })
 
 describe('SyncStore: a file that is not one of ours', () => {
-  const valid = (): Record<string, unknown> => ({ version: 1, enabled: true, categories: { structure: true, settings: true, archive: false, openTabs: false }, port: 50_000, peers: [peer(1)] })
+  const valid = (): Record<string, unknown> => ({ version: 1, enabled: true, categories: { structure: true, settings: true, archive: false, openTabs: false, todayTabs: false }, port: 50_000, peers: [peer(1)] })
 
   it('reads a good file', () => {
     const { path } = fresh()
@@ -150,7 +150,7 @@ describe('SyncStore: a file that is not one of ours', () => {
   it('keeps what a later version added: unknown fields are ignored, a missing category takes its default', () => {
     const { path } = fresh()
     writeFileSync(path, JSON.stringify({ ...valid(), categories: { settings: true }, aLaterField: [1, 2] }))
-    expect(new SyncStore(path).config().categories).toEqual({ structure: true, settings: true, archive: false, openTabs: false })
+    expect(new SyncStore(path).config().categories).toEqual({ structure: true, settings: true, archive: false, openTabs: false, todayTabs: false })
   })
 
   it.each([
