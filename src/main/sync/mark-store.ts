@@ -18,6 +18,9 @@ function parse(text: string, device: string): MarkBook {
   const clock = raw['clock']
   if (!isObject(clock) || !Number.isFinite(clock['ms']) || !Number.isFinite(clock['counter'])) throw new Error('no clock')
   for (const part of ['entities', 'tombstones', 'orders']) if (!isObject(raw[part])) throw new Error(`no ${part}`)
+  // Card 652: `adopted` is optional (a book written before it has none, and reads as every tab admitted here); a value that is not a list of ids is not a book of this version's.
+  const adopted = raw['adopted']
+  if (adopted !== undefined && (!Array.isArray(adopted) || !adopted.every((id) => typeof id === 'string'))) throw new Error('adopted is not a list of ids')
   return new MarkBook(device, raw as unknown as MarksFile)
 }
 

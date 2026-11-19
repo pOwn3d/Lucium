@@ -5953,6 +5953,22 @@
         }
       }
     },
+    "sync.pairing.mac-knows-this-phone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac already knows this iPhone. On the Mac, forget this iPhone in the list of devices, then try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce Mac connaît déjà cet iPhone. Sur le Mac, oubliez cet iPhone dans la liste des appareils, puis réessayez."
+          }
+        }
+      }
+    },
     "sync.pairing.not-confirmed": {
       "localizations": {
         "en": {

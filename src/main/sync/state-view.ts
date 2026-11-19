@@ -68,8 +68,8 @@ function archivedSent(state: SidebarState): SidebarState['archive'] {
 const todayProjection = (tab: SidebarState['tabs'][number]): Entity => ({ ...tab, activeAt: roundActiveAt(tab.lastActiveAt) })
 
 export interface AdmissionInputs {
-  /** The book of marks: it says which tabs are admitted already (§27.3: the admission is kept there, by device). */
-  book: Pick<MarkBook, 'knows'>
+  /** The book of marks: it says which tabs are admitted already, and which of them came from the other device (§27.3, §27.4: the admission is kept there, by device). */
+  book: Pick<MarkBook, 'knows' | 'isAdopted'>
   now: number
   /** Whether the session lets new tabs in (the category `todayTabs` is common): without it only the tabs that are admitted already stay in the set. */
   admitNew: boolean
@@ -104,7 +104,7 @@ function todayAdmission(state: SidebarState, inputs: AdmissionInputs): ReturnTyp
       ...(tab.private === true ? { private: true } : {}),
       ...(!isListedTab(tab) ? { favorite: true } : {}),
       ...(tab.container !== undefined ? { container: true } : {}),
-      ...(admitted ? { admitted: true } : { spaceLocked: inputs.isSpaceLocked(tab.spaceId) })
+      ...(admitted ? { admitted: true, ...(inputs.book.isAdopted(tab.id) ? { adopted: true } : {}) } : { spaceLocked: inputs.isSpaceLocked(tab.spaceId) })
     })
   }
   return admitTabs(candidates)

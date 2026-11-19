@@ -88,7 +88,8 @@ public enum SyncStateView {
 
     /// The shared set of Today tabs at the end of the freeze of a session (§27.3): the tabs already admitted (the book says so) stay, and the others enter when they hold the
     /// conditions. `locked` are the spaces set aside (condition 2), `now` the time of day in milliseconds (condition 4).
-    public static func admission(of state: BrowserState, admitted: Set<String>, locked: Set<String>, now: Int) -> SyncToday.Admission {
+    /// `adopted`: those of `admitted` that the other device sent, which take no place of the cap (§27.4).
+    public static func admission(of state: BrowserState, admitted: Set<String>, adopted: Set<String> = [], locked: Set<String>, now: Int) -> SyncToday.Admission {
         let candidates = state.tabs.filter { !$0.pinned }.map { tab -> SyncToday.Candidate in
             let since = tab.createdAt ?? tab.lastActiveAt ?? Double(now)
             var candidate = SyncToday.Candidate(id: tab.id, url: tab.url, ageMilliseconds: Int(max(0, min(Double(Int32.max) * 1000, Double(now) - since))), lastActiveAt: tab.lastActiveAt ?? tab.createdAt ?? 0)
@@ -97,6 +98,7 @@ public enum SyncStateView {
             candidate.inContainer = isInContainer(tab)
             candidate.spaceLocked = locked.contains(tab.spaceId)
             candidate.admitted = admitted.contains(tab.id)
+            candidate.adopted = adopted.contains(tab.id)
             return candidate
         }
         return SyncToday.admit(candidates)

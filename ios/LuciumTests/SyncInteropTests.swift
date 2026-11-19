@@ -397,8 +397,8 @@ final class SyncInteropTests: BrowserCoreTestCase {
 
     // MARK: What the cap counts
 
-    /// §27.4 says each device shares at most 200 tabs, two devices up to 400 together. The shared set a device holds is what it admitted and what it received, and the cap is read against all
-    /// of it: a Mac that received 200 tabs from the phone, and has none of its own, cannot share the first one it opens. Found by this check (card 512), proposed as a card.
+    /// §27.4 [Q12]: 200 per device, the rest stays local; two devices up to 400 together. The cap counts the tabs a device admitted itself, not the ones it received: a Mac that received
+    /// 200 tabs from the phone, and has none of its own, still shares the first one it opens. Found by this check (card 512, as an expected failure), fixed by card 652.
     func testADeviceThatReceived200TabsStillSharesItsOwnFirstOne() async throws {
         let peer = try MacPeerClient.fromEnvironment()
         let phone = try await makePhone(peer, categories: [.structure, .todayTabs])
@@ -412,9 +412,7 @@ final class SyncInteropTests: BrowserCoreTestCase {
         try await phone.session()
         mac = try await peer.summary()
         XCTAssertNotNil(mac.tabs.first { $0.url == "https://mac-first.example/" }, "it is still on the Mac")
-        XCTExpectFailure("card 512 finding: the cap counts the tabs received, so the Mac's first own tab is not shared", strict: true) {
-            XCTAssertTrue(phone.model.state.tabs.contains { $0.url == "https://mac-first.example/" }, "the Mac's own first tab reaches the phone")
-        }
+        XCTAssertTrue(phone.model.state.tabs.contains { $0.url == "https://mac-first.example/" }, "the Mac's own first tab reaches the phone")
     }
 
     // MARK: A session every 30 seconds

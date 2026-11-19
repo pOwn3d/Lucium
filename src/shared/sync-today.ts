@@ -11,7 +11,10 @@ import type { SyncEntity } from './sync-snapshot'
 /** The kind of the entity (§27.2), distinct from `tab` (the pinned tabs): the two categories are ticked apart. */
 export const TODAY_TAB_KIND = 'todayTab'
 
-/** The most Today tabs one device admits at a time [Q12, A]: one that does not fit stays local, and is admitted when a place is free (§27.4). */
+/**
+ * The most Today tabs one device admits **itself** at a time [Q12, A: 200 per device, the rest stays local]: one that does not fit stays local, and is admitted when a place is
+ * free (§27.4). The tabs it received from the other device (`adopted`) take no place: the shared set goes up to twice this.
+ */
 export const TODAY_TAB_CAP = 200
 /** The most `todayTab` entities the door keeps in one snapshot (§27.4): an honest device never reaches it (it admits 200). */
 export const TODAY_TAB_GATE = 500
@@ -81,6 +84,8 @@ export interface TodayCandidate {
   spaceLocked?: boolean
   /** Already in the shared set (the book of marks says so): the admission is sticky. */
   admitted?: boolean
+  /** In the shared set because the other device sent it (adopted), not because this one admitted it: it stays, and it takes no place of the cap (§27.4). */
+  adopted?: boolean
 }
 
 export type AdmissionRefusal = 'private' | 'private-window' | 'favorite' | 'container' | 'space-locked' | 'not-web-address' | 'url-too-long' | 'too-young' | 'full'
@@ -113,23 +118,27 @@ export interface Admission {
 /**
  * The shared set at the end of the freeze of a session (§27.3). A tab already admitted stays whatever page it is on, and whatever the cap: neither a navigation, nor a
  * full set, nor a lock set later takes it out of the snapshot, since the merge reads "absent from one side, in the base" as a closing (§11.2). A new tab enters when it holds
- * conditions 1 to 4, and while there is a place: `cap` less the tabs already admitted, the most recently used first, then the id (§27.4).
+ * conditions 1 to 4, and while there is a place: `cap` less the tabs this device admitted itself (the adopted ones, received from the other device, take no place), the most
+ * recently used first, then the id (§27.4).
  */
 export function admitTabs(candidates: readonly TodayCandidate[], cap: number = TODAY_TAB_CAP): Admission {
   const admitted: string[] = []
+  let admittedHere = 0
   const refused: Admission['refused'] = []
   const waiting: TodayCandidate[] = []
   for (const c of candidates) {
     const kind = refusalOfKind(c)
     if (kind !== null) refused.push({ id: c.id, reason: kind })
-    else if (c.admitted === true) admitted.push(c.id)
-    else {
+    else if (c.admitted === true) {
+      admitted.push(c.id)
+      if (c.adopted !== true) admittedHere += 1
+    } else {
       const entry = refusalOfEntry(c)
       if (entry !== null) refused.push({ id: c.id, reason: entry })
       else waiting.push(c)
     }
   }
-  let room = Math.max(0, cap - admitted.length)
+  let room = Math.max(0, cap - admittedHere)
   waiting.sort((a, b) => b.lastActiveAt - a.lastActiveAt || compareUtf16(a.id, b.id))
   for (const c of waiting) {
     if (room > 0) {

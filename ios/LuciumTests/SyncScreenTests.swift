@@ -121,7 +121,7 @@ final class SyncScreenTests: BrowserCoreTestCase {
 
     /// Every way a pairing can fail has words, except the person's own cancellation, which has none to say.
     func testEveryFailureOfAPairingHasWordsExceptACancellation() {
-        let failures: [SyncController.PairingFailure] = SyncErrorCode.allCases.map { .code($0) } + [.reach(.refused), .reach(.unreachable), .reach(.localNetworkDenied), .reach(.fingerprintMismatch), .identity]
+        let failures: [SyncController.PairingFailure] = SyncErrorCode.allCases.map { .code($0) } + [.reach(.refused), .reach(.unreachable), .reach(.localNetworkDenied), .reach(.fingerprintMismatch), .identity, .notConfirmed, .macKnowsThisPhone]
         for failure in failures { XCTAssertNotNil(SyncTexts.pairing(failure), "\(failure)") }
         XCTAssertNil(SyncTexts.pairing(.cancelled))
     }

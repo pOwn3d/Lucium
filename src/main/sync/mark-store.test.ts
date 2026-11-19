@@ -41,6 +41,30 @@ describe('MarkStore', () => {
     expect(readdirSync(dir)).toEqual(['sync-marks.json'])
   })
 
+  it('keeps the Today tabs received from the other device (card 652), in a file that is still of the format 2', () => {
+    const dir = tempDir('lucium-sync-marks-')
+    const path = join(dir, 'sync-marks.json')
+    const marks = new MarkBook('mac')
+    marks.update({ entities: { todayTab: { mine: { spaceId: 's1', activeAt: 1 } } }, order: {} }, 1_790_000_000_000)
+    marks.adopt({ entities: { todayTab: { mine: { fields: {}, stamps: {} }, theirs: { fields: { spaceId: 's1' }, stamps: { spaceId: '1790000000500-0000-phone' } } } }, tombstones: {}, order: {}, orderStamps: {} }, () => true)
+    new MarkStore(path).save(marks)
+    expect(JSON.parse(readFileSync(path, 'utf8')).version).toBe(2)
+    const again = new MarkStore(path).load('mac')
+    expect([again.isAdopted('theirs'), again.isAdopted('mine')]).toEqual([true, false])
+  })
+
+  it('sets a file aside whose list of adopted tabs is not a list of ids', () => {
+    const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const dir = tempDir('lucium-sync-marks-')
+    const path = join(dir, 'sync-marks.json')
+    writeFileSync(path, JSON.stringify({ version: 2, clock: { ms: 1, counter: 0 }, entities: {}, tombstones: {}, orders: {}, adopted: [1] }))
+    expect(new MarkStore(path).load('mac').toJSON().entities).toEqual({})
+    expect(readdirSync(dir).length).toBeGreaterThan(0)
+    expect(existsSync(path)).toBe(false)
+    expect(log).toHaveBeenCalled()
+    log.mockRestore()
+  })
+
   it('writes a file only its owner reads', () => {
     const dir = tempDir('lucium-sync-marks-')
     const path = join(dir, 'sync-marks.json')

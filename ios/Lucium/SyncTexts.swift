@@ -40,6 +40,7 @@ enum SyncTexts {
         case .reach(.fingerprintMismatch): "sync.error.fingerprint-mismatch"
         case .identity: "sync.error.identity"
         case .notConfirmed: "sync.pairing.not-confirmed"
+        case .macKnowsThisPhone: "sync.pairing.mac-knows-this-phone"
         case .cancelled: nil
         }
     }

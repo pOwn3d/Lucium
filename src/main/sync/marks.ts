@@ -10,7 +10,8 @@
 // noise) and never the local fields. It follows every category, ticked or not: an entity must not look deleted because its category was unticked for a while.
 
 import { createHash } from 'node:crypto'
-import { canonicalJson } from '@shared/sync-canonical'
+import { canonicalJson, compareUtf16 } from '@shared/sync-canonical'
+import { TODAY_TAB_KIND } from '@shared/sync-today'
 import { ZERO_STAMP, compareStamps, type SyncSnapshot } from '@shared/sync-snapshot'
 import { STAMP_FUTURE_REFUSE_MS, TOMBSTONE_DAYS } from './limits'
 
@@ -118,6 +119,12 @@ export interface MarksFile {
   entities: Record<string, Record<string, Record<string, FieldMark>>>
   tombstones: Record<string, Record<string, string>>
   orders: Record<string, { hash: string; stamp: string }>
+  /**
+   * Card 652: the Today tabs of `entities.todayTab` that this device received from the other one (adopted), as opposed to those it admitted itself (§27.4: the cap of 200
+   * counts only the latter). Optional and still version 2: an older reader ignores the key and sees every tab of the shared set as admitted (what it always did), and a file
+   * without the key is read as one where every tab was admitted here (nothing is lost, the cap is only stricter until those tabs close).
+   */
+  adopted?: string[]
 }
 
 const hashOf = (value: unknown): string => createHash('sha256').update(canonicalJson(value)).digest('hex').slice(0, 16)
@@ -127,6 +134,8 @@ export class MarkBook {
   private entities: MarksFile['entities']
   private tombstones: MarksFile['tombstones']
   private orders: MarksFile['orders']
+  /** The ids of the Today tabs of the shared set that came from the other device; always a subset of `entities.todayTab`. */
+  private adopted: Set<string>
 
   constructor(
     readonly device: string,
@@ -137,6 +146,14 @@ export class MarkBook {
     this.entities = file?.entities ?? {}
     this.tombstones = file?.tombstones ?? {}
     this.orders = file?.orders ?? {}
+    this.adopted = new Set(file?.adopted ?? [])
+    this.pruneAdopted()
+  }
+
+  /** An adopted tab that left the shared set (closed, pinned, taken out) is no longer adopted: if it comes back, it is a new tab of this device. */
+  private pruneAdopted(): void {
+    const shared = this.entities[TODAY_TAB_KIND]
+    for (const id of this.adopted) if (shared?.[id] === undefined) this.adopted.delete(id)
   }
 
   /** Brings the book up to the state: a mark for what changed since it last looked, a tombstone for what went. Cheap when nothing changed. */
@@ -168,6 +185,7 @@ export class MarkBook {
       }
     }
     for (const kind of Object.keys(this.entities)) if (!Object.hasOwn(view.entities, kind)) delete this.entities[kind]
+    this.pruneAdopted()
     for (const [key, ids] of Object.entries(view.order)) {
       const hash = hashOf(ids)
       const mark = this.orders[key]
@@ -192,6 +210,11 @@ export class MarkBook {
     return this.entities[kind]?.[id] !== undefined
   }
 
+  /** Whether a Today tab of the shared set came from the other device: it stays shared, and takes no place of the cap of this one (§27.4). */
+  isAdopted(id: string): boolean {
+    return this.adopted.has(id)
+  }
+
   /** The marks of an entity, one per field it has or has lost. */
   stampsOf(kind: string, id: string): Record<string, string> {
     return Object.fromEntries(Object.entries(this.entities[kind]?.[id] ?? {}).map(([name, mark]) => [name, mark.stamp]))
@@ -212,6 +235,7 @@ export class MarkBook {
   adopt(merged: SyncSnapshot, follows: (kind: string, field: string) => boolean, exchanged: (kind: string) => boolean = () => true, aside: Aside = NOTHING_ASIDE): void {
     // What the session did not exchange (a category that was not ticked on both devices) is not in the merged snapshot, and is not forgotten with it: its marks and its
     // tombstones stay as they were, or its fields would take a mark of the moment at the next look and its deletions could come back (review n° 17).
+    const sharedBefore = new Set(Object.keys(this.entities[TODAY_TAB_KIND] ?? {}))
     const entities: MarksFile['entities'] = {}
     for (const [kind, byKind] of Object.entries(this.entities)) if (!exchanged(kind)) entities[kind] = byKind
     // What the session set aside (the spaces that are locked: nothing of them was sent or taken) is not in the merged snapshot either: its marks stay too, or the changes the
@@ -233,6 +257,9 @@ export class MarkBook {
       }
     }
     this.entities = entities
+    // A Today tab that this device did not hold before the merge came from the other one: it is in the shared set from now on, but it is not one this device admitted (§27.4).
+    if (exchanged(TODAY_TAB_KIND)) for (const id of Object.keys(merged.entities[TODAY_TAB_KIND] ?? {})) if (!sharedBefore.has(id)) this.adopted.add(id)
+    this.pruneAdopted()
     const tombstones = JSON.parse(JSON.stringify(merged.tombstones)) as MarksFile['tombstones']
     for (const [kind, byId] of Object.entries(this.tombstones)) if (!exchanged(kind)) tombstones[kind] = byId
     this.tombstones = tombstones
@@ -249,7 +276,7 @@ export class MarkBook {
   }
 
   toJSON(): MarksFile {
-    return { version: MARKS_VERSION, clock: { ...this.clock.state(), ...(this.clock.peerSeen() > 0 ? { peer: this.clock.peerSeen() } : {}) }, entities: this.entities, tombstones: this.tombstones, orders: this.orders }
+    return { version: MARKS_VERSION, clock: { ...this.clock.state(), ...(this.clock.peerSeen() > 0 ? { peer: this.clock.peerSeen() } : {}) }, entities: this.entities, tombstones: this.tombstones, orders: this.orders, ...(this.adopted.size > 0 ? { adopted: [...this.adopted].sort(compareUtf16) } : {}) }
   }
 }
 
