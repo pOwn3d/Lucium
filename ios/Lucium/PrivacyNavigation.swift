@@ -125,7 +125,7 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
         let policy = await decide(webView, action)
         // A page that is let through is given what the page guard runs in it (the scriptlets and the style sheet of its site, `PageGuard`). One that
         // was cancelled is replaced by the load the rules made, which comes through here again: the address that decides is the final one.
-        if policy == .allow, action.targetFrame?.isMainFrame == true { model?.pageGuard?.prepare(webView, for: action.request.url) }
+        if policy == .allow, action.targetFrame?.isMainFrame == true { model?.preparePage(in: webView, for: action.request.url) }
         return policy
     }
 

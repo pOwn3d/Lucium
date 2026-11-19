@@ -45,6 +45,7 @@ extension BrowserModel {
         switch privacySettings.level {
         case .standard?: "privacy.level.standard"
         case .enhanced?: "privacy.level.enhanced"
+        case .strict?: "privacy.level.strict"
         case nil: "settings.privacy.custom"
         }
     }

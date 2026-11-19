@@ -3017,18 +3017,482 @@
         }
       }
     },
-    "privacy.blocker": {
+    "privacy.ads": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The blocker has no switch. Its lists are inside the application and are never downloaded; their licenses are under “Licenses and credits”."
+            "value": "Block ads and trackers"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le bloqueur n’a pas d’interrupteur. Ses listes sont dans l’application et ne sont jamais téléchargées ; leurs licences sont dans « Licences et crédits »."
+            "value": "Bloquer les publicités et les traqueurs"
+          }
+        }
+      }
+    },
+    "privacy.ads-help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Requests to known advertising and tracking networks are cancelled, and the ad slots the lists name are hidden. Takes effect at once, without reloading the open pages."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les requêtes vers les réseaux connus de publicité et de pistage sont annulées, et les encarts publicitaires que les listes désignent sont masqués. S’applique tout de suite, sans recharger les pages ouvertes."
+          }
+        }
+      }
+    },
+    "privacy.banners": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove cookie banners"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer les bannières de cookies"
+          }
+        }
+      }
+    },
+    "privacy.banners-help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The consent platforms are blocked and the banners that are left are hidden."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les plateformes de consentement sont bloquées et les bannières restantes masquées."
+          }
+        }
+      }
+    },
+    "privacy.blocker.lists": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The lists are inside the application and are never downloaded; their licenses are under “Licenses and credits”."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les listes sont dans l’application et ne sont jamais téléchargées ; leurs licences sont dans « Licences et crédits »."
+          }
+        }
+      }
+    },
+    "privacy.blocker.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocker"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bloqueur"
+          }
+        }
+      }
+    },
+    "privacy.clear.add": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add the site"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter le site"
+          }
+        }
+      }
+    },
+    "privacy.clear.already": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This site is already in the list."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce site est déjà dans la liste."
+          }
+        }
+      }
+    },
+    "privacy.clear.empty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No site. Type one below, or add the page you are on."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun site. Saisissez-en un ci-dessous, ou ajoutez la page où vous êtes."
+          }
+        }
+      }
+    },
+    "privacy.clear.field": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site, for example example.com"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site, par exemple exemple.fr"
+          }
+        }
+      }
+    },
+    "privacy.clear.full": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The list is full."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La liste est pleine."
+          }
+        }
+      }
+    },
+    "privacy.clear.help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Off by default. When the last tab of a site in the list closes or is archived, even automatically (not when it goes to another site), the cookies, storage and caches of the site are erased from the profile of that tab, as “Clear data of the site” does. You will be signed out of it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Désactivé par défaut. Quand le dernier onglet d’un site de la liste se ferme ou est archivé, même automatiquement (pas quand il change de site), les cookies, le stockage et les caches du site sont effacés du profil de cet onglet, comme le fait « Effacer les données du site ». Vous en serez déconnecté."
+          }
+        }
+      }
+    },
+    "privacy.clear.invalid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This site address is not valid."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette adresse de site n’est pas valide."
+          }
+        }
+      }
+    },
+    "privacy.clear.private": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A private tab has nothing to erase: its session is thrown away with it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un onglet privé n’a rien à effacer : sa session est jetée avec lui."
+          }
+        }
+      }
+    },
+    "privacy.clear.quit": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also when the application starts again"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aussi au prochain lancement de l’application"
+          }
+        }
+      }
+    },
+    "privacy.clear.quit-help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS never tells an application that it quits: the sites of the list are erased, in every profile, when Lucium starts again, before any page loads. Tabs reopened then will ask you to sign in again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS ne dit jamais à une application qu’elle se ferme : les sites de la liste sont effacés, dans chaque profil, au lancement suivant de Lucium, avant le chargement de toute page. Les onglets rouverts alors vous demanderont de vous reconnecter."
+          }
+        }
+      }
+    },
+    "privacy.clear.remove": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer"
+          }
+        }
+      }
+    },
+    "privacy.clear.switch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the data of these sites when I close them"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer les données de ces sites quand je les ferme"
+          }
+        }
+      }
+    },
+    "privacy.clear.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear on close"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer à la fermeture"
+          }
+        }
+      }
+    },
+    "privacy.exceptions.add": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add the site"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter le site"
+          }
+        }
+      }
+    },
+    "privacy.exceptions.add-current %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ajouter %@"
+          }
+        }
+      }
+    },
+    "privacy.exceptions.already": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This site is already in the list."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce site est déjà dans la liste."
+          }
+        }
+      }
+    },
+    "privacy.exceptions.covered %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This site is already covered by “%@”."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce site est déjà couvert par « %@ »."
+          }
+        }
+      }
+    },
+    "privacy.exceptions.empty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No site. Type one below, or add the page you are on."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun site. Saisissez-en un ci-dessous, ou ajoutez la page où vous êtes."
+          }
+        }
+      }
+    },
+    "privacy.exceptions.field": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site, for example example.com"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site, par exemple exemple.fr"
+          }
+        }
+      }
+    },
+    "privacy.exceptions.full": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The list is full."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La liste est pleine."
+          }
+        }
+      }
+    },
+    "privacy.exceptions.help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On these sites nothing is blocked or hidden. A site in the list covers its subdomains too."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sur ces sites, rien n’est bloqué ni masqué. Un site de la liste couvre aussi ses sous-domaines."
+          }
+        }
+      }
+    },
+    "privacy.exceptions.invalid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This site address is not valid."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette adresse de site n’est pas valide."
+          }
+        }
+      }
+    },
+    "privacy.exceptions.remove": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer"
+          }
+        }
+      }
+    },
+    "privacy.exceptions.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sites without blocking"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sites sans blocage"
           }
         }
       }
@@ -3150,13 +3614,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tracking parameters come off the addresses you open, and the “do not track me” signal is sent."
+            "value": "Also: cookie banners, the tracking parameters of the addresses you open, and the “do not track me” signal."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les paramètres de suivi sont retirés des adresses que vous ouvrez, et le signal « ne pas me suivre » est envoyé."
+            "value": "En plus : les bannières de cookies, les paramètres de suivi des adresses que vous ouvrez et le signal « ne pas me suivre »."
           }
         }
       }
@@ -3172,7 +3636,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Normal"
+            "value": "Standard"
           }
         }
       }
@@ -3182,13 +3646,45 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Addresses stay as they are and no signal is sent."
+            "value": "Blocks known ads and trackers. Almost no site breaks. Addresses stay as they are and no signal is sent."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les adresses restent telles quelles et aucun signal n’est envoyé."
+            "value": "Bloque les publicités et les traqueurs connus. Presque aucun site ne casse. Les adresses restent telles quelles et aucun signal n’est envoyé."
+          }
+        }
+      }
+    },
+    "privacy.level.strict": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strict"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stricte"
+          }
+        }
+      }
+    },
+    "privacy.level.strict-effect": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also: the blocker’s strict mode and its extended rules, which can break a site that you then fix one site at a time. Unlike on the Mac, nothing blurs the fingerprint of the device: WebKit already limits it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "En plus : le mode strict du bloqueur et ses règles étendues, qui peuvent casser un site que vous réparez alors site par site. Contrairement au Mac, rien ne brouille l’empreinte de l’appareil : WebKit la limite déjà."
           }
         }
       }
@@ -3205,6 +3701,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "Niveau de protection"
+          }
+        }
+      }
+    },
+    "privacy.mode.busy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preparing the lists for this mode… The blocker keeps working with the previous ones."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Préparation des listes de ce mode… Le bloqueur continue avec les précédentes."
+          }
+        }
+      }
+    },
+    "privacy.mode.standard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard"
+          }
+        }
+      }
+    },
+    "privacy.mode.standard-help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard: blocks third-party ads and trackers. A site’s own requests are left alone unless a list is written for them."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Standard : bloque les publicités et les traqueurs tiers. Les requêtes d’un site vers lui-même sont laissées en paix, sauf si une liste est écrite pour elles."
+          }
+        }
+      }
+    },
+    "privacy.mode.strict": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strict"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strict"
+          }
+        }
+      }
+    },
+    "privacy.mode.strict-help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strict: also blocks a site’s own requests when a list asks for it. More ads are blocked, and more sites may need fixing."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Strict : bloque aussi les requêtes d’un site vers lui-même quand une liste le demande. Davantage de publicités sont bloquées, et davantage de sites peuvent demander une réparation."
+          }
+        }
+      }
+    },
+    "privacy.mode.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Blocking mode"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mode de blocage"
           }
         }
       }
@@ -3269,6 +3861,62 @@
           "stringUnit": {
             "state": "translated",
             "value": "Votre connexion n’est pas privée"
+          }
+        }
+      }
+    },
+    "privacy.sites.count %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld site"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld sites"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld site"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld sites"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "privacy.sites.none": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "None"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucun"
           }
         }
       }

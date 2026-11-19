@@ -35,6 +35,10 @@ public struct FilterListFile: Codable, Equatable, Sendable {
     /// The name of the compiled list in WebKit's store. It carries the start of the SHA-256: a new copy of a list is another list, and the old
     /// one is removed (`EmbeddedLists`), so the store never serves rules the application no longer carries.
     public var storeIdentifier: String { "\(FilterListRegistry.identifierPrefix)\(name.replacingOccurrences(of: ".json", with: "")).\(sha256.prefix(12))" }
+
+    /// The name of the list as WebKit holds it for a mode of the blocker. The network rules differ between the two modes (`StandardModeRules`): the
+    /// strict ones are the file as it is, the standard ones carry `.std`. Files of other kinds are the same in both.
+    public func storeIdentifier(for mode: BlockMode) -> String { mode == .standard && kind == .network ? storeIdentifier + ".std" : storeIdentifier }
 }
 
 /// One embedded filter list: where it comes from and under what terms (what the licences screen shows), and its files.

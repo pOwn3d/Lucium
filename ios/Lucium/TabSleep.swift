@@ -21,11 +21,13 @@ extension BrowserModel {
         } else if let space = state.spaces.first(where: { $0.id == tab.spaceId }) {
             configuration.websiteDataStore = dataStore(forProfile: space.profileId)
         }
-        for list in blockers { ContentBlocker.install(list, on: configuration) }
+        // The lists the person's switches and the page ask for (`BrowserModel+Blocker.swift`).
+        let attached = blockerLists(for: tab.isBlank ? nil : tab.url)
+        for list in attached { ContentBlocker.install(list, on: configuration) }
         navigationPolicy.configure(configuration)
-        if let guardList { ContentBlocker.install(guardList, on: configuration) }
         configuration.allowsInlineMediaPlayback = true
         let view = WKWebView(frame: .zero, configuration: configuration)
+        attachedBlockers[ObjectIdentifier(view)] = attached
         navigationPolicy.attach(to: view)
         // The left edge is the sidebar's on an iPhone: going back is the button of the bottom bar (the iPad keeps WebKit's swipe).
         view.allowsBackForwardNavigationGestures = EdgeDrawer.allowsWebKitBackGesture(isPhone: isPhone)
@@ -71,6 +73,7 @@ extension BrowserModel {
         navigationPolicy.forget(tab: tabId)
         view.stopLoading()
         view.navigationDelegate = nil
+        attachedBlockers[ObjectIdentifier(view)] = nil
         view.removeFromSuperview()
         webViews[tabId] = nil
         releasePrivateStoreIfUnused()

@@ -1,24 +1,61 @@
 import LuciumKit
 import SwiftUI
 
-/// The privacy settings: the protection level of the Mac in two of its three steps, and the three options it is made of. They are written under the
-/// Mac's own names in the state file, so the file stays the Mac's (docs/ios.md, "Vie privée"). A page of the settings screen: it is pushed on its
-/// navigation stack.
+/// The privacy settings: the protection level of the Mac in its three steps, the blocker's switches and mode, the two lists of sites (where nothing is
+/// blocked, and whose data is erased on close), and the three options the levels are made of. They are written under the Mac's own names in the state
+/// file, so the file stays the Mac's (docs/ios.md, "Vie privée"). A page of the settings screen: it is pushed on its navigation stack.
 struct PrivacyForm: View {
     @Bindable var model: BrowserModel
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         Form {
             Section {
-                Picker("privacy.level.title", selection: level) {
-                    Text("privacy.level.standard").tag(ProtectionLevel?.some(.standard))
-                    Text("privacy.level.enhanced").tag(ProtectionLevel?.some(.enhanced))
+                // Three names do not fit side by side at the largest text sizes: a menu then.
+                if typeSize.isAccessibilitySize {
+                    Picker("privacy.level.title", selection: level) { levelTags }.pickerStyle(.menu)
+                } else {
+                    Picker("privacy.level.title", selection: level) { levelTags }.pickerStyle(.segmented)
                 }
-                .pickerStyle(.segmented)
             } header: {
                 Text("privacy.level.title")
             } footer: {
                 Text(levelHelp)
+            }
+            Section {
+                Toggle("privacy.ads", isOn: flag(\.blockAds))
+                    .frame(minHeight: 44)
+                Toggle("privacy.banners", isOn: flag(\.blockCookieBanners))
+                    .frame(minHeight: 44)
+                Picker("privacy.mode.title", selection: mode) {
+                    Text("privacy.mode.standard").tag(BlockMode.standard)
+                    Text("privacy.mode.strict").tag(BlockMode.strict)
+                }
+                .frame(minHeight: 44)
+            } header: {
+                Text("privacy.blocker.title")
+            } footer: {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("privacy.ads-help")
+                    Text("privacy.banners-help")
+                    Text(model.privacySettings.blockMode == .strict ? "privacy.mode.strict-help" : "privacy.mode.standard-help")
+                    if model.blockerModeBusy { Text("privacy.mode.busy") }
+                    Text("privacy.blocker.lists")
+                }
+            }
+            Section {
+                NavigationLink {
+                    BlockExceptionsPage(model: model)
+                } label: {
+                    LabeledContent { SiteCount(count: model.privacySettings.blockExceptions.count) } label: { Text("privacy.exceptions.title") }
+                        .frame(minHeight: 44)
+                }
+                NavigationLink {
+                    ClearOnClosePage(model: model)
+                } label: {
+                    LabeledContent { Text(model.privacySettings.clearOnClose.enabled ? "settings.lock.on" : "settings.lock.off") } label: { Text("privacy.clear.title") }
+                        .frame(minHeight: 44)
+                }
             }
             Section {
                 Toggle("privacy.https", isOn: flag(\.httpsUpgrade))
@@ -35,14 +72,18 @@ struct PrivacyForm: View {
             } footer: {
                 Text("privacy.strip-help")
             }
-            // The blocker has no switch of its own: this says where its lists come from, since the page is named after it.
-            Section {} footer: { Text("privacy.blocker") }
         }
         .navigationTitle("settings.privacy")
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    /// The level the settings add up to: no segment is selected when they match neither (the footer then says so).
+    @ViewBuilder private var levelTags: some View {
+        Text("privacy.level.standard").tag(ProtectionLevel?.some(.standard))
+        Text("privacy.level.enhanced").tag(ProtectionLevel?.some(.enhanced))
+        Text("privacy.level.strict").tag(ProtectionLevel?.some(.strict))
+    }
+
+    /// The level the settings add up to: no segment is selected when they match none (the footer then says so).
     private var level: Binding<ProtectionLevel?> {
         Binding(
             get: { model.privacySettings.level },
@@ -51,6 +92,10 @@ struct PrivacyForm: View {
                 model.updatePrivacy { $0.choose(chosen) }
             }
         )
+    }
+
+    private var mode: Binding<BlockMode> {
+        Binding(get: { model.privacySettings.blockMode }, set: { chosen in model.updatePrivacy { $0.blockMode = chosen } })
     }
 
     private func flag(_ keyPath: WritableKeyPath<PrivacySettings, Bool>) -> Binding<Bool> {
@@ -64,8 +109,18 @@ struct PrivacyForm: View {
         switch model.privacySettings.level {
         case .standard?: "privacy.level.standard-effect"
         case .enhanced?: "privacy.level.enhanced-effect"
+        case .strict?: "privacy.level.strict-effect"
         case nil: "privacy.level.custom"
         }
+    }
+}
+
+/// How many sites a list holds, or « None ».
+struct SiteCount: View {
+    let count: Int
+
+    var body: some View {
+        if count == 0 { Text("privacy.sites.none") } else { Text("privacy.sites.count \(count)") }
     }
 }
 

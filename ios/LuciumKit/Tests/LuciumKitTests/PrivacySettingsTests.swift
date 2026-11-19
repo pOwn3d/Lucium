@@ -37,12 +37,88 @@ struct PrivacySettingsTests {
         #expect(settings.level == nil, "neither level: the settings stay as chosen")
     }
 
-    @Test func choosingALevelWritesItsThreeSettingsAndLeavesHttpsAlone() {
+    @Test func choosingALevelWritesEverythingItStandsForAndLeavesHttpsAlone() {
         var settings = PrivacySettings(httpsUpgrade: false, sendGpc: false, stripTrackingParams: false, stripCopiedLinks: false)
         settings.choose(.enhanced)
-        #expect(settings == PrivacySettings(httpsUpgrade: false, sendGpc: true, stripTrackingParams: true, stripCopiedLinks: true))
+        #expect(settings == PrivacySettings(httpsUpgrade: false, sendGpc: true, stripTrackingParams: true, stripCopiedLinks: true, blockCookieBanners: true))
+        #expect(settings.level == .enhanced)
+        settings.choose(.strict)
+        #expect(settings == PrivacySettings(httpsUpgrade: false, sendGpc: true, stripTrackingParams: true, stripCopiedLinks: true, blockCookieBanners: true,
+                                            blockScriptlets: true, blockMode: .strict))
+        #expect(settings.level == .strict)
         settings.choose(.standard)
         #expect(settings == PrivacySettings(httpsUpgrade: false, sendGpc: false, stripTrackingParams: false, stripCopiedLinks: false))
+        #expect(settings.level == .standard)
+    }
+
+    @Test func choosingALevelKeepsTheListsOfSitesAndTheSwitchesThatAreNotALevel() {
+        var settings = PrivacySettings.newProfile
+        settings.blockExceptions = ["example.com"]
+        settings.clearOnClose = .init(enabled: true, sites: ["a.example"], onQuit: true)
+        settings.choose(.strict)
+        settings.choose(.standard)
+        #expect(settings.blockExceptions == ["example.com"])
+        #expect(settings.clearOnClose == .init(enabled: true, sites: ["a.example"], onQuit: true))
+    }
+
+    @Test func aSwitchOutsideTheLevelsMakesTheLevelCustom() {
+        var settings = PrivacySettings.newProfile
+        #expect(settings.level == .enhanced)
+        settings.blockAds = false
+        #expect(settings.level == nil)
+        settings = .newProfile
+        settings.blockMode = .strict
+        #expect(settings.level == nil, "strict mode alone is neither « Renforcée » nor « Stricte »")
+        settings = .newProfile
+        settings.blockCookieBanners = false
+        #expect(settings.level == nil)
+    }
+
+    @Test func theAdsSwitchIsReadAndWrittenWithItsAlias() {
+        // Either key on blocks (`adsBlockingOn`): a file that carries the alias alone is still blocking.
+        #expect(state(settings: ["blockAds": .bool(false), "blockTrackers": .bool(true)]).privacy.blockAds)
+        #expect(!state(settings: ["blockAds": .bool(false), "blockTrackers": .bool(false)]).privacy.blockAds)
+        #expect(state(settings: ["sendGpc": .bool(true)]).privacy.blockAds, "neither written: the default, on")
+        var after = state(settings: ["blockAds": .bool(true)])
+        var settings = after.privacy
+        settings.blockAds = false
+        after.privacy = settings
+        guard case .object(let written)? = after.rest["settings"] else { Issue.record("no settings"); return }
+        #expect(written["blockAds"] == .bool(false))
+        #expect(written["blockTrackers"] == .bool(false), "the Mac writes both: a file with one of them left on would still block")
+    }
+
+    @Test func theBlockerKeysOfTheMacAreRead() {
+        let settings = state(settings: [
+            "blockCookieBanners": .bool(true), "blockCosmetic": .bool(false), "blockScriptlets": .bool(true), "blockMode": .string("strict"),
+            "blockExceptions": .array([.string("Example.com"), .string("https://www.other.test/x"), .number(3), .string("bad host")]),
+            "siteDataClearOnCloseEnabled": .bool(true), "siteDataClearOnClose": .array([.string("shop.example"), .string("localhost:3000"), .string("not a host")]),
+            "siteDataClearOnQuit": .bool(true),
+        ]).privacy
+        #expect(settings.blockCookieBanners && !settings.blockCosmetic && settings.blockScriptlets && settings.blockMode == .strict)
+        #expect(settings.blockExceptions == ["example.com", "other.test"])
+        #expect(settings.clearOnClose == .init(enabled: true, sites: ["shop.example", "localhost:3000"], onQuit: true))
+    }
+
+    @Test func aModeThatIsNotOneOfTheTwoNeverSwitchesTheStricterFilteringOn() {
+        #expect(state(settings: ["blockMode": .string("paranoid")]).privacy.blockMode == .standard)
+        #expect(state(settings: ["blockMode": .bool(true)]).privacy.blockMode == .standard)
+    }
+
+    @Test func theKeysThatAreNotOursSurviveAndTheModeOfASiteIsKept() {
+        var before = state(settings: ["blockModeSites": .object(["example.com": .string("strict")]), "reduceFingerprint": .bool(true), "blockMode": .string("standard")])
+        before.privacy.blockMode = .strict
+        guard case .object(let written)? = before.rest["settings"] else { Issue.record("no settings"); return }
+        #expect(written["blockModeSites"] == .object(["example.com": .string("strict")]), "the mode of a site is the Mac's, kept as it is")
+        #expect(written["reduceFingerprint"] == .bool(true), "choosing or changing anything here never writes the setting the iPhone does not have")
+        #expect(written["blockMode"] == .string("strict"))
+    }
+
+    @Test func theGuardReadsTheSwitches() {
+        var settings = PrivacySettings.newProfile
+        settings.blockAds = false
+        settings.blockExceptions = ["example.com"]
+        #expect(settings.guardSettings == GuardSettings(blockAds: false, blockCookieBanners: true, blockScriptlets: false, exemptSites: ["example.com"]))
     }
 
     @Test func writingKeepsEveryOtherKeyOfTheSettingsAndOfTheState() throws {
@@ -80,8 +156,12 @@ struct PrivacySettingsTests {
         settings.stripCopiedLinks = false
         fresh.privacy = settings
         guard case .object(let written)? = fresh.rest["settings"] else { Issue.record("no settings"); return }
+        // The five keys of a new profile of the Mac, then the blocker's, all at their defaults: what the Mac would read from a file it wrote itself.
         #expect(written == [
             "protectionBaseline": .string("renforcee"), "httpsUpgrade": .bool(true), "sendGpc": .bool(true), "stripTrackingParams": .bool(true), "stripCopiedLinks": .bool(false),
+            "blockAds": .bool(true), "blockTrackers": .bool(true), "blockCookieBanners": .bool(true), "blockCosmetic": .bool(true), "blockScriptlets": .bool(false),
+            "blockMode": .string("standard"), "blockExceptions": .array([]),
+            "siteDataClearOnCloseEnabled": .bool(false), "siteDataClearOnClose": .array([]), "siteDataClearOnQuit": .bool(false),
         ])
     }
 }

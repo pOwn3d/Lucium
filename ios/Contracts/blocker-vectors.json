@@ -1,0 +1,83 @@
+{
+  "description": "Shared by src/shared/ios-blocker-contract.test.ts (the Mac's blocker.ts, site-data.ts, settings-presets.ts) and by ios/LuciumKit (BlockHost, SiteHostEntry, PrivacySettings). The blocker's lists of sites, the level of protection the settings add up to, and what choosing a level writes. `reduceFingerprint` is the one setting the iPhone does not have: a level is read without it there, and choosing one does not write it, so the cases below keep it where the Mac's level wants it.",
+  "normalizeBlockHost": [
+    { "input": "example.com", "expect": "example.com" },
+    { "input": "  Example.COM  ", "expect": "example.com" },
+    { "input": "www.example.com", "expect": "example.com" },
+    { "input": "https://www.example.com/path?q=1#x", "expect": "example.com" },
+    { "input": "http://sub.example.com:8080/", "expect": "sub.example.com" },
+    { "input": "*.example.com", "expect": "example.com" },
+    { "input": "example.com.", "expect": "example.com" },
+    { "input": "localhost", "expect": "localhost" },
+    { "input": "192.168.1.10", "expect": "192.168.1.10" },
+    { "input": "[::1]", "expect": "[::1]" },
+    { "input": "ftp://example.com", "expect": null },
+    { "input": "", "expect": null },
+    { "input": "   ", "expect": null },
+    { "input": "not a host", "expect": null },
+    { "input": "exa mple.com", "expect": null },
+    { "input": "-example.com", "expect": null },
+    { "input": "example..com", "expect": null }
+  ],
+  "isBlockingExempt": [
+    { "url": "https://example.com/page", "hosts": ["example.com"], "expect": true },
+    { "url": "https://www.example.com/page", "hosts": ["example.com"], "expect": true },
+    { "url": "https://shop.example.com/", "hosts": ["example.com"], "expect": true },
+    { "url": "https://example.com./", "hosts": ["example.com"], "expect": true },
+    { "url": "https://notexample.com/", "hosts": ["example.com"], "expect": false },
+    { "url": "https://example.com.evil.test/", "hosts": ["example.com"], "expect": false },
+    { "url": "https://example.com/", "hosts": [], "expect": false },
+    { "url": "about:blank", "hosts": ["example.com"], "expect": false },
+    { "url": "file:///etc/hosts", "hosts": ["example.com"], "expect": false }
+  ],
+  "cleanBlockExceptions": [
+    { "input": ["example.com", "Example.com", "https://www.other.test/x", 7, null, "bad host"], "expect": ["example.com", "other.test"] },
+    { "input": "example.com", "expect": [] }
+  ],
+  "parseSiteHost": [
+    { "input": "example.com", "expect": "example.com" },
+    { "input": "Example.COM", "expect": "example.com" },
+    { "input": "www.example.com", "expect": "www.example.com" },
+    { "input": "localhost", "expect": "localhost" },
+    { "input": "localhost:3000", "expect": "localhost:3000" },
+    { "input": "myapp:3000", "expect": "myapp:3000" },
+    { "input": "nas", "expect": "nas" },
+    { "input": "192.168.1.10", "expect": "192.168.1.10" },
+    { "input": "192.168.1.10:8080", "expect": "192.168.1.10:8080" },
+    { "input": "999.1.1.1", "expect": null },
+    { "input": "127.001.1.1", "expect": null },
+    { "input": "[::1]", "expect": "[::1]" },
+    { "input": "[::1]:3000", "expect": "[::1]:3000" },
+    { "input": "xn--bcher-kva.example", "expect": "xn--bcher-kva.example" },
+    { "input": "example.com:99999", "expect": null },
+    { "input": "example.com:0", "expect": null },
+    { "input": "example.com:80:80", "expect": null },
+    { "input": "https://example.com", "expect": null },
+    { "input": "example.com/path", "expect": null },
+    { "input": "-bad.example.com", "expect": null },
+    { "input": "127.1", "expect": null },
+    { "input": "0x7f.1", "expect": null },
+    { "input": "", "expect": null }
+  ],
+  "cleanClearOnClose": [
+    { "input": ["example.com", "EXAMPLE.com", "localhost:3000", "https://example.com", 3, "999.1.1.1", "app.example.com"], "expect": ["example.com", "localhost:3000", "app.example.com"] },
+    { "input": "example.com", "expect": [] }
+  ],
+  "protectionLevel": [
+    { "name": "defaults of a new profile", "settings": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": true, "blockCosmetic": true, "blockScriptlets": false, "blockMode": "standard", "sendGpc": true, "stripTrackingParams": true, "stripCopiedLinks": true, "reduceFingerprint": false }, "expect": "renforcee" },
+    { "name": "earlier profile", "settings": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": false, "blockCosmetic": true, "blockScriptlets": false, "blockMode": "standard", "sendGpc": false, "stripTrackingParams": false, "stripCopiedLinks": false, "reduceFingerprint": false }, "expect": "standard" },
+    { "name": "strict", "settings": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": true, "blockCosmetic": true, "blockScriptlets": true, "blockMode": "strict", "sendGpc": true, "stripTrackingParams": true, "stripCopiedLinks": true, "reduceFingerprint": true }, "expect": "stricte" },
+    { "name": "ads off", "settings": { "blockAds": false, "blockTrackers": false, "blockCookieBanners": false, "blockCosmetic": true, "blockScriptlets": false, "blockMode": "standard", "sendGpc": false, "stripTrackingParams": false, "stripCopiedLinks": false, "reduceFingerprint": false }, "expect": null },
+    { "name": "the alias alone keeps the ads blocked", "settings": { "blockAds": false, "blockTrackers": true, "blockCookieBanners": true, "blockCosmetic": true, "blockScriptlets": false, "blockMode": "standard", "sendGpc": true, "stripTrackingParams": true, "stripCopiedLinks": true, "reduceFingerprint": false }, "expect": "renforcee" },
+    { "name": "strict mode alone", "settings": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": true, "blockCosmetic": true, "blockScriptlets": false, "blockMode": "strict", "sendGpc": true, "stripTrackingParams": true, "stripCopiedLinks": true, "reduceFingerprint": false }, "expect": null },
+    { "name": "extended rules alone", "settings": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": true, "blockCosmetic": true, "blockScriptlets": true, "blockMode": "standard", "sendGpc": true, "stripTrackingParams": true, "stripCopiedLinks": true, "reduceFingerprint": false }, "expect": null },
+    { "name": "hiding off", "settings": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": true, "blockCosmetic": false, "blockScriptlets": false, "blockMode": "standard", "sendGpc": true, "stripTrackingParams": true, "stripCopiedLinks": true, "reduceFingerprint": false }, "expect": null },
+    { "name": "banners without the signals", "settings": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": true, "blockCosmetic": true, "blockScriptlets": false, "blockMode": "standard", "sendGpc": false, "stripTrackingParams": false, "stripCopiedLinks": false, "reduceFingerprint": false }, "expect": null },
+    { "name": "one signal short", "settings": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": true, "blockCosmetic": true, "blockScriptlets": false, "blockMode": "standard", "sendGpc": true, "stripTrackingParams": true, "stripCopiedLinks": false, "reduceFingerprint": false }, "expect": null }
+  ],
+  "chooseLevel": [
+    { "level": "standard", "option": "standard", "patch": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": false, "blockMode": "standard", "blockCosmetic": true, "blockScriptlets": false, "sendGpc": false, "stripTrackingParams": false, "stripCopiedLinks": false } },
+    { "level": "enhanced", "option": "renforcee", "patch": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": true, "blockMode": "standard", "blockCosmetic": true, "blockScriptlets": false, "sendGpc": true, "stripTrackingParams": true, "stripCopiedLinks": true } },
+    { "level": "strict", "option": "stricte", "patch": { "blockAds": true, "blockTrackers": true, "blockCookieBanners": true, "blockMode": "strict", "blockCosmetic": true, "blockScriptlets": true, "sendGpc": true, "stripTrackingParams": true, "stripCopiedLinks": true } }
+  ]
+}
