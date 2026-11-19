@@ -245,5 +245,42 @@
       "id": "..",
       "valid": false
     }
+  ],
+  "contrast": [
+    {
+      "foreground": "#000000",
+      "background": "#ffffff",
+      "ratio": 21.0
+    },
+    {
+      "foreground": "#ffffff",
+      "background": "#000000",
+      "ratio": 21.0
+    },
+    {
+      "foreground": "#3a5de8",
+      "background": "#ffffff",
+      "ratio": 5.37
+    },
+    {
+      "foreground": "#ffff00",
+      "background": "#000000",
+      "ratio": 19.556
+    },
+    {
+      "foreground": "#767676",
+      "background": "#ffffff",
+      "ratio": 4.542
+    },
+    {
+      "foreground": "#ff8040",
+      "background": "#ffffff",
+      "ratio": 2.496
+    },
+    {
+      "foreground": "#16181f",
+      "background": "#c7d6f6",
+      "ratio": 12.138
+    }
   ]
 }

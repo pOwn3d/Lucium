@@ -23,7 +23,7 @@ struct CommandBar: View {
     var body: some View {
         VStack(spacing: 0) {
             // The band of the status bar takes the colour of the space, as on the drawing.
-            Color.clear.frame(height: 0).background(LinearGradient(colors: model.colors(of: model.activeSpace).map { $0.opacity(0.35) }, startPoint: .topLeading, endPoint: .bottomTrailing), ignoresSafeAreaEdges: .top)
+            Color.clear.frame(height: 0).background { SpaceGradient(colors: model.colors(of: model.activeSpace)).ignoresSafeArea(edges: .top) }
             field
             chips
             ScrollView {

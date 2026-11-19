@@ -34,7 +34,7 @@ struct SidebarGround: View {
     var body: some View {
         ZStack {
             Color(.systemBackground)
-            LinearGradient(colors: model.colors(of: model.activeSpace).map { $0.opacity(0.35) }, startPoint: .topLeading, endPoint: .bottomTrailing)
+            SpaceGradient(colors: model.colors(of: model.activeSpace))
         }
         .ignoresSafeArea()
     }

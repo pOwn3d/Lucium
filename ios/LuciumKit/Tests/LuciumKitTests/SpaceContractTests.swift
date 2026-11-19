@@ -9,7 +9,9 @@ struct SpaceVectors: Decodable {
     struct ProfileId: Decodable { let id: String; let valid: Bool }
     let theme: [Theme]
     let newProfileId: [NewProfileId]
+    struct Contrast: Decodable { let foreground: String; let background: String; let ratio: Double }
     let profileId: [ProfileId]
+    let contrast: [Contrast]
 
     static func load() throws -> SpaceVectors {
         let file = URL(fileURLWithPath: #filePath)
@@ -30,6 +32,13 @@ struct SpaceContractTests {
         for vector in try SpaceVectors.load().theme {
             let colors = SpaceTheme.baseColors(hue: vector.hue, saturation: vector.saturation ?? 0.55).map(\.text)
             #expect(colors == vector.baseColors, "themeFromHue(\(vector.hue), \(String(describing: vector.saturation)))")
+        }
+    }
+
+    @Test func theContrastRatioIsTheOneTheMacMeasures() throws {
+        for vector in try SpaceVectors.load().contrast {
+            let ratio = TintContrast.ratio(HexColor(vector.foreground)!, HexColor(vector.background)!)
+            #expect(abs(ratio - vector.ratio) < 0.001, "contrastRatio(\(vector.foreground), \(vector.background))")
         }
     }
 

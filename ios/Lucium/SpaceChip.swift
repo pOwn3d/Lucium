@@ -14,7 +14,7 @@ struct SpaceChip: View {
         .padding(.leading, 4)
         .padding(.trailing, 9)
         .frame(minHeight: 26)
-        .background(LinearGradient(colors: colors.map { $0.opacity(0.35) }, startPoint: .topLeading, endPoint: .bottomTrailing), in: Capsule())
+        .background { SpaceGradient(colors: colors).clipShape(Capsule()) }
         .accessibilityElement(children: .combine)
     }
 }
