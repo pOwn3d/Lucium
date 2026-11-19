@@ -16,6 +16,19 @@ import Foundation
 ///   - what points at nothing is cut (a tab of a space that is gone, a folder that is gone), the pointers of the state are put right, and a state is never left
 ///     with no space.
 public enum SyncApply {
+    /// What a patch asked for that this version did not write (review n° 39): an entity that was not made or does not read once written (`field` is nil), or one value of an
+    /// entity (`field` is its name). `kind` is the kind of the snapshot (`space`, `todayTab`…, or `setting`, whose only field is `value`).
+    public struct Rejection: Equatable, Hashable, Sendable {
+        public let kind: String
+        public let id: String
+        public let field: String?
+        public init(kind: String, id: String, field: String? = nil) {
+            self.kind = kind
+            self.id = id
+            self.field = field
+        }
+    }
+
     public struct Outcome: Equatable, Sendable {
         public var state: BrowserState
         public var createdSpaceIDs: [String] = []
@@ -27,18 +40,22 @@ public enum SyncApply {
         public var closedTabIDs: [String] = []
         /// What the patch asked and was not written, and why (for the log and the tests): a value that does not pass `clean`, an entity that cannot be made.
         public var rejected: [String] = []
+        /// The same, by what it concerns: the session does not adopt these into its base (review n° 39), so that what this version refused is not read at the next session as
+        /// something it deleted.
+        public var rejections: [Rejection] = []
         public var changed: Bool
         /// The state the patch would make is more than this version may hold (`maxStateBytes`): nothing was written, and a session that finds it ends instead of adopting the merge.
         public var tooLarge = false
 
         public init(state: BrowserState, createdSpaceIDs: [String] = [], removedSpaceIDs: [String] = [], removedTabIDs: [String] = [], closedTabIDs: [String] = [], rejected: [String] = [],
-                    changed: Bool = false, tooLarge: Bool = false) {
+                    rejections: [Rejection] = [], changed: Bool = false, tooLarge: Bool = false) {
             self.state = state
             self.createdSpaceIDs = createdSpaceIDs
             self.removedSpaceIDs = removedSpaceIDs
             self.removedTabIDs = removedTabIDs
             self.closedTabIDs = closedTabIDs
             self.rejected = rejected
+            self.rejections = rejections
             self.changed = changed
             self.tooLarge = tooLarge
         }
@@ -199,13 +216,14 @@ public enum SyncApply {
         return found
     }
 
-    private static func upsert<T>(_ list: inout [Slot<T>], _ places: inout Positions, kind: SyncFieldClasses.Kind, change: SyncPatch.Upsert, now: Double, rejected: inout [String]) {
+    private static func upsert<T>(_ list: inout [Slot<T>], _ places: inout Positions, kind: SyncFieldClasses.Kind, change: SyncPatch.Upsert, now: Double, rejected: inout [String], rejections: inout [Rejection]) {
         if let at = places[Array(change.id.utf8)] {
             var fields = list[at].fields
             var touched = false
             for (name, value) in change.fields.sorted(by: { SyncCanonical.compare($0.key, $1.key) < 0 }) where name != "id" && unchanged(fields, expect: change.expect, names: [name]) {
                 guard let cleaned = clean(kind, name, value) else {
                     rejected.append("\(kind.rawValue) \(change.id): \(name) is not a value this version keeps")
+                    rejections.append(Rejection(kind: kind.rawValue, id: change.id, field: name))
                     continue
                 }
                 if !SyncCanonical.same(fields[name], cleaned) { fields[name] = cleaned; touched = true }
@@ -219,7 +237,10 @@ public enum SyncApply {
         guard change.create else { return }
         var fields = made(kind, id: change.id, now: now)
         for (name, value) in change.fields.sorted(by: { SyncCanonical.compare($0.key, $1.key) < 0 }) where name != "id" {
-            if let cleaned = clean(kind, name, value) { fields[name] = cleaned } else { rejected.append("\(kind.rawValue) \(change.id): \(name) is not a value this version keeps") }
+            if let cleaned = clean(kind, name, value) { fields[name] = cleaned } else {
+                rejected.append("\(kind.rawValue) \(change.id): \(name) is not a value this version keeps")
+                rejections.append(Rejection(kind: kind.rawValue, id: change.id, field: name))
+            }
         }
         // A pinned tab that comes back without the page it was on (its seed fields are sent only with a new entity) opens at the page it returns to.
         if kind == .tab, fields["url"] == nil, case .string(let anchor)? = fields["anchorUrl"] {
@@ -229,6 +250,7 @@ public enum SyncApply {
         if (kind == .tab || kind == .favorite || kind == .archived), fields["title"] == nil, case .string(let address)? = fields["url"] { fields["title"] = .string(AddressResolver.host(of: address)) }
         guard isComplete(kind, fields) else {
             rejected.append("\(kind.rawValue) \(change.id): not made, it lacks a name or an address")
+            rejections.append(Rejection(kind: kind.rawValue, id: change.id))
             return
         }
         places[Array(change.id.utf8)] = list.count
@@ -252,8 +274,11 @@ public enum SyncApply {
     /// the automatic archive treats it the same on both devices.
     /// `detaching`: the tab was pinned here and the other device detached it (a removal of `tab/<id>` and a creation of `todayTab/<id>` in one patch, `SyncToday.moves`): it stays,
     /// in its place, and is no longer pinned.
-    private static func upsertToday(_ list: inout [Slot<TabItem>], _ places: inout Positions, change: SyncPatch.Upsert, detaching: Bool, now: Double, rejected: inout [String]) {
-        func reject(_ name: String) { rejected.append("todayTab \(change.id): \(name) is not a value this version keeps") }
+    private static func upsertToday(_ list: inout [Slot<TabItem>], _ places: inout Positions, change: SyncPatch.Upsert, detaching: Bool, now: Double, rejected: inout [String], rejections: inout [Rejection]) {
+        func reject(_ name: String) {
+            rejected.append("todayTab \(change.id): \(name) is not a value this version keeps")
+            rejections.append(Rejection(kind: SyncToday.kind, id: change.id, field: name))
+        }
         let byName: ((String, JSONValue), (String, JSONValue)) -> Bool = { SyncCanonical.compare($0.0, $1.0) < 0 }
         if let at = places[Array(change.id.utf8)] {
             var fields = list[at].fields
@@ -293,6 +318,7 @@ public enum SyncApply {
         if fields["title"] == nil, case .string(let address)? = fields["url"] { fields["title"] = .string(AddressResolver.host(of: address)) }
         guard isComplete(.todayTab, fields) else {
             rejected.append("todayTab \(change.id): not made, it lacks a space or an address")
+            rejections.append(Rejection(kind: SyncToday.kind, id: change.id))
             return
         }
         places[Array(change.id.utf8)] = list.count
@@ -408,6 +434,7 @@ public enum SyncApply {
     /// The state after a patch. A patch that changes nothing gives back the state it was given.
     public static func apply(_ patch: SyncPatch, to state: BrowserState, now: Double) -> Outcome {
         var rejected: [String] = []
+        var rejections: [Rejection] = []
         var lists = Lists(spaces: slots(state.spaces, SyncStateView.entry(of:)), folders: slots(state.folders) { SyncStateView.entry(ofJSON: $0.json, id: $0.id) },
                           tabs: slots(state.tabs, entryForApply), favorites: slots(state.favorites, SyncStateView.entry(of:)),
                           archive: slots(state.archive) { SyncStateView.entry(ofJSON: $0.json, id: $0.id) })
@@ -417,8 +444,8 @@ public enum SyncApply {
         let pinnedThere = Set(moves.filter { $0.to == "tab" }.map(\.id)), detachedThere = Set(moves.filter { $0.to == SyncToday.kind }.map(\.id))
         for change in patch.upserts {
             switch change.kind {
-            case .space: upsert(&lists.spaces, &places.spaces, kind: .space, change: change, now: now, rejected: &rejected)
-            case .folder: upsert(&lists.folders, &places.folders, kind: .folder, change: change, now: now, rejected: &rejected)
+            case .space: upsert(&lists.spaces, &places.spaces, kind: .space, change: change, now: now, rejected: &rejected, rejections: &rejections)
+            case .folder: upsert(&lists.folders, &places.folders, kind: .folder, change: change, now: now, rejected: &rejected, rejections: &rejections)
             case .tab where pinnedThere.contains(change.id) && places.tabs[Array(change.id.utf8)] != nil:
                 // The Today tab this device has is the one the other device pinned: what it sends is now true here whatever the tab held, and the page stays the one it is on.
                 var forced = change
@@ -427,11 +454,11 @@ public enum SyncApply {
                 if let at = places.tabs[Array(change.id.utf8)] {
                     for name in Set(forced.fields.keys).union(forced.remove) { forced.expect[name] = lists.tabs[at].fields[name] }
                 }
-                upsert(&lists.tabs, &places.tabs, kind: .tab, change: forced, now: now, rejected: &rejected)
-            case .tab: upsert(&lists.tabs, &places.tabs, kind: .tab, change: change, now: now, rejected: &rejected)
-            case .todayTab: upsertToday(&lists.tabs, &places.tabs, change: change, detaching: detachedThere.contains(change.id), now: now, rejected: &rejected)
-            case .favorite: upsert(&lists.favorites, &places.favorites, kind: .favorite, change: change, now: now, rejected: &rejected)
-            case .archived: upsert(&lists.archive, &places.archive, kind: .archived, change: change, now: now, rejected: &rejected)
+                upsert(&lists.tabs, &places.tabs, kind: .tab, change: forced, now: now, rejected: &rejected, rejections: &rejections)
+            case .tab: upsert(&lists.tabs, &places.tabs, kind: .tab, change: change, now: now, rejected: &rejected, rejections: &rejections)
+            case .todayTab: upsertToday(&lists.tabs, &places.tabs, change: change, detaching: detachedThere.contains(change.id), now: now, rejected: &rejected, rejections: &rejections)
+            case .favorite: upsert(&lists.favorites, &places.favorites, kind: .favorite, change: change, now: now, rejected: &rejected, rejections: &rejections)
+            case .archived: upsert(&lists.archive, &places.archive, kind: .archived, change: change, now: now, rejected: &rejected, rejections: &rejections)
             }
         }
         let spacesBefore = Set(lists.spaces.map(\.id))
@@ -466,7 +493,7 @@ public enum SyncApply {
             if case .string(let name)? = slot.fields["profileId"] { profile = name }
             return seen.insert(profile + "\u{0}" + url).inserted
         }
-        return finish(lists, patch: patch, state: state, closing: closed, now: now, rejected: rejected)
+        return finish(lists, patch: patch, state: state, closing: closed, now: now, rejected: rejected, rejections: rejections)
     }
 
     /// The open tabs (the ones of Today: pinned tabs are synchronised, and went with the space on the other device too) of the spaces a patch has removed go to the archive before the
@@ -496,14 +523,16 @@ public enum SyncApply {
     }
 
     /// What the typed lists and the settings become, and what no longer points at anything is cut.
-    private static func finish(_ lists: Lists, patch: SyncPatch, state: BrowserState, closing: [String], now: Double, rejected: [String]) -> Outcome {
+    private static func finish(_ lists: Lists, patch: SyncPatch, state: BrowserState, closing: [String], now: Double, rejected: [String], rejections: [Rejection]) -> Outcome {
         var rejected = rejected
+        var rejections = rejections
         var next = state
         func fold<T>(_ list: [Slot<T>], _ read: ([String: JSONValue]) -> T?, label: String) -> [T] {
             list.compactMap { slot in
                 if !slot.changed, let original = slot.original { return original }
                 if let made = read(slot.fields) { return made }
                 rejected.append("\(label) \(slot.id): it does not read once written, left out")
+                rejections.append(Rejection(kind: label, id: slot.id))
                 return nil
             }
         }
@@ -534,7 +563,7 @@ public enum SyncApply {
         // The tabs the other device closed go to the archive by the path of a tab archived by hand (source `sync`); the space that showed one shows the most recently used one left.
         let closedHere = closing.filter { id in next.tabs.contains { $0.id == id } }
         if !closedHere.isEmpty { next.archive(tabIds: closedHere, source: .sync, now: now) }
-        applySettings(patch.settings, to: &next, rejected: &rejected)
+        applySettings(patch.settings, to: &next, rejected: &rejected, rejections: &rejections)
         for id in spaceIDs where next.activeTabBySpace[id] == nil { next.activeTabBySpace[id] = .some(nil) }
         for id in next.activeTabBySpace.keys.filter({ !spaceIDs.contains($0) }) { next.activeTabBySpace[id] = nil }
         next = next.consistent() ?? state
@@ -542,7 +571,7 @@ public enum SyncApply {
         let removedTabs = state.tabs.map(\.id).filter { !tabsNow.contains($0) }
         return Outcome(state: next, createdSpaceIDs: spaces.map(\.id).filter { !spacesBefore.contains($0) },
                        removedSpaceIDs: state.spaces.map(\.id).filter { !spaceIDs.contains($0) }, removedTabIDs: removedTabs, closedTabIDs: closedHere.filter { !tabsNow.contains($0) }, rejected: rejected,
-                       changed: next != state)
+                       rejections: rejections, changed: next != state)
     }
 
     /// The `parentId` of a folder that is on a loop is cut (the merge cuts the loops of what it gives; this one is for what local folders could add). Each folder walks up its
@@ -579,11 +608,12 @@ public enum SyncApply {
 
     // MARK: The settings
 
-    private static func applySettings(_ values: [String: JSONValue], to state: inout BrowserState, rejected: inout [String]) {
+    private static func applySettings(_ values: [String: JSONValue], to state: inout BrowserState, rejected: inout [String], rejections: inout [Rejection]) {
         var accepted = values.filter { key, value in
             guard SyncFieldClasses.settingKeys.contains(key) else { return false }
             if SyncInbound.settingValueIsInvalid(key: key, value: value) {
                 rejected.append("setting \(key): not a value this version keeps")
+                rejections.append(Rejection(kind: "setting", id: key, field: "value"))
                 return false
             }
             return true

@@ -51,10 +51,14 @@ const todayList = (spaceId: string): string => `today:${spaceId}`
 /** The pinned tabs that are synchronised: pinned, and never private. */
 const isSyncedTab = (tab: SidebarState['tabs'][number]): boolean => tab.pinned && tab.private !== true
 
-/** The archived tabs that are sent: the latest `ARCHIVE_PER_SPACE_SENT` of each space. */
+/**
+ * The archived tabs that are sent: the latest `ARCHIVE_PER_SPACE_SENT` of each space. The entries of source `sync` stay where they are (review n° 37): they are the open
+ * tabs of a space the other device deleted, kept here because open tabs are not synchronised (§8.5); sending them would hand the other device, under « archive », the
+ * addresses and titles that « Onglets ouverts » was never ticked for. They do not count for the latest ones either.
+ */
 function archivedSent(state: SidebarState): SidebarState['archive'] {
   const kept = new Map<string, number>()
-  const newestFirst = [...state.archive].sort((a, b) => b.archivedAt - a.archivedAt || (a.id < b.id ? -1 : 1))
+  const newestFirst = state.archive.filter((entry) => entry.source !== 'sync').sort((a, b) => b.archivedAt - a.archivedAt || (a.id < b.id ? -1 : 1))
   return newestFirst.filter((entry) => {
     const count = (kept.get(entry.spaceId) ?? 0) + 1
     kept.set(entry.spaceId, count)
@@ -217,6 +221,17 @@ export function snapshotOf(state: SidebarState, marks: MarkBook, options: Snapsh
     if (!kinds.has(kind) || (space !== undefined && head !== 'favorites' && options.withheld.has(space))) continue
     order[key] = ids.filter((id) => entities[kind]?.[id] !== undefined)
     orderStamps[key] = marks.orderStampOf(key)
+  }
+  // What this version does not understand is never deleted by it (§11.6, review n° 40): an entity of a kind it does not know, or a list it does not know, came in from a newer
+  // device and crossed into the base; the state holds no such thing, so a snapshot made of the state alone would say « deleted here » and the next merge would send the other
+  // device a deletion of its own data. They are carried over from the base as they were: unchanged, nothing for the merge to settle.
+  if (options.base !== null) {
+    for (const [kind, byId] of Object.entries(options.base.entities)) if (!isKind(kind) && kind !== 'setting') entities[kind] = structuredClone(byId)
+    for (const [key, ids] of Object.entries(options.base.order)) {
+      if (listKindOf(key) !== null) continue
+      order[key] = [...ids]
+      orderStamps[key] = options.base.orderStamps[key] ?? ZERO_STAMP
+    }
   }
   const tombstones: SyncSnapshot['tombstones'] = {}
   for (const [kind, byIds] of Object.entries(marks.tombstonesOf())) if (kinds.has(kind) || !isKind(kind) && kind !== 'setting') tombstones[kind] = byIds

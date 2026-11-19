@@ -321,6 +321,43 @@ struct SyncExchangeTests {
         #expect(await rig.host.patches.count == 1, "no patch the second time")
     }
 
+    @Test func anEntityThePhoneRefusedToWriteIsNotReadAsDeletedAtTheNextSession() async throws {
+        // docs/synchronisation.md §11.6, review n° 39: a folder with a blank name is in the merge and in the base, `SyncApply` does not make it, and the state alone would say
+        // « deleted here » at the second session, which the merge would send the Mac as a deletion of its own folder.
+        let rig = try rig()
+        defer { rig.cleanup() }
+        var macState = macSnapshot()
+        macState.entities["folder", default: [:]]["blank"] = macEntity(["spaceId": .string("m1"), "name": .string("   "), "collapsed": .bool(false)])
+        let first = try await session(rig, mac: SyncTestMac(snapshot: macState))
+        #expect(first.0?.outcome == .committed(at: now))
+        let outcome = try #require(await rig.host.outcomes.first)
+        #expect(outcome.rejections.contains(SyncApply.Rejection(kind: "folder", id: "blank")), "the application says what it did not make")
+        #expect(await !rig.host.state.folders.contains { $0.id == "blank" })
+        // The base is the merged snapshot as before (the Mac keeps the same one, so that both merge from it), and the refusal is remembered beside it.
+        let merged = SyncStateView.base(of: try #require(first.1.merged).snapshot)
+        let stored = try #require(rig.bases.get(peerId: peer.id, now: now))
+        #expect(stored.hash == merged.digest && stored.snapshot.entities["folder"]?["blank"] != nil)
+        #expect(stored.refused == [SyncApply.Rejection(kind: "folder", id: "blank")])
+
+        // The second session: the same base on both sides, the Mac still has its folder. The phone says it holds it, and nothing is deleted.
+        let second = try await session(rig, mac: SyncTestMac(snapshot: merged, base: merged))
+        #expect(second.0?.outcome == .committed(at: now))
+        #expect(second.1.phoneBaseHash as? String == merged.digest, "the two devices still hold the same base, so they merge from it")
+        #expect(second.1.phone.entities["folder"]?["blank"] != nil, "carried from the base, as it is")
+        #expect(second.1.merged?.snapshot.entities["folder"]?["blank"] != nil)
+        #expect(second.1.merged?.snapshot.tombstones["folder"]?["blank"] == nil, "no deletion of the Mac's folder")
+        #expect(try #require(rig.bases.get(peerId: peer.id, now: now)).refused == [SyncApply.Rejection(kind: "folder", id: "blank")], "and it is still remembered while the Mac keeps it")
+
+        // The Mac deletes it: the merge drops it, and there is nothing left to remember.
+        var macGone = merged
+        macGone.entities["folder"]?["blank"] = nil
+        macGone.tombstones["folder", default: [:]]["blank"] = macStamp(5)
+        let third = try await session(rig, mac: SyncTestMac(snapshot: macGone, base: merged))
+        #expect(third.0?.outcome == .committed(at: now))
+        #expect(third.1.merged?.snapshot.entities["folder"]?["blank"] == nil)
+        #expect(try #require(rig.bases.get(peerId: peer.id, now: now)).refused.isEmpty)
+    }
+
     /// The Mac's snapshot once it has adopted a merge: the same entities, seeds included.
     private func macSnapshotAfter(merged: SyncSnapshot) -> SyncSnapshot { SyncStateView.base(of: merged) }
 

@@ -18,9 +18,9 @@ extension SyncApply {
             size = try encoder.encode(outcome.state.persistable()).count
         } catch {
             log("the state a session would write cannot be encoded, it is not written: \(error)")
-            return Outcome(state: state, rejected: outcome.rejected + ["the state would not encode"], changed: false, tooLarge: true)
+            return Outcome(state: state, rejected: outcome.rejected + ["the state would not encode"], rejections: outcome.rejections, changed: false, tooLarge: true)
         }
         guard size > limit else { return outcome }
-        return Outcome(state: state, rejected: outcome.rejected + ["the state would weigh \(size) bytes, more than \(limit)"], changed: false, tooLarge: true)
+        return Outcome(state: state, rejected: outcome.rejected + ["the state would weigh \(size) bytes, more than \(limit)"], rejections: outcome.rejections, changed: false, tooLarge: true)
     }
 }

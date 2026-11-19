@@ -168,6 +168,19 @@ struct SyncStateViewTests {
         #expect(archived["other"] != nil, "the count is by space")
     }
 
+    @Test func theOpenTabsADeletedSpaceLeftInTheArchiveAreNeitherFollowedNorSentAndDoNotUseUpAPlace() throws {
+        // Source `sync` (docs/synchronisation.md §8.5, review n° 37): kept here because open tabs are not synchronised, and not sent under « archive ».
+        var state = try SyncStateFixtures.sample()
+        state.archive = (0..<500).map { ArchivedTab(id: "c\($0)", spaceId: "s1", url: "https://old.example/\($0)", title: "Old", archivedAt: Double($0)) }
+            + [ArchivedTab(id: "left-1", spaceId: "s1", url: "https://secret.example/token?x=1", title: "Open", archivedAt: 10_000, source: .sync)]
+        let archived = try #require(SyncStateView.trackedView(of: state).entities["archived"])
+        #expect(archived["left-1"] == nil)
+        #expect(archived.count == 500)
+        #expect(archived["c0"] != nil, "the oldest closed tab keeps its place: the entry that stays home is not counted")
+        let snapshot = SyncStateView.snapshot(of: state, marks: SyncMarkBook(device: "phone"), categories: [.archive], withheld: [], base: nil)
+        #expect(snapshot.entities["archived"]?["left-1"] == nil)
+    }
+
     @Test func theSeedsOfAnEntityTheMacDoesNotHoldGoWithItAndTheEarliestMarkOfItsFields() throws {
         let state = try SyncStateFixtures.sample()
         var marks = SyncMarkBook(device: "phone")
@@ -181,6 +194,27 @@ struct SyncStateViewTests {
         let known = SyncStateView.snapshot(of: state, marks: marks, categories: [.structure], withheld: [], base: SyncStateView.base(of: fresh))
         #expect(known.entities["tab"]?["t1"]?.fields["url"] == nil && known.entities["tab"]?["t1"]?.fields["title"] == nil)
         #expect(known.entities["folder"]?["f1"]?.fields["collapsed"] == nil)
+    }
+
+    @Test func aKindThisVersionDoesNotKnowIsNeverDeletedByTheSecondSession() throws {
+        // docs/synchronisation.md §11.6, review n° 40: the first session lets the other device's entity of an unknown kind into the merge and the base; the state holds
+        // no such thing, so a snapshot made of the state alone said « deleted here » at the second session, and the merge sent the other device a deletion of its own data.
+        let state = try SyncStateFixtures.sample()
+        var marks = SyncMarkBook(device: "phone")
+        marks.update(SyncStateView.trackedView(of: state), now: SyncStateFixtures.now)
+        let widget = SyncEntity(fields: ["label": .string("from a newer version")], stamps: ["label": "1790000000000-0000-mac"])
+        var remote = SyncSnapshot()
+        remote.entities["widget"] = ["w1": widget]
+        let first = SyncMerge.merge(base: nil, local: SyncStateView.snapshot(of: state, marks: marks, categories: [.structure], withheld: [], base: nil), remote: remote)
+        #expect(first.snapshot.entities["widget"]?["w1"] == widget)
+        let base = SyncStateView.base(of: first.snapshot)
+        let second = SyncMerge.merge(base: base, local: SyncStateView.snapshot(of: state, marks: marks, categories: [.structure], withheld: [], base: base), remote: remote)
+        #expect(second.snapshot.entities["widget"]?["w1"] == widget, "what a newer version sent is still there")
+        #expect(second.snapshot.tombstones["widget"]?["w1"] == nil, "and no deletion of it is sent")
+        // A kind it knows that the state no longer holds is still a deletion.
+        var gone = base
+        gone.entities["space", default: [:]]["ghost"] = SyncEntity(fields: ["name": .string("x")], stamps: ["name": "1790000000000-0000-mac"])
+        #expect(SyncStateView.snapshot(of: state, marks: marks, categories: [.structure], withheld: [], base: gone).entities["space"]?["ghost"] == nil)
     }
 
     @Test func aBaseIsKeptWithoutSeedsOrLocalFields() throws {

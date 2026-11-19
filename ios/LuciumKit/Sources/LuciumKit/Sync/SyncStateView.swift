@@ -125,10 +125,12 @@ public enum SyncStateView {
         Set(state.tabs.filter { !admitted.contains($0.id) && isTodayCandidate($0) && SyncInbound.isWebAddress(.string($0.url)) }.map(\.id))
     }
 
-    /// The archived tabs that are sent: the latest `archivePerSpaceSent` of each space, newest first, then by identifier.
+    /// The archived tabs that are sent: the latest `archivePerSpaceSent` of each space, newest first, then by identifier. The entries of source `sync` stay where they
+    /// are (review n° 37): they are the open tabs of a space the other device deleted, kept because open tabs are not synchronised (§8.5), and they do not count for the
+    /// latest ones. The Mac leaves them out too (`state-view.ts`).
     private static func archivedSent(_ state: BrowserState) -> [ArchivedTab] {
         var kept: [String: Int] = [:]
-        let newestFirst = state.archive.sorted { a, b in a.archivedAt != b.archivedAt ? a.archivedAt > b.archivedAt : SyncCanonical.compare(a.id, b.id) < 0 }
+        let newestFirst = state.archive.filter { $0.source != "sync" }.sorted { a, b in a.archivedAt != b.archivedAt ? a.archivedAt > b.archivedAt : SyncCanonical.compare(a.id, b.id) < 0 }
         return newestFirst.filter { entry in
             let count = (kept[entry.spaceId] ?? 0) + 1
             kept[entry.spaceId] = count
@@ -259,6 +261,16 @@ public enum SyncStateView {
             if !kinds.contains(kind) || (parts.count > 1 && head != "favorites" && withheld.contains(parts[1])) { continue }
             snapshot.order[key] = ids.filter { snapshot.entities[kind]?[$0] != nil }
             snapshot.orderStamps[key] = marks.orderStamp(of: key)
+        }
+        // What this version does not understand is never deleted by it (§11.6, review n° 40): an entity of a kind it does not know, or a list it does not know, came in from a
+        // newer device and crossed into the base; the state holds no such thing, so a snapshot made of the state alone would say « deleted here » and the next merge would send
+        // the other device a deletion of its own data. They are carried over from the base as they were: unchanged, nothing for the merge to settle. The Mac does the same.
+        if let base {
+            for (kind, byID) in base.entities where SyncFieldClasses.kind(kind) == nil && kind != "setting" { snapshot.entities[kind] = byID }
+            for (key, ids) in base.order where SyncMarkBook.listKind(of: key) == nil {
+                snapshot.order[key] = ids
+                snapshot.orderStamps[key] = base.orderStamps[key] ?? SyncStamp.zero
+            }
         }
         for (kind, byID) in marks.tombstonesOfAllKinds() where kinds.contains(kind) || (SyncFieldClasses.kind(kind) == nil && kind != "setting") {
             snapshot.tombstones[kind] = byID

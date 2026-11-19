@@ -90,14 +90,14 @@ describe('IdentityStore', () => {
     const log = quiet()
     const path = join(tempDir('lucium-sync-id-'), 'id.json')
     const old = new IdentityStore(path, box(4)).loadOrCreate().identity
-    const made = new IdentityStore(path, box(5)).loadOrCreate({ replaceUnopenable: true })
+    const made = new IdentityStore(path, box(5)).loadOrCreate({ replaceUnusable: true })
     expect(made).toMatchObject({ created: true, replaced: true })
     expect(made.identity.fingerprint.equals(old.fingerprint)).toBe(false)
     expect(made.identity.deviceId).not.toBe(old.deviceId)
     log.mockRestore()
   })
 
-  it('replaces at once a file that is not an identity at all (not ours, a certificate that does not parse, a key that is not the certificate\'s): nothing could make it open later', () => {
+  it('does not replace at once a file that is not an identity (not ours, a certificate that does not parse, a key that is not the certificate\'s) either: it waits to be told to, as an unopenable one does (review n° 41)', () => {
     const log = quiet()
     const dir = tempDir('lucium-sync-id-')
     const a = join(dir, 'a.json')
@@ -105,9 +105,14 @@ describe('IdentityStore', () => {
     new IdentityStore(a, box(6)).loadOrCreate()
     new IdentityStore(b, box(6)).loadOrCreate()
     writeFileSync(a, JSON.stringify({ ...(JSON.parse(readFileSync(a, 'utf8')) as Record<string, unknown>), sealedKey: (JSON.parse(readFileSync(b, 'utf8')) as { sealedKey: string }).sealedKey }))
-    expect(new IdentityStore(a, box(6)).loadOrCreate()).toMatchObject({ created: true, replaced: true })
+    const brokenKey = readFileSync(a, 'utf8')
+    expect(() => new IdentityStore(a, box(6)).loadOrCreate()).toThrow(IdentityNotOpenableError)
+    expect(readFileSync(a, 'utf8')).toBe(brokenKey)
+    expect(new IdentityStore(a, box(6)).loadOrCreate({ replaceUnusable: true })).toMatchObject({ created: true, replaced: true })
     writeFileSync(b, 'definitely not json')
-    expect(new IdentityStore(b, box(6)).loadOrCreate()).toMatchObject({ created: true, replaced: true })
+    expect(() => new IdentityStore(b, box(6)).loadOrCreate()).toThrow(expect.objectContaining({ name: 'IdentityNotOpenableError', reason: 'broken' }))
+    expect(readFileSync(b, 'utf8')).toBe('definitely not json')
+    expect(new IdentityStore(b, box(6)).loadOrCreate({ replaceUnusable: true })).toMatchObject({ created: true, replaced: true })
     log.mockRestore()
   })
 

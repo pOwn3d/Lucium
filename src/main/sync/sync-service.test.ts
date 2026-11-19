@@ -9,7 +9,7 @@ import { tempDir } from '../temp-dir'
 import { Channel } from './channel'
 import { IdentityStore } from './identity'
 import type { ListenerDeps } from './listener'
-import { PAIRING_WINDOW_MS } from './limits'
+import { IDENTITY_REPLACE_DELAY_MS, PAIRING_WINDOW_MS } from './limits'
 import { readManualCode, readQr } from './pairing-code'
 import { pairingCommitment } from './pairing-commit'
 import { comparisonCode } from './pairing-compare'
@@ -215,11 +215,15 @@ describe('SyncService: off by default, and when the Mac listens (§6.1)', () => 
     expect(() => r.service.setCategory('passwords' as never, true)).toThrow(SyncServiceError)
   })
 
-  it('says, once more, that the identity was replaced and the devices forgotten, when the file is not an identity (nothing could open it later)', async () => {
+  it('keeps the devices for a minute when the file is not an identity (a certificate Node stops reading after an update), then says that the identity was replaced and the devices forgotten (review n° 41)', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const r = rig()
     r.store.addPeer(iphone(1))
     new IdentityStore(join(r.dir, 'sync-identity.json'), { available: () => true, seal: (p) => Buffer.from(p), open: () => Buffer.alloc(0) }).loadOrCreate()
+    await expect(r.service.setEnabled(true)).rejects.toMatchObject({ problem: 'identity-unopenable' })
+    expect(r.service.status()).toMatchObject({ identityReplaced: false })
+    expect(r.store.peers()).toHaveLength(1)
+    r.time.t += IDENTITY_REPLACE_DELAY_MS
     await r.service.setEnabled(true)
     expect(r.service.status()).toMatchObject({ identityReplaced: true, devices: [] })
     log.mockRestore()
@@ -256,7 +260,7 @@ describe('SyncService: off by default, and when the Mac listens (§6.1)', () => 
       log.mockRestore()
     })
 
-    it('makes a new identity at the second try that the key still does not open, and tells the devices are forgotten', async () => {
+    it('does not make a new identity at a second try within the minute that follows the first refusal: the devices stay paired (review n° 41)', async () => {
       const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
       const opens = { now: true }
       const { r, path } = withFlakyKey(opens)
@@ -264,9 +268,41 @@ describe('SyncService: off by default, and when the Mac listens (§6.1)', () => 
       r.store.addPeer(iphone(1))
       opens.now = false
       await expect(r.service.setEnabled(true)).rejects.toMatchObject({ problem: 'identity-unopenable' })
+      r.time.t += IDENTITY_REPLACE_DELAY_MS - 1
+      await expect(r.service.setEnabled(true)).rejects.toMatchObject({ problem: 'identity-unopenable' })
+      expect(r.service.status()).toMatchObject({ identityReplaced: false })
+      expect(r.store.peers()).toHaveLength(1)
+      log.mockRestore()
+    })
+
+    it('makes a new identity at the try that comes a minute after the first refusal, if the key still does not open, and tells the devices are forgotten', async () => {
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const opens = { now: true }
+      const { r, path } = withFlakyKey(opens)
+      new IdentityStore(path, flaky(opens)).loadOrCreate()
+      r.store.addPeer(iphone(1))
       opens.now = false
+      await expect(r.service.setEnabled(true)).rejects.toMatchObject({ problem: 'identity-unopenable' })
+      r.time.t += IDENTITY_REPLACE_DELAY_MS
       await r.service.setEnabled(true)
       expect(r.service.status()).toMatchObject({ enabled: true, identityReplaced: true, devices: [] })
+      log.mockRestore()
+    })
+
+    it('does not count the minute from a later refusal: the first one starts it, and a key that opened in between starts it over', async () => {
+      const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+      const opens = { now: true }
+      const { r, path } = withFlakyKey(opens)
+      new IdentityStore(path, flaky(opens)).loadOrCreate()
+      r.store.addPeer(iphone(1))
+      opens.now = false
+      await expect(r.service.setEnabled(true)).rejects.toMatchObject({ problem: 'identity-unopenable' })
+      r.time.t += IDENTITY_REPLACE_DELAY_MS - 10
+      await expect(r.service.setEnabled(true)).rejects.toMatchObject({ problem: 'identity-unopenable' })
+      // The second refusal is not a new first one: ten more milliseconds are the minute since the first.
+      r.time.t += 10
+      await r.service.setEnabled(true)
+      expect(r.service.status()).toMatchObject({ identityReplaced: true })
       log.mockRestore()
     })
   })

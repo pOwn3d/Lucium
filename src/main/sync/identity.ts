@@ -3,8 +3,9 @@
 // `sync-identity.json` of the data folder, and never renewed: replacing them is pairing again.
 //
 // The private key is sealed (secret-box.ts) before it is written: the file holds the certificate in the clear (it is public) and the sealed key. A restoration on
-// another machine, a copy of the profile, or a keychain that refuses brings the file without a key that opens. It is not replaced the first time (a keychain that
-// refuses for a moment must not take the paired devices with it: `IdentityNotOpenableError`); asked again, a new one is made, and the list of paired devices, which
+// another machine, a copy of the profile, or a keychain that refuses brings the file without a key that opens. An identity the Mac cannot use is not replaced unless the
+// caller says so (a keychain that refuses for a moment, or a certificate that Node stops reading after an update, must not take the paired devices with it:
+// `IdentityNotOpenableError`); the service says so only a minute after the first refusal (review n° 41), and then a new one is made, and the list of paired devices, which
 // belonged to the old fingerprint, is forgotten by the caller (`IdentityLoad.replaced`).
 //
 // Everything read from the file is hostile input: bounded, checked, and the key must belong to the certificate.
@@ -40,10 +41,13 @@ interface IdentityRecord {
   sealedKey: string
 }
 
-/** The key of the identity is sealed and the system does not open it now: not replaced without being asked (`IdentityStore.loadOrCreate`). */
+/**
+ * The identity the file holds cannot be used now: the key is sealed and the system does not open it (`unopenable`), or the file, its certificate or its key cannot be
+ * read (`broken`). Not replaced without being asked (`IdentityStore.loadOrCreate`): the paired devices are kept until the caller has waited.
+ */
 export class IdentityNotOpenableError extends Error {
-  constructor() {
-    super('the key of the identity cannot be opened now')
+  constructor(readonly reason: 'unopenable' | 'broken' = 'unopenable') {
+    super(reason === 'unopenable' ? 'the key of the identity cannot be opened now' : 'the identity file cannot be read now')
     this.name = 'IdentityNotOpenableError'
   }
 }
@@ -160,16 +164,17 @@ export class IdentityStore {
    * The identity, made when there is none. Throws when the system cannot seal a key (nothing is written then: a key is never kept in the clear), and when the file
    * cannot be written (the caller shows the error; the synchronisation stays off).
    *
-   * An identity whose key the system does not open is **not replaced** unless the caller says so (`replaceUnopenable`): a keychain that refuses for a moment (a prompt
-   * that was denied, a keychain that is locked) would otherwise take every paired device with it, since a new identity has another fingerprint (review n° 22 of the
-   * synchronisation). `IdentityNotOpenableError` tells the caller to say so to the person, and to ask again with the flag when the key still does not open; a file that is
-   * not an identity at all is replaced at once, nothing could make it open later.
+   * An identity that cannot be used is **not replaced** unless the caller says so (`replaceUnusable`): a keychain that refuses for a moment (a prompt that was denied, a
+   * keychain that is locked) or a certificate that Node cannot read (the engine was updated) would otherwise take every paired device with it, since a new identity has
+   * another fingerprint (reviews n° 22 and 41 of the synchronisation). `IdentityNotOpenableError` tells the caller to say so to the person, and to ask again with the flag
+   * when the identity still cannot be used a minute later. That holds for a file that is not an identity at all as well: it cannot be told from a read that failed for a
+   * moment, and a minute costs nothing.
    */
-  loadOrCreate(options: { replaceUnopenable?: boolean } = {}): IdentityLoad {
+  loadOrCreate(options: { replaceUnusable?: boolean } = {}): IdentityLoad {
     const reading = this.read()
     if (reading.kind === 'usable') return { identity: reading.identity, created: false, replaced: false }
     if (!this.box.available()) throw new Error('the system cannot seal the key of the device: the synchronisation cannot be switched on')
-    if (reading.kind === 'unopenable' && options.replaceUnopenable !== true) throw new IdentityNotOpenableError()
+    if ((reading.kind === 'unopenable' || reading.kind === 'broken') && options.replaceUnusable !== true) throw new IdentityNotOpenableError(reading.kind)
     const replaced = this.exists()
     const made = makeDeviceCertificate()
     const deviceId = randomBytes(DEVICE_ID_BYTES).toString('base64url')

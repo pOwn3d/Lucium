@@ -189,7 +189,10 @@ public struct SyncExchangeBody: SyncSessionBody {
         // start from the same inputs. An entity that does not pass stays here, untouched, and is not sent; it is counted and logged.
         let sentClean = SyncInbound.clean(frozen, now: context.remote.now, base: base)
         let vetted = Self.vet(sentClean.snapshot, log: log)
-        let real = vetted.snapshot
+        // What this version refused to write last time stays in the snapshot as the base holds it (review n° 39): the state lacks it, and that is not a deletion.
+        var vettedSnapshot = vetted.snapshot
+        let carriedRefusals = base.map { SyncApply.carry(stored?.refused ?? [], from: $0, into: &vettedSnapshot, categories: context.categories) } ?? []
+        let real = vettedSnapshot
         let local = adopting ? real.withoutStructure() : real
         let refusedSent = sentClean.refused + vetted.refused
         if !refusedSent.isEmpty { log("not sent: \(refusedSent.count) entities (\(Dictionary(grouping: refusedSent, by: \.reason.rawValue).mapValues(\.count)))") }
@@ -236,7 +239,7 @@ public struct SyncExchangeBody: SyncSessionBody {
         do {
             let written = await host.currentState()
             try marks.adopt(merged.snapshot, exchanged: { SyncStateView.isExchanged(kind: $0, categories: context.categories) }, aside: SyncAside.of(SyncStateView.trackedView(of: written), spaces: Set(aside)))
-            try bases.save(peerId: mac, snapshot: SyncStateView.base(of: merged.snapshot), now: now())
+            try bases.save(peerId: mac, snapshot: SyncStateView.base(of: merged.snapshot), refused: SyncApply.stillRefused(new: applied?.rejections ?? [], carried: carriedRefusals, merged: merged.snapshot), now: now())
         } catch {
             log("the base or the marks could not be written after the state was: \(error)")
             throw SyncFailure(.internal, "the base could not be written")

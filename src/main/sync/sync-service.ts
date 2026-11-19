@@ -18,7 +18,7 @@ import { encodeQr } from '@shared/qr'
 import { SYNC_CATEGORIES, type SyncCategory, type SyncLastExchange, type SyncPairingView, type SyncProblem, type SyncStatus } from '@shared/sync-ipc'
 import { BaseStore } from './bases'
 import type { Channel } from './channel'
-import { CONFIRM_MS, FINGERPRINT_BYTES, SECRET_BYTES } from './limits'
+import { CONFIRM_MS, FINGERPRINT_BYTES, IDENTITY_REPLACE_DELAY_MS, SECRET_BYTES } from './limits'
 import { MarkStore } from './mark-store'
 import type { MarkBook } from './marks'
 import type { OpenTab } from './messages'
@@ -116,7 +116,8 @@ export class SyncService {
   private identity: SyncIdentity | null = null
   private identityReplaced = false
   /** How many times the key was found sealed and not opened since the application started: the second time, a new identity is made (review n° 22). */
-  private identityRefusals = 0
+  /** When the identity first could not be used (on the clock of the windows), or null: a minute after it, the next try may replace the identity (review n° 41). */
+  private identityRefusedAt: number | null = null
   private door: SyncDoor | null = null
   private pairing: { secret: PairingSecret; view: Omit<SyncPairingView, 'remainingMs'> } | null = null
   /** The question of [Q7]: asked, then (once the person allowed) waiting for the iPhone's person to compare the code (§4.6). */
@@ -295,8 +296,9 @@ export class SyncService {
   private ensureIdentity(): SyncIdentity {
     if (this.identity !== null) return this.identity
     try {
-      const made = this.deps.identities.loadOrCreate({ replaceUnopenable: this.identityRefusals >= 1 })
-      this.identityRefusals = 0
+      const waited = this.identityRefusedAt !== null && this.deps.clock.elapsed() - this.identityRefusedAt >= IDENTITY_REPLACE_DELAY_MS
+      const made = this.deps.identities.loadOrCreate({ replaceUnusable: waited })
+      this.identityRefusedAt = null
       this.identity = made.identity
       if (made.replaced) {
         // The old fingerprint is gone with the old key: the devices that were paired to it cannot be recognised any more (§3.3), and what was kept for them goes too.
@@ -309,10 +311,10 @@ export class SyncService {
       return made.identity
     } catch (error) {
       if (error instanceof IdentityNotOpenableError) {
-        // The keychain did not open the key: the identity and the devices paired to it are kept, and the person is told. If it does not open the next time either (a
-        // profile restored on another machine, a key that is gone), a new identity is made then.
-        this.identityRefusals++
-        console.error('[sync] the key of this Mac could not be opened; the devices stay paired, and a new identity is made if it still cannot be opened next time:', error)
+        // The identity cannot be used now (the keychain did not open the key, or the file cannot be read): it and the devices paired to it are kept, and the person is told. If
+        // it still cannot be used when they try again a minute after the first refusal (a profile restored on another machine, a key that is gone), a new identity is made then.
+        this.identityRefusedAt ??= this.deps.clock.elapsed()
+        console.error('[sync] the identity of this Mac could not be used; the devices stay paired, and a new identity is made if it still cannot be used a minute after the first refusal:', error)
         return this.fail('identity-unopenable', 'the key could not be opened')
       }
       console.error('[sync] the identity of this Mac could not be made or read:', error)
