@@ -80,8 +80,7 @@ enum SyncTexts {
         case .settings: String(localized: "sync.category.settings")
         case .archive: String(localized: "sync.category.archive")
         case .openTabs: String(localized: "sync.category.open-tabs")
-        // The name of the category is a text of the interface change that follows (with its row and the box at pairing); the page does not list it yet, so no one reads this.
-        case .todayTabs: category.rawValue
+        case .todayTabs: String(localized: "sync.category.today-tabs")
         }
     }
 
@@ -98,6 +97,8 @@ enum SyncTexts {
             return Text("sync.last.not-exchanged \(list)")
         case .received(let count): return Text("sync.last.received \(count)")
         case .nothingNew: return Text("sync.last.nothing-new")
+        case .todayTabsReceived(let count): return Text("sync.last.today-received \(count)")
+        case .todayTabsUnshared(let count): return Text("sync.last.today-unshared \(count)")
         case .leftAside(let count): return Text("sync.last.left-aside \(count)")
         }
     }

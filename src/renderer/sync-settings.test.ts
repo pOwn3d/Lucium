@@ -14,7 +14,7 @@ import { countdown } from './SyncSettings'
 
 let mounted: Mounted | null = null
 
-const OFF: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
+const OFF: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, closedShown: null, problem: null }
 const ON: SyncStatus = { ...OFF, enabled: true }
 
 const snapshot = (): UiSnapshot => ({ state: createInitialState({ now: 1, newId: () => 'id' }), extensions: [], downloads: [], runtime: { tabs: {} }, platform: 'darwin' }) as unknown as UiSnapshot
@@ -134,15 +134,89 @@ describe('the subpage', () => {
     expect(page.textContent).toContain(t('sync.identity-replaced'))
   })
 
-  it('shows the four categories, the first ticked only, and sends the one that is clicked', async () => {
+  it('shows the five categories, the first ticked only, and sends the one that is clicked', async () => {
     const b = bridge(() => ON)
     const page = await openPage('#files/sync')
     const boxes = [...page.querySelectorAll<HTMLInputElement>('main input[type="checkbox"]')].slice(1)
-    expect(boxes.map((box) => box.checked)).toEqual([true, false, false, false])
+    expect(boxes.map((box) => box.checked)).toEqual([true, false, false, false, false])
     expect(page.textContent).toContain(t('sync.category-opentabs-hint'))
+    expect(page.textContent).toContain(t('sync.category-todaytabs-hint'))
     expect(page.textContent).toContain(t('sync.categories-never'))
     await click(boxes[3]!)
     expect(b.requests).toContainEqual({ kind: 'category', category: 'openTabs', on: true })
+    await click(boxes[4]!)
+    expect(b.requests).toContainEqual({ kind: 'category', category: 'todayTabs', on: true })
+  })
+
+  it('does not let « Onglets d’Aujourd’hui » be ticked without « Espaces et dossiers »: the row is greyed and says why', async () => {
+    const b = bridge(() => ({ ...ON, categories: { ...ON.categories, structure: false, todayTabs: true } }))
+    const page = await openPage('#files/sync')
+    const box = [...page.querySelectorAll<HTMLInputElement>('main input[type="checkbox"]')].slice(1)[4]!
+    // Even a ticked value left over is not drawn ticked: what the page shows is what goes.
+    expect(box.disabled).toBe(true)
+    expect(box.checked).toBe(false)
+    expect(page.textContent).toContain(t('sync.category-todaytabs-needs'))
+    await click(box)
+    expect(b.requests.filter((request) => request.kind === 'category')).toEqual([])
+  })
+
+  it('offers the box « Partager aussi les onglets d’Aujourd’hui » at the pairing, unticked, and sends it only when ticked', async () => {
+    const b = bridge(() => ({ ...ON, confirm: { name: 'iPhone de Camille', code: 'ABC234', address: '192.168.1.40', waiting: false, remainingMs: 42_000 } }))
+    const page = await openPage('#files/sync')
+    const share = page.querySelector<HTMLInputElement>('.sync-confirm-share input')
+    expect(share?.checked).toBe(false)
+    expect(page.textContent).toContain(t('sync.confirm-share-today'))
+    await click(button(page, 'Autoriser'))
+    expect(b.requests.filter((request) => request.kind === 'answer')).toEqual([{ kind: 'answer', allow: true }])
+    await click(share!)
+    await click(button(page, 'Autoriser'))
+    expect(b.requests.filter((request) => request.kind === 'answer').at(-1)).toEqual({ kind: 'answer', allow: true, shareToday: true })
+  })
+
+  it('offers the box unticked again at the next question', async () => {
+    vi.useFakeTimers()
+    let confirm: SyncStatus['confirm'] = { name: 'iPhone', code: 'ABC234', address: '', waiting: false, remainingMs: 42_000 }
+    bridge(() => ({ ...ON, confirm }))
+    const page = await openPage('#files/sync')
+    await click(page.querySelector<HTMLInputElement>('.sync-confirm-share input')!)
+    expect(page.querySelector<HTMLInputElement>('.sync-confirm-share input')?.checked).toBe(true)
+    confirm = null
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(page.querySelector('.sync-confirm-share')).toBeNull()
+    confirm = { name: 'iPhone', code: 'ABC234', address: '', waiting: false, remainingMs: 42_000 }
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000)
+    })
+    expect(page.querySelector<HTMLInputElement>('.sync-confirm-share input')?.checked).toBe(false)
+  })
+
+  it('does not offer the pairing box on a page that waits for the iPhone, and greys it without the structure', async () => {
+    bridge(() => ({ ...ON, categories: { ...ON.categories, structure: false }, confirm: { name: 'iPhone', code: 'ABC234', address: '', waiting: false, remainingMs: 42_000 } }))
+    const page = await openPage('#files/sync')
+    expect(page.querySelector<HTMLInputElement>('.sync-confirm-share input')?.disabled).toBe(true)
+  })
+
+  it('counts the Today tabs of the last exchange and says the ones left out by the limit', async () => {
+    bridge(() => ({ ...ON, categories: { ...ON.categories, todayTabs: true }, lastExchange: { at: 1, ok: true, code: null, todayTabsReceived: 3, todayTabsUnshared: 37 } }))
+    const page = await openPage('#files/sync')
+    expect(textOf(page)).toContain(t('sync.last-title'))
+    expect(textOf(page)).toContain('3 onglets d’Aujourd’hui reçus.')
+    expect(textOf(page)).toContain('Onglets d’Aujourd’hui non partagés : 37 (limite : 200).')
+  })
+
+  it('says nothing about the Today tabs received while the category is unticked', async () => {
+    bridge(() => ({ ...ON, lastExchange: { at: 1, ok: true, code: null, todayTabsReceived: 3, todayTabsUnshared: 37 } }))
+    const page = await openPage('#files/sync')
+    expect(textOf(page)).not.toContain('onglets d’Aujourd’hui reçus')
+    expect(textOf(page)).not.toContain('non partagés')
+  })
+
+  it('says « Fermé sur l’iPhone » when the other device closed the tab that was shown', async () => {
+    bridge(() => ({ ...ON, closedShown: { at: 5 } }))
+    const page = await openPage('#files/sync')
+    expect(textOf(page)).toContain(t('sync.closed-shown').replace(/[\u00a0\u202f]/g, ' '))
   })
 
   it('says the Mac waits for the iPhone on the local network while it listens, and has no button to open, prolong or close anything', async () => {

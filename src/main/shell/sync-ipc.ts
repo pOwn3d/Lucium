@@ -47,7 +47,7 @@ export async function handleSyncRequest(service: SyncService, request: SyncReque
         service.closePairing()
         break
       case 'answer':
-        service.answer(request.allow)
+        service.answer(request.allow, request.shareToday === true)
         break
       case 'forget':
         service.forget(request.id)

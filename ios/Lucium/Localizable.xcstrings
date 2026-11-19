@@ -4985,6 +4985,118 @@
         }
       }
     },
+    "sync.category.today-tabs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today tabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets d’Aujourd’hui"
+          }
+        }
+      }
+    },
+    "sync.category.today-tabs.detail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The addresses and titles of your Today tabs, and roughly when you used them, are sent to the Mac. Never cookies or sign-ins."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les adresses et les titres de vos onglets d’Aujourd’hui, à peu près quand vous les avez utilisés, sont envoyés au Mac. Jamais les cookies ni les connexions."
+          }
+        }
+      }
+    },
+    "sync.category.today-tabs.needs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tick “Spaces and folders” first: a tab lives in a space."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cochez d’abord « Espaces et dossiers » : un onglet est rangé dans un espace."
+          }
+        }
+      }
+    },
+    "sync.closed-shown.detail": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Its page is in the archive."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sa page est dans l’archive."
+          }
+        }
+      }
+    },
+    "sync.closed-shown.dismiss": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close this notice"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermer cet avis"
+          }
+        }
+      }
+    },
+    "sync.closed-shown.reopen": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reopen"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rouvrir"
+          }
+        }
+      }
+    },
+    "sync.closed-shown.title %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Closed on the Mac: “%@”"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fermé sur le Mac : « %@ »"
+          }
+        }
+      }
+    },
     "sync.conflicts.last": {
       "localizations": {
         "en": {
@@ -5593,6 +5705,62 @@
         }
       }
     },
+    "sync.last.today-received %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Today tab received from the Mac."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld Today tabs received from the Mac."
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld onglet d’Aujourd’hui reçu du Mac."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld onglets d’Aujourd’hui reçus du Mac."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sync.last.today-unshared %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Today tabs not shared: %lld (limit: 200)."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets d’Aujourd’hui non partagés : %lld (limite : 200)."
+          }
+        }
+      }
+    },
     "sync.limits": {
       "localizations": {
         "en": {
@@ -6021,6 +6189,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "Sur le Mac : réglages de Lucium, Synchronisation, « Ajouter un iPhone ». Visez le code QR."
+          }
+        }
+      }
+    },
+    "sync.pairing.share-today": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Also share the Today tabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Partager aussi les onglets d’Aujourd’hui"
+          }
+        }
+      }
+    },
+    "sync.pairing.share-today.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Their addresses and titles will go to this Mac. You can change it later, in the list of what is sent."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leurs adresses et leurs titres partiront vers ce Mac. Vous pourrez le changer plus tard, dans la liste de ce qui est envoyé."
           }
         }
       }

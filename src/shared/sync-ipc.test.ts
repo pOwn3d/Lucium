@@ -13,6 +13,8 @@ describe('parseSyncRequest: what is accepted', () => {
     [{ kind: 'category', category: 'openTabs', on: true }],
     [{ kind: 'answer', allow: true }],
     [{ kind: 'answer', allow: false }],
+    [{ kind: 'answer', allow: true, shareToday: true }],
+    [{ kind: 'answer', allow: true, shareToday: false }],
     [{ kind: 'forget', id: 'iphone-0000000001' }]
   ])('%j', (request) => {
     expect(parseSyncRequest(request)).toEqual(request)
@@ -49,6 +51,8 @@ describe('parseSyncRequest: what is refused', () => {
     ['category with a text for on', { kind: 'category', category: 'structure', on: 'yes' }],
     ['answer with no value', { kind: 'answer' }],
     ['answer with a text', { kind: 'answer', allow: 'allow' }],
+    ['answer with a box that is not a boolean', { kind: 'answer', allow: true, shareToday: 'yes' }],
+    ['answer with a box and another field', { kind: 'answer', allow: true, shareToday: true, extra: 1 }],
     ['forget with no identifier', { kind: 'forget' }],
     ['forget with an identifier with a space', { kind: 'forget', id: 'a b' }],
     ['forget with an identifier of 65 characters', { kind: 'forget', id: 'a'.repeat(65) }],

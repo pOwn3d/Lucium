@@ -14,7 +14,7 @@ import { handleSyncRequest, handleSyncResume, registerSyncIpc } from './sync-ipc
 
 type Handler = (event: { sender: object }, raw: unknown) => Promise<SyncReply>
 
-const STATUS: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
+const STATUS: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, closedShown: null, problem: null }
 
 /** A service that records what it is asked, and answers the state it was given. */
 function fakeService(over: Partial<Record<keyof SyncService, unknown>> = {}) {
@@ -104,8 +104,9 @@ describe('the channel of the synchronisation page: what each request does', () =
     [{ kind: 'category', category: 'openTabs', on: true }, [['setCategory', 'openTabs', true]]],
     [{ kind: 'pair-start' }, [['startPairing']]],
     [{ kind: 'pair-close' }, [['closePairing']]],
-    [{ kind: 'answer', allow: true }, [['answer', true]]],
-    [{ kind: 'answer', allow: false }, [['answer', false]]],
+    [{ kind: 'answer', allow: true }, [['answer', true, false]]],
+    [{ kind: 'answer', allow: true, shareToday: true }, [['answer', true, true]]],
+    [{ kind: 'answer', allow: false }, [['answer', false, false]]],
     [{ kind: 'forget', id: 'iphone-1' }, [['forget', 'iphone-1']]],
     [{ kind: 'leave' }, [['leave']]]
   ])('%j reaches the service as %j and answers the state', async (request, expected) => {

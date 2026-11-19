@@ -14,6 +14,8 @@ struct SyncPairingSheet: View {
     @State private var message: LocalizedStringKey?
     @State private var working = false
     @State private var lastScanned: String?
+    /// The box « Partager aussi les onglets d'Aujourd'hui » (§27.8, [Q9]): unticked every time the sheet opens, and ticked in the settings only once the pairing went through.
+    @State private var shareToday = false
 
     enum Mode: Hashable { case scan, type }
 
@@ -53,6 +55,7 @@ struct SyncPairingSheet: View {
                 if let message, !working {
                     Section { Text(message).foregroundStyle(.red).accessibilityAddTraits(.isStaticText) }
                 }
+                if !working { shareTodaySection }
                 Section { Text("sync.pairing.footer").font(.footnote).foregroundStyle(.secondary) }
             }
             .navigationTitle("sync.pairing.title")
@@ -61,6 +64,23 @@ struct SyncPairingSheet: View {
             .task(id: mode) { await openCameraIfNeeded() }
         }
         .interactiveDismissDisabled(working)
+    }
+
+    // MARK: « Partager aussi les onglets d'Aujourd'hui » (§27.8, [Q9])
+
+    /// Offered once, here, unticked: the person says yes or no while they pair, instead of finding the category afterwards. Greyed while « Espaces et dossiers » is unticked.
+    @ViewBuilder private var shareTodaySection: some View {
+        let possible = controller.isOn(.structure)
+        Section {
+            Toggle(isOn: Binding(get: { shareToday && possible }, set: { shareToday = $0 })) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("sync.pairing.share-today")
+                    Text(possible ? "sync.pairing.share-today.hint" : "sync.category.today-tabs.needs").font(.footnote).foregroundStyle(.secondary)
+                }
+            }
+            .disabled(!possible)
+            .frame(minHeight: 44)
+        }
     }
 
     // MARK: The code to compare (§4.6)
@@ -173,7 +193,7 @@ struct SyncPairingSheet: View {
         message = nil
         working = true
         Task {
-            let result = await controller.pair(with: parsed)
+            let result = await controller.pair(with: parsed, shareToday: shareToday && controller.isOn(.structure))
             working = false
             switch result {
             case .success: dismiss()

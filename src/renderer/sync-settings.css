@@ -14,3 +14,5 @@
 .sync-notice { color: var(--text-2); }
 .sync-problem { color: var(--danger-ink); }
 .sync-device-name { font-weight: var(--w-semibold); }
+.sync-confirm .sync-confirm-share { display: grid; grid-template-columns: auto 1fr; column-gap: var(--sp-2); align-items: start; }
+.sync-confirm .sync-confirm-share .pref-hint { grid-column: 2; }

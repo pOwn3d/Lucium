@@ -83,6 +83,7 @@ struct BrowserScreen: View {
 
     private var pageAndBar: some View {
         VStack(spacing: 0) {
+            SyncClosedBanner(model: model)
             PageArea(model: model)
             BottomBar(model: model)
         }

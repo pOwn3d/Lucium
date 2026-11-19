@@ -5,12 +5,13 @@
 // given, and it asks again once a second while it is on screen (the countdowns). The Mac listens for as long as the switch is on, Lucium is unlocked and an iPhone is
 // paired (§6.1): nothing here opens or closes it, and leaving the page only closes the sheet of a pairing. The state is asked for only while the page is drawn.
 
+import type { ReactElement } from 'react'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { getLanguage, t } from '@shared/i18n'
+import { getLanguage, t, tp } from '@shared/i18n'
 import type { UiSnapshot } from '@shared/ipc'
 import { encodeQr, qrPath } from '@shared/qr'
 import { syncSummary } from '@shared/settings-subpages'
-import { SYNC_CATEGORIES, type SyncCategory, type SyncRequest, type SyncStatus } from '@shared/sync-ipc'
+import { NEEDS_STRUCTURE, SYNC_CATEGORIES, type SyncCategory, type SyncRequest, type SyncStatus } from '@shared/sync-ipc'
 import { api } from './api'
 import { Check, Group, Row, Subpage, SubpageEntry } from './settings-parts'
 import './sync-settings.css'
@@ -27,12 +28,28 @@ export function countdown(ms: number): string {
 const when = (ms: number): string => new Date(ms).toLocaleString(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' })
 
 /** Getters: the texts are looked up when the page draws, in the language chosen then. */
-// `todayTabs` has none yet: its row, its sentence and its box at the pairing come with the interface card, and a category with no text is not drawn.
+// `openTabs` goes with « Reprendre un onglet du Mac » (card 511): until then its row stays. A category with no text here is not drawn.
 const CATEGORY_TEXT: Partial<Record<SyncCategory, { label: () => string; hint: () => string }>> = {
+  todayTabs: { label: () => t('sync.category-todaytabs'), hint: () => t('sync.category-todaytabs-hint') },
   structure: { label: () => t('sync.category-structure'), hint: () => t('sync.category-structure-hint') },
   settings: { label: () => t('sync.category-settings'), hint: () => t('sync.category-settings-hint') },
   archive: { label: () => t('sync.category-archive'), hint: () => t('sync.category-archive-hint') },
   openTabs: { label: () => t('sync.category-opentabs'), hint: () => t('sync.category-opentabs-hint') }
+}
+
+/**
+ * The lines of « Dernier échange » (§13.3, card 510): the Today tabs the last session took, the ones this Mac kept to itself because the shared set was full (§27.4), and the tab
+ * the other device closed while it was the one shown (§27.5, [Q11]). Nothing when there is nothing to say, and nothing about the Today tabs while the category is unticked.
+ */
+function lastLines(status: SyncStatus): ReactElement[] {
+  const last = status.lastExchange
+  const lines: ReactElement[] = []
+  if (status.categories.todayTabs && last !== null) {
+    if (last.todayTabsReceived > 0) lines.push(<Row key="received" label={<span role="status">{tp('sync.last-received', last.todayTabsReceived)}</span>} />)
+    if (last.todayTabsUnshared > 0) lines.push(<Row key="unshared" label={<span role="status">{t('sync.last-unshared', { count: last.todayTabsUnshared })}</span>} />)
+  }
+  if (status.closedShown !== null) lines.push(<Row key="closed" label={<span className="sync-notice" role="status">{t('sync.closed-shown')}</span>} />)
+  return lines
 }
 
 /**
@@ -97,6 +114,12 @@ export function SyncEntry({ snapshot }: { snapshot: UiSnapshot }) {
 
 function Panel() {
   const { status, message, ask } = useSync(true)
+  // The box « Partager aussi les onglets d'Aujourd'hui » of the question (§27.8, [Q9]): unticked every time a question opens.
+  const [shareToday, setShareToday] = useState(false)
+  const questionOpen = status?.confirm != null
+  useEffect(() => {
+    if (!questionOpen) setShareToday(false)
+  }, [questionOpen])
   if (status === null) return message ? <div className="pref-row sync-problem" role="alert">{message}</div> : null
   const on = status.enabled
   return (
@@ -115,9 +138,13 @@ function Panel() {
           <Group title={t('sync.categories-title')} footnote={t('sync.categories-never')}>
             {SYNC_CATEGORIES.flatMap((category) => {
               const text = CATEGORY_TEXT[category]
-              return text === undefined ? [] : [<Check key={category} label={text.label()} hint={text.hint()} checked={status.categories[category]} onChange={(checked) => void ask({ kind: 'category', category, on: checked })} />]
+              if (text === undefined) return []
+              // Without « Espaces et dossiers » the row is greyed and says why: unticking the structure unticks it (the service does it), so what the page shows is what goes.
+              const blocked = NEEDS_STRUCTURE.includes(category) && !status.categories.structure
+              return [<Check key={category} label={text.label()} hint={blocked ? t('sync.category-todaytabs-needs') : text.hint()} checked={status.categories[category] && !blocked} disabled={blocked} onChange={(checked) => void ask({ kind: 'category', category, on: checked })} />]
             })}
           </Group>
+          {lastLines(status).length > 0 && <Group title={t('sync.last-title')}>{lastLines(status)}</Group>}
           <Group title={t('sync.devices-title')}>
             {status.devices.length === 0 && <Row label={<span className="muted">{t('sync.devices-none')}</span>} />}
             {status.devices.map((device) => (
@@ -171,6 +198,13 @@ function Panel() {
               <p className="sync-confirm-code">
                 <span>{t('sync.confirm-code')}</span> <strong className="sync-code">{status.confirm.code}</strong>
               </p>
+              {!status.confirm.waiting && (
+                <label className="sync-confirm-share">
+                  <input type="checkbox" checked={shareToday && status.categories.structure} disabled={!status.categories.structure} onChange={(event) => setShareToday(event.target.checked)} />
+                  <span>{t('sync.confirm-share-today')}</span>
+                  <span className="pref-hint">{status.categories.structure ? t('sync.confirm-share-today-hint') : t('sync.category-todaytabs-needs')}</span>
+                </label>
+              )}
               {status.confirm.address !== '' && <p className="pref-hint">{t('sync.confirm-address', { address: status.confirm.address })}</p>}
               <p className="pref-hint" role="timer">
                 {t(status.confirm.waiting ? 'sync.confirm-waiting-timer' : 'sync.confirm-timer', { time: countdown(status.confirm.remainingMs) })}
@@ -182,7 +216,7 @@ function Panel() {
                   </button>
                 ) : (
                   <>
-                    <button type="button" className="button primary" onClick={() => void ask({ kind: 'answer', allow: true })}>
+                    <button type="button" className="button primary" onClick={() => void ask({ kind: 'answer', allow: true, ...(shareToday && status.categories.structure ? { shareToday: true } : {}) })}>
                       {t('sync.confirm-allow')}
                     </button>
                     <button type="button" className="button" onClick={() => void ask({ kind: 'answer', allow: false })}>

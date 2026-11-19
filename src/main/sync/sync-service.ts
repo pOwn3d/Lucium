@@ -15,7 +15,7 @@
 
 import { createHash, randomInt, randomBytes } from 'node:crypto'
 import { encodeQr } from '@shared/qr'
-import { SYNC_CATEGORIES, type SyncCategory, type SyncLastExchange, type SyncPairingView, type SyncProblem, type SyncStatus } from '@shared/sync-ipc'
+import { NEEDS_STRUCTURE, SYNC_CATEGORIES, type SyncCategory, type SyncLastExchange, type SyncPairingView, type SyncProblem, type SyncStatus } from '@shared/sync-ipc'
 import { BaseStore } from './bases'
 import type { Channel } from './channel'
 import { CONFIRM_MS, FINGERPRINT_BYTES, IDENTITY_REPLACE_DELAY_MS, SECRET_BYTES } from './limits'
@@ -138,6 +138,10 @@ export class SyncService {
   private tracker: MarkTracker | null = null
   private exchanging = false
   private lastExchange: SyncLastExchange | null = null
+  /** The other device closed the tab this Mac showed (§27.5, [Q11]): memory only, for the line « Fermé sur l'iPhone ». */
+  private closedShown: { at: number } | null = null
+  /** The box « Partager aussi les onglets d'Aujourd'hui » of the question, kept from « Autoriser » until the pairing ends (§27.8, [Q9]). */
+  private shareTodayAtPairing = false
   /** What the other devices announced as their open tabs: in memory only, never written, forgotten with the window and with the device (§10.4). */
   private readonly announced = new Map<string, { items: OpenTab[]; at: number }>()
   /** The devices that went through a session since the lists were last forgotten: « it sent nothing » is only told after one (§10.4). */
@@ -175,6 +179,7 @@ export class SyncService {
       identityReplaced: this.identityReplaced,
       justPaired: this.justPaired,
       lastExchange: this.lastExchange,
+      closedShown: this.closedShown,
       problem: this.problem
     }
   }
@@ -287,7 +292,11 @@ export class SyncService {
   setCategory(category: SyncCategory, on: boolean): void {
     this.begin()
     if (!(SYNC_CATEGORIES as readonly string[]).includes(category)) this.fail('internal', `${category} is not a category`)
+    // « Onglets d'Aujourd'hui » cannot be ticked without « Espaces et dossiers » (§27.2), and unticking the structure unticks it: what the page shows is what goes.
+    const config = this.deps.store.config()
+    if (on && NEEDS_STRUCTURE.includes(category) && !config.categories.structure) this.fail('internal', `${category} needs the structure`)
     this.deps.store.setCategory(category, on)
+    if (!on && category === 'structure') for (const dependent of NEEDS_STRUCTURE) this.deps.store.setCategory(dependent, false)
     // Unticked: what the iPhone said it had open is forgotten at once, not at the next session.
     if (category === 'openTabs' && !on) this.forgetAnnounced()
     this.changed()
@@ -380,6 +389,7 @@ export class SyncService {
 
   /** The page was left (another page, the window closed): the sheet of the pairing goes with it; the listening does not depend on the page. */
   async leave(): Promise<void> {
+    this.closedShown = null
     this.closePairingSheet()
     await this.reconcileListening()
   }
@@ -453,6 +463,8 @@ export class SyncService {
         if (outcome.outcome === 'paired') {
           this.justPaired = readableName(outcome.peer.name)
           this.pairing = null
+          // The box of the question (§27.8, [Q9]): ticked once, here, only when the structure is ticked (a Today tab depends on its space).
+          if (this.shareTodayAtPairing && this.deps.store.config().categories.structure) this.deps.store.setCategory('todayTabs', true)
         } else if (outcome.code === 'pairing-refused') this.pairing = null
         this.resolveConfirm('refuse')
         // A pairing that ended with nobody paired closes the door, but not before the answer the iPhone is owed has left: closing the door drops its connection.
@@ -545,8 +557,9 @@ export class SyncService {
   }
 
   /** « Autoriser » or « Refuser » (and « Annuler » while the iPhone is asked). With no question open it does nothing (a late click). */
-  answer(allow: boolean): void {
+  answer(allow: boolean, shareToday = false): void {
     this.begin()
+    if (this.confirm?.waiting === false) this.shareTodayAtPairing = allow && shareToday
     this.resolveConfirm(allow ? 'allow' : 'refuse')
     this.changed()
   }
@@ -580,6 +593,7 @@ export class SyncService {
     this.bases?.remove(id)
     this.announced.delete(id)
     this.sessionSeen.delete(id)
+    this.closedShown = null
     this.door?.dropPeer(peer.fingerprint)
     // The last device gone, the door closes (`wantsToListen`). When the device itself said it forgot the Mac, in its own session, the door waits for the answer it is owed.
     this.reconcileLater(settleMs)
@@ -646,7 +660,10 @@ export class SyncService {
         port: () => this.currentPort(),
         ...(ports.openTabs !== undefined ? { openTabs: ports.openTabs } : {}),
         onOpenTabs: (id, items) => void this.announced.set(id, { items, at: this.deps.now() }),
-        ...(ports.onShownTabsClosed !== undefined ? { onShownTabsClosed: ports.onShownTabsClosed } : {}),
+        onShownTabsClosed: (id, tabs) => {
+          this.closedShown = { at: this.deps.now() }
+          ports.onShownTabsClosed?.(id, tabs)
+        },
         onUnpair: (id) => this.forget(id, this.deps.settleMs ?? 2000),
         onRefused: (id, refused) => console.warn(`[sync] ${refused.length} entities of ${id} were not taken (${[...new Set(refused.map((one) => one.reason))].join(', ')})`),
         onDone: (id, at) => {
@@ -656,7 +673,7 @@ export class SyncService {
         onWarning: (id, code) => console.warn(`[sync] ${id} says: ${code}`)
       })
       const known = ['divergence', 'state-too-new', 'locked', 'interrupted'] as const
-      this.lastExchange = { at: this.deps.now(), ok: result.ok, code: result.ok ? null : (known as readonly string[]).includes(result.code) ? (result.code as (typeof known)[number]) : 'other' }
+      this.lastExchange = { at: this.deps.now(), ok: result.ok, todayTabsReceived: result.ok ? result.todayTabsReceived : 0, todayTabsUnshared: result.ok ? result.todayTabsUnshared : 0, code: result.ok ? null : (known as readonly string[]).includes(result.code) ? (result.code as (typeof known)[number]) : 'other' }
       if (!result.ok) console.warn(`[sync] a session with ${peer.id} ended: ${result.code}: ${result.detail}`)
       this.changed()
     } finally {

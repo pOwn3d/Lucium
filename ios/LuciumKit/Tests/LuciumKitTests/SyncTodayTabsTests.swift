@@ -52,6 +52,17 @@ struct SyncTodayTabsTests {
         #expect(try JSONDecoder().decode(SyncSettings.self, from: Data(older.utf8)).categories == [.structure, .todayTabs])
     }
 
+    @Test func todayTabsCannotBeTickedWithoutTheStructureAndGoWithIt() {
+        #expect(SyncCategory.todayTabs.needsStructure)
+        #expect(SyncCategory.allCases.filter(\.needsStructure) == [.todayTabs], "only the Today tabs need the structure")
+        #expect(SyncCategory.ticked([.structure], category: .todayTabs, on: true) == [.structure, .todayTabs])
+        #expect(SyncCategory.ticked([.settings], category: .todayTabs, on: true) == nil, "refused: a tab lives in a space")
+        #expect(SyncCategory.ticked([], category: .todayTabs, on: true) == nil)
+        #expect(SyncCategory.ticked([.structure, .todayTabs, .archive], category: .structure, on: false) == [.archive], "unticking the structure takes the Today tabs with it")
+        #expect(SyncCategory.ticked([.structure, .todayTabs], category: .todayTabs, on: false) == [.structure])
+        #expect(SyncCategory.ticked([.structure], category: .archive, on: true) == [.structure, .archive], "the order of the catalogue")
+    }
+
     @Test func todayTabsAreAnnouncedAndTakenAsCommonOnlyWithTheStructure() {
         #expect(SyncCategory.announced([.todayTabs]) == [] && SyncCategory.announced([.todayTabs, .archive]) == [.archive])
         #expect(SyncCategory.announced([.structure, .todayTabs]) == [.structure, .todayTabs])
@@ -555,6 +566,46 @@ struct SyncTodayTabsTests {
         #expect(state.archive.first?.id == "m1" && state.archive.first?.source == ArchivedTab.Source.sync.rawValue && state.archive.first?.url == "https://mac.example/a")
         let outcome = try #require(await rig.host.outcomes.last)
         #expect(outcome.closedTabIDs == ["m1"])
+    }
+
+    @Test func theSummaryCountsTheTodayTabsTakenFromTheMacAndTheOnesKeptBecauseTheSetWasFull() async throws {
+        // 203 tabs here, all old enough: 200 go in the shared set, 3 stay here (§27.4); the Mac gives one tab, which is new here.
+        let many = (0..<203).map { tab(String(format: "t%03d", $0), lastUsed: Double(now - 100_000 + $0)) }
+        let rig = try rig(many)
+        defer { rig.cleanup() }
+        try await session(rig, mac: SyncTestMac(snapshot: macWithATab(), categories: ["structure", "todayTabs"]))
+        let summary = try #require(await rig.host.summaries.last)
+        #expect(summary.todayTabsTaken == 1)
+        #expect(summary.todayTabsUnshared == 3)
+        #expect(SyncLastExchange.lines(of: summary, ticked: [.structure, .todayTabs]).contains(.todayTabsReceived(1)))
+        #expect(SyncLastExchange.lines(of: summary, ticked: [.structure, .todayTabs]).contains(.todayTabsUnshared(3)))
+    }
+
+    @Test func aRenameOfATabTheMacAlreadyGaveIsNotATabReceivedAndTheLimitIsForgottenWhenTheCategoryStopsCrossing() async throws {
+        let many = (0..<203).map { tab(String(format: "t%03d", $0), lastUsed: Double(now - 100_000 + $0)) }
+        let rig = try rig(many)
+        defer { rig.cleanup() }
+        let first = try await session(rig, mac: SyncTestMac(snapshot: macWithATab(), categories: ["structure", "todayTabs"]))
+        #expect(try #require(await rig.host.summaries.last).todayTabsUnshared == 3)
+        let held = SyncStateView.base(of: try #require(first.merged).snapshot)
+        // The Mac renames the tab it gave: a change of a tab already here, not a tab that arrived.
+        var renamed = held
+        renamed.entities[SyncToday.kind]?["m1"]?.fields["customTitle"] = .string("Renamed")
+        renamed.entities[SyncToday.kind]?["m1"]?.stamps["customTitle"] = stamp(now + 5_000, 1)
+        try await session(rig, mac: SyncTestMac(snapshot: renamed, base: held, categories: ["structure", "todayTabs"]))
+        let second = try #require(await rig.host.summaries.last)
+        #expect(second.taken > 0 && second.todayTabsTaken == 0)
+        // The Mac stops announcing the category: the phone does not repeat the number of the session before.
+        try await session(rig, mac: SyncTestMac(snapshot: SyncSnapshot(), categories: ["structure"]))
+        #expect(try #require(await rig.host.summaries.last).todayTabsUnshared == 0)
+    }
+
+    @Test func theSummaryCountsNoTodayTabWhileTheCategoryIsNotCommon() async throws {
+        let rig = try rig([tab("mine")])
+        defer { rig.cleanup() }
+        try await session(rig, mac: SyncTestMac(snapshot: SyncSnapshot(), categories: ["structure"]))
+        let summary = try #require(await rig.host.summaries.last)
+        #expect(summary.todayTabsTaken == 0 && summary.todayTabsUnshared == 0)
     }
 
     @Test func aTabOpenedOnThePhoneGoesToTheMacAndItsClosingGoesToo() async throws {

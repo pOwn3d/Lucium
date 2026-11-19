@@ -64,6 +64,30 @@ final class SyncTodayTabsAppTests: BrowserCoreTestCase {
         XCTAssertEqual(event.title, closedTab.title)
     }
 
+    func testReopeningTheTabTheMacClosedBringsItsPageBackAndTheLineGoes() async throws {
+        let model = await makeModel()
+        try await load("/a.html", in: model)
+        let space = model.state.activeSpaceId
+        model.applySyncPatch(patch { $0.upserts = [arrival("closed-there", space: space, path: "/b.html", activeAt: 1_790_000_000_000 - 3_600_000)] })
+        model.openTab(try XCTUnwrap(model.state.tabs.first { $0.id == "closed-there" }))
+        let closedTab = try XCTUnwrap(model.activeTab)
+        model.applySyncPatch(patch { $0.removals = [closing(closedTab)] })
+        XCTAssertNotNil(model.syncClosedShownTab)
+        model.reopenSyncClosedShownTab()
+        XCTAssertNil(model.syncClosedShownTab, "the line goes")
+        XCTAssertEqual(model.activeTab?.url, address("/b.html").absoluteString, "the page is shown again")
+        XCTAssertNotEqual(model.activeTab?.id, "closed-there", "as a new tab, with a new identifier (§27.5)")
+        XCTAssertFalse(model.state.archive.contains { $0.id == "closed-there" }, "and no longer in the archive")
+    }
+
+    func testReopeningWithNothingClosedDoesNothing() async throws {
+        let model = await makeModel()
+        try await load("/a.html", in: model)
+        let before = model.state
+        model.reopenSyncClosedShownTab()
+        XCTAssertEqual(model.state, before)
+    }
+
     func testATabClosedThereThatWasNotOnScreenSaysNothing() async throws {
         let model = await makeModel()
         try await load("/a.html", in: model)

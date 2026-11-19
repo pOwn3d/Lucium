@@ -28,7 +28,7 @@ import { cleanSnapshot, isKnownSearchTemplate, isWebAddress } from './inbound-fi
 import { asideOf, type MarkBook } from './marks'
 import type { OpenTab, SnapshotPart, WireEntity, WireTombstone } from './messages'
 import { buildPatch, patchIsEmpty } from './patch'
-import { admittedTodayTabs, baseOf, follows, kindIsExchanged, onlyExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
+import { admittedTodayTabs, unsharedTodayTabs, baseOf, follows, kindIsExchanged, onlyExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 import { randomBytes } from 'node:crypto'
 
 /** What a session needs of the state of the device. */
@@ -89,7 +89,7 @@ export function shownTabsClosed(before: SidebarState, after: SidebarState, patch
 }
 
 export type SessionResult =
-  | { ok: true; applied: boolean; conflicts: SyncConflict[]; refused: number; categories: SyncCategory[] }
+  | { ok: true; applied: boolean; conflicts: SyncConflict[]; refused: number; categories: SyncCategory[]; todayTabsReceived: number; todayTabsUnshared: number }
   | { ok: false; code: ErrorCode | 'interrupted' | 'unpaired'; detail: string }
 
 /**
@@ -272,7 +272,10 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     // freeze and send
     const state = deps.host.state()
     // The Today tabs of the shared set (§27.3): new ones come in only when the category is common, at the end of the freeze; the ones the book holds stay.
-    const admittedToday = admittedTodayTabs(state, { book: deps.marks, now: deps.now(), admitNew: common.has('todayTabs'), isSpaceLocked: (spaceId) => deps.host.isSpaceLocked(spaceId) })
+    const admission = { book: deps.marks, now: deps.now(), admitNew: common.has('todayTabs'), isSpaceLocked: (spaceId: string) => deps.host.isSpaceLocked(spaceId) }
+    const admittedToday = admittedTodayTabs(state, admission)
+    // The tabs that stayed on this device because the shared set was full (never any while the category is not common: only the admitted ones are candidates): « non partagés : n » (§27.4).
+    const todayTabsUnshared = unsharedTodayTabs(state, admission)
     deps.marks.update(trackedViewOf(state, admittedToday), deps.now())
     const withheld = withheldSpaces(state, (spaceId) => deps.host.isSpaceLocked(spaceId))
     // What this device sends is what it would itself accept (the same gate as for what comes in, with the other device's clock for the marks of the future): the two
@@ -336,7 +339,7 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     await expect(channel, 'commit', warn)
     channel.bye()
     deps.onDone?.(peerId, deps.now())
-    return { ok: true, applied: !patchIsEmpty(patch), conflicts: merged.conflicts, refused: cleaned.refused.length, categories: [...common] }
+    return { ok: true, applied: !patchIsEmpty(patch), conflicts: merged.conflicts, refused: cleaned.refused.length, categories: [...common], todayTabsReceived: patch.upserts.filter((one) => one.kind === TODAY_TAB_KIND && one.create).length, todayTabsUnshared }
   } catch (error) {
     if (error instanceof ProtocolError) {
       if (error.code === 'not-paired') deps.onUnpair?.(peerId)
