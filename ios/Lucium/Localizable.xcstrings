@@ -3529,6 +3529,198 @@
         }
       }
     },
+    "settings.about.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Lucium"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À propos de Lucium"
+          }
+        }
+      }
+    },
+    "settings.about.version": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App version"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version de l’application"
+          }
+        }
+      }
+    },
+    "settings.about.site": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium website"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site de Lucium"
+          }
+        }
+      }
+    },
+    "settings.about.help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help and community"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aide et communauté"
+          }
+        }
+      }
+    },
+    "settings.about.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Links open in Safari, only when you tap them. Lucium sends nothing on its own."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les liens s’ouvrent dans Safari, seulement quand vous les touchez. Lucium n’envoie rien de lui-même."
+          }
+        }
+      }
+    },
+    "settings.changed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifié"
+          }
+        }
+      }
+    },
+    "settings.reset.button": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore settings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir les réglages"
+          }
+        }
+      }
+    },
+    "settings.reset.confirm.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore the settings?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir les réglages ?"
+          }
+        }
+      }
+    },
+    "settings.reset.confirm.message %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The search engine of the profile “%@” and the privacy settings go back to their original values. The lock, the spaces and the synchronisation do not change."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le moteur de recherche du profil « %@ » et la vie privée reviennent à leur valeur d’origine. Le verrouillage, les espaces et la synchronisation ne changent pas."
+          }
+        }
+      }
+    },
+    "settings.reset.confirm.action": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir"
+          }
+        }
+      }
+    },
+    "settings.reset.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puts the search engine and the privacy settings back to their original values."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remet le moteur de recherche et la vie privée à leur valeur d’origine."
+          }
+        }
+      }
+    },
+    "settings.reset.none": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing has been changed: the settings are at their original values."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien n’a été modifié : les réglages sont à leur valeur d’origine."
+          }
+        }
+      }
+    },
     "settings.section.about": {
       "localizations": {
         "en": {
