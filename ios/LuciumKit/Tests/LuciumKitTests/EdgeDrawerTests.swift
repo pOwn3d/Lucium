@@ -34,6 +34,11 @@ struct EdgeDrawerTests {
         #expect(!EdgeDrawer.isAvailable(layout: .sidebar, isPhone: true), "no sidebar over a sidebar")
     }
 
+    @Test func theBarButtonBringsTheSidebarOutWhenAwayAndPutsItAwayWhenOut() {
+        #expect(EdgeDrawer.isOpen(after: EdgeDrawer.buttonEvent(wasOpen: false), wasOpen: false), "a tap on the button opens it")
+        #expect(!EdgeDrawer.isOpen(after: EdgeDrawer.buttonEvent(wasOpen: true), wasOpen: true), "a second tap closes it")
+    }
+
     @Test func webKitsBackGestureIsOffOnAPhoneAndKeptOnAnIPad() {
         #expect(!EdgeDrawer.allowsWebKitBackGesture(isPhone: true), "the left edge is the sidebar's")
         #expect(EdgeDrawer.allowsWebKitBackGesture(isPhone: false))

@@ -76,6 +76,12 @@ public enum EdgeDrawer {
         return wasOpen ? reached > 1 - closeFraction : reached >= openFraction
     }
 
+    /// What the visible sidebar button of the bottom bar does (card 664): it brings the sidebar out when it is away and puts it away when it is out, so
+    /// that a person who does not think of the edge drag, or on whose page the drag does not work (a carousel takes it), has the same sidebar.
+    public static func buttonEvent(wasOpen: Bool) -> EdgeDrawerEvent {
+        wasOpen ? .dismissed : .openedByButton
+    }
+
     /// Whether the sidebar is out after `event`. The sidebar goes away when a page is shown, when the person puts it away, and when it has no place
     /// any more (the application locks); it stays while the person is only choosing (another space).
     public static func isOpen(after event: EdgeDrawerEvent, wasOpen: Bool) -> Bool {

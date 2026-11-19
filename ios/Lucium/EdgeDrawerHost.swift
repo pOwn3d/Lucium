@@ -8,7 +8,8 @@ import UIKit
 /// there; this is the part that draws it and listens to the fingers.
 ///
 /// A person who cannot drag from an edge has two other ways: the tabs button of the bottom bar, which opens the sheet of the same lists, and the
-/// accessible button of this view (VoiceOver, Switch Control and Voice Control find it; nothing is drawn for it). With VoiceOver the sidebar is a
+/// sidebar button of the bottom bar (card 664: visible, 44 points, found by VoiceOver, Switch Control and Voice Control; it replaces the invisible
+/// one this view had). With VoiceOver the sidebar is a
 /// modal group, the page behind it is not read, and the "escape" action puts it away.
 struct EdgeDrawerHost<Page: View>: View {
     @Bindable var model: BrowserModel
@@ -58,7 +59,6 @@ struct EdgeDrawerHost<Page: View>: View {
             }
         }
         .gesture(edgePan)
-        .overlay(alignment: .topLeading) { if !model.drawerShown { opener } }
         .animation(settle, value: model.drawerShown)
         // VoiceOver moves to the new screen: into the sidebar when it opens, back to the page when it closes.
         .onChange(of: model.drawerShown) { UIAccessibility.post(notification: .screenChanged, argument: nil) }
@@ -89,20 +89,6 @@ struct EdgeDrawerHost<Page: View>: View {
             .accessibilityAddTraits(.isModal)
             .accessibilityAction(.escape) { put(.dismissed) }
             .accessibilityIdentifier("edge-drawer")
-    }
-
-    /// For the people who cannot drag from the edge: a button that VoiceOver, Switch Control and Voice Control find, in the corner where the iPad's
-    /// toggle is. It draws nothing and takes no touch (a finger there is on the page); the assistive technologies activate it themselves.
-    private var opener: some View {
-        Color.clear
-            .frame(width: 44, height: 44)
-            .allowsHitTesting(false)
-            .accessibilityElement()
-            .accessibilityLabel(Text("sidebar.show"))
-            .accessibilityAddTraits(.isButton)
-            .accessibilityIdentifier("edge-drawer-open")
-            .accessibilityAction { put(.openedByButton) }
-            .accessibilitySortPriority(1)
     }
 
     // MARK: Fingers

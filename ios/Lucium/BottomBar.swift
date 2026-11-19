@@ -4,14 +4,22 @@ import SwiftUI
 /// Approach C of the mockups (`C1 · Navigation`): the address pill, and under it the spaces as round buttons, then back, forward and the tabs.
 /// Every target is 44 pt, the minimum Apple asks for a finger. The pill is a button: it opens the command bar (`CommandBar`), where the address
 /// is typed; the reload button sits inside it, as on the drawing. The gear of the settings (decision of 18 November 2026) is beside the pill, not in
-/// the row below: that row already holds seven buttons, and an eighth would not fit a narrow phone or a fourth space.
+/// the row below: that row already holds seven buttons, and an eighth would not fit a narrow phone or a fourth space. The iPhone's sidebar button is there too.
 struct BottomBar: View {
     @Bindable var model: BrowserModel
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 4) {
             DownloadStrip(downloads: model.downloads)
             HStack(spacing: 6) {
+                // The sidebar button (card 664) is in this row: the row below already holds seven buttons. It is the iPhone's (the iPad has its own toggle).
+                if EdgeDrawer.isAvailable(layout: .bottomBar, isPhone: model.isPhone) {
+                    barButton(.sidebar, label: model.drawerShown ? "sidebar.hide" : "sidebar.show", enabled: true) {
+                        withAnimation(reduceMotion ? nil : .snappy(duration: 0.3)) { model.toggleDrawer() }
+                    }
+                    .accessibilityIdentifier("bar-sidebar")
+                }
                 addressPill
                 barButton(.settings, label: "settings.title", enabled: true) { model.openSettings() }
             }
