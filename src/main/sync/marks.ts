@@ -24,10 +24,10 @@ interface Clock {
 /** The largest time thirteen digits hold: a mark is `<ms on 13 digits>-…`, and one with more digits is not a mark (§9.2). */
 const MAX_MS = 9_999_999_999_999
 
-/** The list keys are made of the kind they order (`spaces`, `folders:<space>:<parent>`, `tabs:<space>:<folder>`, `favorites:<profile>`): the kind, or null for a key of no kind this version knows. */
-export function listKindOf(key: string): 'space' | 'folder' | 'tab' | 'favorite' | null {
+/** The list keys are made of the kind they order (`spaces`, `folders:<space>:<parent>`, `tabs:<space>:<folder>`, `today:<space>`, `favorites:<profile>`): the kind, or null for a key of no kind this version knows. */
+export function listKindOf(key: string): 'space' | 'folder' | 'tab' | 'todayTab' | 'favorite' | null {
   const head = key.split(':')[0]
-  return head === 'spaces' ? 'space' : head === 'folders' ? 'folder' : head === 'tabs' ? 'tab' : head === 'favorites' ? 'favorite' : null
+  return head === 'spaces' ? 'space' : head === 'folders' ? 'folder' : head === 'tabs' ? 'tab' : head === 'today' ? 'todayTab' : head === 'favorites' ? 'favorite' : null
 }
 
 const pad = (ms: number, counter: number, device: string): string => `${String(ms).padStart(13, '0')}-${counter.toString(16).padStart(4, '0')}-${device}`
@@ -80,8 +80,15 @@ interface FieldMark {
   stamp: string
 }
 
+/**
+ * The format of the file. 2 (card 508): the book also holds the Today tabs that are admitted to the shared set (§27.3, kind `todayTab`): the shape is the one of 1, but a
+ * version that reads a 2 and does not know the kind would drop those marks without a word and, when the file is read again by a newer one, read every admitted tab as new.
+ * It does not know the format, so it sets the file aside and starts a book of its own (the case of a base that is lost, §11.8) instead.
+ */
+export const MARKS_VERSION = 2
+
 export interface MarksFile {
-  version: 1
+  version: typeof MARKS_VERSION
   clock: Clock
   entities: Record<string, Record<string, Record<string, FieldMark>>>
   tombstones: Record<string, Record<string, string>>
@@ -154,6 +161,11 @@ export class MarkBook {
     }
   }
 
+  /** Whether the book holds the entity: for a Today tab, whether it is admitted to the shared set (§27.3: the admission is kept here, by device). */
+  knows(kind: string, id: string): boolean {
+    return this.entities[kind]?.[id] !== undefined
+  }
+
   /** The marks of an entity, one per field it has or has lost. */
   stampsOf(kind: string, id: string): Record<string, string> {
     return Object.fromEntries(Object.entries(this.entities[kind]?.[id] ?? {}).map(([name, mark]) => [name, mark.stamp]))
@@ -204,7 +216,7 @@ export class MarkBook {
   }
 
   toJSON(): MarksFile {
-    return { version: 1, clock: this.clock.state(), entities: this.entities, tombstones: this.tombstones, orders: this.orders }
+    return { version: MARKS_VERSION, clock: this.clock.state(), entities: this.entities, tombstones: this.tombstones, orders: this.orders }
   }
 }
 

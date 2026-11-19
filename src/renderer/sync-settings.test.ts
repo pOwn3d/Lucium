@@ -14,7 +14,7 @@ import { countdown } from './SyncSettings'
 
 let mounted: Mounted | null = null
 
-const OFF: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
+const OFF: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
 const ON: SyncStatus = { ...OFF, enabled: true }
 
 const snapshot = (): UiSnapshot => ({ state: createInitialState({ now: 1, newId: () => 'id' }), extensions: [], downloads: [], runtime: { tabs: {} }, platform: 'darwin' }) as unknown as UiSnapshot

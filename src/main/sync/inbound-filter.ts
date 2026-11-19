@@ -5,7 +5,8 @@
 //   - a kind that is code or a secret is refused (`never-synced`), whatever the device says;
 //   - a setting is accepted only if it is in the closed list and its value is one this version would write (`not-synced`, `invalid-value`); the search engine only if it is
 //     one of those Lucium offers, which are all https: an engine of one's own stays on the device that has it, and a device cannot send the searches of another to a server of its choice;
-//   - a tab is accepted only if it is pinned and not private (`not-pinned`, `private`): the Today tabs are not entities;
+//   - a tab is accepted only if it is pinned and not private (`not-pinned`, `private`): the Today tabs are the entities of another kind, `todayTab` (§27), whose own checks
+//     (the address, the title, the bound of 500 in a snapshot) are `gateTodayTabs`, called once the general ones have passed;
 //   - an address is accepted only if it is an http or https address (`invalid-url`): a page, never a script or a file;
 //   - the fields of the class « local » are taken off: a device does not tell this one what its local files are;
 //   - an entity of a kind this version does not know, and a field of a known kind it does not know, cross as they are (§11.6);
@@ -22,13 +23,14 @@ import { MAX_STRING_BYTES, MAX_TOMBSTONES_PER_SNAPSHOT, STAMP_FUTURE_REFUSE_MS }
 import { hasLoneSurrogate } from './messages'
 import { isProfileId } from '@shared/profiles'
 import { compareStamps } from '@shared/sync-snapshot'
-import { FIELD_CLASSES, isKind, NEVER_KINDS, SYNCED_SETTINGS, type EntityKind } from './field-classes'
+import { classesOf, isKind, NEVER_KINDS, SYNCED_SETTINGS, type SyncKind } from './field-classes'
 import type { WireEntity } from './messages'
 import { SEARCH_ENGINES } from '@shared/model'
 import { PROFILE_NAME_MAX } from '@shared/sidebar'
 import type { SyncEntity, SyncSnapshot } from '@shared/sync-snapshot'
+import { gateTodayTabs, TODAY_TAB_KIND, type TodayRefusal } from '@shared/sync-today'
 
-export type Refusal = 'never-synced' | 'not-synced' | 'invalid-value' | 'not-pinned' | 'private' | 'invalid-url' | 'future-mark' | 'too-many-tombstones'
+export type Refusal = 'never-synced' | 'not-synced' | 'invalid-value' | 'not-pinned' | 'private' | 'invalid-url' | 'future-mark' | 'too-many-tombstones' | TodayRefusal
 export type Filtered = { accepted: true; fields: Record<string, unknown> } | { accepted: false; reason: Refusal }
 
 const isObject = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -36,7 +38,8 @@ const isObject = (value: unknown): value is Record<string, unknown> => typeof va
 /** An http or https address that parses: the only kind of page worth synchronising (a script, a file or a data address is refused). */
 export const isWebAddress = (value: unknown): boolean => typeof value === 'string' && /^https?:\/\//i.test(value) && URL.canParse(value)
 
-const URL_FIELDS: Readonly<Partial<Record<EntityKind, readonly string[]>>> = { tab: ['url', 'anchorUrl'], favorite: ['url'], archived: ['url', 'anchorUrl'] }
+// The address of a `todayTab` is checked by `gateTodayTabs` (it also bounds its length).
+const URL_FIELDS: Readonly<Partial<Record<SyncKind, readonly string[]>>> = { tab: ['url', 'anchorUrl'], favorite: ['url'], archived: ['url', 'anchorUrl'] }
 
 /** The search templates Lucium offers (the engines of the Settings): the only ones that cross, all of them https (docs/synchronisation.md §10.3). */
 const KNOWN_SEARCH_TEMPLATES: ReadonlySet<string> = new Set(SEARCH_ENGINES.map((engine) => engine.url))
@@ -106,7 +109,7 @@ export function filterEntity(entity: Pick<WireEntity, 'kind' | 'id' | 'fields'>)
     if (entity.fields['private'] === true) return { accepted: false, reason: 'private' }
     if (entity.fields['pinned'] !== true) return { accepted: false, reason: 'not-pinned' }
   }
-  const local = FIELD_CLASSES[entity.kind].local
+  const local = classesOf(entity.kind).local
   const fields = Object.fromEntries(Object.entries(entity.fields).filter(([name]) => !local.includes(name)))
   for (const name of URL_FIELDS[entity.kind] ?? []) if (fields[name] !== undefined && !isWebAddress(fields[name])) return { accepted: false, reason: 'invalid-url' }
   return { accepted: true, fields }
@@ -150,9 +153,18 @@ export function cleanSnapshot(remote: SyncSnapshot, now: number, base: SyncSnaps
         if (before !== undefined && STANDS_IN_AS_IN_THE_BASE.has(verdict.reason)) (entities[kind] ??= {})[id] = before
         continue
       }
-      const stamps = Object.fromEntries(Object.entries(entity.stamps).filter(([name]) => !(isKind(kind) && FIELD_CLASSES[kind].local.includes(name))))
+      const stamps = Object.fromEntries(Object.entries(entity.stamps).filter(([name]) => !(isKind(kind) && classesOf(kind).local.includes(name))))
       ;(entities[kind] ??= {})[id] = { fields: verdict.fields as SyncEntity['fields'], stamps }
     }
+  }
+  // What only a Today tab needs (§27.4, §27.7): the same function as the phone's door, so that both sides keep the same entities.
+  const today = entities[TODAY_TAB_KIND]
+  if (today !== undefined) {
+    const gate = gateTodayTabs(today, base?.entities[TODAY_TAB_KIND] ?? null)
+    for (const one of gate.refused) refused.push({ kind: TODAY_TAB_KIND, id: one.id, reason: one.reason })
+    // A kind with no entity left is not in the snapshot, as for every other kind: an empty one would not hash like an absent one.
+    if (Object.keys(gate.entities).length > 0) entities[TODAY_TAB_KIND] = gate.entities
+    else delete entities[TODAY_TAB_KIND]
   }
   const tombstones: SyncSnapshot['tombstones'] = {}
   const standing: Array<{ kind: string; id: string; stamp: string }> = []
