@@ -21,6 +21,7 @@
     "test:bench-script": "vitest run --config vitest.bench-script.config.mts",
     "test:snapshot-bench": "vitest run --config vitest.snapshot-bench.config.mts",
     "test:state-bench": "vitest run --config vitest.state-bench.config.mts",
+    "test:sync-interop-peer": "vitest run --config vitest.sync-interop.config.mts",
     "test:engine:webstore": "electron-vite build && { profile=\"$(mktemp -d)\"; LUCIUM_SMOKE_ONLY=webstore electron . --smoke --user-data-dir=\"$profile\"; code=$?; rm -rf \"$profile\"; exit $code; }",
     "test:engine:extwindows": "electron-vite build && { profile=\"$(mktemp -d)\"; LUCIUM_SMOKE_ONLY=extwindows electron . --smoke --user-data-dir=\"$profile\"; code=$?; rm -rf \"$profile\"; exit $code; }",
     "test:engine:release": "node scripts/engine-release-run.mjs",
