@@ -414,7 +414,7 @@ L'égalité de deux marques est impossible entre deux appareils (l'identifiant d
 
 ### 10.1 Les catégories
 
-La personne coche ce qui voyage ; **une catégorie ne passe que si les deux appareils l'ont cochée**. Valeurs par défaut **[Q2]** : **seule `structure` est cochée**, les trois autres sont au choix de la personne, chacune avec sa phrase.
+La personne coche ce qui voyage ; **une catégorie ne passe que si les deux appareils l'ont cochée**, **en réception aussi** : ce qu'un appareil envoie d'une catégorie qui n'est pas commune (réglages, archive, structure) est écarté avant la fusion, des deux côtés (`onlyExchanged`), et compté comme « non synchronisé » ; un appareil honnête n'en envoie jamais (revue de sécurité, seconde passe : sans cela un appareil appairé pouvait baisser les réglages de vie privée sans que « réglages » soit coché). Valeurs par défaut **[Q2]** : **seule `structure` est cochée**, les trois autres sont au choix de la personne, chacune avec sa phrase.
 
 | Identifiant | Contenu | Fusionné ? | Défaut |
 |---|---|---|---|

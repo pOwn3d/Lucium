@@ -70,6 +70,8 @@ struct SyncTestMac: Sendable {
     var extraPartAfterEnd = false
     /// Says hello and then nothing at all.
     var silentAfterHello = false
+    /// Sends its settings and its archive whatever the categories both ticked (a Mac that does not keep to what it said in its hello), and merges them as it sends them.
+    var ignoresTheCategories = false
 
     struct Seen: @unchecked Sendable {
         var hello: [String: Any] = [:]
@@ -130,8 +132,8 @@ struct SyncTestMac: Sendable {
         let common = Set(categories).intersection(phoneCategories)
         var shown = snapshot
         if !common.contains("structure") { shown = shown.withoutStructure() }
-        if !common.contains("settings") { shown.entities["setting"] = nil }
-        if !common.contains("archive") { shown.entities["archived"] = nil }
+        if !common.contains("settings") && !ignoresTheCategories { shown.entities["setting"] = nil }
+        if !common.contains("archive") && !ignoresTheCategories { shown.entities["archived"] = nil }
         // What the Mac sends is what it would itself accept, with the phone's clock for the marks of the future (`hello.now`).
         let sent = SyncInbound.clean(shown, now: theirs.fields["now"] as? Int ?? now, base: (hash != nil && phoneHash == hash) ? base : nil).snapshot
         let parts = SyncSnapshotParts.parts(of: sent, withheld: withheld)
@@ -415,6 +417,36 @@ struct SyncExchangeTests {
         guard case .object(let settings)? = await rig.host.state.rest["settings"] else { Issue.record("no settings"); return }
         #expect(settings["autoArchiveHours"] == .number(6), "a patch that holds only a setting is written")
         #expect(await rig.host.state.spaces.map(\.id).sorted() == ["s1", "s2"])
+    }
+
+    @Test func theSettingsAndTheArchiveOfAMacThatDoesNotKeepToTheCategoriesAreNotTaken() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["structure"])
+        mac.ignoresTheCategories = true
+        mac.snapshot.entities["setting"] = ["httpsUpgrade": macEntity(["value": .bool(false)]), "sendGpc": macEntity(["value": .bool(true)])]
+        mac.snapshot.entities["archived"] = ["planted": macEntity(["spaceId": .string("m1"), "url": .string("https://planted.example/"), "title": .string("planted"), "archivedAt": .number(1)])]
+        let before = await rig.host.state
+        // Only the structure is common. The Mac merges what it sent, the settings included; the phone merges what is common, and the two do not reach the same snapshot.
+        _ = try? await session(rig, mac: mac, categories: [.structure])
+        let after = await rig.host.state
+        #expect(after.rest["settings"] == before.rest["settings"], "the privacy settings of the phone are not the Mac's to change when the category is not ticked")
+        #expect(after.archive == before.archive)
+        #expect(after.spaces == before.spaces, "and nothing is written at all when the two devices do not agree")
+    }
+
+    @Test func whatIsLeftOutOfACategoryThatIsNotCommonIsTheKindsAndTheListsOfIt() {
+        var received = macSnapshot()
+        received.entities["setting"] = ["httpsUpgrade": macEntity(["value": .bool(false)])]
+        received.entities["archived"] = ["a9": macEntity(["spaceId": .string("m1"), "url": .string("https://x.example/")])]
+        received.entities["unknown-kind"] = ["u1": macEntity(["x": .number(1)])]
+        received.tombstones = ["tab": ["gone": macStamp(2)], "archived": ["old": macStamp(2)]]
+        let kept = SyncInbound.onlyExchanged(received, categories: [.settings])
+        #expect(kept.snapshot.entities.keys.sorted() == ["setting", "unknown-kind"], "the structure and the archive are not common; a kind this version does not know crosses")
+        #expect(kept.snapshot.tombstones.isEmpty)
+        #expect(kept.snapshot.order.isEmpty && kept.snapshot.orderStamps.isEmpty, "the lists and the deletions of the structure go with it")
+        #expect(kept.refused.contains { $0.kind == "space" && $0.id == "m1" && $0.reason == .notSynced })
+        #expect(SyncInbound.onlyExchanged(received, categories: [.structure, .settings, .archive]).snapshot == received, "everything that is common stays")
     }
 
     @Test func anEntityThatCannotTravelBecauseOfItsMarkIsNotTakenForADeletion() async throws {

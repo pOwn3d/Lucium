@@ -13,7 +13,7 @@ import { ZERO_STAMP, type SyncEntity, type SyncFields, type SyncSnapshot } from 
 import { ARCHIVE_PER_SPACE_SENT, FIELD_CLASSES, SYNCED_SETTINGS, isKind, type EntityKind } from './field-classes'
 import { cutBytes } from '@shared/state-clean'
 import { MAX_OPEN_TABS, MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES } from './limits'
-import { earlier, type MarkBook, type TrackedView } from './marks'
+import { earlier, listKindOf, type MarkBook, type TrackedView } from './marks'
 
 type Entity = object
 
@@ -98,6 +98,38 @@ const kindsOfCategories = (categories: ReadonlySet<SyncCategory>): ReadonlySet<s
 
 /** Whether a session with these categories exchanges the kind: the kinds of the categories, and the kinds this version does not know (they cross whatever is ticked, §11.6). */
 export const kindIsExchanged = (kind: string, categories: ReadonlySet<SyncCategory>): boolean => kindsOfCategories(categories).has(kind) || (!isKind(kind) && kind !== 'setting')
+
+/**
+ * What a device sent, cut down to the kinds this session exchanges (§5 [Q2], §11.6): an honest device sends nothing of a category that is not common, so what is left out
+ * here came from one that does not keep to them, and it is not applied (the settings of privacy, the archive, the spaces of a device whose structure is not ticked here).
+ * The kinds this version does not know cross whatever is ticked, as they do in `kindIsExchanged`; a list is of the kind it orders.
+ */
+export function onlyExchanged(snapshot: SyncSnapshot, categories: ReadonlySet<SyncCategory>): { snapshot: SyncSnapshot; refused: Array<{ kind: string; id: string; reason: 'not-synced' }> } {
+  const refused: Array<{ kind: string; id: string; reason: 'not-synced' }> = []
+  const kindKept = (kind: string): boolean => kindIsExchanged(kind, categories)
+  const listKept = (key: string): boolean => {
+    const kind = listKindOf(key)
+    return kind === null || kindKept(kind)
+  }
+  const entities: SyncSnapshot['entities'] = {}
+  for (const [kind, byId] of Object.entries(snapshot.entities)) {
+    if (kindKept(kind)) entities[kind] = byId
+    else for (const id of Object.keys(byId)) refused.push({ kind, id, reason: 'not-synced' })
+  }
+  const tombstones: SyncSnapshot['tombstones'] = {}
+  for (const [kind, byId] of Object.entries(snapshot.tombstones)) {
+    if (kindKept(kind)) tombstones[kind] = byId
+    else for (const id of Object.keys(byId)) refused.push({ kind: 'tombstone', id: `${kind}/${id}`, reason: 'not-synced' })
+  }
+  const order: SyncSnapshot['order'] = {}
+  for (const [key, ids] of Object.entries(snapshot.order)) {
+    if (listKept(key)) order[key] = ids
+    else refused.push({ kind: 'order', id: key, reason: 'not-synced' })
+  }
+  const orderStamps: SyncSnapshot['orderStamps'] = {}
+  for (const [key, stamp] of Object.entries(snapshot.orderStamps)) if (listKept(key)) orderStamps[key] = stamp
+  return { snapshot: { entities, tombstones, order, orderStamps }, refused }
+}
 
 /** The snapshot a session freezes and sends. The marks must be up to date (`MarkBook.update`) before it is made. */
 export function snapshotOf(state: SidebarState, marks: MarkBook, options: SnapshotOptions): SyncSnapshot {
