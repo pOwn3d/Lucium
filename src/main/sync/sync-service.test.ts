@@ -459,11 +459,11 @@ describe('SyncService: the sheet of « Ajouter un iPhone »', () => {
 
   it('gives the pairing the port the door listens on now, not the one it was started with, so that the iPhone keeps a port that answers (review n° 38)', async () => {
     const r = await withSheet()
-    const context = r.door.deps?.openPairing()
+    const context = r.door.deps?.openPairing(Buffer.alloc(32, 7))
     expect(context?.port()).toBe(r.door.currentPort)
     // A port that was replaced since (a fallback after a restart): the context says the one in use.
     r.door.currentPort = 61234
-    expect(r.door.deps?.openPairing()?.port()).toBe(61234)
+    expect(r.door.deps?.openPairing(Buffer.alloc(32, 7))?.port()).toBe(61234)
   })
 
   it('opens the door if it is closed (nobody is paired yet), and gives the QR, the code and the address', async () => {

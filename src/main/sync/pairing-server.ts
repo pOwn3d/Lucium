@@ -12,7 +12,9 @@
 //              shows the code to compare (pairing-compare.ts: the same six characters the iPhone shows, review n° 9), which only exists once the iPhone has revealed, and the address the request came from (n° 21)
 //   accept     the Mac sends its identity, its addresses and ITS proof, which the iPhone checks before it writes anything. It has NOT written the iPhone down yet
 //   compare    the iPhone shows « Appairer avec « … » ? Code : … » and its person says yes or no: `bye` is yes, an `error` is no (a minute at most). Both ends keep the
-//              other only after both persons said yes: a code that is not the same on both screens is a pairing nobody wanted (§4.6)
+//              other only after both persons said yes, the Mac's first (« Autoriser », with the code and the address in front of them) and the iPhone's after it: the Mac's
+//              person is not asked a second time when the iPhone says yes, they can only still give up (review n° 42). A code that is not the same on both screens is a
+//              pairing nobody wanted (§4.6)
 //   keep       the Mac writes the iPhone in its list and answers `bye`, so that the iPhone that reads it can come back to a Mac that knows it; a list that is full is
 //              told as `internal` instead, and the iPhone keeps nothing
 //
