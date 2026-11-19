@@ -3636,7 +3636,7 @@
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Standard"
+            "value": "Normal"
           }
         }
       }
@@ -3726,13 +3726,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Standard"
+            "value": "Standard mode"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Standard"
+            "value": "Mode standard"
           }
         }
       }
@@ -3758,13 +3758,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Strict"
+            "value": "Strict mode"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Strict"
+            "value": "Mode strict"
           }
         }
       }
@@ -3891,13 +3891,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld site"
+                  "value": "%lld site listé"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "%lld sites"
+                  "value": "%lld sites listés"
                 }
               }
             }

@@ -213,6 +213,22 @@ final class BlockerSwitchesTests: XCTestCase {
         XCTAssertFalse(strict.isEmpty)
     }
 
+    // MARK: The page guard
+
+    func testThePageGuardFollowsTheSwitchesAndEachNavigationTellsItAgain() async throws {
+        let model = try await makeModel()
+        let pageGuard = try XCTUnwrap(model.pageGuard, "this build carries the page guard")
+        model.updatePrivacy { $0.choose(.strict) }
+        XCTAssertEqual(pageGuard.settings, GuardSettings(blockAds: true, blockCookieBanners: true, blockScriptlets: true, exemptSites: []))
+        model.updatePrivacy { $0.blockAds = false; $0.blockExceptions = ["example.org"] }
+        XCTAssertEqual(pageGuard.settings, GuardSettings(blockAds: false, blockCookieBanners: true, blockScriptlets: true, exemptSites: ["example.org"]))
+
+        // The next page is prepared with what the settings say now, whatever the guard held.
+        pageGuard.settings = GuardSettings()
+        try await load("/page.html", in: model)
+        XCTAssertEqual(pageGuard.settings, model.privacySettings.guardSettings)
+    }
+
     // MARK: The state
 
     func testTheSwitchesAreWrittenWhereTheMacReadsThem() async throws {
