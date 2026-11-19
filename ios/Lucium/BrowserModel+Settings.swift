@@ -48,4 +48,35 @@ extension BrowserModel {
         case nil: "settings.privacy.custom"
         }
     }
+
+    // MARK: Tabs
+
+    /// What the profile of the space on screen archives with, or that it follows the default profile's (`autoArchiveHours`, the Mac's key).
+    var archiveChoice: ArchiveChoice { state.archiveChoice(forProfile: settingsProfileId) }
+
+    /// The delay in force for the profile of the space on screen, whether it chose it or follows the default profile.
+    var archiveHours: Double { state.autoArchiveHours(forSpace: activeSpace.id) }
+
+    /// Chooses the archive delay of the profile of the space on screen. It is the delay the sweep reads when the application comes to the front.
+    func chooseArchiveDelay(_ choice: ArchiveChoice) {
+        var next = state
+        guard next.chooseArchiveDelay(choice, forProfile: settingsProfileId) else { return }
+        state = next
+        scheduleSave()
+    }
+
+    /// How many tabs keep a live page: the limit in the state (the Mac's `sleepAwakeMax`, 0 = no limit), else the application's own.
+    var awakeLimit: Int { state.awakeTabLimit ?? awakeCap }
+
+    /// The cap the sleep rules use: no limit is a cap nothing reaches.
+    var effectiveAwakeCap: Int { awakeLimit == 0 ? Int.max : awakeLimit }
+
+    /// Chooses how many tabs stay awake; a lower number frees the surplus now.
+    func chooseAwakeTabLimit(_ limit: Int) {
+        var next = state
+        guard next.chooseAwakeTabLimit(limit) else { return }
+        state = next
+        scheduleSave()
+        Task { await sleepSurplus() }
+    }
 }

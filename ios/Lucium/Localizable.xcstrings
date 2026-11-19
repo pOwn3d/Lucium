@@ -7416,6 +7416,262 @@
           }
         }
       }
+    },
+    "settings.tabs.archive.footer %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Today tab you have not opened for this long goes to the archive, in the profile “%@”. Pinned tabs and favorites are never archived. The change applies the next time Lucium comes to the front."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un onglet d’« Aujourd’hui » que vous n’avez pas ouvert pendant ce délai part dans l’archive, dans le profil « %@ ». Les onglets épinglés et les favoris ne sont jamais archivés. Le changement s’applique à la prochaine ouverture de Lucium."
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archive inactive tabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archiver les onglets inactifs"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.hours %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "After %lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "After %lld hours"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Après %lld heure"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Après %lld heures"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.never": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jamais"
+          }
+        }
+      }
+    },
+    "settings.tabs.awake.count %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld tab"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld tabs"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld onglet"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld onglets"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "settings.tabs.awake.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How many tabs keep their page loaded at once. The others go to sleep: they stay in the list and reload when you open them. The tab on screen and a tab that is playing sound or video, or using the camera or microphone, never sleep. Fewer tabs spare memory and battery. This setting belongs to this device and is not synchronized."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombre d’onglets dont la page reste chargée en même temps. Les autres se mettent en veille : ils restent dans la liste et se rechargent à l’ouverture. L’onglet à l’écran et un onglet qui joue un son ou une vidéo, ou qui utilise la caméra ou le micro, ne dorment jamais. Moins d’onglets, c’est moins de mémoire et de batterie. Ce réglage est propre à cet appareil et n’est pas synchronisé."
+          }
+        }
+      }
+    },
+    "settings.tabs.awake.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabs kept in memory"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets gardés en mémoire"
+          }
+        }
+      }
+    },
+    "settings.tabs.awake.unlimited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No limit"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans limite"
+          }
+        }
+      }
+    },
+    "settings.tabs.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.inherited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same as the default profile"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comme le profil par défaut"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.twelve-hours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 12 hours"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après 12 heures"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.one-day": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 1 day"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après 1 jour"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.seven-days": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 7 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après 7 jours"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -7,7 +7,7 @@ struct SettingsLayoutTests {
     @Test func theSectionsAreListedInTheOrderOfTheDecision() {
         let groups = SettingsLayout.groups(lockAvailable: true)
         #expect(groups.map(\.section) == [.navigation, .privacy, .spaces, .about, .reset])
-        #expect(groups.flatMap(\.rows) == [.searchEngine, .privacy, .passwords, .lock, .spaces, .about, .licenses, .reset])
+        #expect(groups.flatMap(\.rows) == [.searchEngine, .tabs, .privacy, .passwords, .lock, .spaces, .about, .licenses, .reset])
     }
 
     @Test func aCopyWithNoLockHasNoLockRowAndKeepsItsPrivacySection() {
@@ -318,6 +318,32 @@ struct SettingsDefaultsTests {
         #expect(moved.searchTemplate(forProfile: "default") == duck)
     }
 
+    @Test func theTabSettingsAreMarkedAndPutBackByTheReset() {
+        var moved = state()
+        let changedArchive = moved.chooseArchiveDelay(.hours(0), forProfile: "work")
+        #expect(changedArchive)
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "work") == [.tabs])
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "home").isEmpty, "another profile's delay is not this list's")
+        let changedLimit = moved.chooseAwakeTabLimit(8)
+        #expect(changedLimit)
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "home") == [.tabs], "the limit belongs to the device, whatever the profile")
+        let didReset = SettingsDefaults.reset(&moved, profileId: "work")
+        #expect(didReset)
+        #expect(moved.archiveChoice(forProfile: "work") == .inherited)
+        #expect(moved.awakeTabLimit == SleepPlanner.defaultCap)
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "work").isEmpty)
+        #expect(moved.archiveChoice(forProfile: "default") == .hours(12), "the reset of a profile does not touch the default one")
+    }
+
+    @Test func theDefaultProfilesArchiveDelayGoesBackToTwelveHours() {
+        var moved = state()
+        moved.chooseArchiveDelay(.hours(168), forProfile: "default")
+        #expect(SettingsDefaults.changedRows(in: moved, profileId: "default") == [.tabs])
+        let didReset = SettingsDefaults.reset(&moved, profileId: "default")
+        #expect(didReset)
+        #expect(moved.archiveChoice(forProfile: "default") == .hours(12))
+    }
+
     @Test func aResetOnAnUnknownProfileStillRestoresThePrivacy() {
         var moved = state()
         moved.privacy.choose(.standard)
@@ -334,5 +360,138 @@ struct AboutLinksTests {
         #expect(AboutLinks.help(languageCode: "fr").absoluteString == "https://lucium.app/communaute/")
         #expect(AboutLinks.help(languageCode: "en").absoluteString == "https://lucium.app/en/community/")
         #expect(AboutLinks.help(languageCode: nil).absoluteString == "https://lucium.app/en/community/", "any other language reads the English site")
+    }
+}
+
+// MARK: - Tabs: archive delay and awake tabs
+
+@Suite("Settings screen: the archive delay of a profile")
+struct ArchiveDelayChoiceTests {
+    @Test func theDefaultProfileShowsTwelveHoursWhenTheStateSaysNothingAndAnotherInherits() {
+        let before = state()
+        #expect(before.archiveChoice(forProfile: "default") == .hours(12), "the Mac's default")
+        #expect(before.archiveChoice(forProfile: "work") == .inherited)
+        #expect(state(settings: ["autoArchiveHours": .number(168)]).archiveChoice(forProfile: "work") == .inherited)
+        #expect(state(settings: ["autoArchiveHours": .number(168)]).archiveChoice(forProfile: "default") == .hours(168))
+    }
+
+    @Test func theChoiceIsWhatTheSweepUses() {
+        var chosen = state(settings: ["autoArchiveHours": .number(12)])
+        let r1 = chosen.chooseArchiveDelay(.hours(168), forProfile: "work")
+        #expect(r1)
+        #expect(chosen.autoArchiveHours(forSpace: "s-work") == 168)
+        #expect(chosen.autoArchiveHours(forSpace: "s-home") == 12, "another profile is not touched")
+        let r2 = chosen.chooseArchiveDelay(.hours(0), forProfile: "default")
+        #expect(r2)
+        #expect(chosen.autoArchiveHours(forSpace: "s-default") == 0, "never")
+        #expect(chosen.autoArchiveHours(forSpace: "s-home") == 0, "a profile that inherits follows the general delay")
+    }
+
+    @Test func theChoiceIsWrittenWhereTheMacReadsIt() {
+        var chosen = state(settings: ["autoArchiveHours": .number(12), "profiles": .object([:])])
+        chosen.chooseArchiveDelay(.hours(24), forProfile: "default")
+        chosen.chooseArchiveDelay(.hours(0), forProfile: "work")
+        #expect(settings(of: chosen)["autoArchiveHours"] == .number(24), "the default profile's delay is the general one")
+        #expect(ownKeys(of: chosen, profile: "work")?["autoArchiveHours"] == .number(0))
+        #expect(ownKeys(of: chosen, profile: "default") == nil)
+    }
+
+    @Test func goingBackToTheDefaultProfilesDelayRemovesTheOverrideAndKeepsTheOtherKeys() {
+        let entry: [String: JSONValue] = ["downloadDir": .string("/Users/me/Work"), "autoArchiveHours": .number(168)]
+        var chosen = state(settings: ["autoArchiveHours": .number(12), "profiles": .object(["work": .object(entry), "home": .object(["autoArchiveHours": .number(24)])])])
+        let r3 = chosen.chooseArchiveDelay(.inherited, forProfile: "work")
+        #expect(r3)
+        #expect(ownKeys(of: chosen, profile: "work") == ["downloadDir": entry["downloadDir"]!])
+        let r4 = chosen.chooseArchiveDelay(.inherited, forProfile: "home")
+        #expect(r4)
+        #expect(ownKeys(of: chosen, profile: "home") == nil, "no empty entry is left behind, as the Mac does")
+    }
+
+    @Test func anOverrideLeftOnTheDefaultProfileDoesNotHideItsChoice() {
+        var chosen = state(settings: ["autoArchiveHours": .number(12), "profiles": .object(["default": .object(["autoArchiveHours": .number(168)])])])
+        #expect(chosen.archiveChoice(forProfile: "default") == .hours(168))
+        let r5 = chosen.chooseArchiveDelay(.hours(24), forProfile: "default")
+        #expect(r5)
+        #expect(chosen.archiveChoice(forProfile: "default") == .hours(24))
+        #expect(chosen.autoArchiveHours(forSpace: "s-default") == 24)
+    }
+
+    @Test func aDelayThatIsNotOfferedAnUnknownProfileAndANoOpChangeNothing() {
+        var chosen = state(settings: ["autoArchiveHours": .number(12)])
+        let before = chosen
+        let r6 = chosen.chooseArchiveDelay(.hours(5), forProfile: "work")
+        #expect(!r6)
+        let r7 = chosen.chooseArchiveDelay(.hours(24), forProfile: "ghost")
+        #expect(!r7)
+        let r8 = chosen.chooseArchiveDelay(.inherited, forProfile: "default")
+        #expect(!r8)
+        let r9 = chosen.chooseArchiveDelay(.hours(12), forProfile: "default")
+        #expect(!r9)
+        #expect(chosen == before)
+    }
+
+    @Test func aDelayTheMacWroteThatIsNotOfferedIsShownAndKeptUntilAnotherIsChosen() {
+        var chosen = state(settings: ["autoArchiveHours": .number(48)])
+        #expect(chosen.archiveChoice(forProfile: "default") == .hours(48))
+        let r10 = chosen.chooseArchiveDelay(.hours(168), forProfile: "default")
+        #expect(r10)
+        #expect(chosen.archiveChoice(forProfile: "default") == .hours(168))
+    }
+
+    @Test func nothingElseOfTheStateMovesAndAStateWithNoSettingsStaysANewProfile() {
+        var before = state()
+        before.rest["somethingNewer"] = .array([.string("kept")])
+        var after = before
+        after.chooseArchiveDelay(.hours(0), forProfile: "work")
+        #expect(after.privacy == .newProfile, "choosing a delay must not weaken the protection")
+        #expect(after.rest["somethingNewer"] == before.rest["somethingNewer"])
+        #expect(after.spaces == before.spaces && after.tabs == before.tabs)
+        var known = state(settings: ["blockAds": .bool(true), "future": .object(["x": .number(1)])])
+        let beforeKnown = known
+        known.chooseArchiveDelay(.hours(24), forProfile: "default")
+        for key in ["blockAds", "future"] { #expect(settings(of: known)[key] == settings(of: beforeKnown)[key]) }
+    }
+}
+
+@Suite("Settings screen: tabs kept awake")
+struct AwakeTabLimitTests {
+    @Test func theStateSaysNothingUntilALimitIsChosen() {
+        #expect(state().awakeTabLimit == nil)
+        #expect(state(settings: ["sleepAwakeMax": .number(12)]).awakeTabLimit == 12, "a number the Mac wrote")
+        #expect(state(settings: ["sleepAwakeMax": .number(0)]).awakeTabLimit == 0, "no limit")
+        for bad in [JSONValue.number(-1), .number(2.5), .number(501), .string("4"), .bool(true)] {
+            #expect(state(settings: ["sleepAwakeMax": bad]).awakeTabLimit == nil, "\(bad) is not a limit")
+        }
+    }
+
+    @Test func theChoiceIsWrittenAsTheMacWritesItAndTouchesNothingElse() {
+        var chosen = state(settings: ["blockAds": .bool(true)])
+        let r11 = chosen.chooseAwakeTabLimit(8)
+        #expect(r11)
+        #expect(settings(of: chosen)["sleepAwakeMax"] == .number(8))
+        #expect(settings(of: chosen)["blockAds"] == .bool(true))
+        #expect(chosen.awakeTabLimit == 8)
+        let r12 = chosen.chooseAwakeTabLimit(0)
+        #expect(r12)
+        #expect(chosen.awakeTabLimit == 0)
+    }
+
+    @Test func aLimitThatIsNotOfferedOrAlreadyInForceChangesNothing() {
+        var chosen = state(settings: ["sleepAwakeMax": .number(8)])
+        let before = chosen
+        let r13 = chosen.chooseAwakeTabLimit(5)
+        #expect(!r13)
+        let r14 = chosen.chooseAwakeTabLimit(8)
+        #expect(!r14)
+        var fresh = state()
+        let sameAsDefault = fresh.chooseAwakeTabLimit(SleepPlanner.defaultCap)
+        #expect(!sameAsDefault, "the application's own default is already in force")
+        #expect(chosen == before)
+    }
+
+    @Test func aStateWithNoSettingsStaysANewProfile() {
+        var chosen = state()
+        chosen.chooseAwakeTabLimit(2)
+        #expect(chosen.privacy == .newProfile)
     }
 }

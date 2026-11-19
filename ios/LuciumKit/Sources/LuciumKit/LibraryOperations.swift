@@ -97,7 +97,7 @@ extension BrowserState {
     }
 
     /// Hours of idleness after which a Today tab goes to the archive (0 = never): the value of the space's profile, else the general one, else
-    /// 12, the Mac's default (`autoArchiveHours`, `profileArchiveHours`). Read from the settings the Mac wrote; the iPhone has no screen for it yet.
+    /// 12, the Mac's default (`autoArchiveHours`, `profileArchiveHours`). Read from the settings (the Mac's, or the ones Settings › Tabs wrote).
     public func autoArchiveHours(forSpace spaceId: String) -> Double {
         func hours(_ value: JSONValue?) -> Double? {
             if case .number(let number)? = value, number.isFinite, number >= 0 { return number }
