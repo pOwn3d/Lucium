@@ -190,6 +190,20 @@ struct TabsSheet: View {
                 }
             }
         }
+        Section {
+            Button { model.showKept(model.keptList) } label: {
+                HStack(spacing: Gap.m) {
+                    IconView(.bookmark, size: 22).foregroundStyle(.secondary)
+                    Text("kept.title").font(.subheadline)
+                    Spacer(minLength: 8)
+                    Text("kept.count \(model.bookmarks.count + model.readLaterPages.count)").font(.footnote).foregroundStyle(.secondary)
+                    IconView(.chevron, size: 16).foregroundStyle(.secondary)
+                }
+                .frame(minHeight: 48)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
         if model.archiveCount > 0 {
             Section {
                 Button { path.append(.archive) } label: {

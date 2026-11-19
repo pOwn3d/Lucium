@@ -69,6 +69,7 @@ struct PageCard: View {
             toolbar
             Divider()
             SyncClosedBanner(model: model)
+            KeepBanner(model: model)
             PageArea(model: model)
         }
         .background(Color(.systemBackground))

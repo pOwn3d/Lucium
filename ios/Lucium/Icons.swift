@@ -11,7 +11,7 @@ enum Icon: String {
     case plus = "IconPlus", person = "IconPerson", check = "IconCheck"
     case commands = "icon-commands", pin = "icon-pin", archive = "icon-archive", star = "icon-star", restore = "icon-restore"
     case trash = "icon-trash", rename = "icon-rename", folderPlus = "icon-folder-plus", more = "icon-more", sidebar = "icon-sidebar", download = "icon-download"
-    case settings = "icon-settings"
+    case settings = "icon-settings", bookmark = "icon-bookmark", later = "icon-later"
 
     var image: Image { Image(rawValue) }
 }
