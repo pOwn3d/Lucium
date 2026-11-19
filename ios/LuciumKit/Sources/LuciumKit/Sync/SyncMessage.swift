@@ -38,8 +38,10 @@ public struct SyncHello: Equatable, Sendable {
     public let hosts: [String]?
     /// The port the Mac listens on now (review n° 38). Nil from the phone.
     public let port: Int?
+    /// The highest version of the format of differences this device reads (§31.1, 1 to 255), or nil when it only knows whole snapshots.
+    public let diff: Int?
 
-    public init(device: SyncDeviceInfo, nonce: Data, categories: [String], baseHash: String?, stateVersion: Int, appVersion: String, now: Int, hosts: [String]? = nil, port: Int? = nil) {
+    public init(device: SyncDeviceInfo, nonce: Data, categories: [String], baseHash: String?, stateVersion: Int, appVersion: String, now: Int, hosts: [String]? = nil, port: Int? = nil, diff: Int? = nil) {
         self.device = device
         self.nonce = nonce
         self.categories = categories
@@ -49,7 +51,11 @@ public struct SyncHello: Equatable, Sendable {
         self.now = now
         self.hosts = hosts
         self.port = port
+        self.diff = diff
     }
+
+    /// The version of the format of differences this build reads and writes (§31.1).
+    public static let diffVersion = 1
 }
 
 /// A message of the protocol, after it has been read and found to be well formed (§7.3). The parts of a snapshot and the list of open tabs are checked
@@ -66,7 +72,10 @@ public enum SyncMessage: Equatable, Sendable {
     /// `port` is the port the Mac listens on now (review n° 38): the one of the QR may have been replaced since.
     case pairAccept(device: SyncDeviceInfo, proof: Data, hosts: [String], port: Int)
     case snapshotPart(JSONValue)
+    /// The count and the digest of the WHOLE snapshot, also when the parts were a difference (§31.2).
     case snapshotEnd(entityCount: Int, digest: String)
+    /// Only in a session by differences (§31.4): the snapshot of the other was rebuilt (`ok`), or the whole one is asked for.
+    case snapshotCheck(ok: Bool)
     /// Retired (§27.11): no device sends it any more. A device that still does is read without its body and ignored by the session, which logs it.
     case openTabs
     case result(digest: String)
@@ -86,6 +95,7 @@ public enum SyncMessage: Equatable, Sendable {
         case .pairAccept: "pair.accept"
         case .snapshotPart: "snapshot.part"
         case .snapshotEnd: "snapshot.end"
+        case .snapshotCheck: "snapshot.check"
         case .openTabs: "open-tabs"
         case .result: "result"
         case .commit: "commit"
@@ -117,11 +127,18 @@ public enum SyncTransitions {
             if history == ["pair.challenge"] { return type == "pair.nonce" }
             return history == ["pair.challenge", "pair.nonce"] && type == "pair.accept"
         case .session:
+            // §31.5: a second snapshot (the whole one that a failed rebuild asks for) comes only after the `snapshot.check`, and at most one. The history may collapse the
+            // parts that follow one another into one entry: only whether a part came since the last end is asked.
+            let ends = history.filter { $0 == "snapshot.end" }.count
+            let sinceEnd = history.suffix(from: (history.lastIndex(of: "snapshot.end") ?? -1) + 1)
+            let partsSinceEnd = sinceEnd.contains("snapshot.part")
+            let roundIsOpen = ends == 0 || (ends == 1 && seen("snapshot.check"))
             switch type {
             case "hello": return !seen("hello")
-            case "snapshot.part", "open-tabs": return seen("hello") && !seen("snapshot.end")
-            case "snapshot.end": return seen("snapshot.part") && !seen("snapshot.end")
-            case "result": return seen("snapshot.end") && !seen("result")
+            case "snapshot.part", "open-tabs": return seen("hello") && !seen("result") && roundIsOpen
+            case "snapshot.end": return partsSinceEnd && roundIsOpen
+            case "snapshot.check": return ends == 1 && !partsSinceEnd && !seen("snapshot.check")
+            case "result": return ends >= 1 && !partsSinceEnd && !seen("result")
             case "commit": return seen("result") && !seen("commit")
             case "unpair": return seen("hello")
             default: return false
@@ -223,7 +240,7 @@ public enum SyncMessageCodec {
         return count
     }
 
-    private static let knownTypes: Set<String> = ["hello", "pair.challenge", "pair.request", "pair.nonce", "pair.reveal", "pair.accept", "snapshot.part", "snapshot.end", "open-tabs", "result", "commit", "unpair", "error", "bye"]
+    private static let knownTypes: Set<String> = ["hello", "pair.challenge", "pair.request", "pair.nonce", "pair.reveal", "pair.accept", "snapshot.part", "snapshot.end", "snapshot.check", "open-tabs", "result", "commit", "unpair", "error", "bye"]
 
     /// A string over 64 KiB, a number that is not finite or that JavaScript would write with an exponent, a nesting beyond 32 levels, a `__proto__` key.
     static func hasProblem(_ value: JSONValue, depth: Int) -> Bool {
@@ -314,7 +331,12 @@ public enum SyncMessageCodec {
                 guard let number = Self.port(raw) else { return nil }
                 port = number
             }
-            return .hello(SyncHello(device: device, nonce: nonce, categories: categories, baseHash: baseHash, stateVersion: stateVersion, appVersion: appVersion, now: now, hosts: hosts, port: port))
+            var diff: Int?
+            if let raw = fields["diff"] {
+                guard let number = integer(raw, minimum: 1), number <= 255 else { return nil }
+                diff = number
+            }
+            return .hello(SyncHello(device: device, nonce: nonce, categories: categories, baseHash: baseHash, stateVersion: stateVersion, appVersion: appVersion, now: now, hosts: hosts, port: port, diff: diff))
         case "pair.challenge":
             return nonce(fields["nonce"]).map { .pairChallenge(nonce: $0) }
         case "pair.request":
@@ -334,6 +356,9 @@ public enum SyncMessageCodec {
         case "snapshot.end":
             guard let count = integer(fields["entityCount"], minimum: 0), let digest = digest(fields["digest"]) else { return nil }
             return .snapshotEnd(entityCount: count, digest: digest)
+        case "snapshot.check":
+            guard case .bool(let ok)? = fields["ok"] else { return nil }
+            return .snapshotCheck(ok: ok)
         case "open-tabs":
             return .openTabs
         case "result": return digest(fields["digest"]).map { .result(digest: $0) }
@@ -381,6 +406,19 @@ public enum SyncMessageCodec {
             guard let stamps = object(raw), stamps.values.allSatisfy({ if case .string = $0 { true } else { false } }) else { return false }
         }
         if let raw = fields["withheld"], texts(raw, max: 10_000, maxCharacters: 128) == nil { return false }
+        // A difference (§31.2): the base it is with, and what it takes out of that base.
+        if let raw = fields["base"], digest(raw) == nil { return false }
+        for name in ["removedEntities", "removedTombstones"] {
+            guard let raw = fields[name] else { continue }
+            guard case .array(let items) = raw, items.count <= 100_000 else { return false }
+            for item in items {
+                guard let members = object(item), case .string(let kind)? = members["kind"], (1...64).contains(kind.utf16.count), !SyncSnapshot.namesOfAnObject.contains(kind),
+                      case .string(let id)? = members["id"], (1...128).contains(id.utf16.count), !SyncSnapshot.namesOfAnObject.contains(id) else { return false }
+            }
+        }
+        if let raw = fields["removedLists"] {
+            guard let keys = texts(raw, max: 100_000, maxCharacters: 400), keys.allSatisfy({ !$0.isEmpty && !SyncSnapshot.namesOfAnObject.contains($0) }) else { return false }
+        }
         return true
     }
 
@@ -400,6 +438,7 @@ public enum SyncMessageCodec {
             members["now"] = .number(Double(hello.now))
             if let hosts = hello.hosts { members["hosts"] = .array(hosts.map { .string($0) }) }
             if let port = hello.port { members["port"] = .number(Double(port)) }
+            if let diff = hello.diff { members["diff"] = .number(Double(diff)) }
         case .pairRequest(let device, let nonce, let proof, let commit):
             members["device"] = deviceValue(device)
             members["nonce"] = .string(SyncEncoding.base64url(nonce))
@@ -426,6 +465,8 @@ public enum SyncMessageCodec {
         case .snapshotEnd(let entityCount, let digest):
             members["entityCount"] = .number(Double(entityCount))
             members["digest"] = .string(digest)
+        case .snapshotCheck(let ok):
+            members["ok"] = .bool(ok)
         case .result(let digest), .commit(let digest):
             members["digest"] = .string(digest)
         case .pairChallenge, .pairNonce, .pairAccept:

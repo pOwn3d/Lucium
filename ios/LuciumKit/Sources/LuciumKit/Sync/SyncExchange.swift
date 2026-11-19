@@ -41,9 +41,14 @@ public struct SyncExchangeSummary: Equatable, Sendable {
     public var todayTabsTaken: Int
     /// The Today tabs of this phone that stayed here because the shared set was full (§27.4, the limit of 200); 0 when that category is not common.
     public var todayTabsUnshared: Int
+    /// How the snapshots of this session went (§31): whole, as differences with the base, or as differences of which one had to be asked again whole.
+    public var snapshots: SnapshotMode
+
+    /// §31: whole, as differences with the base both devices hold, or as differences of which one had to be asked again whole (never shown to the person).
+    public enum SnapshotMode: String, Equatable, Sendable { case whole, differences, fallback }
 
     public init(at: Int, conflicts: [SettledConflict], refusedSent: [SyncInbound.Refused], refusedReceived: [SyncInbound.Refused], rejectedByApply: [String], applied: Bool, adoptedTheMacState: Bool,
-                spacesSetAside: Int, categories: Set<SyncCategory> = [], taken: Int = 0, todayTabsTaken: Int = 0, todayTabsUnshared: Int = 0) {
+                spacesSetAside: Int, categories: Set<SyncCategory> = [], taken: Int = 0, todayTabsTaken: Int = 0, todayTabsUnshared: Int = 0, snapshots: SnapshotMode = .whole) {
         self.at = at
         self.conflicts = conflicts
         self.refusedSent = refusedSent
@@ -56,6 +61,7 @@ public struct SyncExchangeSummary: Equatable, Sendable {
         self.taken = taken
         self.todayTabsTaken = todayTabsTaken
         self.todayTabsUnshared = todayTabsUnshared
+        self.snapshots = snapshots
     }
 }
 
@@ -63,7 +69,8 @@ public struct SyncExchangeSummary: Equatable, Sendable {
 /// same steps with their own state), written for a phone:
 ///
 ///   freeze    the book of marks is brought up to the state and a snapshot is frozen (the categories both ticked; the spaces set aside left out);
-///   send      the snapshot goes in parts, then `snapshot.end` with its count and its digest;
+///   send      the snapshot goes in parts, then `snapshot.end` with its count and its digest; when both devices hold the same base, only what differs from it goes (§31),
+///             the other rebuilds the snapshot and says so with `snapshot.check` (a whole one is sent if it could not);
 ///   check     what comes in is checked for its count and its digest (`truncated`), its form (`SyncSnapshot.read`), then entity by entity (`SyncInbound`);
 ///   merge     `SyncMerge.merge(base, local, remote, withheld)`: the same function with the same inputs on both sides;
 ///   result    the digests of the merged snapshots are compared; different: `divergence`, NOTHING is written on either side;
@@ -120,14 +127,16 @@ public struct SyncExchangeBody: SyncSessionBody {
         }
     }
 
-    private func receiveSnapshot(_ channel: SyncChannel) async throws -> SyncSnapshotParts.Assembled {
-        var assembler = SyncSnapshotParts.Assembler()
+    /// A snapshot that came in whole or was rebuilt, or the reason a difference did not rebuild (§31.4: not an error of the session, a whole snapshot is asked for).
+    /// With `rebuildOn`, a first part that says `base` is a difference and is rebuilt on it (§31.3); without it, a difference is a bad message: none was agreed.
+    private func receiveSnapshot(_ channel: SyncChannel, rebuildOn: (snapshot: SyncSnapshot, hash: String)? = nil) async throws -> SyncSnapshotParts.Assembler.Outcome {
+        var assembler = SyncSnapshotParts.Assembler(differencesAgreed: rebuildOn != nil)
         while true {
             switch try await next(channel) {
             case .snapshotPart(let part): try assembler.add(part)
             // Retired (§27.11): a Mac that still sends it is ignored and logged, the session goes on.
             case .openTabs: log("the Mac sent the retired message open-tabs: ignored")
-            case .snapshotEnd(let count, let digest): return try assembler.finish(entityCount: count, digest: digest)
+            case .snapshotEnd(let count, let digest): return try assembler.end(entityCount: count, digest: digest, rebuildOn: rebuildOn)
             case let other: throw SyncFailure(.badMessage, "a \(other.type) is not expected in a snapshot")
             }
         }
@@ -172,6 +181,8 @@ public struct SyncExchangeBody: SyncSessionBody {
         // A base is used only when both devices hold the same one (§8.2). A phone that adopts the Mac's state has none to speak of: it said `baseHash: null` in its
         // `hello` (`baseHash(forMac:)`), so the two hashes cannot be equal.
         let base: SyncSnapshot? = (stored != nil && context.local.baseHash == stored?.hash && context.remote.baseHash == stored?.hash) ? stored?.snapshot : nil
+        // Differences only when both devices read them and hold the same base (§31.1): both compute the same answer from the two `hello`.
+        let rebuildOn: (snapshot: SyncSnapshot, hash: String)? = (base != nil && stored != nil && context.local.diff != nil && context.remote.diff != nil) ? (base!, stored!.hash) : nil
 
         // freeze
         let state = await host.currentState()
@@ -191,14 +202,36 @@ public struct SyncExchangeBody: SyncSessionBody {
         if !refusedSent.isEmpty { log("not sent: \(refusedSent.count) entities (\(Dictionary(grouping: refusedSent, by: \.reason.rawValue).mapValues(\.count)))") }
 
         // send
-        let parts = SyncSnapshotParts.parts(of: local, withheld: locked.filter { !SyncSnapshot.namesOfAnObject.contains($0) }.sorted(by: { SyncCanonical.compare($0, $1) < 0 }))
-        guard parts.count <= SyncLimits.maxParts else { throw SyncFailure(.tooLarge, "the snapshot needs more parts than the bound") }
-        for part in parts { try await channel.send(.snapshotPart(.object(part))) }
+        let withheldNames = locked.filter { !SyncSnapshot.namesOfAnObject.contains($0) }.sorted(by: { SyncCanonical.compare($0, $1) < 0 })
         let entityCount = local.entities.values.reduce(0) { $0 + $1.count }
-        try await channel.send(.snapshotEnd(entityCount: entityCount, digest: local.digest))
+        func sendSnapshot(_ parts: [[String: JSONValue]]) async throws {
+            guard parts.count <= SyncLimits.maxParts else { throw SyncFailure(.tooLarge, "the snapshot needs more parts than the bound") }
+            for part in parts { try await channel.send(.snapshotPart(.object(part))) }
+            try await channel.send(.snapshotEnd(entityCount: entityCount, digest: local.digest))
+        }
+        if let rebuildOn { try await sendSnapshot(SyncSnapshotParts.parts(differingFrom: rebuildOn.snapshot, hash: rebuildOn.hash, of: local, withheld: withheldNames)) } else { try await sendSnapshot(SyncSnapshotParts.parts(of: local, withheld: withheldNames)) }
 
         // receive, check
-        let received = try await receiveSnapshot(channel)
+        var snapshots: SyncExchangeSummary.SnapshotMode = rebuildOn != nil ? .differences : .whole
+        var outcome = try await receiveSnapshot(channel, rebuildOn: rebuildOn)
+        if rebuildOn != nil {
+            // Each side says whether it rebuilt the snapshot of the other (§31.4) before anything else is sent: a whole snapshot asked for comes in its place, in the same order on both.
+            var rebuilt = true
+            if case .didNotRebuild = outcome { rebuilt = false }
+            try await channel.send(.snapshotCheck(ok: rebuilt))
+            guard case .snapshotCheck(let theirs) = try await next(channel) else { throw SyncFailure(.badMessage, "a snapshot.check was expected") }
+            if !theirs {
+                snapshots = .fallback
+                try await sendSnapshot(SyncSnapshotParts.parts(of: local, withheld: withheldNames))
+            }
+            if case .didNotRebuild(let reason) = outcome {
+                snapshots = .fallback
+                log("a difference of the Mac did not rebuild (\(reason)): the whole snapshot was asked for")
+                outcome = try await receiveSnapshot(channel)
+                if case .didNotRebuild(let again) = outcome { throw SyncFailure(.truncated, again) }
+            }
+        }
+        guard case .assembled(let received) = outcome else { throw SyncFailure(.truncated, "the snapshot of the Mac did not rebuild") }
         let exchanged = SyncInbound.onlyExchanged(received.snapshot, categories: context.categories)
         var cleaned = SyncInbound.clean(exchanged.snapshot, now: now(), base: base)
         cleaned.refused = (cleaned.refused + exchanged.refused).sorted { a, b in
@@ -240,7 +273,7 @@ public struct SyncExchangeBody: SyncSessionBody {
         let taken = (applied?.changed ?? false) ? patch.upserts.count + patch.removals.count + patch.settings.count : 0
         await host.exchanged(SyncExchangeSummary(at: at, conflicts: conflicts, refusedSent: refusedSent, refusedReceived: cleaned.refused, rejectedByApply: applied?.rejected ?? [], applied: applied?.changed ?? false,
                                                  adoptedTheMacState: adopting, spacesSetAside: aside.count, categories: context.categories, taken: taken,
-                                                 todayTabsTaken: patch.upserts.filter { $0.create && $0.kind == .todayTab }.count, todayTabsUnshared: context.categories.contains(.todayTabs) ? marks.lastUnshared : 0))
+                                                 todayTabsTaken: patch.upserts.filter { $0.create && $0.kind == .todayTab }.count, todayTabsUnshared: context.categories.contains(.todayTabs) ? marks.lastUnshared : 0, snapshots: snapshots))
         return .committed(at: at)
     }
 

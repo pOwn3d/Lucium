@@ -38,12 +38,19 @@ export interface WireTombstone {
   stamp: string
 }
 
+/** An entity or a tombstone that a difference takes out of the base (§31.2). */
+export interface WireRemoval {
+  kind: string
+  id: string
+}
+
 interface Envelope {
   v: number
   n: number
 }
 
-export type Hello = Envelope & { t: 'hello'; device: DeviceInfo; nonce: string; categories: string[]; baseHash: string | null; stateVersion: number; appVersion: string; now: number; hosts?: string[]; port?: number }
+/** `diff` is the highest version of the format of differences this device reads (§31.1): absent, the device only knows whole snapshots. */
+export type Hello = Envelope & { t: 'hello'; device: DeviceInfo; nonce: string; categories: string[]; baseHash: string | null; stateVersion: number; appVersion: string; now: number; hosts?: string[]; port?: number; diff?: number }
 export type PairChallenge = Envelope & { t: 'pair.challenge'; nonce: string }
 export type PairRequest = Envelope & { t: 'pair.request'; device: DeviceInfo; nonce: string; proof: string; commit: string }
 /** The Mac's code nonce, sent after the commitment of the iPhone and a right proof (§4.7). */
@@ -61,8 +68,16 @@ export type SnapshotPart = Envelope & {
   order?: Record<string, string[]>
   orderStamps?: Record<string, string>
   withheld?: string[]
+  /** First part only: this snapshot is a difference with the base of this hash (§31.2). Absent: a whole snapshot. */
+  base?: string
+  removedEntities?: WireRemoval[]
+  removedTombstones?: WireRemoval[]
+  removedLists?: string[]
 }
+/** The count and the digest of the WHOLE snapshot, also when the parts were a difference (§31.2). */
 export type SnapshotEnd = Envelope & { t: 'snapshot.end'; entityCount: number; digest: string }
+/** Only in a session by differences (§31.4): the snapshot of the other was rebuilt (`ok`), or the whole one is asked for. */
+export type SnapshotCheck = Envelope & { t: 'snapshot.check'; ok: boolean }
 /** Retired (§27.11): no device sends it any more. A device that still does is read without its body and ignored by the session, which logs it. */
 export type OpenTabs = Envelope & { t: 'open-tabs' }
 export type ResultMessage = Envelope & { t: 'result'; digest: string }
@@ -71,7 +86,7 @@ export type Unpair = Envelope & { t: 'unpair' }
 export type ErrorMessage = Envelope & { t: 'error'; code: ErrorCode; fatal: boolean; supported?: number[]; detail?: string }
 export type Bye = Envelope & { t: 'bye' }
 
-export type Message = Hello | PairChallenge | PairRequest | PairNonce | PairReveal | PairAccept | SnapshotPart | SnapshotEnd | OpenTabs | ResultMessage | Commit | Unpair | ErrorMessage | Bye
+export type Message = Hello | PairChallenge | PairRequest | PairNonce | PairReveal | PairAccept | SnapshotPart | SnapshotEnd | SnapshotCheck | OpenTabs | ResultMessage | Commit | Unpair | ErrorMessage | Bye
 export type MessageType = Message['t']
 
 // ---------- the walk over hostile JSON ----------
@@ -222,6 +237,13 @@ function readTombstone(value: unknown): WireTombstone | null {
   return typeof stamp === 'string' && STAMP.test(stamp) ? { kind, id, stamp } : null
 }
 
+function readRemoval(value: unknown): WireRemoval | null {
+  if (!isObject(value)) return null
+  const { kind, id } = value
+  if (typeof kind !== 'string' || kind.length === 0 || kind.length > 64 || isInheritedName(kind) || typeof id !== 'string' || id.length === 0 || id.length > 128 || isInheritedName(id)) return null
+  return { kind, id }
+}
+
 /** Every item of a list read by `read`, or null when the list is too long, is not a list, or holds an item that does not read. */
 function readList<T>(value: unknown, max: number, read: (item: unknown) => T | null): T[] | null {
   if (!Array.isArray(value) || value.length > max) return null
@@ -248,7 +270,8 @@ const readHello: Reader<Hello> = (m) => {
   if (!isInt(m['stateVersion'], 1) || !textBytes(m['appVersion'], 32) || !isInt(m['now'])) return null
   if (m['hosts'] !== undefined && !textList(m['hosts'], MAX_HOSTS, 253)) return null
   if (m['port'] !== undefined && !isPort(m['port'])) return null
-  return { device, nonce: m['nonce'], categories: m['categories'], baseHash, stateVersion: m['stateVersion'], appVersion: m['appVersion'], now: m['now'], ...(m['hosts'] !== undefined ? { hosts: m['hosts'] } : {}), ...(m['port'] !== undefined ? { port: m['port'] } : {}) }
+  if (m['diff'] !== undefined && !(isInt(m['diff'], 1) && m['diff'] <= 255)) return null
+  return { device, nonce: m['nonce'], categories: m['categories'], baseHash, stateVersion: m['stateVersion'], appVersion: m['appVersion'], now: m['now'], ...(m['hosts'] !== undefined ? { hosts: m['hosts'] } : {}), ...(m['port'] !== undefined ? { port: m['port'] } : {}), ...(m['diff'] !== undefined ? { diff: m['diff'] } : {}) }
 }
 
 const readPairRequest: Reader<PairRequest> = (m) => {
@@ -291,10 +314,26 @@ const readSnapshotPart: Reader<SnapshotPart> = (m) => {
     if (!textList(m['withheld'], 10_000, 128) || !m['withheld'].every((id) => !isInheritedName(id))) return null
     result.withheld = m['withheld']
   }
+  if (m['base'] !== undefined) {
+    if (typeof m['base'] !== 'string' || !HEX_32.test(m['base'])) return null
+    result.base = m['base']
+  }
+  for (const name of ['removedEntities', 'removedTombstones'] as const) {
+    if (m[name] === undefined) continue
+    const removals = readList(m[name], 100_000, readRemoval)
+    if (removals === null) return null
+    result[name] = removals
+  }
+  if (m['removedLists'] !== undefined) {
+    if (!textList(m['removedLists'], 100_000, 400) || !m['removedLists'].every((key) => key.length > 0 && !isInheritedName(key))) return null
+    result.removedLists = m['removedLists']
+  }
   return result
 }
 
 const readSnapshotEnd: Reader<SnapshotEnd> = (m) => (isInt(m['entityCount']) && typeof m['digest'] === 'string' && HEX_32.test(m['digest']) ? { entityCount: m['entityCount'], digest: m['digest'] } : null)
+
+const readSnapshotCheck: Reader<SnapshotCheck> = (m) => (typeof m['ok'] === 'boolean' ? { ok: m['ok'] } : null)
 
 const readDigest = (m: Record<string, unknown>): { digest: string } | null => (typeof m['digest'] === 'string' && HEX_32.test(m['digest']) ? { digest: m['digest'] } : null)
 
@@ -315,6 +354,7 @@ const READERS: { [T in MessageType]: Reader<Extract<Message, { t: T }>> } = {
   'pair.accept': readPairAccept,
   'snapshot.part': readSnapshotPart,
   'snapshot.end': readSnapshotEnd,
+  'snapshot.check': readSnapshotCheck,
   'open-tabs': () => ({}),
   result: readDigest,
   commit: readDigest,
@@ -399,6 +439,9 @@ export type Role = 'mac' | 'ios'
  */
 export class PhaseTracker {
   private readonly seen = new Set<MessageType>()
+  /** The snapshots that were ended, and the parts received since the last end (§31.5: a session by differences may have a second, whole snapshot). */
+  private ends = 0
+  private partsSinceEnd = 0
 
   constructor(private readonly receiver: Role, private readonly phase: Phase) {}
 
@@ -408,12 +451,22 @@ export class PhaseTracker {
     const allowed = this.allows(type)
     if (!allowed) return bad
     this.seen.add(type)
+    if (type === 'snapshot.part') this.partsSinceEnd++
+    if (type === 'snapshot.end') {
+      this.ends++
+      this.partsSinceEnd = 0
+    }
     return { ok: true }
   }
 
   /** The types received so far, for a caller that must know where the exchange stands. */
   has(type: MessageType): boolean {
     return this.seen.has(type)
+  }
+
+  /** Whether a snapshot may be going on: the first one, or the second after a `snapshot.check`. */
+  private roundIsOpen(): boolean {
+    return this.ends === 0 || (this.ends === 1 && this.seen.has('snapshot.check'))
   }
 
   private allows(type: MessageType): boolean {
@@ -427,13 +480,16 @@ export class PhaseTracker {
     switch (type) {
       case 'hello':
         return !seen('hello')
+      // A second snapshot (the whole one a failed rebuild asks for, §31.4) comes only after the `snapshot.check` of the other, and at most one.
       case 'snapshot.part':
       case 'open-tabs':
-        return seen('hello') && !seen('snapshot.end')
+        return seen('hello') && !seen('result') && this.roundIsOpen()
       case 'snapshot.end':
-        return seen('snapshot.part') && !seen('snapshot.end')
+        return this.partsSinceEnd > 0 && this.roundIsOpen()
+      case 'snapshot.check':
+        return this.ends === 1 && this.partsSinceEnd === 0 && !seen('snapshot.check')
       case 'result':
-        return seen('snapshot.end') && !seen('result')
+        return this.ends >= 1 && this.partsSinceEnd === 0 && !seen('result')
       case 'commit':
         return seen('result') && !seen('commit')
       case 'unpair':

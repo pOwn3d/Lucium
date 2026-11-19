@@ -334,7 +334,11 @@ final class SyncInteropTests: BrowserCoreTestCase {
         try await assertSameBase(phone, "\(count) tabs each")
 
         // A session with nothing changed: what the interval of 30 seconds does most of the time.
-        report["quietSession"] = costJSON(try await phone.session())
+        let quiet = try await phone.session()
+        report["quietSession"] = costJSON(quiet)
+        // §31: both devices hold the same base, so nothing but the difference (here none) goes: 93 KB each way before the card 653, under 2 KB after.
+        XCTAssertLessThan(quiet.sentBytes, 20_000, "a session with nothing changed sends the difference with the base, not the whole snapshot")
+        XCTAssertLessThan(quiet.receivedBytes, 20_000)
 
         // The cap (§27.4): each device shares 200 tabs; a tab more is « not shared » and stays where it is.
         phone.openToday("over-phone", in: phoneSpace, ageMs: 120_000)
@@ -353,7 +357,9 @@ final class SyncInteropTests: BrowserCoreTestCase {
         // A shared tab closed on each side: one session carries both closings (the work of a person who tidies their tabs).
         try await peer.dispatch("tab/archive", ["id": .string("phone-t-000")])
         phone.model.archive(try XCTUnwrap(phone.tab("mac-t-000")))
-        report["sessionWithOneTabClosedOnEachSide"] = costJSON(try await phone.session())
+        let closed = try await phone.session()
+        report["sessionWithOneTabClosedOnEachSide"] = costJSON(closed)
+        XCTAssertLessThan(closed.sentBytes, 20_000, "two tabs closed are a difference of a few entities")
         macState = try await peer.summary()
         XCTAssertNil(phone.tab("phone-t-000"))
         XCTAssertFalse(macState.tabs.contains { $0.id == "mac-t-000" })

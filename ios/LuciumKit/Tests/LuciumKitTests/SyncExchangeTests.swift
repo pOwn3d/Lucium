@@ -75,6 +75,12 @@ struct SyncTestMac: Sendable {
     var silentAfterHello = false
     /// Sends its settings and its archive whatever the categories both ticked (a Mac that does not keep to what it said in its hello), and merges them as it sends them.
     var ignoresTheCategories = false
+    /// Says `diff` in its hello (§31.1) and, when both hold the same base, sends only what differs from it and reads the phone's difference the same way.
+    var differences = false
+    /// Its difference loses what it changed on the way (the phone cannot rebuild its snapshot: the digest is not the announced one, §31.4).
+    var corruptsItsDifference = false
+    /// Its `snapshot.check` asks for the whole snapshot of the phone, whatever the phone's difference was.
+    var asksForTheWholeSnapshot = false
 
     struct Seen: @unchecked Sendable {
         var hello: [String: Any] = [:]
@@ -86,6 +92,11 @@ struct SyncTestMac: Sendable {
         var errors: [(String, Bool)] = []
         var types: [String] = []
         var merged: SyncMergeResult?
+        /// Whether the first part of the phone's first snapshot said it was a difference (`base`), and the checks the phone sent (§31.4).
+        var phoneSentADifference = false
+        var phoneChecks: [Bool] = []
+        /// The bytes the phone wrote in all (counted by the loopback).
+        var phoneBytes = 0
     }
 
     private struct Message: @unchecked Sendable { let fields: [String: Any]? }
@@ -118,6 +129,7 @@ struct SyncTestMac: Sendable {
         var hello: [String: Any] = ["device": ["id": macId, "name": "MacBook de test", "platform": "mac"], "nonce": SyncEncoding.base64url(Data(repeating: 3, count: 16)), "categories": categories,
                                     "baseHash": hash ?? NSNull(), "stateVersion": 1, "appVersion": "1.2.0", "now": now]
         hello["hosts"] = ["mac-de-test.local"]
+        if differences { hello["diff"] = SyncHello.diffVersion }
         try await mac.write("hello", hello)
         let theirs = try await mac.read()
         seen.hello = theirs.fields
@@ -138,7 +150,11 @@ struct SyncTestMac: Sendable {
         if !common.contains("archive") && !ignoresTheCategories { shown.entities["archived"] = nil }
         // What the Mac sends is what it would itself accept, with the phone's clock for the marks of the future (`hello.now`).
         let sent = SyncInbound.clean(shown, now: theirs.fields["now"] as? Int ?? now, base: (hash != nil && phoneHash == hash) ? base : nil).snapshot
-        let parts = SyncSnapshotParts.parts(of: sent, withheld: withheld)
+        // A session by differences (§31.1): both said `diff` and hold the same base.
+        let usableBase: SyncSnapshot? = (hash != nil && phoneHash == hash) ? base : nil
+        let byDifferences: (snapshot: SyncSnapshot, hash: String)? = (differences && theirs.fields["diff"] != nil && usableBase != nil) ? (usableBase!, hash!) : nil
+        var parts = byDifferences.map { SyncSnapshotParts.parts(differingFrom: $0.snapshot, hash: $0.hash, of: sent, withheld: withheld) } ?? SyncSnapshotParts.parts(of: sent, withheld: withheld)
+        if corruptsItsDifference, byDifferences != nil { parts[0]["entities"] = .array([]) }
         for (index, part) in parts.enumerated() {
             try await mac.write("snapshot.part", try Self.jsonObject(.object(part)) as? [String: Any] ?? [:])
             if index == 0, let code = errorAfterParts {
@@ -158,18 +174,50 @@ struct SyncTestMac: Sendable {
         if extraPartAfterEnd { try await mac.write("snapshot.part", try Self.jsonObject(.object(parts[0])) as? [String: Any] ?? [:]) }
 
         // What the phone sent.
-        var assembler = SyncSnapshotParts.Assembler()
+        var assembler = SyncSnapshotParts.Assembler(differencesAgreed: byDifferences != nil)
+        var firstPart = true
         while true {
             let message = try await mac.read()
             let type = message.fields["t"] as? String ?? "?"
             seen.types.append(type)
             switch type {
-            case "snapshot.part": try assembler.add(try Self.value(message.fields))
+            case "snapshot.part":
+                if firstPart { seen.phoneSentADifference = message.fields["base"] != nil }
+                firstPart = false
+                try assembler.add(try Self.value(message.fields))
             case "snapshot.end":
-                let assembled = try assembler.finish(entityCount: message.fields["entityCount"] as? Int ?? -1, digest: message.fields["digest"] as? String ?? "")
+                var outcome = try assembler.end(entityCount: message.fields["entityCount"] as? Int ?? -1, digest: message.fields["digest"] as? String ?? "", rebuildOn: byDifferences)
+                if byDifferences != nil {
+                    // §31.4: say whether the phone's snapshot was rebuilt, read what the phone says of the Mac's, and exchange the whole snapshots that were asked for.
+                    var rebuilt = true
+                    if case .didNotRebuild = outcome { rebuilt = false }
+                    try await mac.write("snapshot.check", ["ok": rebuilt && !asksForTheWholeSnapshot])
+                    let check = try await mac.read()
+                    seen.types.append(check.fields["t"] as? String ?? "?")
+                    let phoneAccepted = check.fields["ok"] as? Bool ?? false
+                    seen.phoneChecks.append(phoneAccepted)
+                    if !phoneAccepted {
+                        for (index, part) in SyncSnapshotParts.parts(of: sent, withheld: withheld).enumerated() { try await mac.write("snapshot.part", try Self.jsonObject(.object(part)) as? [String: Any] ?? [:]); _ = index }
+                        try await mac.write("snapshot.end", ["entityCount": count, "digest": sent.digest])
+                    }
+                    if !rebuilt || asksForTheWholeSnapshot {
+                        var whole = SyncSnapshotParts.Assembler()
+                        while true {
+                            let next = try await mac.read()
+                            let nextType = next.fields["t"] as? String ?? "?"
+                            seen.types.append(nextType)
+                            if nextType == "snapshot.part" { try whole.add(try Self.value(next.fields)) }
+                            else if nextType == "snapshot.end" {
+                                outcome = .assembled(try whole.finish(entityCount: next.fields["entityCount"] as? Int ?? -1, digest: next.fields["digest"] as? String ?? ""))
+                                break
+                            } else { return seen }
+                        }
+                    }
+                }
+                guard case .assembled(let assembled) = outcome else { return seen }
                 seen.phone = assembled.snapshot
                 seen.phoneWithheld = assembled.withheld.sorted()
-                let usable: SyncSnapshot? = (hash != nil && phoneHash == hash) ? base : nil
+                let usable: SyncSnapshot? = usableBase
                 let cleaned = SyncInbound.clean(assembled.snapshot, now: now, base: usable)
                 let aside = Set(withheld).union(assembled.withheld).sorted()
                 let merged = SyncMerge.merge(base: usable, local: sent, remote: cleaned.snapshot, withheld: aside)
@@ -267,7 +315,8 @@ struct SyncExchangeTests {
             report = try await SyncSessionClient.run(connection: connection, peer: peer, device: phone, categories: categories, appVersion: "0.1.0", supportedStateVersion: 1, nonce: Data(repeating: 9, count: 16),
                                                      baseHash: baseHash, now: { phoneNow ?? self.now }, body: rig.body, handshakeTimeout: .seconds(2))
         }
-        let seen = (try? await macTask.value) ?? SyncTestMac.Seen()
+        var seen = (try? await macTask.value) ?? SyncTestMac.Seen()
+        seen.phoneBytes = ends.phone.sent
         return (report, seen)
     }
 
@@ -1109,6 +1158,89 @@ struct SyncExchangeTests {
         #expect(summary.taken == 0 && !summary.applied)
         #expect(SyncLastExchange.lines(of: summary, ticked: [.structure]) == [.exchanged([.structure]), .nothingNew])
     }
+    // MARK: Differences with the base (§31)
+
+    /// A first session, then a second in which the Mac renamed its space and the phone changed nothing: what the two sessions say, and the state the phone ends in. The first
+    /// session has no base, so it is whole whatever the Mac says.
+    private func twoSessions(differences: Bool, corrupt: Bool = false, asksForWhole: Bool = false) async throws -> (first: (SyncSessionReport?, SyncTestMac.Seen), second: (SyncSessionReport?, SyncTestMac.Seen), state: BrowserState, baseHash: String?, rig: Rig) {
+        let rig = try rig()
+        var first = SyncTestMac(snapshot: macSnapshot())
+        first.differences = differences
+        let one = try await session(rig, mac: first)
+        let merged = SyncStateView.base(of: try #require(one.1.merged).snapshot)
+        var macNow = merged
+        macNow.entities["space"]?["m1"] = SyncEntity(fields: ["name": .string("Renommé sur le Mac"), "emoji": .string("🍎"), "profileId": .string("default"), "theme": SpaceTheme.make(hue: 130)],
+                                                    stamps: ["name": String(format: "%013ld-0000-vector-mac-0000000001", now + 60_000), "emoji": macStamp(0), "profileId": macStamp(0), "theme": macStamp(0)])
+        var second = SyncTestMac(snapshot: macNow, base: merged)
+        second.differences = differences
+        second.corruptsItsDifference = corrupt
+        second.asksForTheWholeSnapshot = asksForWhole
+        let two = try await session(rig, mac: second)
+        return (one, two, await rig.host.state, rig.bases.get(peerId: peer.id, now: now)?.hash, rig)
+    }
+
+    /// What a person sees of a state, in an order that does not depend on the marks (their counters follow the order Swift walks a dictionary in, which changes at every run).
+    private func shown(_ state: BrowserState) -> [String] {
+        state.spaces.map { "space \($0.id) \($0.name)" }.sorted() + state.folders.map { "folder \($0.id) \($0.name)" }.sorted() + state.tabs.map { "tab \($0.id)" }.sorted() + state.favorites.map { "favorite \($0.id)" }.sorted()
+    }
+
+    /// The base the phone keeps is the one the Mac adopts: the merged snapshot of the session (§8.5).
+    private func baseIsTheMergedSnapshot(_ seen: SyncTestMac.Seen, _ baseHash: String?) -> Bool {
+        baseHash != nil && baseHash == seen.merged.map { SyncStateView.base(of: $0.snapshot).digest }
+    }
+
+    @Test func aSecondSessionByDifferencesSendsFarLessAndEndsInTheStateOfAWholeOne() async throws {
+        let whole = try await twoSessions(differences: false)
+        defer { whole.rig.cleanup() }
+        let diff = try await twoSessions(differences: true)
+        defer { diff.rig.cleanup() }
+        #expect(whole.second.0?.outcome == .committed(at: now) && diff.second.0?.outcome == .committed(at: now))
+        // The first has no base: whole on both sides. The second is by differences when both say `diff` and hold the same base.
+        #expect(!diff.first.1.phoneSentADifference && diff.first.1.phoneChecks.isEmpty)
+        #expect(diff.second.1.phoneSentADifference)
+        #expect(diff.second.1.phoneChecks == [true], "the phone rebuilt the Mac's difference")
+        #expect(await diff.rig.host.summaries.map(\.snapshots) == [.whole, .differences])
+        #expect(await whole.rig.host.summaries.map(\.snapshots) == [.whole, .whole])
+        // The same state, the same base, much less written.
+        #expect(shown(diff.state) == shown(whole.state))
+        #expect(diff.state.spaces.first { $0.id == "m1" }?.name == "Renommé sur le Mac")
+        #expect(baseIsTheMergedSnapshot(diff.second.1, diff.baseHash) && baseIsTheMergedSnapshot(whole.second.1, whole.baseHash))
+        #expect(diff.second.1.phoneBytes < whole.second.1.phoneBytes, "\(diff.second.1.phoneBytes) bytes by differences, \(whole.second.1.phoneBytes) whole")
+        #expect(diff.second.1.types.suffix(4) == ["snapshot.check", "result", "commit", "bye"])
+    }
+
+    @Test func aMacThatDoesNotSayDiffGetsTheWholeSnapshotAsBefore() async throws {
+        let run = try await twoSessions(differences: false)
+        defer { run.rig.cleanup() }
+        #expect(run.second.1.phoneChecks.isEmpty && !run.second.1.phoneSentADifference)
+        #expect(!run.second.1.types.contains("snapshot.check"))
+        #expect(run.state.spaces.first { $0.id == "m1" }?.name == "Renommé sur le Mac")
+    }
+
+    @Test func aDifferenceOfTheMacThatDoesNotRebuildIsAskedAgainWholeAndTheSessionGoesThrough() async throws {
+        let reference = try await twoSessions(differences: false)
+        defer { reference.rig.cleanup() }
+        let run = try await twoSessions(differences: true, corrupt: true)
+        defer { run.rig.cleanup() }
+        #expect(run.second.0?.outcome == .committed(at: now), "no error: the person sees an ordinary session")
+        #expect(await run.rig.host.summaries.last?.snapshots == .fallback)
+        // The Mac lost the rename from its difference: the phone asked for the whole snapshot, got it, and ends where a whole session ends.
+        #expect(shown(run.state) == shown(reference.state) && baseIsTheMergedSnapshot(run.second.1, run.baseHash))
+        #expect(run.second.1.phoneChecks == [false], "the phone could not rebuild the Mac's difference and said so in its check")
+        #expect(run.second.1.types.filter { $0 == "snapshot.check" }.count == 1)
+    }
+
+    @Test func aMacThatAsksForTheWholeSnapshotOfThePhoneGetsItAndTheSessionGoesThrough() async throws {
+        let reference = try await twoSessions(differences: false)
+        defer { reference.rig.cleanup() }
+        let run = try await twoSessions(differences: true, asksForWhole: true)
+        defer { run.rig.cleanup() }
+        #expect(run.second.0?.outcome == .committed(at: now))
+        #expect(run.second.1.phoneSentADifference && run.second.1.phoneChecks == [true])
+        #expect(await run.rig.host.summaries.last?.snapshots == .fallback)
+        #expect(shown(run.state) == shown(reference.state) && baseIsTheMergedSnapshot(run.second.1, run.baseHash))
+    }
+
 }
 
 /// A Mac that sends what it is given without cleaning it: the way a hostile one would.

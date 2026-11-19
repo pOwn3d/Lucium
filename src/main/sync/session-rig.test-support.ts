@@ -58,6 +58,10 @@ export class Device {
   unpaired: string[] = []
   done: string[] = []
   warnings: string[] = []
+  /** The reasons a difference of the other device did not rebuild (§31.4). */
+  fallbacks: string[] = []
+  /** False plays a device from before §31: it says no `diff`. */
+  differences = true
   applied: SyncPatch[] = []
   saves = 0
   merge: SessionDeps['merge']
@@ -120,7 +124,9 @@ export class Device {
       onRefused: (_peer, refused) => void this.refused.push(refused),
       onShownTabsClosed: (_peer, tabs) => void this.shownClosed.push(tabs),
       onDone: (peer) => void this.done.push(peer),
-      onWarning: (_peer, code) => void this.warnings.push(code)
+      onWarning: (_peer, code) => void this.warnings.push(code),
+      onFallback: (_peer, reason) => void this.fallbacks.push(reason),
+      differences: this.differences
     }
   }
 

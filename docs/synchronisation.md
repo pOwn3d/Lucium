@@ -297,14 +297,15 @@ La version du protocole est **négociée par ALPN** : le Mac offre `lucium-sync/
 
 | `t` | Sens | Champs (tous requis sauf mention) |
 |---|---|---|
-| `hello` | les deux, **première** trame d'une séance | `device` `{id, name, platform}` (`platform` : `"mac"` ou `"ios"`) ; `nonce` (16 octets, base64url) ; `categories` (liste d'identifiants du §10.1, 0 à 8) ; `baseHash` (64 hex, ou `null` : pas de base) ; `stateVersion` (entier) ; `appVersion` (chaîne ≤ 32) ; `now` (ms depuis 1970, pour la dérive de l'horloge, §9.3) ; `hosts` (Mac seulement, 0 à 4 hôtes locaux) ; `port` (Mac seulement, facultatif : le port d'écoute **actuel**, entier de 1 à 65535, carte 517, n° 38) |
+| `hello` | les deux, **première** trame d'une séance | `device` `{id, name, platform}` (`platform` : `"mac"` ou `"ios"`) ; `nonce` (16 octets, base64url) ; `categories` (liste d'identifiants du §10.1, 0 à 8) ; `baseHash` (64 hex, ou `null` : pas de base) ; `stateVersion` (entier) ; `appVersion` (chaîne ≤ 32) ; `now` (ms depuis 1970, pour la dérive de l'horloge, §9.3) ; `hosts` (Mac seulement, 0 à 4 hôtes locaux) ; `port` (Mac seulement, facultatif : le port d'écoute **actuel**, entier de 1 à 65535, carte 517, n° 38) ; `diff` (facultatif, entier de 1 à 255 : la plus haute version du format de différences que l'appareil lit, §31.1) |
 | `pair.challenge` | Mac → iPhone, **première** trame d'un appairage | `nonce` |
 | `pair.request` | iPhone → Mac | `device` ; `nonce` ; `proof` (§4.4) ; `commit` (43 caractères, l'engagement du §4.7) |
 | `pair.nonce` | Mac → iPhone, après une preuve juste | `nonce` (le nonce de code du Mac, §4.7) |
 | `pair.reveal` | iPhone → Mac | `nonce` (le nonce de code de l'iPhone, qui doit ouvrir `commit`, §4.7) |
 | `pair.accept` | Mac → iPhone | `device` ; `proof` ; `hosts` ; `port` (le port d'écoute **actuel** du Mac, entier de 1 à 65535, obligatoire : une valeur absente, nulle, trop grande ou qui n'est pas un entier est un `bad-message`, n° 38) |
-| `snapshot.part` | les deux | `part` (entier, de 0), `parts` (total, 1 à 4096), `entities` (0 à 500 objets du §8.3), `tombstones` (liste, facultative), `order` et `orderStamps` (objets, facultatifs), `withheld` (liste d'identifiants d'espaces mis de côté, facultatif : [Q4], §18) |
-| `snapshot.end` | les deux, après la dernière partie | `entityCount` (entier) ; `digest` (64 hex, §8.4) |
+| `snapshot.part` | les deux | `part` (entier, de 0), `parts` (total, 1 à 4096), `entities` (0 à 500 objets du §8.3), `tombstones` (liste, facultative), `order` et `orderStamps` (objets, facultatifs), `withheld` (liste d'identifiants d'espaces mis de côté, facultatif : [Q4], §18) ; **d'une différence** (§31.2) : `base` (64 hex, première partie seulement), `removedEntities` et `removedTombstones` (listes de `{kind, id}`, facultatives), `removedLists` (liste de clés, facultative) |
+| `snapshot.end` | les deux, après la dernière partie | `entityCount` (entier) ; `digest` (64 hex, §8.4) : toujours ceux de l'instantané **complet**, même quand les parties n'étaient qu'une différence (§31.2) |
+| `snapshot.check` | les deux, **séance par différences seulement** (§31.4) | `ok` (booléen) : l'instantané de l'autre a été reconstruit (`true`) ou l'instantané complet est demandé (`false`) |
 | ~~`open-tabs`~~ | **retiré** (carte 511, §27.11) : aucun appareil ne l'envoie plus. Un appareil de développement qui l'enverrait encore est **lu sans son corps, ignoré et journalisé** (« retired message open-tabs »), jamais une erreur de séance ; il reste permis entre `hello` et `snapshot.end` (vecteurs `transitions`) et refusé après | — |
 | `result` | les deux, après les deux `snapshot.end` | `digest` du résultat de la fusion |
 | `commit` | les deux, après l'application locale | `digest` (le même) |
@@ -317,7 +318,7 @@ La version du protocole est **négociée par ALPN** : le Mac offre `lucium-sync/
 Une connexion est dans **une phase** à la fois, et un message hors phase est un `bad-message` fatal :
 
 - **Appairage** : `pair.challenge` (Mac) → `pair.request` avec son engagement (iPhone) → `pair.nonce` (Mac, après une preuve juste) → `pair.reveal` (iPhone) → `pair.accept` (Mac) **ou** `error` → puis le mot de la personne de l'iPhone, qui compare le code (§4.6) : `bye` (oui) **ou** `error` `pairing-refused` (non) → le Mac répond `bye` (il a enregistré l'iPhone) **ou** `error` `internal` (il n'a pas pu). Rien d'autre (`bye` et `error` sont admis partout). Un message hors de cet ordre est un `bad-message` (§4.7).
-- **Séance** : `hello` des deux côtés ; puis, dans chaque sens, une ou plusieurs `snapshot.part`, puis `snapshot.end` ; quand **les deux** `snapshot.end` sont reçus, `result` des deux côtés ; si les `digest` sont égaux, chacun applique, puis `commit` ; `bye`. `unpair` et `error` sont permis après `hello`.
+- **Séance** : `hello` des deux côtés ; puis, dans chaque sens, une ou plusieurs `snapshot.part`, puis `snapshot.end` ; quand **les deux** `snapshot.end` sont reçus, `result` des deux côtés ; si les `digest` sont égaux, chacun applique, puis `commit` ; `bye`. `unpair` et `error` sont permis après `hello`. **Séance par différences** (§31) : entre les `snapshot.end` et les `result`, un `snapshot.check` dans chaque sens, et, pour qui a reçu `ok: false`, l'instantané complet (§31.5).
 
 Il n'y a **pas d'accusé par message** : TCP et TLS livrent dans l'ordre et sans perte ou la connexion tombe ; l'**exhaustivité** est contrôlée par `parts`, `entityCount` et `digest`. L'accusé de la **séance** est `commit` : l'état « À jour » ne s'affiche que quand le `commit` de l'autre est reçu.
 
@@ -384,7 +385,7 @@ L'iPhone ouvre une séance : au **lancement**, au **retour au premier plan** (5 
 3. **`snapshot.part`** : chacun envoie son instantané complet (§8.3), puis **`snapshot.end`**.
 4. ~~**`open-tabs`**, entre `hello` et `snapshot.end`, si la catégorie `openTabs` est commune~~ : **retiré** (carte 511, §27.11). Les onglets d'« Aujourd'hui » sont des entités du genre `todayTab` dans l'instantané (§27.2).
 
-L'envoi de l'instantané **complet** à chaque séance est un choix de simplicité (quelques milliers d'entités tiennent en quelques centaines de Kio). Un envoi par différences, par résumé de chaque entité, pourra s'ajouter plus tard par une capacité de plus dans `hello` ; il n'est pas dans la v1.
+L'envoi de l'instantané **complet** à chaque séance était un choix de simplicité (quelques milliers d'entités tiennent en quelques centaines de Kio). **Depuis la carte 653, quand les deux appareils ont la même base** (même `baseHash`, et chacun dit `diff` dans son `hello`), chacun n'envoie que ce qui diffère de cette base et l'autre reconstruit l'instantané et en vérifie le condensat : §31. Sans base commune, ou face à un appareil qui ne dit pas `diff`, l'instantané est complet comme ci-dessus.
 
 ### 8.3 L'instantané
 
@@ -799,6 +800,7 @@ Trois fichiers dans `ios/Contracts/`, **au format des vecteurs existants** (JSON
 | `sync-today-vectors.json` | (carte 507, §27.16) les **onglets d'« Aujourd'hui » partagés** : les limites, les classes de champs de `todayTab`, l'adresse partageable, `activeAt`, l'**admission** (conditions, collante, plafond), la **porte d'entrée** (`invalid-url`, `invalid-value`, `too-many-today-tabs`), les **déplacements** épinglé ↔ Aujourd'hui et des **cas de fusion** (§27.9, §27.10, espace verrouillé). Joués par `src/shared/ios-sync-today-contract.test.ts` (contre `src/shared/sync-today.ts` et `sync-merge.ts`) et par LuciumKit (`SyncTodayVectorTests.swift`, contre `SyncToday.swift` et `SyncMerge.swift`) |
 | `sync-state-vectors.json` | (carte 452) l'**état d'un appareil tel que la synchronisation le lit** : pour un état au format du Mac, les catégories communes, les espaces mis de côté et la base, les entités et les listes de l'instantané qu'une séance gèle (produits par `trackedViewOf` et `snapshotOf` du Mac) ; et le **patch** que donnent deux instantanés (produit par `buildPatch`). Joués par `src/main/sync/state-view-vectors.test.ts` et par LuciumKit (`SyncStateTests.swift`) |
 | `sync-categories-vectors.json` | (carte 516, §10.1) les **catégories annoncées et communes** : pour chaque ensemble coché, la liste du `hello` ; pour chaque couple d'ensembles, les catégories de la séance. Joués par `src/main/sync/session-category-vectors.test.ts` (`announcedCategories`, `commonCategories`) et par LuciumKit (`SyncCategoryTests.swift`, `SyncCategory.announced`, `SyncCategory.common`, pour les catégories que cette version connaît) |
+| `sync-delta-vectors.json` | (carte 653, §31.9) les **différences avec la base** : des cas écrits à la main, 60 tirages de deux appareils (la différence de leur instantané avec la base, forme canonique) et les **échecs d'une reconstruction** ; la reconstruction doit redonner le condensat de l'instantané. Joués par `src/shared/sync-delta.test.ts` (`sync-delta.ts`, fichier de référence réécrit par `-u`) et par LuciumKit (`SyncDeltaTests.swift`, `SyncDelta.swift`) ; les messages `snapshot.check` et les champs d'une différence sont dans `sync-message-vectors.json` (`messages`, `transitions`) |
 | `sync-merge-draws.json`, `sync-snapshot-vectors.json`, `sync-conflict-vectors.json` | (carte 446) le **corpus de tirages** et son résultat, ce qu'un instantané reçu doit être, les **lignes du journal et les phrases** de « Conflit réglé » pour chaque conflit des deux fichiers précédents, la conservation du journal (30 jours, 200 lignes) et la lecture d'un fichier hostile |
 
 **Qui les lit.**
@@ -1281,7 +1283,7 @@ Le prévu du §27.12 (« de l'ordre de 60 Kio ») valait pour 200 entités ; ave
 
 ### 30.4 Faut-il un envoi par différences ?
 
-**Non pour 200 onglets** : une séance coûte 210 ms, 93 Kio et moins de 1 % d'un cœur, et l'application ne la fait que lorsqu'elle est à l'écran ; la mémoire ne croît pas. **Ce qui pourrait le demander** : un plafond relevé à 500 (option B du §27.4), ou une mesure d'autonomie sur un vrai iPhone qui montrerait que 120 réveils de la radio par heure pèsent. Dans ce cas, la forme la moins chère n'est pas un protocole nouveau : comme les deux appareils connaissent la même base (`baseHash` du `hello`, §8.2), un appareil peut n'envoyer que les entités qui **diffèrent de la base** et le condensat de son instantané, l'autre reconstruit l'instantané (base plus différences) et vérifie le condensat. C'est une carte proposée, à décider ; elle n'est pas faite ici.
+**Non pour 200 onglets** : une séance coûte 210 ms, 93 Kio et moins de 1 % d'un cœur, et l'application ne la fait que lorsqu'elle est à l'écran ; la mémoire ne croît pas. **Ce qui pourrait le demander** : un plafond relevé à 500 (option B du §27.4), ou une mesure d'autonomie sur un vrai iPhone qui montrerait que 120 réveils de la radio par heure pèsent. Dans ce cas, la forme la moins chère n'est pas un protocole nouveau : comme les deux appareils connaissent la même base (`baseHash` du `hello`, §8.2), un appareil peut n'envoyer que les entités qui **diffèrent de la base** et le condensat de son instantané, l'autre reconstruit l'instantané (base plus différences) et vérifie le condensat. **Fait par la carte 653 : §31.**
 
 ### 30.5 Ce qui n'est pas prouvé
 
@@ -1294,3 +1296,110 @@ Un vrai iPhone, un vrai Wi-Fi entre deux machines, le nom `.local`, l'autorisati
 **Ce qui change** (Mac seulement : l'iPhone n'a rien à corriger, il faut une **nouvelle build du Mac**, pas une nouvelle build de l'iPhone) : quand un appairage est ouvert et que sa place est libre, un appareil que le Mac connaît déjà est **mené par l'appairage** (le QR est celui de la personne qui vient d'ouvrir « Ajouter un iPhone ») ; son enregistrement est remplacé (`addPeer` remplace par identifiant ou par empreinte). Sans appairage ouvert, ou si la place de l'appairage est prise, un appareil connu garde sa **séance** comme avant. L'appairage demande toujours le secret du QR : une empreinte connue ne donne rien de plus que le QR. **Coût assumé** : pendant les deux minutes d'une feuille « Ajouter un iPhone », la séance d'un iPhone déjà appairé qui se connecte alors reçoit `pair.challenge` au lieu de `hello` et échoue ; l'iPhone réessaie à son intervalle. Le fichier de base de l'ancien enregistrement (`sync-base-<ancien identifiant>.json`) reste jusqu'à la purge de 30 jours.
 
 **Contournement sans nouvelle build** : sur le Mac, « Oublier » l'iPhone dans la liste des appareils, puis « Ajouter un iPhone ».
+
+## 31. Envoi par différences (carte 653, 19 novembre 2026)
+
+**Ce que cette carte ajoute.** Une séance dont les deux appareils ont la **même base** (§8.2, §11.8) n'envoie plus l'instantané entier : chacun n'envoie que ce qui **diffère de la base**, et l'autre **reconstruit** l'instantané complet (base + différences) et **vérifie son condensat** (§8.4). Si la reconstruction ne donne pas le condensat annoncé, ou si les deux appareils n'ont pas la même base, la séance se fait **comme avant** : l'instantané complet, sans erreur montrée à la personne. La fusion (§11), les bases (§8.5), les pierres tombales, les plafonds, les portes et les catégories **ne changent pas** : seule la façon dont l'instantané de l'autre arrive change. C'est la « proposition B » du bilan de la carte 512 (§30.4), faite pour le jour où le plafond monte ou qu'une mesure d'autonomie la demande ; elle est en place **sans changer la version du protocole** (§31.8).
+
+### 31.1 Quand : la négociation
+
+Chaque `hello` (§7.3) porte un champ **facultatif** `diff` : un entier de 1 à 255, **la plus haute version du format de différences que cet appareil sait lire** (cette carte : `1`). Une séance est **par différences** si et seulement si :
+
+1. les **deux** `hello` portent `diff` (version 1 au moins), et
+2. les **deux** `baseHash` sont non nuls et **égaux**, et cette valeur est le condensat de la base que cet appareil a lui-même sous la main (la base de moins de 30 jours, lisible : exactement la condition qui donne déjà une base à la fusion, §11.8).
+
+Les deux appareils calculent la même réponse à partir des deux `hello` : aucun message n'est échangé pour la décider. **Sinon** (un appareil sans `diff`, pas de base d'un côté, `baseHash` différents, base de plus de 30 jours, iPhone neuf qui adopte l'état du Mac, §11.8) la séance est celle des §7 et §8, **octet pour octet** : un appareil qui ne parle pas `diff` n'a rien à savoir.
+
+### 31.2 Ce qui voyage : l'instantané de différences
+
+L'instantané local d'un appareil est celui du §8.2 (gelé, restreint aux catégories communes, nettoyé comme ce qui entre : `cleanSnapshot`), **sans changement**. La **différence** entre cet instantané `S` et la base `B` est :
+
+| Morceau | Contenu | Où il voyage |
+|---|---|---|
+| entités | celles de `S` qui sont **absentes de `B` ou dont les champs ou les marques diffèrent** (comparées en forme canonique, §8.4), **entières** (pas champ par champ) | `entities` |
+| pierres tombales | celles de `S` absentes de `B` ou de marque différente | `tombstones` |
+| listes | celles de `S` absentes de `B`, ou dont les identifiants **ou** la marque d'ordre diffèrent, entières | `order` et `orderStamps` |
+| entités retirées | `(genre, id)` de `B` **absents** de `S` | `removedEntities` : liste de `{kind, id}` |
+| pierres tombales retirées | `(genre, id)` de `B` dont la pierre est **absente** de `S` (purge, catégorie qui n'est plus commune) | `removedTombstones` : liste de `{kind, id}` |
+| listes retirées | clés de `B.order` **absentes** de `S.order` | `removedLists` : liste de clés |
+
+Les trois listes `removed*` sont triées par unités de code UTF-16 (genre puis identifiant), comme les conflits (§11.7), pour que les deux langages écrivent la même différence. Un genre ou une liste **inconnus** de cette version voyagent comme les autres : la différence ne lit aucun genre, elle compare ; un instantané qui **reprend de la base** les genres et les listes inconnus (§11.6) ne les met donc **jamais** dans les `removed*` : une séance par différences **ne supprime rien de ce que l'appareil ne comprend pas**.
+
+**Sur le fil**, la différence est coupée en `snapshot.part` **comme l'instantané** (même règle de poids, 500 entités par partie, 4096 parties au plus), avec les mêmes champs (§7.3), plus :
+
+- `base` (64 hex, **première partie seulement**) : **cet instantané est une différence** avec la base de ce condensat. Sans `base` dans la première partie, l'instantané est **complet**, comme au §8.3. `base` dans une autre partie : `bad-message` ;
+- `removedEntities`, `removedTombstones`, `removedLists` (facultatifs, chacun 100 000 éléments au plus **par partie**, comme les pierres tombales) : dans la partie où le poids le permet. Ces trois champs dans un instantané **complet** (sans `base`) : `bad-message` ;
+- `withheld` (première partie) : inchangé.
+
+`snapshot.end` est **inchangé et dit l'instantané COMPLET** : `entityCount` est le nombre d'entités de `S` (pas de la différence), `digest` son condensat (§8.4). C'est ce que l'autre vérifie après la reconstruction.
+
+### 31.3 Reconstruire
+
+L'appareil qui reçoit une différence (première partie avec `base`) fait, sur **une copie de sa base** :
+
+1. si `base` n'est pas le condensat de **sa** base : échec de reconstruction ;
+2. il **retire** chaque entité de `removedEntities`, chaque pierre de `removedTombstones`, chaque liste de `removedLists` (avec sa marque d'ordre) ; un retrait qui nomme **quelque chose qui n'est pas dans la base** : échec ;
+3. il **écrit** les entités, pierres tombales et listes reçues (par remplacement entier) ; un `(genre, id)` à la fois dans les écritures **et** dans les retraits : échec ; les genres et listes qui restent vides sont supprimés (l'instantané n'écrit jamais un genre sans entité, §8.3) ;
+4. il compare le **nombre d'entités** et le **condensat** de ce qu'il a obtenu à `snapshot.end` : différents, échec.
+
+Ce qui reste **fatal, comme avant**, parce que ce n'est le fait d'aucun appareil honnête : une trame ou un message mal formé (§7.1), une entité ou une pierre écrite **deux fois** dans la différence, plus de 100 000 entités après reconstruction (`too-large`), un `snapshot.end` qui manque (`truncated`). Un **échec de reconstruction** (1 à 4) n'est **pas** une erreur de séance : c'est le repli du §31.4. L'instantané reconstruit passe ensuite **exactement** les mêmes portes que s'il était venu entier : `parseSnapshot`, `onlyExchanged`, `cleanSnapshot` (§8.5, §10.1, §9.3) ; la reconstruction n'est une confiance que dans la base, que l'appareil a lui-même écrite.
+
+### 31.4 Vérification et repli : `snapshot.check`
+
+Nouveau type (§7.3), **seulement dans une séance par différences** : `snapshot.check`, champ `ok` (booléen), un par sens, **après** le `snapshot.end` de l'autre :
+
+- `ok: true` : « j'ai reconstruit ton instantané, le condensat est le bon » ;
+- `ok: false` : « je n'ai pas pu (§31.3) : envoie-le **entier** ».
+
+Quand un appareil **reçoit** `snapshot.check` avec `ok: false`, il envoie son instantané **complet** (parties sans `base`, puis `snapshot.end`) ; quand il **a envoyé** `ok: false`, il lit cet instantané complet, et le vérifie comme au §8.2 : un condensat faux est alors `truncated`, **fatal** (il n'y a pas de deuxième repli). **Un seul** repli par séance et par sens ; un deuxième `snapshot.check`, un instantané complet que l'on n'a pas demandé, ou un `snapshot.check` dans une séance qui n'est pas par différences sont des `bad-message`. Le repli est **sans erreur visible** : la personne voit « À jour » ; il est **journalisé** (« a difference did not rebuild: the whole snapshot was asked ») avec son motif.
+
+Le message existe pour que l'ordre reste **le même sur les deux appareils** : chacun envoie son instantané, lit celui de l'autre, dit s'il l'a reconstruit, lit ce que l'autre en dit ; ensuite seulement `result` (§31.5). Sans lui, un `result` envoyé trop tôt arriverait avant l'instantané complet qu'une reconstruction ratée fait renvoyer. Il coûte une trame d'une centaine d'octets par sens.
+
+### 31.5 Ordre d'une séance par différences
+
+Le §7.4 devient, pour ces séances :
+
+```
+hello ⇄ hello
+snapshot.part… snapshot.end   (différences)  ⇄  snapshot.part… snapshot.end   (différences)
+snapshot.check ⇄ snapshot.check
+[snapshot.part… snapshot.end  (complet), seulement pour qui a reçu ok: false, dans le même sens]
+result ⇄ result ;  commit ⇄ commit ;  bye
+```
+
+Tout autre ordre est un `bad-message` (le suiveur de phase, `PhaseTracker` et `SyncTransitions`, admet un **second** `snapshot.end` seulement **après** un `snapshot.check` et **un seul**, et la séance refuse le reste ; vecteurs `transitions`). La fusion et ce qui la suit (§8.5 : `result`, `commit`, application, base, marques) sont **inchangés** : ils reçoivent un instantané de l'autre, entier, qu'il soit venu entier ou reconstruit.
+
+### 31.6 Ce qui ne bouge pas
+
+- **Mêmes bases** : la base est toujours l'instantané **fusionné** de la dernière séance réussie ; les deux condensats de base sont toujours ceux du `hello`. Une séance par différences écrit la même base qu'une séance entière.
+- **Même résultat de fusion** : la fusion reçoit les mêmes quatre entrées ; le test de séance joue les mêmes séances en mode entier et en mode différences et exige **les mêmes bases et les mêmes états** (§31.9).
+- **Aucune suppression d'un genre ou d'une liste inconnus** (§11.6, n° 39 et 40) : voir §31.2.
+- **Les plafonds et les portes** : toutes les bornes du §7.5 (trame, valeurs, octets de la connexion, 100 000 entités, 4096 parties), le plafond de 200 onglets annoncés par appareil (§27.4), les gardes de `cleanSnapshot` et de `onlyExchanged`, l'espace verrouillé, les catégories (§10.1) et les 7 jours de futur (§9.3). Les octets et les valeurs d'un repli **comptent** dans les bornes de la connexion comme tout autre message ; un état au bord de ces bornes (un million de valeurs par instantané) qui subirait un repli dépasserait `too-large`, comme un instantané de plus. Rien n'est relâché pour le repli.
+- **Rien de nouveau ne quitte l'appareil** : mêmes entités, mêmes champs, moins d'octets (§5 d'AGENTS.md : aucun appel réseau de plus).
+
+### 31.7 Ce que cela ne change pas pour l'iPhone
+
+L'iPhone fait **les mêmes pas** que le Mac (§8.2) : `SyncExchangeBody` calcule la différence entre son instantané envoyé (`local`, après `vet`, après la mémoire des refus de la base, §11.6) et la base, et reconstruit celui du Mac sur sa propre base. Un iPhone qui adopte l'état du Mac (§11.8) dit `baseHash: null` : séance entière.
+
+### 31.8 Versions et compatibilité
+
+La version du protocole (§7.2) **ne change pas** : `diff` est un champ de plus dans `hello`, que l'ancienne version ignore (§7.1), et `snapshot.check` n'est envoyé que si **les deux** disent `diff`. Un appareil sans cette carte parle donc à un appareil avec elle **comme avant** (séance entière) ; c'est une conséquence de la négociation et pas une promesse : **rien n'est publié**, la compatibilité avec les builds d'essai n'est pas due, et si le format de différences change plus tard (`diff: 2`), les builds d'essai qui disent `diff: 1` pourront être laissés sans réponse. Le bloc `removed*` et `base` sont **propres à la version 1 du format** (`diff`).
+
+### 31.9 Vecteurs et preuves
+
+`ios/Contracts/sync-delta-vectors.json` (§19) : des cas écrits à la main (aucun changement, entité changée, ajoutée, retirée, pierre tombale ajoutée et purgée, liste réordonnée, liste vidée, genre inconnu, catégorie qui n'est plus commune), les **60 tirages** de `sync-merge-draws.json` (la différence de leur instantané local avec leur base, en forme canonique), et les **échecs de reconstruction** (retrait d'une entité qui n'est pas dans la base, écriture et retrait du même `(genre, id)`, condensat faux). Joués par Vitest (`sync-delta.ts`) **et** par LuciumKit (`SyncDelta.swift`) : la même différence octet pour octet, la même reconstruction, les mêmes échecs. Les tests de séance (`session-delta.test.ts`, Swift `SyncDeltaSessionTests`) jouent : le chemin heureux (et sa taille), le repli (condensat faux, base qui diffère, base absente d'un côté), l'ordre des messages et l'égalité des bases et des états avec une séance entière. Les mutations vues échouer sont dans le compte rendu de la carte.
+
+### 31.10 Mesures (harnais `scripts/sync-interop/run.sh`, 200 onglets d'« Aujourd'hui » par appareil, 400 entités par instantané)
+
+Même machine, même harnais (`testMeasuresWith200TodayTabsOnEachDevice`), TLS 1.3 réel, le vrai `SyncService` du Mac sous Node et le vrai `SyncController` de l'application sur un simulateur sans fenêtre ; **avant** = `origin/main` (5c1d2037), **après** = cette carte. Octets : ce que le processus de l'application écrit et lit sur le réseau.
+
+| Séance | Avant (envoyés / reçus) | Après (envoyés / reçus) | Durée avant → après |
+|---|---|---|---|
+| **sans aucun changement** (ce que fait l'intervalle de 30 s presque tout le temps) | 93 046 / 93 053 o | **911 / 918 o** (−99 %) | 213 → 205 ms |
+| **avec un changement** (un onglet fermé de chaque côté) | 92 926 / 92 933 o | **3 562 / 3 967 o** (−96 %) | 207 → 211 ms |
+| première séance, 200 onglets de chaque côté (pas de base : entière) | 82 644 / 81 569 o | 82 653 / 81 578 o (+9 o : le champ `diff` du `hello`) | — |
+| un iPhone vide adopte les 200 onglets du Mac (entière) | 1 071 / 81 569 o | 1 080 / 81 578 o | 249 → 247 ms |
+
+À une séance toutes les 30 secondes, les ≈ 10 Mio par heure et par sens du §30.3 deviennent **≈ 0,1 Mio** (séances sans changement) ; avec un onglet fermé à chaque séance, ≈ 0,4 Mio. Le temps d'une séance ne baisse pas (205 ms contre 213) : il est fait de la poignée de main TLS et des allers-retours, pas du volume. Les applications (`sync/apply`) sont les mêmes : 13 ms sur l'iPhone et 1,4 ms sur le Mac avec un changement de chaque côté. Les 911 octets d'une séance sans changement sont l'enveloppe des messages (`hello`, première partie vide avec `base` et `withheld`, `snapshot.end`, `snapshot.check`, `result`, `commit`, `bye`) dans chaque sens. Le plafond de 200 onglets, la fermeture des deux côtés et les catégories sont joués par le même essai, qui échoue maintenant si une séance sans changement dépasse 20 Kio.
+
+**Ce que ces mesures ne disent pas** : la batterie d'un vrai iPhone, la latence d'un vrai Wi-Fi (comme au §30.3) ; ni le coût CPU de la comparaison des entités avec la base, négligeable ici (400 entités, de l'ordre de la milliseconde, non mesuré à part).

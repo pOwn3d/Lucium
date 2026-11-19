@@ -1701,6 +1701,522 @@
         "ok": false,
         "code": "bad-message"
       }
+    },
+    {
+      "name": "a hello that says it reads differences (diff 1, §31.1)",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "MacBook Pro de test",
+          "platform": "mac"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "hosts": [
+          "mac-de-test.local",
+          "192.168.1.20"
+        ],
+        "port": 49213,
+        "diff": 1
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a hello with the highest diff, 255",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "MacBook Pro de test",
+          "platform": "mac"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "hosts": [
+          "mac-de-test.local",
+          "192.168.1.20"
+        ],
+        "port": 49213,
+        "diff": 255
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a hello with a diff of 0",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "MacBook Pro de test",
+          "platform": "mac"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "hosts": [
+          "mac-de-test.local",
+          "192.168.1.20"
+        ],
+        "port": 49213,
+        "diff": 0
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a hello with a diff of 256",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "MacBook Pro de test",
+          "platform": "mac"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "hosts": [
+          "mac-de-test.local",
+          "192.168.1.20"
+        ],
+        "port": 49213,
+        "diff": 256
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a hello with a diff that is a fraction",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "MacBook Pro de test",
+          "platform": "mac"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "hosts": [
+          "mac-de-test.local",
+          "192.168.1.20"
+        ],
+        "port": 49213,
+        "diff": 1.5
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a hello with a diff that is a text",
+      "message": {
+        "v": 1,
+        "t": "hello",
+        "n": 1,
+        "device": {
+          "id": "vector-mac-0000000001",
+          "name": "MacBook Pro de test",
+          "platform": "mac"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "categories": [
+          "structure",
+          "settings"
+        ],
+        "baseHash": "0bf474896363505e5ea5e5d6ace8ebfb13a760a409b1fb467d428fc716f9f284",
+        "stateVersion": 1,
+        "appVersion": "1.2.0",
+        "now": 1790000000000,
+        "hosts": [
+          "mac-de-test.local",
+          "192.168.1.20"
+        ],
+        "port": 49213,
+        "diff": "1"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a first part that says it is a difference with a base (§31.2)",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ],
+        "base": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a part with a base that is not 64 lower-case hexadecimal digits",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ],
+        "base": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a part with a base that is not a text",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ],
+        "base": 7
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a part of a difference with its removals",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ],
+        "base": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "removedEntities": [
+          {
+            "kind": "tab",
+            "id": "t1"
+          }
+        ],
+        "removedTombstones": [
+          {
+            "kind": "tab",
+            "id": "t0"
+          }
+        ],
+        "removedLists": [
+          "tabs:s1:-"
+        ]
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a removed entity with no id",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ],
+        "base": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "removedEntities": [
+          {
+            "kind": "tab"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a removed entity whose kind is __proto__ written as a value",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ],
+        "base": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "removedEntities": [
+          {
+            "kind": "__proto__",
+            "id": "t1"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a removed tombstone whose id is constructor",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ],
+        "base": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "removedTombstones": [
+          {
+            "kind": "tab",
+            "id": "constructor"
+          }
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "removed lists that are not a list of texts",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ],
+        "base": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "removedLists": "tabs"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a removed list named toString",
+      "message": {
+        "v": 1,
+        "t": "snapshot.part",
+        "n": 2,
+        "part": 0,
+        "parts": 1,
+        "entities": [
+          {
+            "kind": "space",
+            "id": "s1",
+            "fields": {
+              "name": "Perso"
+            },
+            "stamps": {
+              "name": "0"
+            }
+          }
+        ],
+        "base": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "removedLists": [
+          "toString"
+        ]
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a snapshot.check that says the snapshot was rebuilt (§31.4)",
+      "message": {
+        "v": 1,
+        "t": "snapshot.check",
+        "n": 4,
+        "ok": true
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a snapshot.check that asks for the whole snapshot",
+      "message": {
+        "v": 1,
+        "t": "snapshot.check",
+        "n": 4,
+        "ok": false
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a snapshot.check with no ok",
+      "message": {
+        "v": 1,
+        "t": "snapshot.check",
+        "n": 4
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a snapshot.check whose ok is a text",
+      "message": {
+        "v": 1,
+        "t": "snapshot.check",
+        "n": 4,
+        "ok": "true"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
     }
   ],
   "duplicateKeys": [
@@ -2108,6 +2624,243 @@
       "type": "bye",
       "expect": {
         "ok": true
+      }
+    },
+    {
+      "name": "a snapshot.check after the end of the first snapshot (§31.5)",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end"
+      ],
+      "type": "snapshot.check",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a snapshot.check with no snapshot ended",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part"
+      ],
+      "type": "snapshot.check",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a snapshot.check before anything",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello"
+      ],
+      "type": "snapshot.check",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a second snapshot.check",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check"
+      ],
+      "type": "snapshot.check",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a part of the whole snapshot after the check",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check"
+      ],
+      "type": "snapshot.part",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a part of a second snapshot with no check before it",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end"
+      ],
+      "type": "snapshot.part",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the end of the second snapshot",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check",
+        "snapshot.part"
+      ],
+      "type": "snapshot.end",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a second end with no part of the second snapshot",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check"
+      ],
+      "type": "snapshot.end",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a third snapshot",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check",
+        "snapshot.part",
+        "snapshot.end"
+      ],
+      "type": "snapshot.part",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a result after the check, without a second snapshot",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check"
+      ],
+      "type": "result",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a result in the middle of the second snapshot",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check",
+        "snapshot.part"
+      ],
+      "type": "result",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a result after the second snapshot",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check",
+        "snapshot.part",
+        "snapshot.end"
+      ],
+      "type": "result",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a check after the second snapshot was begun",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check",
+        "snapshot.part"
+      ],
+      "type": "snapshot.check",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a snapshot.check after the result",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check",
+        "result"
+      ],
+      "type": "snapshot.check",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a part after the result of a session by differences",
+      "receiver": "ios",
+      "phase": "session",
+      "history": [
+        "hello",
+        "snapshot.part",
+        "snapshot.end",
+        "snapshot.check",
+        "result"
+      ],
+      "type": "snapshot.part",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
       }
     }
   ],
