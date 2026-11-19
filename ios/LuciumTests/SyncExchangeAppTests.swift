@@ -288,7 +288,7 @@ final class SyncExchangeAppTests: BrowserCoreTestCase {
     }
 
     private func summary(_ conflicts: [SettledConflict]) -> SyncExchangeSummary {
-        SyncExchangeSummary(at: now, conflicts: conflicts, refusedSent: [], refusedReceived: [], rejectedByApply: [], applied: true, adoptedTheMacState: false, spacesSetAside: 0, openTabs: nil)
+        SyncExchangeSummary(at: now, conflicts: conflicts, refusedSent: [], refusedReceived: [], rejectedByApply: [], applied: true, adoptedTheMacState: false, spacesSetAside: 0)
     }
 
     func testTheConflictsOfASessionGoToTheJournalAndSurviveARestart() async throws {
@@ -335,20 +335,6 @@ final class SyncExchangeAppTests: BrowserCoreTestCase {
         XCTAssertTrue(files.allSatisfy { FileManager.default.fileExists(atPath: $0.path) })
         controller.forgetMac()
         XCTAssertTrue(files.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) }, "the base, the marks and the journal go with the Mac (§12)")
-        XCTAssertTrue(controller.lastConflicts.isEmpty && controller.macOpenTabs.isEmpty)
-    }
-
-    func testTheOpenTabsOfTheMacAreKeptInMemoryOnly() async throws {
-        let (_, controller) = try await pairedModel(connector: ScriptedConnector(.fail(.timedOut)))
-        var withTabs = summary([])
-        withTabs.openTabs = [SyncOpenTab(id: "t", spaceId: "s", url: "https://reading.example/", title: "Lu", lastActiveAt: 5)]
-        controller.exchangeDone(withTabs)
-        XCTAssertEqual(controller.macOpenTabs.map(\.url), ["https://reading.example/"])
-        for name in try FileManager.default.contentsOfDirectory(atPath: directory.path) {
-            let text = (try? String(contentsOf: directory.appending(path: name), encoding: .utf8)) ?? ""
-            XCTAssertFalse(text.contains("reading.example"), "\(name) holds an address of the Mac's open tabs")
-        }
-        controller.exchangeDone(summary([]))
-        XCTAssertTrue(controller.macOpenTabs.isEmpty, "a session where the category is not common leaves none")
+        XCTAssertTrue(controller.lastConflicts.isEmpty)
     }
 }

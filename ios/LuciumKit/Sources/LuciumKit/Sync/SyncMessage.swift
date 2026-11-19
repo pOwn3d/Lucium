@@ -67,7 +67,8 @@ public enum SyncMessage: Equatable, Sendable {
     case pairAccept(device: SyncDeviceInfo, proof: Data, hosts: [String], port: Int)
     case snapshotPart(JSONValue)
     case snapshotEnd(entityCount: Int, digest: String)
-    case openTabs(JSONValue)
+    /// Retired (§27.11): no device sends it any more. A device that still does is read without its body and ignored by the session, which logs it.
+    case openTabs
     case result(digest: String)
     case commit(digest: String)
     case unpair
@@ -334,7 +335,7 @@ public enum SyncMessageCodec {
             guard let count = integer(fields["entityCount"], minimum: 0), let digest = digest(fields["digest"]) else { return nil }
             return .snapshotEnd(entityCount: count, digest: digest)
         case "open-tabs":
-            return openTabsAreWellFormed(fields) ? .openTabs(whole) : nil
+            return .openTabs
         case "result": return digest(fields["digest"]).map { .result(digest: $0) }
         case "commit": return digest(fields["digest"]).map { .commit(digest: $0) }
         case "unpair": return .unpair
@@ -383,15 +384,6 @@ public enum SyncMessageCodec {
         return true
     }
 
-    private static func openTabsAreWellFormed(_ fields: [String: JSONValue]) -> Bool {
-        guard case .array(let items)? = fields["items"], items.count <= SyncLimits.maxOpenTabs else { return false }
-        for item in items {
-            guard let members = object(item), case .string? = members["id"], case .string? = members["spaceId"], text(members["url"], maxBytes: SyncLimits.maxOpenTabURLBytes) != nil,
-                  text(members["title"], maxBytes: SyncLimits.maxOpenTabTitleBytes) != nil, integer(members["lastActiveAt"], minimum: 0) != nil else { return false }
-        }
-        return true
-    }
-
     // MARK: Writing
 
     /// The JSON of a message, with the number it carries. Only what the phone sends is written: the rest is the other device's business.
@@ -417,12 +409,14 @@ public enum SyncMessageCodec {
             members["nonce"] = .string(SyncEncoding.base64url(nonce))
         case .unpair, .bye:
             break
+        case .openTabs:
+            throw SyncFailure(.internal, "open-tabs is retired (§27.11) and is never written")
         case .error(let code, let fatal, let supported, let detail):
             members["code"] = .string(code.rawValue)
             members["fatal"] = .bool(fatal)
             if let supported { members["supported"] = .array(supported.map { .number(Double($0)) }) }
             if let detail { members["detail"] = .string(detail) }
-        case .snapshotPart(let body), .openTabs(let body):
+        case .snapshotPart(let body):
             // The fields of the part (or of the list) as the session built them; the envelope is the codec's and overwrites whatever the body says of it.
             guard case .object(let fields) = body else { throw SyncFailure(.internal, "the body of \(message.type) is not an object") }
             members.merge(fields) { _, new in new }

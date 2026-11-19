@@ -13,7 +13,6 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Added
 
 - **Synchronization with your iPhone**: Settings › Downloads and files › Synchronization pairs an iPhone by QR code or typed code, with Allow or Deny on the Mac. Off by default. Once paired, the iPhone synchronizes by itself, every minute or at your pace, deletions included. Cookies and passwords are never sent.
-- **“On the iPhone” in the command bar**: when “Open tabs” is ticked on both devices, the tabs your iPhone had open answer what you type in the command bar. A click opens the page in a new tab, in the space of the same name if it is not locked.
 
 ### Changed
 

@@ -67,9 +67,6 @@ export const MAX_STRING_BYTES = 65_536
 export const MAX_DEVICE_NAME_CHARS = 80
 export const MAX_DEVICE_ID_CHARS = 64
 export const MAX_CATEGORIES = 8
-export const MAX_OPEN_TABS = 200
-export const MAX_OPEN_TAB_URL_BYTES = 4096
-export const MAX_OPEN_TAB_TITLE_BYTES = 300
 
 /** Connections, time and rate (§6.1, §7.5). */
 export const MAX_CONNECTIONS = 4

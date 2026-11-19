@@ -471,7 +471,8 @@ const SHAPES: Record<string, (m: Record<string, unknown>) => boolean> = {
   'pair.accept': (m) => device(m['device']) && typeof m['proof'] === 'string' && B64U(43).test(m['proof']) && textList(m['hosts'], L['maxHosts'] as number, 253) && isPort(m['port']),
   'snapshot.part': (m) => isInt(m['part']) && isInt(m['parts'], 1) && (m['parts'] as number) <= (L['maxParts'] as number) && (m['part'] as number) < (m['parts'] as number) && Array.isArray(m['entities']) && m['entities'].length <= (L['maxEntitiesPerPart'] as number) && m['entities'].every(entity) && (m['tombstones'] === undefined || (Array.isArray(m['tombstones']) && m['tombstones'].every((t) => isObject(t) && typeof t['kind'] === 'string' && typeof t['id'] === 'string' && typeof t['stamp'] === 'string'))) && (m['order'] === undefined || (isObject(m['order']) && Object.values(m['order']).every((l) => textList(l, 100000, 128)))) && (m['orderStamps'] === undefined || (isObject(m['orderStamps']) && Object.values(m['orderStamps']).every((s) => typeof s === 'string'))) && optionalList(m['withheld'], 10000),
   'snapshot.end': (m) => isInt(m['entityCount']) && typeof m['digest'] === 'string' && HEX(32).test(m['digest']),
-  'open-tabs': (m) => Array.isArray(m['items']) && m['items'].length <= (L['maxOpenTabs'] as number) && m['items'].every((t) => isObject(t) && typeof t['id'] === 'string' && typeof t['spaceId'] === 'string' && isText(t['url'], L['maxOpenTabUrlBytes'] as number) && isText(t['title'], L['maxOpenTabTitleBytes'] as number) && isInt(t['lastActiveAt'])),
+  // Retired (§27.11): read without its body.
+  'open-tabs': () => true,
   result: (m) => typeof m['digest'] === 'string' && HEX(32).test(m['digest']),
   commit: (m) => typeof m['digest'] === 'string' && HEX(32).test(m['digest']),
   unpair: () => true,
@@ -550,7 +551,7 @@ describe('iOS contract: sync message vectors, form', () => {
   })
 
   it('writes the limits of the specification (§7.5)', () => {
-    expect(L).toMatchObject({ maxFrameBytes: 1048576, maxSnapshotBytes: 33554432, maxEntities: 100000, maxEntitiesPerPart: 500, maxParts: 4096, maxJsonDepth: 32, maxStringBytes: 65536, maxDeviceNameChars: 80, maxDeviceIdChars: 64, maxOpenTabs: 200, handshakeTimeoutMs: 10000, idleTimeoutMs: 60000, sessionMaxMs: 600000, maxConnections: 4, minAutoIntervalMs: 15000, tombstoneDays: 30, archivePerSpace: 500 })
+    expect(L).toMatchObject({ maxFrameBytes: 1048576, maxSnapshotBytes: 33554432, maxEntities: 100000, maxEntitiesPerPart: 500, maxParts: 4096, maxJsonDepth: 32, maxStringBytes: 65536, maxDeviceNameChars: 80, maxDeviceIdChars: 64, handshakeTimeoutMs: 10000, idleTimeoutMs: 60000, sessionMaxMs: 600000, maxConnections: 4, minAutoIntervalMs: 15000, tombstoneDays: 30, archivePerSpace: 500 })
     for (const [name, value] of Object.entries(L)) expect(Number.isInteger(value) && value > 0, name).toBe(true)
   })
 

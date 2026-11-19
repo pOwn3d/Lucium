@@ -409,22 +409,6 @@
         }
       }
     },
-    "command.filter.mac": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On the Mac"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sur le Mac"
-          }
-        }
-      }
-    },
     "command.filter.tabs": {
       "localizations": {
         "en": {
@@ -517,22 +501,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Favoris"
-          }
-        }
-      }
-    },
-    "command.section.mac": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "On the Mac"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sur le Mac"
           }
         }
       }
@@ -3337,166 +3305,6 @@
         }
       }
     },
-    "resume.age %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "List announced by the Mac %@"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Liste annoncée par le Mac %@"
-          }
-        }
-      }
-    },
-    "resume.age.now": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "List announced by the Mac just now"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Liste annoncée par le Mac à l’instant"
-          }
-        }
-      }
-    },
-    "resume.footer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nothing in this list is saved: it goes away when you lock Lucium or forget the Mac. A tap opens the page in a new tab."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rien de cette liste n’est enregistré : elle disparaît quand vous verrouillez Lucium ou oubliez le Mac. Un toucher ouvre la page dans un nouvel onglet."
-          }
-        }
-      }
-    },
-    "resume.notice.disabled-here": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "To see the tabs of your Mac, turn on “Open tabs” in Settings › Synchronization, and tick it on the Mac too."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pour voir les onglets de votre Mac, activez « Onglets ouverts » dans Réglages › Synchronisation, et cochez-les aussi sur le Mac."
-          }
-        }
-      }
-    },
-    "resume.notice.disabled-mac": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The Mac sent no tabs. On the Mac, tick “Open tabs” in Settings › Synchronization."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le Mac n’a envoyé aucun onglet. Sur le Mac, cochez « Onglets ouverts » dans Réglages › Synchronisation."
-          }
-        }
-      }
-    },
-    "resume.notice.empty": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The Mac announced no web page at the last synchronization."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le Mac n’a annoncé aucune page web à la dernière synchronisation."
-          }
-        }
-      }
-    },
-    "resume.notice.no-match": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tab of the Mac matches."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aucun onglet du Mac ne correspond."
-          }
-        }
-      }
-    },
-    "resume.notice.not-paired": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pair your Mac first, in Settings › Synchronization."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Appairez d’abord votre Mac, dans Réglages › Synchronisation."
-          }
-        }
-      }
-    },
-    "resume.notice.waiting": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The list comes with the next synchronization with your Mac."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La liste arrive à la prochaine synchronisation avec votre Mac."
-          }
-        }
-      }
-    },
-    "resume.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pick up a tab from your Mac"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reprendre un onglet du Mac"
-          }
-        }
-      }
-    },
     "settings.lock.off": {
       "localizations": {
         "en": {
@@ -4901,38 +4709,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cochez d’abord « Espaces et dossiers » : un onglet archivé est rangé dans un espace."
-          }
-        }
-      }
-    },
-    "sync.category.open-tabs": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Open tabs"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Onglets ouverts"
-          }
-        }
-      }
-    },
-    "sync.category.open-tabs.detail": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "What you are reading is sent, titles and addresses included."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce que vous lisez est envoyé, titres et adresses compris."
           }
         }
       }

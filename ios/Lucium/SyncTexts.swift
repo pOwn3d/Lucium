@@ -79,7 +79,6 @@ enum SyncTexts {
         case .structure: String(localized: "sync.category.structure")
         case .settings: String(localized: "sync.category.settings")
         case .archive: String(localized: "sync.category.archive")
-        case .openTabs: String(localized: "sync.category.open-tabs")
         case .todayTabs: String(localized: "sync.category.today-tabs")
         }
     }

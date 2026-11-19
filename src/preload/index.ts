@@ -117,7 +117,6 @@ const api: LuciumApi = {
   lockUnlock: (request) => ipcRenderer.invoke(Channel.lockUnlock, request),
   lockConfigure: (request) => ipcRenderer.invoke(Channel.lockConfigure, request),
   sync: (request) => ipcRenderer.invoke(Channel.syncRequest, request),
-  syncResume: (request) => ipcRenderer.invoke(Channel.syncResume, request),
   passwords: (request) => ipcRenderer.invoke(Channel.passwords, request),
   moveTabsToSpace: (ids, spaceId) => ipcRenderer.send(Channel.moveTabsToSpace, ids, spaceId),
   tabDrag: (phase, ids) => ipcRenderer.send(Channel.tabDrag, phase, ids),

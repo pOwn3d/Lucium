@@ -33,8 +33,6 @@ public struct SyncExchangeSummary: Equatable, Sendable {
     public var adoptedTheMacState: Bool
     /// The spaces set aside because they are locked here or on the Mac, whose content did not go (§18).
     public var spacesSetAside: Int
-    /// The Mac's open tabs, when "Open tabs" is common: kept in memory by the caller, never written (§10.4).
-    public var openTabs: [SyncOpenTab]?
     /// The categories both devices ticked, which are the ones this session exchanged: a category ticked on one device only crosses nothing, and the page says so.
     public var categories: Set<SyncCategory>
     /// How many things the Mac's side gave this phone that the state took: entities made or changed, entities removed, settings written (`SyncPatch`), 0 when nothing was written.
@@ -45,7 +43,7 @@ public struct SyncExchangeSummary: Equatable, Sendable {
     public var todayTabsUnshared: Int
 
     public init(at: Int, conflicts: [SettledConflict], refusedSent: [SyncInbound.Refused], refusedReceived: [SyncInbound.Refused], rejectedByApply: [String], applied: Bool, adoptedTheMacState: Bool,
-                spacesSetAside: Int, openTabs: [SyncOpenTab]?, categories: Set<SyncCategory> = [], taken: Int = 0, todayTabsTaken: Int = 0, todayTabsUnshared: Int = 0) {
+                spacesSetAside: Int, categories: Set<SyncCategory> = [], taken: Int = 0, todayTabsTaken: Int = 0, todayTabsUnshared: Int = 0) {
         self.at = at
         self.conflicts = conflicts
         self.refusedSent = refusedSent
@@ -54,7 +52,6 @@ public struct SyncExchangeSummary: Equatable, Sendable {
         self.applied = applied
         self.adoptedTheMacState = adoptedTheMacState
         self.spacesSetAside = spacesSetAside
-        self.openTabs = openTabs
         self.categories = categories
         self.taken = taken
         self.todayTabsTaken = todayTabsTaken
@@ -66,7 +63,7 @@ public struct SyncExchangeSummary: Equatable, Sendable {
 /// same steps with their own state), written for a phone:
 ///
 ///   freeze    the book of marks is brought up to the state and a snapshot is frozen (the categories both ticked; the spaces set aside left out);
-///   send      the snapshot goes in parts, then `open-tabs` if that category is common, then `snapshot.end` with its count and its digest;
+///   send      the snapshot goes in parts, then `snapshot.end` with its count and its digest;
 ///   check     what comes in is checked for its count and its digest (`truncated`), its form (`SyncSnapshot.read`), then entity by entity (`SyncInbound`);
 ///   merge     `SyncMerge.merge(base, local, remote, withheld)`: the same function with the same inputs on both sides;
 ///   result    the digests of the merged snapshots are compared; different: `divergence`, NOTHING is written on either side;
@@ -123,26 +120,16 @@ public struct SyncExchangeBody: SyncSessionBody {
         }
     }
 
-    private func receiveSnapshot(_ channel: SyncChannel, takeOpenTabs: Bool) async throws -> (SyncSnapshotParts.Assembled, [SyncOpenTab]?) {
+    private func receiveSnapshot(_ channel: SyncChannel) async throws -> SyncSnapshotParts.Assembled {
         var assembler = SyncSnapshotParts.Assembler()
-        var tabs: [SyncOpenTab]?
         while true {
             switch try await next(channel) {
             case .snapshotPart(let part): try assembler.add(part)
-            case .openTabs(let list): if takeOpenTabs { tabs = Self.readOpenTabs(list) }
-            case .snapshotEnd(let count, let digest): return (try assembler.finish(entityCount: count, digest: digest), tabs)
+            // Retired (§27.11): a Mac that still sends it is ignored and logged, the session goes on.
+            case .openTabs: log("the Mac sent the retired message open-tabs: ignored")
+            case .snapshotEnd(let count, let digest): return try assembler.finish(entityCount: count, digest: digest)
             case let other: throw SyncFailure(.badMessage, "a \(other.type) is not expected in a snapshot")
             }
-        }
-    }
-
-    /// The tabs a Mac announced, as far as they read (the form was checked by the codec; an address that is not a web page is left out).
-    static func readOpenTabs(_ message: JSONValue) -> [SyncOpenTab] {
-        guard case .object(let fields) = message, case .array(let items)? = fields["items"] else { return [] }
-        return items.compactMap { item in
-            guard case .object(let tab) = item, case .string(let id)? = tab["id"], case .string(let spaceId)? = tab["spaceId"], case .string(let url)? = tab["url"], case .string(let title)? = tab["title"],
-                  case .number(let last)? = tab["lastActiveAt"], let at = Int(exactly: last), SyncInbound.isWebAddress(.string(url)), id.utf16.count <= 128, spaceId.utf16.count <= 128 else { return nil }
-            return SyncOpenTab(id: id, spaceId: spaceId, url: url, title: title, lastActiveAt: at)
         }
     }
 
@@ -207,16 +194,11 @@ public struct SyncExchangeBody: SyncSessionBody {
         let parts = SyncSnapshotParts.parts(of: local, withheld: locked.filter { !SyncSnapshot.namesOfAnObject.contains($0) }.sorted(by: { SyncCanonical.compare($0, $1) < 0 }))
         guard parts.count <= SyncLimits.maxParts else { throw SyncFailure(.tooLarge, "the snapshot needs more parts than the bound") }
         for part in parts { try await channel.send(.snapshotPart(.object(part))) }
-        if context.categories.contains(.openTabs) {
-            let tabs = SyncStateView.openTabs(of: state, isSpaceLocked: locked.contains)
-            let items = tabs.map { JSONValue.object(["id": .string($0.id), "spaceId": .string($0.spaceId), "url": .string($0.url), "title": .string($0.title), "lastActiveAt": .number(Double($0.lastActiveAt))]) }
-            try await channel.send(.openTabs(.object(["items": .array(items)])))
-        }
         let entityCount = local.entities.values.reduce(0) { $0 + $1.count }
         try await channel.send(.snapshotEnd(entityCount: entityCount, digest: local.digest))
 
         // receive, check
-        let (received, openTabs) = try await receiveSnapshot(channel, takeOpenTabs: context.categories.contains(.openTabs))
+        let received = try await receiveSnapshot(channel)
         let exchanged = SyncInbound.onlyExchanged(received.snapshot, categories: context.categories)
         var cleaned = SyncInbound.clean(exchanged.snapshot, now: now(), base: base)
         cleaned.refused = (cleaned.refused + exchanged.refused).sorted { a, b in
@@ -257,7 +239,7 @@ public struct SyncExchangeBody: SyncSessionBody {
         let conflicts = SyncConflicts.settle(conflicts: merged.conflicts, local: local, remote: cleaned.snapshot, merged: merged.snapshot, now: at, peer: .mac)
         let taken = (applied?.changed ?? false) ? patch.upserts.count + patch.removals.count + patch.settings.count : 0
         await host.exchanged(SyncExchangeSummary(at: at, conflicts: conflicts, refusedSent: refusedSent, refusedReceived: cleaned.refused, rejectedByApply: applied?.rejected ?? [], applied: applied?.changed ?? false,
-                                                 adoptedTheMacState: adopting, spacesSetAside: aside.count, openTabs: openTabs, categories: context.categories, taken: taken,
+                                                 adoptedTheMacState: adopting, spacesSetAside: aside.count, categories: context.categories, taken: taken,
                                                  todayTabsTaken: patch.upserts.filter { $0.create && $0.kind == .todayTab }.count, todayTabsUnshared: context.categories.contains(.todayTabs) ? marks.lastUnshared : 0))
         return .committed(at: at)
     }

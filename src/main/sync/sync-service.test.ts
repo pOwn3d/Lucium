@@ -98,7 +98,7 @@ async function listen(r: Rig): Promise<void> {
 describe('SyncService: off by default, and when the Mac listens (§6.1)', () => {
   it('starts off, with nothing paired, not listening and no sheet', () => {
     const { service } = rig()
-    expect(service.status()).toMatchObject({ available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, problem: null })
+    expect(service.status()).toMatchObject({ available: true, enabled: false, categories: { structure: true, settings: false, archive: false, todayTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, problem: null })
   })
 
   it('turns on with no iPhone paired without opening the door: nobody to wait for, no port', async () => {
@@ -210,9 +210,10 @@ describe('SyncService: off by default, and when the Mac listens (§6.1)', () => 
 
   it('keeps a category ticked or not, and refuses one that does not exist', async () => {
     const r = rig()
-    r.service.setCategory('openTabs', true)
-    expect(r.service.status().categories.openTabs).toBe(true)
+    r.service.setCategory('archive', true)
+    expect(r.service.status().categories.archive).toBe(true)
     expect(() => r.service.setCategory('passwords' as never, true)).toThrow(SyncServiceError)
+    expect(() => r.service.setCategory('openTabs' as never, true)).toThrow(SyncServiceError)
   })
 
   it('does not tick « Onglets d’Aujourd’hui » without the structure, and unticks it with the structure (§27.2, card 510)', async () => {

@@ -14,7 +14,7 @@ import { countdown } from './SyncSettings'
 
 let mounted: Mounted | null = null
 
-const OFF: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, closedShown: null, problem: null }
+const OFF: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, todayTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, closedShown: null, problem: null }
 const ON: SyncStatus = { ...OFF, enabled: true }
 
 const snapshot = (): UiSnapshot => ({ state: createInitialState({ now: 1, newId: () => 'id' }), extensions: [], downloads: [], runtime: { tabs: {} }, platform: 'darwin' }) as unknown as UiSnapshot
@@ -134,24 +134,23 @@ describe('the subpage', () => {
     expect(page.textContent).toContain(t('sync.identity-replaced'))
   })
 
-  it('shows the five categories, the first ticked only, and sends the one that is clicked', async () => {
+  it('shows the four categories, the first ticked only, and sends the one that is clicked', async () => {
     const b = bridge(() => ON)
     const page = await openPage('#files/sync')
     const boxes = [...page.querySelectorAll<HTMLInputElement>('main input[type="checkbox"]')].slice(1)
-    expect(boxes.map((box) => box.checked)).toEqual([true, false, false, false, false])
-    expect(page.textContent).toContain(t('sync.category-opentabs-hint'))
+    expect(boxes.map((box) => box.checked)).toEqual([true, false, false, false])
     expect(page.textContent).toContain(t('sync.category-todaytabs-hint'))
     expect(page.textContent).toContain(t('sync.categories-never'))
+    await click(boxes[2]!)
+    expect(b.requests).toContainEqual({ kind: 'category', category: 'archive', on: true })
     await click(boxes[3]!)
-    expect(b.requests).toContainEqual({ kind: 'category', category: 'openTabs', on: true })
-    await click(boxes[4]!)
     expect(b.requests).toContainEqual({ kind: 'category', category: 'todayTabs', on: true })
   })
 
   it('does not let « Onglets d’Aujourd’hui » be ticked without « Espaces et dossiers »: the row is greyed and says why', async () => {
     const b = bridge(() => ({ ...ON, categories: { ...ON.categories, structure: false, todayTabs: true } }))
     const page = await openPage('#files/sync')
-    const box = [...page.querySelectorAll<HTMLInputElement>('main input[type="checkbox"]')].slice(1)[4]!
+    const box = [...page.querySelectorAll<HTMLInputElement>('main input[type="checkbox"]')].slice(1)[3]!
     // Even a ticked value left over is not drawn ticked: what the page shows is what goes.
     expect(box.disabled).toBe(true)
     expect(box.checked).toBe(false)

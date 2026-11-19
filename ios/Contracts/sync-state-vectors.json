@@ -6,8 +6,7 @@
       "categories": [
         "structure",
         "settings",
-        "archive",
-        "openTabs"
+        "archive"
       ],
       "expect": {
         "entities": {
@@ -1310,9 +1309,7 @@
     },
     {
       "base": null,
-      "categories": [
-        "openTabs"
-      ],
+      "categories": [],
       "expect": {
         "entities": {},
         "order": {}
@@ -1745,8 +1742,7 @@
       "categories": [
         "structure",
         "settings",
-        "archive",
-        "openTabs"
+        "archive"
       ],
       "expect": {
         "entities": {
@@ -2110,8 +2106,7 @@
       "categories": [
         "structure",
         "settings",
-        "archive",
-        "openTabs"
+        "archive"
       ],
       "expect": {
         "entities": {
@@ -2759,8 +2754,7 @@
       "categories": [
         "structure",
         "settings",
-        "archive",
-        "openTabs"
+        "archive"
       ],
       "expect": {
         "entities": {
@@ -2854,8 +2848,7 @@
       "categories": [
         "structure",
         "settings",
-        "archive",
-        "openTabs"
+        "archive"
       ],
       "expect": {
         "entities": {

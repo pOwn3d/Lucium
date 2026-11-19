@@ -10,7 +10,7 @@
 //
 // The same vectors (ios/Contracts/sync-message-vectors.json: `messages`, `sequences`, `transitions`) are played on the iPhone side by LuciumKit.
 
-import { ALPN, MAX_CATEGORIES, MAX_DEVICE_ID_CHARS, MAX_DEVICE_NAME_CHARS, MAX_ENTITIES_PER_PART, MAX_HOSTS, MAX_FRAME_VALUES, MAX_JSON_DEPTH, MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES, MAX_OPEN_TABS, MAX_PARTS, MAX_STRING_BYTES, PROTOCOL_VERSION } from './limits'
+import { ALPN, MAX_CATEGORIES, MAX_DEVICE_ID_CHARS, MAX_DEVICE_NAME_CHARS, MAX_ENTITIES_PER_PART, MAX_HOSTS, MAX_FRAME_VALUES, MAX_JSON_DEPTH, MAX_PARTS, MAX_STRING_BYTES, PROTOCOL_VERSION } from './limits'
 import { isErrorCode, type ErrorCode, type Verdict } from './error-codes'
 import { isInheritedName } from '@shared/sync-snapshot'
 
@@ -38,14 +38,6 @@ export interface WireTombstone {
   stamp: string
 }
 
-export interface OpenTab {
-  id: string
-  spaceId: string
-  url: string
-  title: string
-  lastActiveAt: number
-}
-
 interface Envelope {
   v: number
   n: number
@@ -71,7 +63,8 @@ export type SnapshotPart = Envelope & {
   withheld?: string[]
 }
 export type SnapshotEnd = Envelope & { t: 'snapshot.end'; entityCount: number; digest: string }
-export type OpenTabs = Envelope & { t: 'open-tabs'; items: OpenTab[] }
+/** Retired (§27.11): no device sends it any more. A device that still does is read without its body and ignored by the session, which logs it. */
+export type OpenTabs = Envelope & { t: 'open-tabs' }
 export type ResultMessage = Envelope & { t: 'result'; digest: string }
 export type Commit = Envelope & { t: 'commit'; digest: string }
 export type Unpair = Envelope & { t: 'unpair' }
@@ -229,13 +222,6 @@ function readTombstone(value: unknown): WireTombstone | null {
   return typeof stamp === 'string' && STAMP.test(stamp) ? { kind, id, stamp } : null
 }
 
-function readOpenTab(value: unknown): OpenTab | null {
-  if (!isObject(value)) return null
-  const { id, spaceId, url, title, lastActiveAt } = value
-  if (typeof id !== 'string' || typeof spaceId !== 'string' || !textBytes(url, MAX_OPEN_TAB_URL_BYTES) || !textBytes(title, MAX_OPEN_TAB_TITLE_BYTES) || !isInt(lastActiveAt)) return null
-  return { id, spaceId, url, title, lastActiveAt }
-}
-
 /** Every item of a list read by `read`, or null when the list is too long, is not a list, or holds an item that does not read. */
 function readList<T>(value: unknown, max: number, read: (item: unknown) => T | null): T[] | null {
   if (!Array.isArray(value) || value.length > max) return null
@@ -310,11 +296,6 @@ const readSnapshotPart: Reader<SnapshotPart> = (m) => {
 
 const readSnapshotEnd: Reader<SnapshotEnd> = (m) => (isInt(m['entityCount']) && typeof m['digest'] === 'string' && HEX_32.test(m['digest']) ? { entityCount: m['entityCount'], digest: m['digest'] } : null)
 
-const readOpenTabs: Reader<OpenTabs> = (m) => {
-  const items = readList(m['items'], MAX_OPEN_TABS, readOpenTab)
-  return items === null ? null : { items }
-}
-
 const readDigest = (m: Record<string, unknown>): { digest: string } | null => (typeof m['digest'] === 'string' && HEX_32.test(m['digest']) ? { digest: m['digest'] } : null)
 
 const readError: Reader<ErrorMessage> = (m) => {
@@ -334,7 +315,7 @@ const READERS: { [T in MessageType]: Reader<Extract<Message, { t: T }>> } = {
   'pair.accept': readPairAccept,
   'snapshot.part': readSnapshotPart,
   'snapshot.end': readSnapshotEnd,
-  'open-tabs': readOpenTabs,
+  'open-tabs': () => ({}),
   result: readDigest,
   commit: readDigest,
   unpair: () => ({}),

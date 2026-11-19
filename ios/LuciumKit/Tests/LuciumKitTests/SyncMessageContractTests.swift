@@ -33,9 +33,6 @@ struct SyncMessageContractTests {
         #expect(limits["maxDeviceIdChars"] == SyncLimits.maxDeviceIdCharacters)
         #expect(limits["maxCategories"] == SyncLimits.maxCategories)
         #expect(limits["maxHosts"] == SyncLimits.maxHosts)
-        #expect(limits["maxOpenTabs"] == SyncLimits.maxOpenTabs)
-        #expect(limits["maxOpenTabUrlBytes"] == SyncLimits.maxOpenTabURLBytes)
-        #expect(limits["maxOpenTabTitleBytes"] == SyncLimits.maxOpenTabTitleBytes)
         #expect(limits["handshakeTimeoutMs"] == 10_000 && limits["idleTimeoutMs"] == 60_000 && limits["sessionMaxMs"] == 600_000)
         #expect(limits["minAutoIntervalMs"] == 15_000 && limits["clockSkewWarnMs"] == SyncLimits.clockSkewWarningMilliseconds)
     }

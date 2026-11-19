@@ -4,12 +4,10 @@ import type { SyncCategory } from '@shared/sync-ipc'
 import type { SyncSnapshot } from '@shared/sync-snapshot'
 import { MarkBook } from './marks'
 import { NOW, stateOf } from './session-rig.test-support'
-import { hasLoneSurrogate, parseMessage } from './messages'
-import { MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES } from './limits'
 import { mergeSnapshots } from '@shared/sync-merge'
-import { baseOf, follows, openTabsOf, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
+import { baseOf, follows, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 
-const all = new Set<SyncCategory>(['structure', 'settings', 'archive', 'openTabs'])
+const all = new Set<SyncCategory>(['structure', 'settings', 'archive'])
 const snap = (state: ReturnType<typeof stateOf>, over: { categories?: Set<SyncCategory>; withheld?: string[]; base?: SyncSnapshot | null } = {}): SyncSnapshot => {
   const marks = new MarkBook('mac')
   marks.update(trackedViewOf(state), NOW)
@@ -72,7 +70,6 @@ describe('snapshotOf', () => {
     expect(Object.keys(snap(state, { categories: new Set(['structure']) }).entities).sort()).toEqual(['favorite', 'folder', 'space', 'tab'])
     expect(Object.keys(snap(state, { categories: new Set(['settings']) }).entities)).toEqual(['setting'])
     expect(Object.keys(snap(state, { categories: new Set() }).entities)).toEqual([])
-    expect(Object.keys(snap(state, { categories: new Set(['openTabs']) }).entities)).toEqual([])
   })
 
   it('takes nothing of a space set aside: neither it, nor what it holds, nor its lists', () => {
@@ -206,85 +203,5 @@ describe('what the book follows, and the base', () => {
     const state = stateOf({ spaces: [{ id: 'a' }, { id: 'b' }, { id: 'c' }] })
     expect(withheldSpaces(state, (id) => id !== 'a')).toEqual(['b', 'c'])
     expect(withheldSpaces(state, () => false)).toEqual([])
-  })
-})
-
-describe('openTabsOf (§10.4)', () => {
-  const state = stateOf({
-    spaces: [{ id: 's1' }, { id: 'locked' }],
-    tabs: [
-      { id: 'a', spaceId: 's1', pinned: false, url: 'https://a.example/', title: 'A', lastActiveAt: 5 },
-      { id: 'b', spaceId: 's1', pinned: false, url: 'https://b.example/', title: 'B', lastActiveAt: 9 },
-      { id: 'private', spaceId: 's1', private: true, url: 'https://p.example/' },
-      { id: 'file', spaceId: 's1', pinned: false, url: 'file:///etc/passwd' },
-      { id: 'hidden', spaceId: 'locked', pinned: false, url: 'https://h.example/' }
-    ]
-  })
-
-  it('lists web pages only, the latest first, never a private tab nor a tab of a locked space', () => {
-    expect(openTabsOf(state, (id) => id === 'locked').map((tab) => tab.id)).toEqual(['b', 'a'])
-  })
-
-  it('writes what the message allows: the title up to 300 characters, the time as a whole number', () => {
-    const long = { ...state, tabs: [{ ...state.tabs[0]!, title: 'T'.repeat(400), lastActiveAt: 7.9 }] }
-    const [tab] = openTabsOf(long, () => false)
-    expect(tab?.title.length).toBe(300)
-    expect(tab?.lastActiveAt).toBe(7)
-  })
-
-  it('leaves out a tab whose address is longer than 4096 bytes, and keeps one at the bound: an address cut is another page, which the other device would show and open (review, second pass)', () => {
-    const at = `https://x.example/${'a'.repeat(4096 - 'https://x.example/'.length)}`
-    const over = `${at}a`
-    const wide = `https://x.example/${'é'.repeat(2040)}`
-    expect(Buffer.byteLength(at, 'utf8')).toBe(4096)
-    expect(Buffer.byteLength(wide, 'utf8')).toBeGreaterThan(4096)
-    const tabs = [at, over, wide].map((url, n) => ({ ...state.tabs[0]!, id: `u${n}`, url, lastActiveAt: 9 - n }))
-    expect(openTabsOf({ ...state, tabs }, () => false).map((tab) => [tab.id, tab.url])).toEqual([['u0', at]])
-  })
-
-  it('does not cut a title in the middle of an emoji: a lone surrogate is not text, and Swift refuses the whole message that holds one (review n° 15)', () => {
-    const emoji = '\u{1F600}'
-    const long = { ...state, tabs: [{ ...state.tabs[0]!, title: `${'T'.repeat(299)}${emoji}` }] }
-    const [tab] = openTabsOf(long, () => false)
-    expect(tab?.title).toBe('T'.repeat(299))
-    expect(hasLoneSurrogate(`${tab?.title}`)).toBe(false)
-  })
-
-  it('cuts the title to the BYTES the message allows, not to as many UTF-16 units: a title of 300 non-ASCII characters is 900 bytes, and the message holding it was refused', () => {
-    const wide = { ...state, tabs: [{ ...state.tabs[0]!, title: '日本語のタイトル'.repeat(60), lastActiveAt: 7 }] }
-    const [tab] = openTabsOf(wide, () => false)
-    expect(Buffer.byteLength(tab?.title ?? '', 'utf8')).toBeLessThanOrEqual(MAX_OPEN_TAB_TITLE_BYTES)
-    expect(Buffer.byteLength(tab?.url ?? '', 'utf8')).toBeLessThanOrEqual(MAX_OPEN_TAB_URL_BYTES)
-    // As much as fits, in whole characters (a title of three-byte characters is cut at a hundred of them), and what is left is text.
-    expect(tab?.title).toBe('日本語のタイトル'.repeat(60).slice(0, 100))
-    expect(hasLoneSurrogate(`${tab?.title}${tab?.url}`)).toBe(false)
-    // The message that carries it is read back by the same reader the other device uses (a Swift reader refuses what is over the bound).
-    const parsed = parseMessage(JSON.stringify({ v: 1, n: 2, t: 'open-tabs', items: [tab] }))
-    expect(parsed.ok).toBe(true)
-  })
-
-  it('cuts at the bytes without leaving half of an emoji either, whatever the cut falls on (one, two, three or four bytes)', () => {
-    for (const unit of ['a', 'é', '日', '\u{1F600}']) {
-      for (let before = 0; before < 4; before++) {
-        const title = `${'a'.repeat(before)}${unit.repeat(400)}`
-        const [tab] = openTabsOf({ ...state, tabs: [{ ...state.tabs[0]!, title }] }, () => false)
-        expect(Buffer.byteLength(tab?.title ?? '', 'utf8'), `${unit} after ${before}`).toBeLessThanOrEqual(MAX_OPEN_TAB_TITLE_BYTES)
-        expect(hasLoneSurrogate(tab?.title ?? ''), `${unit} after ${before}`).toBe(false)
-        expect(Buffer.byteLength(tab?.title ?? '', 'utf8'), `${unit} after ${before}: as much as fits`).toBeGreaterThan(MAX_OPEN_TAB_TITLE_BYTES - 4)
-      }
-    }
-  })
-
-  it('writes a title that holds a lone surrogate as text: a page sets its own title, and the message that held one was refused whole by the iPhone, every session (review, second pass)', () => {
-    const odd = { ...state, tabs: [{ ...state.tabs[0]!, title: 'ok \ud83d', lastActiveAt: 7 }] }
-    const [tab] = openTabsOf(odd, () => false)
-    expect(hasLoneSurrogate(tab?.title ?? '')).toBe(false)
-    expect(tab?.title).toBe('ok \uFFFD')
-    expect(parseMessage(JSON.stringify({ v: 1, n: 2, t: 'open-tabs', items: [tab] })).ok).toBe(true)
-  })
-
-  it('announces at most two hundred', () => {
-    const many = { ...state, tabs: Array.from({ length: 300 }, (_, n) => ({ ...state.tabs[0]!, id: `t${n}`, lastActiveAt: n })) }
-    expect(openTabsOf(many, () => false)).toHaveLength(200)
   })
 })

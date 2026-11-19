@@ -15,10 +15,9 @@ import type { NamedWindow } from './window-names'
 import type { WindowSidebar } from './window-sidebar'
 import type { PlatformId } from './platform'
 import { t } from './i18n'
-import type { ResumeAvailability, ResumeLine } from './sync-resume'
 import { COMMAND_BAR_CARD } from './command-bar-surface'
 import type { Candidate } from './command-bar-types'
-import { onePerSplit, MAX_TABS, tabCandidate, actionCandidates, jotCandidate, spaceCandidates, MAX_ARCHIVED, readLaterCandidates, bookmarkCandidates, iphoneCandidates, MAX_BANG_HINTS, MAX_SUGGESTIONS, MAX_HISTORY, searchOnlyActions, tabSearchActions, autoReloadActions, readLaterActions, containerActions, MAX_CONTAINER_ACTIONS, libraryActions, notesActions, webStoreActions, privacyActions, passwordActions, markdownActions, readableActions, shareActions, sessionActions, sessionCandidates, workViewCandidates, asideActions, lockActions, layoutActions, windowSidebarActions, webPanelCandidates, moveCandidates, paneCandidates, extensionCandidates, windowCandidates } from './command-bar-sources'
+import { onePerSplit, MAX_TABS, tabCandidate, actionCandidates, jotCandidate, spaceCandidates, MAX_ARCHIVED, readLaterCandidates, bookmarkCandidates, MAX_BANG_HINTS, MAX_SUGGESTIONS, MAX_HISTORY, searchOnlyActions, tabSearchActions, autoReloadActions, readLaterActions, containerActions, MAX_CONTAINER_ACTIONS, libraryActions, notesActions, webStoreActions, privacyActions, passwordActions, markdownActions, readableActions, shareActions, sessionActions, sessionCandidates, workViewCandidates, asideActions, lockActions, layoutActions, windowSidebarActions, webPanelCandidates, moveCandidates, paneCandidates, extensionCandidates, windowCandidates } from './command-bar-sources'
 import { matchScore, fold, foldedQuery, nameScore, scoreFolded } from './command-bar-match'
 import type { BarScope } from './command-bar-groups'
 
@@ -148,7 +147,7 @@ export function rankCandidates(
   history: HistoryEntry[] = [],
   suggestions: string[] = [],
   extensions: readonly ExtensionInfo[] = [],
-  options: { private?: boolean; windows?: readonly NamedWindow[]; newTab?: boolean; windowSidebar?: WindowSidebar; platform?: PlatformId; iphone?: { lines: readonly ResumeLine[]; announcedAt: number | null; availability: ResumeAvailability; now: number } } = {}
+  options: { private?: boolean; windows?: readonly NamedWindow[]; newTab?: boolean; windowSidebar?: WindowSidebar; platform?: PlatformId } = {}
 ): Candidate[] {
   const q = query.trim()
   const { suggestHistory, suggestTabs, suggestArchive, suggestReadLater } = state.settings
@@ -252,8 +251,6 @@ export function rankCandidates(
   )
   if (suggestReadLater) result.push(...readLaterCandidates(q, state))
   result.push(...bookmarkCandidates(q, state, options.private === true))
-  // « Sur l'iPhone »: only in a normal window, and only when the main process gave a list (an iPhone paired, the category ticked on both sides).
-  if (options.iphone && options.private !== true) result.push(...iphoneCandidates(q, options.iphone))
   const lower = q.toLowerCase()
   const bangPrefix = state.settings.searchBangs ? /^!([a-z0-9_-]{0,30})$/i.exec(q) : null
   if (bangPrefix) {

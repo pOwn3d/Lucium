@@ -28,13 +28,12 @@ export function countdown(ms: number): string {
 const when = (ms: number): string => new Date(ms).toLocaleString(getLanguage(), { dateStyle: 'medium', timeStyle: 'short' })
 
 /** Getters: the texts are looked up when the page draws, in the language chosen then. */
-// `openTabs` goes with « Reprendre un onglet du Mac » (card 511): until then its row stays. A category with no text here is not drawn.
+// A category with no text here is not drawn.
 const CATEGORY_TEXT: Partial<Record<SyncCategory, { label: () => string; hint: () => string; needs?: () => string }>> = {
   todayTabs: { label: () => t('sync.category-todaytabs'), hint: () => t('sync.category-todaytabs-hint'), needs: () => t('sync.category-todaytabs-needs') },
   structure: { label: () => t('sync.category-structure'), hint: () => t('sync.category-structure-hint') },
   settings: { label: () => t('sync.category-settings'), hint: () => t('sync.category-settings-hint') },
-  archive: { label: () => t('sync.category-archive'), hint: () => t('sync.category-archive-hint'), needs: () => t('sync.category-archive-needs') },
-  openTabs: { label: () => t('sync.category-opentabs'), hint: () => t('sync.category-opentabs-hint') }
+  archive: { label: () => t('sync.category-archive'), hint: () => t('sync.category-archive-hint'), needs: () => t('sync.category-archive-needs') }
 }
 
 /**

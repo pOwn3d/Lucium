@@ -167,9 +167,8 @@ struct SyncPartsTests {
 struct SyncSessionMessagesTests {
     @Test func whatThePhoneWritesForAnExchangeIsReadBack() throws {
         let part: JSONValue = .object(["part": .number(0), "parts": .number(1), "entities": .array([]), "withheld": .array([.string("s9")])])
-        let tabs: JSONValue = .object(["items": .array([.object(["id": .string("t"), "spaceId": .string("s"), "url": .string("https://a.example/"), "title": .string("A"), "lastActiveAt": .number(5)])])])
         let digest = String(repeating: "ab", count: 32)
-        let sent: [SyncMessage] = [.snapshotPart(part), .openTabs(tabs), .snapshotEnd(entityCount: 7, digest: digest), .result(digest: digest), .commit(digest: digest)]
+        let sent: [SyncMessage] = [.snapshotPart(part), .snapshotEnd(entityCount: 7, digest: digest), .result(digest: digest), .commit(digest: digest)]
         for (index, message) in sent.enumerated() {
             let data = try SyncMessageCodec.encode(message, number: index + 1)
             guard case .success(let envelope) = SyncMessageCodec.decode(data) else { Issue.record("not read back: \(message.type)"); continue }
@@ -177,7 +176,6 @@ struct SyncSessionMessagesTests {
             #expect(envelope.message.type == message.type)
             switch (envelope.message, message) {
             case (.snapshotPart(let read), .snapshotPart): #expect(read["part"] == .number(0) && read["withheld"] == .array([.string("s9")]))
-            case (.openTabs(let read), .openTabs): #expect(read["items"]?.items.count == 1)
             default: #expect(envelope.message == message)
             }
         }

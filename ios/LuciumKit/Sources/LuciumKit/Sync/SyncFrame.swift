@@ -20,9 +20,6 @@ public enum SyncLimits {
     public static let maxDeviceIdCharacters = 64
     public static let maxCategories = 8
     public static let maxHosts = 4
-    public static let maxOpenTabs = 200
-    public static let maxOpenTabURLBytes = 4096
-    public static let maxOpenTabTitleBytes = 300
     public static let handshakeTimeout: Duration = .seconds(10)
     public static let idleTimeout: Duration = .seconds(60)
     public static let sessionMaximum: Duration = .seconds(600)

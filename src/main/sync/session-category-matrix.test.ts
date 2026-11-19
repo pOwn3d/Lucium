@@ -44,7 +44,7 @@ describe('the categories announced and taken as common (§10.1)', () => {
   })
 
   it('keeps taking as common what both ticked and does not depend on a space', () => {
-    expect([...commonCategories(new Set<SyncCategory>(['settings', 'openTabs']), ['settings', 'openTabs', 'archive'])].sort()).toEqual(['openTabs', 'settings'])
+    expect([...commonCategories(new Set<SyncCategory>(['settings', 'todayTabs']), ['settings', 'openTabs', 'archive'])].sort()).toEqual(['settings'])
     expect([...commonCategories(new Set<SyncCategory>(['structure', 'archive', 'todayTabs']), ['structure', 'archive', 'todayTabs'])].sort()).toEqual(['archive', 'structure', 'todayTabs'])
   })
 })

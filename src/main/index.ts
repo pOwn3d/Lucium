@@ -63,7 +63,6 @@ import { LockStore } from './lock-store'
 import { STATE_VERSION } from '@shared/model'
 import { setSyncService } from './sync/registry'
 import { createSyncService } from './sync/sync-wiring'
-import { openTabsOf } from './sync/state-view'
 import { restoreRefusal } from '@shared/lock'
 import { createBlockHandlerFollower } from './block-handlers'
 import { lastWindowClosedStep } from './window-lifecycle'
@@ -333,8 +332,7 @@ async function main(): Promise<void> {
       host: { state: () => sharedStore.get(), apply: (patch) => browser.dispatch({ type: 'sync/apply', patch }), isSpaceLocked: (spaceId) => lock.isSpaceLocked(spaceId), isAppLocked: () => lock.isAppLocked() },
       subscribe: (listener) => sharedStore.subscribe(() => listener()),
       appVersion: app.getVersion(),
-      stateVersion: STATE_VERSION,
-      openTabs: () => openTabsOf(sharedStore.get(), (spaceId) => lock.isSpaceLocked(spaceId))
+      stateVersion: STATE_VERSION
     }
   })
   setSyncService(sync)

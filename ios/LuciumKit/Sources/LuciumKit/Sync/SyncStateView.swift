@@ -21,23 +21,6 @@ public struct SyncTrackedView: Equatable, Sendable {
     }
 }
 
-/// A tab announced to the other device when "Open tabs" is common (§10.4).
-public struct SyncOpenTab: Equatable, Sendable {
-    public let id: String
-    public let spaceId: String
-    public let url: String
-    public let title: String
-    public let lastActiveAt: Int
-
-    public init(id: String, spaceId: String, url: String, title: String, lastActiveAt: Int) {
-        self.id = id
-        self.spaceId = spaceId
-        self.url = url
-        self.title = title
-        self.lastActiveAt = lastActiveAt
-    }
-}
-
 public enum SyncStateView {
     private static let dash = "-"
 
@@ -315,19 +298,6 @@ public enum SyncStateView {
             size += width
         }
         return String(out)
-    }
-
-    /// The tabs announced to the other device when "Open tabs" is common (§10.4): web pages the person has open, never a private tab, never a tab of a locked
-    /// space, the latest 200. An address longer than the message allows is left out (a cut one would be another page); a title is cut.
-    public static func openTabs(of state: BrowserState, isSpaceLocked: (String) -> Bool) -> [SyncOpenTab] {
-        let candidates = state.tabs.filter { !$0.isPrivate && isWebPage($0.url) && !isSpaceLocked($0.spaceId) && $0.url.utf8.count <= SyncLimits.maxOpenTabURLBytes }
-        let latest = candidates.sorted { a, b in
-            let x = a.lastActiveAt ?? 0, y = b.lastActiveAt ?? 0
-            return x != y ? x > y : SyncCanonical.compare(a.id, b.id) < 0
-        }
-        return latest.prefix(SyncLimits.maxOpenTabs).map { tab in
-            SyncOpenTab(id: tab.id, spaceId: tab.spaceId, url: tab.url, title: cut(tab.title, bytes: SyncLimits.maxOpenTabTitleBytes), lastActiveAt: Int(max(0, (tab.lastActiveAt ?? 0).rounded(.towardZero))))
-        }
     }
 }
 

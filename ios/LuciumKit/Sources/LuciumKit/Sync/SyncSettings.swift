@@ -8,8 +8,6 @@ public enum SyncCategory: String, CaseIterable, Codable, Hashable, Sendable {
     case settings
     /// The archived tabs.
     case archive
-    /// A read-only announcement of the open tabs, for "Resume a tab of the Mac" (§10.4).
-    case openTabs
     /// The tabs of "Today", open and closed on one device and on the other (§27). Not ticked by default [Q9].
     case todayTabs
 
@@ -24,7 +22,7 @@ public enum SyncCategory: String, CaseIterable, Codable, Hashable, Sendable {
     public var needsStructure: Bool {
         switch self {
         case .archive, .todayTabs: true
-        case .structure, .settings, .openTabs: false
+        case .structure, .settings: false
         }
     }
 

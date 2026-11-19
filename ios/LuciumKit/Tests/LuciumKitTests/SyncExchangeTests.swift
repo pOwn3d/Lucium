@@ -60,7 +60,8 @@ struct SyncTestMac: Sendable {
     /// The base the Mac holds for the phone, and the hash it says in its hello.
     var base: SyncSnapshot?
     var categories = ["structure"]
-    var openTabs: [SyncOpenTab]?
+    /// Sends the retired `open-tabs` message (§27.11) between the parts and the end, as an old build of the Mac would.
+    var sendsRetiredOpenTabs = false
     var warnAfterHello = false
     var wrongEndDigest = false
     var wrongResultDigest = false
@@ -79,7 +80,6 @@ struct SyncTestMac: Sendable {
         var hello: [String: Any] = [:]
         var phone = SyncSnapshot()
         var phoneWithheld: [String] = []
-        var phoneOpenTabs: [[String: Any]]?
         var phoneBaseHash: Any?
         var phoneResult: String?
         var phoneCommit: String?
@@ -152,10 +152,7 @@ struct SyncTestMac: Sendable {
             if index == 0, unpairAfterParts { try await mac.write("unpair"); return seen }
             if index == 0, byeAfterParts { try await mac.write("bye"); return seen }
         }
-        if let tabs = openTabs {
-            let items = tabs.map { ["id": $0.id, "spaceId": $0.spaceId, "url": $0.url, "title": $0.title, "lastActiveAt": $0.lastActiveAt] as [String: Any] }
-            try await mac.write("open-tabs", ["items": items])
-        }
+        if sendsRetiredOpenTabs { try await mac.write("open-tabs", ["items": [["id": "x", "spaceId": "m1", "url": "file:///etc/passwd", "title": "T", "lastActiveAt": 1]]]) }
         let count = sent.entities.values.reduce(0) { $0 + $1.count }
         try await mac.write("snapshot.end", ["entityCount": count, "digest": wrongEndDigest ? String(repeating: "0", count: 64) : sent.digest])
         if extraPartAfterEnd { try await mac.write("snapshot.part", try Self.jsonObject(.object(parts[0])) as? [String: Any] ?? [:]) }
@@ -168,7 +165,6 @@ struct SyncTestMac: Sendable {
             seen.types.append(type)
             switch type {
             case "snapshot.part": try assembler.add(try Self.value(message.fields))
-            case "open-tabs": seen.phoneOpenTabs = message.fields["items"] as? [[String: Any]]
             case "snapshot.end":
                 let assembled = try assembler.finish(entityCount: message.fields["entityCount"] as? Int ?? -1, digest: message.fields["digest"] as? String ?? "")
                 seen.phone = assembled.snapshot
@@ -996,56 +992,35 @@ struct SyncExchangeTests {
         #expect(rig.bases.get(peerId: peer.id, now: now) == nil)
     }
 
-    // MARK: The open tabs
+    // MARK: The retired open tabs (§27.11)
 
-    @Test func theOpenTabsOfTheMacAreHeldAndThoseOfThePhoneAreSentWhenTheCategoryIsCommon() async throws {
-        var state = try SyncStateFixtures.sample()
-        var web = TabItem(id: "w1", spaceId: "s1", url: "https://reading.example/article", title: "À lire")
-        web.lastActiveAt = 5
-        state.tabs.append(web)
-        let rig = try rig(state: state)
+    /// A thread-safe list of the lines a session logged.
+    private final class Lines: @unchecked Sendable {
+        private let lock = NSLock()
+        private var lines: [String] = []
+        func add(_ line: String) { lock.lock(); lines.append(line); lock.unlock() }
+        var all: [String] { lock.lock(); defer { lock.unlock() }; return lines }
+    }
+
+    @Test func theRetiredOpenTabsMessageOfAnOldMacIsIgnoredAndLoggedAndTheSessionGoesOn() async throws {
+        var rig = try rig()
         defer { rig.cleanup() }
-        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["structure", "openTabs"])
-        mac.openTabs = [SyncOpenTab(id: "mt-open", spaceId: "m1", url: "https://mac-reading.example/", title: "Sur le Mac", lastActiveAt: 7)]
-        let (_, seen) = try await session(rig, mac: mac, categories: [.structure, .openTabs])
-        let summary = try #require(await rig.host.summaries.first)
-        #expect(summary.openTabs == mac.openTabs)
-        let sent = try #require(seen.phoneOpenTabs)
-        #expect(sent.compactMap { $0["id"] as? String }.sorted() == ["t1", "t2", "today", "w1"], "every open web page, pinned or not; never the private one")
-        #expect(!(await rig.host.state.tabs.contains { $0.id == "mt-open" }), "an announced tab is never written into the state")
+        let logged = Lines()
+        rig.body = SyncExchangeBody(host: rig.host, marks: rig.marks, bases: rig.bases, now: { SyncStateFixtures.now }, idleTimeout: .seconds(2), log: { logged.add($0) })
+        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["structure"])
+        mac.sendsRetiredOpenTabs = true
+        let (report, _) = try await session(rig, mac: mac)
+        #expect(report != nil, "no error of the session")
+        #expect(try #require(await rig.host.summaries.first).applied, "the snapshot of the Mac was taken all the same")
+        #expect(logged.all.contains { $0.contains("retired message open-tabs") })
+        #expect(!(await rig.host.state.tabs.contains { $0.id == "x" }), "nothing of the message is written")
     }
 
-    @Test func aListOfOpenTabsThePhoneDidNotAskForIsIgnoredAndOnlyWebPagesAreKept() async throws {
-        let withoutIt = try rig()
-        defer { withoutIt.cleanup() }
-        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["structure", "openTabs"])
-        mac.openTabs = [SyncOpenTab(id: "x", spaceId: "m1", url: "https://reading.example/", title: "Lu", lastActiveAt: 7), SyncOpenTab(id: "y", spaceId: "m1", url: "file:///etc/passwd", title: "Fichier", lastActiveAt: 8)]
-        // The phone did not tick « Open tabs »: a list that comes anyway is not kept.
-        _ = try await session(withoutIt, mac: mac, categories: [.structure])
-        #expect(try #require(await withoutIt.host.summaries.first).openTabs == nil)
-        // It did: only the web pages of the list are kept.
-        let withIt = try rig()
-        defer { withIt.cleanup() }
-        _ = try await session(withIt, mac: mac, categories: [.structure, .openTabs])
-        #expect(try #require(await withIt.host.summaries.first).openTabs?.map(\.id) == ["x"], "an address that is not a web page is left out")
-    }
-
-    @Test func anOpenTabWithAnIdentifierLongerThanTheMacKeepsIsLeftOut() async throws {
+    @Test func thePhoneNeverSendsOpenTabsEvenWhenTheMacStillAnnouncesTheCategory() async throws {
         let rig = try rig()
         defer { rig.cleanup() }
-        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["structure", "openTabs"])
-        mac.openTabs = [SyncOpenTab(id: "ok", spaceId: "m1", url: "https://reading.example/", title: "Lu", lastActiveAt: 7), SyncOpenTab(id: String(repeating: "i", count: 129), spaceId: "m1", url: "https://long-id.example/", title: "Long", lastActiveAt: 8),
-                        SyncOpenTab(id: "long-space", spaceId: String(repeating: "s", count: 129), url: "https://long-space.example/", title: "Long", lastActiveAt: 9), SyncOpenTab(id: String(repeating: "i", count: 128), spaceId: "m1", url: "https://edge.example/", title: "Edge", lastActiveAt: 10)]
-        _ = try await session(rig, mac: mac, categories: [.structure, .openTabs])
-        #expect(try #require(await rig.host.summaries.first).openTabs?.map(\.url) == ["https://reading.example/", "https://edge.example/"], "128 characters is kept, 129 is not")
-    }
-
-    @Test func theOpenTabsAreNotSentWhenTheMacDidNotTickTheCategory() async throws {
-        let rig = try rig()
-        defer { rig.cleanup() }
-        let (_, seen) = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot()), categories: [.structure, .openTabs])
-        #expect(seen.phoneOpenTabs == nil)
-        #expect(try #require(await rig.host.summaries.first).openTabs == nil)
+        let (_, seen) = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot(), categories: ["structure", "openTabs"]))
+        #expect(!seen.types.contains("open-tabs"))
     }
 
     // MARK: The first real trial (19 November 2026, card 494)

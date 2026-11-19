@@ -29,7 +29,7 @@ struct SyncCategoryTests {
 
     @Test func whatAnnouncedIsWhatTheVectorsSayForEverySetOfCategories() {
         let cases = Self.file["announced"]?.items ?? []
-        #expect(cases.count == 32)
+        #expect(cases.count == 16)
         for item in cases {
             let ticked = Self.known(item["ticked"])
             #expect(SyncCategory.announced(ticked) == Self.known(item["announced"]), "ticked \(ticked.map(\.rawValue))")

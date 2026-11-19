@@ -10,7 +10,7 @@ describe('parseSyncRequest: what is accepted', () => {
     [{ kind: 'leave' }],
     [{ kind: 'enable', on: true }],
     [{ kind: 'enable', on: false }],
-    [{ kind: 'category', category: 'openTabs', on: true }],
+    [{ kind: 'category', category: 'archive', on: true }],
     [{ kind: 'answer', allow: true }],
     [{ kind: 'answer', allow: false }],
     [{ kind: 'answer', allow: true, shareToday: true }],
@@ -22,7 +22,7 @@ describe('parseSyncRequest: what is accepted', () => {
 
   it('accepts every category, and only them', () => {
     for (const category of SYNC_CATEGORIES) expect(parseSyncRequest({ kind: 'category', category, on: false })).toEqual({ kind: 'category', category, on: false })
-    for (const category of ['', 'Structure', 'history', 'passwords', 'locks', '__proto__', 1, null, undefined, ['structure']]) expect(parseSyncRequest({ kind: 'category', category, on: true }), String(category)).toBeNull()
+    for (const category of ['', 'Structure', 'history', 'openTabs', 'passwords', 'locks', '__proto__', 1, null, undefined, ['structure']]) expect(parseSyncRequest({ kind: 'category', category, on: true }), String(category)).toBeNull()
   })
 })
 
@@ -75,7 +75,7 @@ describe('parseSyncRequest: what is refused', () => {
 
 describe('the defaults of the categories [Q2]', () => {
   it('tick the structure alone', () => {
-    expect(DEFAULT_SYNC_CATEGORIES).toEqual({ structure: true, settings: false, archive: false, openTabs: false, todayTabs: false })
+    expect(DEFAULT_SYNC_CATEGORIES).toEqual({ structure: true, settings: false, archive: false, todayTabs: false })
     expect(Object.keys(DEFAULT_SYNC_CATEGORIES)).toEqual([...SYNC_CATEGORIES])
   })
 })

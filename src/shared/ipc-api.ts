@@ -43,7 +43,6 @@ import type { PasswordReply, PasswordRequest } from './passwords'
 import type { ExtensionsReply, ExtensionsRequest } from './extension-page'
 import type { NotesReply, NotesRequest } from './notes'
 import type { SyncReply, SyncRequest } from './sync-ipc'
-import type { SyncResumeReply, SyncResumeRequest } from './sync-resume'
 import type { NoteFileReply, NoteFileRequest } from './note-files'
 import type { ResourceAction, ResourceActionReply, ResourceReport } from './resources'
 import type { UiSnapshot, NavCommand, OverlayRequest, CommandBarMode, FindOptions, MenuTarget, DownloadCommand, LittleCommand, LittleState, ProcessRow, ExportRequest, ExportReply, TabResources, TooltipRequest, PeekAction } from './ipc'
@@ -203,8 +202,6 @@ export interface LuciumApi {
   lockConfigure(request: LockConfig): Promise<LockReply>
   /** The page « Synchronisation » of the Settings: the switch, the window, the pairing sheet, the devices (see sync-ipc.ts). The reply is the state to draw; it holds no key. */
   sync(request: SyncRequest): Promise<SyncReply>
-  /** The tabs an iPhone announced (« Sur l'iPhone » in the command bar): the lines to show, and the opening of one of them by its identifier. Titles and hosts only: the address stays in the main process. */
-  syncResume(request: SyncResumeRequest): Promise<SyncResumeReply>
   /** The password manager: every request of its panel and of the command bar (see passwords.ts). The reply holds rows and counts, never a password (the generator's text aside). */
   passwords(request: PasswordRequest): Promise<PasswordReply>
   /** Moves tabs to another space (a tab dropped on a space of the footer). Crossing profiles asks the user first. */
