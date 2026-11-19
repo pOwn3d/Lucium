@@ -15,7 +15,7 @@
 import { canonicalJson } from '@shared/sync-canonical'
 import { mergeSnapshots, type SyncConflict } from '@shared/sync-merge'
 import { parseSnapshot, type SyncEntity, type SyncSnapshot } from '@shared/sync-snapshot'
-import { SYNC_CATEGORIES, type SyncCategory } from '@shared/sync-ipc'
+import { NEEDS_STRUCTURE, SYNC_CATEGORIES, type SyncCategory } from '@shared/sync-ipc'
 import type { SidebarState } from '@shared/model'
 import type { SyncPatch } from '@shared/sidebar-sync'
 import { TODAY_TAB_KIND } from '@shared/sync-today'
@@ -93,22 +93,24 @@ export type SessionResult =
   | { ok: false; code: ErrorCode | 'interrupted' | 'unpaired'; detail: string }
 
 /**
- * The categories this device announces in its `hello`: the ones ticked, except `todayTabs` without `structure`. A Today tab depends on its space (§27.2) and the spaces travel
- * with the structure: with the structure alone left out, the merge finds no space for any tab and removes them all (`withoutSpaces`, §11.7.1), the ones of this device first.
+ * The categories this device announces in its `hello`: the ones ticked, except those that hang on a space (`NEEDS_STRUCTURE`: the archive, the Today tabs) when the
+ * structure is not ticked. Their entities depend on their space (§27.2) and the spaces travel with the structure: with the structure left out, the merge finds no space for any
+ * of them and removes them all (`withoutSpaces`, §11.7.1), the ones of this device first.
  */
 export function announcedCategories(ticked: ReadonlySet<SyncCategory>): ReadonlySet<SyncCategory> {
-  if (ticked.has('structure') || !ticked.has('todayTabs')) return ticked
-  return new Set([...ticked].filter((category) => category !== 'todayTabs'))
+  const dependent = (category: SyncCategory): boolean => NEEDS_STRUCTURE.includes(category)
+  if (ticked.has('structure') || ![...ticked].some(dependent)) return ticked
+  return new Set([...ticked].filter((category) => !dependent(category)))
 }
 
 /**
- * The categories both devices ticked (§8.2), less `todayTabs` when the structure is not among them. A device that announces the category without the structure (it should not,
- * see `announcedCategories`) would otherwise make both merges start from Today tabs with no space, and both would remove them all: not followed here, the two merges then
- * start from other inputs, the session ends in `divergence` (§8.5) and nothing is written.
+ * The categories both devices ticked (§8.2), less those that hang on a space when the structure is not among them. A device that announces such a category without the
+ * structure (it should not, see `announcedCategories`) would otherwise make both merges start from entities with no space, and both would remove them all: not followed here,
+ * the two merges then start from other inputs, the session ends in `divergence` (§8.5) and nothing is written.
  */
 export function commonCategories(mine: ReadonlySet<SyncCategory>, theirs: readonly string[]): Set<SyncCategory> {
   const common = new Set(SYNC_CATEGORIES.filter((category) => mine.has(category) && theirs.includes(category)))
-  if (!common.has('structure')) common.delete('todayTabs')
+  if (!common.has('structure')) for (const category of NEEDS_STRUCTURE) common.delete(category)
   return common
 }
 

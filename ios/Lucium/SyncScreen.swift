@@ -163,7 +163,7 @@ struct SyncScreen: View {
                 Toggle(isOn: Binding(get: { controller.isOn(category) && !blocked }, set: { controller.setCategory(category, on: $0) })) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(Self.title(of: category))
-                        Text(blocked ? "sync.category.today-tabs.needs" : Self.detail(of: category)).font(.footnote).foregroundStyle(.secondary)
+                        Text(blocked ? Self.needs(of: category) : Self.detail(of: category)).font(.footnote).foregroundStyle(.secondary)
                     }
                 }
                 .disabled(blocked)
@@ -184,6 +184,11 @@ struct SyncScreen: View {
         case .openTabs: "sync.category.open-tabs"
         case .todayTabs: "sync.category.today-tabs"
         }
+    }
+
+    /// What the row says while it is greyed for want of « Espaces et dossiers » (only the categories that `needsStructure` are ever greyed).
+    static func needs(of category: SyncCategory) -> LocalizedStringKey {
+        category == .archive ? "sync.category.archive.needs" : "sync.category.today-tabs.needs"
     }
 
     static func detail(of category: SyncCategory) -> LocalizedStringKey {

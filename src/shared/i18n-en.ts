@@ -6339,6 +6339,7 @@ export const en: Record<MessageKey, string> = {
   'sync.category-settings-hint': 'The privacy protections, automatic archiving, the search engine and the profile names. Never the network or lock settings.',
   'sync.category-archive': 'Archived tabs',
   'sync.category-archive-hint': 'The addresses and titles of what you archived.',
+  'sync.category-archive-needs': 'Tick “Spaces, folders, favorites and pinned tabs” first: an archived tab lives in a space.',
   'sync.category-todaytabs': 'Today tabs',
   'sync.category-todaytabs-hint': 'The addresses and titles of your Today tabs, and roughly when you used them, are sent to the other device. Never cookies or sign-ins.',
   'sync.category-todaytabs-needs': 'Tick “Spaces, folders, favorites and pinned tabs” first: a tab lives in a space.',

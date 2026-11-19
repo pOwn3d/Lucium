@@ -160,6 +160,17 @@ describe('the subpage', () => {
     expect(b.requests.filter((request) => request.kind === 'category')).toEqual([])
   })
 
+  it('does not let « Onglets archivés » be ticked without « Espaces et dossiers » either, and says why in its own words (card 516)', async () => {
+    const b = bridge(() => ({ ...ON, categories: { ...ON.categories, structure: false, archive: true } }))
+    const page = await openPage('#files/sync')
+    const box = [...page.querySelectorAll<HTMLInputElement>('main input[type="checkbox"]')].slice(1)[2]!
+    expect(box.disabled).toBe(true)
+    expect(box.checked).toBe(false)
+    expect(page.textContent).toContain(t('sync.category-archive-needs'))
+    await click(box)
+    expect(b.requests.filter((request) => request.kind === 'category')).toEqual([])
+  })
+
   it('offers the box « Partager aussi les onglets d’Aujourd’hui » at the pairing, unticked, and sends it only when ticked', async () => {
     const b = bridge(() => ({ ...ON, confirm: { name: 'iPhone de Camille', code: 'ABC234', address: '192.168.1.40', waiting: false, remainingMs: 42_000 } }))
     const page = await openPage('#files/sync')

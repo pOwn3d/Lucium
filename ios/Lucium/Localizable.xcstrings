@@ -4889,6 +4889,22 @@
         }
       }
     },
+    "sync.category.archive.needs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tick “Spaces and folders” first: an archived tab lives in a space."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cochez d’abord « Espaces et dossiers » : un onglet archivé est rangé dans un espace."
+          }
+        }
+      }
+    },
     "sync.category.open-tabs": {
       "localizations": {
         "en": {

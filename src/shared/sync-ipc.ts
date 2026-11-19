@@ -12,10 +12,13 @@ export const SYNC_CATEGORIES = ['structure', 'settings', 'archive', 'openTabs', 
 export type SyncCategory = (typeof SYNC_CATEGORIES)[number]
 
 /**
- * The categories that cannot be ticked without « Espaces et dossiers » (`structure`): a Today tab depends on its space, and the spaces travel with the structure (§27.2). The page
- * greys the row while the structure is unticked, and the service refuses it and unticks it with the structure, so that what the page shows is what goes (card 510).
+/**
+ * The categories that cannot be ticked without « Espaces et dossiers » (`structure`): what they carry hangs on a space (`spaceId`: the archive, the Today tabs), and the spaces
+ * travel with the structure (§10.1, §27.2). Without it the merge finds no space for them, takes each for dangling (§11.7.1) and removes it. The page greys the row while the
+ * structure is unticked and the service refuses it and unticks it with the structure (card 510); a session announces and takes them as common only with the structure,
+ * whatever is ticked (`announcedCategories`, `commonCategories`: card 516).
  */
-export const NEEDS_STRUCTURE: readonly SyncCategory[] = ['todayTabs']
+export const NEEDS_STRUCTURE: readonly SyncCategory[] = ['archive', 'todayTabs']
 
 /** [Q2]: only the structure is ticked by default; the settings, the archive, the open tabs and the Today tabs [Q9] are the person's choice, each with its own sentence. */
 export const DEFAULT_SYNC_CATEGORIES: Readonly<Record<SyncCategory, boolean>> = { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }

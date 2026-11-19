@@ -54,17 +54,19 @@ struct SyncTodayTabsTests {
 
     @Test func todayTabsCannotBeTickedWithoutTheStructureAndGoWithIt() {
         #expect(SyncCategory.todayTabs.needsStructure)
-        #expect(SyncCategory.allCases.filter(\.needsStructure) == [.todayTabs], "only the Today tabs need the structure")
+        #expect(SyncCategory.allCases.filter(\.needsStructure) == [.archive, .todayTabs], "what hangs on a space needs the structure: the archive and the Today tabs (card 516)")
         #expect(SyncCategory.ticked([.structure], category: .todayTabs, on: true) == [.structure, .todayTabs])
         #expect(SyncCategory.ticked([.settings], category: .todayTabs, on: true) == nil, "refused: a tab lives in a space")
         #expect(SyncCategory.ticked([], category: .todayTabs, on: true) == nil)
-        #expect(SyncCategory.ticked([.structure, .todayTabs, .archive], category: .structure, on: false) == [.archive], "unticking the structure takes the Today tabs with it")
+        #expect(SyncCategory.ticked([.structure, .todayTabs, .archive, .settings], category: .structure, on: false) == [.settings], "unticking the structure takes the Today tabs and the archive with it")
         #expect(SyncCategory.ticked([.structure, .todayTabs], category: .todayTabs, on: false) == [.structure])
         #expect(SyncCategory.ticked([.structure], category: .archive, on: true) == [.structure, .archive], "the order of the catalogue")
+        #expect(SyncCategory.ticked([.settings], category: .archive, on: true) == nil, "the archive is kept by space too: refused without the structure (card 516)")
+        #expect(SyncCategory.ticked([.settings], category: .settings, on: true) == [.settings], "the settings need nothing")
     }
 
     @Test func todayTabsAreAnnouncedAndTakenAsCommonOnlyWithTheStructure() {
-        #expect(SyncCategory.announced([.todayTabs]) == [] && SyncCategory.announced([.todayTabs, .archive]) == [.archive])
+        #expect(SyncCategory.announced([.todayTabs]) == [] && SyncCategory.announced([.todayTabs, .archive]) == [], "the archive hangs on a space too (card 516)")
         #expect(SyncCategory.announced([.structure, .todayTabs]) == [.structure, .todayTabs])
         #expect(SyncCategory.common(mine: [.structure, .todayTabs], theirs: ["todayTabs"]) == [], "the other device announced the category without the structure")
         #expect(SyncCategory.common(mine: [.structure, .todayTabs], theirs: ["structure", "todayTabs"]) == [.structure, .todayTabs])
@@ -535,7 +537,7 @@ struct SyncTodayTabsTests {
         _ = try await SyncSessionClient.run(connection: connection, peer: peer, device: phone, categories: [.todayTabs, .archive], appVersion: "0.1.0", supportedStateVersion: 1, nonce: Data(repeating: 9, count: 16),
                                             baseHash: nil, now: { at }, body: rig.body, handshakeTimeout: .seconds(2))
         let seen = try await macTask.value
-        #expect(seen.hello["categories"] as? [String] == ["archive"])
+        #expect(seen.hello["categories"] as? [String] == [], "the archive is left out too: it hangs on a space as well (card 516)")
         #expect(seen.phone.entities[SyncToday.kind] == nil, "nothing of the Today tabs was sent")
         let state = await rig.host.state
         #expect(state.tabs.contains { $0.id == "mine" }, "and the phone's own tab is not removed")

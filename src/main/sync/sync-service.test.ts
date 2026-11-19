@@ -231,6 +231,23 @@ describe('SyncService: off by default, and when the Mac listens (§6.1)', () => 
     expect(r.service.status().categories.todayTabs).toBe(true)
   })
 
+  it('does not tick « Onglets archivés » without the structure either, and unticks it with the structure (§10.1, card 516)', async () => {
+    const r = rig()
+    r.service.setCategory('archive', true)
+    r.service.setCategory('settings', true)
+    expect(r.service.status().categories).toMatchObject({ structure: true, archive: true, settings: true })
+    // Unticking the structure takes the archive with it, and leaves what does not hang on a space.
+    r.service.setCategory('structure', false)
+    expect(r.service.status().categories).toMatchObject({ structure: false, archive: false, settings: true })
+    expect(() => r.service.setCategory('archive', true)).toThrow(SyncServiceError)
+    expect(r.service.status().categories.archive).toBe(false)
+    r.service.setCategory('settings', false)
+    r.service.setCategory('settings', true)
+    r.service.setCategory('structure', true)
+    r.service.setCategory('archive', true)
+    expect(r.service.status().categories.archive).toBe(true)
+  })
+
   it('keeps the devices for a minute when the file is not an identity (a certificate Node stops reading after an update), then says that the identity was replaced and the devices forgotten (review n° 41)', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const r = rig()
