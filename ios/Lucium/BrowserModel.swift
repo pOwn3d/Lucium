@@ -41,6 +41,10 @@ final class BrowserModel {
     var spacesSheetShown = false
     /// The settings screen (`SettingsScreen`), opened by the gear of the bottom bar and of the iPad's sidebar, and the page it opens on (the list when nil).
     var settingsShown = false
+    /// The sheet of bookmarks and "Read later" (`KeptPagesScreen`), the list it shows, and the line that tells what keeping a page did (`KeepBanner`).
+    var keptShown = false
+    var keptList = KeptList.bookmarks
+    var keepNotice: KeepNotice?
     var settingsStart: SettingsRow?
     /// The site "Clear this site's data" was asked for, until the person answers (`SiteDataFlow`).
     var siteDataAsked: String?

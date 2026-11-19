@@ -37,6 +37,8 @@ extension BrowserModel {
         tabsSheetShown = false
         spacesSheetShown = false
         settingsShown = false
+        keptShown = false
+        keepNotice = nil
         commandBarShown = false
         downloads.sheetShown = false
         drawerEvent(.applicationLocked)

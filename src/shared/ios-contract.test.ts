@@ -3,7 +3,10 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { bookmarkKey, filterBookmarks, isBookmarkUrl } from './bookmarks'
 import { contrastRatio } from './contrast'
+import { BOOKMARKS_LIMIT, BOOKMARK_TITLE_MAX, BOOKMARK_URL_MAX, READ_LATER_LIMIT, READ_LATER_TITLE_MAX, READ_LATER_URL_MAX, type Bookmark } from './model'
+import { filterReadLater } from './read-later'
 import { LOCKED_SPACES_MAX } from './lock'
 import { isProfileId, newProfileId, PRIVATE_PROFILE_ID } from './profiles'
 import { themeFromHue, themeHue } from './theme'
@@ -252,3 +255,48 @@ describe('iOS contract: icons of the project', () => {
   })
 })
 
+
+// Bookmarks and the "Read later" list of the iPhone (ios/LuciumKit/Sources/LuciumKit/Keepsakes.swift) follow the Mac's rules (bookmarks.ts, read-later.ts).
+describe('iOS contract: bookmarks and read later', () => {
+  interface BookmarkVectors {
+    keys: { input: string; expect: string }[]
+    webAddresses: { input: string; expect: boolean }[]
+    bookmarks: Bookmark[]
+    filters: { query: string; tags: string[]; expect: string[] }[]
+    readLater: { id: string; url: string; title: string }[]
+    readLaterFilters: { query: string; expect: string[] }[]
+  }
+  const bookmarkVectors = JSON.parse(readFileSync(join(__dirname, '../../ios/Contracts/bookmark-vectors.json'), 'utf8')) as BookmarkVectors
+
+  it('has vectors to run', () => {
+    expect(bookmarkVectors.keys.length).toBeGreaterThan(3)
+    expect(bookmarkVectors.filters.length).toBeGreaterThan(8)
+  })
+
+  it.each(bookmarkVectors.keys)('bookmarkKey($input)', ({ input, expect: expected }) => {
+    expect(bookmarkKey(input)).toBe(expected)
+  })
+
+  it.each(bookmarkVectors.webAddresses)('isBookmarkUrl($input)', ({ input, expect: expected }) => {
+    expect(isBookmarkUrl(input)).toBe(expected)
+  })
+
+  it.each(bookmarkVectors.filters)('filterBookmarks("$query", $tags)', ({ query, tags, expect: expected }) => {
+    expect(filterBookmarks(bookmarkVectors.bookmarks.map((b) => ({ ...b, addedAt: 0 })), query, tags).map((b) => b.id)).toEqual(expected)
+  })
+
+  it.each(bookmarkVectors.readLaterFilters)('filterReadLater("$query")', ({ query, expect: expected }) => {
+    expect(filterReadLater(bookmarkVectors.readLater.map((i) => ({ ...i, savedAt: 0 })), query).map((i) => i.id)).toEqual(expected)
+  })
+
+  it('keeps at most as many pages, and as long titles and addresses, as the Mac does', () => {
+    const swift = readFileSync(join(__dirname, '../../ios/LuciumKit/Sources/LuciumKit/Keepsakes.swift'), 'utf8')
+    const number = (name: string): number => Number(swift.match(new RegExp(`static let ${name} = (\\d+)`))?.[1])
+    expect(number('bookmarksLimit')).toBe(BOOKMARKS_LIMIT)
+    expect(number('bookmarkTitleMax')).toBe(BOOKMARK_TITLE_MAX)
+    expect(number('bookmarkUrlMax')).toBe(BOOKMARK_URL_MAX)
+    expect(number('readLaterLimit')).toBe(READ_LATER_LIMIT)
+    expect(number('readLaterTitleMax')).toBe(READ_LATER_TITLE_MAX)
+    expect(number('readLaterUrlMax')).toBe(READ_LATER_URL_MAX)
+  })
+})

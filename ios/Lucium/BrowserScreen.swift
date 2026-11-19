@@ -45,6 +45,9 @@ struct BrowserScreen: View {
             .sheet(isPresented: $model.settingsShown) {
                 SettingsScreen(model: model)
             }
+            .sheet(isPresented: $model.keptShown) {
+                KeptPagesScreen(model: model)
+            }
             .modifier(SiteDataFlow(model: model))
             .sheet(isPresented: Binding(get: { model.downloads.sheetShown }, set: { model.downloads.sheetShown = $0 })) {
                 DownloadsSheet(downloads: model.downloads)
@@ -86,6 +89,7 @@ struct BrowserScreen: View {
     private var pageAndBar: some View {
         VStack(spacing: 0) {
             SyncClosedBanner(model: model)
+            KeepBanner(model: model)
             PageArea(model: model)
             BottomBar(model: model)
         }

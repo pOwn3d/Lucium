@@ -63,6 +63,11 @@ struct PageActionsMenu: View {
                     .disabled(!model.canChangeDisplay)
             }
             Divider()
+            Button(model.activePageIsBookmarked ? "kept.menu.unbookmark" : "kept.menu.bookmark") { model.toggleBookmark() }
+                .disabled(model.keepableTab == nil)
+            Button("kept.menu.later") { model.readLater() }.disabled(model.keepableTab == nil)
+            Button("kept.menu.open") { model.showKept(model.keptList) }
+            Divider()
             Button("page.downloads") { model.downloads.sheetShown = true }
         } label: {
             IconView(.more).frame(width: 44, height: 44).contentShape(Rectangle())
