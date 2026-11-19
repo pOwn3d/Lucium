@@ -134,6 +134,18 @@ final class SyncControllerTests: XCTestCase {
         XCTAssertEqual(makeController(connector: ScriptedConnector(.fail(.timedOut))).settings.categories, [.settings, .openTabs])
     }
 
+    func testTodayTabsAreTickedOnlyWithTheStructureAndGoWithIt() throws {
+        let controller = makeController(connector: ScriptedConnector(.fail(.timedOut)))
+        XCTAssertTrue(controller.setCategory(.todayTabs, on: true), "the structure is ticked by default")
+        XCTAssertEqual(controller.settings.categories, [.structure, .todayTabs])
+        // Unticking the structure takes the Today tabs with it: what the page shows is what goes.
+        controller.setCategory(.structure, on: false)
+        XCTAssertEqual(controller.settings.categories, [])
+        XCTAssertFalse(controller.setCategory(.todayTabs, on: true), "refused without the structure")
+        XCTAssertFalse(controller.isOn(.todayTabs))
+        XCTAssertEqual(makeController(connector: ScriptedConnector(.fail(.timedOut))).settings.categories, [], "and the file says the same")
+    }
+
     // MARK: A pairing
 
     private func pairingMac(secret: Data, phoneFingerprint: Data, refuse: SyncErrorCode? = nil) -> ScriptedConnector.Answer {
@@ -204,6 +216,35 @@ final class SyncControllerTests: XCTestCase {
         XCTAssertEqual(mac.port, 51_000, "the port the Mac says in its accept, not the one of the QR (49213): review n° 38")
         XCTAssertEqual(file.load(), .loaded(controller.settings), "the pairing is on the disk")
         XCTAssertEqual(controller.pairingStep, .idle)
+    }
+
+    func testTheBoxOfThePairingTicksTheTodayTabsOnlyWhenTickedAndOnlyOnceThePairingWentThrough() async throws {
+        let phoneFingerprint = try store.loadOrCreate().fingerprint
+        // Unticked (the default): not ticked.
+        let plain = makeController(connector: ScriptedConnector(pairingMac(secret: secret, phoneFingerprint: phoneFingerprint)))
+        plain.setEnabled(true)
+        _ = try await pair(plain, answer: true)
+        XCTAssertFalse(plain.isOn(.todayTabs))
+        try? FileManager.default.removeItem(at: file.url)
+        // Ticked: ticked, and written.
+        let shared = makeController(connector: ScriptedConnector(pairingMac(secret: secret, phoneFingerprint: phoneFingerprint)))
+        shared.setEnabled(true)
+        let pairing = Task { await shared.pair(with: qr(macFingerprint), shareToday: true) }
+        try await waitUntil("the code is shown to the person", { if case .comparing = shared.pairingStep { return true } else { return false } })
+        shared.answerComparison(true)
+        let sharedResult = await pairing.value
+        XCTAssertNil(failure(sharedResult))
+        XCTAssertTrue(shared.isOn(.todayTabs))
+        XCTAssertEqual(file.load(), .loaded(shared.settings))
+        try? FileManager.default.removeItem(at: file.url)
+        // Ticked, but the person said no to the code: nothing is ticked.
+        let declined = makeController(connector: ScriptedConnector(pairingMac(secret: secret, phoneFingerprint: phoneFingerprint)))
+        declined.setEnabled(true)
+        let refused = Task { await declined.pair(with: qr(macFingerprint), shareToday: true) }
+        try await waitUntil("the code is shown to the person", { if case .comparing = declined.pairingStep { return true } else { return false } })
+        declined.answerComparison(false)
+        _ = await refused.value
+        XCTAssertFalse(declined.isOn(.todayTabs))
     }
 
     func testAPersonWhoSaysNoToTheCodeKeepsNothingAndTheMacIsToldItWasRefused() async throws {

@@ -11,6 +11,12 @@
 export const SYNC_CATEGORIES = ['structure', 'settings', 'archive', 'openTabs', 'todayTabs'] as const
 export type SyncCategory = (typeof SYNC_CATEGORIES)[number]
 
+/**
+ * The categories that cannot be ticked without « Espaces et dossiers » (`structure`): a Today tab depends on its space, and the spaces travel with the structure (§27.2). The page
+ * greys the row while the structure is unticked, and the service refuses it and unticks it with the structure, so that what the page shows is what goes (card 510).
+ */
+export const NEEDS_STRUCTURE: readonly SyncCategory[] = ['todayTabs']
+
 /** [Q2]: only the structure is ticked by default; the settings, the archive, the open tabs and the Today tabs [Q9] are the person's choice, each with its own sentence. */
 export const DEFAULT_SYNC_CATEGORIES: Readonly<Record<SyncCategory, boolean>> = { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }
 
@@ -21,7 +27,8 @@ export type SyncRequest =
   | { kind: 'category'; category: SyncCategory; on: boolean }
   | { kind: 'pair-start' }
   | { kind: 'pair-close' }
-  | { kind: 'answer'; allow: boolean }
+  /** `shareToday`: the box « Partager aussi les onglets d'Aujourd'hui » of the question (§27.8 [Q9]), unticked unless the person ticked it. Only meaningful with `allow`. */
+  | { kind: 'answer'; allow: boolean; shareToday?: boolean }
   | { kind: 'forget'; id: string }
   | { kind: 'leave' }
 
@@ -71,6 +78,9 @@ export type SyncProblem = 'unavailable' | 'port' | 'identity' | 'identity-unopen
 export interface SyncLastExchange {
   at: number
   ok: boolean
+  /** The Today tabs taken from the other device by this session, and the ones this device kept to itself because the shared set was full (§27.4); 0 when the category is not common. */
+  todayTabsReceived: number
+  todayTabsUnshared: number
   code: 'divergence' | 'state-too-new' | 'interrupted' | 'locked' | 'other' | null
 }
 
@@ -90,6 +100,8 @@ export interface SyncStatus {
   justPaired: string | null
   /** How the last session ended, or null before any. */
   lastExchange: SyncLastExchange | null
+  /** The other device closed the tab this one showed (§27.5, [Q11]): when, for the line « Fermé sur l'iPhone ». Forgotten with the device, and when the page is left. */
+  closedShown: { at: number } | null
   /** The last thing that went wrong when the page asked for something, or null. */
   problem: SyncProblem | null
 }
@@ -121,8 +133,12 @@ export function parseSyncRequest(raw: unknown): SyncRequest | null {
       const category = own('category')
       return hasOnly(request, ['kind', 'category', 'on']) && (SYNC_CATEGORIES as readonly unknown[]).includes(category) && typeof own('on') === 'boolean' ? { kind, category: category as SyncCategory, on: own('on') as boolean } : null
     }
-    case 'answer':
-      return hasOnly(request, ['kind', 'allow']) && typeof own('allow') === 'boolean' ? { kind, allow: own('allow') as boolean } : null
+    case 'answer': {
+      const share = own('shareToday')
+      if (!hasOnly(request, ['kind', 'allow', 'shareToday']) || typeof own('allow') !== 'boolean') return null
+      if (share === undefined) return { kind, allow: own('allow') as boolean }
+      return typeof share === 'boolean' ? { kind, allow: own('allow') as boolean, shareToday: share } : null
+    }
     case 'forget': {
       const id = own('id')
       return hasOnly(request, ['kind', 'id']) && typeof id === 'string' && DEVICE_ID.test(id) ? { kind, id } : null

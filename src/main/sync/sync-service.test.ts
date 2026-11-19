@@ -215,6 +215,22 @@ describe('SyncService: off by default, and when the Mac listens (§6.1)', () => 
     expect(() => r.service.setCategory('passwords' as never, true)).toThrow(SyncServiceError)
   })
 
+  it('does not tick « Onglets d’Aujourd’hui » without the structure, and unticks it with the structure (§27.2, card 510)', async () => {
+    const r = rig()
+    // The structure is ticked by default: the category can be ticked.
+    r.service.setCategory('todayTabs', true)
+    expect(r.service.status().categories.todayTabs).toBe(true)
+    // Unticking the structure takes the Today tabs with it: what the page shows is what goes.
+    r.service.setCategory('structure', false)
+    expect(r.service.status().categories).toMatchObject({ structure: false, todayTabs: false })
+    // And without the structure it cannot be ticked again.
+    expect(() => r.service.setCategory('todayTabs', true)).toThrow(SyncServiceError)
+    expect(r.service.status().categories.todayTabs).toBe(false)
+    r.service.setCategory('structure', true)
+    r.service.setCategory('todayTabs', true)
+    expect(r.service.status().categories.todayTabs).toBe(true)
+  })
+
   it('keeps the devices for a minute when the file is not an identity (a certificate Node stops reading after an update), then says that the identity was replaced and the devices forgotten (review n° 41)', async () => {
     const log = vi.spyOn(console, 'error').mockImplementation(() => undefined)
     const r = rig()
@@ -770,6 +786,44 @@ describe('SyncService: a pairing that ends, and the devices', () => {
     expect(r.service.status()).toMatchObject({ justPaired: 'iPhone de Camille', pairing: null })
     r.service.setCategory('archive', true)
     expect(r.service.status().justPaired).toBeNull()
+  })
+
+  it('ticks « Onglets d’Aujourd’hui » at the pairing only when the box of the question was ticked, and only once the pairing went through (§27.8, [Q9])', async () => {
+    const pair = async (answer: (r: Rig) => void, ended: 'paired' | 'failed' = 'paired'): Promise<boolean> => {
+      const r = rig()
+      await r.service.setEnabled(true)
+      await r.service.startPairing()
+      const offer = r.door.deps?.openPairing(Buffer.alloc(32))
+      void offer?.confirm({ name: 'iPhone', code: 'ABC234', address: '192.168.1.40' })
+      answer(r)
+      r.door.deps?.onPairingEnded?.(ended === 'paired' ? { outcome: 'paired', peer: iphone(1) } : { outcome: 'failed', code: 'pairing-refused', detail: 'x' })
+      return r.service.status().categories.todayTabs
+    }
+    expect(await pair((r) => r.service.answer(true))).toBe(false)
+    expect(await pair((r) => r.service.answer(true, false))).toBe(false)
+    expect(await pair((r) => r.service.answer(true, true))).toBe(true)
+    // Ticked at the question, but the pairing did not go through: nothing is ticked.
+    expect(await pair((r) => r.service.answer(true, true), 'failed')).toBe(false)
+    // « Refuser » with the box ticked is not a yes.
+    expect(await pair((r) => r.service.answer(false, true))).toBe(false)
+  })
+
+  it('does not tick the Today tabs at the pairing without the structure, and forgets the box for the next pairing', async () => {
+    const r = rig()
+    await r.service.setEnabled(true)
+    r.service.setCategory('structure', false)
+    await r.service.startPairing()
+    void r.door.deps?.openPairing(Buffer.alloc(32))?.confirm({ name: 'iPhone', code: 'ABC234', address: '' })
+    r.service.answer(true, true)
+    r.door.deps?.onPairingEnded?.({ outcome: 'paired', peer: iphone(1) })
+    expect(r.service.status().categories.todayTabs).toBe(false)
+    // A second pairing, answered without the box, does not inherit the first one's box.
+    r.service.setCategory('structure', true)
+    await r.service.startPairing()
+    void r.door.deps?.openPairing(Buffer.alloc(32))?.confirm({ name: 'iPhone', code: 'ABC234', address: '' })
+    r.service.answer(true)
+    r.door.deps?.onPairingEnded?.({ outcome: 'paired', peer: iphone(2) })
+    expect(r.service.status().categories.todayTabs).toBe(false)
   })
 
   it('closes the sheet after a refusal (the secret is spent), and keeps it after a wrong proof (it is not)', async () => {

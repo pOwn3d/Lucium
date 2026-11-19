@@ -22,6 +22,15 @@ extension BrowserModel {
         return outcome.changed
     }
 
+    /// « Rouvrir » on the line « Fermé sur le Mac »: the page the Mac closed comes back from the archive as a new tab, and the line goes. Nothing happens, and the line goes
+    /// too, when the archive no longer holds it.
+    func reopenSyncClosedShownTab() {
+        guard let event = syncClosedShownTab else { return }
+        syncClosedShownTab = nil
+        guard let entry = state.archive.first(where: { $0.id == event.id }) else { return }
+        restore(entry)
+    }
+
     private func write(_ outcome: SyncApply.Outcome, because reason: String) {
         if !outcome.rejected.isEmpty { print("[sync] \(reason) asked for \(outcome.rejected.count) values this version does not keep: \(outcome.rejected.prefix(5))") }
         guard outcome.changed else { return }

@@ -84,6 +84,15 @@ export interface AdmissionInputs {
  * Today tab. What decides is `admitTabs`, the function the vectors play.
  */
 export function admittedTodayTabs(state: SidebarState, inputs: AdmissionInputs): ReadonlySet<string> {
+  return new Set(todayAdmission(state, inputs).admitted)
+}
+
+/** The same decision with its refusals, for « non partagés : n » (§27.4): the tabs that had every other condition and found no room (`full`). */
+export function unsharedTodayTabs(state: SidebarState, inputs: AdmissionInputs): number {
+  return todayAdmission(state, inputs).refused.filter((one) => one.reason === 'full').length
+}
+
+function todayAdmission(state: SidebarState, inputs: AdmissionInputs): ReturnType<typeof admitTabs> {
   const candidates: TodayCandidate[] = []
   for (const tab of state.tabs) {
     if (tab.pinned) continue
@@ -100,7 +109,7 @@ export function admittedTodayTabs(state: SidebarState, inputs: AdmissionInputs):
       ...(admitted ? { admitted: true } : { spaceLocked: inputs.isSpaceLocked(tab.spaceId) })
     })
   }
-  return new Set(admitTabs(candidates).admitted)
+  return admitTabs(candidates)
 }
 
 export function trackedViewOf(state: SidebarState, admittedToday: ReadonlySet<string> = new Set()): TrackedView {

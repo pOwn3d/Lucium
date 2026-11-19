@@ -156,14 +156,17 @@ struct SyncScreen: View {
 
     @ViewBuilder private var categoriesSection: some View {
         Section {
-            // The Today tabs are not offered yet: their row, texts and the box at pairing belong to the interface changes that follow. The data side (`SyncCategory.todayTabs`) is ready.
-            ForEach(SyncCategory.allCases.filter { $0 != .todayTabs }) { category in
-                Toggle(isOn: Binding(get: { controller.isOn(category) }, set: { controller.setCategory(category, on: $0) })) {
+            ForEach(SyncCategory.allCases) { category in
+                // « Onglets d'Aujourd'hui » needs « Espaces et dossiers »: greyed while that one is unticked, and the row says why. The controller drops it with the structure, so
+                // what the page shows is what goes.
+                let blocked = category.needsStructure && !controller.isOn(.structure)
+                Toggle(isOn: Binding(get: { controller.isOn(category) && !blocked }, set: { controller.setCategory(category, on: $0) })) {
                     VStack(alignment: .leading, spacing: 2) {
                         Text(Self.title(of: category))
-                        Text(Self.detail(of: category)).font(.footnote).foregroundStyle(.secondary)
+                        Text(blocked ? "sync.category.today-tabs.needs" : Self.detail(of: category)).font(.footnote).foregroundStyle(.secondary)
                     }
                 }
+                .disabled(blocked)
                 .frame(minHeight: 44)
             }
         } header: {
@@ -179,7 +182,7 @@ struct SyncScreen: View {
         case .settings: "sync.category.settings"
         case .archive: "sync.category.archive"
         case .openTabs: "sync.category.open-tabs"
-        case .todayTabs: LocalizedStringKey(category.rawValue)  // not listed yet
+        case .todayTabs: "sync.category.today-tabs"
         }
     }
 
@@ -189,7 +192,7 @@ struct SyncScreen: View {
         case .settings: "sync.category.settings.detail"
         case .archive: "sync.category.archive.detail"
         case .openTabs: "sync.category.open-tabs.detail"
-        case .todayTabs: LocalizedStringKey(category.rawValue)  // not listed yet
+        case .todayTabs: "sync.category.today-tabs.detail"
         }
     }
 }

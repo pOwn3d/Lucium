@@ -232,13 +232,16 @@ final class SyncController {
         consecutiveFailures = wentThrough ? 0 : consecutiveFailures + 1
     }
 
-    func setCategory(_ category: SyncCategory, on: Bool) {
-        var categories = settings.categories.filter { $0 != category }
-        if on { categories.append(category) }
+    /// Ticks or unticks a category. « Onglets d'Aujourd'hui » is not ticked without « Espaces et dossiers » and goes with it when that one is unticked (§27.2): `false` when
+    /// the change was refused.
+    @discardableResult
+    func setCategory(_ category: SyncCategory, on: Bool) -> Bool {
         // Always in the order of the catalogue, so that the file does not depend on the order of the person's taps.
-        settings.categories = SyncCategory.allCases.filter(categories.contains)
+        guard let categories = SyncCategory.ticked(settings.categories, category: category, on: on) else { return false }
+        settings.categories = categories
         if category == .openTabs, !on { forgetOpenTabs() }
         save()
+        return true
     }
 
     /// The Mac's open tabs are in memory only (§10.4): they go with the lock, with the category being turned off, and with the Mac.
@@ -261,7 +264,9 @@ final class SyncController {
 
     /// Pairs with the Mac a code names. The code is a QR read by the camera or a code typed with the address (`SyncPairingCode`). On success the Mac is kept
     /// and a first session starts at once (one path for the first synchronisation and the next ones, §4.1).
-    func pair(with code: SyncPairingCode) async -> Result<Void, PairingFailure> {
+    /// `shareToday`: the box « Partager aussi les onglets d'Aujourd'hui » of the sheet (§27.8, [Q9]), unticked unless the person ticked it. It is ticked here only once the
+    /// pairing went through, and only if the structure is ticked.
+    func pair(with code: SyncPairingCode, shareToday: Bool = false) async -> Result<Void, PairingFailure> {
         guard settings.enabled, pairingTask == nil else { return .failure(.cancelled) }
         let task = Task { await performPairing(code) }
         pairingTask = task
@@ -269,6 +274,7 @@ final class SyncController {
         pairingTask = nil
         pairingStep = .idle
         if case .success = result {
+            if shareToday { setCategory(.todayTabs, on: true) }
             requestSession(.manual)
             startIntervalLoop()
         }

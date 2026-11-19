@@ -17,6 +17,29 @@ public enum SyncCategory: String, CaseIterable, Codable, Hashable, Sendable {
     /// browsing history, or what changes all the time.
     public static let defaults: [SyncCategory] = [.structure]
 
+    /// Whether this category cannot be ticked without « Spaces and folders » (the structure): a Today tab depends on its space (§27.2). The page greys the row while the structure
+    /// is unticked, and `ticked(_:category:on:)` refuses it and drops it with the structure, so that what the page shows is what goes (card 510). The Mac's `NEEDS_STRUCTURE`.
+    public var needsStructure: Bool {
+        switch self {
+        case .todayTabs: true
+        case .structure, .settings, .archive, .openTabs: false
+        }
+    }
+
+    /// The categories ticked after the person set `category` to `on`, in the order of the catalogue; nil when that is refused (a category that needs the structure, ticked
+    /// without it). Unticking the structure unticks the categories that need it.
+    public static func ticked(_ ticked: [SyncCategory], category: SyncCategory, on: Bool) -> [SyncCategory]? {
+        var next = Set(ticked)
+        if on {
+            if category.needsStructure && !next.contains(.structure) { return nil }
+            next.insert(category)
+        } else {
+            next.remove(category)
+            if category == .structure { next = next.filter { !$0.needsStructure } }
+        }
+        return allCases.filter(next.contains)
+    }
+
     /// The categories a device announces in its `hello`: the ones ticked, except `todayTabs` without `structure`. A Today tab depends on its space (§27.2) and the spaces travel with
     /// the structure: with the structure alone left out, the merge finds no space for any tab and removes them all, the ones of the other device included. The same rule as the
     /// Mac's `announcedCategories`.

@@ -12,6 +12,8 @@ public final class SyncMarkKeeper: @unchecked Sendable {
     private var lastView: SyncTrackedView?
     /// The Today tabs that could enter the shared set, as of the last look: a new one is a change that asks for a session (§27.12).
     private var lastWaiting: Set<String> = []
+    /// How many Today tabs the last freeze left out only because the shared set was full (§27.4, the limit of 200): « non partagés : n » on the page. 0 when the category was not common.
+    private var unshared = 0
     /// A session is writing what the merge decided into the state: looking at the state now would mark what the Mac wrote as the phone's own change. Until `adopt`.
     private var holding = false
     private let file: SyncMarksFile
@@ -54,6 +56,13 @@ public final class SyncMarkKeeper: @unchecked Sendable {
         return true
     }
 
+    /// What the last freeze left to this phone because of the limit of the shared set.
+    public var lastUnshared: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return unshared
+    }
+
     /// The snapshot a session freezes: the book is brought up to the state first, so that no change of the person lacks its mark.
     public func freeze(_ state: BrowserState, categories: Set<SyncCategory>, withheld: Set<String>, base: SyncSnapshot?, now: Int) -> SyncSnapshot {
         lock.lock()
@@ -62,7 +71,9 @@ public final class SyncMarkKeeper: @unchecked Sendable {
         holding = false
         // The shared set of Today tabs is decided here, once the freeze starts and only when the category is common: the admission is sticky, so what enters stays until the tab goes.
         if categories.contains(.todayTabs) {
-            book.admit(Set(SyncStateView.admission(of: state, admitted: book.admitted, locked: withheld, now: now).admitted))
+            let admission = SyncStateView.admission(of: state, admitted: book.admitted, locked: withheld, now: now)
+            book.admit(Set(admission.admitted))
+            unshared = admission.refused.filter { $0.reason == .full }.count
         }
         let view = SyncStateView.trackedView(of: state, admitted: book.admitted)
         if view != lastView {

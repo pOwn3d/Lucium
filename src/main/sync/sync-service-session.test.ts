@@ -139,6 +139,51 @@ describe('the service with the exchange of the data', () => {
     expect(r.mac.state.tabs.map((t) => t.id)).toEqual(['t-b'])
     expect(r.mac.state.archive[0]).toMatchObject({ id: 't-a', source: 'sync' })
     expect(r.mac.shownClosed).toEqual([[{ id: 't-a', spaceId: 'sp-main', onScreen: true }]])
+    // The page says « Fermé sur l'iPhone » until it is left, and the line goes with the device.
+    expect(r.service.status().closedShown).toEqual({ at: expect.any(Number) })
+    await r.service.leave()
+    expect(r.service.status().closedShown).toBeNull()
+  })
+
+  it('counts the Today tabs the Mac took from the iPhone and the ones it kept to itself because the shared set was full (§27.4, card 510)', async () => {
+    const old = 1_790_000_000_000 - 120_000
+    const macTabs = Array.from({ length: 203 }, (_, i) => ({ id: `m-${String(i).padStart(3, '0')}`, spaceId: 'sp-main', pinned: false, createdAt: old, lastActiveAt: old - i }))
+    const phoneTabs = [{ id: 'p-a', spaceId: 'sp-main', pinned: false, createdAt: old, lastActiveAt: old }, { id: 'p-b', spaceId: 'sp-main', pinned: false, createdAt: old, lastActiveAt: old }]
+    const r = rig({ tabs: macTabs }, { tabs: phoneTabs })
+    r.store.setCategory('todayTabs', true)
+    r.phone.categories.add('todayTabs')
+    await r.service.setEnabled(true)
+    r.phone.edit((s) => s)
+    await phoneSession(r, macDeviceId(r))
+    await sleep(30)
+    expect(r.service.status().lastExchange).toMatchObject({ ok: true, todayTabsReceived: 2, todayTabsUnshared: 3 })
+  })
+
+  it('counts only the Today tabs that are new here: a rename on the iPhone is not a tab received', async () => {
+    const old = 1_790_000_000_000 - 120_000
+    const r = rig({}, { tabs: [{ id: 'p-a', spaceId: 'sp-main', pinned: false, createdAt: old, lastActiveAt: old }] })
+    r.store.setCategory('todayTabs', true)
+    r.phone.categories.add('todayTabs')
+    await r.service.setEnabled(true)
+    r.phone.edit((s) => s)
+    await phoneSession(r, macDeviceId(r))
+    await sleep(30)
+    expect(r.service.status().lastExchange).toMatchObject({ ok: true, todayTabsReceived: 1 })
+    r.phone.edit((s) => reduce(s, { type: 'tab/rename', id: 'p-a', title: 'Renamed' }, { now: r.phone.clock, newId: () => 'made' }))
+    await phoneSession(r, macDeviceId(r))
+    await sleep(30)
+    expect(r.mac.state.tabs.find((t) => t.id === 'p-a')?.customTitle).toBe('Renamed')
+    expect(r.service.status().lastExchange).toMatchObject({ ok: true, todayTabsReceived: 0 })
+  })
+
+  it('counts no Today tab while the category is not common', async () => {
+    const old = 1_790_000_000_000 - 120_000
+    const r = rig({ tabs: [{ id: 't-a', spaceId: 'sp-main', pinned: false, createdAt: old, lastActiveAt: old }] }, {})
+    await r.service.setEnabled(true)
+    r.phone.edit((s) => s)
+    await phoneSession(r, macDeviceId(r))
+    await sleep(30)
+    expect(r.service.status().lastExchange).toMatchObject({ ok: true, todayTabsReceived: 0, todayTabsUnshared: 0 })
   })
 
   it('keeps the open tabs of the iPhone in memory only, once the category is ticked on both sides, and keeps them after the session, for as long as the Mac listens', async () => {

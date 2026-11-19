@@ -4,10 +4,10 @@ import Testing
 
 @Suite("Synchronisation: what the page says about the last exchange")
 struct SyncLastExchangeTests {
-    private func summary(categories: Set<SyncCategory> = [.structure], taken: Int = 0, refused: Int = 0, rejected: Int = 0) -> SyncExchangeSummary {
+    private func summary(categories: Set<SyncCategory> = [.structure], taken: Int = 0, refused: Int = 0, rejected: Int = 0, todayTaken: Int = 0, todayUnshared: Int = 0) -> SyncExchangeSummary {
         let refusedReceived = (0..<refused).map { SyncInbound.Refused(kind: "tab", id: "t\($0)", reason: .invalidValue) }
         return SyncExchangeSummary(at: 1, conflicts: [], refusedSent: [], refusedReceived: refusedReceived, rejectedByApply: (0..<rejected).map { "value \($0)" }, applied: taken > 0, adoptedTheMacState: false,
-                                   spacesSetAside: 0, openTabs: nil, categories: categories, taken: taken)
+                                   spacesSetAside: 0, openTabs: nil, categories: categories, taken: taken, todayTabsTaken: todayTaken, todayTabsUnshared: todayUnshared)
     }
 
     @Test func aCategoryTickedHereAndNotOnTheMacIsNamedAsNotExchanged() {
@@ -39,5 +39,15 @@ struct SyncLastExchangeTests {
     @Test func theCategoriesCrossedAreListedInTheOrderOfTheSettingsPage() {
         let lines = SyncLastExchange.lines(of: summary(categories: [.archive, .structure, .openTabs], taken: 1), ticked: [.structure, .archive, .openTabs])
         #expect(lines.first == .exchanged([.structure, .archive, .openTabs]))
+    }
+
+    @Test func theTodayTabsReceivedAndKeptBackAreCountedApartWhenTheCategoryCrossed() {
+        let lines = SyncLastExchange.lines(of: summary(categories: [.structure, .todayTabs], taken: 5, todayTaken: 4, todayUnshared: 37), ticked: [.structure, .todayTabs])
+        #expect(lines == [.exchanged([.structure, .todayTabs]), .received(5), .todayTabsReceived(4), .todayTabsUnshared(37)])
+    }
+
+    @Test func theTodayTabsAreNotCountedWhenTheCategoryDidNotCross() {
+        let lines = SyncLastExchange.lines(of: summary(categories: [.structure], taken: 1, todayTaken: 4, todayUnshared: 37), ticked: [.structure, .todayTabs])
+        #expect(lines == [.exchanged([.structure]), .notExchanged([.todayTabs]), .received(1)])
     }
 }

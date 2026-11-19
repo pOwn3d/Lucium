@@ -15,6 +15,10 @@ public enum SyncLastExchange {
         case received(Int)
         /// Both devices already held the same thing.
         case nothingNew
+        /// How many Today tabs of the Mac arrived on this phone (§27, card 510): said apart from « received », which counts every kind.
+        case todayTabsReceived(Int)
+        /// How many Today tabs of this phone were kept to itself because the shared set was full (§27.4: the limit of 200).
+        case todayTabsUnshared(Int)
         /// How many things of the Mac were not taken (refused at the door, or refused by the state when written).
         case leftAside(Int)
     }
@@ -27,6 +31,10 @@ public enum SyncLastExchange {
         let missing = SyncCategory.allCases.filter { ticked.contains($0) && !summary.categories.contains($0) }
         if !missing.isEmpty { lines.append(.notExchanged(missing)) }
         if summary.taken > 0 { lines.append(.received(summary.taken)) } else if !crossed.isEmpty { lines.append(.nothingNew) }
+        if crossed.contains(.todayTabs) {
+            if summary.todayTabsTaken > 0 { lines.append(.todayTabsReceived(summary.todayTabsTaken)) }
+            if summary.todayTabsUnshared > 0 { lines.append(.todayTabsUnshared(summary.todayTabsUnshared)) }
+        }
         let aside = summary.refusedReceived.count + summary.rejectedByApply.count
         if aside > 0 { lines.append(.leftAside(aside)) }
         return lines

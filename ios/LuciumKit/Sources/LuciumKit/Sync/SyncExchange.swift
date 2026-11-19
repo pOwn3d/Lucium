@@ -39,9 +39,13 @@ public struct SyncExchangeSummary: Equatable, Sendable {
     public var categories: Set<SyncCategory>
     /// How many things the Mac's side gave this phone that the state took: entities made or changed, entities removed, settings written (`SyncPatch`), 0 when nothing was written.
     public var taken: Int
+    /// Of what was taken, the Today tabs of the Mac that were new here (§27); 0 when that category is not common.
+    public var todayTabsTaken: Int
+    /// The Today tabs of this phone that stayed here because the shared set was full (§27.4, the limit of 200); 0 when that category is not common.
+    public var todayTabsUnshared: Int
 
     public init(at: Int, conflicts: [SettledConflict], refusedSent: [SyncInbound.Refused], refusedReceived: [SyncInbound.Refused], rejectedByApply: [String], applied: Bool, adoptedTheMacState: Bool,
-                spacesSetAside: Int, openTabs: [SyncOpenTab]?, categories: Set<SyncCategory> = [], taken: Int = 0) {
+                spacesSetAside: Int, openTabs: [SyncOpenTab]?, categories: Set<SyncCategory> = [], taken: Int = 0, todayTabsTaken: Int = 0, todayTabsUnshared: Int = 0) {
         self.at = at
         self.conflicts = conflicts
         self.refusedSent = refusedSent
@@ -53,6 +57,8 @@ public struct SyncExchangeSummary: Equatable, Sendable {
         self.openTabs = openTabs
         self.categories = categories
         self.taken = taken
+        self.todayTabsTaken = todayTabsTaken
+        self.todayTabsUnshared = todayTabsUnshared
     }
 }
 
@@ -251,7 +257,8 @@ public struct SyncExchangeBody: SyncSessionBody {
         let conflicts = SyncConflicts.settle(conflicts: merged.conflicts, local: local, remote: cleaned.snapshot, merged: merged.snapshot, now: at, peer: .mac)
         let taken = (applied?.changed ?? false) ? patch.upserts.count + patch.removals.count + patch.settings.count : 0
         await host.exchanged(SyncExchangeSummary(at: at, conflicts: conflicts, refusedSent: refusedSent, refusedReceived: cleaned.refused, rejectedByApply: applied?.rejected ?? [], applied: applied?.changed ?? false,
-                                                 adoptedTheMacState: adopting, spacesSetAside: aside.count, openTabs: openTabs, categories: context.categories, taken: taken))
+                                                 adoptedTheMacState: adopting, spacesSetAside: aside.count, openTabs: openTabs, categories: context.categories, taken: taken,
+                                                 todayTabsTaken: patch.upserts.filter { $0.create && $0.kind == .todayTab }.count, todayTabsUnshared: context.categories.contains(.todayTabs) ? marks.lastUnshared : 0))
         return .committed(at: at)
     }
 

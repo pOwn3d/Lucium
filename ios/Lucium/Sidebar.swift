@@ -68,6 +68,7 @@ struct PageCard: View {
         VStack(spacing: 0) {
             toolbar
             Divider()
+            SyncClosedBanner(model: model)
             PageArea(model: model)
         }
         .background(Color(.systemBackground))
