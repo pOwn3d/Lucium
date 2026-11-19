@@ -6,7 +6,7 @@
 //   - `safeStorage` seals and opens a key in this engine (the keychain stand-in of the throw-away profile, main/index.ts), and the identity made over it is read back;
 //   - the hand-written certificate is read by the engine's own `X509Certificate`, and a TLS 1.3 session with ALPN between two such certificates is made by the engine's TLS
 //     (BoringSSL), with the fingerprint pinned;
-//   - the door opens only when the window is opened, answers a paired device and refuses a stranger, and closes with the window (no port left open);
+//   - the door opens only while a pairing is open or an iPhone is paired, answers a paired device and refuses a stranger, and closes when the last device is forgotten (no port left open);
 //   - a pairing goes through end to end, with the question answered;
 //   - what the engine says of its host name, so that « le nom `.local` du Mac » (§5) is read from a fact: it is reported, not asserted.
 // The page of the Settings is not driven: the window it needs is the maintainer's to look at (AGENTS.md §1).
@@ -76,11 +76,12 @@ export async function smokeSync(_ctx: SmokeContext, check: Check): Promise<void>
   })
   try {
     await service.setEnabled(true)
-    check('switching on opens nothing: the window is closed and the status says so', !service.status().window.open && service.status().enabled)
+    check('switching on with no iPhone paired opens nothing: the Mac is not listening and the status says so', !service.status().listening && service.status().enabled)
     // No address of the local network in the stand-in environment: the QR cannot be written, and the service says `network` instead of showing a code nobody can read.
     const refused = await service.startPairing().then(() => 'opened', (error: { problem?: string }) => error.problem ?? 'other')
     check('without an address of the local network the sheet is refused with `network`', refused === 'network')
-    await service.closeWindow()
+    await service.reconcileListening()
+    check('a pairing that could not be shown leaves no door open', !service.status().listening)
 
     const lan = new SyncService({
       store,
@@ -130,12 +131,14 @@ export async function smokeSync(_ctx: SmokeContext, check: Check): Promise<void>
     check('a device that is not paired is told not-paired', told.includes('not-paired'))
     strangerSocket.destroy()
 
-    await lan.closeWindow()
+    const [listed] = lan.status().devices
+    lan.forget(listed?.id ?? '')
+    await lan.reconcileListening()
     const closed = await dial(reading.port, phoneIdentity).then(
       (open) => (open.destroy(), false),
       () => true
     )
-    check('no port is left open once the window is closed', closed && !lan.status().window.open)
+    check('no port is left open once the last device is forgotten', closed && !lan.status().listening)
     await lan.dispose()
   } finally {
     await service.dispose()

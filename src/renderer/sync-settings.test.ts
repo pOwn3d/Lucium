@@ -14,7 +14,7 @@ import { countdown } from './SyncSettings'
 
 let mounted: Mounted | null = null
 
-const OFF: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false }, window: { open: false, remainingMs: 0 }, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
+const OFF: SyncStatus = { available: true, enabled: false, categories: { structure: true, settings: false, archive: false, openTabs: false }, listening: false, pairing: null, confirm: null, devices: [], identityReplaced: false, justPaired: null, lastExchange: null, problem: null }
 const ON: SyncStatus = { ...OFF, enabled: true }
 
 const snapshot = (): UiSnapshot => ({ state: createInitialState({ now: 1, newId: () => 'id' }), extensions: [], downloads: [], runtime: { tabs: {} }, platform: 'darwin' }) as unknown as UiSnapshot
@@ -83,10 +83,10 @@ describe('the row on the page of the files', () => {
     expect(b.kinds()).toEqual(['status'])
   })
 
-  it('counts the devices and says when the window is open', async () => {
-    bridge(() => ({ ...ON, devices: [{ id: 'a', name: 'iPhone', platform: 'ios', pairedAt: 1, lastSessionAt: null }], window: { open: true, remainingMs: 5000 } }))
+  it('counts the devices and says when this Mac is listening for them', async () => {
+    bridge(() => ({ ...ON, devices: [{ id: 'a', name: 'iPhone', platform: 'ios', pairedAt: 1, lastSessionAt: null }], listening: true }))
     const page = await openPage('#files')
-    expect(page.querySelector('main [data-subpage-entry="sync"] .subpage-state')?.textContent).toBe('1 appareil · fenêtre ouverte')
+    expect(page.querySelector('main [data-subpage-entry="sync"] .subpage-state')?.textContent).toBe('1 appareil · à l’écoute')
   })
 
   it('says it is off by default, in English too', async () => {
@@ -106,8 +106,8 @@ describe('the subpage', () => {
     const switchRow = [...page.querySelectorAll('main input[type="checkbox"]')]
     expect(switchRow).toHaveLength(1)
     expect((switchRow[0] as HTMLInputElement).checked).toBe(false)
-    // Off: no window, no category, no device, no way to add one.
-    expect(page.textContent).not.toContain(t('sync.window-open-button'))
+    // Off: no listening line, no category, no device, no way to add one.
+    expect(page.textContent).not.toContain(t('sync.listening-title'))
     expect(page.textContent).not.toContain(t('sync.add-button'))
   })
 
@@ -117,8 +117,8 @@ describe('the subpage', () => {
     const page = await openPage('#files/sync')
     await click(page.querySelector('main input[type="checkbox"]')!)
     expect(b.requests).toContainEqual({ kind: 'enable', on: true })
-    expect(b.kinds()).not.toContain('open-window')
-    expect(page.textContent).toContain(t('sync.window-open-button'))
+    expect(b.kinds().filter((kind) => kind !== 'status')).toEqual(['enable'])
+    expect(page.textContent).toContain(t('sync.listening-title'))
   })
 
   it('cannot be turned on when the system cannot seal a key, and says why', async () => {
@@ -145,23 +145,31 @@ describe('the subpage', () => {
     expect(b.requests).toContainEqual({ kind: 'category', category: 'openTabs', on: true })
   })
 
-  it('opens the window only when the button is clicked: closed, it says no port is open', async () => {
-    const b = bridge(() => ON)
+  it('says the Mac waits for the iPhone on the local network while it listens, and has no button to open, prolong or close anything', async () => {
+    const b = bridge(() => ({ ...ON, listening: true, devices: [{ id: 'iphone-1', name: 'iPhone de Camille', platform: 'ios', pairedAt: 1_790_000_000_000, lastSessionAt: null }] }))
     const page = await openPage('#files/sync')
-    expect(page.textContent).toContain(t('sync.window-closed'))
-    expect(b.kinds()).not.toContain('open-window')
-    await click(button(page, t('sync.window-open-button')))
-    expect(b.requests).toContainEqual({ kind: 'open-window' })
+    expect(textOf(page)).toContain(t('sync.listening-on'))
+    expect(page.textContent).toContain(t('sync.listening-hint'))
+    for (const key of ['sync.listening-off', 'sync.listening-failed'] as const) expect(page.textContent).not.toContain(t(key))
+    expect(b.kinds().every((kind) => kind === 'status')).toBe(true)
   })
 
-  it('counts the open window down, and prolongs or closes it', async () => {
-    const b = bridge(() => ({ ...ON, window: { open: true, remainingMs: 520_000 } }))
+  it('says no port is open when no iPhone is paired, and that the Mac should be listening when one is paired and it is not', async () => {
+    bridge(() => ({ ...ON, listening: false }))
+    expect((await openPage('#files/sync')).textContent).toContain(t('sync.listening-off'))
+    // One page at a time: a page left mounted would go on asking, under the next test's bridge.
+    mounted?.unmount()
+    mounted = null
+    bridge(() => ({ ...ON, listening: false, devices: [{ id: 'iphone-1', name: 'iPhone de Camille', platform: 'ios', pairedAt: 1_790_000_000_000, lastSessionAt: null }] }))
+    expect((await openPage('#files/sync')).textContent).toContain(t('sync.listening-failed'))
+  })
+
+  it('says in one sentence that no cookie, session, password or automatic sign-in to a website is ever synchronized', async () => {
+    bridge(() => ON)
     const page = await openPage('#files/sync')
-    expect(textOf(page)).toContain('Ouverte : il reste 8:40')
-    await click(button(page, t('sync.window-prolong')))
-    await click(button(page, t('sync.window-close')))
-    expect(b.requests).toContainEqual({ kind: 'prolong' })
-    expect(b.requests).toContainEqual({ kind: 'close-window' })
+    const sentence = t('sync.categories-never')
+    expect(page.textContent).toContain(sentence)
+    for (const word of ['mots de passe', 'cookies', 'sessions', 'connexions automatiques']) expect(sentence).toContain(word)
   })
 
   it('lists the devices with their dates, forgets one when asked, and adds an iPhone', async () => {
@@ -182,7 +190,7 @@ describe('the subpage', () => {
   })
 
   it('shows the sheet that adds an iPhone: the QR drawn, the address, the code, the countdown; it closes by its button', async () => {
-    const b = bridge(() => ({ ...ON, window: { open: true, remainingMs: 590_000 }, pairing: { qr: 'lucium-sync:1/' + 'A'.repeat(43) + '/' + 'B'.repeat(22) + '/49213/192.168.1.20', code: 'ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z', address: 'mac.local:49213', remainingMs: 95_000 } }))
+    const b = bridge(() => ({ ...ON, listening: true, pairing: { qr: 'lucium-sync:1/' + 'A'.repeat(43) + '/' + 'B'.repeat(22) + '/49213/192.168.1.20', code: 'ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z', address: 'mac.local:49213', remainingMs: 95_000 } }))
     const page = await openPage('#files/sync')
     const drawing = page.querySelector('svg.sync-qr')
     expect(drawing?.getAttribute('aria-label')).toBe(t('sync.add-qr-label'))
@@ -221,11 +229,11 @@ describe('the subpage', () => {
   })
 
   it('shows the sentence of a refusal, and keeps the state it came with', async () => {
-    bridge(() => ON, (request) => (request.kind === 'open-window' ? { ok: false, message: t('sync.error.port'), status: ON } : null))
+    bridge(() => ON, (request) => (request.kind === 'pair-start' ? { ok: false, message: t('sync.error.port'), status: ON } : null))
     const page = await openPage('#files/sync')
-    await click(button(page, t('sync.window-open-button')))
+    await click(button(page, t('sync.add-button')))
     expect(page.querySelector('[role="alert"]')?.textContent).toBe(t('sync.error.port'))
-    expect(page.textContent).toContain(t('sync.window-open-button'))
+    expect(page.textContent).toContain(t('sync.add-button'))
   })
 
   it('says the iPhone that has just been paired', async () => {
@@ -244,29 +252,30 @@ describe('the subpage', () => {
 })
 
 describe('the page and time', () => {
-  it('reads the state again every second while it is on screen, and the countdowns move', async () => {
+  it('reads the state again every second while it is on screen, and the countdown of the pairing moves', async () => {
     vi.useFakeTimers()
-    let remaining = 520_000
-    const b = bridge(() => ({ ...ON, window: { open: true, remainingMs: remaining } }))
+    let remaining = 95_000
+    const sheet = (): SyncStatus => ({ ...ON, listening: true, pairing: { qr: 'lucium-sync:1/' + 'A'.repeat(43) + '/' + 'B'.repeat(22) + '/49213/192.168.1.20', code: 'ABCDE-FGHIJ-KLMNO-PQRST-UVWXY-Z', address: 'mac.local:49213', remainingMs: remaining } })
+    const b = bridge(sheet)
     const page = await openPage('#files/sync')
-    expect(textOf(page)).toContain('Ouverte : il reste 8:40')
+    expect(textOf(page)).toContain('Ce code expire dans 1:35.')
     const before = b.kinds().filter((kind) => kind === 'status').length
-    remaining = 519_000
+    remaining = 94_000
     await act(async () => {
       await vi.advanceTimersByTimeAsync(1000)
     })
     expect(b.kinds().filter((kind) => kind === 'status').length).toBe(before + 1)
-    expect(textOf(page)).toContain('Ouverte : il reste 8:39')
+    expect(textOf(page)).toContain('Ce code expire dans 1:34.')
   })
 
-  it('closes the window when the page is left by its way back', async () => {
+  it('tells the main process the page was left, by its way back (the sheet of a pairing goes with it)', async () => {
     const b = bridge(() => ON)
     const page = await openPage('#files/sync')
     expect(b.kinds()).not.toContain('leave')
     await act(async () => {
       page.querySelector<HTMLButtonElement>('main .subpage-back')!.click()
     })
-    // The window hears the change of address after a task, and lands after a frame.
+    // The page hears the change of address after a task, and lands after a frame.
     await settle(() => new Promise((resolve) => setTimeout(resolve, 0)))
     await settle(() => new Promise((resolve) => requestAnimationFrame(() => resolve(undefined))))
     expect(b.kinds()).toContain('leave')
@@ -296,7 +305,7 @@ describe('the page and time', () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining('leaving the page could not be told'), expect.anything())
   })
 
-  it('closes the window when the whole Settings page is unmounted', async () => {
+  it('tells the main process the page was left when the whole Settings page is unmounted', async () => {
     const b = bridge(() => ON)
     await openPage('#files/sync')
     mounted!.unmount()

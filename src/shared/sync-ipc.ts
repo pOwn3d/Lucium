@@ -11,14 +11,11 @@ export type SyncCategory = (typeof SYNC_CATEGORIES)[number]
 /** [Q2]: only the structure is ticked by default; the settings, the archive and the open tabs are the person's choice, each with its own sentence. */
 export const DEFAULT_SYNC_CATEGORIES: Readonly<Record<SyncCategory, boolean>> = { structure: true, settings: false, archive: false, openTabs: false }
 
-/** What the page asks. `status` is asked about once a second while the page is open (it carries the countdowns); `leave` is sent when the page is left. */
+/** What the page asks. `status` is asked about once a second while the page is open (it carries the countdowns); `leave` is sent when the page is left (the sheet of a pairing goes with it). */
 export type SyncRequest =
   | { kind: 'status' }
   | { kind: 'enable'; on: boolean }
   | { kind: 'category'; category: SyncCategory; on: boolean }
-  | { kind: 'open-window' }
-  | { kind: 'prolong' }
-  | { kind: 'close-window' }
   | { kind: 'pair-start' }
   | { kind: 'pair-close' }
   | { kind: 'answer'; allow: boolean }
@@ -79,7 +76,8 @@ export interface SyncStatus {
   available: boolean
   enabled: boolean
   categories: Record<SyncCategory, boolean>
-  window: { open: boolean; remainingMs: number }
+  /** Whether the Mac listens now: the switch is on, the application is unlocked, and an iPhone is paired (or a pairing is open). There is no window to open any more (§6.1). */
+  listening: boolean
   pairing: SyncPairingView | null
   confirm: SyncConfirmView | null
   devices: SyncDeviceView[]
@@ -110,9 +108,6 @@ export function parseSyncRequest(raw: unknown): SyncRequest | null {
   const kind = own('kind')
   switch (kind) {
     case 'status':
-    case 'open-window':
-    case 'prolong':
-    case 'close-window':
     case 'pair-start':
     case 'pair-close':
     case 'leave':
