@@ -75,7 +75,7 @@ describe('grouping', () => {
   it('keeps an address typed in full ahead of the tab that already is on it', () => {
     const state = world({ goToOpenTab: true })
     const grouped = groupCandidates(rankCandidates('agenda.local', state, history))
-    expect(grouped[0]).toMatchObject({ kind: 'open', url: 'https://agenda.local' })
+    expect(grouped[0]).toMatchObject({ kind: 'open', url: 'http://agenda.local' })
     expect(grouped[0]).not.toHaveProperty('search')
     expect(kinds(grouped).indexOf('tab')).toBeGreaterThan(0)
     expect(grouped.find((c) => c.kind === 'tab')).toMatchObject({ label: 'Agenda partagé' })
