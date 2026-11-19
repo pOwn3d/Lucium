@@ -78,6 +78,13 @@ const KNOWN: readonly string[] = [
   'sync-conflicts.ts parseJournal',
   'sync-conflicts.ts removeFromJournal',
   'sync-conflicts.ts serializeJournal',
+  // The contract of the shared Today tabs (docs/synchronisation.md §27.16, card 507): played by the vectors, called by the Mac's snapshot and patch code once the
+  // Mac card (2/6) writes it. Remove these five lines as it does.
+  'sync-today.ts admitTabs',
+  'sync-today.ts gateTodayTabs',
+  'sync-today.ts lastActiveFrom',
+  'sync-today.ts roundActiveAt',
+  'sync-today.ts todayMoves',
   'tab-state.ts tabStateLegend',
   'tab-tree.ts TREE_INDENT',
   'tab-tree.ts treeDepth',
