@@ -34,15 +34,19 @@ public enum SyncResume {
         }
     }
 
-    /// The rows of a list: web pages only (`http` and `https`, checked again here whatever the receiver kept), most recently read first, one per address
-    /// and no more than the protocol allows. A page that has no host is not a page a person could be sent to.
+    /// The rows of a list: web pages only (`http` and `https`, checked again here whatever the receiver kept), most recently read first, one per address and
+    /// per identifier, and no more than the protocol allows. A page that has no host is not a page a person could be sent to.
     public static func rows(from tabs: [SyncOpenTab]) -> [Row] {
         var seen = Set<String>()
+        var named = Set<String>()
         var rows: [Row] = []
         for tab in tabs.sorted(by: { ($0.lastActiveAt, $1.id) > ($1.lastActiveAt, $0.id) }) {
-            guard isWebAddress(tab.url), seen.insert(tab.url).inserted else { continue }
+            // One line per address and per identifier: a list never holds two lines of one name (the screen names a line by it).
+            guard isWebAddress(tab.url), !seen.contains(tab.url), !named.contains(tab.id) else { continue }
             let host = AddressResolver.host(of: tab.url)
             guard !host.isEmpty else { continue }
+            seen.insert(tab.url)
+            named.insert(tab.id)
             let title = tab.title.trimmingCharacters(in: .whitespacesAndNewlines)
             rows.append(Row(id: tab.id, url: tab.url, title: title.isEmpty ? host : title, host: host, spaceId: tab.spaceId, lastActiveAt: tab.lastActiveAt))
             if rows.count == SyncLimits.maxOpenTabs { break }

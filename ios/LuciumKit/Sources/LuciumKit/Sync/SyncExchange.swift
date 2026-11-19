@@ -35,9 +35,13 @@ public struct SyncExchangeSummary: Equatable, Sendable {
     public var spacesSetAside: Int
     /// The Mac's open tabs, when "Open tabs" is common: kept in memory by the caller, never written (§10.4).
     public var openTabs: [SyncOpenTab]?
+    /// The categories both devices ticked, which are the ones this session exchanged: a category ticked on one device only crosses nothing, and the page says so.
+    public var categories: Set<SyncCategory>
+    /// How many things the Mac's side gave this phone that the state took: entities made or changed, entities removed, settings written (`SyncPatch`), 0 when nothing was written.
+    public var taken: Int
 
     public init(at: Int, conflicts: [SettledConflict], refusedSent: [SyncInbound.Refused], refusedReceived: [SyncInbound.Refused], rejectedByApply: [String], applied: Bool, adoptedTheMacState: Bool,
-                spacesSetAside: Int, openTabs: [SyncOpenTab]?) {
+                spacesSetAside: Int, openTabs: [SyncOpenTab]?, categories: Set<SyncCategory> = [], taken: Int = 0) {
         self.at = at
         self.conflicts = conflicts
         self.refusedSent = refusedSent
@@ -47,6 +51,8 @@ public struct SyncExchangeSummary: Equatable, Sendable {
         self.adoptedTheMacState = adoptedTheMacState
         self.spacesSetAside = spacesSetAside
         self.openTabs = openTabs
+        self.categories = categories
+        self.taken = taken
     }
 }
 
@@ -202,7 +208,12 @@ public struct SyncExchangeBody: SyncSessionBody {
 
         // receive, check
         let (received, openTabs) = try await receiveSnapshot(channel, takeOpenTabs: context.categories.contains(.openTabs))
-        let cleaned = SyncInbound.clean(received.snapshot, now: now(), base: base)
+        let exchanged = SyncInbound.onlyExchanged(received.snapshot, categories: context.categories)
+        var cleaned = SyncInbound.clean(exchanged.snapshot, now: now(), base: base)
+        cleaned.refused = (cleaned.refused + exchanged.refused).sorted { a, b in
+            let kind = SyncCanonical.compare(a.kind, b.kind)
+            return kind != 0 ? kind < 0 : SyncCanonical.compare(a.id, b.id) < 0
+        }
         if !cleaned.refused.isEmpty { log("not taken: \(cleaned.refused.count) entities (\(Dictionary(grouping: cleaned.refused, by: \.reason.rawValue).mapValues(\.count)))") }
 
         // merge, compare
@@ -232,8 +243,9 @@ public struct SyncExchangeBody: SyncSessionBody {
 
         let at = now()
         let conflicts = SyncConflicts.settle(conflicts: merged.conflicts, local: local, remote: cleaned.snapshot, merged: merged.snapshot, now: at, peer: .mac)
+        let taken = (applied?.changed ?? false) ? patch.upserts.count + patch.removals.count + patch.settings.count : 0
         await host.exchanged(SyncExchangeSummary(at: at, conflicts: conflicts, refusedSent: refusedSent, refusedReceived: cleaned.refused, rejectedByApply: applied?.rejected ?? [], applied: applied?.changed ?? false,
-                                                 adoptedTheMacState: adopting, spacesSetAside: aside.count, openTabs: openTabs))
+                                                 adoptedTheMacState: adopting, spacesSetAside: aside.count, openTabs: openTabs, categories: context.categories, taken: taken))
         return .committed(at: at)
     }
 

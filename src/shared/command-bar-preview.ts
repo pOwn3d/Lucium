@@ -132,6 +132,8 @@ export function candidatePreview(candidate: Candidate, ctx: PreviewContext): Can
     }
     case 'iphone':
       return make({ glyph: 'page', title: candidate.label, note: candidate.detail, chips: [t('cmd.groupe-sur-iphone')], keys: [{ keys: ENTER, label: t('cmd.ouvrir-la-page') }] })
+    case 'iphone-hint':
+      return make({ glyph: 'page', title: candidate.label, chips: [t('cmd.groupe-sur-iphone')], keys: [] })
     case 'archived': {
       const entry = state.archive.find((a) => a.id === candidate.archivedId)
       const space = entry ? state.spaces.find((s) => s.id === entry.spaceId) : undefined

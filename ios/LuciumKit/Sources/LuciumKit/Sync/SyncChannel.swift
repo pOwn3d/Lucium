@@ -52,7 +52,9 @@ public actor SyncChannel {
                     guard SyncTransitions.allows(envelope.message.type, after: history, receiver: .ios, phase: phase) else {
                         throw SyncFailure(.badMessage, "\(envelope.message.type) is not allowed here")
                     }
-                    history.append(envelope.message.type)
+                    // The kinds that came, once each: the rules of §7.4 ask whether a kind was seen, never how many times, and a list of every message made each one search all
+                    // the ones before it (quadratic, for a peer that sends them by the hundred thousand).
+                    if !history.contains(envelope.message.type) { history.append(envelope.message.type) }
                     return envelope.message
                 }
                 let chunk = try await Self.read(transport, timeout: timeout)

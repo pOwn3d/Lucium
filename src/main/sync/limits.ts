@@ -30,9 +30,6 @@ export const CONFIRM_MS = 60_000
  */
 export const PAIRING_REQUEST_GRACE_MS = 3_000
 
-/** The synchronisation window the person opens by hand: the only time the Mac listens (§6.1, [Q5]). */
-export const WINDOW_MAX_MS = 600_000
-
 /** A QR text is at most this long and names at most this many hosts (§4.2). */
 export const QR_MAX_CHARS = 300
 export const MAX_HOSTS = 4

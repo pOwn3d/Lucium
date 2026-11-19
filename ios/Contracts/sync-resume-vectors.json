@@ -134,6 +134,18 @@
         { "id": "i2", "title": "Stadt", "host": "xn--mnchen-3ya.de:8443", "spaceId": "s1" }
       ]
     }
+    ,{
+      "name": "one row per identifier too: two tabs with the same identifier are one line (the most recent keeps it), so that a list never holds two lines of one name",
+      "tabs": [
+        { "id": "d", "spaceId": "s1", "url": "https://first.example/", "title": "Old", "lastActiveAt": 1 },
+        { "id": "d", "spaceId": "s1", "url": "https://second.example/", "title": "New", "lastActiveAt": 8 },
+        { "id": "e", "spaceId": "s1", "url": "https://third.example/", "title": "Other", "lastActiveAt": 4 }
+      ],
+      "expect": [
+        { "id": "d", "title": "New", "host": "second.example", "spaceId": "s1" },
+        { "id": "e", "title": "Other", "host": "third.example", "spaceId": "s1" }
+      ]
+    }
   ],
   "availability": [
     {

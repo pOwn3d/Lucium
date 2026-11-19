@@ -5,9 +5,6 @@ import { DEFAULT_SYNC_CATEGORIES, parseSyncRequest, SYNC_CATEGORIES } from './sy
 describe('parseSyncRequest: what is accepted', () => {
   it.each([
     [{ kind: 'status' }],
-    [{ kind: 'open-window' }],
-    [{ kind: 'prolong' }],
-    [{ kind: 'close-window' }],
     [{ kind: 'pair-start' }],
     [{ kind: 'pair-close' }],
     [{ kind: 'leave' }],
@@ -37,6 +34,10 @@ describe('parseSyncRequest: what is refused', () => {
     ['no kind', {}],
     ['a kind that does not exist', { kind: 'export-key' }],
     ['a kind with a different case', { kind: 'Status' }],
+    // The window of the Mac is gone (docs/synchronisation.md §6.1): nothing the page sends opens, prolongs or closes the listening.
+    ['the old request to open the window', { kind: 'open-window' }],
+    ['the old request to prolong the window', { kind: 'prolong' }],
+    ['the old request to close the window', { kind: 'close-window' }],
     ['a kind that is not a text', { kind: 3 }],
     ['an inherited kind', Object.create({ kind: 'status' }) as unknown],
     ['a field more on a request with no field', { kind: 'status', extra: 1 }],

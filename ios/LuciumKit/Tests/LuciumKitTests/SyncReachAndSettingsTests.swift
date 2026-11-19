@@ -225,6 +225,56 @@ struct SyncSettingsTests {
         #expect(decide(.manual, since: .seconds(1)) == .start(after: .zero), "the person's own request is not held back")
     }
 
+    @Test func theIntervalTriggerStartsAtOnceButKeepsTheFifteenSecondFloorAndEveryOtherCondition() {
+        func decide(_ trigger: SyncScheduler.Trigger = .interval, enabled: Bool = true, hasMac: Bool = true, locked: Bool = false, running: Bool = false, since: Duration? = nil) -> SyncScheduler.Decision {
+            SyncScheduler.decide(trigger, enabled: enabled, hasMac: hasMac, appLocked: locked, running: running, sinceLastStart: since)
+        }
+        #expect(decide(since: nil) == .start(after: .zero))
+        #expect(decide(since: .seconds(30)) == .start(after: .zero))
+        #expect(decide(since: .seconds(14)) == .skip(.tooSoon), "never more than one session in 15 seconds, the interval included")
+        #expect(decide(enabled: false) == .skip(.off))
+        #expect(decide(hasMac: false) == .skip(.noMac))
+        #expect(decide(locked: true) == .skip(.appLocked))
+        #expect(decide(running: true) == .skip(.alreadyRunning))
+    }
+
+    @Test func theIntervalsOnOfferAreThirtySecondsOneMinuteFiveMinutesAndFifteenMinutesAndTheDefaultIsOneMinute() {
+        #expect(SyncInterval.allCases.map(\.rawValue) == [30, 60, 300, 900])
+        #expect(SyncInterval.default == .minute1 && SyncInterval.default.duration == .seconds(60))
+        #expect(SyncSettings().interval == .minute1)
+        #expect(SyncInterval.allCases.allSatisfy { $0.duration >= SyncLimits.minimumAutomaticInterval }, "no interval is shorter than the floor between two sessions")
+    }
+
+    @Test func theIntervalIsKeptInTheFileAndAnUnknownOrMissingOneIsOneMinute() throws {
+        var settings = SyncSettings(enabled: true)
+        settings.interval = .minutes5
+        let data = try JSONEncoder().encode(settings)
+        #expect(try JSONDecoder().decode(SyncSettings.self, from: data).interval == .minutes5)
+        // A file written before the interval existed.
+        let old = #"{"version":1,"enabled":true,"categories":["structure"]}"#
+        #expect(try JSONDecoder().decode(SyncSettings.self, from: Data(old.utf8)).interval == .minute1)
+        // A value a version does not offer (7 seconds, a text).
+        for odd in ["7", "0", "-30", "\"30\"", "null"] {
+            let json = #"{"version":1,"enabled":true,"categories":["structure"],"interval":"# + odd + "}"
+            let read = try? JSONDecoder().decode(SyncSettings.self, from: Data(json.utf8))
+            #expect(read?.interval == .minute1, "\(odd): the file stays readable, with the default")
+        }
+    }
+
+    @Test func theNextAutomaticSessionIsDueAtTheChosenIntervalAndSlowsDownAfterThreeFailuresInARow() {
+        for interval in SyncInterval.allCases {
+            for failures in 0...2 { #expect(SyncAutoSchedule.delay(interval: interval, consecutiveFailures: failures) == interval.duration, "\(interval) after \(failures)") }
+        }
+        let thirty = SyncInterval.seconds30
+        #expect([3, 4, 5, 6, 7].map { SyncAutoSchedule.delay(interval: thirty, consecutiveFailures: $0) } == [.seconds(60), .seconds(120), .seconds(240), .seconds(480), .seconds(900)], "doubled at each failure, 15 minutes at most")
+        #expect(SyncAutoSchedule.delay(interval: .minute1, consecutiveFailures: 3) == .seconds(120))
+        #expect(SyncAutoSchedule.delay(interval: .minutes5, consecutiveFailures: 3) == .seconds(600))
+        #expect(SyncAutoSchedule.delay(interval: .minutes5, consecutiveFailures: 4) == .seconds(900))
+        #expect(SyncAutoSchedule.delay(interval: .minutes15, consecutiveFailures: 9) == .seconds(900), "never past 15 minutes, and never below the interval")
+        for failures in [0, 3, 50, 10_000] { #expect(SyncAutoSchedule.delay(interval: .minutes15, consecutiveFailures: failures) == .seconds(900)) }
+        #expect(SyncAutoSchedule.delay(interval: thirty, consecutiveFailures: 10_000) == .seconds(900), "a huge count does not overflow")
+    }
+
     @Test func onlyTheStatesThatHaveAMacToTalkToCanStartASession() {
         let startable: [SyncStatus] = [.idle, .waiting, .unreachable, .macAnswered(at: 1), .upToDate(at: 1), .localNetworkDenied, .clockSkew, .failed(.timeout)]
         for status in startable { #expect(status.canStartSession, "\(status)") }
