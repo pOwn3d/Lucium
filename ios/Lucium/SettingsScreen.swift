@@ -57,6 +57,8 @@ struct SettingsScreen: View {
             link(row, "settings.search.title") { Text(verbatim: SearchEngine.name(forTemplate: model.searchTemplate)) }
         case .privacy:
             link(row, "settings.privacy") { Text(model.privacyLevelSummary) }
+        case .passwords:
+            link(row, "settings.passwords.title") { Text("settings.passwords.value") }
         case .lock:
             link(row, "lock.settings.title") { Text(model.lock?.isActive == true ? "settings.lock.on" : "settings.lock.off") }
         case .spaces:
@@ -81,6 +83,7 @@ struct SettingsScreen: View {
         switch row {
         case .searchEngine: SearchEngineScreen(model: model)
         case .privacy: PrivacyForm(model: model)
+        case .passwords: PasswordsScreen()
         case .lock:
             if let lock = model.lock { LockSettingsForm(lock: lock, spaces: model.spaces) }
         // Choosing a space to browse in leaves the settings, as it leaves the sheet of the spaces.
@@ -134,5 +137,21 @@ struct SearchEngineScreen: View {
             .contentShape(Rectangle())
         }
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+/// What Lucium says of passwords and passkeys (docs/ios.md, "AutoFill et passkeys"). It states only what is known: Lucium keeps no password, the system
+/// may offer its own, and passkeys are not promised. Nothing here reads or stores a credential.
+struct PasswordsScreen: View {
+    var body: some View {
+        List {
+            Section {
+                Text("settings.passwords.none")
+                Text("settings.passwords.autofill")
+                Text("settings.passwords.passkeys")
+            }
+        }
+        .navigationTitle("settings.passwords.title")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }

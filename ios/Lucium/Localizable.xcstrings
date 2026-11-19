@@ -3353,6 +3353,86 @@
         }
       }
     },
+    "settings.passwords.autofill": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When a page asks you to sign in, iOS can offer the passwords saved in your Keychain above the keyboard. That depends on iOS and on the site, and Lucium has not checked it on every site."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Quand une page demande de se connecter, iOS peut proposer au-dessus du clavier les mots de passe de votre trousseau. Cela dépend d’iOS et du site, et Lucium ne l’a pas vérifié sur tous les sites."
+          }
+        }
+      }
+    },
+    "settings.passwords.none": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium does not save any password and has no password manager of its own."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium n’enregistre aucun mot de passe et n’a pas de gestionnaire de mots de passe à lui."
+          }
+        }
+      }
+    },
+    "settings.passwords.passkeys": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passkeys are not guaranteed in Lucium. If a site asks for one and nothing happens, sign in with a password or open the site in Safari."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les clés d’accès (passkeys) ne sont pas garanties dans Lucium. Si un site en demande une et que rien ne se passe, connectez-vous avec un mot de passe ou ouvrez le site dans Safari."
+          }
+        }
+      }
+    },
+    "settings.passwords.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passwords and passkeys"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mots de passe et clés d’accès"
+          }
+        }
+      }
+    },
+    "settings.passwords.value": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "System"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Système"
+          }
+        }
+      }
+    },
     "settings.privacy": {
       "localizations": {
         "en": {
