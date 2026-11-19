@@ -85,6 +85,7 @@ extension BrowserModel {
         switch phase {
         case .background:
             lockOnLeaving()
+            sync?.leftScreen()
             Task { await enterBackground() }
         case .active:
             didBecomeActive()
