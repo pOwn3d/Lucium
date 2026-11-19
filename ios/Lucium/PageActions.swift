@@ -11,6 +11,15 @@ extension BrowserModel {
 
     var canSavePDF: Bool { shareURL != nil }
 
+    /// Searching in the page needs a page: the start page is drawn by SwiftUI, there is no text of the web to search.
+    var canFindInPage: Bool { shareURL != nil && webView?.findInteraction != nil }
+
+    /// Opens the system's find bar on the page in front of the person.
+    func findInPage() {
+        guard canFindInPage, let interaction = webView?.findInteraction else { return }
+        presentFind(interaction)
+    }
+
     /// The page as a PDF in the folder of the downloads. The whole page is drawn, not only what is on screen (`WKPDFConfiguration` with no rectangle).
     func savePageAsPDF() async {
         guard let view = webView, canSavePDF else { return }
@@ -36,6 +45,7 @@ struct PageActionsMenu: View {
             } else {
                 Button("page.share") {}.disabled(true)
             }
+            Button("page.find") { model.findInPage() }.disabled(!model.canFindInPage)
             Button("page.save-pdf") { Task { await model.savePageAsPDF() } }.disabled(!model.canSavePDF)
             Button("page.downloads") { model.downloads.sheetShown = true }
         } label: {

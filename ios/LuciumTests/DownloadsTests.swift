@@ -353,6 +353,21 @@ final class DownloadsTests: BrowserCoreTestCase {
         XCTAssertTrue(model.canSavePDF)
     }
 
+    func testAWebPageCanBeSearchedWithTheSystemFindBarAndTheStartPageCannot() async throws {
+        let model = await makeDownloadsModel()
+        XCTAssertFalse(model.canFindInPage, "the start page has no web text to search")
+        try await load("/a.html", in: model)
+        let view = try XCTUnwrap(model.webView)
+        XCTAssertTrue(view.isFindInteractionEnabled)
+        XCTAssertTrue(model.canFindInPage)
+        let interaction = try XCTUnwrap(view.findInteraction)
+        var shown: [UIFindInteraction] = []
+        model.presentFind = { shown.append($0) }
+        model.findInPage()
+        XCTAssertEqual(shown.count, 1, "the entry of the menu asks for the find bar")
+        XCTAssertTrue(shown.first === interaction, "on the page that is on screen")
+    }
+
     func testAPageIsSavedAsAWholePdfNamedAfterItsTitle() async throws {
         let tall = (0..<40).map { "<p style=\"height:100px;margin:0\">line \($0)</p>" }.joined()
         try await serve { _ in
