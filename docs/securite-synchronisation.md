@@ -1,8 +1,10 @@
 # Revue de sécurité de la synchronisation Mac et iPhone
 
-Rapport de la carte 448 (synchro 6/6), écrit le 18 novembre 2026. Il porte sur le code **déjà fusionné** dans `main` (jusqu'au commit `bb7e8067`) et sur les correctifs de cette carte, puis de la carte 471 (décisions du chef du 18 novembre et points n° 9 à 22 : §8 et §10). La spécification est `docs/synchronisation.md` ; ce rapport dit ce que l'attaque a trouvé, ce qui est corrigé, ce qui reste, et propose la réponse au questionnaire d'exportation du chiffrement.
+Rapport de la carte 448 (synchro 6/6), écrit le 18 novembre 2026 (première passe) et complété le 19 novembre 2026 (**seconde passe : §11**). Il porte sur le code **déjà fusionné** dans `main` (jusqu'au commit `bb7e8067`) et sur les correctifs de cette carte, puis de la carte 471 (décisions du chef du 18 novembre et points n° 9 à 22 : §8 et §10). La spécification est `docs/synchronisation.md` ; ce rapport dit ce que l'attaque a trouvé, ce qui est corrigé, ce qui reste, et propose la réponse au questionnaire d'exportation du chiffrement.
 
 **Résultat en une phrase.** Aucun défaut ne permet à quelqu'un qui n'est pas appairé de lire ou d'écrire des données : l'appairage, l'épinglage et le filtre d'adresses tiennent, et le faux QR scanné par la personne (n° 9) est fermé par le code à comparer. **Un appareil appairé hostile pouvait faire plus que ne le dit la spécification** (écrire dans le prototype du processus principal, empoisonner l'horloge, faire supprimer des données, bloquer le processus principal quelques secondes) : **les vingt-deux défauts n° 1 à 22 sont corrigés par quatorze PR** (§10 ; le n° 23 est une information acceptée), côté Mac et côté iPhone, chacun avec un test vu échouer sans lui. Les décisions du chef du 18 novembre 2026 (n° 9, 10 et 13) sont appliquées. **Ce qui reste n'est pas un défaut de code** : la relecture du corps de séance de l'iPhone (§6), la conformité du chiffrement (§9, décision du chef) et ce qui ne se vérifie que sur un appareil réel.
+
+**Seconde passe (19 novembre 2026, §11).** Les 22 correctifs de la première passe ont été **rejoués** (chacun retiré du code : son test échoue) et tiennent. Le corps de séance de l'iPhone et les correctifs de la carte 471 ont été relus par trois lecteurs indépendants : **onze défauts de plus**, dont deux de perte de données sans appareil hostile (n° 25) ou par un Mac appairé hostile (n° 33), **sont corrigés par onze PR** ; **huit points restent à décider** (§11.4). **Ce n'est donc toujours pas « sans point bloquant »** : voir la conclusion du §11.5.
 
 ## 1. Périmètre
 
@@ -72,11 +74,11 @@ Lu en entier et jugé sain, avec la preuve quand elle existe :
 - **Le « réseau local » contient** `10/8`, `172.16/12`, `192.168/16`, `169.254/16`, `fc00::/7`, `fe80::/10` **et `100.64/10`** (VPN maillés, mais aussi le réseau de certains opérateurs). Choix de la spécification.
 - **Certificat valable de 1970 à 9999, jamais renouvelé** ; la clé de l'iPhone n'est pas dans la Secure Enclave. Choix de la spécification.
 - **Un Mac volé** ne peut pas se connecter à l'iPhone (il n'ouvre jamais de connexion) ; un iPhone volé se coupe en l'oubliant sur le Mac.
-- **Le modèle de recherche** (n° 10) : tant que la catégorie « réglages » reste non cochée par défaut, le risque ne touche que ceux qui la cochent.
+- **Le modèle de recherche** (n° 10) : tant que la catégorie « réglages » reste non cochée par défaut, le risque ne touche que ceux qui la cochent. **Correction de la seconde passe** : cette phrase était fausse pour tout ce qui voyage : la séance appliquait ce qu'elle recevait **quelle que soit la catégorie** (n° 24, corrigé par la PR #129) ; elle est vraie depuis.
 
 ## 6. Ce qui n'a pas été revu ni vérifié
 
-- Le corps de séance de l'iPhone (carte 452) ; à relire à sa fusion.
+- ~~Le corps de séance de l'iPhone (carte 452) ; à relire à sa fusion.~~ **Relu à la seconde passe (§11)**, par un lecteur indépendant et par moi pour `SyncExchange.swift`, `SyncMarkKeeper`, `SyncBase`, `SyncJournalFile`, `SyncRestore`, `SyncApply`.
 - Rien sur un appareil réel : `Network.framework`, résolution d'un nom `.local`, invite du réseau local, caméra, `safeStorage` dans l'application, pare-feu de macOS. Le Node d'Electron 45.2.1 a été essayé par la carte 444, pas par moi.
 - `smoke-sync.ts` n'a pas été lancé (`AGENTS.md` §1) ; les essais de bout en bout du Mac sont ceux des tests Vitest.
 - La mesure du n° 12 (mémoire, gel) est celle de la relecture ; je ne l'ai pas rejouée. Celle du n° 11 l'a été.
@@ -178,3 +180,100 @@ Dans l'ordre où App Store Connect pose les questions (ordre et formulation **à
 | #121 | hors périmètre, bloquait la CI : un autre port quand le système refuse celui qui est tiré (Windows) | fusionnée |
 
 Chacune a un test qui échoue sans le correctif (mutation vue) ; la méthode, les mutations et ce qui n'a pas été essayé sont dans le compte rendu de la carte. Un seul écart de méthode de la première passe : la branche de la PR #97 a été amendée et poussée de force (`--force-with-lease`) quelques minutes après son premier envoi, avant l'ouverture de la PR, ce que `AGENTS.md` §7 déconseille ; rien d'autre n'était sur cette branche.
+
+## 11. Seconde passe (19 novembre 2026)
+
+La carte 448 est restée ouverte après la première passe : le corps de séance de l'iPhone (carte 452), les correctifs de sécurité de la carte 471 (« code à comparer », moteurs connus, archive avant suppression, bornes, horloge) et la reprise d'un onglet des deux côtés (cartes 447 et 490, puis 491) ont été fusionnés depuis. Cette passe les attaque, et vérifie que chaque trouvaille de la première passe est **vraiment** fermée.
+
+### 11.1 Méthode
+
+1. Lecture de la carte, de ses commentaires, des bilans des cartes 452, 471, 447 et 490, de ce rapport et de `docs/synchronisation.md`.
+2. **Trois relectures indépendantes**, en lecture seule, sans mon avis ni mes conclusions : (a) le corps de séance de l'iPhone et ses jumeaux du Mac, (b) les correctifs de la carte 471 (contournement, régression, divergence Mac/iPhone), (c) la reprise d'onglet des deux côtés (schémas, IPC, verrou, affichage). Elles pouvaient lancer des tests Vitest et `swift test` jetés (dans un dossier à part), ni fenêtre, ni simulateur, ni Electron.
+3. **Rejouer les preuves de la première passe** : pour chaque PR de la première passe et de la carte 471, je retire le correctif du code (`git revert` du code seul, ou mutation ciblée d'une ligne) et je lance les tests de la synchronisation : ils doivent échouer.
+4. **Chaque trouvaille d'une relecture a été rejouée par moi avant d'être corrigée** : un test qui échoue sur le vrai code, le correctif, puis la mutation (je retire le correctif, le test échoue). Ce qui n'a pas été rejoué est dit.
+5. Une PR par défaut, squash, aucun push forcé sauf un (voir §11.6). Aucune fenêtre ouverte, aucun simulateur.
+
+### 11.2 Les trouvailles de la première passe sont-elles fermées ? Oui
+
+Rejoué sur `main` à `949a6f68` (puis `07d8e9e6`) : Vitest des dossiers de la synchronisation 1 521 tests verts, `swift test` 652 tests verts. Pour chaque correctif, retiré du code :
+
+| Trouvailles | PR | Retiré, les tests échouent |
+|---|---|---|
+| 1 pollution de prototype | #93 | 3 tests (messages, séance, instantané) |
+| 2 horloge empoisonnée | #94 | 3 tests (filtre, séance, vecteurs communs), pour les pierres et pour les listes |
+| 3 place d'appairage | #95 | 1 test chacun pour la grâce et pour la demande envoyée |
+| 4 onglets ouverts | #96 | 1 test pour le filtre, 1 pour la borne des identifiants |
+| 5 refus lu comme suppression | #97 | 5 tests |
+| 6, 7, 8 Swift | #98 | sans le correctif : `Fatal error: String index is out of bounds` et l'adresse `fd00::1\0…` repasse |
+| 11 patch quadratique | #99 | équivalence au lent + **97 ms pour 40 000 créations et un ordre de 40 000, 17 ms pour 40 000 suppressions** (rejoué) |
+| 12 valeurs par trame | #100 | 1 test pour la borne de trame, 1 pour celle de connexion |
+| 10 moteurs connus | #107 | 14 tests (filtre) et 1 test (moteur personnalisé gardé) |
+| 13 archive avant | #109 | 8 tests |
+| 9 + 21 code à comparer | #111 | 2 tests de canal, 4 fichiers de test (dont le module du code) |
+| 14, 15, 16, 20 | #112 | 23 tests |
+| 17, 18 | #113 | 7 tests |
+| 19, 22 | #114 | 3 tests |
+| port de repli | #121 | 2 tests |
+
+Aucune de ces trouvailles n'est rouverte. **Mais** trois d'entre elles avaient un trou voisin (§11.3 n° 25, 35, 37) et le n° 9 a une limite (n° 36).
+
+### 11.3 Nouvelles trouvailles (n° 24 à 34), toutes corrigées
+
+| N° | Gravité | Trouvaille | Preuve | État |
+|---|---|---|---|---|
+| 24 | **moyenne à haute** | **Une catégorie non cochée est appliquée quand même.** Rien ne filtrait par catégorie ce que la séance **recevait** : un appareil appairé qui envoie ses réglages, son archive ou ses espaces alors que la catégorie n'est pas commune les fait écrire. Rejoué sur le Mac (`httpsUpgrade`, `sendGpc` et une entrée d'archive changés) et sur l'iPhone (`httpsUpgrade`, `stripTrackingParams`, `protectionBaseline`, archive) : la phrase du §5, « le risque ne touche que ceux qui cochent « réglages » », était fausse. Trouvé par deux lecteurs (Mac et iPhone). | Test qui échoue sans le correctif, des deux côtés | **Corrigé**, PR #129 (le reçu est coupé aux genres des catégories communes avant la fusion ; un appareil qui en envoie plus finit en `divergence`, rien n'est écrit) |
+| 25 | **moyenne** (perte de données sans appareil hostile) | **Les marques d'un espace mis de côté sont oubliées.** Un espace verrouillé n'est pas dans l'instantané fusionné ; `MarkBook.adopt` ne gardait que les marques de ce qui y était : au déverrouillage, ce que l'autre appareil avait changé entre-temps perdait contre l'ancienne valeur, sur les deux appareils, sans erreur (rejoué : un dossier renommé sur l'iPhone pendant que son espace était verrouillé sur le Mac revient à son ancien nom partout). Le n° 17 laissait ce trou. Trouvé par deux lecteurs. | Test qui échoue sans le correctif, des deux côtés | **Corrigé**, PR #130 |
+| 26 | moyenne | **« Sur l'iPhone » : la ligne cliquée n'est pas toujours celle qui s'ouvre.** Une ligne était nommée `<iPhone>:<identifiant d'onglet>` et le clic cherchait l'adresse par ce nom : deux lignes de même identifiant (`good.example` et `evil.example`, même titre) → le clic sur celle qu'on lit ouvre l'autre ; et une séance qui met une autre adresse sous le même identifiant pendant que la barre est ouverte → le clic ouvre la nouvelle page. L'hôte lu n'est plus l'hôte ouvert. Rejoué sur le vrai service. | Deux tests de service | **Corrigé**, PR #126 (le nom porte une empreinte de l'adresse) |
+| 27 | basse | Le Mac **coupait** à 4096 octets l'adresse d'un onglet ouvert annoncé (une autre page : jeton ou paramètre perdu) ; l'iPhone écarte et la spécification disait « laissée de côté ». | Test (adresse à la borne, +1 octet, caractères à 2 octets) | **Corrigé**, PR #125 (fusionnée) |
+| 28 | basse à moyenne | **iPhone : l'hôte d'un nom international est écrit en Unicode** (`https://аррӏе.com/` lisible comme un site connu, alors que le système charge `xn--80ak6aa92e.com` ; le Mac écrit le nom ASCII). La fonction sert à toutes les lignes (onglets, barre, archive, téléchargements). Rejoué avec `URLComponents` contre `URL`. | Vecteurs communs (adresses et reprise) : le Mac passe, l'iPhone échoue sans le correctif | **Corrigé**, PR #127 |
+| 29 | basse | Deux onglets annoncés de même identifiant donnent deux lignes de même nom (SwiftUI ne définit pas ce qu'il en fait ; non rejoué, pas de simulateur). | Vecteur commun | **Corrigé**, PR #128 (une ligne par identifiant) |
+| 30 | moyenne | **Le titre d'un onglet ouvert pouvait porter un substitut isolé** (une page fixe son titre) : l'iPhone refuse le message entier, la séance échoue tant que l'onglet est ouvert et que « Onglets ouverts » est cochée. Que Chromium laisse passer un tel titre jusqu'à l'état n'a pas été essayé (pas d'Electron). | Test sur `openTabsOf` | **Corrigé**, PR #131 |
+| 31 | basse | `holdsUnsendableText` empilait une liste avec `push(...liste)` : `RangeError` à partir d'environ 125 000 éléments (la trame en permet 150 000) ; la séance finit en `internal`, pas de plantage. | Test (149 000 valeurs) | **Corrigé**, PR #132 |
+| 32 | **haute** (iPhone seulement) | **`SyncApply` est quadratique, voire cubique, sur le fil principal** (le Mac l'a corrigé en #99, pas le Swift) : build de test, 10 000 créations + un ordre : **13 s** ; une chaîne de 1 500 dossiers : **35 s** ; 12 000 listes à ordonner : **34 s**. Un Mac appairé hostile calcule la même fusion, donc les résumés concordent. | Équivalence à l'ancienne version (copiée comme oracle) sur 400 patchs au hasard, et trois cas de taille | **Corrigé**, PR #133 |
+| 33 | **haute** (iPhone seulement) | **L'état peut dépasser ce que l'iPhone sait relire.** L'iPhone garde les champs qu'il ne connaît pas (§11.6) et n'a pas les plafonds du Mac : 28,8 Mio de champs inconnus à chaque séance (une séance en porte 32) donnent 28,8, 57,6 puis 86,5 Mio de `state.json`, au-delà des 64 Mio de relecture : au lancement suivant le fichier est mis de côté (`.corrupt-…`, trois copies) et l'application repart de zéro. Rejoué sur l'écriture et la relecture ; la mémoire du décodage n'a pas été mesurée. | Test de séance (la fusion n'est pas adoptée) | **Corrigé**, PR #135 (au-delà de 32 Mio, rien n'est écrit, la séance finit en `too-large`) |
+| 34 | moyenne à basse | `SyncChannel` gardait le type de **chaque** message et les règles d'ordre le parcouraient : 30 000 petits `open-tabs` en 19,5 s (build de test), jusqu'à la coupure à dix minutes. | Test de durée | **Corrigé**, PR #134 |
+
+### 11.4 Points non corrigés, à décider (n° 35 à 42)
+
+| N° | Gravité | Point | Pourquoi je ne l'ai pas corrigé | Recommandation |
+|---|---|---|---|---|
+| 35 | moyenne | **Une horloge qui revient en arrière de plus de 7 jours fait reculer les marques** (`Hlc.next` repart de l'heure, `update` refait les marques « trop loin »). C'est la contrepartie du n° 18 : on ne sait pas dire si l'**ancienne** horloge ou la **nouvelle** est fausse. Rejoué : le dernier renommage du Mac, daté d'une horloge à −30 jours, perd contre un plus ancien de l'iPhone ; le Swift fait de même (lu). | Choix de conception, pas un oubli. | Garder : une horloge à −7 jours ou plus est rare et le n° 18 l'est davantage ; ou ne refaire les marques que si l'**heure du jour** est plus loin que la dernière marque de plus de 7 jours (et pas l'inverse) |
+| 36 | moyenne | **Le code à comparer (30 bits) tient moins que dit.** La carte 471 écrivait « suffisant contre un faux Mac qui ne peut pas essayer plus de quelques certificats (raisonnement, non mesuré) ». Mesuré (simulation, Node) : un faux Mac et un faux iPhone qui choisissent chacun leur certificat trouvent une collision `code(A1, iPhone) = code(Mac, A2)` en 80 000 empreintes par côté (0,3 s) ; si l'empreinte de l'iPhone n'est connue qu'à la connexion, 2³⁰ essais, environ 7 min d'un cœur (une empreinte se fait varier sans refaire de clé). **Précondition** : l'attaquant a photographié le vrai QR (secret et empreinte du Mac), la personne scanne le sien **pendant** que le vrai Mac attend. Sans fenêtre d'appairage ouverte sur le vrai Mac, il n'y a rien à comparer et seule la lecture de la phrase protège. | Aucun code de six caractères ne résiste à cela sans engagement (commit-reveal) ; c'est un changement de protocole. | **Accepter et le dire** : le code protège du faux QR seul, pas d'un attaquant qui a vu le vrai QR et relaie. Pour aller plus loin : un engagement de l'empreinte de l'iPhone avant que le Mac ne montre la sienne |
+| 37 | basse à moyenne | **Les onglets ouverts d'un espace supprimé repartent par l'archive** : les entrées d'archive de source `sync` (n° 13) portent adresse et titre et partent avec la catégorie « archive », sans le consentement « onglets ouverts ». Rejoué. Un appareil hostile récupère ainsi les onglets ouverts d'un espace qu'il choisit de supprimer — mais il reçoit déjà toute l'archive si la catégorie est cochée. | Question de ce que la personne attend de « archive ». | Ne pas envoyer les entrées `source: sync` (elles restent là où l'espace a été supprimé), des deux côtés, avec un vecteur |
+| 38 | basse à moyenne | **Le port de repli (#121) n'est jamais répercuté** aux iPhone déjà appairés : `hello` ne porte que `hosts`, l'iPhone garde le port du QR. Après un repli (`EADDRINUSE` ou `EACCES`), il faut ré-appairer. | Changement de protocole. | Mettre le port dans `pair.accept`/`hello` ou le choisir une fois pour toutes à l'appairage |
+| 39 | basse | **Une entité que `SyncApply` refuse reste dans la base**, puis devient une suppression poussée au Mac à la séance suivante (rejoué : un dossier au nom blanc). Un Mac honnête ne l'envoie pas ; une version plus récente qui permettrait plus le pourrait. | Peu probable sans version qui diffère. | Ne pas adopter dans la base ce que `apply` rejette |
+| 40 | moyenne (écart à la spécification) | **Un genre inconnu traverse une fois puis est supprimé à la deuxième séance** (rejoué : `widget`) : le Swift ne l'envoie pas, la base le garde, la fusion le prend pour supprimé ; la spécification (§11.6) dit qu'on ne supprime jamais ce qu'on ne comprend pas. Même `snapshotOf` côté Mac. Seul un appareil plus récent en produit. | Il n'y en a pas encore. | À corriger avant la première version qui ajoute un genre |
+| 41 | basse | L'identité est remplacée au **second** refus du trousseau, sans délai ; un certificat que `X509Certificate` ne lit plus (après une mise à jour d'Electron) est remplacé tout de suite. | Choix de la carte 471. | Ajouter un délai (une minute) ou demander à la personne |
+| 42 | basse | Le Mac enregistre l'iPhone au `bye` de celui-ci, **sans second accord de sa personne** : « Autoriser » est cliqué avant que le code de l'iPhone existe. La phrase « accord des deux côtés » (§4.6) est vraie de l'iPhone, pas du Mac. | Le Mac a déjà montré le code et l'adresse avant le clic. | Corriger la phrase |
+
+Et ce qui est **noté, borné, non corrigé** : l'archive de la personne est évincée par les entrées `sync` d'un espace supprimé (500 au plus, bornées par les onglets du Mac) ; 50 000 pierres tombales à +6 jours se propagent (bruit, 30 jours) ; `hello.now` hostile empêche l'envoi de tout ce qui est local (rien d'écrit) ; un `state.json` corrompu à `lastActiveAt: 1e20` arrête l'application (`Int(…)`) ; deux clés JSON équivalentes en Unicode (NFC contre NFD) sont des doublons pour le Swift et pas pour le JavaScript (aucune clé de snapshot exploitable : NFC est imposée) ; le fichier de marques n'est pas validé à la lecture (un fichier corrompu à la main) ; une séance qui s'achève juste après le verrouillage ou l'oubli du Mac peut repeupler la liste « Sur le Mac » ; l'hôte d'« Sur l'iPhone » long est coupé par la fin dans la barre (le vrai domaine peut être caché), l'espace où s'ouvre la page est choisi par l'iPhone sans pastille sur le Mac, et l'adresse brute (retour à la ligne, tabulation, identifiants) est gardée telle quelle jusqu'à l'ouverture, où Chromium la normalise (le Swift la refuse : au pire une `divergence`).
+
+### 11.5 Ce qui n'a pas été revu, et conclusion
+
+**Pas revu ou pas prouvé** : tout ce qui demande un appareil, un simulateur ou Electron (invite du réseau local, caméra, Network.framework, `safeStorage`, le comportement de SwiftUI avec des identifiants en double, un titre de page à substitut isolé dans Chromium, la mémoire du décodage de dizaines de Mio, le watchdog d'iOS) ; `smoke-sync.ts` n'a pas été lancé ; la cible de l'application iOS n'a pas été compilée (les changements qui la touchent tiennent en une ligne dans `BrowserModel+Sync.swift`) ; la page des Réglages, `SyncConflictScreen` et les textes n'ont pas été relus ; la liste « Sur l'iPhone » a été relue **à la fusion de la carte 491** (PR #124) : elle garde la liste en mémoire après la fenêtre, l'oublie au verrou, à la décoche, à l'arrêt, avec l'appareil et à la sortie (testé) ; je n'y ai rien trouvé de plus (la ligne d'aide n'est qu'un texte, un clic dessus n'ouvre rien) ; le n° 26 compte davantage depuis qu'elle dure. La conformité du chiffrement (§9) n'a pas été rouverte.
+
+**Conclusion : toujours pas « sans point bloquant »**, mais plus pour la même raison. Les onze défauts de ce paragraphe (n° 24 à 34), dont trois de gravité haute ou moyenne à haute, **sont corrigés** une fois les onze PR fusionnées (§11.7) ; aucun ne donnait accès à quelqu'un qui n'est pas appairé. Il reste **à décider** les n° 35, 36, 37 et 38 (une horloge reculée, la force du code, l'archive, le port) et à **corriger avant le prochain genre** le n° 40 ; les autres sont de peu de gravité. Aucun point ne justifie, seul, de retenir la première version TestFlight, **mais le n° 24 et le n° 33 le justifiaient tant qu'ils étaient ouverts** : leurs PR doivent être fusionnées avant. Et la synchronisation n'a toujours **jamais tourné sur un appareil réel** (premier paragraphe de ce §11.5) : un essai sur un iPhone et un Mac avant de l'inclure est la condition que cette revue ne peut pas lever.
+
+### 11.6 Écarts de méthode de cette passe
+
+- **Un push forcé** : la branche de la PR #131 a reçu un premier commit qui utilisait `String.prototype.toWellFormed` (absent de la bibliothèque TypeScript du projet : le contrôle de types échouait) ; je l'ai amendé et poussé de force quelques minutes après l'ouverture de la PR (`AGENTS.md` §7 le déconseille ; dit dans la PR). Rien d'autre n'était sur cette branche.
+- Mes mutations ont d'abord été lancées dans la copie `.worktrees/C448b` que lisaient aussi les relecteurs, pendant quelques secondes ; je suis passé à une copie jetable (`C448b-mut`) dès que je l'ai vu. Je n'ai pas vu de trace dans leurs rapports.
+- La PR #127 change `AddressResolver.host(of:)`, qui sert partout sur l'iPhone ; la cible de l'application n'a pas été jouée sur simulateur.
+
+### 11.7 Liste des PR de la seconde passe
+
+| PR | Sujet | État |
+|---|---|---|
+| #125 | n° 27 : écarter l'onglet ouvert à l'adresse trop longue, au lieu de la couper | fusionnée |
+| #126 | n° 26 : nommer une ligne de « Sur l'iPhone » par l'adresse annoncée | voir la carte |
+| #127 | n° 28 : l'hôte ASCII d'une adresse sur l'iPhone | voir la carte |
+| #128 | n° 29 : une ligne par identifiant | voir la carte |
+| #129 | n° 24 : une catégorie non commune n'est pas appliquée | voir la carte |
+| #130 | n° 25 : garder les marques des espaces mis de côté | voir la carte |
+| #131 | n° 30 : le titre d'un onglet ouvert écrit comme un texte | voir la carte |
+| #132 | n° 31 : ne pas empiler une liste sur la pile d'appel | voir la carte |
+| #133 | n° 32 : appliquer un patch en temps linéaire sur l'iPhone | voir la carte |
+| #134 | n° 34 : retenir les genres de messages, pas chaque message | voir la carte |
+| #135 | n° 33 : ne pas écrire un état trop gros pour être relu | voir la carte |
+
+Chacune a un test qui échoue sans le correctif (vu), et la mutation a été faite côté Mac comme côté Swift.
