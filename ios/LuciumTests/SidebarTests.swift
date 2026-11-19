@@ -269,6 +269,17 @@ final class SidebarTests: BrowserCoreTestCase {
         try check("iphone-sidebar-open-large-text", large)
     }
 
+    func testTheBarButtonTogglesTheSidebarOnAPhoneOnly() async throws {
+        let phone = await seededModel(isPhone: true)
+        phone.toggleDrawer()
+        XCTAssertTrue(phone.drawerShown, "the first tap brings the sidebar out")
+        phone.toggleDrawer()
+        XCTAssertFalse(phone.drawerShown, "the second puts it away")
+        let pad = await seededModel(isPhone: false)
+        pad.toggleDrawer()
+        XCTAssertFalse(pad.drawerShown, "the iPad has no such sidebar")
+    }
+
     func testShowingAPageClosesTheSidebarAndChoosingASpaceLeavesItOut() async throws {
         let model = await seededModel(isPhone: true)
         let weather = try XCTUnwrap(model.todayTabs.first { $0.id == "weather" })

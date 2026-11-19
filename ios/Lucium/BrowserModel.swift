@@ -234,6 +234,9 @@ final class BrowserModel {
 
     /// Something happened to the sidebar that slides out from the left edge of an iPhone: it opens, closes or stays as `EdgeDrawer` says. The iPad never has
     /// it, so nothing opens it there.
+    /// The sidebar button of the bottom bar: out when away, away when out.
+    func toggleDrawer() { drawerEvent(EdgeDrawer.buttonEvent(wasOpen: drawerShown)) }
+
     func drawerEvent(_ event: EdgeDrawerEvent) {
         let open = EdgeDrawer.isOpen(after: event, wasOpen: drawerShown)
         guard open != drawerShown, !open || isPhone else { return }
