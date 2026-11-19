@@ -284,6 +284,16 @@ final class SyncControllerTests: XCTestCase {
         }
     }
 
+    /// Card 652: a Mac that still lists this phone says `hello` where the pairing waits for a challenge. The person is told what to do, not that the two "did not understand each other".
+    func testAMacThatStillKnowsThePhoneTellsThePersonToForgetItOnTheMac() async throws {
+        let controller = makeController(connector: ScriptedConnector(sessionMac(hello: { Self.helloFromMac() })))
+        controller.setEnabled(true)
+        let result = await controller.pair(with: qr(macFingerprint))
+        XCTAssertEqual(failure(result), .macKnowsThisPhone)
+        XCTAssertNil(controller.settings.mac)
+        XCTAssertNotNil(SyncTexts.pairing(.macKnowsThisPhone))
+    }
+
     func testAMacThatDoesNotKnowTheSecretIsNotKept() async throws {
         let phoneFingerprint = try store.loadOrCreate().fingerprint
         let controller = makeController(connector: ScriptedConnector(pairingMac(secret: Data(repeating: 1, count: 16), phoneFingerprint: phoneFingerprint)))

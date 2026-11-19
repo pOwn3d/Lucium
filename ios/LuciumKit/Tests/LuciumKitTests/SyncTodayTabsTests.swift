@@ -237,6 +237,62 @@ struct SyncTodayTabsTests {
         #expect(shared(freeze(keeper, state, at: now + 2_000))["fromMac"] != nil)
     }
 
+    @Test func twoHundredTabsReceivedLeaveAPlaceForTheFirstOwnTab() throws {
+        // Card 652 (§27.4): the cap of 200 counts what this device admitted itself, not what the other device sent.
+        let dir = directory()
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let keeper = keeper(in: dir)
+        var state = try state([])
+        _ = freeze(keeper, state)
+        let stamp = String(format: "%013ld-%04lx-vector-mac-0000000001", now, 0)
+        var merged = SyncSnapshot()
+        var entities: [String: SyncEntity] = [:]
+        for n in 0..<200 {
+            let id = String(format: "r%03d", n)
+            state.tabs.append(tab(id))
+            entities[id] = SyncEntity(fields: ["spaceId": .string("s1"), "activeAt": .number(Double(now))], stamps: ["spaceId": stamp, "activeAt": stamp])
+        }
+        merged.entities[SyncToday.kind] = entities
+        keeper.hold()
+        try keeper.adopt(merged, exchanged: { _ in true })
+        #expect(keeper.currentBook.admitted.count == 200 && keeper.currentBook.adoptedTabs.count == 200)
+        state.tabs.append(tab("mine"))
+        let snapshot = freeze(keeper, state, at: now + 2_000)
+        #expect(shared(snapshot)["mine"] != nil, "its own first tab is shared")
+        #expect(shared(snapshot).count == 201)
+        #expect(keeper.lastUnshared == 0)
+        #expect(!keeper.currentBook.adoptedTabs.contains("mine"), "admitted here, not adopted")
+    }
+
+    @Test func theBookTellsAdoptedFromAdmittedAndStillReadsTheOldFormat() throws {
+        var book = SyncMarkBook(device: "phone-0000000001")
+        book.admit(["mine"])
+        let stamp = String(format: "%013ld-%04lx-vector-mac-0000000001", now, 0)
+        var merged = SyncSnapshot()
+        merged.entities[SyncToday.kind] = ["mine": SyncEntity(fields: ["spaceId": .string("s1")], stamps: ["spaceId": stamp]), "theirs": SyncEntity(fields: ["spaceId": .string("s1")], stamps: ["spaceId": stamp])]
+        book.adopt(merged, exchanged: { _ in true })
+        #expect(book.admitted == ["mine", "theirs"] && book.adoptedTabs == ["theirs"])
+        // Written in the same version, with `admitted` still holding the whole set (an older reader sees every tab as admitted).
+        guard case .object(let root) = book.json() else { Issue.record("not an object"); return }
+        #expect(root["version"] == .number(2))
+        #expect(root["admitted"] == .array([.string("mine"), .string("theirs")]) && root["adopted"] == .array([.string("theirs")]))
+        let again = try #require(SyncMarkBook.read(book.json(), device: "phone-0000000001"))
+        #expect(again.adoptedTabs == ["theirs"])
+        // A book written before the list reads as one where every tab was admitted here: nothing is lost.
+        var old = root
+        old["adopted"] = nil
+        let older = try #require(SyncMarkBook.read(.object(old), device: "phone-0000000001"))
+        #expect(older.admitted == ["mine", "theirs"] && older.adoptedTabs.isEmpty)
+        // A list that is not ids is not a book; an id that is not admitted is not kept as adopted; a tab that leaves the set is not adopted any more.
+        old["adopted"] = .array([.number(1)])
+        #expect(SyncMarkBook.read(.object(old), device: "phone-0000000001") == nil)
+        old["adopted"] = .array([.string("ghost")])
+        #expect(try #require(SyncMarkBook.read(.object(old), device: "phone-0000000001")).adoptedTabs.isEmpty)
+        book.admit(["mine"])
+        #expect(book.adoptedTabs.isEmpty)
+        #expect({ var fresh = SyncMarkBook(device: "d"); fresh.admit(["a"]); if case .object(let r) = fresh.json() { return r["adopted"] == nil }; return false }(), "nothing is written when there is nothing adopted")
+    }
+
     @Test func openingATabThatCouldBeSharedAsksForASessionOnce() throws {
         let dir = directory()
         defer { try? FileManager.default.removeItem(at: dir) }

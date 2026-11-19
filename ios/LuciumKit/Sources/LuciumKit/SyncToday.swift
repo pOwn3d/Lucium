@@ -7,7 +7,8 @@ import Foundation
 public enum SyncToday {
     /// The kind of the entity (§27.2), distinct from `tab` (the pinned tabs): the two categories are ticked apart.
     public static let kind = "todayTab"
-    /// The most Today tabs one device admits at a time [Q12, A]: one that does not fit stays local, and is admitted when a place is free (§27.4).
+    /// The most Today tabs one device admits **itself** at a time [Q12, A: 200 per device, the rest stays local]: one that does not fit stays local, and is admitted when a place
+    /// is free (§27.4). The tabs it received from the other device (`adopted`) take no place: the shared set goes up to twice this.
     public static let cap = 200
     /// The most `todayTab` entities the door keeps in one snapshot (§27.4): an honest device never reaches it.
     public static let gate = 500
@@ -65,6 +66,8 @@ public enum SyncToday {
         public var spaceLocked = false
         /// Already in the shared set: the admission is sticky.
         public var admitted = false
+        /// In the shared set because the other device sent it, not because this one admitted it: it stays, and it takes no place of the cap (§27.4).
+        public var adopted = false
 
         public init(id: String, url: String, ageMilliseconds: Int, lastActiveAt: Double) {
             self.id = id
@@ -116,18 +119,23 @@ public enum SyncToday {
 
     /// The shared set at the end of the freeze of a session (§27.3). A tab already admitted stays whatever page it is on and whatever the cap: neither a navigation,
     /// nor a full set, nor a lock set later takes it out of the snapshot, since the merge reads "absent from one side, in the base" as a closing (§11.2). A new tab
-    /// enters when it holds conditions 1 to 4, and while there is a place: `cap` less the tabs already admitted, the most recently used first, then the id (§27.4).
+    /// enters when it holds conditions 1 to 4, and while there is a place: `cap` less the tabs this device admitted itself (the adopted ones, received from the other device,
+    /// take no place), the most recently used first, then the id (§27.4).
     public static func admit(_ candidates: [Candidate], cap: Int = SyncToday.cap) -> Admission {
         var admitted: [String] = []
+        var admittedHere = 0
         var refused: [(id: String, reason: AdmissionRefusal)] = []
         var waiting: [Candidate] = []
         for c in candidates {
             if let reason = refusalOfKind(c) { refused.append((c.id, reason)) }
-            else if c.admitted { admitted.append(c.id) }
+            else if c.admitted {
+                admitted.append(c.id)
+                if !c.adopted { admittedHere += 1 }
+            }
             else if let reason = refusalOfEntry(c) { refused.append((c.id, reason)) }
             else { waiting.append(c) }
         }
-        var room = max(0, cap - admitted.count)
+        var room = max(0, cap - admittedHere)
         waiting.sort { a, b in a.lastActiveAt != b.lastActiveAt ? a.lastActiveAt > b.lastActiveAt : SyncCanonical.compare(a.id, b.id) < 0 }
         for c in waiting {
             if room > 0 {

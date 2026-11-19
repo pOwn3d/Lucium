@@ -404,6 +404,28 @@ struct SyncPairingFlowTests {
         }
     }
 
+    @Test func aMacThatSaysHelloWhereTheChallengeWasExpectedIsToldApartFromABrokenOne() async throws {
+        // Card 652: a Mac that already lists this phone takes the connection for a session. The code stays `bad-message` on the wire; the detail lets the application say what to do.
+        do {
+            _ = try await pair(code, mac: { mac in
+                let hello: [String: Any] = ["device": ["id": "vector-mac-0000000001", "name": "MacBook de test", "platform": "mac"], "nonce": SyncEncoding.base64url(Data(repeating: 3, count: 16)), "categories": ["structure"],
+                                            "baseHash": NSNull(), "stateVersion": 1, "appVersion": "1.2.0", "now": 1_790_000_000_000, "hosts": ["mac-de-test.local"], "port": 49213]
+                try await mac.write("hello", hello)
+            })
+            Issue.record("a hello was taken for a challenge")
+        } catch let failure as SyncFailure {
+            #expect(failure.code == .badMessage)
+            #expect(failure.isHelloInAPairing)
+        }
+        // Another message out of place is not that.
+        do {
+            _ = try await pair(code, mac: { mac in try await mac.write("pair.accept", ["device": macDevice(), "proof": String(repeating: "A", count: 43), "hosts": []]) })
+            Issue.record("an accept before any challenge was accepted")
+        } catch let failure as SyncFailure {
+            #expect(failure.code == .badMessage && !failure.isHelloInAPairing)
+        }
+    }
+
     @Test func whatTheMacSendsOutOfOrderOrBrokenClosesTheConnection() async throws {
         let attempts: [(String, @Sendable (SyncFakeMac) async throws -> Void, SyncErrorCode)] = [
             ("an accept before any challenge", { mac in try await mac.write("pair.accept", ["device": macDevice(), "proof": String(repeating: "A", count: 43), "hosts": []]) }, .badMessage),

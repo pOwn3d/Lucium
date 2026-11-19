@@ -42,6 +42,11 @@ public struct SyncFailure: Error, Equatable, Sendable {
         self.code = code
         self.detail = detail
     }
+
+    /// What a Mac that already knows this phone does at a pairing: it takes the connection for a session and says `hello` where the phone waits for `pair.challenge` (card 652).
+    /// It is `bad-message` on the wire (the catalogue of §7.6 has no code for it), told apart by this detail so that the application can say what to do (`isHelloInAPairing`).
+    public static let helloInAPairing = "hello where pair.challenge was expected: the Mac already knows this phone"
+    public var isHelloInAPairing: Bool { code == .badMessage && detail == Self.helloInAPairing }
 }
 
 /// Where the connection to the Mac stopped before any message could say why. Not a code of the protocol: there was nobody to send it.

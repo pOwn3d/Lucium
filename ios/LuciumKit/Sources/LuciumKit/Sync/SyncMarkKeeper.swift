@@ -71,7 +71,7 @@ public final class SyncMarkKeeper: @unchecked Sendable {
         holding = false
         // The shared set of Today tabs is decided here, once the freeze starts and only when the category is common: the admission is sticky, so what enters stays until the tab goes.
         if categories.contains(.todayTabs) {
-            let admission = SyncStateView.admission(of: state, admitted: book.admitted, locked: withheld, now: now)
+            let admission = SyncStateView.admission(of: state, admitted: book.admitted, adopted: book.adoptedTabs, locked: withheld, now: now)
             book.admit(Set(admission.admitted))
             unshared = admission.refused.filter { $0.reason == .full }.count
         }

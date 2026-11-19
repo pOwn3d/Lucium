@@ -81,6 +81,10 @@ public struct SyncMarkBook: Equatable, Sendable {
     private(set) var orders: [String: OrderMark]
     /// The Today tabs of the shared set (§27.3): the admission is sticky, so it is kept here, by device, and not recomputed from the state.
     public private(set) var admitted: Set<String>
+    /// Card 652: those of `admitted` that the other device sent (adopted), as opposed to the ones this device admitted itself: the cap of 200 counts only the latter (§27.4). Written as
+    /// a list `adopted` next to `admitted` in the same version 2: an older reader ignores it and sees all of them as admitted, and a file without it is read as one where this device
+    /// admitted them all.
+    public private(set) var adoptedTabs: Set<String>
 
     public init(device: String) {
         self.device = device
@@ -89,6 +93,7 @@ public struct SyncMarkBook: Equatable, Sendable {
         tombstones = [:]
         orders = [:]
         admitted = []
+        adoptedTabs = []
     }
 
     // MARK: The clock
@@ -261,11 +266,20 @@ public struct SyncMarkBook: Equatable, Sendable {
         orders = lists
         for stamp in merged.orderStamps.values { observe(stamp) }
         // A Today tab that came from the other device is in the shared set from now on: without it the next look would see it as absent from the view and mark it deleted (§27.3).
-        if exchanged(SyncToday.kind) { admitted.formUnion(merged.entities[SyncToday.kind]?.keys.map { $0 } ?? []) }
+        // It is adopted, not admitted here: it takes no place of the cap (§27.4). One that was already in the set stays what it was.
+        if exchanged(SyncToday.kind) {
+            let received = Set(merged.entities[SyncToday.kind]?.keys.map { $0 } ?? [])
+            adoptedTabs.formUnion(received.subtracting(admitted))
+            admitted.formUnion(received)
+        }
     }
 
     /// The shared set of Today tabs, as `SyncToday.admit` gave it at the end of a freeze.
-    public mutating func admit(_ ids: Set<String>) { admitted = ids }
+    /// A tab that is not in the set any more is not adopted any more: if it comes back, it is a new tab of this device.
+    public mutating func admit(_ ids: Set<String>) {
+        admitted = ids
+        adoptedTabs.formIntersection(ids)
+    }
 
     // MARK: The file
 
@@ -288,7 +302,7 @@ public struct SyncMarkBook: Equatable, Sendable {
             "tombstones": .object(tombstones.mapValues { .object($0.mapValues { .string($0) }) }),
             "orders": .object(orders.mapValues { .object(["hash": .string($0.hash), "stamp": .string($0.stamp)]) }),
             "admitted": .array(admitted.sorted { SyncCanonical.compare($0, $1) < 0 }.map { .string($0) }),
-        ])
+        ].merging(adoptedTabs.isEmpty ? [:] : ["adopted": .array(adoptedTabs.sorted { SyncCanonical.compare($0, $1) < 0 }.map { .string($0) })]) { $1 })
     }
 
     /// A book from a file's JSON, or nil when it is not one of this version's. A file is hostile: every part is checked for its kind, and every mark for its form.
@@ -333,6 +347,16 @@ public struct SyncMarkBook: Equatable, Sendable {
             for id in ids {
                 guard case .string(let text) = id, (1...128).contains(text.utf16.count) else { return nil }
                 book.admitted.insert(text)
+            }
+        default: return nil
+        }
+        // Card 652: absent in a book written before it (every admitted tab is then one admitted here); present, it is a list of ids, and only those of `admitted` count.
+        switch root["adopted"] {
+        case nil: break
+        case .array(let ids)?:
+            for id in ids {
+                guard case .string(let text) = id, (1...128).contains(text.utf16.count) else { return nil }
+                if book.admitted.contains(text) { book.adoptedTabs.insert(text) }
             }
         default: return nil
         }

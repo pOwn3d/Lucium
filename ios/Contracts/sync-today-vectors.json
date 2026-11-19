@@ -1,5 +1,5 @@
 {
-  "comment": "The shared Today tabs of docs/synchronisation.md §27 (card 507). Read by src/shared/ios-sync-today-contract.test.ts (played against src/shared/sync-today.ts and the merge of src/shared/sync-merge.ts) and by LuciumKit (SyncTodayVectorTests, against SyncToday.swift and SyncMerge.swift). Sections: limits; fieldClasses (the classes of todayTab, §27.2); address (§27.3 condition 3, §27.7); activeAt (§27.2, §27.5); admission (§27.3, §27.4: the conditions, the sticky admission, the cap; a case's `cap` replaces the 200 of `limits` so that a vector stays small); gate (the door of §27.4: invalid-url, invalid-value, too-many-today-tabs; a case's `limit` replaces the 500 of `limits`); moves (pinning and detaching, §27.2); merge (cases of the format of sync-merge-vectors.json: the conflicts of §27.9, the first exchange of §27.10, a locked space of §27.7; in `expect.order` a null means that the list is absent). The closing of a tab on the other device (an archive entry with the id of the tab, source sync, §27.5) is not here: it belongs to the cards that write the Mac and the phone.",
+  "comment": "The shared Today tabs of docs/synchronisation.md §27 (card 507). Read by src/shared/ios-sync-today-contract.test.ts (played against src/shared/sync-today.ts and the merge of src/shared/sync-merge.ts) and by LuciumKit (SyncTodayVectorTests, against SyncToday.swift and SyncMerge.swift). Sections: limits; fieldClasses (the classes of todayTab, §27.2); address (§27.3 condition 3, §27.7); activeAt (§27.2, §27.5); admission (§27.3, §27.4: the conditions, the sticky admission, the cap, which counts only the tabs this device admitted itself: a candidate with `adopted` came from the other device and takes no place (card 652); a case's `cap` replaces the 200 of `limits` so that a vector stays small); gate (the door of §27.4: invalid-url, invalid-value, too-many-today-tabs; a case's `limit` replaces the 500 of `limits`); moves (pinning and detaching, §27.2); merge (cases of the format of sync-merge-vectors.json: the conflicts of §27.9, the first exchange of §27.10, a locked space of §27.7; in `expect.order` a null means that the list is absent). The closing of a tab on the other device (an archive entry with the id of the tab, source sync, §27.5) is not here: it belongs to the cards that write the Mac and the phone.",
   "limits": {
     "todayTabCap": 200,
     "todayTabGate": 500,
@@ -649,6 +649,177 @@
         "refused": [
           {
             "id": "d",
+            "reason": "full"
+          }
+        ]
+      }
+    },
+    {
+      "name": "adopted: tabs received from the other device take no place of the cap (card 652)",
+      "cap": 2,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true,
+          "adopted": true
+        },
+        {
+          "id": "b",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true,
+          "adopted": true
+        },
+        {
+          "id": "c",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true,
+          "adopted": true
+        },
+        {
+          "id": "n1",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 2
+        },
+        {
+          "id": "n2",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1
+        },
+        {
+          "id": "n3",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 0
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a",
+          "b",
+          "c",
+          "n1",
+          "n2"
+        ],
+        "refused": [
+          {
+            "id": "n3",
+            "reason": "full"
+          }
+        ]
+      }
+    },
+    {
+      "name": "adopted: only the tabs admitted here use a place (one of each)",
+      "cap": 2,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true
+        },
+        {
+          "id": "b",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true,
+          "adopted": true
+        },
+        {
+          "id": "n1",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 2
+        },
+        {
+          "id": "n2",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a",
+          "b",
+          "n1"
+        ],
+        "refused": [
+          {
+            "id": "n2",
+            "reason": "full"
+          }
+        ]
+      }
+    },
+    {
+      "name": "adopted: a tab received that became private is out, whoever admitted it",
+      "cap": 2,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000,
+          "admitted": true,
+          "adopted": true,
+          "private": true
+        },
+        {
+          "id": "n1",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1790000000000
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "n1"
+        ],
+        "refused": [
+          {
+            "id": "a",
+            "reason": "private"
+          }
+        ]
+      }
+    },
+    {
+      "name": "adopted: a tab that is not marked admitted is a new tab, adopted or not",
+      "cap": 1,
+      "candidates": [
+        {
+          "id": "a",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 2,
+          "adopted": true
+        },
+        {
+          "id": "b",
+          "url": "https://a.example/",
+          "ageMs": 60000,
+          "lastActiveAt": 1
+        }
+      ],
+      "expect": {
+        "admitted": [
+          "a"
+        ],
+        "refused": [
+          {
+            "id": "b",
             "reason": "full"
           }
         ]

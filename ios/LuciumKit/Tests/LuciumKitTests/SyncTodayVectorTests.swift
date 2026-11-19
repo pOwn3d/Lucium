@@ -43,6 +43,7 @@ private enum TodayVectors {
         c.inContainer = raw["container"]?.flag ?? false
         c.spaceLocked = raw["spaceLocked"]?.flag ?? false
         c.admitted = raw["admitted"]?.flag ?? false
+        c.adopted = raw["adopted"]?.flag ?? false
         return c
     }
 
@@ -113,7 +114,7 @@ struct SyncTodayAddressTests {
 struct SyncTodayAdmissionTests {
     @Test func playsTheVectors() {
         let cases = TodayVectors.section("admission")
-        #expect(cases.count >= 20)
+        #expect(cases.count >= 25)
         var reasons = Set<String>()
         for c in cases {
             let name = c["name"]?.text ?? ""

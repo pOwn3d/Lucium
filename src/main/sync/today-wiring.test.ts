@@ -55,6 +55,16 @@ describe('admittedTodayTabs: the admission read from the state and the book (§2
     expect(admitted.has('t000')).toBe(false)
   })
 
+  it('counts only the tabs this device admitted itself against the cap: 200 received tabs leave the first own tab a place (card 652)', () => {
+    const received = Array.from({ length: TODAY_TAB_CAP }, (_, n) => tab(`r${String(n).padStart(3, '0')}`, { lastActiveAt: OLD - 1000 + n }))
+    const book = new MarkBook('mac')
+    book.adopt(snap({ entities: { todayTab: Object.fromEntries(received.map((t) => [t.id, ent({ spaceId: 's1', activeAt: 1 })])) } }), () => true)
+    const state = stateOf({ spaces: [{ id: 's1' }], tabs: [...received, tab('mine')] })
+    const admitted = admittedTodayTabs(state, { book, now: NOW, admitNew: true, isSpaceLocked: () => false })
+    expect(admitted.size).toBe(TODAY_TAB_CAP + 1)
+    expect(admitted.has('mine')).toBe(true)
+  })
+
   it('keeps a tab the book holds whatever page it is on, a locked space, a young age or a full set: the admission is sticky', () => {
     const tabs = [tab('old', { url: 'lucium-ui://extensions/' }), tab('younger', { createdAt: NOW - 1000, spaceId: 's2' })]
     const state = stateOf({ spaces: [{ id: 's1' }, { id: 's2' }], tabs })

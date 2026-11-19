@@ -342,3 +342,62 @@ describe('MarkBook.toJSON', () => {
     expect(JSON.stringify(book)).not.toMatch(/bank|statement|secret/)
   })
 })
+
+describe('MarkBook: the Today tabs received from the other device (card 652, §27.4)', () => {
+  const follows = (): boolean => true
+  const MARK = '1790000000500-0000-phone'
+  const today = (...ids: string[]): TrackedView['entities'] => ({ todayTab: Object.fromEntries(ids.map((id) => [id, { spaceId: 's1', activeAt: 1 }])) })
+  const merged = (...ids: string[]): Parameters<MarkBook['adopt']>[0] => ({
+    entities: { todayTab: Object.fromEntries(ids.map((id) => [id, { fields: { spaceId: 's1', activeAt: 1 }, stamps: { spaceId: MARK, activeAt: MARK } }])) },
+    tombstones: {},
+    order: {},
+    orderStamps: {}
+  })
+
+  it('tells a tab it admitted itself from one that the merge brought in', () => {
+    const book = new MarkBook('mac')
+    book.update(view(today('mine')), NOW)
+    book.adopt(merged('mine', 'theirs'), follows)
+    expect(book.knows('todayTab', 'mine') && book.knows('todayTab', 'theirs')).toBe(true)
+    expect(book.isAdopted('mine')).toBe(false)
+    expect(book.isAdopted('theirs')).toBe(true)
+  })
+
+  it('keeps a tab adopted from one session to the next, and forgets it when the tab leaves the shared set', () => {
+    const book = new MarkBook('mac')
+    book.adopt(merged('theirs'), follows)
+    book.adopt(merged('theirs'), follows)
+    expect(book.isAdopted('theirs')).toBe(true)
+    book.update(view(today()), NOW)
+    expect(book.isAdopted('theirs')).toBe(false)
+    // Back in the set by this device's own admission, it is not adopted any more.
+    book.update(view(today('theirs')), NOW + 1000)
+    expect(book.isAdopted('theirs')).toBe(false)
+  })
+
+  it('does not call adopted the tabs of a session that did not exchange the Today tabs', () => {
+    const book = new MarkBook('mac')
+    book.adopt(merged('theirs'), follows, (kind) => kind !== 'todayTab')
+    expect(book.isAdopted('theirs')).toBe(false)
+  })
+
+  it('writes the adopted tabs next to the format 2, which an older reader ignores, and reads a book without them as one that admitted everything here', () => {
+    const book = new MarkBook('mac')
+    book.update(view(today('mine')), NOW)
+    book.adopt(merged('mine', 'theirs'), follows)
+    const file = book.toJSON()
+    expect(file.version).toBe(2)
+    expect(file.adopted).toEqual(['theirs'])
+    expect(new MarkBook('mac', JSON.parse(JSON.stringify(file))).isAdopted('theirs')).toBe(true)
+    const { adopted: _adopted, ...old } = file
+    const read = new MarkBook('mac', JSON.parse(JSON.stringify(old)))
+    expect(read.isAdopted('theirs')).toBe(false)
+    expect(read.knows('todayTab', 'theirs')).toBe(true)
+    expect(new MarkBook('mac').toJSON()).not.toHaveProperty('adopted')
+  })
+
+  it('does not keep an adopted id that the entities do not hold (a file edited by hand)', () => {
+    const file = new MarkBook('mac').toJSON()
+    expect(new MarkBook('mac', { ...file, adopted: ['ghost'] }).isAdopted('ghost')).toBe(false)
+  })
+})

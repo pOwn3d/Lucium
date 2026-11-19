@@ -50,6 +50,7 @@ public actor SyncChannel {
                     }
                     try incoming.accept(envelope.number)
                     guard SyncTransitions.allows(envelope.message.type, after: history, receiver: .ios, phase: phase) else {
+                        if phase == .pairing, history.isEmpty, envelope.message.type == "hello" { throw SyncFailure(.badMessage, SyncFailure.helloInAPairing) }
                         throw SyncFailure(.badMessage, "\(envelope.message.type) is not allowed here")
                     }
                     // The kinds that came, once each: the rules of §7.4 ask whether a kind was seen, never how many times, and a list of every message made each one search all

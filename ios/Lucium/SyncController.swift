@@ -35,6 +35,8 @@ final class SyncController {
         case identity
         /// The person was shown the code and did not confirm it in time: nothing was kept.
         case notConfirmed
+        /// The Mac answered the pairing with the `hello` of a session: it still lists this phone (the `unpair` was lost). The person has to forget the phone on the Mac (card 652).
+        case macKnowsThisPhone
         case cancelled
     }
 
@@ -323,6 +325,7 @@ final class SyncController {
             print("[sync] the pairing failed: \(failure.code.rawValue) \(failure.detail)")
             // A refusal that is ours, not the Mac's: the person said no to the code (nothing to say to them), or was shown it and did not answer in time.
             if failure.code == .pairingRefused, comparisonShown { return .failure(comparisonDeclined || Task.isCancelled ? .cancelled : .notConfirmed) }
+            if failure.isHelloInAPairing { return .failure(.macKnowsThisPhone) }
             return .failure(.code(failure.code))
         } catch {
             print("[sync] the pairing was interrupted: \(error)")
