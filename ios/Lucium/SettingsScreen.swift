@@ -132,7 +132,7 @@ struct SettingsScreen: View {
 private struct ChangedMark: View {
     var body: some View {
         Circle()
-            .fill(Color.accentColor)
+            .fill(.accentFill)
             .frame(width: 8, height: 8)
             .accessibilityLabel(Text("settings.changed"))
     }
