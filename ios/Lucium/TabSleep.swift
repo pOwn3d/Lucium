@@ -111,7 +111,7 @@ extension BrowserModel {
                                   // A private tab that is freed loses its cookies with its view, and its page state is never kept: it stays awake.
                                   keepAwake: tab.keepAwake || tab.isPrivate))
         }
-        for id in SleepPlanner.tabsToSleep(facts, cap: awakeCap, underPressure: underPressure) { putToSleep(id) }
+        for id in SleepPlanner.tabsToSleep(facts, cap: effectiveAwakeCap, underPressure: underPressure) { putToSleep(id) }
     }
 
     /// The tabs that have a live view, for the tests and the screen.

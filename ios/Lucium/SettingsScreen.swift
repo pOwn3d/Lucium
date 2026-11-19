@@ -67,6 +67,8 @@ struct SettingsScreen: View {
         switch row {
         case .searchEngine:
             link(row, "settings.search.title") { Text(verbatim: SearchEngine.name(forTemplate: model.searchTemplate)) }
+        case .tabs:
+            link(row, "settings.tabs.title") { TabsSettingsScreen.archiveName(hours: model.archiveHours) }
         case .privacy:
             link(row, "settings.privacy") { Text(model.privacyLevelSummary) }
         case .passwords:
@@ -112,6 +114,7 @@ struct SettingsScreen: View {
     @ViewBuilder private func page(_ row: SettingsRow) -> some View {
         switch row {
         case .searchEngine: SearchEngineScreen(model: model)
+        case .tabs: TabsSettingsScreen(model: model)
         case .privacy: PrivacyForm(model: model)
         case .passwords: PasswordsScreen()
         case .lock:
@@ -164,6 +167,90 @@ struct AboutScreen: View {
         let version = info?["CFBundleShortVersionString"] as? String ?? "?"
         guard let build = info?["CFBundleVersion"] as? String else { return version }
         return "\(version) (\(build))"
+    }
+}
+
+/// The tab settings: how long an idle Today tab waits before it is archived (per profile, the Mac's `autoArchiveHours`) and how many tabs keep a live
+/// page (the Mac's `sleepAwakeMax`, a setting of this device). Both are written where the Mac reads them (`BrowserState.chooseArchiveDelay`,
+/// `chooseAwakeTabLimit`, proved in `LuciumKit`).
+struct TabsSettingsScreen: View {
+    @Bindable var model: BrowserModel
+
+    /// The name of a delay: the four the screen offers by their own words, any other number the Mac wrote by its hours.
+    static func archiveName(hours: Double) -> Text {
+        // A number the Mac wrote that the screen does not offer; kept in a constant so that the key reads as a count.
+        let count = Int(hours.rounded())
+        switch hours {
+        case 0: return Text("settings.tabs.archive.never")
+        case 12: return Text("settings.tabs.archive.twelve-hours")
+        case 24: return Text("settings.tabs.archive.one-day")
+        case 168: return Text("settings.tabs.archive.seven-days")
+        default: return Text("settings.tabs.archive.hours \(count)")
+        }
+    }
+
+    var body: some View {
+        let choice = model.archiveChoice
+        let defaultDelay = Self.archiveName(hours: model.state.autoArchiveHours(forSpace: model.state.spaces.first { $0.profileId == BrowserState.defaultProfileId }?.id ?? ""))
+        List {
+            Section {
+                if model.settingsProfileId != BrowserState.defaultProfileId {
+                    SettingsChoiceRow(title: Text("settings.tabs.archive.inherited"), detail: defaultDelay, selected: choice == .inherited) { model.chooseArchiveDelay(.inherited) }
+                }
+                ForEach(BrowserState.archiveDelayPresets, id: \.self) { hours in
+                    SettingsChoiceRow(title: Self.archiveName(hours: hours), selected: choice == .hours(hours)) { model.chooseArchiveDelay(.hours(hours)) }
+                }
+                if case .hours(let hours) = choice, !BrowserState.archiveDelayPresets.contains(hours) {
+                    // Typed on the Mac: it stays until another delay is chosen.
+                    SettingsChoiceRow(title: Self.archiveName(hours: hours), selected: true) {}
+                }
+            } header: {
+                Text("settings.tabs.archive.header")
+            } footer: {
+                Text("settings.tabs.archive.footer \(model.profileTitle)")
+            }
+            Section {
+                ForEach(BrowserState.awakeLimitPresets, id: \.self) { limit in
+                    SettingsChoiceRow(title: Self.awakeName(limit), selected: model.awakeLimit == limit) { model.chooseAwakeTabLimit(limit) }
+                }
+                if !BrowserState.awakeLimitPresets.contains(model.awakeLimit) {
+                    SettingsChoiceRow(title: Self.awakeName(model.awakeLimit), selected: true) {}
+                }
+            } header: {
+                Text("settings.tabs.awake.header")
+            } footer: {
+                Text("settings.tabs.awake.footer")
+            }
+        }
+        .navigationTitle("settings.tabs.title")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private static func awakeName(_ limit: Int) -> Text {
+        limit == 0 ? Text("settings.tabs.awake.unlimited") : Text("settings.tabs.awake.count \(limit)")
+    }
+}
+
+/// A choice of a list: its name, and a check on the one that is in force. VoiceOver reads it as selected; the row is at least 44 pt high.
+struct SettingsChoiceRow: View {
+    let title: Text
+    /// What the choice stands for, when its name does not say it (the delay the default profile has): read by VoiceOver after the name.
+    var detail: Text?
+    let selected: Bool
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: Gap.m) {
+                title.foregroundStyle(Color.primary)
+                Spacer(minLength: 8)
+                if let detail { detail.foregroundStyle(Color.secondary) }
+                if selected { IconView(.check).foregroundStyle(Color.accentColor) }
+            }
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
 

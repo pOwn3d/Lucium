@@ -91,6 +91,29 @@ final class SettingsModelTests: BrowserCoreTestCase {
         XCTAssertFalse(AboutScreen.versionText.isEmpty)
     }
 
+    func testTheArchiveDelayChosenIsKeptWhereTheMacReadsItAndComesBackAfterARestart() async throws {
+        let model = await makeModel()
+        XCTAssertEqual(model.archiveChoice, .inherited)
+        XCTAssertEqual(model.archiveHours, 12, "the Mac's default, until a delay is chosen")
+        model.chooseArchiveDelay(.hours(0))
+        XCTAssertEqual(model.archiveHours, 0, "never: the sweep reads what was chosen")
+        model.selectSpace("home")
+        XCTAssertEqual(model.archiveHours, 12, "another profile keeps its own delay")
+        model.selectSpace("work")
+        let file = directory.appending(path: StateFile.fileName)
+        try await eventually("the choice is written to the state file") {
+            (try? String(contentsOf: file, encoding: .utf8))?.contains("autoArchiveHours") == true
+        }
+        let restarted = await makeModel()
+        XCTAssertEqual(restarted.archiveChoice, .hours(0))
+        guard case .object(let settings)? = restarted.state.rest["settings"], case .object(let profiles)? = settings["profiles"], case .object(let own)? = profiles["work"] else {
+            return XCTFail("the choice is not in settings.profiles.work")
+        }
+        XCTAssertEqual(own["autoArchiveHours"], .number(0))
+        model.chooseArchiveDelay(.hours(5))
+        XCTAssertEqual(model.archiveHours, 0, "a delay that is not offered changes nothing")
+    }
+
     func testTheGearOpensTheListAndAPageIsOpenedByNamingIt() async throws {
         let model = await makeModel()
         model.openSettings()
@@ -189,7 +212,7 @@ final class SettingsScreenshotTests: BrowserCoreTestCase {
     /// The list and every page, on a phone, in light, in both languages.
     func testEveryPageOfTheSettingsDrawsOnAPhone() async throws {
         let model = await model()
-        let pages: [(String, SettingsRow?)] = [("list", nil), ("search", .searchEngine), ("privacy", .privacy), ("passwords", .passwords), ("lock", .lock), ("spaces", .spaces), ("licenses", .licenses), ("about", .about)]
+        let pages: [(String, SettingsRow?)] = [("list", nil), ("search", .searchEngine), ("tabs", .tabs), ("privacy", .privacy), ("passwords", .passwords), ("lock", .lock), ("spaces", .spaces), ("licenses", .licenses), ("about", .about)]
         for language in ["fr", "en"] {
             for (name, row) in pages {
                 model.settingsStart = row
@@ -204,7 +227,7 @@ final class SettingsScreenshotTests: BrowserCoreTestCase {
         let model = await model()
         for language in ["fr", "en"] {
             for (device, size, regular) in [("phone", Self.phone, false), ("pad", Self.padPortrait, true)] {
-                for (name, row) in [("list", SettingsRow?.none), ("search", .searchEngine)] {
+                for (name, row) in [("list", SettingsRow?.none), ("search", .searchEngine), ("tabs", .tabs)] {
                     model.settingsStart = row
                     try check("\(name)-\(device)-dark-\(language)", try await draw(SettingsScreen(model: model), size: size, regular: regular, scheme: .dark, language: language))
                     if device == "pad" { try check("\(name)-\(device)-light-\(language)", try await draw(SettingsScreen(model: model), size: size, regular: regular, scheme: .light, language: language)) }
@@ -214,6 +237,8 @@ final class SettingsScreenshotTests: BrowserCoreTestCase {
             try check("list-phone-largest-text-\(language)", try await draw(SettingsScreen(model: model), size: Self.phone, regular: false, scheme: .light, language: language, textSize: .accessibility3))
             model.settingsStart = .searchEngine
             try check("search-phone-largest-text-\(language)", try await draw(SettingsScreen(model: model), size: Self.phone, regular: false, scheme: .light, language: language, textSize: .accessibility3))
+            model.settingsStart = .tabs
+            try check("tabs-phone-largest-text-\(language)", try await draw(SettingsScreen(model: model), size: Self.phone, regular: false, scheme: .light, language: language, textSize: .accessibility3))
         }
     }
 

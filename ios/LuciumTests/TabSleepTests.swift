@@ -29,6 +29,23 @@ final class TabSleepTests: BrowserCoreTestCase {
         XCTAssertNil(model.sideStore?.read(.interaction, for: d.id), "a tab that is awake has not slept")
     }
 
+    func testTheLimitChosenInTheSettingsIsTheCapTheSleepRulesUse() async throws {
+        let model = await makeModel(cap: 4)
+        try await load("/a.html", in: model)
+        _ = try await openTab("/b.html", in: model)
+        _ = try await openTab("/c.html", in: model)
+        _ = try await openTab("/d.html", in: model)
+        XCTAssertEqual(model.awakeTabIds.count, 4)
+        model.chooseAwakeTabLimit(2)
+        XCTAssertEqual(model.effectiveAwakeCap, 2)
+        await model.sleepSurplus()
+        XCTAssertEqual(model.awakeTabIds.count, 2, "the surplus sleeps by the limit of the state, not the one the model was made with")
+        model.chooseAwakeTabLimit(0)
+        XCTAssertEqual(model.effectiveAwakeCap, Int.max, "no limit")
+        guard case .object(let settings)? = model.state.rest["settings"] else { return XCTFail("no settings") }
+        XCTAssertEqual(settings["sleepAwakeMax"], .number(0), "written where the Mac reads it")
+    }
+
     func testASleepingTabWakesWhereItLeftOffWithItsHistory() async throws {
         let model = await makeModel(cap: 1)
         try await load("/a.html", in: model)
