@@ -11,6 +11,7 @@ import { IdentityStore } from './identity'
 import type { ListenerDeps } from './listener'
 import { PAIRING_WINDOW_MS } from './limits'
 import { readManualCode, readQr } from './pairing-code'
+import { pairingCommitment } from './pairing-commit'
 import { comparisonCode } from './pairing-compare'
 import { acceptProof, requestProof } from './pairing-proof'
 import { SafeClock } from './safe-clock'
@@ -783,18 +784,24 @@ describe('SyncService: through the real door, over the loopback', () => {
     const challenge = await channel.receive()
     if (challenge.t !== 'pair.challenge') throw new Error('no challenge')
     const nonce = randomBytes(16)
+    const nonceCodePhone = randomBytes(16)
     await channel.send({
       t: 'pair.request',
       device: { id: phone.deviceId, name: 'iPhone de Camille', platform: 'ios' },
       nonce: nonce.toString('base64url'),
-      proof: requestProof({ secret: reading.secret, fingerprintMac: serverFingerprint, fingerprintPhone: phone.fingerprint, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: '', idPhone: phone.deviceId })
+      proof: requestProof({ secret: reading.secret, fingerprintMac: serverFingerprint, fingerprintPhone: phone.fingerprint, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: '', idPhone: phone.deviceId }),
+      commit: pairingCommitment(phone.fingerprint, nonceCodePhone)
     })
+    // The commitment of §4.7: the Mac's code nonce comes after the commitment, the iPhone's is revealed after it.
+    const codeNonce = await channel.receive()
+    if (codeNonce.t !== 'pair.nonce') throw new Error(`expected the Mac's code nonce, got ${codeNonce.t}`)
+    await channel.send({ t: 'pair.reveal', nonce: nonceCodePhone.toString('base64url') })
     // The person is asked, by name, before anything is written.
     for (let tries = 0; tries < 100 && r.service.status().confirm === null; tries++) await sleep(10)
     expect(r.service.status().confirm?.name).toBe('iPhone de Camille')
     expect(r.service.status().devices).toEqual([])
-    // The code on the sheet is the one the iPhone computes from the two fingerprints it saw, and the address is the one it connected from.
-    expect(r.service.status().confirm?.code).toBe(comparisonCode(serverFingerprint, phone.fingerprint))
+    // The code on the sheet is the one the iPhone computes from the two fingerprints it saw and the two code nonces, and the address is the one it connected from.
+    expect(r.service.status().confirm?.code).toBe(comparisonCode(serverFingerprint, phone.fingerprint, Buffer.from(codeNonce.nonce, 'base64url'), nonceCodePhone))
     expect(r.service.status().confirm?.address).toMatch(/^127\.0\.0\.1$|^::1$/)
     r.service.answer(true)
     const accept = await channel.receive()
@@ -825,7 +832,10 @@ describe('SyncService: through the real door, over the loopback', () => {
     const challenge = await channel.receive()
     if (challenge.t !== 'pair.challenge') throw new Error('no challenge')
     const nonce = randomBytes(16)
-    await channel.send({ t: 'pair.request', device: { id: phone.deviceId, name: 'iPhone', platform: 'ios' }, nonce: nonce.toString('base64url'), proof: requestProof({ secret: reading.secret, fingerprintMac: serverFingerprint, fingerprintPhone: phone.fingerprint, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: '', idPhone: phone.deviceId }) })
+    const nonceCodePhone = randomBytes(16)
+    await channel.send({ t: 'pair.request', device: { id: phone.deviceId, name: 'iPhone', platform: 'ios' }, nonce: nonce.toString('base64url'), proof: requestProof({ secret: reading.secret, fingerprintMac: serverFingerprint, fingerprintPhone: phone.fingerprint, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: '', idPhone: phone.deviceId }), commit: pairingCommitment(phone.fingerprint, nonceCodePhone) })
+    await channel.receive()
+    await channel.send({ t: 'pair.reveal', nonce: nonceCodePhone.toString('base64url') })
     for (let tries = 0; tries < 100 && r.service.status().confirm === null; tries++) await sleep(10)
     r.service.answer(false)
     expect(await channel.receive()).toMatchObject({ t: 'error', code: 'pairing-refused' })

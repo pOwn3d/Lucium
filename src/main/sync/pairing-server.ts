@@ -2,10 +2,14 @@
 // peer presented an unknown certificate during an open pairing window; the only thing such a connection may say is `pair.request`.
 //
 //   challenge  the Mac sends a nonce of 16 bytes
-//   request    the iPhone sends its identity, its nonce and a proof; the Mac checks it in constant time against what the QR's secret gives for THIS connection
-//              (both fingerprints and both nonces are in the transcription) and spends the secret on the first right proof
+//   request    the iPhone sends its identity, its nonce, a proof and a commitment to its fingerprint and a code nonce it keeps back (§4.7); the Mac checks the proof
+//              in constant time against what the QR's secret gives for THIS connection (both fingerprints and both nonces are in the transcription) and spends the
+//              secret on the first right proof
+//   nonce      only after a right proof, the Mac draws its own code nonce and sends it (a secret that is closed, spent, expired or locked gets none)
+//   reveal     the iPhone reveals its code nonce; the Mac checks that it opens the commitment, over the fingerprint it SAW in the TLS handshake (review n° 36). The code
+//              is made of the two fingerprints and the two code nonces, so that nobody can choose what it says after seeing the other side's half
 //   confirm    [Q7] « Un iPhone nommé « … » demande à s'appairer »: Autoriser or Refuser; no answer in a minute is a refusal. The secret is burned in both cases. The sheet
-//              shows the code to compare (pairing-compare.ts: the same six characters the iPhone shows, review n° 9) and the address the request came from (n° 21)
+//              shows the code to compare (pairing-compare.ts: the same six characters the iPhone shows, review n° 9), which only exists once the iPhone has revealed, and the address the request came from (n° 21)
 //   accept     the Mac sends its identity, its addresses and ITS proof, which the iPhone checks before it writes anything. It has NOT written the iPhone down yet
 //   compare    the iPhone shows « Appairer avec « … » ? Code : … » and its person says yes or no: `bye` is yes, an `error` is no (a minute at most). Both ends keep the
 //              other only after both persons said yes: a code that is not the same on both screens is a pairing nobody wanted (§4.6)
@@ -15,7 +19,8 @@
 // The code of an outcome is the one of the catalogue (§7.6); the listener counts the failures per address.
 
 import { randomBytes } from 'node:crypto'
-import { CONFIRM_MS, NONCE_BYTES } from './limits'
+import { CODE_NONCE_BYTES, CONFIRM_MS, HANDSHAKE_TIMEOUT_MS, NONCE_BYTES } from './limits'
+import { commitmentOpens } from './pairing-commit'
 import { comparisonCode } from './pairing-compare'
 import { Channel, ConnectionClosed, ProtocolError } from './channel'
 import { acceptProof, proofMatches, requestProof } from './pairing-proof'
@@ -26,7 +31,7 @@ import type { PeerRecord } from './sync-store'
 /** What the person is asked: the name the iPhone gave itself (shown as text, never trusted to recognise it), the code to compare with the iPhone's screen (§4.6) and the address of the connection. */
 export interface PairingRequestInfo {
   name: string
-  /** Six characters made of the two fingerprints (pairing-compare.ts): the iPhone shows the same ones if it is the device this Mac is talking to. */
+  /** Six characters made of the two fingerprints and the two code nonces (pairing-compare.ts): the iPhone shows the same ones if it is the device this Mac is talking to. */
   code: string
   /** Where the request comes from: the person who photographed the QR is called « iPhone de … » too, and is not at the address of their iPhone. */
   address: string
@@ -55,6 +60,8 @@ export interface PairingContext {
   now: () => number
   /** How long the person has to answer; a test shortens it. */
   confirmMs?: number
+  /** How long the iPhone has to reveal its code nonce once it has the Mac's (§4.7); a test shortens it. */
+  revealMs?: number
   /** Told when the iPhone's `pair.request` has come, whatever its proof: from then on the connection is not a silent one (listener.ts). */
   onRequest?: () => void
 }
@@ -107,7 +114,22 @@ export async function runPairing(channel: Channel, ctx: PairingContext): Promise
     if (answer !== 'accepted') return fail(answer === 'bad-proof' ? 'bad-proof' : answer, `the secret answered ${answer}`)
     if (request.device.platform !== 'ios') return fail('bad-message', 'only an iPhone is paired by a code')
 
-    const info: PairingRequestInfo = { name: request.device.name, code: comparisonCode(ctx.device.fingerprint, ctx.peerFingerprint), address: ctx.peerAddress }
+    // The commitment of §4.7: the Mac's code nonce goes out only now (after the commitment and a right proof), and the iPhone's must open what it committed to.
+    const nonceCodeMac = randomBytes(CODE_NONCE_BYTES)
+    await channel.send({ t: 'pair.nonce', nonce: nonceCodeMac.toString('base64url') })
+    // The iPhone answers at once (no person is involved yet): the silence it is allowed is the one of the handshake, not the minute of a person.
+    channel.allowSilence(ctx.revealMs ?? HANDSHAKE_TIMEOUT_MS)
+    const reveal = await channel.receive()
+    if (reveal.t === 'error') return { outcome: 'failed', code: reveal.code, detail: 'the iPhone ended the pairing' }
+    if (reveal.t !== 'pair.reveal') return fail('bad-message', `a ${reveal.t} is not expected after the code nonce`)
+    const nonceCodePhone = Buffer.from(reveal.nonce, 'base64url')
+    if (!commitmentOpens(request.commit, ctx.peerFingerprint, nonceCodePhone)) return fail('bad-proof', 'the nonce revealed does not open the commitment')
+
+    const info: PairingRequestInfo = {
+      name: request.device.name,
+      code: comparisonCode(ctx.device.fingerprint, ctx.peerFingerprint, nonceCodeMac, nonceCodePhone),
+      address: ctx.peerAddress
+    }
     if ((await askPerson(ctx, info)) !== 'allow') return fail('pairing-refused', 'the person refused')
 
     const peer: PeerRecord = { id: request.device.id, name: request.device.name, platform: 'ios', fingerprint: ctx.peerFingerprint.toString('hex'), pairedAt: ctx.now(), lastSessionAt: null }

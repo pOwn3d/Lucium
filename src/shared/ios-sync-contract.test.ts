@@ -28,12 +28,13 @@ const fromHex = (hex: string): Buffer => Buffer.from(hex, 'hex')
 
 interface ProofInputs { secret: string; fpMac: string; fpPhone: string; nonceMac: string; noncePhone: string; idMac: string; idPhone: string; requestTag: string; acceptTag: string }
 interface PairingVectors {
-  constants: { secretBytes: number; nonceBytes: number; fingerprintBytes: number; windowMs: number; maxInvalidProofs: number; qrMaxChars: number; qrMaxHosts: number; comparisonCodeChars: number }
+  constants: { secretBytes: number; nonceBytes: number; fingerprintBytes: number; windowMs: number; maxInvalidProofs: number; qrMaxChars: number; qrMaxHosts: number; comparisonCodeChars: number; commitBytes: number; codeNonceBytes: number }
   proof: (ProofInputs & { name: string })[]
   mutations: { of: string; cases: (Partial<ProofInputs> & { field: keyof ProofInputs; value?: string; valueHex?: string; requestTag: string; acceptTag: string; changesRequestTag: boolean; changesAcceptTag: boolean })[] }
   qr: { valid: { name: string; text: string; expect: { fingerprintHex: string; secretHex: string; port: number; hosts: string[] } }[]; invalid: { name: string; text: string; expect: { code: string } }[] }
   manualCode: { valid: { name: string; input: string; expect: { secretHex: string } }[]; invalid: { name: string; input: string; expect: { code: string } }[] }
-  comparisonCode: { name: string; fpMac: string; fpPhone: string; code: string }[]
+  commitments: { name: string; fpPhone: string; nonceCodePhone: string; commit: string }[]
+  comparisonCode: { name: string; fpMac: string; fpPhone: string; nonceCodeMac: string; nonceCodePhone: string; code: string }[]
   secretLifecycle: { name: string; events: { atMs: number; event: 'request' | 'confirm' | 'close'; proof?: 'valid' | 'invalid'; decision?: 'refuse' | 'allow' }[]; expect: string[] }[]
   clientChecks: { name: string; mode: 'qr' | 'manualCode'; expectedFingerprintHex: string | null; presentedFingerprintHex: string; expect: string }[]
   addressPolicy: { host: string; allowed: boolean }[]
@@ -67,7 +68,7 @@ describe('iOS contract: sync pairing vectors, form', () => {
   })
 
   it('states the constants of the specification', () => {
-    expect(pairing.constants).toEqual({ secretBytes: 16, nonceBytes: 16, fingerprintBytes: 32, windowMs: 120000, maxInvalidProofs: 5, qrMaxChars: 300, qrMaxHosts: 4, comparisonCodeChars: 6 })
+    expect(pairing.constants).toEqual({ secretBytes: 16, nonceBytes: 16, fingerprintBytes: 32, windowMs: 120000, maxInvalidProofs: 5, qrMaxChars: 300, qrMaxHosts: 4, comparisonCodeChars: 6, commitBytes: 32, codeNonceBytes: 16 })
   })
 
   it('writes every proof input with the size the specification gives it', () => {
@@ -166,28 +167,43 @@ function parseManualCode(input: string): { ok: true; secretHex: string } | { ok:
   return { ok: true, secretHex: Buffer.from(bytes).toString('hex') }
 }
 
-describe('iOS contract: the code to compare at a pairing (docs/synchronisation.md §4.6)', () => {
-  // The reference reader of the code, written here from the text of the specification (the label, the two fingerprints each after its length, SHA-256, the first 30 bits as
-  // six characters of the alphabet of the typed code): the real code of the Mac and LuciumKit play the same vectors.
+describe('iOS contract: the commitment and the code to compare at a pairing (docs/synchronisation.md §4.6, §4.7)', () => {
+  // The reference readers, written here from the text of the specification (the label, each field after its length, SHA-256): the real code of the Mac and LuciumKit play
+  // the same vectors. The commitment is the whole digest in base64url; the code is the first 30 bits as six characters of the alphabet of the typed code.
   const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-  const comparisonOf = (fpMac: Buffer, fpPhone: Buffer): string => {
-    const digest = sha256(transcription('lucium-sync/1 pair-compare', [fpMac, fpPhone]))
+  const comparisonOf = (fpMac: Buffer, fpPhone: Buffer, nonceMac: Buffer, noncePhone: Buffer): string => {
+    const digest = sha256(transcription('lucium-sync/1 pair-code', [fpMac, fpPhone, nonceMac, noncePhone]))
     const bits = [...digest.subarray(0, 4)].map((byte) => byte.toString(2).padStart(8, '0')).join('')
     return Array.from({ length: 6 }, (_, at) => ALPHABET[Number.parseInt(bits.slice(at * 5, at * 5 + 5), 2)]).join('')
   }
+  const commitmentOf = (fpPhone: Buffer, noncePhone: Buffer): string => sha256(transcription('lucium-sync/1 pair-commit', [fpPhone, noncePhone])).toString('base64url')
 
-  it.each(pairing.comparisonCode)('$name', ({ fpMac, fpPhone, code }) => {
-    expect(fpMac).toMatch(HEX(32))
+  it.each(pairing.commitments)('commitment: $name', ({ fpPhone, nonceCodePhone, commit }) => {
     expect(fpPhone).toMatch(HEX(32))
-    expect(code).toMatch(/^[A-Z2-7]{6}$/)
-    expect(comparisonOf(fromHex(fpMac), fromHex(fpPhone))).toBe(code)
+    expect(nonceCodePhone).toMatch(HEX(16))
+    expect(commit).toMatch(/^[A-Za-z0-9_-]{43}$/)
+    expect(commitmentOf(fromHex(fpPhone), fromHex(nonceCodePhone))).toBe(commit)
   })
 
-  it('tells the Mac fingerprint from the iPhone one: the same two in the other order give another code', () => {
-    const [reference] = pairing.comparisonCode
-    const swapped = pairing.comparisonCode.find((one) => one.fpMac === reference?.fpPhone && one.fpPhone === reference?.fpMac)
-    expect(swapped).toBeDefined()
-    expect(swapped?.code).not.toBe(reference?.code)
+  it('has a different commitment for every one of its inputs: one bit of the fingerprint or of the nonce changes it', () => {
+    const [reference, ...others] = pairing.commitments
+    expect(others.length).toBeGreaterThanOrEqual(3)
+    for (const other of others) expect(other.commit, other.name).not.toBe(reference?.commit)
+  })
+
+  it.each(pairing.comparisonCode)('code: $name', ({ fpMac, fpPhone, nonceCodeMac, nonceCodePhone, code }) => {
+    expect(fpMac).toMatch(HEX(32))
+    expect(fpPhone).toMatch(HEX(32))
+    expect(nonceCodeMac).toMatch(HEX(16))
+    expect(nonceCodePhone).toMatch(HEX(16))
+    expect(code).toMatch(/^[A-Z2-7]{6}$/)
+    expect(comparisonOf(fromHex(fpMac), fromHex(fpPhone), fromHex(nonceCodeMac), fromHex(nonceCodePhone))).toBe(code)
+  })
+
+  it('depends on each of the four inputs and on which side each one belongs to: the vectors that change one input give another code', () => {
+    const [reference, ...others] = pairing.comparisonCode
+    expect(others.length).toBeGreaterThanOrEqual(6)
+    for (const other of others) expect(other.code, other.name).not.toBe(reference?.code)
   })
 })
 
@@ -447,7 +463,9 @@ const optionalList = (v: unknown, max: number): boolean => v === undefined || te
 const SHAPES: Record<string, (m: Record<string, unknown>) => boolean> = {
   hello: (m) => device(m['device']) && typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']) && textList(m['categories'], L['maxCategories'] as number, 32) && (m['baseHash'] === null || (typeof m['baseHash'] === 'string' && HEX(32).test(m['baseHash']))) && isInt(m['stateVersion'], 1) && isText(m['appVersion'], 32) && isInt(m['now']) && (m['hosts'] === undefined || textList(m['hosts'], L['maxHosts'] as number, 253)),
   'pair.challenge': (m) => typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']),
-  'pair.request': (m) => device(m['device']) && typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']) && typeof m['proof'] === 'string' && B64U(43).test(m['proof']),
+  'pair.request': (m) => device(m['device']) && typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']) && typeof m['proof'] === 'string' && B64U(43).test(m['proof']) && typeof m['commit'] === 'string' && B64U(43).test(m['commit']),
+  'pair.nonce': (m) => typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']),
+  'pair.reveal': (m) => typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']),
   'pair.accept': (m) => device(m['device']) && typeof m['proof'] === 'string' && B64U(43).test(m['proof']) && textList(m['hosts'], L['maxHosts'] as number, 253),
   'snapshot.part': (m) => isInt(m['part']) && isInt(m['parts'], 1) && (m['parts'] as number) <= (L['maxParts'] as number) && (m['part'] as number) < (m['parts'] as number) && Array.isArray(m['entities']) && m['entities'].length <= (L['maxEntitiesPerPart'] as number) && m['entities'].every(entity) && (m['tombstones'] === undefined || (Array.isArray(m['tombstones']) && m['tombstones'].every((t) => isObject(t) && typeof t['kind'] === 'string' && typeof t['id'] === 'string' && typeof t['stamp'] === 'string'))) && (m['order'] === undefined || (isObject(m['order']) && Object.values(m['order']).every((l) => textList(l, 100000, 128)))) && (m['orderStamps'] === undefined || (isObject(m['orderStamps']) && Object.values(m['orderStamps']).every((s) => typeof s === 'string'))) && optionalList(m['withheld'], 10000),
   'snapshot.end': (m) => isInt(m['entityCount']) && typeof m['digest'] === 'string' && HEX(32).test(m['digest']),
@@ -483,9 +501,10 @@ function validateTransition(receiver: 'mac' | 'ios', phase: 'session' | 'pairing
   if (type === 'error' || type === 'bye') return { ok: true }
   const seen = (t: string): boolean => history.includes(t)
   if (phase === 'pairing') {
-    if (receiver === 'mac') return type === 'pair.request' && !seen('pair.request') ? { ok: true } : bad
+    if (receiver === 'mac') return (type === 'pair.request' && !seen('pair.request')) || (type === 'pair.reveal' && seen('pair.request') && !seen('pair.reveal')) ? { ok: true } : bad
     if (history.length === 0) return type === 'pair.challenge' ? { ok: true } : bad
-    return history.length === 1 && history[0] === 'pair.challenge' && type === 'pair.accept' ? { ok: true } : bad
+    if (history.length === 1) return history[0] === 'pair.challenge' && type === 'pair.nonce' ? { ok: true } : bad
+    return history.length === 2 && history[1] === 'pair.nonce' && type === 'pair.accept' ? { ok: true } : bad
   }
   const allowed = ((): boolean => {
     switch (type) {

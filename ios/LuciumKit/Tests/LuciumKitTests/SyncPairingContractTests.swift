@@ -102,30 +102,66 @@ struct SyncPairingContractTests {
         }
     }
 
-    // MARK: The code to compare (§4.6)
+    // MARK: The commitment and the code to compare (§4.6, §4.7)
 
-    @Test func theCodeToCompareIsTheOneTheVectorsGiveForTheTwoFingerprints() throws {
+    @Test func theCommitmentIsTheOneTheVectorsGiveForTheFingerprintAndTheNonce() throws {
+        let vectors = try SyncContract.array(pairing, "commitments")
+        #expect(vectors.count >= 4)
+        for vector in vectors {
+            let phone = SyncContract.hex(vector["fpPhone"] as? String ?? "")
+            let nonce = SyncContract.hex(vector["nonceCodePhone"] as? String ?? "")
+            let commit = SyncPairingCommit.commitment(fingerprintPhone: phone, nonce: nonce)
+            #expect(commit.map { SyncEncoding.base64url($0) } == vector["commit"] as? String, "\(vector["name"] ?? "?")")
+        }
+        let constants = try #require(pairing["constants"] as? [String: Any])
+        #expect(constants["commitBytes"] as? Int == SyncPairingCommit.commitBytes)
+        #expect(constants["codeNonceBytes"] as? Int == SyncPairingCommit.codeNonceBytes)
+    }
+
+    @Test func aCommitmentIsMadeOnlyOfAFingerprintOf32BytesAndANonceOf16() {
+        let phone = Data(repeating: 0x22, count: 32), nonce = Data(repeating: 0x44, count: 16)
+        #expect(SyncPairingCommit.commitment(fingerprintPhone: phone, nonce: nonce)?.count == 32)
+        #expect(SyncPairingCommit.commitment(fingerprintPhone: Data(count: 31), nonce: nonce) == nil)
+        #expect(SyncPairingCommit.commitment(fingerprintPhone: phone, nonce: Data(count: 17)) == nil)
+        var other = nonce
+        other[0] ^= 1
+        #expect(SyncPairingCommit.commitment(fingerprintPhone: phone, nonce: other) != SyncPairingCommit.commitment(fingerprintPhone: phone, nonce: nonce))
+    }
+
+    @Test func theCodeToCompareIsTheOneTheVectorsGiveForTheFingerprintsAndTheNonces() throws {
         let vectors = try SyncContract.array(pairing, "comparisonCode")
-        #expect(vectors.count >= 5)
+        #expect(vectors.count >= 8)
         for vector in vectors {
             let mac = SyncContract.hex(vector["fpMac"] as? String ?? "")
             let phone = SyncContract.hex(vector["fpPhone"] as? String ?? "")
-            #expect(SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: phone) == vector["code"] as? String, "\(vector["name"] ?? "?")")
+            let macNonce = SyncContract.hex(vector["nonceCodeMac"] as? String ?? "")
+            let phoneNonce = SyncContract.hex(vector["nonceCodePhone"] as? String ?? "")
+            #expect(SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: phone, nonceMac: macNonce, noncePhone: phoneNonce) == vector["code"] as? String, "\(vector["name"] ?? "?")")
         }
         let constants = try #require(pairing["constants"] as? [String: Any])
         #expect(constants["comparisonCodeChars"] as? Int == SyncPairingCompare.codeCharacters)
     }
 
-    @Test func theCodeToCompareDependsOnBothFingerprintsAndOnWhichIsWhichAndRefusesAFingerprintOfAnotherSize() {
+    @Test func theCodeToCompareDependsOnBothFingerprintsAndBothNoncesAndOnWhichIsWhichAndRefusesAnInputOfAnotherSize() {
         let mac = Data(repeating: 0x11, count: 32), phone = Data(repeating: 0x22, count: 32)
-        let code = SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: phone)
-        #expect(code == "O6NSGD")
-        #expect(SyncPairingCompare.code(fingerprintMac: phone, fingerprintPhone: mac) != code)
+        let macNonce = Data(repeating: 0x33, count: 16), phoneNonce = Data(repeating: 0x44, count: 16)
+        let code = SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: phone, nonceMac: macNonce, noncePhone: phoneNonce)
+        #expect(code?.count == 6)
+        #expect(SyncPairingCompare.code(fingerprintMac: phone, fingerprintPhone: mac, nonceMac: macNonce, noncePhone: phoneNonce) != code)
+        #expect(SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: phone, nonceMac: phoneNonce, noncePhone: macNonce) != code)
         var otherMac = mac
         otherMac[31] ^= 1
-        #expect(SyncPairingCompare.code(fingerprintMac: otherMac, fingerprintPhone: phone) != code)
-        #expect(SyncPairingCompare.code(fingerprintMac: Data(count: 31), fingerprintPhone: phone) == nil)
-        #expect(SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: Data(count: 33)) == nil)
+        #expect(SyncPairingCompare.code(fingerprintMac: otherMac, fingerprintPhone: phone, nonceMac: macNonce, noncePhone: phoneNonce) != code)
+        var otherMacNonce = macNonce
+        otherMacNonce[15] ^= 1
+        #expect(SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: phone, nonceMac: otherMacNonce, noncePhone: phoneNonce) != code, "the Mac's nonce is in the code (review n° 36)")
+        var otherPhoneNonce = phoneNonce
+        otherPhoneNonce[0] ^= 1
+        #expect(SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: phone, nonceMac: macNonce, noncePhone: otherPhoneNonce) != code, "the phone's nonce is in the code (review n° 36)")
+        #expect(SyncPairingCompare.code(fingerprintMac: Data(count: 31), fingerprintPhone: phone, nonceMac: macNonce, noncePhone: phoneNonce) == nil)
+        #expect(SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: Data(count: 33), nonceMac: macNonce, noncePhone: phoneNonce) == nil)
+        #expect(SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: phone, nonceMac: Data(count: 15), noncePhone: phoneNonce) == nil)
+        #expect(SyncPairingCompare.code(fingerprintMac: mac, fingerprintPhone: phone, nonceMac: macNonce, noncePhone: Data(count: 17)) == nil)
     }
 
     @Test func everyValidTypedCodeGivesTheSecretOfTheVector() throws {

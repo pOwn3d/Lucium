@@ -23,20 +23,23 @@ public struct SyncPairingProposal: Equatable, Sendable {
 
 /// The code both devices show at a pairing, to be compared by eye. A person who scanned the QR of someone else's Mac sees a code that the real Mac does not show.
 ///
-/// SHA-256 of the transcription of §4.4 (the label, then each fingerprint after its length), the first 30 bits, as six characters of the alphabet of the typed code
-/// (RFC 4648: A–Z and 2–7). The fingerprints are the ones each device saw in the TLS handshake, the Mac's first. `comparisonCode` in
+/// SHA-256 of the transcription of §4.4 (the label, then the two fingerprints and the two code nonces, each after its length), the first 30 bits, as six characters
+/// of the alphabet of the typed code (RFC 4648: A–Z and 2–7). The fingerprints are the ones each device saw in the TLS handshake, the Mac's first; the nonces are the
+/// ones of the commitment exchange of §4.7 (`SyncPairingCommit`), the Mac's first. Made of the fingerprints alone, 30 bits could be searched for by a relay that holds the
+/// real QR (review n° 36); with two nonces drawn after the other side is committed the relay has one try, at 2^-30. `comparisonCode` in
 /// `ios/Contracts/sync-pairing-vectors.json` fixes the result; the Mac's `pairing-compare.ts` plays the same vectors.
 public enum SyncPairingCompare {
     public static let codeCharacters = 6
     /// How long the phone's person has to compare and answer: the Mac gives the same minute, and a refusal (or no answer) keeps nothing on either side.
     public static let personWait: Duration = .seconds(55)
-    static let label = "lucium-sync/1 pair-compare"
+    static let label = "lucium-sync/1 pair-code"
     private static let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567")
 
-    /// The code, or nil for a fingerprint that is not 32 bytes (a code made of something else would compare nothing).
-    public static func code(fingerprintMac: Data, fingerprintPhone: Data) -> String? {
+    /// The code, or nil for a fingerprint that is not 32 bytes or a nonce that is not 16 (a code made of something else would compare nothing).
+    public static func code(fingerprintMac: Data, fingerprintPhone: Data, nonceMac: Data, noncePhone: Data) -> String? {
         guard fingerprintMac.count == SyncPairingCode.fingerprintBytes, fingerprintPhone.count == SyncPairingCode.fingerprintBytes,
-              let transcription = SyncProof.transcription(label, [fingerprintMac, fingerprintPhone]) else { return nil }
+              nonceMac.count == SyncPairingCommit.codeNonceBytes, noncePhone.count == SyncPairingCommit.codeNonceBytes,
+              let transcription = SyncProof.transcription(label, [fingerprintMac, fingerprintPhone, nonceMac, noncePhone]) else { return nil }
         let digest = Array(SHA256.hash(data: transcription))
         let bits = digest.prefix(4).reduce(UInt32(0)) { ($0 << 8) | UInt32($1) }
         return String((0..<codeCharacters).map { alphabet[Int((bits >> UInt32(27 - $0 * 5)) & 31)] })

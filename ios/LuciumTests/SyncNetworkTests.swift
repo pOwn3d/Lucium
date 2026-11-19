@@ -302,6 +302,9 @@ final class SyncNetworkTests: XCTestCase {
                     try await mac.write("error", ["code": "bad-proof", "fatal": true])
                     return
                 }
+                // The commitment exchange (§4.7): the Mac's code nonce goes out after a right proof, and the phone reveals its own.
+                try await mac.write("pair.nonce", ["nonce": SyncEncoding.base64url(Data(repeating: 0x61, count: 16))])
+                _ = try await mac.read()
                 let accept = SyncProof.acceptTag(inputs).map(SyncEncoding.base64url) ?? ""
                 try await mac.write("pair.accept", ["device": ["id": "mac-test-0000000001", "name": "Mac de test", "platform": "mac"], "proof": accept, "hosts": ["mac-de-test.local"]])
                 // The phone's person says yes (§4.6): a bye, which the Mac answers with its own once it has kept the phone.
@@ -319,7 +322,7 @@ final class SyncNetworkTests: XCTestCase {
         let code = SyncPairingCode(fingerprint: mac.fingerprint, secret: secret, port: server.port, hosts: ["127.0.0.1"])
         let connection = try await connector().connect(host: "127.0.0.1", port: server.port, pin: .fingerprint(mac.fingerprint), timeout: .seconds(5))
         let outcome = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: phone.fingerprint,
-                                                      device: SyncDeviceInfo(id: "phone-test-000000001", name: "iPhone de test", platform: .ios), nonce: Data(repeating: 5, count: 16),
+                                                      device: SyncDeviceInfo(id: "phone-test-000000001", name: "iPhone de test", platform: .ios), nonce: Data(repeating: 5, count: 16), codeNonce: Data(repeating: 6, count: 16),
                                                       handshakeTimeout: .seconds(5), confirmationTimeout: .seconds(5), confirm: { _ in true })
         XCTAssertEqual(outcome.mac.id, "mac-test-0000000001")
         XCTAssertEqual(outcome.fingerprint, mac.fingerprint)
@@ -335,7 +338,7 @@ final class SyncNetworkTests: XCTestCase {
         let connection = try await connector().connect(host: "127.0.0.1", port: server.port, pin: .fingerprint(mac.fingerprint), timeout: .seconds(5))
         do {
             _ = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: phone.fingerprint,
-                                                device: SyncDeviceInfo(id: "phone-test-000000001", name: "iPhone de test", platform: .ios), nonce: Data(repeating: 5, count: 16),
+                                                device: SyncDeviceInfo(id: "phone-test-000000001", name: "iPhone de test", platform: .ios), nonce: Data(repeating: 5, count: 16), codeNonce: Data(repeating: 6, count: 16),
                                                 handshakeTimeout: .seconds(5), confirmationTimeout: .seconds(5), confirm: { _ in true })
             XCTFail("a pairing with the wrong secret went through")
         } catch let failure as SyncFailure {

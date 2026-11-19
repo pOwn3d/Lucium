@@ -326,7 +326,7 @@ final class SyncController {
         }
         do {
             let outcome = try await SyncPairingClient.pair(code: code, connection: connection, ownFingerprint: identity.fingerprint,
-                                                          device: SyncDeviceInfo(id: deviceId, name: deviceName, platform: .ios), nonce: Self.randomBytes(16),
+                                                          device: SyncDeviceInfo(id: deviceId, name: deviceName, platform: .ios), nonce: Self.randomBytes(16), codeNonce: Self.randomBytes(16),
                                                           onRequestSent: { Task { @MainActor in if self.pairingStep == .connecting { self.pairingStep = .waitingForMac } } },
                                                           confirm: { proposal in await self.compare(proposal) })
             let hosts = outcome.hosts.isEmpty ? SyncCandidates.ordered(code.hosts) : outcome.hosts

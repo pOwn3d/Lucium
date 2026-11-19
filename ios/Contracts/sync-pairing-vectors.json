@@ -1,5 +1,5 @@
 {
-  "comment": "Shared by src/shared/ios-sync-contract.test.ts (a reference reader written in the test, until src/main/sync/ exists) and by ios/LuciumKit (SyncVectorTests). The pairing of docs/synchronisation.md §4 and §6: the proofs (HMAC-SHA-256 over a transcription, §4.4), the text of the QR (§4.2), the code typed without a camera (§4.3), the code both devices show to be compared once the Mac's proof is checked (§4.6), the life of the secret (§4.5), what the phone checks before it sends anything, the local-address filter (§6.2) and the certificate profile (§6.3). Binary values are lower-case hex when named `…Hex`, base64url without padding otherwise. Written by a script from fixed inputs: change a rule on one side and the other side fails.",
+  "comment": "Shared by src/shared/ios-sync-contract.test.ts (a reference reader written in the test, until src/main/sync/ exists) and by ios/LuciumKit (SyncVectorTests). The pairing of docs/synchronisation.md §4 and §6: the proofs (HMAC-SHA-256 over a transcription, §4.4), the text of the QR (§4.2), the code typed without a camera (§4.3), the commitment the iPhone makes before the Mac shows what its code is made of (§4.7) and the code both devices show to be compared once the Mac's proof is checked, made of the two fingerprints and the two nonces of the commitment (§4.6), the life of the secret (§4.5), what the phone checks before it sends anything, the local-address filter (§6.2) and the certificate profile (§6.3). Binary values are lower-case hex when named `…Hex`, base64url without padding otherwise. Written by a script from fixed inputs: change a rule on one side and the other side fails.",
   "constants": {
     "secretBytes": 16,
     "nonceBytes": 16,
@@ -8,7 +8,9 @@
     "maxInvalidProofs": 5,
     "qrMaxChars": 300,
     "qrMaxHosts": 4,
-    "comparisonCodeChars": 6
+    "comparisonCodeChars": 6,
+    "commitBytes": 32,
+    "codeNonceBytes": 16
   },
   "proof": [
     {
@@ -426,36 +428,118 @@
       }
     ]
   },
+  "commitments": [
+    {
+      "name": "the reference commitment",
+      "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "nonceCodePhone": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "commit": "dG_8ir9BVojoZoE2_2--zlpgUC5f700rUuNCSPJwye0"
+    },
+    {
+      "name": "one bit of the iPhone's fingerprint",
+      "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d2",
+      "nonceCodePhone": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "commit": "PUE3CJWeEezCdKLQF9iKJwWI16yXGAIyFLaPGbjE5I0"
+    },
+    {
+      "name": "one bit of the iPhone's nonce",
+      "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "nonceCodePhone": "0f1e2d3c4b5a69788696a5b4c3d2e1f0",
+      "commit": "MFAPj3zGnyfdJxLkfV4eviunObv94HnD8Nbm9xof97o"
+    },
+    {
+      "name": "the Mac's fingerprint where the iPhone's belongs: the commitment names its own",
+      "fpPhone": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "nonceCodePhone": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "commit": "KlCcWVyYV7NjG1Oyk9FJBxYOZd8clHgectT-ZzKs94A"
+    },
+    {
+      "name": "all zero bits",
+      "fpPhone": "0000000000000000000000000000000000000000000000000000000000000000",
+      "nonceCodePhone": "00000000000000000000000000000000",
+      "commit": "R-qlZEsCimEezCQYQZh0LB8nOlesztolBnrAKEQdlxw"
+    }
+  ],
   "comparisonCode": [
     {
       "name": "the reference exchange",
       "fpMac": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
       "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
-      "code": "3FZUQD"
+      "nonceCodeMac": "8899aabbccddeeff0011223344556677",
+      "nonceCodePhone": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "code": "RQSMOP"
     },
     {
       "name": "the same two fingerprints, the other way round: the Mac's comes first",
       "fpMac": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
       "fpPhone": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
-      "code": "YFEEFV"
+      "nonceCodeMac": "8899aabbccddeeff0011223344556677",
+      "nonceCodePhone": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "code": "NN4CQP"
     },
     {
-      "name": "two fingerprints of repeated bytes",
+      "name": "the same exchange, the two nonces swapped: the Mac's comes first",
+      "fpMac": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "nonceCodeMac": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "nonceCodePhone": "8899aabbccddeeff0011223344556677",
+      "code": "YZZPDO"
+    },
+    {
+      "name": "one bit of the Mac's nonce",
+      "fpMac": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "nonceCodeMac": "8899aabbccddeeff0011223344556676",
+      "nonceCodePhone": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "code": "ZHTNMK"
+    },
+    {
+      "name": "one bit of the iPhone's nonce",
+      "fpMac": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "nonceCodeMac": "8899aabbccddeeff0011223344556677",
+      "nonceCodePhone": "0e1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "code": "EZS37W"
+    },
+    {
+      "name": "one bit of the Mac's fingerprint",
+      "fpMac": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519e",
+      "fpPhone": "6a1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "nonceCodeMac": "8899aabbccddeeff0011223344556677",
+      "nonceCodePhone": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "code": "TYEQDC"
+    },
+    {
+      "name": "one bit of the iPhone's fingerprint",
+      "fpMac": "d1e9cc4016253cbcc57d90fa77640b06d550223a14fd582c1c3bf31426e8519f",
+      "fpPhone": "6b1e82e7f597e6b178278d395e619acfebe48f27bffe86d854a48104cdf406d3",
+      "nonceCodeMac": "8899aabbccddeeff0011223344556677",
+      "nonceCodePhone": "0f1e2d3c4b5a69788796a5b4c3d2e1f0",
+      "code": "3ZDLSG"
+    },
+    {
+      "name": "two fingerprints and two nonces of repeated bytes",
       "fpMac": "1111111111111111111111111111111111111111111111111111111111111111",
       "fpPhone": "2222222222222222222222222222222222222222222222222222222222222222",
-      "code": "O6NSGD"
+      "nonceCodeMac": "33333333333333333333333333333333",
+      "nonceCodePhone": "44444444444444444444444444444444",
+      "code": "D6XEXK"
     },
     {
-      "name": "the same fingerprint on both sides",
-      "fpMac": "abababababababababababababababababababababababababababababababab",
-      "fpPhone": "abababababababababababababababababababababababababababababababab",
-      "code": "C7YCIX"
-    },
-    {
-      "name": "all zero and all one bits",
+      "name": "all zero bits",
       "fpMac": "0000000000000000000000000000000000000000000000000000000000000000",
+      "fpPhone": "0000000000000000000000000000000000000000000000000000000000000000",
+      "nonceCodeMac": "00000000000000000000000000000000",
+      "nonceCodePhone": "00000000000000000000000000000000",
+      "code": "XB6BW5"
+    },
+    {
+      "name": "all one bits",
+      "fpMac": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
       "fpPhone": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-      "code": "S4M7GG"
+      "nonceCodeMac": "ffffffffffffffffffffffffffffffff",
+      "nonceCodePhone": "ffffffffffffffffffffffffffffffff",
+      "code": "DQUNRR"
     }
   ],
   "secretLifecycle": [

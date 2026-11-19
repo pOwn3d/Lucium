@@ -54,7 +54,12 @@ public struct SyncHello: Equatable, Sendable {
 public enum SyncMessage: Equatable, Sendable {
     case hello(SyncHello)
     case pairChallenge(nonce: Data)
-    case pairRequest(device: SyncDeviceInfo, nonce: Data, proof: Data)
+    /// `commit` is the commitment of §4.7: the SHA-256 of the phone's fingerprint and of a code nonce it keeps back until `pair.reveal`.
+    case pairRequest(device: SyncDeviceInfo, nonce: Data, proof: Data, commit: Data)
+    /// The Mac's code nonce (§4.7), sent after the phone's commitment and a right proof.
+    case pairNonce(nonce: Data)
+    /// The phone's code nonce (§4.7), which must open its commitment.
+    case pairReveal(nonce: Data)
     case pairAccept(device: SyncDeviceInfo, proof: Data, hosts: [String])
     case snapshotPart(JSONValue)
     case snapshotEnd(entityCount: Int, digest: String)
@@ -71,6 +76,8 @@ public enum SyncMessage: Equatable, Sendable {
         case .hello: "hello"
         case .pairChallenge: "pair.challenge"
         case .pairRequest: "pair.request"
+        case .pairNonce: "pair.nonce"
+        case .pairReveal: "pair.reveal"
         case .pairAccept: "pair.accept"
         case .snapshotPart: "snapshot.part"
         case .snapshotEnd: "snapshot.end"
@@ -100,9 +107,10 @@ public enum SyncTransitions {
         let seen = { (kind: String) in history.contains(kind) }
         switch phase {
         case .pairing:
-            if receiver == .mac { return type == "pair.request" && !seen("pair.request") }
+            if receiver == .mac { return (type == "pair.request" && !seen("pair.request")) || (type == "pair.reveal" && seen("pair.request") && !seen("pair.reveal")) }
             if history.isEmpty { return type == "pair.challenge" }
-            return history == ["pair.challenge"] && type == "pair.accept"
+            if history == ["pair.challenge"] { return type == "pair.nonce" }
+            return history == ["pair.challenge", "pair.nonce"] && type == "pair.accept"
         case .session:
             switch type {
             case "hello": return !seen("hello")
@@ -210,7 +218,7 @@ public enum SyncMessageCodec {
         return count
     }
 
-    private static let knownTypes: Set<String> = ["hello", "pair.challenge", "pair.request", "pair.accept", "snapshot.part", "snapshot.end", "open-tabs", "result", "commit", "unpair", "error", "bye"]
+    private static let knownTypes: Set<String> = ["hello", "pair.challenge", "pair.request", "pair.nonce", "pair.reveal", "pair.accept", "snapshot.part", "snapshot.end", "open-tabs", "result", "commit", "unpair", "error", "bye"]
 
     /// A string over 64 KiB, a number that is not finite or that JavaScript would write with an exponent, a nesting beyond 32 levels, a `__proto__` key.
     static func hasProblem(_ value: JSONValue, depth: Int) -> Bool {
@@ -294,8 +302,13 @@ public enum SyncMessageCodec {
         case "pair.challenge":
             return nonce(fields["nonce"]).map { .pairChallenge(nonce: $0) }
         case "pair.request":
-            guard let device = device(fields["device"]), let nonce = nonce(fields["nonce"]), let proof = proof(fields["proof"]) else { return nil }
-            return .pairRequest(device: device, nonce: nonce, proof: proof)
+            // The commitment is a SHA-256 (§4.7): a request without one is the form that had none, and is refused as a message that is not well formed.
+            guard let device = device(fields["device"]), let nonce = nonce(fields["nonce"]), let requestProof = proof(fields["proof"]), let commit = proof(fields["commit"]) else { return nil }
+            return .pairRequest(device: device, nonce: nonce, proof: requestProof, commit: commit)
+        case "pair.nonce":
+            return nonce(fields["nonce"]).map { .pairNonce(nonce: $0) }
+        case "pair.reveal":
+            return nonce(fields["nonce"]).map { .pairReveal(nonce: $0) }
         case "pair.accept":
             guard let device = device(fields["device"]), let proof = proof(fields["proof"]), let hosts = texts(fields["hosts"], max: SyncLimits.maxHosts, maxCharacters: 253) else { return nil }
             return .pairAccept(device: device, proof: proof, hosts: hosts)
@@ -378,10 +391,13 @@ public enum SyncMessageCodec {
             members["appVersion"] = .string(hello.appVersion)
             members["now"] = .number(Double(hello.now))
             if let hosts = hello.hosts { members["hosts"] = .array(hosts.map { .string($0) }) }
-        case .pairRequest(let device, let nonce, let proof):
+        case .pairRequest(let device, let nonce, let proof, let commit):
             members["device"] = deviceValue(device)
             members["nonce"] = .string(SyncEncoding.base64url(nonce))
             members["proof"] = .string(SyncEncoding.base64url(proof))
+            members["commit"] = .string(SyncEncoding.base64url(commit))
+        case .pairReveal(let nonce):
+            members["nonce"] = .string(SyncEncoding.base64url(nonce))
         case .unpair, .bye:
             break
         case .error(let code, let fatal, let supported, let detail):
@@ -401,7 +417,7 @@ public enum SyncMessageCodec {
             members["digest"] = .string(digest)
         case .result(let digest), .commit(let digest):
             members["digest"] = .string(digest)
-        case .pairChallenge, .pairAccept:
+        case .pairChallenge, .pairNonce, .pairAccept:
             throw SyncFailure(.internal, "the phone does not write \(message.type)")
         }
         let encoder = JSONEncoder()

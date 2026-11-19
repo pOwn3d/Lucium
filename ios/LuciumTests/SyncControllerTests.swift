@@ -137,11 +137,16 @@ final class SyncControllerTests: XCTestCase {
     private func pairingMac(secret: Data, phoneFingerprint: Data, refuse: SyncErrorCode? = nil) -> ScriptedConnector.Answer {
         let macFingerprint = self.macFingerprint
         let wordOfThePhone = self.wordOfThePhone
+        let revealOfThePhone = self.revealOfThePhone
         return .connect(fingerprint: macFingerprint, mac: { mac in
             let nonce = Data((0..<16).map { UInt8($0) })
             try await mac.write("pair.challenge", ["nonce": SyncEncoding.base64url(nonce)])
             let request = try await mac.read()
             if let refuse { return try await mac.write("error", ["code": refuse.rawValue, "fatal": true]) }
+            // The commitment exchange (§4.7): the Mac's code nonce after a right proof, the phone's reveal after it.
+            try await mac.write("pair.nonce", ["nonce": SyncEncoding.base64url(Self.macCodeNonce)])
+            let reveal = try await mac.read()
+            revealOfThePhone.value = SyncEncoding.base64urlDecode(reveal["nonce"] as? String ?? "", characters: 22)
             let device = request["device"] as? [String: Any]
             let inputs = SyncProofInputs(secret: secret, fingerprintMac: macFingerprint, fingerprintPhone: phoneFingerprint, nonceMac: nonce,
                                          noncePhone: SyncEncoding.base64urlDecode(request["nonce"] as? String ?? "", characters: 22) ?? Data(), idMac: "mac-test-0000000001", idPhone: device?["id"] as? String ?? "")
@@ -156,6 +161,9 @@ final class SyncControllerTests: XCTestCase {
 
     /// The last word the scripted Mac read from the phone once it had sent its accept.
     private let wordOfThePhone = Box<String?>(nil)
+    /// The code nonce the phone revealed to the scripted Mac (§4.7), and the one the Mac gave.
+    private let revealOfThePhone = Box<Data?>(nil)
+    private static let macCodeNonce = Data((0..<16).map { UInt8(0x70 + $0) })
 
     /// Pairs while the person of the phone answers the code (§4.6): waits for the sheet to show it, hands the proposal to `check`, then answers.
     private func pair(_ controller: SyncController, answer: Bool, check: (SyncPairingProposal) -> Void = { _ in }, line: UInt = #line) async throws -> Result<Void, SyncController.PairingFailure> {
@@ -177,7 +185,10 @@ final class SyncControllerTests: XCTestCase {
         let result = try await pair(controller, answer: true, check: { proposal in
             // The person is shown the name the Mac gave itself and the code both devices compute from the two fingerprints, before anything is kept.
             XCTAssertEqual(proposal.macName, "Mac de test")
-            XCTAssertEqual(proposal.code, SyncPairingCompare.code(fingerprintMac: self.macFingerprint, fingerprintPhone: phoneFingerprint))
+            // The code is made of the two fingerprints and the two code nonces (§4.6, §4.7): the phone's is read from what it revealed to the Mac a moment before.
+            let revealed = self.revealOfThePhone.value ?? Data()
+            XCTAssertEqual(proposal.code, SyncPairingCompare.code(fingerprintMac: self.macFingerprint, fingerprintPhone: phoneFingerprint, nonceMac: Self.macCodeNonce, noncePhone: revealed))
+            XCTAssertEqual(revealed.count, 16)
             XCTAssertNil(controller.settings.mac, "nothing is kept before the person says yes")
         })
         XCTAssertNil(failure(result), "the pairing went through")

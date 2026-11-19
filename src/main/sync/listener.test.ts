@@ -8,6 +8,7 @@ import { Channel } from './channel'
 import { encodeFrame } from './frames'
 import { FAILURES_PER_MINUTE_BEFORE_REFUSAL, MAX_CONNECTIONS } from './limits'
 import { SyncListener, type ListenerDeps, type ListenerEvent, type OpenPairing } from './listener'
+import { pairingCommitment } from './pairing-commit'
 import { requestProof } from './pairing-proof'
 import { PairingSecret } from './pairing-secret'
 import { AddressLimiter } from './rate-limit'
@@ -305,24 +306,31 @@ describe('SyncListener: a pairing', () => {
     return { secret }
   }
 
-  /** The iPhone's half up to its request: takes the challenge, sends a request with the right proof. */
-  async function sendRequest(r: Rig, channel: Channel, phone: TestIdentity, serverFingerprint: Buffer, secret: Buffer): Promise<void> {
+  /** The iPhone's half up to the question of the Mac's person: takes the challenge, sends a request with the right proof and its commitment, takes the Mac's code nonce and reveals its own (§4.7). */
+  /** What the Mac said instead of its code nonce (an error: a secret that is closed, spent…), or null when the iPhone could reveal. */
+  async function sendRequest(r: Rig, channel: Channel, phone: TestIdentity, serverFingerprint: Buffer, secret: Buffer): Promise<Record<string, unknown> | null> {
     const challenge = await channel.receive()
     if (challenge.t !== 'pair.challenge') throw new Error('no challenge')
     const nonce = randomBytes(16)
+    const nonceCode = randomBytes(16)
     await channel.send({
       t: 'pair.request',
       device: { id: phone.deviceId, name: 'iPhone de test', platform: 'ios' },
       nonce: nonce.toString('base64url'),
-      proof: requestProof({ secret, fingerprintMac: serverFingerprint, fingerprintPhone: phone.fingerprint, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: r.mac.deviceId, idPhone: phone.deviceId })
+      proof: requestProof({ secret, fingerprintMac: serverFingerprint, fingerprintPhone: phone.fingerprint, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: r.mac.deviceId, idPhone: phone.deviceId }),
+      commit: pairingCommitment(phone.fingerprint, nonceCode)
     })
+    const codeNonce = await channel.receive()
+    if (codeNonce.t !== 'pair.nonce') return codeNonce as unknown as Record<string, unknown>
+    await channel.send({ t: 'pair.reveal', nonce: nonceCode.toString('base64url') })
+    return null
   }
 
   async function pairOnce(r: Rig, phone: TestIdentity, secret: Buffer): Promise<Record<string, unknown>> {
     const { socket, serverFingerprint } = await connectTls(r.port, phone)
     const channel = new Channel(socket, { phase: 'pairing', role: 'ios' })
-    await sendRequest(r, channel, phone, serverFingerprint, secret)
-    const answer = (await channel.receive()) as unknown as Record<string, unknown>
+    const early = await sendRequest(r, channel, phone, serverFingerprint, secret)
+    const answer = early ?? ((await channel.receive()) as unknown as Record<string, unknown>)
     // The iPhone's person says yes (§4.6): a bye, and the Mac keeps the iPhone and answers with its own.
     if (answer['t'] === 'pair.accept') {
       await channel.send({ t: 'bye' })

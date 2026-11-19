@@ -25,6 +25,7 @@ import { certificatePem, fingerprintOf, makeDeviceCertificate, privateKeyOf } fr
 import { Channel } from './sync/channel'
 import { IdentityStore } from './sync/identity'
 import { readQr } from './sync/pairing-code'
+import { pairingCommitment } from './sync/pairing-commit'
 import { requestProof } from './sync/pairing-proof'
 import { ownHosts } from './sync/own-hosts'
 import { SafeClock } from './sync/safe-clock'
@@ -143,12 +144,17 @@ export async function smokeSync(ctx: SmokeContext, check: Check): Promise<void> 
     const challenge = await channel.receive()
     if (challenge.t !== 'pair.challenge') throw new Error('no challenge')
     const nonce = randomBytes(16)
+    const nonceCodePhone = randomBytes(16)
     await channel.send({
       t: 'pair.request',
       device: { id: 'iphone-smoke-000001', name: 'iPhone de test', platform: 'ios' },
       nonce: nonce.toString('base64url'),
-      proof: requestProof({ secret: reading.secret, fingerprintMac: made.identity.fingerprint, fingerprintPhone: fingerprintOf(phone.certificate), nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: '', idPhone: 'iphone-smoke-000001' })
+      proof: requestProof({ secret: reading.secret, fingerprintMac: made.identity.fingerprint, fingerprintPhone: fingerprintOf(phone.certificate), nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone: nonce, idMac: '', idPhone: 'iphone-smoke-000001' }),
+      commit: pairingCommitment(fingerprintOf(phone.certificate), nonceCodePhone)
     })
+    const codeNonce = await channel.receive()
+    if (codeNonce.t !== 'pair.nonce') throw new Error('no code nonce after the commitment')
+    await channel.send({ t: 'pair.reveal', nonce: nonceCodePhone.toString('base64url') })
     await waitFor(() => lan.status().confirm !== null)
     check('the person is asked, by name, before the iPhone is kept', lan.status().confirm?.name === 'iPhone de test' && lan.status().devices.length === 0)
     lan.answer(true)

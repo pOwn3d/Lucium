@@ -4,6 +4,7 @@ import { randomBytes } from 'node:crypto'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Channel } from './channel'
 import { MAX_INVALID_PROOFS, PAIRING_WINDOW_MS } from './limits'
+import { pairingCommitment } from './pairing-commit'
 import { comparisonCode } from './pairing-compare'
 import { acceptProof, proofMatches, requestProof } from './pairing-proof'
 import { PairingSecret } from './pairing-secret'
@@ -66,20 +67,56 @@ function setup(over: Partial<PairingContext> & { decision?: 'allow' | 'refuse' |
 }
 
 /**
- * The iPhone: reads the challenge, answers with a proof made from `secret` (or a wrong one), reads what the Mac says next and, when that is the accept, plays what its person
- * decides (§4.6): `accept` says `bye` and reads the Mac's last word, `refuse` says `error` (`pairing-refused`), `silent` says nothing.
+ * The iPhone: reads the challenge, answers with a proof made from `secret` (or a wrong one) and a commitment to a code nonce (§4.7), reads the Mac's code nonce and reveals
+ * its own, reads what the Mac says next and, when that is the accept, plays what its person decides (§4.6): `accept` says `bye` and reads the Mac's last word, `refuse` says
+ * `error` (`pairing-refused`), `silent` says nothing. `commitFingerprint` is the fingerprint the commitment names (the iPhone's own by default), `revealNonce` the nonce it
+ * reveals (the one it committed to by default), `skipReveal` sends nothing after the Mac's code nonce.
  */
 async function iphone(
   s: Setup,
   phone: Channel,
-  options: { secret?: Buffer; fingerprintPhone?: Buffer; platform?: 'ios' | 'mac'; wrongProof?: boolean; decision?: 'accept' | 'refuse' | 'silent'; onAccept?: () => void } = {}
-): Promise<{ challenge: string; noncePhone: Buffer; reply: Awaited<ReturnType<Channel['receive']>>; final: Awaited<ReturnType<Channel['receive']>> | null }> {
+  options: {
+    secret?: Buffer
+    fingerprintPhone?: Buffer
+    platform?: 'ios' | 'mac'
+    wrongProof?: boolean
+    decision?: 'accept' | 'refuse' | 'silent'
+    onAccept?: () => void
+    commitFingerprint?: Buffer
+    revealNonce?: Buffer
+    skipReveal?: boolean
+    /** The commitment as sent: a test can replace it by anything. */
+    commit?: string
+  } = {}
+): Promise<{
+  challenge: string
+  noncePhone: Buffer
+  nonceCodePhone: Buffer
+  nonceCodeMac: Buffer | null
+  reply: Awaited<ReturnType<Channel['receive']>>
+  final: Awaited<ReturnType<Channel['receive']>> | null
+}> {
   const challenge = await phone.receive()
   if (challenge.t !== 'pair.challenge') throw new Error(`expected a challenge, got ${challenge.t}`)
   const noncePhone = randomBytes(16)
   const proof = requestProof({ secret: options.secret ?? s.secret.secret, fingerprintMac: MAC_FP, fingerprintPhone: options.fingerprintPhone ?? PHONE_FP, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone, idMac: 'mac-device-0000000001', idPhone: 'iphone-0000000001' })
-  await phone.send({ t: 'pair.request', device: { id: 'iphone-0000000001', name: 'iPhone de test', platform: options.platform ?? 'ios' }, nonce: noncePhone.toString('base64url'), proof: options.wrongProof === true ? proof.replace(/.$/, proof.endsWith('A') ? 'B' : 'A') : proof })
-  const reply = await phone.receive()
+  const nonceCodePhone = randomBytes(16)
+  const commit = options.commit ?? pairingCommitment(options.commitFingerprint ?? options.fingerprintPhone ?? PHONE_FP, nonceCodePhone)
+  await phone.send({
+    t: 'pair.request',
+    device: { id: 'iphone-0000000001', name: 'iPhone de test', platform: options.platform ?? 'ios' },
+    nonce: noncePhone.toString('base64url'),
+    proof: options.wrongProof === true ? proof.replace(/.$/, proof.endsWith('A') ? 'B' : 'A') : proof,
+    commit
+  })
+  let nonceCodeMac: Buffer | null = null
+  let reply = await phone.receive()
+  if (reply.t === 'pair.nonce') {
+    nonceCodeMac = Buffer.from(reply.nonce, 'base64url')
+    if (options.skipReveal === true) return { challenge: challenge.nonce, noncePhone, nonceCodePhone, nonceCodeMac, reply, final: null }
+    await phone.send({ t: 'pair.reveal', nonce: (options.revealNonce ?? nonceCodePhone).toString('base64url') })
+    reply = await phone.receive()
+  }
   let final: Awaited<ReturnType<Channel['receive']>> | null = null
   if (reply.t === 'pair.accept') {
     options.onAccept?.()
@@ -89,7 +126,7 @@ async function iphone(
       final = await phone.receive().catch(() => null)
     } else if (decision === 'refuse') await phone.send({ t: 'error', code: 'pairing-refused', fatal: true })
   }
-  return { challenge: challenge.nonce, noncePhone, reply, final }
+  return { challenge: challenge.nonce, noncePhone, nonceCodePhone, nonceCodeMac, reply, final }
 }
 
 async function run(s: Setup, play: (phone: Channel) => Promise<void>): Promise<Awaited<ReturnType<typeof runPairing>>> {
@@ -136,12 +173,25 @@ describe('runPairing: a pairing that goes through', () => {
     expect((seen as unknown as Awaited<ReturnType<typeof iphone>>).final).toMatchObject({ t: 'bye' })
   })
 
-  it('shows the person the same code the iPhone computes from the two fingerprints, and the address the request came from (review n° 9 and 21)', async () => {
+  it('shows the person the same code the iPhone computes from the two fingerprints and the two code nonces, and the address the request came from (review n° 9, 21 and 36)', async () => {
     const s = setup({ peerAddress: '192.168.1.40' })
+    let seen: Awaited<ReturnType<typeof iphone>> | null = null
+    await run(s, async (phone) => void (seen = await iphone(s, phone)))
+    const { nonceCodeMac, nonceCodePhone } = seen as unknown as Awaited<ReturnType<typeof iphone>>
+    expect(nonceCodeMac).not.toBeNull()
+    expect(s.requests).toEqual([{ name: 'iPhone de test', code: comparisonCode(MAC_FP, PHONE_FP, nonceCodeMac as Buffer, nonceCodePhone), address: '192.168.1.40' }])
+    expect(s.requests[0]?.code).toMatch(/^[A-Z2-7]{6}$/)
+  })
+
+  it('shows a code that is not the one of the two fingerprints alone: the nonces are in it (review n° 36)', async () => {
+    const s = setup()
     await run(s, async (phone) => void (await iphone(s, phone)))
-    expect(s.requests).toEqual([{ name: 'iPhone de test', code: comparisonCode(MAC_FP, PHONE_FP), address: '192.168.1.40' }])
-    // Six characters, and the one the shared vectors give for these two fingerprints.
-    expect(s.requests[0]?.code).toBe('O6NSGD')
+    // The code the pairing showed before the commitment: made of the fingerprints alone, it could be searched for. With the two nonces it differs, here and every time.
+    const oldCode = comparisonCode(MAC_FP, PHONE_FP, Buffer.alloc(16), Buffer.alloc(16))
+    expect(s.requests[0]?.code).not.toBe(oldCode)
+    const other = setup()
+    await run(other, async (phone) => void (await iphone(other, phone)))
+    expect(other.requests[0]?.code).not.toBe(s.requests[0]?.code)
   })
 
   it('tells the sheet the person allowed, so that it can say it waits for the iPhone', async () => {
@@ -165,6 +215,99 @@ describe('runPairing: a pairing that goes through', () => {
     }
     expect(proofs).toHaveLength(2)
     expect(proofs[0]).not.toBe(proofs[1])
+  })
+})
+
+describe('runPairing: the commitment of the iPhone (docs/synchronisation.md §4.7, review n° 36)', () => {
+  it('sends its code nonce only after a right proof, and sends it to nobody else', async () => {
+    const wrong = setup()
+    let seenWrong: Awaited<ReturnType<typeof iphone>> | null = null
+    await run(wrong, async (phone) => void (seenWrong = await iphone(wrong, phone, { wrongProof: true })))
+    expect((seenWrong as unknown as Awaited<ReturnType<typeof iphone>>).nonceCodeMac).toBeNull()
+    const closed = setup()
+    closed.secret.close()
+    let seenClosed: Awaited<ReturnType<typeof iphone>> | null = null
+    await run(closed, async (phone) => void (seenClosed = await iphone(closed, phone)))
+    expect((seenClosed as unknown as Awaited<ReturnType<typeof iphone>>).nonceCodeMac).toBeNull()
+    const right = setup()
+    let seenRight: Awaited<ReturnType<typeof iphone>> | null = null
+    await run(right, async (phone) => void (seenRight = await iphone(right, phone)))
+    expect((seenRight as unknown as Awaited<ReturnType<typeof iphone>>).nonceCodeMac).toHaveLength(16)
+  })
+
+  it('draws a new code nonce for every pairing', async () => {
+    const nonces: string[] = []
+    for (let n = 0; n < 3; n++) {
+      const s = setup()
+      await run(s, async (phone) => void nonces.push(((await iphone(s, phone)).nonceCodeMac as Buffer).toString('hex')))
+    }
+    expect(new Set(nonces).size).toBe(3)
+  })
+
+  it('refuses a nonce that does not open the commitment, shows no sheet and keeps nothing', async () => {
+    const s = setup()
+    let seen: Awaited<ReturnType<typeof iphone>> | null = null
+    const outcome = await run(s, async (phone) => void (seen = await iphone(s, phone, { revealNonce: randomBytes(16) })))
+    expect(outcome).toMatchObject({ outcome: 'failed', code: 'bad-proof' })
+    expect((seen as unknown as Awaited<ReturnType<typeof iphone>>).reply).toMatchObject({ t: 'error', code: 'bad-proof', fatal: true })
+    expect(s.asked).toEqual([])
+    expect(s.added).toEqual([])
+  })
+
+  it('refuses a commitment made over another fingerprint than the one the Mac saw in the TLS handshake: a relayed commitment does not open', async () => {
+    const s = setup()
+    const outcome = await run(s, async (phone) => void (await iphone(s, phone, { commitFingerprint: Buffer.alloc(32, 0x77) })))
+    expect(outcome).toMatchObject({ outcome: 'failed', code: 'bad-proof' })
+    expect(s.asked).toEqual([])
+    expect(s.added).toEqual([])
+  })
+
+  it('shows no sheet before the reveal: a person is never asked to compare a code that nothing commits', async () => {
+    const s = setup({ revealMs: 60 })
+    const outcome = await run(s, async (phone) => void (await iphone(s, phone, { skipReveal: true })))
+    expect(outcome).toMatchObject({ outcome: 'failed', code: 'timeout' })
+    expect(s.asked).toEqual([])
+    expect(s.added).toEqual([])
+  })
+
+  it('refuses a pair.request that has no commitment, which is the form from before: nothing is sent back and nothing kept', async () => {
+    const s = setup()
+    const outcome = await run(s, async (phone) => {
+      const challenge = await phone.receive()
+      if (challenge.t !== 'pair.challenge') throw new Error('no challenge')
+      const noncePhone = randomBytes(16)
+      const proof = requestProof({ secret: s.secret.secret, fingerprintMac: MAC_FP, fingerprintPhone: PHONE_FP, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone, idMac: 'mac-device-0000000001', idPhone: 'iphone-0000000001' })
+      // A request without `commit` is not a message the reader accepts: the cast is the point.
+      await phone.send({ t: 'pair.request', device: { id: 'iphone-0000000001', name: 'iPhone de test', platform: 'ios' }, nonce: noncePhone.toString('base64url'), proof } as never)
+      await phone.receive().catch(() => undefined)
+    })
+    expect(outcome).toMatchObject({ outcome: 'failed', code: 'bad-message' })
+    expect(s.asked).toEqual([])
+    expect(s.added).toEqual([])
+  })
+
+  it('refuses a reveal that comes before the Mac has sent its nonce, and one that is not a reveal', async () => {
+    const early = setup()
+    const outcomeEarly = await run(early, async (phone) => {
+      await phone.receive()
+      await phone.send({ t: 'pair.reveal', nonce: randomBytes(16).toString('base64url') })
+      await phone.receive().catch(() => undefined)
+    })
+    expect(outcomeEarly).toMatchObject({ outcome: 'failed', code: 'bad-message' })
+    const wrongKind = setup()
+    const outcomeKind = await run(wrongKind, async (phone) => {
+      const challenge = await phone.receive()
+      if (challenge.t !== 'pair.challenge') throw new Error('no challenge')
+      const noncePhone = randomBytes(16)
+      const proof = requestProof({ secret: wrongKind.secret.secret, fingerprintMac: MAC_FP, fingerprintPhone: PHONE_FP, nonceMac: Buffer.from(challenge.nonce, 'base64url'), noncePhone, idMac: 'mac-device-0000000001', idPhone: 'iphone-0000000001' })
+      await phone.send({ t: 'pair.request', device: { id: 'iphone-0000000001', name: 'iPhone de test', platform: 'ios' }, nonce: noncePhone.toString('base64url'), proof, commit: pairingCommitment(PHONE_FP, randomBytes(16)) })
+      await phone.receive()
+      // The Mac waits for a reveal: a second request in its place is not one, and nothing is kept.
+      await phone.send({ t: 'pair.request', device: { id: 'iphone-0000000001', name: 'iPhone de test', platform: 'ios' }, nonce: noncePhone.toString('base64url'), proof, commit: pairingCommitment(PHONE_FP, randomBytes(16)) })
+      await phone.receive().catch(() => undefined)
+    })
+    expect(outcomeKind).toMatchObject({ outcome: 'failed', code: 'bad-message' })
+    expect(wrongKind.asked).toEqual([])
   })
 })
 
