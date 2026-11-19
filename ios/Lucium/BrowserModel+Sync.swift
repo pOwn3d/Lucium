@@ -9,7 +9,7 @@ extension BrowserModel {
     /// takes its web view, its picture and its page state with it (a profile stays, with its cookies, as when a space is deleted by hand).
     @discardableResult
     func applySyncPatch(_ patch: SyncPatch) -> SyncApply.Outcome {
-        let outcome = SyncApply.apply(patch, to: state, now: clock())
+        let outcome = SyncApply.apply(patch, to: state, now: clock(), maxStateBytes: SyncApply.maxStateBytes)
         write(outcome, because: "a session")
         return outcome
     }
