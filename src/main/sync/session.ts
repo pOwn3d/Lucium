@@ -18,6 +18,7 @@ import { parseSnapshot, type SyncEntity, type SyncSnapshot } from '@shared/sync-
 import { SYNC_CATEGORIES, type SyncCategory } from '@shared/sync-ipc'
 import type { SidebarState } from '@shared/model'
 import type { SyncPatch } from '@shared/sidebar-sync'
+import { TODAY_TAB_KIND } from '@shared/sync-today'
 import { Channel, ConnectionClosed, ProtocolError } from './channel'
 import type { ErrorCode } from './error-codes'
 import { CLOCK_SKEW_WARN_MS, MAX_ENTITIES, MAX_ENTITIES_PER_PART, MAX_PARTS, NONCE_BYTES } from './limits'
@@ -27,7 +28,7 @@ import { cleanSnapshot, isKnownSearchTemplate, isWebAddress } from './inbound-fi
 import type { MarkBook } from './marks'
 import type { OpenTab, SnapshotPart, WireEntity, WireTombstone } from './messages'
 import { buildPatch, patchIsEmpty } from './patch'
-import { baseOf, follows, kindIsExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
+import { admittedTodayTabs, baseOf, follows, kindIsExchanged, onlyExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 import { randomBytes } from 'node:crypto'
 
 /** What a session needs of the state of the device. */
@@ -60,15 +61,54 @@ export interface SessionDeps {
   onUnpair?: (peerId: string) => void
   /** What was refused of what came in, for the log. */
   onRefused?: (peerId: string, refused: Array<{ kind: string; id: string; reason: string }>) => void
+  /** A Today tab the other device closed was the selected one of its space here (§27.5, [Q11]): the interface says it (card of the interface), the session has already shown the neighbour. */
+  onShownTabsClosed?: (peerId: string, tabs: ClosedShownTab[]) => void
   /** A session that went through. */
   onDone?: (peerId: string, at: number) => void
   /** A warning of the other device that does not end the session (the clocks differ). */
   onWarning?: (peerId: string, code: ErrorCode) => void
 }
 
+/** A Today tab that the other device closed while it was the one selected in its space here (§27.5, [Q11]): it is archived and the neighbour is shown. */
+export interface ClosedShownTab {
+  id: string
+  spaceId: string
+  /** The space was the one on screen: the person was looking at the tab. */
+  onScreen: boolean
+}
+
+/** The tabs of `patch` that were selected in their space before it was applied and are gone after it: what the line « Fermé sur l'iPhone » is said about. */
+export function shownTabsClosed(before: SidebarState, after: SidebarState, patch: SyncPatch): ClosedShownTab[] {
+  const closing = new Set(patch.removals.filter((removal) => removal.kind === TODAY_TAB_KIND).map((removal) => removal.id))
+  const present = new Set(after.tabs.map((tab) => tab.id))
+  return Object.entries(before.activeTabBySpace)
+    .filter(([, id]) => id !== null && closing.has(id) && !present.has(id))
+    .map(([spaceId, id]) => ({ id: id as string, spaceId, onScreen: spaceId === before.activeSpaceId }))
+}
+
 export type SessionResult =
   | { ok: true; applied: boolean; conflicts: SyncConflict[]; refused: number; categories: SyncCategory[] }
   | { ok: false; code: ErrorCode | 'interrupted' | 'unpaired'; detail: string }
+
+/**
+ * The categories this device announces in its `hello`: the ones ticked, except `todayTabs` without `structure`. A Today tab depends on its space (§27.2) and the spaces travel
+ * with the structure: with the structure alone left out, the merge finds no space for any tab and removes them all (`withoutSpaces`, §11.7.1), the ones of this device first.
+ */
+export function announcedCategories(ticked: ReadonlySet<SyncCategory>): ReadonlySet<SyncCategory> {
+  if (ticked.has('structure') || !ticked.has('todayTabs')) return ticked
+  return new Set([...ticked].filter((category) => category !== 'todayTabs'))
+}
+
+/**
+ * The categories both devices ticked (§8.2), less `todayTabs` when the structure is not among them. A device that announces the category without the structure (it should not,
+ * see `announcedCategories`) would otherwise make both merges start from Today tabs with no space, and both would remove them all: not followed here, the two merges then
+ * start from other inputs, the session ends in `divergence` (§8.5) and nothing is written.
+ */
+export function commonCategories(mine: ReadonlySet<SyncCategory>, theirs: readonly string[]): Set<SyncCategory> {
+  const common = new Set(SYNC_CATEGORIES.filter((category) => mine.has(category) && theirs.includes(category)))
+  if (!common.has('structure')) common.delete('todayTabs')
+  return common
+}
 
 /** The bytes a part may weigh before the next one starts: well under a frame. */
 const PART_BYTES = 600_000
@@ -205,7 +245,7 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     if (deps.host.isAppLocked()) return fail('locked', 'the application is locked')
     const merge = deps.merge ?? mergeSnapshots
     const stored = deps.bases.get(peerId, deps.now())
-    const mine = deps.categories()
+    const mine = announcedCategories(deps.categories())
 
     // hello
     await channel.send({
@@ -224,16 +264,18 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     if (hello.device.id !== peerId) return fail('fingerprint-mismatch', 'the identifier is not the one paired with this certificate')
     if (hello.stateVersion > deps.stateVersion) return fail('state-too-new', 'the other device writes a newer format of the state')
     if (Math.abs(hello.now - deps.now()) > CLOCK_SKEW_WARN_MS) await channel.send({ t: 'error', code: 'clock-skew', fatal: false, detail: 'the clocks differ by more than five minutes' })
-    const common = new Set(SYNC_CATEGORIES.filter((category) => mine.has(category) && hello.categories.includes(category)))
+    const common = commonCategories(mine, hello.categories)
     const base = stored !== null && hello.baseHash === stored.hash ? stored.snapshot : null
 
     // freeze and send
     const state = deps.host.state()
-    deps.marks.update(trackedViewOf(state), deps.now())
+    // The Today tabs of the shared set (§27.3): new ones come in only when the category is common, at the end of the freeze; the ones the book holds stay.
+    const admittedToday = admittedTodayTabs(state, { book: deps.marks, now: deps.now(), admitNew: common.has('todayTabs'), isSpaceLocked: (spaceId) => deps.host.isSpaceLocked(spaceId) })
+    deps.marks.update(trackedViewOf(state, admittedToday), deps.now())
     const withheld = withheldSpaces(state, (spaceId) => deps.host.isSpaceLocked(spaceId))
     // What this device sends is what it would itself accept (the same gate as for what comes in, with the other device's clock for the marks of the future): the two
     // merges then start from the same inputs. An entity that does not pass stays here, untouched, and is not sent; it is counted and logged.
-    const frozen = cleanSnapshot(snapshotOf(state, deps.marks, { categories: common, withheld: new Set(withheld), base }), hello.now, base)
+    const frozen = cleanSnapshot(snapshotOf(state, deps.marks, { categories: common, admittedToday, withheld: new Set(withheld), base }), hello.now, base)
     if (frozen.refused.length > 0) deps.onRefused?.(peerId, frozen.refused)
     const local = frozen.snapshot
     const parts = partsOf(local, withheld)
@@ -255,7 +297,9 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     )
     const form = parseSnapshot(JSON.parse(canonicalJson(received.snapshot)))
     if ('problem' in form) return fail('bad-message', `the snapshot is not well formed: ${form.problem}`)
-    const cleaned = cleanSnapshot(form.snapshot, deps.now(), base)
+    const exchanged = onlyExchanged(form.snapshot, common)
+    if (exchanged.refused.length > 0) deps.onRefused?.(peerId, exchanged.refused)
+    const cleaned = cleanSnapshot(exchanged.snapshot, deps.now(), base)
     if (cleaned.refused.length > 0) deps.onRefused?.(peerId, cleaned.refused)
 
     // merge, compare
@@ -272,7 +316,12 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     // An engine of search of one's own stays on this device (§10.3): it is not sent, and the engine the other device has does not replace it. The engine is whatever the
     // state holds now, not what it held at the freeze: the person may have typed one meanwhile.
     if (Object.hasOwn(patch.settings, 'searchUrlTemplate') && !isKnownSearchTemplate((deps.host.state().settings as unknown as Record<string, unknown>)['searchUrlTemplate'])) delete patch.settings['searchUrlTemplate']
-    if (!patchIsEmpty(patch)) deps.host.apply(patch)
+    if (!patchIsEmpty(patch)) {
+      const before = deps.host.state()
+      deps.host.apply(patch)
+      const closed = shownTabsClosed(before, deps.host.state(), patch)
+      if (closed.length > 0) deps.onShownTabsClosed?.(peerId, closed)
+    }
     deps.marks.adopt(merged.snapshot, follows, (kind) => kindIsExchanged(kind, common))
     try {
       deps.bases.save(peerId, baseOf(merged.snapshot), deps.now())

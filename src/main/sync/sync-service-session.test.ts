@@ -1,6 +1,7 @@
 // The service with the real exchange (docs/synchronisation.md §8): a paired iPhone, written in the test with the same session function, connects over real TLS to the door
 // the service opened, and the two end up with the same spaces. What the service adds to the session is what is asserted here: the marks follow the state while the switch is on
 // and only then, one session at a time, the device that says `unpair` is forgotten, the open tabs are kept in memory only, and what the last session was is told.
+import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -8,6 +9,7 @@ import { reduce } from '@shared/sidebar'
 import type { SidebarState } from '@shared/model'
 import type { SyncPatch } from '@shared/sidebar-sync'
 import { tempDir } from '../temp-dir'
+import { handleSyncResume } from '../shell/sync-ipc'
 import { Channel } from './channel'
 import { IdentityStore } from './identity'
 import { SafeClock } from './safe-clock'
@@ -28,7 +30,7 @@ interface Rig {
   service: SyncService
   dir: string
   store: SyncStore
-  mac: { state: SidebarState; listeners: Array<() => void>; applied: SyncPatch[] }
+  mac: { state: SidebarState; listeners: Array<() => void>; applied: SyncPatch[]; shownClosed: Array<{ id: string; spaceId: string; onScreen: boolean }[]> }
   phone: Device
   phoneTls: ReturnType<typeof testIdentity>
   time: { t: number }
@@ -40,7 +42,7 @@ function rig(macSeed: Parameters<typeof stateOf>[0], phoneSeed: Parameters<typeo
   const dir = tempDir('lucium-sync-exchange-')
   const time = { t: 0 }
   const locked = { v: false }
-  const mac: Rig['mac'] = { state: stateOf(macSeed), listeners: [], applied: [] }
+  const mac: Rig['mac'] = { state: stateOf(macSeed), listeners: [], applied: [], shownClosed: [] }
   const store = new SyncStore(join(dir, 'sync.json'))
   const ports: SessionPorts = {
     host: {
@@ -57,6 +59,7 @@ function rig(macSeed: Parameters<typeof stateOf>[0], phoneSeed: Parameters<typeo
     basesDir: dir,
     appVersion: '1.2.0',
     stateVersion: 1,
+    onShownTabsClosed: (_peer, tabs) => void mac.shownClosed.push(tabs),
     openTabs: () => [{ id: 'open-1', spaceId: 'sp-main', url: 'https://reading.example/', title: 'Reading', lastActiveAt: 7 }]
   }
   const service = new SyncService({
@@ -94,7 +97,6 @@ describe('the service with the exchange of the data', () => {
   it('runs a session with a paired iPhone through the real door: the two devices end with the same spaces, and the Mac says so', async () => {
     const r = rig({ spaces: [{ id: 'sp-work', name: 'Travail' }], tabs: [{ id: 'tab-a', spaceId: 'sp-work', anchorUrl: 'https://a.example/' }] }, { spaces: [{ id: 'sp-phone', name: 'Téléphone' }] })
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     r.phone.edit((s) => s)
     const result = await phoneSession(r, macDeviceId(r))
     expect(result).toMatchObject({ ok: true })
@@ -111,7 +113,6 @@ describe('the service with the exchange of the data', () => {
   it('writes the marks and the base next to the state, and nothing of them in the state', async () => {
     const r = rig({ spaces: [{ id: 'sp-work', name: 'Secret title' }] }, {})
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     r.phone.edit((s) => s)
     await phoneSession(r, macDeviceId(r))
     await sleep(30)
@@ -120,20 +121,41 @@ describe('the service with the exchange of the data', () => {
     expect(readFileSync(join(r.dir, 'sync-marks.json'), 'utf8')).not.toContain('Secret title')
   })
 
-  it('keeps the open tabs of the iPhone in memory only, once the category is ticked on both sides, and keeps them after the window closes', async () => {
+  it('shares the Today tabs once the category is ticked on both sides, and tells the interface when the iPhone closed the tab the Mac was showing (§27.5, [Q11])', async () => {
+    const old = 1_790_000_000_000 - 120_000
+    const r = rig({ tabs: [{ id: 't-a', spaceId: 'sp-main', pinned: false, createdAt: old, lastActiveAt: old }, { id: 't-b', spaceId: 'sp-main', pinned: false, createdAt: old, lastActiveAt: old }] }, {})
+    r.store.setCategory('todayTabs', true)
+    r.phone.categories.add('todayTabs')
+    await r.service.setEnabled(true)
+    r.phone.edit((s) => s)
+    await phoneSession(r, macDeviceId(r))
+    await sleep(30)
+    expect(r.phone.state.tabs.filter((t) => !t.pinned).map((t) => t.id)).toEqual(['t-a', 't-b'])
+    // The Mac shows t-a; the person closes it on the iPhone.
+    r.mac.state = reduce(r.mac.state, { type: 'tab/select', id: 't-a' }, { now: old, newId: () => 'made' })
+    r.phone.edit((s) => reduce(s, { type: 'tab/archive', id: 't-a' }, { now: r.phone.clock, newId: () => 'made' }))
+    await phoneSession(r, macDeviceId(r))
+    await sleep(30)
+    expect(r.mac.state.tabs.map((t) => t.id)).toEqual(['t-b'])
+    expect(r.mac.state.archive[0]).toMatchObject({ id: 't-a', source: 'sync' })
+    expect(r.mac.shownClosed).toEqual([[{ id: 't-a', spaceId: 'sp-main', onScreen: true }]])
+  })
+
+  it('keeps the open tabs of the iPhone in memory only, once the category is ticked on both sides, and keeps them after the session, for as long as the Mac listens', async () => {
     const r = rig({}, {})
     r.store.setCategory('openTabs', true)
     r.phone.categories.add('openTabs')
     r.phone.openTabs = [{ id: 'p1', spaceId: 'sp-main', url: 'https://phone.example/', title: 'Phone page', lastActiveAt: 5 }]
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     r.phone.edit((s) => s)
     await phoneSession(r, macDeviceId(r))
     await sleep(30)
     expect(r.service.openTabsFrom(PHONE_ID)).toEqual(r.phone.openTabs)
     expect(r.phone.received[0]?.items).toEqual([{ id: 'open-1', spaceId: 'sp-main', url: 'https://reading.example/', title: 'Reading', lastActiveAt: 7 }])
     expect(r.mac.state.tabs).toEqual([])
-    await r.service.closeWindow()
+    // The listening has no deadline: hours later the door is the same one, and the list is still what the iPhone announced.
+    r.time.t += 6 * 3_600_000
+    expect(r.service.status().listening).toBe(true)
     expect(r.service.openTabsFrom(PHONE_ID)).toEqual(r.phone.openTabs)
   })
 
@@ -145,8 +167,7 @@ describe('the service with the exchange of the data', () => {
       r.phone.categories.add('openTabs')
       r.phone.openTabs = [{ id: 'p1', spaceId: 'sp-main', url: 'https://phone.example/', title: 'Phone page', lastActiveAt: 5 }]
       await r.service.setEnabled(true)
-      await r.service.openWindow()
-      r.phone.edit((s) => s)
+        r.phone.edit((s) => s)
       await phoneSession(r, macDeviceId(r))
       await sleep(30)
       return r
@@ -157,7 +178,44 @@ describe('the service with the exchange of the data', () => {
       const source = r.service.resumeSource()
       expect(source).toMatchObject({ paired: true, categoryOnHere: true, listAnnounced: true, sessionHappened: true })
       expect(source.announcedAt).toBe(1_790_000_000_000 + r.time.t)
-      expect(source.rows).toEqual([{ id: `${PHONE_ID}:p1`, url: 'https://phone.example/', title: 'Phone page', host: 'phone.example', spaceId: 'sp-main', lastActiveAt: 5 }])
+      expect(source.rows).toEqual([{ id: `${PHONE_ID}:p1:${createHash('sha256').update('https://phone.example/').digest('hex').slice(0, 12)}`, url: 'https://phone.example/', title: 'Phone page', host: 'phone.example', spaceId: 'sp-main', lastActiveAt: 5 }])
+    })
+
+    /** The bar's way of opening a line: what `handleSyncResume` does with the service, and what it dispatched. */
+    function click(r: Awaited<ReturnType<typeof withList>>, id: string): unknown[] {
+      const dispatched: unknown[] = []
+      handleSyncResume(r.service, { state: () => ({ spaces: [{ id: 'sp-main' }], activeSpaceId: 'sp-main' }) as never, isSpaceLocked: () => false, dispatch: (action) => void dispatched.push(action) }, { kind: 'open', id })
+      return dispatched
+    }
+
+    it('opens the page of the line that was clicked when an iPhone gives two lines the same tab identifier (review, second pass)', async () => {
+      const r = rig({}, {})
+      r.store.setCategory('openTabs', true)
+      r.phone.categories.add('openTabs')
+      r.phone.openTabs = [
+        { id: 'x', spaceId: 'sp-main', url: 'https://evil.example/', title: 'Bank', lastActiveAt: 9 },
+        { id: 'x', spaceId: 'sp-main', url: 'https://good.example/', title: 'Bank', lastActiveAt: 5 }
+      ]
+      await r.service.setEnabled(true)
+        r.phone.edit((s) => s)
+      await phoneSession(r, macDeviceId(r))
+      await sleep(30)
+      const lines = handleSyncResume(r.service, { state: () => ({ spaces: [], activeSpaceId: 'sp-main' }) as never, isSpaceLocked: () => false, dispatch: () => undefined }, { kind: 'list' })
+      const shown = lines.ok ? lines.view.lines : []
+      expect(shown.map((line) => line.host).sort()).toEqual(['evil.example', 'good.example'])
+      for (const line of shown) expect(click(r, line.id)).toEqual([{ type: 'tab/open', url: `https://${line.host}/`, spaceId: 'sp-main' }])
+    })
+
+    it('opens nothing for a line whose page was replaced by another session: the line the person saw is not the one that opens (review, second pass)', async () => {
+      const r = await withList()
+      const before = r.service.resumeSource().rows[0]!
+      expect(click(r, before.id)).toHaveLength(1)
+      r.phone.openTabs = [{ id: 'p1', spaceId: 'sp-main', url: 'https://evil.example/phish', title: 'Phone page', lastActiveAt: 6 }]
+      r.phone.edit((s) => s)
+      await phoneSession(r, macDeviceId(r))
+      await sleep(30)
+      expect(r.service.resumeSource().rows.map((row) => row.url)).toEqual(['https://evil.example/phish'])
+      expect(click(r, before.id)).toEqual([])
     })
 
     it('says nothing before any session, and tells « the iPhone sent nothing » only after one without a list', async () => {
@@ -165,8 +223,7 @@ describe('the service with the exchange of the data', () => {
       r.store.setCategory('openTabs', true)
       await r.service.setEnabled(true)
       expect(r.service.resumeSource()).toMatchObject({ paired: true, announcedAt: null, sessionHappened: false, rows: [] })
-      await r.service.openWindow()
-      r.phone.edit((s) => s)
+        r.phone.edit((s) => s)
       await phoneSession(r, macDeviceId(r))
       await sleep(30)
       expect(r.service.resumeSource()).toMatchObject({ announcedAt: null, listAnnounced: false, sessionHappened: true, rows: [] })
@@ -217,14 +274,13 @@ describe('the service with the exchange of the data', () => {
       expect(r.service.resumeSource().paired).toBe(false)
     })
 
-    it('keeps the list, with its age, after the window closes (and still after it closes for another reason than the person)', async () => {
+    it('keeps the list, with its age, as long as the Mac listens: the session ending does not close anything', async () => {
       const r = await withList()
       const before = r.service.resumeSource()
       expect(before.announcedAt).not.toBeNull()
-      await r.service.closeWindow()
+      r.time.t += 3_600_000
       expect(r.service.resumeSource()).toEqual(before)
-      await r.service.closeWindow('timeout')
-      expect(r.service.resumeSource().rows).toHaveLength(1)
+      expect(r.service.status().listening).toBe(true)
     })
 
     it('forgets the list when Lucium quits', async () => {
@@ -237,7 +293,6 @@ describe('the service with the exchange of the data', () => {
   it('forgets the iPhone, and its base, when it says it forgets the Mac', async () => {
     const r = rig({ spaces: [{ id: 'sp-work' }] }, {})
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     r.phone.edit((s) => s)
     await phoneSession(r, macDeviceId(r))
     await sleep(30)
@@ -256,7 +311,6 @@ describe('the service with the exchange of the data', () => {
   it('removes the base of a device when it is forgotten from the page', async () => {
     const r = rig({ spaces: [{ id: 'sp-work' }] }, {})
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     r.phone.edit((s) => s)
     await phoneSession(r, macDeviceId(r))
     await sleep(30)
@@ -267,7 +321,6 @@ describe('the service with the exchange of the data', () => {
   it('tells the iPhone `busy` for a second session at the same time', async () => {
     const r = rig({ spaces: [{ id: 'sp-work' }] }, {})
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     const first = await connectTls(r.port(), r.phoneTls)
     const firstChannel = new Channel(first.socket, { phase: 'session', role: 'ios' })
     await firstChannel.receive()
@@ -283,7 +336,6 @@ describe('the service with the exchange of the data', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const r = rig({ spaces: [{ id: 'sp-work' }] }, {})
     await r.service.setEnabled(true)
-    await r.service.openWindow()
     r.phone.edit((s) => s)
     r.phone.stateVersion = 2
     const result = await phoneSession(r, macDeviceId(r))

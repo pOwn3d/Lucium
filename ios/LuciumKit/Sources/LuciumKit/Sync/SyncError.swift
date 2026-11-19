@@ -46,11 +46,11 @@ public struct SyncFailure: Error, Equatable, Sendable {
 
 /// Where the connection to the Mac stopped before any message could say why. Not a code of the protocol: there was nobody to send it.
 public enum SyncReachFailure: Equatable, Sendable {
-    /// No address of the Mac answered: it is off, away from this network, or its synchronisation window is closed (§8.1).
+    /// No address of the Mac answered: it is off, away from this network, or not listening (§8.1).
     case unreachable
     /// The person refused Lucium the local network in the settings of iOS: a connection to a local address cannot be made.
     case localNetworkDenied
-    /// The Mac is on this network and refused the connection: its synchronisation window is closed, or it is locked (§8.1). Not an error.
+    /// The Mac is on this network and refused the connection: it does not listen (Lucium closed or locked there, §8.1). Not an error.
     case refused
     /// An address answered with a certificate that is not the one pinned.
     case fingerprintMismatch

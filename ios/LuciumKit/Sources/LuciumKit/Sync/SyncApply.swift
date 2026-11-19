@@ -25,14 +25,17 @@ public enum SyncApply {
         /// What the patch asked and was not written, and why (for the log and the tests): a value that does not pass `clean`, an entity that cannot be made.
         public var rejected: [String] = []
         public var changed: Bool
+        /// The state the patch would make is more than this version may hold (`maxStateBytes`): nothing was written, and a session that finds it ends instead of adopting the merge.
+        public var tooLarge = false
 
-        public init(state: BrowserState, createdSpaceIDs: [String] = [], removedSpaceIDs: [String] = [], removedTabIDs: [String] = [], rejected: [String] = [], changed: Bool = false) {
+        public init(state: BrowserState, createdSpaceIDs: [String] = [], removedSpaceIDs: [String] = [], removedTabIDs: [String] = [], rejected: [String] = [], changed: Bool = false, tooLarge: Bool = false) {
             self.state = state
             self.createdSpaceIDs = createdSpaceIDs
             self.removedSpaceIDs = removedSpaceIDs
             self.removedTabIDs = removedTabIDs
             self.rejected = rejected
             self.changed = changed
+            self.tooLarge = tooLarge
         }
     }
 
@@ -172,8 +175,18 @@ public enum SyncApply {
         names.allSatisfy { SyncCanonical.same(fields[$0], expect[$0]) }
     }
 
-    private static func upsert<T>(_ list: inout [Slot<T>], kind: SyncFieldClasses.Kind, change: SyncPatch.Upsert, now: Double, rejected: inout [String]) {
-        if let at = list.firstIndex(where: { SyncCanonical.identical($0.id, change.id) }) {
+    /// Where each identifier sits in a list (the first one met, as `firstIndex` found it): a patch of forty thousand new entities walked the list for each of them. The key is
+    /// the bytes of the identifier, as `SyncCanonical.identical` compares them (a `String` key would equate two canonically equivalent texts).
+    private typealias Positions = [[UInt8]: Int]
+
+    private static func positions<T>(of list: [Slot<T>]) -> Positions {
+        var found = Positions(minimumCapacity: list.count)
+        for (at, slot) in list.enumerated() { let key = Array(slot.id.utf8); if found[key] == nil { found[key] = at } }
+        return found
+    }
+
+    private static func upsert<T>(_ list: inout [Slot<T>], _ places: inout Positions, kind: SyncFieldClasses.Kind, change: SyncPatch.Upsert, now: Double, rejected: inout [String]) {
+        if let at = places[Array(change.id.utf8)] {
             var fields = list[at].fields
             var touched = false
             for (name, value) in change.fields.sorted(by: { SyncCanonical.compare($0.key, $1.key) < 0 }) where name != "id" && unchanged(fields, expect: change.expect, names: [name]) {
@@ -204,22 +217,44 @@ public enum SyncApply {
             rejected.append("\(kind.rawValue) \(change.id): not made, it lacks a name or an address")
             return
         }
+        places[Array(change.id.utf8)] = list.count
         list.append(Slot(id: change.id, fields: fields, original: nil, changed: true))
     }
 
-    private static func remove<T>(_ list: inout [Slot<T>], _ removal: SyncPatch.Removal) {
-        guard let at = list.firstIndex(where: { SyncCanonical.identical($0.id, removal.id) }), unchanged(list[at].fields, expect: removal.expect, names: removal.expect.keys) else { return }
-        list.remove(at: at)
+    /// Marks an entity removed when it is still as it was frozen: it is dropped from the list once, after all the removals (`dropping`), not shifted out of it one by one.
+    private static func remove<T>(_ list: [Slot<T>], _ places: inout Positions, dead: inout Set<Int>, _ removal: SyncPatch.Removal) {
+        let key = Array(removal.id.utf8)
+        guard let at = places[key], unchanged(list[at].fields, expect: removal.expect, names: removal.expect.keys) else { return }
+        dead.insert(at)
+        places[key] = nil
+    }
+
+    private static func dropping<T>(_ list: [Slot<T>], dead: Set<Int>) -> [Slot<T>] {
+        dead.isEmpty ? list : list.enumerated().filter { !dead.contains($0.offset) }.map(\.element)
     }
 
     // MARK: The order
 
     private static func dash(_ value: JSONValue?) -> String { if case .string(let text)? = value { return text }; return "-" }
 
+    /// Where the members of each list of a collection sit in it, in list order, computed once, the first time a patch orders a list of the collection: a patch that orders twenty
+    /// thousand lists walked the whole collection for each of them. A list is named by its key; an entity that is a member of none (an identifier with a colon cannot be told
+    /// from the key) is in no group, as the walk that this replaces found.
+    private struct Groups {
+        var folders: [String: [Int]]?
+        var tabs: [String: [Int]]?
+        var favorites: [String: [Int]]?
+    }
+
+    private static func grouped<T>(_ list: [Slot<T>], key: ([String: JSONValue]) -> String?) -> [String: [Int]] {
+        var found: [String: [Int]] = [:]
+        for (at, slot) in list.enumerated() { if let name = key(slot.fields) { found[name, default: []].append(at) } }
+        return found
+    }
+
     /// The members of one list put in `ids` order, in the places the members held; a member that `ids` does not name goes after those it does, in its own order.
-    private static func reordered<T>(_ list: [Slot<T>], member: ([String: JSONValue]) -> Bool, ids: [String]) -> (list: [Slot<T>], moved: Bool) {
-        let positions = list.indices.filter { member(list[$0].fields) }
-        guard positions.count >= 2 else { return (list, false) }
+    private static func reordered<T>(_ list: [Slot<T>], positions: [Int], ids: [String]) -> [Slot<T>] {
+        guard positions.count >= 2 else { return list }
         var rank: [String: Int] = [:]
         for (index, id) in ids.enumerated() where rank[id] == nil { rank[id] = index }
         let sorted = positions.sorted { a, b in
@@ -227,35 +262,44 @@ public enum SyncApply {
             return x != y ? x < y : a < b
         }
         var out = list
-        var moved = false
         for (place, source) in zip(positions, sorted) where place != source {
             out[place] = list[source]
             out[place].changed = true
-            moved = true
         }
-        return (out, moved)
+        return out
     }
 
-    private static func applyOrder(_ key: String, ids: [String], to lists: inout Lists) {
+    private static func applyOrder(_ key: String, ids: [String], to lists: inout Lists, groups: inout Groups) {
         let parts = key.split(separator: ":", omittingEmptySubsequences: false).map(String.init)
-        var rest = Array(parts.dropFirst())
-        let last = rest.popLast()
-        let middle = rest.joined(separator: ":")
         switch parts[0] {
         case "spaces" where parts.count == 1:
-            lists.spaces = reordered(lists.spaces, member: { _ in true }, ids: ids).list
-        case "folders" where last != nil:
-            lists.folders = reordered(lists.folders, member: { fields in dash(fields["spaceId"]) == middle && dash(fields["parentId"]) == last }, ids: ids).list
-        case "tabs" where last != nil:
-            lists.tabs = reordered(lists.tabs, member: { fields in
-                if case .bool(true)? = fields["pinned"], fields["private"] != .bool(true) { return dash(fields["spaceId"]) == middle && dash(fields["folderId"]) == last }
-                return false
-            }, ids: ids).list
-        case "favorites" where rest.isEmpty && last != nil:
-            lists.favorites = reordered(lists.favorites, member: { fields in
-                if case .string(let profile)? = fields["profileId"] { return profile == last }
-                return last == Library.defaultProfile
-            }, ids: ids).list
+            lists.spaces = reordered(lists.spaces, positions: Array(lists.spaces.indices), ids: ids)
+        case "folders" where parts.count >= 2:
+            if groups.folders == nil {
+                groups.folders = grouped(lists.folders) { fields in
+                    let parent = dash(fields["parentId"])
+                    return parent.contains(":") ? nil : "folders:\(dash(fields["spaceId"])):\(parent)"
+                }
+            }
+            lists.folders = reordered(lists.folders, positions: groups.folders?[key] ?? [], ids: ids)
+        case "tabs" where parts.count >= 2:
+            if groups.tabs == nil {
+                groups.tabs = grouped(lists.tabs) { fields in
+                    guard case .bool(true)? = fields["pinned"], fields["private"] != .bool(true) else { return nil }
+                    let folder = dash(fields["folderId"])
+                    return folder.contains(":") ? nil : "tabs:\(dash(fields["spaceId"])):\(folder)"
+                }
+            }
+            lists.tabs = reordered(lists.tabs, positions: groups.tabs?[key] ?? [], ids: ids)
+        case "favorites" where parts.count == 2:
+            if groups.favorites == nil {
+                groups.favorites = grouped(lists.favorites) { fields in
+                    let profile: String
+                    if case .string(let name)? = fields["profileId"] { profile = name } else { profile = Library.defaultProfile }
+                    return profile.contains(":") ? nil : "favorites:\(profile)"
+                }
+            }
+            lists.favorites = reordered(lists.favorites, positions: groups.favorites?[key] ?? [], ids: ids)
         default:
             break
         }
@@ -269,29 +313,37 @@ public enum SyncApply {
         var lists = Lists(spaces: slots(state.spaces, SyncStateView.entry(of:)), folders: slots(state.folders) { SyncStateView.entry(ofJSON: $0.json, id: $0.id) },
                           tabs: slots(state.tabs, SyncStateView.entry(of:)), favorites: slots(state.favorites, SyncStateView.entry(of:)),
                           archive: slots(state.archive) { SyncStateView.entry(ofJSON: $0.json, id: $0.id) })
+        var places = (spaces: positions(of: lists.spaces), folders: positions(of: lists.folders), tabs: positions(of: lists.tabs), favorites: positions(of: lists.favorites), archive: positions(of: lists.archive))
         for change in patch.upserts {
             switch change.kind {
-            case .space: upsert(&lists.spaces, kind: .space, change: change, now: now, rejected: &rejected)
-            case .folder: upsert(&lists.folders, kind: .folder, change: change, now: now, rejected: &rejected)
-            case .tab: upsert(&lists.tabs, kind: .tab, change: change, now: now, rejected: &rejected)
-            case .favorite: upsert(&lists.favorites, kind: .favorite, change: change, now: now, rejected: &rejected)
-            case .archived: upsert(&lists.archive, kind: .archived, change: change, now: now, rejected: &rejected)
+            case .space: upsert(&lists.spaces, &places.spaces, kind: .space, change: change, now: now, rejected: &rejected)
+            case .folder: upsert(&lists.folders, &places.folders, kind: .folder, change: change, now: now, rejected: &rejected)
+            case .tab: upsert(&lists.tabs, &places.tabs, kind: .tab, change: change, now: now, rejected: &rejected)
+            case .favorite: upsert(&lists.favorites, &places.favorites, kind: .favorite, change: change, now: now, rejected: &rejected)
+            case .archived: upsert(&lists.archive, &places.archive, kind: .archived, change: change, now: now, rejected: &rejected)
             }
         }
         let spacesBefore = Set(lists.spaces.map(\.id))
+        var dead = (spaces: Set<Int>(), folders: Set<Int>(), tabs: Set<Int>(), favorites: Set<Int>(), archive: Set<Int>())
         for removal in patch.removals {
             switch removal.kind {
             case .space:
                 // A state is never left with no space: the last one stays, whatever the merge says.
-                if lists.spaces.count > 1 { remove(&lists.spaces, removal) }
-            case .folder: remove(&lists.folders, removal)
-            case .tab: remove(&lists.tabs, removal)
-            case .favorite: remove(&lists.favorites, removal)
-            case .archived: remove(&lists.archive, removal)
+                if lists.spaces.count - dead.spaces.count > 1 { remove(lists.spaces, &places.spaces, dead: &dead.spaces, removal) }
+            case .folder: remove(lists.folders, &places.folders, dead: &dead.folders, removal)
+            case .tab: remove(lists.tabs, &places.tabs, dead: &dead.tabs, removal)
+            case .favorite: remove(lists.favorites, &places.favorites, dead: &dead.favorites, removal)
+            case .archived: remove(lists.archive, &places.archive, dead: &dead.archive, removal)
             }
         }
+        lists.spaces = dropping(lists.spaces, dead: dead.spaces)
+        lists.folders = dropping(lists.folders, dead: dead.folders)
+        lists.tabs = dropping(lists.tabs, dead: dead.tabs)
+        lists.favorites = dropping(lists.favorites, dead: dead.favorites)
+        lists.archive = dropping(lists.archive, dead: dead.archive)
         keepOpenTabsOfRemovedSpaces(&lists, removed: spacesBefore.subtracting(lists.spaces.map(\.id)), active: state.activeSpaceId, now: now)
-        for key in patch.order.keys.sorted(by: { SyncCanonical.compare($0, $1) < 0 }) { applyOrder(key, ids: patch.order[key] ?? [], to: &lists) }
+        var groups = Groups()
+        for key in patch.order.keys.sorted(by: { SyncCanonical.compare($0, $1) < 0 }) { applyOrder(key, ids: patch.order[key] ?? [], to: &lists, groups: &groups) }
         // A profile lists a page once among its favourites (the same rule as `favorite/add`): two devices that each added the same page under another id keep the first.
         var seen = Set<String>()
         lists.favorites = lists.favorites.filter { slot in
@@ -369,24 +421,41 @@ public enum SyncApply {
         for id in spaceIDs where next.activeTabBySpace[id] == nil { next.activeTabBySpace[id] = .some(nil) }
         for id in next.activeTabBySpace.keys.filter({ !spaceIDs.contains($0) }) { next.activeTabBySpace[id] = nil }
         next = next.consistent() ?? state
-        let removedTabs = state.tabs.map(\.id).filter { id in !next.tabs.contains { $0.id == id } }
-        return Outcome(state: next, createdSpaceIDs: spaces.map(\.id).filter { id in !state.spaces.contains { $0.id == id } },
+        let tabsNow = Set(next.tabs.map(\.id)), spacesBefore = Set(state.spaces.map(\.id))
+        let removedTabs = state.tabs.map(\.id).filter { !tabsNow.contains($0) }
+        return Outcome(state: next, createdSpaceIDs: spaces.map(\.id).filter { !spacesBefore.contains($0) },
                        removedSpaceIDs: state.spaces.map(\.id).filter { !spaceIDs.contains($0) }, removedTabIDs: removedTabs, rejected: rejected, changed: next != state)
     }
 
-    /// The `parentId` of a folder that is on a loop is cut (the merge cuts the loops of what it gives; this one is for what local folders could add).
+    /// The `parentId` of a folder that is on a loop is cut (the merge cuts the loops of what it gives; this one is for what local folders could add). Each folder walks up its
+    /// parents until it ends or meets itself; a chain that ended is remembered, so that the next folder of the chain stops at it: a chain of two thousand folders cost eight
+    /// billion steps (a walk of the list at each step of each walk).
     private static func breakLoops(_ folders: inout [Folder]) {
+        var parentOf: [String: String?] = [:]
+        var firstAt: [String: Int] = [:]
+        for (at, folder) in folders.enumerated() where firstAt[folder.id] == nil {
+            firstAt[folder.id] = at
+            parentOf[folder.id] = .some(folder.parentId)
+        }
+        var ends = Set<String>()
         for start in folders.indices {
             var seen: Set<String> = [folders[start].id]
+            var walked: [String] = [folders[start].id]
             var at = folders[start].parentId
+            var onALoop = false
             while let current = at {
+                if ends.contains(current) { break }
                 if seen.contains(current) {
                     folders[start].parentId = nil
+                    if firstAt[folders[start].id] == start { parentOf[folders[start].id] = .some(nil) }
+                    onALoop = true
                     break
                 }
                 seen.insert(current)
-                at = folders.first { $0.id == current }?.parentId
+                walked.append(current)
+                at = parentOf[current] ?? nil
             }
+            if !onALoop { ends.formUnion(walked) }
         }
     }
 

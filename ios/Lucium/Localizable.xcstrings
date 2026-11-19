@@ -5118,13 +5118,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lucium is locked on the Mac. Unlock it, then open synchronization."
+            "value": "Lucium is locked on the Mac. Unlock it: synchronization resumes by itself."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lucium est verrouillé sur le Mac. Déverrouillez-le, puis ouvrez la synchronisation."
+            "value": "Lucium est verrouillé sur le Mac. Déverrouillez-le : la synchronisation reprend toute seule."
           }
         }
       }
@@ -5321,18 +5321,290 @@
         }
       }
     },
-    "sync.limits": {
+    "sync.interval.five-minutes": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Both devices must be on, on the same network, with Lucium open on the iPhone and the synchronization window open on the Mac. Passwords, locks, cookies and history are never sent."
+            "value": "Every 5 minutes"
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Les deux appareils doivent être allumés, sur le même réseau, Lucium ouvert sur l’iPhone et la fenêtre de synchronisation ouverte sur le Mac. Les mots de passe, les verrous, les cookies et l’historique ne sont jamais envoyés."
+            "value": "Toutes les 5 minutes"
+          }
+        }
+      }
+    },
+    "sync.interval.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium synchronizes by itself, in both directions, while it is open on the screen. In the background iOS suspends it, so nothing is exchanged until you come back. If the Mac does not answer, Lucium waits longer between attempts."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium se synchronise tout seul, dans les deux sens, tant qu’il est ouvert à l’écran. En arrière-plan, iOS le suspend : rien n’est échangé avant votre retour. Si le Mac ne répond pas, Lucium espace ses essais."
+          }
+        }
+      }
+    },
+    "sync.interval.half-minute": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every 30 seconds"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les 30 secondes"
+          }
+        }
+      }
+    },
+    "sync.interval.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic synchronization"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Synchronisation automatique"
+          }
+        }
+      }
+    },
+    "sync.interval.minute": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every minute"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chaque minute"
+          }
+        }
+      }
+    },
+    "sync.interval.picker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pace"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rythme"
+          }
+        }
+      }
+    },
+    "sync.interval.quarter-hour": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Every 15 minutes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Toutes les 15 minutes"
+          }
+        }
+      }
+    },
+    "sync.last.exchanged %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exchanged: %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Échangé : %@."
+          }
+        }
+      }
+    },
+    "sync.last.exchanged.none": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No category in common with the Mac: nothing was exchanged."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aucune catégorie en commun avec le Mac : rien n’a été échangé."
+          }
+        }
+      }
+    },
+    "sync.last.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last exchange"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dernier échange"
+          }
+        }
+      }
+    },
+    "sync.last.left-aside %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item from the Mac was not taken."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items from the Mac were not taken."
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld élément du Mac n’a pas été pris."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld éléments du Mac n’ont pas été pris."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sync.last.not-exchanged %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not exchanged, because it is not ticked on the Mac: %@."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pas échangé, car non coché sur le Mac : %@."
+          }
+        }
+      }
+    },
+    "sync.last.nothing-new": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing new: both devices already held the same thing."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien de nouveau : les deux appareils avaient déjà la même chose."
+          }
+        }
+      }
+    },
+    "sync.last.received %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld item received from the Mac."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld items received from the Mac."
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld élément reçu du Mac."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld éléments reçus du Mac."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "sync.limits": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Both devices must be on, on the same network, with Lucium open on both. Synchronization runs by itself while Lucium is open on the iPhone; iOS pauses it in the background. Passwords, cookies, sessions, automatic sign-ins to websites, locks and history are never sent."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les deux appareils doivent être allumés, sur le même réseau, Lucium ouvert sur les deux. La synchronisation se fait toute seule tant que Lucium est ouvert sur l’iPhone ; iOS la met en pause en arrière-plan. Les mots de passe, les cookies, les sessions, les connexions automatiques aux sites, les verrous et l’historique ne sont jamais envoyés."
           }
         }
       }
@@ -6014,13 +6286,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Waiting: open synchronization on the Mac."
+            "value": "Waiting: Lucium must be open and unlocked on the Mac."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "En attente : ouvrez la synchronisation sur le Mac."
+            "value": "En attente : Lucium doit être ouvert et déverrouillé sur le Mac."
           }
         }
       }

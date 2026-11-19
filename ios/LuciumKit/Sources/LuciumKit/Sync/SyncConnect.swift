@@ -30,7 +30,7 @@ public struct SyncConnection: Sendable {
 
 /// Why one address did not give a connection.
 public enum SyncConnectError: Error, Equatable, Sendable {
-    /// The address answered "no": the Mac is there and nobody listens (its window is closed, §6.1).
+    /// The address answered "no": the Mac is there and nobody listens (Lucium is closed or locked there, or nothing is paired there, §6.1).
     case refused
     /// Nothing answered within the time.
     case timedOut
@@ -67,7 +67,7 @@ public enum SyncReach: Sendable {
 
 /// Tries the addresses one after the other, 3 seconds each (§5). The first connection wins. When none does, the reason that says the most is reported: a
 /// local network that iOS refused, then a certificate that is not the pinned one (somebody else is at a Mac's old address), then a Mac that is there and
-/// refuses (its window is closed), then nobody. No address is tried in parallel: a Mac's window is short and a burst of connections is what a rate limit
+/// refuses (it does not listen), then nobody. No address is tried in parallel: a burst of connections is what a rate limit
 /// is made to refuse.
 public enum SyncReacher {
     public static func connect(hosts: [String], port: UInt16, pin: SyncPin, using connector: any SyncConnecting, timeout: Duration = SyncLimits.candidateTimeout) async -> SyncReach {

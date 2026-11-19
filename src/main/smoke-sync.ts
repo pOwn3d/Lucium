@@ -6,15 +6,19 @@
 //   - `safeStorage` seals and opens a key in this engine (the keychain stand-in of the throw-away profile, main/index.ts), and the identity made over it is read back;
 //   - the hand-written certificate is read by the engine's own `X509Certificate`, and a TLS 1.3 session with ALPN between two such certificates is made by the engine's TLS
 //     (BoringSSL), with the fingerprint pinned;
-//   - the door opens only when the window is opened, answers a paired device and refuses a stranger, and closes with the window (no port left open);
+//   - the door opens only while a pairing is open or an iPhone is paired, answers a paired device and refuses a stranger, and closes when the last device is forgotten (no port left open);
 //   - a pairing goes through end to end, with the question answered;
-//   - what the engine says of its host name, so that « le nom `.local` du Mac » (§5) is read from a fact: it is reported, not asserted.
+//   - what the engine says of its host name, so that « le nom `.local` du Mac » (§5) is read from a fact: it is reported, not asserted;
+//   - the shared Today tabs (§27, card 508) in the real browser: a tab that arrives through `sync/apply` is asleep (no page is made for it) and changes neither the tab nor the
+//     space on screen, and a tab closed from the other device while it is the one shown goes to the archive (source `sync`) and the neighbour is shown, awake.
 // The page of the Settings is not driven: the window it needs is the maintainer's to look at (AGENTS.md §1).
 
 import { randomBytes, X509Certificate } from 'node:crypto'
 import { hostname, networkInterfaces } from 'node:os'
 import { join } from 'node:path'
 import { connect as tlsConnect, type TLSSocket } from 'node:tls'
+import { roundActiveAt } from '@shared/sync-today'
+import type { SyncPatch } from '@shared/sidebar-sync'
 import type { SmokeContext } from './smoke'
 import { noteCheck, waiterOf } from './smoke-kit'
 import { certificatePem, fingerprintOf, makeDeviceCertificate, privateKeyOf } from './sync/certificate'
@@ -41,7 +45,39 @@ function dial(port: number, identity: { certificate: Buffer; privateKey: ReturnT
   })
 }
 
-export async function smokeSync(_ctx: SmokeContext, check: Check): Promise<void> {
+/** The Today tabs the other device made or closed, in the real browser: what the state says and what the engine did with it. */
+async function smokeSyncToday({ browser, store }: SmokeContext, check: Check): Promise<void> {
+  const tab = (id: string) => store.get().tabs.find((one) => one.id === id)
+  const spaceId = store.get().activeSpaceId
+  const apply = (patch: Partial<SyncPatch>): void => browser.dispatch({ type: 'sync/apply', patch: { upserts: [], removals: [], order: {}, settings: {}, ...patch } })
+  const shownBefore = store.get().activeTabBySpace[spaceId]
+
+  // 1. A tab that arrives is asleep, and nothing on screen changes.
+  apply({ upserts: [{ kind: 'todayTab', id: 'smoke-today-arrived', create: true, fields: { spaceId, url: 'https://example.invalid/arrived', title: 'Arrived', activeAt: roundActiveAt(Date.now() - 3_600_000) }, remove: [], expect: {} }] })
+  check('today tabs: a tab that arrives through sync/apply is in the state, as a Today tab', tab('smoke-today-arrived')?.pinned === false)
+  // Looked at for a second: a page that was going to be made for it is made within a few turns of the loop.
+  const woke = await waitFor(() => browser.sleepStateOf('smoke-today-arrived') !== 'asleep', 1000)
+  check('today tabs: a tab that arrives is asleep: no page is made for it', !woke)
+  check('today tabs: a tab that arrives changes neither the tab nor the space on screen', store.get().activeTabBySpace[spaceId] === shownBefore && store.get().activeSpaceId === spaceId)
+
+  // 2. A tab closed from the other device while it is the one shown goes to the archive, and the neighbour is shown.
+  browser.dispatch({ type: 'tab/open', url: 'https://example.invalid/shown-then-closed' })
+  const shown = store.get().activeTabBySpace[spaceId]
+  const closing = shown === null || shown === undefined ? undefined : tab(shown)
+  check('today tabs: a tab opened here is the one shown', closing !== undefined && closing.url === 'https://example.invalid/shown-then-closed')
+  if (closing === undefined) return
+  apply({ removals: [{ kind: 'todayTab', id: closing.id, expect: { spaceId: closing.spaceId, activeAt: roundActiveAt(closing.lastActiveAt), ...(closing.customTitle !== undefined ? { customTitle: closing.customTitle } : {}) } }] })
+  check('today tabs: the tab closed from the other device is gone from the tabs and is in the archive, with the source « sync » and its own id', tab(closing.id) === undefined && store.get().archive.some((entry) => entry.id === closing.id && entry.source === 'sync'))
+  const neighbour = store.get().activeTabBySpace[spaceId]
+  check('today tabs: the tab shown after the closing is another one', neighbour !== null && neighbour !== undefined && neighbour !== closing.id)
+  if (neighbour !== null && neighbour !== undefined) check('today tabs: the neighbour that is now shown is awake (its page was made because it is on screen)', await waitFor(() => browser.sleepStateOf(neighbour) !== 'asleep'))
+
+  // What the check made does not stay: the tabs it made go, with the entries it put in the archive.
+  apply({ removals: [{ kind: 'todayTab', id: 'smoke-today-arrived', expect: { spaceId, activeAt: roundActiveAt(Date.now() - 3_600_000) } }] })
+  browser.dispatch({ type: 'archive/clear' })
+}
+
+export async function smokeSync(ctx: SmokeContext, check: Check): Promise<void> {
   // 1. The sealing of the key by this engine.
   const box = electronSecretBox()
   check('safeStorage can seal a key in this engine', box.available())
@@ -76,11 +112,12 @@ export async function smokeSync(_ctx: SmokeContext, check: Check): Promise<void>
   })
   try {
     await service.setEnabled(true)
-    check('switching on opens nothing: the window is closed and the status says so', !service.status().window.open && service.status().enabled)
+    check('switching on with no iPhone paired opens nothing: the Mac is not listening and the status says so', !service.status().listening && service.status().enabled)
     // No address of the local network in the stand-in environment: the QR cannot be written, and the service says `network` instead of showing a code nobody can read.
     const refused = await service.startPairing().then(() => 'opened', (error: { problem?: string }) => error.problem ?? 'other')
     check('without an address of the local network the sheet is refused with `network`', refused === 'network')
-    await service.closeWindow()
+    await service.reconcileListening()
+    check('a pairing that could not be shown leaves no door open', !service.status().listening)
 
     const lan = new SyncService({
       store,
@@ -130,16 +167,19 @@ export async function smokeSync(_ctx: SmokeContext, check: Check): Promise<void>
     check('a device that is not paired is told not-paired', told.includes('not-paired'))
     strangerSocket.destroy()
 
-    await lan.closeWindow()
+    const [listed] = lan.status().devices
+    lan.forget(listed?.id ?? '')
+    await lan.reconcileListening()
     const closed = await dial(reading.port, phoneIdentity).then(
       (open) => (open.destroy(), false),
       () => true
     )
-    check('no port is left open once the window is closed', closed && !lan.status().window.open)
+    check('no port is left open once the last device is forgotten', closed && !lan.status().listening)
     await lan.dispose()
   } finally {
     await service.dispose()
   }
+  await smokeSyncToday(ctx, check)
 }
 
 /** `LUCIUM_SMOKE_ONLY=sync`: these checks with their own report. */

@@ -147,9 +147,9 @@ export function subpageSummary(id: SettingsSubpage, facts: SubpageFacts): string
 /** What the row of the scripts says: how many were imported. */
 export const scriptsSummary = (count: number): string => (count === 0 ? t('settings.sub-no-script') : tp('settings.sub-scripts', count))
 
-/** What the row of the synchronisation says of it: off, or how many devices are paired and whether the window is open. */
-export function syncSummary(status: { enabled: boolean; devices: number; windowOpen: boolean }): string {
+/** What the row of the synchronisation says of it: off, or how many devices are paired and whether this Mac is listening for them. */
+export function syncSummary(status: { enabled: boolean; devices: number; listening: boolean }): string {
   if (!status.enabled) return t('sync.state-off')
   const devices = status.devices === 0 ? t('sync.state-none') : tp('sync.state-devices', status.devices)
-  return status.windowOpen ? `${devices} · ${t('sync.state-open')}` : devices
+  return status.listening ? `${devices} · ${t('sync.state-listening')}` : devices
 }

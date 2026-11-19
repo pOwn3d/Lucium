@@ -60,13 +60,16 @@ public struct SyncSettings: Codable, Equatable, Sendable {
     /// Off until the person turns it on. Nothing runs, nothing is asked of the system, while it is off.
     public var enabled: Bool
     public var categories: [SyncCategory]
+    /// How often a session starts by itself while Lucium is on the screen (card 505). A value this version does not know, or none, is the default: one minute.
+    public var interval: SyncInterval
     /// This phone's identifier in the protocol: 16 random bytes in base64url, made at the first activation (§3.2). Never derived from anything on the phone.
     public var deviceId: String?
     public var mac: SyncPairedMac?
 
-    public init(enabled: Bool = false, categories: [SyncCategory] = SyncCategory.defaults, deviceId: String? = nil, mac: SyncPairedMac? = nil) {
+    public init(enabled: Bool = false, categories: [SyncCategory] = SyncCategory.defaults, interval: SyncInterval = .default, deviceId: String? = nil, mac: SyncPairedMac? = nil) {
         self.enabled = enabled
         self.categories = categories
+        self.interval = interval
         self.deviceId = deviceId
         self.mac = mac
     }
@@ -78,7 +81,7 @@ public struct SyncSettings: Codable, Equatable, Sendable {
         case badRecord
     }
 
-    private enum Keys: String, CodingKey { case version, enabled, categories, deviceId, mac }
+    private enum Keys: String, CodingKey { case version, enabled, categories, interval, deviceId, mac }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: Keys.self)
@@ -88,6 +91,9 @@ public struct SyncSettings: Codable, Equatable, Sendable {
         // A category this version does not know is left out, not an error: a newer version may have added one.
         let names = try container.decode([String].self, forKey: .categories)
         categories = Self.unique(names.compactMap(SyncCategory.init(rawValue:)))
+        // A file written before the interval existed, or by a version that offers another one, has no usable value: one minute.
+        // A value of another type (a text) is the same: the pairing is worth more than a rhythm, so the file stays readable with the default.
+        interval = (try? container.decodeIfPresent(Int.self, forKey: .interval)).flatMap { $0 }.flatMap(SyncInterval.init(rawValue:)) ?? .default
         deviceId = try container.decodeIfPresent(String.self, forKey: .deviceId)
         if let id = deviceId, !SyncDeviceInfo.isValidId(id) { throw ReadError.badRecord }
         mac = try container.decodeIfPresent(SyncPairedMac.self, forKey: .mac)
@@ -99,6 +105,7 @@ public struct SyncSettings: Codable, Equatable, Sendable {
         try container.encode(Self.version, forKey: .version)
         try container.encode(enabled, forKey: .enabled)
         try container.encode(categories.map(\.rawValue), forKey: .categories)
+        try container.encode(interval.rawValue, forKey: .interval)
         try container.encodeIfPresent(deviceId, forKey: .deviceId)
         try container.encodeIfPresent(mac, forKey: .mac)
     }
