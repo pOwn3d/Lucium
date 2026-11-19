@@ -486,7 +486,7 @@ Choix de cette règle plutôt que d'une autre : traiter les espaces comme « con
 
 Une catégorie qui **n'a pas** besoin de la structure et qui est commune ne change donc pas : `settings` seule passe comme avant.
 
-Réservées, **pas dans la v1** : `library` (signets, « À lire plus tard » ; l'iPhone ne les a pas encore, `docs/ios.md` §4.1), `sessions`. Un genre ou un champ **inconnu** d'une version plus récente traverse sans être lu (§11.6).
+Réservées, **pas dans la v1** : `library` (signets, « À lire plus tard » ; l'iPhone les a depuis la carte 675 mais **ne les synchronise pas** : mêmes formats que le Mac, listes locales, `docs/ios.md` §5.4), `sessions`. Un genre ou un champ **inconnu** d'une version plus récente traverse sans être lu (§11.6).
 
 ### 10.2 Classement des champs
 
