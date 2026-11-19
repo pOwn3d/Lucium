@@ -213,6 +213,14 @@ describe('openTabsOf (§10.4)', () => {
     }
   })
 
+  it('writes a title that holds a lone surrogate as text: a page sets its own title, and the message that held one was refused whole by the iPhone, every session (review, second pass)', () => {
+    const odd = { ...state, tabs: [{ ...state.tabs[0]!, title: 'ok \ud83d', lastActiveAt: 7 }] }
+    const [tab] = openTabsOf(odd, () => false)
+    expect(hasLoneSurrogate(tab?.title ?? '')).toBe(false)
+    expect(tab?.title).toBe('ok \uFFFD')
+    expect(parseMessage(JSON.stringify({ v: 1, n: 2, t: 'open-tabs', items: [tab] })).ok).toBe(true)
+  })
+
   it('announces at most two hundred', () => {
     const many = { ...state, tabs: Array.from({ length: 300 }, (_, n) => ({ ...state.tabs[0]!, id: `t${n}`, lastActiveAt: n })) }
     expect(openTabsOf(many, () => false)).toHaveLength(200)
