@@ -17,6 +17,8 @@ struct BrowserScreen: View {
 
     var body: some View {
         content
+            // The accent of the interface is the one of the space on screen, worked out from its hue as on the Mac (`SpaceAccent`).
+            .spaceAccent(of: model.activeSpace)
             // The device lost its passcode, so the lock was turned off: the person is told, once, wherever they are.
             .alert("lock.alert.title", isPresented: switchedOffShown) {
                 Button("state.notice.ok") { model.lock?.dismissNotice() }

@@ -36,7 +36,7 @@ struct SpacePastille: View {
             .font(.system(size: size * 0.5))
             .frame(width: size, height: size)
             .background(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing), in: Circle())
-            .overlay { if selected { Circle().strokeBorder(Color.accentColor, lineWidth: Stroke.ring).padding(-3) } }
+            .overlay { if selected { Circle().strokeBorder(.accentFill, lineWidth: Stroke.ring).padding(-3) } }
             .accessibilityHidden(true)
     }
 }

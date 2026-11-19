@@ -132,7 +132,7 @@ struct SettingsScreen: View {
 private struct ChangedMark: View {
     var body: some View {
         Circle()
-            .fill(Color.accentColor)
+            .fill(.accentFill)
             .frame(width: 8, height: 8)
             .accessibilityLabel(Text("settings.changed"))
     }
@@ -203,7 +203,7 @@ struct SearchEngineScreen: View {
             HStack(spacing: Gap.m) {
                 title.foregroundStyle(Color.primary)
                 Spacer(minLength: 8)
-                if selected { IconView(.check).foregroundStyle(Color.accentColor) }
+                if selected { IconView(.check).foregroundStyle(.accentText) }
             }
             .frame(minHeight: 44)
             .contentShape(Rectangle())

@@ -56,7 +56,7 @@ struct CommandBar: View {
             .padding(.horizontal, Gap.m)
             .frame(height: 48)
             .background(.fill.tertiary, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
-            .overlay { RoundedRectangle(cornerRadius: Radius.l, style: .continuous).strokeBorder(Color.accentColor, lineWidth: Stroke.ring) }
+            .overlay { RoundedRectangle(cornerRadius: Radius.l, style: .continuous).strokeBorder(.accentFill, lineWidth: Stroke.ring) }
             Button("command.cancel") { model.commandBarShown = false }
                 .frame(minHeight: 44)
         }
@@ -83,11 +83,11 @@ struct CommandBar: View {
                 IconView(icon, size: 15)
                 Text(title).font(.footnote)
             }
-            .foregroundStyle(on ? Color.accentColor : Color.secondary)
+            .foregroundStyle(on ? AnyShapeStyle(.accentText) : AnyShapeStyle(.secondary))
             .padding(.horizontal, Gap.m)
             .frame(height: 36)
-            .background(on ? Color.accentColor.opacity(0.14) : Color(.systemBackground), in: Capsule())
-            .overlay { Capsule().strokeBorder(on ? Color.accentColor : Color.primary.opacity(0.1), lineWidth: Stroke.hairline) }
+            .background(on ? AnyShapeStyle(.accentFill.opacity(0.14)) : AnyShapeStyle(Color(.systemBackground)), in: Capsule())
+            .overlay { Capsule().strokeBorder(on ? AnyShapeStyle(.accentFill) : AnyShapeStyle(Color.primary.opacity(0.1)), lineWidth: Stroke.hairline) }
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(on ? .isSelected : [])
@@ -153,7 +153,7 @@ struct CommandBar: View {
     private func favoriteRow(_ favorite: Favorite) -> some View {
         row(icon: AnyView(SiteTile(address: favorite.url, size: 28)), title: Text(verbatim: favorite.title),
             detail: Text(verbatim: AddressResolver.host(of: favorite.url)), selected: model.isShown(favorite),
-            trailing: AnyView(IconView(.chevron, size: 18).foregroundStyle(Color.accentColor))) { model.openFavorite(favorite) }
+            trailing: AnyView(IconView(.chevron, size: 18).foregroundStyle(.accentText))) { model.openFavorite(favorite) }
     }
 
     private func commandRow(_ item: CommandItem) -> some View {
@@ -187,7 +187,7 @@ struct CommandBar: View {
             }
             .padding(.horizontal, Gap.m)
             .frame(minHeight: 56)
-            .background(selected || chosen ? Color.accentColor.opacity(0.14) : Color.clear, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+            .background(selected || chosen ? AnyShapeStyle(.accentFill.opacity(0.14)) : AnyShapeStyle(Color.clear), in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

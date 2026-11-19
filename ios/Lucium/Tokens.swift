@@ -32,7 +32,7 @@ enum Stroke {
     static let ring: CGFloat = 2
 }
 
-/// Roles of colour. The accent is the one of the app (`AccentColor`); the status colours are the system's, which adapt to the scheme.
+/// Roles of colour. The accent is the one of the space (`SpaceAccentStyle.swift`; `AccentColor` is only the fallback); the status colours are the system's, which adapt to the scheme.
 extension Color {
     /// An error or a destructive action.
     static let danger = Color(.systemRed)
