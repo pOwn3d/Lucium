@@ -27,6 +27,8 @@ export const ICONS: Record<Candidate['kind'], ReactNode> = {
   // A bookmark: a page kept to be read later (its favicon leads the row when it has one).
   readlater: glyph('M5.500 3h9a1 1 0 0 1 1 1v13l-5.500-3.500L4.500 17V4a1 1 0 0 1 1-1Z'),
   // A phone: a tab the iPhone announced.
+  // The sentence under « Sur l'iPhone » has no icon of its own: the row shows the same phone.
+  'iphone-hint': glyph('M6.500 2.500h7a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1ZM9 15h2'),
   iphone: glyph('M6.500 2.500h7a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-13a1 1 0 0 1 1-1ZM9 15h2'),
   // A star: a bookmark of the library.
   bookmark: glyph('M10 2.800l2.100 4.300 4.700.7-3.400 3.300.8 4.700L10 13.600 5.800 15.800l.8-4.700L3.200 7.800l4.700-.7L10 2.800Z'),

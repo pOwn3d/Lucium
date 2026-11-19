@@ -783,7 +783,7 @@ Les points où le code a dû choisir, sans changer ce qui est décidé plus haut
 | **Marques du futur** (§9.3) | `cleanSnapshot` écarte, en plus des entités, les pierres tombales et les listes (avec leur marque d'ordre) dont la marque dépasse l'heure locale de plus de 7 jours ; la porte s'applique aussi à l'instantané que cet appareil envoie, avec l'heure de l'autre (`hello.now`) | les deux fusions doivent partir des mêmes entrées ; une marque de l'an 2286 tirait l'horloge des marques du Mac (`MarkBook.adopt` la retient) |
 | **Avertissement d'horloge** (§9.3) | un `error` non fatal (`clock-skew`) est noté et la séance continue ; un `error` fatal l'arrête avec son code | |
 | **Fichiers** (§3.3) | `sync.json`, `sync-identity.json`, `sync-marks.json`, `sync-base-<id>.json` (un par appareil, 30 jours), à côté de `state.json` | aucun export, aucune sauvegarde ni copie de session ne les emporte |
-| **Onglets ouverts** (§10.4) | annoncés (au plus 200, adresses web, jamais privés ni d'un espace verrouillé) seulement si la catégorie est commune ; gardés **en mémoire** par le service (`openTabsFrom`, `resumeSource`), oubliés avec la fenêtre, au verrouillage, à la décoche de la catégorie, à l'arrêt de la synchronisation et avec l'appareil | la carte 447 les montre sur l'iPhone, la carte 490 dans la barre de commandes du Mac (§25) |
+| **Onglets ouverts** (§10.4) | annoncés (au plus 200, adresses web, jamais privés ni d'un espace verrouillé) seulement si la catégorie est commune ; gardés **en mémoire** par le service (`openTabsFrom`, `resumeSource`), oubliés au verrouillage, à la fermeture de Lucium, à la décoche de la catégorie, à l'arrêt de la synchronisation et avec l'appareil (pas avec la fenêtre : §26) | la carte 447 les montre sur l'iPhone, la carte 490 dans la barre de commandes du Mac (§25) |
 
 **Ce que les tests ne montrent pas** : un échange avec le vrai code de l'iPhone (carte 445), un réseau réel, un grand état de plusieurs milliers d'entités sur un appareil, le comportement de `safeStorage` au premier usage.
 
@@ -836,12 +836,24 @@ Décision du chef de projet du 18 novembre 2026. La logique pure est `src/shared
 
 | Sujet | Ce qui est fait | Pourquoi |
 |---|---|---|
-| **Quand la section existe** | seulement si un iPhone est appairé, la synchronisation est allumée, la catégorie « Onglets ouverts » est cochée **sur le Mac** et l'iPhone a annoncé une liste non vide (donc l'a cochée aussi) ; sinon **rien** n'est dessiné, pas même une phrase | le choix le plus simple retenu ; la raison (`resumeAvailability`) est calculée, et testée, comme sur l'iPhone, si une phrase doit un jour la dire |
+| **Quand la section existe** | seulement si un iPhone est appairé, la synchronisation est allumée, la catégorie « Onglets ouverts » est cochée **sur le Mac** et l'iPhone a annoncé une liste non vide (donc l'a cochée aussi) ; sinon aucune ligne d'onglet n'est dessinée ; **une phrase** dit alors comment l'obtenir (§26) | la raison (`resumeAvailability`) est calculée et testée, comme sur l'iPhone |
 | **Les lignes** | titre, hôte, âge de la liste (« annoncé il y a 5 minutes ») ; sous le titre « Sur l'iPhone », **seulement quand un texte est tapé** (titre ou hôte), cinq au plus, après les signets | comme « Sur le Mac » côté iPhone |
 | **Ce que reçoit la page** | **ni adresse ni espace** : seulement l'identifiant, le titre, l'hôte et l'heure de la ligne ; un clic envoie l'identifiant, et le processus principal relit l'adresse et l'espace dans ce qu'il garde (`handleSyncResume`) | la page ne peut pas faire ouvrir une autre adresse ; chaque message est validé (`parseSyncResumeRequest`) |
 | **Où s'ouvre un clic** | un **nouvel onglet** (`tab/open`), dans l'espace de même identifiant s'il existe ici et n'est pas verrouillé, sinon dans l'espace à l'écran ; si celui-ci est verrouillé aussi, **nulle part**. `http` et `https` seulement, **revérifiés à l'ouverture** | §10.4 ; un verrou ne se contourne pas |
-| **Oubli** | au verrouillage de l'application, à la décoche de la catégorie, à l'arrêt de la synchronisation, à la fermeture de la fenêtre et avec l'iPhone | §10.4, §12 |
+| **Oubli** | au verrouillage de l'application, à la décoche de la catégorie, à l'arrêt de la synchronisation et avec l'iPhone ; **pas** à la fermeture de la fenêtre (§26) | §10.4, §12 |
 | **Plusieurs iPhone** | les listes sont réunies, la plus récente d'abord ; l'identifiant d'une ligne porte celui de l'appareil | deux appareils peuvent annoncer le même identifiant d'onglet |
 | **Fenêtre privée** | aucune demande, aucune ligne | la synchronisation n'est pas pour elle |
 
 **Ce que les tests ne montrent pas** : une vraie barre de commandes ouverte (aucune fenêtre n'a été ouverte pour cette carte), un vrai iPhone.
+
+## 26. Ce que la carte 491 a changé (liste gardée après la fenêtre, phrase « comment l'activer »)
+
+Décision du chef de projet du 18 novembre 2026 (« La garder en mémoire »), suite du §25.
+
+| Sujet | Ce qui est fait | Pourquoi |
+|---|---|---|
+| **Durée de la liste** | la dernière liste des onglets ouverts de l'iPhone reste **en mémoire du processus principal** après la fermeture de la fenêtre de synchronisation, avec son **âge** (« annoncé il y a 3 heures »), jusqu'au **verrouillage**, à la **fermeture de Lucium**, à la **décoche** de « Onglets ouverts », à l'arrêt de la synchronisation ou à l'**oubli de l'iPhone** ; une séance suivante la remplace | la fenêtre dure 10 minutes au plus : la liste n'aurait servi que pendant ce temps |
+| **Ce qui ne change pas** | rien sur disque, **aucun port ouvert hors fenêtre**, aucune connexion nouvelle : la liste est celle de la dernière séance | §3.1, §6.1 |
+| **La phrase** | quand la liste est absente et que le texte tapé nomme la section (« iphone »), une ligne **sans action** sous « Sur l'iPhone » dit **comment l'activer**, une phrase par raison (`resumeAvailability` : `not-paired`, `disabled-here`, `waiting`, `disabled-on-iphone`, `empty` ; clés `cmd.iphone-hint-*`, FR et EN) | rien n'est dit à qui tape autre chose, ni à qui n'a pas d'iPhone ; la raison était déjà calculée |
+
+**Ce que les tests ne montrent pas** : une vraie barre de commandes ouverte et un vrai iPhone (aucune fenêtre ouverte).
