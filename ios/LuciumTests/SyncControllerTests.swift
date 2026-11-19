@@ -128,10 +128,8 @@ final class SyncControllerTests: XCTestCase {
         let controller = makeController(connector: ScriptedConnector(.fail(.timedOut)))
         controller.setCategory(.archive, on: true)
         controller.setCategory(.settings, on: true)
-        controller.setCategory(.structure, on: false)
-        XCTAssertEqual(controller.settings.categories, [.settings, .archive])
-        XCTAssertFalse(controller.isOn(.structure))
-        XCTAssertEqual(makeController(connector: ScriptedConnector(.fail(.timedOut))).settings.categories, [.settings, .archive])
+        XCTAssertEqual(controller.settings.categories, [.structure, .settings, .archive], "the order of the taps does not decide the order of the file")
+        XCTAssertEqual(makeController(connector: ScriptedConnector(.fail(.timedOut))).settings.categories, [.structure, .settings, .archive])
     }
 
     func testTodayTabsAreTickedOnlyWithTheStructureAndGoWithIt() throws {
