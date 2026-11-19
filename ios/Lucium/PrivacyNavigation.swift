@@ -278,6 +278,14 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
         view.load(request)
     }
 
+    /// « Open over HTTP » on the screen of a failed secure connection to a device of the person's own network (`LoadFailure.httpAddress`): the person's
+    /// own load of the http address, which HTTPS first never upgrades (a local address has no certificate).
+    func openOverHttp(tab: String) {
+        guard let address = model?.loadFailures[tab]?.httpAddress, var request = request(for: address), let view = model?.webViews[tab] else { return }
+        prepare(&request, for: view)
+        view.load(request)
+    }
+
     /// A tab was closed or went to sleep: nothing of it is remembered.
     func forget(tab: String) {
         model?.loadFailures[tab] = nil

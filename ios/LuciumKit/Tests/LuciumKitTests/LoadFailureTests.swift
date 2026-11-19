@@ -44,4 +44,43 @@ final class LoadFailureTests: XCTestCase {
         XCTAssertNil(LoadFailure(kind: .other, address: "").retryAddress, "no address, nothing to retry")
         XCTAssertNil(LoadFailure(kind: .other, address: "javascript:alert(1)").retryAddress, "only http(s) is retried")
     }
+    // MARK: The local network (a home-automation UI, a NAS, a printer)
+
+    private func failure(_ kind: LoadFailure.Kind, _ address: String) -> LoadFailure { LoadFailure(kind: kind, address: address) }
+
+    func testADeviceOfTheLocalNetworkIsToldFromTheOthers() {
+        for address in ["http://192.168.1.20:8123/", "http://10.0.0.5/", "http://172.16.3.4:80/", "http://169.254.1.1/", "http://homeassistant.local:8123/",
+                        "http://nas.lan/", "http://router.home.arpa/", "http://[fe80::1]:8123/", "http://[fd12::1]/"] {
+            XCTAssertTrue(failure(.cannotConnect, address).isLocalNetwork, address)
+        }
+        for address in ["https://example.org/", "http://127.0.0.1:8123/", "http://localhost:3000/", "http://172.32.0.1/", "http://8.8.8.8/", "https://local.example.com/"] {
+            XCTAssertFalse(failure(.cannotConnect, address).isLocalNetwork, address)
+        }
+    }
+
+    func testTheSettingsAreSuggestedForAnUnreachableDeviceOfTheLocalNetworkOnly() {
+        for kind in [LoadFailure.Kind.offline, .cannotConnect, .timedOut, .hostNotFound, .connectionLost] {
+            XCTAssertTrue(failure(kind, "http://192.168.1.20:8123/").suggestsLocalNetworkSettings, "\(kind)")
+            XCTAssertFalse(failure(kind, "https://example.org/").suggestsLocalNetworkSettings, "a public site: \(kind)")
+            XCTAssertFalse(failure(kind, "http://127.0.0.1:8123/").suggestsLocalNetworkSettings, "this machine: \(kind)")
+        }
+        XCTAssertFalse(failure(.tooManyRedirects, "http://192.168.1.20/").suggestsLocalNetworkSettings, "the device answered")
+        XCTAssertFalse(failure(.secureConnection, "https://192.168.1.20/").suggestsLocalNetworkSettings, "the device answered")
+    }
+
+    func testAFailedSecureConnectionToAHomeDeviceOffersHttp() {
+        XCTAssertEqual(failure(.secureConnection, "https://homeassistant.local:8123/lovelace?x=1").httpAddress, "http://homeassistant.local:8123/lovelace?x=1")
+        XCTAssertEqual(failure(.secureConnection, "https://192.168.1.20:8123/").httpAddress, "http://192.168.1.20:8123/")
+        XCTAssertEqual(failure(.secureConnection, "https://localhost:3000/").httpAddress, "http://localhost:3000/")
+        XCTAssertEqual(failure(.secureConnection, "https://[fd12::1]:8123/").httpAddress, "http://[fd12::1]:8123/")
+    }
+
+    func testNoOtherSiteIsEverSentBackToHttpByTheScreen() {
+        XCTAssertNil(failure(.secureConnection, "https://example.org/").httpAddress, "a public site")
+        XCTAssertNil(failure(.secureConnection, "https://8.8.8.8/").httpAddress, "a public address")
+        XCTAssertNil(failure(.secureConnection, "https://local.example.com/").httpAddress, "a name that only contains local")
+        XCTAssertNil(failure(.cannotConnect, "https://192.168.1.20/").httpAddress, "only a failed TLS handshake")
+        XCTAssertNil(failure(.secureConnection, "http://192.168.1.20/").httpAddress, "already http")
+        XCTAssertNil(failure(.secureConnection, "").httpAddress)
+    }
 }

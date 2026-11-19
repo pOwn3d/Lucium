@@ -15,7 +15,9 @@ final class LoadFailureViewTests: XCTestCase {
                     XCTAssertNotEqual(bundle.localizedString(forKey: key, value: "MISSING", table: nil), "MISSING", "\(key) in \(language)")
                 }
             }
-            XCTAssertNotEqual(bundle.localizedString(forKey: "loadfailure.retry", value: "MISSING", table: nil), "MISSING")
+            for key in ["loadfailure.retry", "loadfailure.local-network.hint", "loadfailure.local-network.settings", "privacy.refused.http"] {
+                XCTAssertNotEqual(bundle.localizedString(forKey: key, value: "MISSING", table: nil), "MISSING", "\(key) in \(language)")
+            }
         }
     }
 
@@ -23,7 +25,9 @@ final class LoadFailureViewTests: XCTestCase {
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first, "the hosted tests run inside the application's scene")
         let shapes: [(String, CGSize)] = [("iphone", CGSize(width: 390, height: 844)), ("ipad", CGSize(width: 1024, height: 768))]
         let failures = [LoadFailure(kind: .offline, address: "https://www.example.org/a"), LoadFailure(kind: .hostNotFound, address: "https://exmple.org/"),
-                        LoadFailure(kind: .timedOut, address: "https://example.org/")]
+                        LoadFailure(kind: .timedOut, address: "https://example.org/"),
+                        // A device of the local network: the sentence about « Local Network » and the button of the Settings, then « Open over HTTP ».
+                        LoadFailure(kind: .cannotConnect, address: "http://192.168.1.20:8123/"), LoadFailure(kind: .secureConnection, address: "https://homeassistant.local:8123/")]
         for language in ["en", "fr"] {
             for (shape, size) in shapes {
                 for failure in failures {
@@ -38,7 +42,7 @@ final class LoadFailureViewTests: XCTestCase {
                     XCTAssertGreaterThan(image.size.width, 0)
                     if let folder = ProcessInfo.processInfo.environment["LUCIUM_SHOTS"], let png = image.pngData() {
                         try FileManager.default.createDirectory(atPath: folder, withIntermediateDirectories: true)
-                        try png.write(to: URL(fileURLWithPath: folder).appending(path: "lucium-ios-loadfailure-\(failure.kind.rawValue)-\(shape)-\(language).png"))
+                        try png.write(to: URL(fileURLWithPath: folder).appending(path: "lucium-ios-loadfailure-\(failure.kind.rawValue)\(failure.isLocalNetwork ? "-local" : "")-\(shape)-\(language).png"))
                     }
                     window.isHidden = true
                 }

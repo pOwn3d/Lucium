@@ -121,7 +121,8 @@ struct PageArea: View {
                 WebViewHost(webView: view).id(model.activeTab?.id)
                 // The load failed: the screen says why, over the web view (which keeps the page that was there, for a step back).
                 if let tab = model.activeTab?.id, let failure = model.loadFailures[tab] {
-                    LoadFailureView(failure: failure, retry: { model.navigationPolicy.retry(tab: tab) })
+                    LoadFailureView(failure: failure, retry: { model.navigationPolicy.retry(tab: tab) },
+                                    openOverHttp: { model.navigationPolicy.openOverHttp(tab: tab) })
                 }
             }
         } else {
