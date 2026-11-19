@@ -6343,6 +6343,7 @@ export const fr = {
   'sync.category-settings-hint': 'Les protections de vie privée, l’archivage automatique, le moteur de recherche et les noms des profils. Jamais les réglages de réseau ni de verrouillage.',
   'sync.category-archive': 'Onglets archivés',
   'sync.category-archive-hint': 'Les adresses et les titres de ce que vous avez archivé.',
+  'sync.category-archive-needs': 'Il faut d’abord cocher « Espaces, dossiers, favoris et onglets épinglés » : un onglet archivé est rangé dans un espace.',
   'sync.category-todaytabs': 'Onglets d’Aujourd’hui',
   'sync.category-todaytabs-hint': 'Les adresses et les titres de vos onglets d’Aujourd’hui, à peu près quand vous les avez utilisés, sont envoyés à l’autre appareil. Jamais les cookies ni les connexions.',
   'sync.category-todaytabs-needs': 'Il faut d’abord cocher « Espaces, dossiers, favoris et onglets épinglés » : un onglet est rangé dans un espace.',

@@ -29,11 +29,11 @@ const when = (ms: number): string => new Date(ms).toLocaleString(getLanguage(), 
 
 /** Getters: the texts are looked up when the page draws, in the language chosen then. */
 // `openTabs` goes with « Reprendre un onglet du Mac » (card 511): until then its row stays. A category with no text here is not drawn.
-const CATEGORY_TEXT: Partial<Record<SyncCategory, { label: () => string; hint: () => string }>> = {
-  todayTabs: { label: () => t('sync.category-todaytabs'), hint: () => t('sync.category-todaytabs-hint') },
+const CATEGORY_TEXT: Partial<Record<SyncCategory, { label: () => string; hint: () => string; needs?: () => string }>> = {
+  todayTabs: { label: () => t('sync.category-todaytabs'), hint: () => t('sync.category-todaytabs-hint'), needs: () => t('sync.category-todaytabs-needs') },
   structure: { label: () => t('sync.category-structure'), hint: () => t('sync.category-structure-hint') },
   settings: { label: () => t('sync.category-settings'), hint: () => t('sync.category-settings-hint') },
-  archive: { label: () => t('sync.category-archive'), hint: () => t('sync.category-archive-hint') },
+  archive: { label: () => t('sync.category-archive'), hint: () => t('sync.category-archive-hint'), needs: () => t('sync.category-archive-needs') },
   openTabs: { label: () => t('sync.category-opentabs'), hint: () => t('sync.category-opentabs-hint') }
 }
 
@@ -139,9 +139,9 @@ function Panel() {
             {SYNC_CATEGORIES.flatMap((category) => {
               const text = CATEGORY_TEXT[category]
               if (text === undefined) return []
-              // Without « Espaces et dossiers » the row is greyed and says why: unticking the structure unticks it (the service does it), so what the page shows is what goes.
+              // Without « Espaces et dossiers » the row (the archive, the Today tabs) is greyed and says why: unticking the structure unticks it (the service does it), so what the page shows is what goes.
               const blocked = NEEDS_STRUCTURE.includes(category) && !status.categories.structure
-              return [<Check key={category} label={text.label()} hint={blocked ? t('sync.category-todaytabs-needs') : text.hint()} checked={status.categories[category] && !blocked} disabled={blocked} onChange={(checked) => void ask({ kind: 'category', category, on: checked })} />]
+              return [<Check key={category} label={text.label()} hint={blocked && text.needs !== undefined ? text.needs() : text.hint()} checked={status.categories[category] && !blocked} disabled={blocked} onChange={(checked) => void ask({ kind: 'category', category, on: checked })} />]
             })}
           </Group>
           {lastLines(status).length > 0 && <Group title={t('sync.last-title')}>{lastLines(status)}</Group>}

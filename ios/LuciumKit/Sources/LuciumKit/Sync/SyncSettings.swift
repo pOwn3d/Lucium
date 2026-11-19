@@ -17,12 +17,14 @@ public enum SyncCategory: String, CaseIterable, Codable, Hashable, Sendable {
     /// browsing history, or what changes all the time.
     public static let defaults: [SyncCategory] = [.structure]
 
-    /// Whether this category cannot be ticked without « Spaces and folders » (the structure): a Today tab depends on its space (§27.2). The page greys the row while the structure
-    /// is unticked, and `ticked(_:category:on:)` refuses it and drops it with the structure, so that what the page shows is what goes (card 510). The Mac's `NEEDS_STRUCTURE`.
+    /// Whether this category cannot be ticked without « Spaces and folders » (the structure): what it carries hangs on a space (`spaceId`: the archive, the Today tabs; §10.1, §27.2),
+    /// and the spaces travel with the structure. The page greys the row while the structure is unticked, and `ticked(_:category:on:)` refuses it and drops it with the structure
+    /// (card 510); a session announces and takes it as common only with the structure (`announced`, `common`: card 516). The Mac's `NEEDS_STRUCTURE`. The switch has no `default`
+    /// on purpose: a category added later must say which it is.
     public var needsStructure: Bool {
         switch self {
-        case .todayTabs: true
-        case .structure, .settings, .archive, .openTabs: false
+        case .archive, .todayTabs: true
+        case .structure, .settings, .openTabs: false
         }
     }
 
@@ -40,19 +42,16 @@ public enum SyncCategory: String, CaseIterable, Codable, Hashable, Sendable {
         return allCases.filter(next.contains)
     }
 
-    /// The categories a device announces in its `hello`: the ones ticked, except `todayTabs` without `structure`. A Today tab depends on its space (§27.2) and the spaces travel with
-    /// the structure: with the structure alone left out, the merge finds no space for any tab and removes them all, the ones of the other device included. The same rule as the
-    /// Mac's `announcedCategories`.
+    /// The categories this device announces in its `hello`: the ones ticked, less those that hang on a space when the structure is not ticked (`TypeScript: announcedCategories`).
     public static func announced(_ ticked: [SyncCategory]) -> [SyncCategory] {
-        ticked.contains(.structure) ? ticked : ticked.filter { $0 != .todayTabs }
+        ticked.contains(.structure) ? ticked : ticked.filter { !$0.needsStructure }
     }
 
-    /// The categories both devices ticked (§8.2), less `todayTabs` when the structure is not among them (the Mac's `commonCategories`): a device that announced the category alone
-    /// would make both merges start from Today tabs with no space.
+    /// The categories both devices ticked, less those that hang on a space when the structure is not among them, whatever the other device announces
+    /// (`TypeScript: commonCategories`). Names this version does not know are ignored.
     public static func common(mine: [SyncCategory], theirs: [String]) -> Set<SyncCategory> {
-        var common = Set(mine).intersection(theirs.compactMap(SyncCategory.init(rawValue:)))
-        if !common.contains(.structure) { common.remove(.todayTabs) }
-        return common
+        let common = Set(mine).intersection(theirs.compactMap(SyncCategory.init(rawValue:)))
+        return common.contains(.structure) ? common : common.filter { !$0.needsStructure }
     }
 }
 

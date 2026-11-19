@@ -474,6 +474,33 @@ struct SyncExchangeTests {
         #expect(after.spaces == before.spaces, "and nothing is written at all when the two devices do not agree")
     }
 
+    // MARK: Categories that hang on a space (§10.1, card 516)
+
+    @Test func theArchiveTickedWithoutTheStructureIsNotAnnouncedAndTheArchiveOfThePhoneIsKept() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        let before = await rig.host.state
+        #expect(before.archive.isEmpty == false)
+        let (report, seen) = try await session(rig, mac: SyncTestMac(snapshot: macSnapshot(), categories: ["structure", "archive"]), categories: [.archive])
+        #expect(report?.outcome == .committed(at: now))
+        #expect(seen.hello["categories"] as? [String] == [], "the archive is announced with the structure only: the spaces its entries hang on travel with it")
+        #expect(report?.categories.isEmpty == true)
+        #expect(await rig.host.state.archive == before.archive, "nothing of the archive is removed")
+        #expect(await rig.host.state.spaces == before.spaces)
+    }
+
+    @Test func aMacThatAnnouncesTheArchiveWithoutTheStructureDoesNotEmptyTheArchiveOfThePhone() async throws {
+        let rig = try rig()
+        defer { rig.cleanup() }
+        var mac = SyncTestMac(snapshot: macSnapshot(), categories: ["archive"])
+        mac.snapshot.entities["archived"] = ["ma": macEntity(["spaceId": .string("m1"), "url": .string("https://mac-old.example/"), "title": .string("Old"), "archivedAt": .number(1)])]
+        let before = await rig.host.state
+        // The Mac does not keep to the rule: whatever the session becomes (the two merges start from other inputs and disagree), nothing of the phone is removed.
+        _ = try? await session(rig, mac: mac, categories: [.structure, .archive])
+        #expect(await rig.host.state.archive == before.archive)
+        #expect(await rig.host.state.spaces == before.spaces)
+    }
+
     @Test func whatIsLeftOutOfACategoryThatIsNotCommonIsTheKindsAndTheListsOfIt() {
         var received = macSnapshot()
         received.entities["setting"] = ["httpsUpgrade": macEntity(["value": .bool(false)])]
