@@ -6,7 +6,7 @@ import type { Candidate } from './command-bar-types'
 // ---------- groups, widths, genre filters and the preview of the highlighted line ----------
 
 /** The genres the list of the bar is cut into, with a title before each. */
-export type CandidateGroup = 'calc' | 'address' | 'tabs' | 'workviews' | 'bookmarks' | 'readlater' | 'iphone' | 'history' | 'archive' | 'commands' | 'web'
+export type CandidateGroup = 'calc' | 'address' | 'tabs' | 'workviews' | 'bookmarks' | 'readlater' | 'history' | 'archive' | 'commands' | 'web'
 
 /** The genre of a result. A typed address and a web search are two genres: Enter on an address opens it, it does not search for it. */
 export function candidateGroup(candidate: Candidate): CandidateGroup {
@@ -27,9 +27,6 @@ export function candidateGroup(candidate: Candidate): CandidateGroup {
       return 'bookmarks'
     case 'readlater':
       return 'readlater'
-    case 'iphone':
-    case 'iphone-hint':
-      return 'iphone'
     case 'history':
       return 'history'
     case 'archived':
@@ -86,8 +83,6 @@ export function groupTitle(group: CandidateGroup, query: string): string {
       return t('cmd.groupe-signets')
     case 'readlater':
       return t('cmd.groupe-lire-plus-tard')
-    case 'iphone':
-      return t('cmd.groupe-sur-iphone')
     case 'history':
       return t('cmd.groupe-historique')
     case 'archive':

@@ -24,9 +24,9 @@ import type { ErrorCode } from './error-codes'
 import { CLOCK_SKEW_WARN_MS, MAX_ENTITIES, MAX_ENTITIES_PER_PART, MAX_PARTS, NONCE_BYTES } from './limits'
 import type { BaseStore } from './bases'
 import { hashOfSnapshot } from './bases'
-import { cleanSnapshot, isKnownSearchTemplate, isWebAddress } from './inbound-filter'
+import { cleanSnapshot, isKnownSearchTemplate } from './inbound-filter'
 import { asideOf, type MarkBook } from './marks'
-import type { OpenTab, SnapshotPart, WireEntity, WireTombstone } from './messages'
+import type { SnapshotPart, WireEntity, WireTombstone } from './messages'
 import { buildPatch, patchIsEmpty } from './patch'
 import { admittedTodayTabs, unsharedTodayTabs, baseOf, follows, kindIsExchanged, onlyExchanged, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 import { randomBytes } from 'node:crypto'
@@ -55,10 +55,6 @@ export interface SessionDeps {
   /** The port this Mac listens on now (review n° 38), said in `hello` so that an iPhone paired before a fallback of the port finds the Mac again. Mac only. */
   port?: () => number
   merge?: typeof mergeSnapshots
-  /** The tabs announced to the other device, when the category `openTabs` is common. */
-  openTabs?: () => OpenTab[]
-  /** The open tabs the other device announced (kept in memory by the caller, never written). */
-  onOpenTabs?: (peerId: string, items: OpenTab[]) => void
   /** The other device said it forgets this one. */
   onUnpair?: (peerId: string) => void
   /** What was refused of what came in, for the log. */
@@ -161,12 +157,6 @@ interface Assembled {
   withheld: Set<string>
 }
 
-/**
- * The open tabs of the other device that this one keeps (§10.4): web pages only. What the other device announces is shown to the person as « Reprendre un onglet du Mac »
- * and opened by the ordinary path of opening an address, which accepts more than a web page (a local file, a script): a device must not be able to plant one there.
- */
-export const webTabs = (items: OpenTab[]): OpenTab[] => items.filter((tab) => isWebAddress(tab.url) && tab.id.length <= 128 && tab.spaceId.length <= 128)
-
 const fail = (code: ErrorCode, detail: string): never => {
   throw new ProtocolError(code, detail)
 }
@@ -183,8 +173,11 @@ async function nextMessage(channel: Channel, warn: (code: ErrorCode) => void): P
   }
 }
 
-/** Reads `snapshot.part`s (and the `open-tabs` that may come between) up to `snapshot.end`, checking every number the other device gave. */
-async function receiveSnapshot(channel: Channel, onOpenTabs: (items: OpenTab[]) => void, warn: (code: ErrorCode) => void): Promise<Assembled> {
+/**
+ * Reads `snapshot.part`s up to `snapshot.end`, checking every number the other device gave. A retired `open-tabs` (§27.11) that comes between is dropped, not an error of the
+ * session: `onRetired` lets the caller log it.
+ */
+async function receiveSnapshot(channel: Channel, onRetired: () => void, warn: (code: ErrorCode) => void): Promise<Assembled> {
   const snapshot: SyncSnapshot = { entities: {}, tombstones: {}, order: {}, orderStamps: {} }
   const withheld = new Set<string>()
   let parts: number | null = null
@@ -217,7 +210,7 @@ async function receiveSnapshot(channel: Channel, onOpenTabs: (items: OpenTab[]) 
         break
       }
       case 'open-tabs':
-        onOpenTabs(message.items)
+        onRetired()
         break
       case 'snapshot.end': {
         if (parts === null || next !== parts) return fail('truncated', 'the parts announced did not all come')
@@ -288,18 +281,12 @@ export async function runSession(channel: Channel, peerId: string, deps: Session
     const parts = partsOf(local, withheld)
     if (parts.length > MAX_PARTS) return fail('too-large', 'the snapshot needs more parts than the bound')
     for (const [part, body] of parts.entries()) await channel.send({ t: 'snapshot.part', part, parts: parts.length, ...body })
-    if (common.has('openTabs')) await channel.send({ t: 'open-tabs', items: deps.openTabs?.() ?? [] })
     await channel.send({ t: 'snapshot.end', entityCount: Object.values(local.entities).reduce((sum, byId) => sum + Object.keys(byId).length, 0), digest: hashOfSnapshot(local) })
 
     // receive, check
     const received = await receiveSnapshot(
       channel,
-      (items) => {
-        if (!common.has('openTabs')) return
-        const kept = webTabs(items)
-        if (kept.length < items.length) deps.onRefused?.(peerId, items.filter((tab) => !kept.includes(tab)).map((tab) => ({ kind: 'open-tab', id: tab.id.slice(0, 64), reason: 'invalid-url' })))
-        deps.onOpenTabs?.(peerId, kept)
-      },
+      () => console.warn(`[sync] ${peerId} sent the retired message open-tabs: ignored`),
       warn
     )
     const form = parseSnapshot(JSON.parse(canonicalJson(received.snapshot)))

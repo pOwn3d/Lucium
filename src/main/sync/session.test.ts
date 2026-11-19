@@ -258,19 +258,6 @@ describe('the categories, the settings, the archive and the open tabs', () => {
     expect(mac.marks.stampsOf('setting', 'sendGpc')).toEqual(setting)
     expect(mac.marks.tombstonesOf()['archived']?.['old-tab']).toBe(tombstone)
   })
-
-  it('announces the open tabs only when both ticked them, and never writes them into the state', async () => {
-    const mac = new Device(MAC_ID, 'mac', {}, ['openTabs'])
-    mac.openTabs = [{ id: 't1', spaceId: 'sp-main', url: 'https://read.example/', title: 'Reading', lastActiveAt: 5 }]
-    const phone = new Device(PHONE_ID, 'ios', {}, ['openTabs'])
-    const off = new Device('other-phone-00000001', 'ios', {}, ['structure'])
-    mac.edit((s) => s)
-    await sync(mac, phone)
-    expect(phone.received).toEqual([{ peer: MAC_ID, items: mac.openTabs }])
-    expect(phone.state.tabs).toEqual([])
-    await sync(mac, off)
-    expect(off.received).toEqual([])
-  })
 })
 
 describe('what a session refuses, and what it leaves untouched', () => {
@@ -467,32 +454,15 @@ describe('what a session checks before it writes', () => {
     expect(out.mac.done).toEqual([])
   })
 
-  it('does not send its open tabs to a device that did not tick them, and does not keep the ones it is sent', async () => {
-    const mac = new Device(MAC_ID, 'mac', { spaces: [{ id: 'sp-main' }] }, ['structure', 'openTabs'])
-    mac.openTabs = [{ id: 't', spaceId: 'sp-main', url: 'https://t.example/', title: 'T', lastActiveAt: 1 }]
-    const out = await honest(mac, space('Remote'), { categories: ['structure'], openTabs: true })
-    expect(out.seen).not.toContain('open-tabs')
-    expect(out.mac.received).toEqual([])
-  })
-
-  it('keeps of the open tabs another device announces only the web pages: a script, a local file, a data address and a name that is not an address are counted and left out', async () => {
-    const tab = (id: string, url: string): Record<string, unknown> => ({ id, spaceId: 's', url, title: id, lastActiveAt: 1 })
-    const mac = new Device(MAC_ID, 'mac', { spaces: [{ id: 'sp-main' }] }, ['structure', 'openTabs'])
-    const out = await honest(mac, space('Remote'), {
-      categories: ['structure', 'openTabs'],
-      openTabs: true,
-      tabs: [tab('web', 'https://p.example/a'), tab('script', 'javascript:alert(1)'), tab('file', 'file:///etc/passwd'), tab('data', 'data:text/html,<b>x</b>'), tab('text', 'not an address'), tab('long', `https://p.example/${'x'.repeat(10)}`), { ...tab('big', 'https://p.example/'), id: 'i'.repeat(129) }]
-    })
+  it('ignores and logs the retired message open-tabs (§27.11): the session still ends well, nothing is kept, nothing is sent back', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const mac = new Device(MAC_ID, 'mac', { spaces: [{ id: 'sp-main' }] }, ['structure'])
+    const out = await honest(mac, space('Remote'), { openTabs: true })
     expect(out.result).toMatchObject({ ok: true })
-    expect(out.mac.received).toEqual([{ peer: PHONE_ID, items: [expect.objectContaining({ id: 'web' }), expect.objectContaining({ id: 'long' })] }])
-    expect(out.mac.refused.flat().filter((one) => one.kind === 'open-tab').map((one) => one.id.slice(0, 6))).toEqual(['script', 'file', 'data', 'text', 'iiiiii'])
-  })
-
-  it('takes the open tabs of a device that ticked them, and sends its own', async () => {
-    const mac = new Device(MAC_ID, 'mac', { spaces: [{ id: 'sp-main' }] }, ['structure', 'openTabs'])
-    const out = await honest(mac, space('Remote'), { categories: ['structure', 'openTabs'], openTabs: true })
-    expect(out.seen).toContain('open-tabs')
-    expect(out.mac.received).toHaveLength(1)
+    expect(out.seen).not.toContain('open-tabs')
+    expect(out.mac.state.tabs).toEqual([])
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('retired message open-tabs'))
+    warn.mockRestore()
   })
 
   it('ends at once when the other device ends with an error that is fatal, with its code', async () => {

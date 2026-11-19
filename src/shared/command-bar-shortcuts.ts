@@ -15,7 +15,6 @@ export function candidateHint(candidate: Candidate): string {
     case 'archived':
       return t('cmd.restaurer-l-onglet')
     case 'readlater':
-    case 'iphone':
     case 'bookmark':
       return t('cmd.ouvrir-la-page')
     case 'calc':

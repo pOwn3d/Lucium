@@ -12,8 +12,6 @@ import type { SyncCategory } from '@shared/sync-ipc'
 import { ZERO_STAMP, type SyncEntity, type SyncFields, type SyncSnapshot } from '@shared/sync-snapshot'
 import { admitTabs, roundActiveAt, TODAY_TAB_KIND, type TodayCandidate } from '@shared/sync-today'
 import { ARCHIVE_PER_SPACE_SENT, SYNCED_SETTINGS, classesOf, isKind, type SyncKind } from './field-classes'
-import { cutBytes } from '@shared/state-clean'
-import { MAX_OPEN_TABS, MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES } from './limits'
 import { earlier, listKindOf, type MarkBook, type TrackedView } from './marks'
 
 type Entity = object
@@ -260,17 +258,4 @@ export function baseOf(merged: SyncSnapshot): SyncSnapshot {
     }
   }
   return { ...merged, entities }
-}
-
-/** A text with each lone surrogate written as U+FFFD (`String.prototype.toWellFormed`, which the compiler's library does not list yet). */
-const wellFormed = (text: string): string => text.replace(/[\ud800-\udbff](?![\udc00-\udfff])|(?<![\ud800-\udbff])[\udc00-\udfff]/g, '\uFFFD')
-
-/** The tabs announced to the other device when « Onglets ouverts » is common (§10.4): web pages the person has open, never a private tab, never a tab of a locked space, a tab whose address is over the bound of the message, the latest 200. */
-export function openTabsOf(state: SidebarState, isSpaceLocked: (spaceId: string) => boolean): Array<{ id: string; spaceId: string; url: string; title: string; lastActiveAt: number }> {
-  return state.tabs
-    // An address longer than the message allows is left out, not cut: a cut address is another page, which the other device would show and open (as the iPhone does).
-    .filter((tab) => tab.private !== true && /^https?:\/\//i.test(tab.url) && Buffer.byteLength(tab.url, 'utf8') <= MAX_OPEN_TAB_URL_BYTES && !isSpaceLocked(tab.spaceId))
-    .sort((a, b) => b.lastActiveAt - a.lastActiveAt || (a.id < b.id ? -1 : 1))
-    .slice(0, MAX_OPEN_TABS)
-    .map((tab) => ({ id: tab.id, spaceId: tab.spaceId, url: tab.url, title: cutBytes(wellFormed(tab.title), MAX_OPEN_TAB_TITLE_BYTES), lastActiveAt: Math.max(0, Math.trunc(tab.lastActiveAt)) }))
 }

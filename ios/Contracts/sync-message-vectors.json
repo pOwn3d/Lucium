@@ -13,9 +13,6 @@
     "maxDeviceIdChars": 64,
     "maxCategories": 8,
     "maxHosts": 4,
-    "maxOpenTabs": 200,
-    "maxOpenTabUrlBytes": 4096,
-    "maxOpenTabTitleBytes": 300,
     "handshakeTimeoutMs": 10000,
     "idleTimeoutMs": 60000,
     "sessionMaxMs": 600000,
@@ -1572,7 +1569,7 @@
       }
     },
     {
-      "name": "open tabs",
+      "name": "the retired open-tabs message is read without its body (§27.11): the session ignores it",
       "message": {
         "v": 1,
         "t": "open-tabs",
@@ -1592,100 +1589,15 @@
       }
     },
     {
-      "name": "201 open tabs",
+      "name": "the retired open-tabs message with a body that is not a list is read all the same (§27.11)",
       "message": {
         "v": 1,
         "t": "open-tabs",
         "n": 2,
-        "items": [
-          {
-            "id": "t0",
-            "spaceId": "s1",
-            "url": "https://example.com/",
-            "title": "T",
-            "lastActiveAt": 1
-          }
-        ]
-      },
-      "expect": {
-        "ok": false,
-        "code": "bad-message"
-      },
-      "fill": {
-        "path": [
-          "items"
-        ],
-        "copy": {
-          "id": "t0",
-          "spaceId": "s1",
-          "url": "https://example.com/",
-          "title": "T",
-          "lastActiveAt": 1
-        },
-        "times": 201
-      }
-    },
-    {
-      "name": "200 open tabs",
-      "message": {
-        "v": 1,
-        "t": "open-tabs",
-        "n": 2,
-        "items": [
-          {
-            "id": "t0",
-            "spaceId": "s1",
-            "url": "https://example.com/",
-            "title": "T",
-            "lastActiveAt": 1
-          }
-        ]
+        "items": "not a list"
       },
       "expect": {
         "ok": true
-      },
-      "fill": {
-        "path": [
-          "items"
-        ],
-        "copy": {
-          "id": "t0",
-          "spaceId": "s1",
-          "url": "https://example.com/",
-          "title": "T",
-          "lastActiveAt": 1
-        },
-        "times": 200
-      }
-    },
-    {
-      "name": "an open tab with an address of 4097 bytes",
-      "message": {
-        "v": 1,
-        "t": "open-tabs",
-        "n": 2,
-        "items": [
-          {
-            "id": "t1",
-            "spaceId": "s1",
-            "url": "https://example.com/",
-            "title": "T",
-            "lastActiveAt": 1
-          }
-        ]
-      },
-      "expect": {
-        "ok": false,
-        "code": "bad-message"
-      },
-      "fill": {
-        "path": [
-          "items",
-          0,
-          "url"
-        ],
-        "repeat": "a",
-        "times": 4097
       }
     },
     {

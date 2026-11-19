@@ -16,7 +16,7 @@ describe('SyncStore: the defaults', () => {
     const { path } = fresh()
     const config = new SyncStore(path).config()
     expect(config.enabled).toBe(false)
-    expect(config.categories).toEqual({ structure: true, settings: false, archive: false, openTabs: false, todayTabs: false })
+    expect(config.categories).toEqual({ structure: true, settings: false, archive: false, todayTabs: false })
     expect(config.categories).toEqual(DEFAULT_CATEGORIES)
     expect(config.port).toBeNull()
     expect(config.peers).toEqual([])
@@ -27,7 +27,7 @@ describe('SyncStore: the defaults', () => {
     const store = new SyncStore(fresh().path)
     const config = store.config()
     config.enabled = true
-    config.categories.openTabs = true
+    config.categories.settings = true
     config.peers.push(peer(1))
     expect(store.config()).toMatchObject({ enabled: false, categories: DEFAULT_CATEGORIES, peers: [] })
   })
@@ -38,11 +38,11 @@ describe('SyncStore: what is kept', () => {
     const { path } = fresh()
     const store = new SyncStore(path)
     store.setEnabled(true)
-    store.setCategory('openTabs', true)
+    store.setCategory('archive', true)
     store.setCategory('structure', false)
     const again = new SyncStore(path).config()
     expect(again.enabled).toBe(true)
-    expect(again.categories).toEqual({ structure: false, settings: false, archive: false, openTabs: true, todayTabs: false })
+    expect(again.categories).toEqual({ structure: false, settings: false, archive: true, todayTabs: false })
   })
 
   // A POSIX mode: Windows keeps none.
@@ -139,7 +139,7 @@ describe('SyncStore: what is kept', () => {
 })
 
 describe('SyncStore: a file that is not one of ours', () => {
-  const valid = (): Record<string, unknown> => ({ version: 1, enabled: true, categories: { structure: true, settings: true, archive: false, openTabs: false, todayTabs: false }, port: 50_000, peers: [peer(1)] })
+  const valid = (): Record<string, unknown> => ({ version: 1, enabled: true, categories: { structure: true, settings: true, archive: false, todayTabs: false }, port: 50_000, peers: [peer(1)] })
 
   it('reads a good file', () => {
     const { path } = fresh()
@@ -150,7 +150,16 @@ describe('SyncStore: a file that is not one of ours', () => {
   it('keeps what a later version added: unknown fields are ignored, a missing category takes its default', () => {
     const { path } = fresh()
     writeFileSync(path, JSON.stringify({ ...valid(), categories: { settings: true }, aLaterField: [1, 2] }))
-    expect(new SyncStore(path).config().categories).toEqual({ structure: true, settings: true, archive: false, openTabs: false, todayTabs: false })
+    expect(new SyncStore(path).config().categories).toEqual({ structure: true, settings: true, archive: false, todayTabs: false })
+  })
+
+  it('ignores the retired category `openTabs` of a development file, and does not write it back (§27.11)', () => {
+    const { path } = fresh()
+    writeFileSync(path, JSON.stringify({ ...valid(), categories: { structure: true, settings: true, archive: false, openTabs: true, todayTabs: false } }))
+    const store = new SyncStore(path)
+    expect(store.config().categories).toEqual({ structure: true, settings: true, archive: false, todayTabs: false })
+    store.setCategory('archive', true)
+    expect(JSON.parse(readFileSync(path, 'utf8')).categories).not.toHaveProperty('openTabs')
   })
 
   it.each([

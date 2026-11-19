@@ -50,6 +50,6 @@ describe('the Settings window (main/shell/own-windows-wiring.ts)', () => {
 
 describe('the IPC channel (main/shell/ipc.ts)', () => {
   it('is registered with the other channels of a window, behind their guard', () => {
-    expect(read('shell/ipc.ts')).toContain('registerSyncIpc(ipcMain, guard, browser, store)')
+    expect(read('shell/ipc.ts')).toContain('registerSyncIpc(ipcMain, guard, browser)')
   })
 })

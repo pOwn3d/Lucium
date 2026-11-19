@@ -6,9 +6,9 @@
 
 /**
  * The categories the person ticks (§10.1). A category passes only when both devices ticked it. `todayTabs` (§27, card 508) is the data side of the shared Today tabs: its
- * row on the page, its sentence and its box at the pairing are the interface cards'; `openTabs` goes when « Reprendre un onglet du Mac » does [Q8].
+ * row on the page, its sentence and its box at the pairing are the interface cards'. The category `openTabs` of the first design (« Reprendre un onglet du Mac ») is retired [Q8, §27.11]: a stored value is ignored.
  */
-export const SYNC_CATEGORIES = ['structure', 'settings', 'archive', 'openTabs', 'todayTabs'] as const
+export const SYNC_CATEGORIES = ['structure', 'settings', 'archive', 'todayTabs'] as const
 export type SyncCategory = (typeof SYNC_CATEGORIES)[number]
 
 /**
@@ -20,8 +20,8 @@ export type SyncCategory = (typeof SYNC_CATEGORIES)[number]
  */
 export const NEEDS_STRUCTURE: readonly SyncCategory[] = ['archive', 'todayTabs']
 
-/** [Q2]: only the structure is ticked by default; the settings, the archive, the open tabs and the Today tabs [Q9] are the person's choice, each with its own sentence. */
-export const DEFAULT_SYNC_CATEGORIES: Readonly<Record<SyncCategory, boolean>> = { structure: true, settings: false, archive: false, openTabs: false, todayTabs: false }
+/** [Q2]: only the structure is ticked by default; the settings, the archive and the Today tabs [Q9] are the person's choice, each with its own sentence. */
+export const DEFAULT_SYNC_CATEGORIES: Readonly<Record<SyncCategory, boolean>> = { structure: true, settings: false, archive: false, todayTabs: false }
 
 /** What the page asks. `status` is asked about once a second while the page is open (it carries the countdowns); `leave` is sent when the page is left (the sheet of a pairing goes with it). */
 export type SyncRequest =

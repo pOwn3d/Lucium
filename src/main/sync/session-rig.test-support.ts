@@ -52,10 +52,8 @@ export class Device {
   locked = new Set<string>()
   appLocked = false
   stateVersion = 1
-  openTabs: Array<{ id: string; spaceId: string; url: string; title: string; lastActiveAt: number }> = []
   /** The tabs a session closed that were the selected one of their space (§27.5). */
   shownClosed: Array<{ id: string; spaceId: string; onScreen: boolean }[]> = []
-  received: Array<{ peer: string; items: unknown[] }> = []
   refused: Array<Array<{ kind: string; id: string; reason: string }>> = []
   unpaired: string[] = []
   done: string[] = []
@@ -118,8 +116,6 @@ export class Device {
       hosts: () => ['mac.local'],
       port: () => 49213,
       ...(this.merge !== undefined ? { merge: this.merge } : {}),
-      openTabs: () => this.openTabs,
-      onOpenTabs: (peer, items) => void this.received.push({ peer, items }),
       onUnpair: (peer) => void this.unpaired.push(peer),
       onRefused: (_peer, refused) => void this.refused.push(refused),
       onShownTabsClosed: (_peer, tabs) => void this.shownClosed.push(tabs),

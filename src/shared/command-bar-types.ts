@@ -85,10 +85,6 @@ export type Candidate =
   | { kind: 'action'; id: string; label: string; detail: string; action: CommandAction; url?: string; /** The text of the note `jot-note` makes. */ text?: string }
   /** "Lire plus tard — <title>": a page saved with File › Lire plus tard; choosing it opens the page in a new tab. */
   | { kind: 'readlater'; id: string; label: string; detail: string; readLaterId: string; faviconUrl?: string }
-  /** A tab an iPhone announced (« Sur l'iPhone », docs/synchronisation.md §10.4): choosing it opens the page in a new tab; `resumeId` names the line to the main process, which holds the address. */
-  | { kind: 'iphone'; id: string; label: string; detail: string; resumeId: string }
-  /** The sentence that says how to get « Sur l'iPhone » when the list is absent: it opens nothing, the bar stays. */
-  | { kind: 'iphone-hint'; id: string; label: string; detail: string }
   /** "Signet — <title>": a bookmark of the library (setting `bookmarkManager`); choosing it opens the page in a new tab. */
   | { kind: 'bookmark'; id: string; label: string; detail: string; bookmarkId: string; faviconUrl?: string }
   /** "Restaurer la session <name>": choosing it opens the saved pages as tabs of the current space. */

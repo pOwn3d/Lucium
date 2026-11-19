@@ -13,7 +13,7 @@
 //
 // The exchange of data itself (the session, §8) is a flow handed in (`runSession`): until it exists, a device that connects is told `internal`, honestly.
 
-import { createHash, randomInt, randomBytes } from 'node:crypto'
+import { randomInt, randomBytes } from 'node:crypto'
 import { encodeQr } from '@shared/qr'
 import { NEEDS_STRUCTURE, SYNC_CATEGORIES, type SyncCategory, type SyncLastExchange, type SyncPairingView, type SyncProblem, type SyncStatus } from '@shared/sync-ipc'
 import { BaseStore } from './bases'
@@ -21,7 +21,6 @@ import type { Channel } from './channel'
 import { CONFIRM_MS, FINGERPRINT_BYTES, IDENTITY_REPLACE_DELAY_MS, SECRET_BYTES } from './limits'
 import { MarkStore } from './mark-store'
 import type { MarkBook } from './marks'
-import type { OpenTab } from './messages'
 import { runSession as runExchange, type ClosedShownTab, type SessionHost } from './session'
 import { MarkTracker } from './sync-tracker'
 import { IdentityNotOpenableError, type IdentityStore, type SyncIdentity } from './identity'
@@ -31,7 +30,6 @@ import { PairingSecret } from './pairing-secret'
 import type { PairingRequestInfo } from './pairing-server'
 import { AddressLimiter } from './rate-limit'
 import { ownHosts, type HostEnvironment } from './own-hosts'
-import { isResumeId, resumeRows, type ResumeRow, type ResumeTab } from '@shared/sync-resume'
 import type { SafeClock } from './safe-clock'
 import type { SecretBox } from './secret-box'
 import { PORT_MAX, PORT_MIN, type PeerRecord, type SyncStore } from './sync-store'
@@ -92,8 +90,6 @@ export interface SessionPorts {
   basesDir: string
   appVersion: string
   stateVersion: number
-  /** The tabs announced when the category « Onglets ouverts » is common. */
-  openTabs?: () => OpenTab[]
   /** Told when a session closed a Today tab that was the selected one of its space (§27.5, [Q11]); the line « Fermé sur l'iPhone » is the interface card's. */
   onShownTabsClosed?: (peerId: string, tabs: ClosedShownTab[]) => void
 }
@@ -142,11 +138,6 @@ export class SyncService {
   private closedShown: { at: number } | null = null
   /** The box « Partager aussi les onglets d'Aujourd'hui » of the question, kept from « Autoriser » until the pairing ends (§27.8, [Q9]). */
   private shareTodayAtPairing = false
-  /** What the other devices announced as their open tabs: in memory only, never written, forgotten with the window and with the device (§10.4). */
-  private readonly announced = new Map<string, { items: OpenTab[]; at: number }>()
-  /** The devices that went through a session since the lists were last forgotten: « it sent nothing » is only told after one (§10.4). */
-  private readonly sessionSeen = new Set<string>()
-
   constructor(private readonly deps: SyncServiceDeps) {
     this.limiter = new AddressLimiter(() => deps.clock.elapsed())
     this.listening = new SyncListening({
@@ -253,7 +244,6 @@ export class SyncService {
       this.deps.store.setEnabled(false)
       this.closePairingSheet()
       await this.reconcileListening()
-      this.forgetAnnounced()
       this.stopTracking()
     }
     this.changed()
@@ -297,8 +287,6 @@ export class SyncService {
     if (on && NEEDS_STRUCTURE.includes(category) && !config.categories.structure) this.fail('internal', `${category} needs the structure`)
     this.deps.store.setCategory(category, on)
     if (!on && category === 'structure') for (const dependent of NEEDS_STRUCTURE) this.deps.store.setCategory(dependent, false)
-    // Unticked: what the iPhone said it had open is forgotten at once, not at the next session.
-    if (category === 'openTabs' && !on) this.forgetAnnounced()
     this.changed()
   }
 
@@ -396,10 +384,6 @@ export class SyncService {
 
   /** The application locked or unlocked: a lock closes the door and the sheet, an unlock opens the door again when an iPhone is paired. */
   async lockChanged(): Promise<void> {
-    if (this.deps.isLocked()) {
-      // What the iPhone had open is what a person reads: it does not stay in memory behind a lock.
-      this.forgetAnnounced()
-    }
     await this.reconcileListening()
   }
 
@@ -591,48 +575,11 @@ export class SyncService {
     if (peer === undefined) return
     this.deps.store.forgetPeer(id)
     this.bases?.remove(id)
-    this.announced.delete(id)
-    this.sessionSeen.delete(id)
     this.closedShown = null
     this.door?.dropPeer(peer.fingerprint)
     // The last device gone, the door closes (`wantsToListen`). When the device itself said it forgot the Mac, in its own session, the door waits for the answer it is owed.
     this.reconcileLater(settleMs)
     this.changed()
-  }
-
-  /** The open tabs a paired device announced in its last session (in memory only; the screen « Reprise » of card 447 reads them). */
-  openTabsFrom(peerId: string): readonly OpenTab[] {
-    return this.announced.get(peerId)?.items ?? []
-  }
-
-  private forgetAnnounced(): void {
-    this.announced.clear()
-    this.sessionSeen.clear()
-  }
-
-  /**
-   * What the command bar shows of the iPhones' open tabs (« Sur l'iPhone »): the rows of every paired iPhone together, the most recent first, each named by the device and its
-   * own identifier, and the facts `resumeView` needs for saying why there is no list. Nothing is read from the state and nothing is kept.
-   */
-  resumeSource(): { paired: boolean; categoryOnHere: boolean; announcedAt: number | null; listAnnounced: boolean; sessionHappened: boolean; rows: ResumeRow[] } {
-    const config = this.deps.store.config()
-    const phones = this.deps.store.peers().filter((peer) => peer.platform === 'ios')
-    const tabs: ResumeTab[] = []
-    let announcedAt: number | null = null
-    let sessionHappened = false
-    for (const phone of phones) {
-      sessionHappened ||= this.sessionSeen.has(phone.id)
-      const list = this.announced.get(phone.id)
-      if (list === undefined) continue
-      announcedAt = Math.max(announcedAt ?? 0, list.at)
-      for (const tab of list.items) {
-        // The line is named by the device, its tab AND a digest of the address it was announced with: a list that comes later with another page under the same tab
-        // identifier is another line (a click on the one the person saw opens nothing), and two lines of one list never share a name (the one clicked is the one opened).
-        const id = `${phone.id}:${tab.id}:${createHash('sha256').update(tab.url).digest('hex').slice(0, 12)}`
-        if (isResumeId(id)) tabs.push({ ...tab, id })
-      }
-    }
-    return { paired: config.enabled && phones.length > 0, categoryOnHere: config.categories.openTabs, announcedAt, listAnnounced: announcedAt !== null, sessionHappened, rows: resumeRows(tabs) }
   }
 
   /** A session with a paired device: one at a time (a second is told `busy`), the exchange of docs/synchronisation.md §8 with the state and the marks of this device. */
@@ -658,8 +605,6 @@ export class SyncService {
         stateVersion: ports.stateVersion,
         hosts: () => ownHosts(this.deps.hostEnv()),
         port: () => this.currentPort(),
-        ...(ports.openTabs !== undefined ? { openTabs: ports.openTabs } : {}),
-        onOpenTabs: (id, items) => void this.announced.set(id, { items, at: this.deps.now() }),
         onShownTabsClosed: (id, tabs) => {
           this.closedShown = { at: this.deps.now() }
           ports.onShownTabsClosed?.(id, tabs)
@@ -668,7 +613,6 @@ export class SyncService {
         onRefused: (id, refused) => console.warn(`[sync] ${refused.length} entities of ${id} were not taken (${[...new Set(refused.map((one) => one.reason))].join(', ')})`),
         onDone: (id, at) => {
           store.touchSession(id, at)
-          this.sessionSeen.add(id)
         },
         onWarning: (id, code) => console.warn(`[sync] ${id} says: ${code}`)
       })
@@ -689,7 +633,6 @@ export class SyncService {
     this.settleTimer = null
     await this.reconciling
     await this.listening.close('quit')
-    this.forgetAnnounced()
   }
 }
 
