@@ -18,6 +18,23 @@
 	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
+	<!-- Receiving links from other applications (docs/ios.md §9.4): http and https are declared so that the application can be offered as a default
+	     browser. This is NOT the com.apple.developer.web-browser entitlement, which Apple grants by a form: without it the system never routes a link here
+	     by itself. Only http(s) addresses are opened (`ExternalLink`); no custom scheme is declared. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>app.lucium.browser.ios.web</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>http</string>
+				<string>https</string>
+			</array>
+		</dict>
+	</array>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoadsInWebContent</key>

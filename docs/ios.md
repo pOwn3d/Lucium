@@ -265,7 +265,7 @@ Légende : **reprise** = même comportement ; **adaptée** = même but, autre mo
 
 ### 4.4 Spécifique à l'iPhone (nouveau)
 
-Barre du bas et feuilles (sur l'iPad en paysage, la barre latérale : §3.1) ; navigateur par défaut (§9.4) ; partage de la page (**fait**, §4.6) ; « Ouvrir dans Lucium » depuis une autre application ; widgets : plus tard.
+Barre du bas et feuilles (sur l'iPad en paysage, la barre latérale : §3.1) ; navigateur par défaut (§9.4) ; partage de la page (**fait**, §4.6) ; « Ouvrir dans Lucium » depuis une autre application (**fait** pour les liens http(s), §9.4) ; widgets : plus tard.
 
 ### 4.5 Le verrou : espaces et application (fait)
 
@@ -594,6 +594,18 @@ Lucium est publié sous **GPL-3.0-or-later**. Les conditions d'utilisation de l'
 ### 9.4 Navigateur par défaut
 
 Pour être proposé dans l'app Réglages d'iOS, à la rubrique « Navigateur par défaut » de la section Apps, il faut l'entitlement `com.apple.developer.web-browser` (iOS 14+). Lu dans la documentation d'Apple : c'est un « managed entitlement », **demandé par un formulaire** (« Default browser entitlement request form ») ; **non documenté** : les critères d'acceptation. Exigences de l'application : les schémas `http` et `https` dans l'`Info.plist` (la clé exacte n'est **pas nommée** dans ce qui a été lu : c'est `CFBundleURLTypes`, **supposé**) ; pas de `UIWebView` ; à l'ouverture, une zone de saisie d'adresse, des outils de recherche ou des signets ; ouvrir une adresse web sans redirection inattendue ; limiter les clés de confidentialité (photos, localisation en permanence, HomeKit, Bluetooth en permanence, Santé : « will be rejected »). Ce qu'il donne : le chargement de pages de tous les domaines avec accès complet aux scripts, les Service Workers, « Ajouter à l'écran d'accueil ». **Action du chef de projet : remplir le formulaire** (compte Apple, §10.3) ; la carte « Navigateur par défaut » attend la réponse. Mesure de l'état : `UIApplication.isDefault(.webBrowser)`.
+
+**Exigences de l'application : état (carte 651).** Remplies par le code, sans l'entitlement :
+
+| Exigence d'Apple | État | Où |
+|---|---|---|
+| `http` et `https` déclarés | **fait** : `CFBundleURLTypes` dans `ios/Lucium/Info.plist` (aucun autre schéma) | `Info.plist` |
+| Recevoir un lien d'une autre app et aller droit à la destination | **fait** : `onOpenURL` (démarrage à froid et app ouverte) → nouvel onglet de l'espace actif, chargé par le chemin ordinaire d'un onglet (HTTPS d'abord, bloqueurs, filtres de vie privée) | `LuciumApp.swift`, `BrowserModel+ExternalLink.swift` |
+| Seuls http(s) sont acceptés | **fait** : `ExternalLink.address(from:)` refuse tout autre schéma (`file`, `javascript`, `data`, `lucium://`…), une adresse sans hôte, avec identifiants (`user:pass@`) ou de plus de 8 192 caractères ; rien n'est réécrit | `LuciumKit/ExternalLink.swift`, tests |
+| App verrouillée ou espace actif verrouillé | le lien **attend en mémoire** (le dernier seul, jamais écrit sur disque) : rien ne s'ouvre ni ne se nomme avant le déverrouillage, puis l'onglet s'ouvre | `openPendingExternalLink`, appelé par `applyLock` |
+| Pas de `UIWebView`, champ d'adresse au lancement, pas de clés de confidentialité interdites | déjà vrai (carte 417, commentaire 2909) | |
+
+Prouvé : tests `ExternalLinkTests` (LuciumKit : schémas refusés, mutation vue échouer en acceptant `file`) et `ExternalLinkBrowserTests` (XCTest, vraies pages locales : le lien ouvre un onglet et charge la page, les schémas refusés n'ouvrent rien, un lien reçu verrouillé attend le déverrouillage). **Non prouvé** : l'envoi d'un vrai lien depuis une autre application (le système n'en route aucun vers Lucium tant que l'entitlement n'est pas accordé ; `xcrun simctl openurl` ouvre Safari). **Reste** : remplir le formulaire d'Apple (carte 417), puis ajouter `com.apple.developer.web-browser` dans un `.entitlements` déclaré dans `project.yml`, régénérer le profil, et relire ce paragraphe.
 
 ### 9.5 Autres obligations de la fiche (lues dans App Store Connect Help)
 
