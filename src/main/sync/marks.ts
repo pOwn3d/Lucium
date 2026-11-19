@@ -37,12 +37,32 @@ function parse(stamp: string): Clock | null {
   return match === null ? null : { ms: Number(match[1]), counter: Number.parseInt(match[2] as string, 16) }
 }
 
+/** The device identifier of a mark (what follows `<ms>-<counter>-`), or null for a text that is not a mark. */
+const deviceOf = (stamp: string): string | null => (/^[0-9]{13}-[0-9a-f]{4}-/.test(stamp) ? stamp.slice(19) : null)
+
 /** The hybrid logical clock of one device. */
 export class Hlc {
+  /**
+   * `peer`: the latest time (ms) of a mark that came in from another device, kept with the clock (review n° 35). The time of day alone cannot tell a clock that WAS wrong and
+   * was put right (the marks of this device are ahead of it, and every other device refuses them: review n° 18) from a clock that IS wrong and went back (the marks are right,
+   * the time of day is behind). The other device can: its marks are made at its own time. A mark that came in is never more than a week ahead of what this device's clock said
+   * when it came (§9.3), so what is kept here is a bound the other device set, not one it can push.
+   */
   constructor(
     private readonly device: string,
-    private last: Clock = { ms: 0, counter: 0 }
+    private last: Clock = { ms: 0, counter: 0 },
+    private peer = 0
   ) {}
+
+  /** The time the marks are measured against: the time of day, or the latest mark seen from another device when the time of day is behind it. */
+  reference(now: number): number {
+    return Math.max(now, this.peer)
+  }
+
+  /** The latest time of a mark that came in from another device, or 0. */
+  peerSeen(): number {
+    return this.peer
+  }
 
   /**
    * The next mark: the time of day, or one tick after the last mark made or seen when the time of day is not ahead of it. A clock more than a week ahead of the time of
@@ -50,8 +70,11 @@ export class Hlc {
    * (§9.3), so staying on them would shut this device out of the synchronisation for ever. It starts over from the time of day.
    */
   next(now: number): string {
-    if (this.last.ms > now + STAMP_FUTURE_REFUSE_MS || this.last.ms >= MAX_MS) this.last = { ms: 0, counter: 0 }
-    if (now > this.last.ms) this.last = { ms: now, counter: 0 }
+    // Measured against the time of day, or against the other device when it is ahead of it: a clock put back by more than a week no longer takes the marks back with it
+    // (review n° 35), while marks that are ahead of both are still the ones of a clock that was wrong (review n° 18).
+    const reference = this.reference(now)
+    if (this.last.ms > reference + STAMP_FUTURE_REFUSE_MS || this.last.ms >= MAX_MS) this.last = { ms: 0, counter: 0 }
+    if (reference > this.last.ms) this.last = { ms: reference, counter: 0 }
     else if (this.last.counter >= 0xffff) this.last = { ms: this.last.ms + 1, counter: 0 }
     else this.last = { ms: this.last.ms, counter: this.last.counter + 1 }
     return pad(this.last.ms, this.last.counter, this.device)
@@ -60,6 +83,7 @@ export class Hlc {
   /** A mark that came in: the clock is never behind it. */
   observe(stamp: string): void {
     const seen = parse(stamp)
+    if (seen !== null && deviceOf(stamp) !== this.device) this.peer = Math.max(this.peer, seen.ms)
     if (seen !== null && (seen.ms > this.last.ms || (seen.ms === this.last.ms && seen.counter > this.last.counter))) this.last = seen
   }
 
@@ -89,7 +113,8 @@ export const MARKS_VERSION = 2
 
 export interface MarksFile {
   version: typeof MARKS_VERSION
-  clock: Clock
+  /** `peer`: the latest time of a mark seen from another device (review n° 35); absent in a file that has none. */
+  clock: Clock & { peer?: number }
   entities: Record<string, Record<string, Record<string, FieldMark>>>
   tombstones: Record<string, Record<string, string>>
   orders: Record<string, { hash: string; stamp: string }>
@@ -107,7 +132,8 @@ export class MarkBook {
     readonly device: string,
     file: MarksFile | null = null
   ) {
-    this.clock = new Hlc(device, file?.clock)
+    const peer = file?.clock.peer
+    this.clock = new Hlc(device, file?.clock, typeof peer === 'number' && Number.isFinite(peer) && peer >= 0 ? peer : 0)
     this.entities = file?.entities ?? {}
     this.tombstones = file?.tombstones ?? {}
     this.orders = file?.orders ?? {}
@@ -117,7 +143,7 @@ export class MarkBook {
   update(view: TrackedView, now: number): void {
     // A mark more than a week ahead of the time of day was made while the clock was wrong (review n° 18): no other device accepts it, so the thing it marks would never
     // leave this one. It is marked again, as a change of now.
-    const limit = now + STAMP_FUTURE_REFUSE_MS
+    const limit = this.clock.reference(now) + STAMP_FUTURE_REFUSE_MS
     const tooFar = (stamp: string): boolean => (parse(stamp)?.ms ?? 0) > limit
     for (const [kind, byId] of Object.entries(view.entities)) {
       const known = (this.entities[kind] ??= {})
@@ -223,7 +249,7 @@ export class MarkBook {
   }
 
   toJSON(): MarksFile {
-    return { version: MARKS_VERSION, clock: this.clock.state(), entities: this.entities, tombstones: this.tombstones, orders: this.orders }
+    return { version: MARKS_VERSION, clock: { ...this.clock.state(), ...(this.clock.peerSeen() > 0 ? { peer: this.clock.peerSeen() } : {}) }, entities: this.entities, tombstones: this.tombstones, orders: this.orders }
   }
 }
 
