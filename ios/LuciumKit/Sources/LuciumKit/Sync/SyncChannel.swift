@@ -53,9 +53,11 @@ public actor SyncChannel {
                         if phase == .pairing, history.isEmpty, envelope.message.type == "hello" { throw SyncFailure(.badMessage, SyncFailure.helloInAPairing) }
                         throw SyncFailure(.badMessage, "\(envelope.message.type) is not allowed here")
                     }
-                    // The kinds that came, once each: the rules of §7.4 ask whether a kind was seen, never how many times, and a list of every message made each one search all
-                    // the ones before it (quadratic, for a peer that sends them by the hundred thousand).
-                    if !history.contains(envelope.message.type) { history.append(envelope.message.type) }
+                    // The kinds that came, once each: the rules of §7.4 ask whether a kind was seen, and a list of every message made each one search all the ones before it
+                    // (quadratic, for a peer that sends them by the hundred thousand). Two things are asked more than that (§31.5): how many snapshots ended (at most two get
+                    // through, so an end is always kept) and whether a part came since the last end (parts that follow one another are one entry).
+                    let type = envelope.message.type
+                    if type == "snapshot.end" || (type == "snapshot.part" ? history.last != type : !history.contains(type)) { history.append(type) }
                     return envelope.message
                 }
                 let chunk = try await Self.read(transport, timeout: timeout)

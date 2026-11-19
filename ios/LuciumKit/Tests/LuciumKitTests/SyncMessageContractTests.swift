@@ -167,7 +167,7 @@ struct SyncMessageContractTests {
         for vector in try SyncContract.array(messages, "messages") where (vector["expect"] as? [String: Any])?["ok"] as? Bool == true {
             if case .success(let envelope) = SyncMessageCodec.decode(try text(of: vector)) { seen.insert(envelope.message.type) }
         }
-        #expect(seen == ["hello", "pair.challenge", "pair.request", "pair.nonce", "pair.reveal", "pair.accept", "snapshot.part", "snapshot.end", "open-tabs", "result", "commit", "unpair", "error", "bye"])
+        #expect(seen == ["hello", "pair.challenge", "pair.request", "pair.nonce", "pair.reveal", "pair.accept", "snapshot.part", "snapshot.end", "snapshot.check", "open-tabs", "result", "commit", "unpair", "error", "bye"])
     }
 
     @Test func aHelloIsReadFieldByField() throws {

@@ -462,14 +462,18 @@ const optionalList = (v: unknown, max: number): boolean => v === undefined || te
 /** A TCP port: a whole number from 1 to 65535 (docs/synchronisation.md §7.3, review n° 38). */
 const isPort = (v: unknown): boolean => isInt(v, 1) && (v as number) <= 65535
 
+const isInherited = (name: string): boolean => name === 'prototype' || name in Object.prototype
+const removals = (v: unknown): boolean => v === undefined || (Array.isArray(v) && v.length <= 100000 && v.every((r) => isObject(r) && typeof r['kind'] === 'string' && r['kind'].length > 0 && r['kind'].length <= 64 && !isInherited(r['kind']) && typeof r['id'] === 'string' && r['id'].length > 0 && r['id'].length <= 128 && !isInherited(r['id'])))
+
 const SHAPES: Record<string, (m: Record<string, unknown>) => boolean> = {
-  hello: (m) => device(m['device']) && typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']) && textList(m['categories'], L['maxCategories'] as number, 32) && (m['baseHash'] === null || (typeof m['baseHash'] === 'string' && HEX(32).test(m['baseHash']))) && isInt(m['stateVersion'], 1) && isText(m['appVersion'], 32) && isInt(m['now']) && (m['hosts'] === undefined || textList(m['hosts'], L['maxHosts'] as number, 253)) && (m['port'] === undefined || isPort(m['port'])),
+  hello: (m) => device(m['device']) && typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']) && textList(m['categories'], L['maxCategories'] as number, 32) && (m['baseHash'] === null || (typeof m['baseHash'] === 'string' && HEX(32).test(m['baseHash']))) && isInt(m['stateVersion'], 1) && isText(m['appVersion'], 32) && isInt(m['now']) && (m['hosts'] === undefined || textList(m['hosts'], L['maxHosts'] as number, 253)) && (m['port'] === undefined || isPort(m['port'])) && (m['diff'] === undefined || (isInt(m['diff'], 1) && (m['diff'] as number) <= 255)),
   'pair.challenge': (m) => typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']),
   'pair.request': (m) => device(m['device']) && typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']) && typeof m['proof'] === 'string' && B64U(43).test(m['proof']) && typeof m['commit'] === 'string' && B64U(43).test(m['commit']),
   'pair.nonce': (m) => typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']),
   'pair.reveal': (m) => typeof m['nonce'] === 'string' && B64U(22).test(m['nonce']),
   'pair.accept': (m) => device(m['device']) && typeof m['proof'] === 'string' && B64U(43).test(m['proof']) && textList(m['hosts'], L['maxHosts'] as number, 253) && isPort(m['port']),
-  'snapshot.part': (m) => isInt(m['part']) && isInt(m['parts'], 1) && (m['parts'] as number) <= (L['maxParts'] as number) && (m['part'] as number) < (m['parts'] as number) && Array.isArray(m['entities']) && m['entities'].length <= (L['maxEntitiesPerPart'] as number) && m['entities'].every(entity) && (m['tombstones'] === undefined || (Array.isArray(m['tombstones']) && m['tombstones'].every((t) => isObject(t) && typeof t['kind'] === 'string' && typeof t['id'] === 'string' && typeof t['stamp'] === 'string'))) && (m['order'] === undefined || (isObject(m['order']) && Object.values(m['order']).every((l) => textList(l, 100000, 128)))) && (m['orderStamps'] === undefined || (isObject(m['orderStamps']) && Object.values(m['orderStamps']).every((s) => typeof s === 'string'))) && optionalList(m['withheld'], 10000),
+  'snapshot.part': (m) => isInt(m['part']) && isInt(m['parts'], 1) && (m['parts'] as number) <= (L['maxParts'] as number) && (m['part'] as number) < (m['parts'] as number) && Array.isArray(m['entities']) && m['entities'].length <= (L['maxEntitiesPerPart'] as number) && m['entities'].every(entity) && (m['tombstones'] === undefined || (Array.isArray(m['tombstones']) && m['tombstones'].every((t) => isObject(t) && typeof t['kind'] === 'string' && typeof t['id'] === 'string' && typeof t['stamp'] === 'string'))) && (m['order'] === undefined || (isObject(m['order']) && Object.values(m['order']).every((l) => textList(l, 100000, 128)))) && (m['orderStamps'] === undefined || (isObject(m['orderStamps']) && Object.values(m['orderStamps']).every((s) => typeof s === 'string'))) && optionalList(m['withheld'], 10000) && (m['base'] === undefined || (typeof m['base'] === 'string' && HEX(32).test(m['base']))) && removals(m['removedEntities']) && removals(m['removedTombstones']) && (m['removedLists'] === undefined || (Array.isArray(m['removedLists']) && textList(m['removedLists'], 100000, 400) && (m['removedLists'] as string[]).every((key) => key.length > 0 && !isInherited(key)))),
+  'snapshot.check': (m) => typeof m['ok'] === 'boolean',
   'snapshot.end': (m) => isInt(m['entityCount']) && typeof m['digest'] === 'string' && HEX(32).test(m['digest']),
   // Retired (§27.11): read without its body.
   'open-tabs': () => true,
@@ -503,6 +507,10 @@ function validateTransition(receiver: 'mac' | 'ios', phase: 'session' | 'pairing
   const bad: Verdict = { ok: false, code: 'bad-message' }
   if (type === 'error' || type === 'bye') return { ok: true }
   const seen = (t: string): boolean => history.includes(t)
+  // §31.5: a second snapshot (the whole one that a failed rebuild asks for) comes only after the `snapshot.check`, and at most one.
+  const ends = history.filter((t) => t === 'snapshot.end').length
+  const partsSinceEnd = history.slice(history.lastIndexOf('snapshot.end') + 1).filter((t) => t === 'snapshot.part').length
+  const roundOpen = ends === 0 || (ends === 1 && seen('snapshot.check'))
   if (phase === 'pairing') {
     if (receiver === 'mac') return (type === 'pair.request' && !seen('pair.request')) || (type === 'pair.reveal' && seen('pair.request') && !seen('pair.reveal')) ? { ok: true } : bad
     if (history.length === 0) return type === 'pair.challenge' ? { ok: true } : bad
@@ -512,10 +520,11 @@ function validateTransition(receiver: 'mac' | 'ios', phase: 'session' | 'pairing
   const allowed = ((): boolean => {
     switch (type) {
       case 'hello': return !seen('hello')
-      case 'snapshot.part': return seen('hello') && !seen('snapshot.end')
-      case 'open-tabs': return seen('hello') && !seen('snapshot.end')
-      case 'snapshot.end': return seen('snapshot.part') && !seen('snapshot.end')
-      case 'result': return seen('snapshot.end') && !seen('result')
+      case 'snapshot.part': return seen('hello') && !seen('result') && roundOpen
+      case 'open-tabs': return seen('hello') && !seen('result') && roundOpen
+      case 'snapshot.end': return partsSinceEnd > 0 && roundOpen
+      case 'snapshot.check': return ends === 1 && partsSinceEnd === 0 && !seen('snapshot.check')
+      case 'result': return ends >= 1 && partsSinceEnd === 0 && !seen('result')
       case 'commit': return seen('result') && !seen('commit')
       case 'unpair': return seen('hello')
       default: return false

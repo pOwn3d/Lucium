@@ -92,7 +92,7 @@ public enum SyncSessionClient {
         let channel = SyncChannel(transport: transport, phase: .session, log: log)
         // A category whose entities hang on a space is announced with the structure only (§10.1, card 516).
         let announced = SyncCategory.announced(categories)
-        let local = SyncHello(device: device, nonce: nonce, categories: announced.map(\.rawValue), baseHash: baseHash, stateVersion: supportedStateVersion, appVersion: appVersion, now: now())
+        let local = SyncHello(device: device, nonce: nonce, categories: announced.map(\.rawValue), baseHash: baseHash, stateVersion: supportedStateVersion, appVersion: appVersion, now: now(), diff: SyncHello.diffVersion)
         try await channel.send(.hello(local))
         let first = try await channel.receive(timeout: handshakeTimeout)
         let remote: SyncHello

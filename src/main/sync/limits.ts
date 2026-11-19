@@ -54,6 +54,8 @@ export const MAX_ENTITIES = 100_000
 export const MAX_TOMBSTONES_PER_SNAPSHOT = 50_000
 export const MAX_ENTITIES_PER_PART = 500
 export const MAX_PARTS = 4096
+/** The version of the format of differences this build reads and writes, said in `hello.diff` (§31.1). */
+export const DIFF_VERSION = 1
 export const MAX_JSON_DEPTH = 32
 /**
  * How many values (every object, list, text, number, boolean and null) one frame and one whole connection may hold. The bounds in bytes do not bound the work: a frame of
