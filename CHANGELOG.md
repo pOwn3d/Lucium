@@ -12,7 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
-- **Synchronization with your iPhone**: Settings › Downloads and files › Synchronization pairs an iPhone by QR code or typed code, with Allow or Deny on the Mac. Off by default. Once an iPhone is paired, the Mac waits for it on your local network for as long as Lucium is unlocked, and the iPhone synchronizes by itself (every minute by default, 30 seconds to 15 minutes at your choice), in both directions: what you delete on one device is deleted on the other. Cookies, sessions, passwords and automatic sign-ins are never sent.
+- **Synchronization with your iPhone**: Settings › Downloads and files › Synchronization pairs an iPhone by QR code or typed code, with Allow or Deny on the Mac. Off by default. Once paired, the iPhone synchronizes by itself, every minute or at your pace, deletions included. Cookies and passwords are never sent.
 - **“On the iPhone” in the command bar**: when “Open tabs” is ticked on both devices, the tabs your iPhone had open answer what you type in the command bar. A click opens the page in a new tab, in the space of the same name if it is not locked.
 
 ### Changed
