@@ -220,6 +220,44 @@ final class SyncInteropTests: BrowserCoreTestCase {
         XCTAssertEqual(devices.count, 1, "nothing was added to the Mac by the second attempt")
     }
 
+    /// A person takes their time: several seconds to press « Autoriser » on the Mac, several to compare the words on the phone.
+    func testPairingWhenThePeopleTakeTheirTime() async throws {
+        let peer = try MacPeerClient.fromEnvironment()
+        let phone = try await makePhone(peer, categories: [.structure, .todayTabs])
+        let view = try await peer.pair(delayMs: 8_000)
+        let code = try SyncPairingCode.parse(qr: view.qr).get()
+        let pairing = Task { await phone.controller.pair(with: code) }
+        try await phone.waitFor("the words to compare", timeout: .seconds(40)) { if case .comparing = phone.controller.pairingStep { return true } else { return pairing.isCancelled } }
+        try await Task.sleep(for: .seconds(8))
+        phone.controller.answerComparison(true)
+        let result = await pairing.value
+        if case .failure(let failure) = result { XCTFail("the pairing failed after the people took their time: \(failure)") }
+        let devices = try await peer.status().devices
+        XCTAssertEqual(devices.count, 1)
+    }
+
+    /// The phone forgot the Mac and the Mac did not forget the phone (the `unpair` was lost: the Mac was off, or being replaced): the same phone, with the same identity, scans the new QR.
+    /// Found by the real trial of 19 November: the Mac took the connection for a session (it knows the fingerprint) and said `hello`, the phone waited for `pair.challenge`.
+    func testAPhoneThatTheMacStillKnowsPairsAgain() async throws {
+        let peer = try MacPeerClient.fromEnvironment()
+        let first = try await makePhone(peer, categories: [.structure])
+        try await first.pair()
+        try await first.waitFor("the first session") { first.host.sessionsDone >= 1 && first.controller.status != .running }
+        let before = try await peer.status().devices
+        XCTAssertEqual(before.map(\.id), [first.deviceId])
+        // The same phone (same identity, same keychain), its settings gone: it has forgotten the Mac. The Mac still lists it.
+        let folder = directory.appending(path: "again")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let model = await makeModel(in: folder)
+        let again = try InteropPhone(peer: peer, model: model, directory: folder, store: store, categories: [.structure])
+        try await again.pair()
+        let after = try await peer.status().devices
+        XCTAssertEqual(after.map(\.id), [again.deviceId], "the Mac replaced the old record of this phone by the new one, once")
+        try await again.session()
+        let last = try await peer.status().lastExchange
+        XCTAssertEqual(last?.ok, true)
+    }
+
     // MARK: The refusals of the pairing
 
     func testPairingRefusedOnThePhoneKeepsNothing() async throws {

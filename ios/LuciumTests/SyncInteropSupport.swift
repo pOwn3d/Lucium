@@ -81,7 +81,9 @@ struct MacPeerClient: Sendable {
 
     func enable(_ categories: [SyncCategory]) async throws { try await call("POST", "/enable", .object(["categories": .array(categories.map { .string($0.rawValue) })])) }
     func setCategories(_ categories: [SyncCategory]) async throws { try await call("POST", "/categories", .object(["categories": .array(categories.map { .string($0.rawValue) })])) }
-    func pair(answer: String = "allow") async throws -> PeerPairing { try JSONDecoder().decode(PeerPairing.self, from: try await call("POST", "/pair", .object(["answer": .string(answer)]))) }
+    func pair(answer: String = "allow", delayMs: Int = 0) async throws -> PeerPairing {
+        try JSONDecoder().decode(PeerPairing.self, from: try await call("POST", "/pair", .object(["answer": .string(answer), "delayMs": .number(Double(delayMs))])))
+    }
     func beginSession() async throws { try await call("POST", "/begin-session") }
     func seedToday(_ count: Int, space: String, prefix: String) async throws {
         try await call("POST", "/seed-today", .object(["count": .number(Double(count)), "spaceId": .string(space), "prefix": .string(prefix)]))

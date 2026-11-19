@@ -9,7 +9,7 @@
 import { randomBytes, randomUUID } from 'node:crypto'
 import { mkdtempSync } from 'node:fs'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
-import { networkInterfaces, tmpdir } from 'node:os'
+import { hostname, networkInterfaces, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { SidebarState, TabItem } from '@shared/model'
 import { createInitialState, normalize, reduce, type Ctx } from '@shared/sidebar'
@@ -90,6 +90,8 @@ export class MacPeer {
   private current: PeerSession = { at: 0, applyMs: 0, applies: 0 }
   private answerTimer: NodeJS.Timeout | null = null
   private answer: 'allow' | 'refuse' | 'none' = 'allow'
+  private answerDelay = 0
+  private questionSeenAt: number | null = null
   private readonly cpuAtStart = process.cpuUsage()
 
   constructor(options: { host?: { name: string; address: string } } = {}) {
@@ -120,7 +122,7 @@ export class MacPeer {
       box,
       clock: new SafeClock(),
       // Only the chosen address is written in the QR and in `hello.hosts`; a name that is not `.local` is never written.
-      hostEnv: () => ({ hostname: 'interop-mac', interfaces: { [this.host.name]: [{ address: this.host.address, family: 'IPv4', internal: false, netmask: '255.255.255.0', mac: '00:00:00:00:00:00', cidr: `${this.host.address}/24` }] } }),
+      hostEnv: () => process.env.LUCIUM_INTEROP_REAL_HOSTS === '1' ? { hostname: hostname(), interfaces: networkInterfaces() } : ({ hostname: 'interop-mac', interfaces: { [this.host.name]: [{ address: this.host.address, family: 'IPv4', internal: false, netmask: '255.255.255.0', mac: '00:00:00:00:00:00', cidr: `${this.host.address}/24` }] } }),
       deviceName: () => 'Mac interop',
       now: () => Date.now(),
       isLocked: () => false,
@@ -160,12 +162,17 @@ export class MacPeer {
   }
 
   /** Opens a pairing and answers its question the way a person would (`allow` by default), a hundred milliseconds after it appears. */
-  async pair(answer: 'allow' | 'refuse' | 'none' = 'allow'): Promise<{ qr: string; code: string; address: string }> {
+  async pair(answer: 'allow' | 'refuse' | 'none' = 'allow', delayMs = 0): Promise<{ qr: string; code: string; address: string }> {
     this.answer = answer
+    this.answerDelay = delayMs
     await this.service.startPairing()
     this.answerTimer ??= setInterval(() => {
       const confirm = this.service.status().confirm
       if (confirm === null || confirm.waiting || this.answer === 'none') return
+      // A person takes their time to read the question and press the button.
+      this.questionSeenAt ??= Date.now()
+      if (Date.now() - this.questionSeenAt < this.answerDelay) return
+      this.questionSeenAt = null
       this.codesShown.push(confirm.code)
       this.service.answer(this.answer === 'allow')
     }, 100)
@@ -258,7 +265,7 @@ export class ControlServer {
           for (const category of SYNC_CATEGORIES) peer.service.setCategory(category, ((input.categories as SyncCategory[] | undefined) ?? []).includes(category))
           return reply(200, { ok: true })
         case 'POST /pair':
-          return reply(200, await peer.pair((input.answer as 'allow' | 'refuse' | 'none' | undefined) ?? 'allow'))
+          return reply(200, await peer.pair((input.answer as 'allow' | 'refuse' | 'none' | undefined) ?? 'allow', Number(input.delayMs ?? 0)))
         case 'POST /dispatch':
           peer.dispatch(input.action as SidebarAction)
           return reply(200, { ok: true })
