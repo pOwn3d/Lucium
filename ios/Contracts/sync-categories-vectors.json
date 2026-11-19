@@ -1,40 +1,24 @@
 {
-  "comment": "Which categories a device announces in its hello and which ones a session takes as common (docs/synchronisation.md §10.1, card 516): a category whose entities hang on a space (`needStructure`: the archive, the Today tabs) travels only with `structure`, because the spaces travel with it; without it the merge finds no space, takes every one of those entities for dangling (§11.7.1) and removes it. `announced` gives, for each set of categories a person ticked, the list the hello carries; `common` gives, for a set ticked here and the list the other device announced, the categories the session exchanges (the announcement is made first, and a name this version does not know is ignored). Lists are in the order of `order`. Played by src/main/sync/session-category-vectors.test.ts (announcedCategories, commonCategories) and by LuciumKit (SyncCategoryTests.swift: SyncCategory.announced, SyncCategory.common, for the names the version knows).",
-  "order": ["structure", "settings", "archive", "openTabs", "todayTabs"],
+  "comment": "Which categories a device announces in its hello and which ones a session takes as common (docs/synchronisation.md §10.1, card 516): a category whose entities hang on a space (`needStructure`: the archive, the Today tabs) travels only with `structure`, because the spaces travel with it; without it the merge finds no space, takes every one of those entities for dangling (§11.7.1) and removes it. `announced` gives, for each set of categories a person ticked, the list the hello carries; `common` gives, for a set ticked here and the list the other device announced, the categories the session exchanges (the announcement is made first, and a name this version does not know is ignored: `openTabs`, retired by card 511, is one of them). Lists are in the order of `order`. Played by src/main/sync/session-category-vectors.test.ts (announcedCategories, commonCategories) and by LuciumKit (SyncCategoryTests.swift: SyncCategory.announced, SyncCategory.common, for the names the version knows).",
+  "order": ["structure", "settings", "archive", "todayTabs"],
   "needStructure": ["archive", "todayTabs"],
   "announced": [
     {"ticked": [], "announced": []},
     {"ticked": ["structure"], "announced": ["structure"]},
     {"ticked": ["settings"], "announced": ["settings"]},
     {"ticked": ["archive"], "announced": []},
-    {"ticked": ["openTabs"], "announced": ["openTabs"]},
     {"ticked": ["todayTabs"], "announced": []},
     {"ticked": ["structure", "settings"], "announced": ["structure", "settings"]},
     {"ticked": ["structure", "archive"], "announced": ["structure", "archive"]},
-    {"ticked": ["structure", "openTabs"], "announced": ["structure", "openTabs"]},
     {"ticked": ["structure", "todayTabs"], "announced": ["structure", "todayTabs"]},
     {"ticked": ["settings", "archive"], "announced": ["settings"]},
-    {"ticked": ["settings", "openTabs"], "announced": ["settings", "openTabs"]},
     {"ticked": ["settings", "todayTabs"], "announced": ["settings"]},
-    {"ticked": ["archive", "openTabs"], "announced": ["openTabs"]},
     {"ticked": ["archive", "todayTabs"], "announced": []},
-    {"ticked": ["openTabs", "todayTabs"], "announced": ["openTabs"]},
     {"ticked": ["structure", "settings", "archive"], "announced": ["structure", "settings", "archive"]},
-    {"ticked": ["structure", "settings", "openTabs"], "announced": ["structure", "settings", "openTabs"]},
     {"ticked": ["structure", "settings", "todayTabs"], "announced": ["structure", "settings", "todayTabs"]},
-    {"ticked": ["structure", "archive", "openTabs"], "announced": ["structure", "archive", "openTabs"]},
     {"ticked": ["structure", "archive", "todayTabs"], "announced": ["structure", "archive", "todayTabs"]},
-    {"ticked": ["structure", "openTabs", "todayTabs"], "announced": ["structure", "openTabs", "todayTabs"]},
-    {"ticked": ["settings", "archive", "openTabs"], "announced": ["settings", "openTabs"]},
     {"ticked": ["settings", "archive", "todayTabs"], "announced": ["settings"]},
-    {"ticked": ["settings", "openTabs", "todayTabs"], "announced": ["settings", "openTabs"]},
-    {"ticked": ["archive", "openTabs", "todayTabs"], "announced": ["openTabs"]},
-    {"ticked": ["structure", "settings", "archive", "openTabs"], "announced": ["structure", "settings", "archive", "openTabs"]},
-    {"ticked": ["structure", "settings", "archive", "todayTabs"], "announced": ["structure", "settings", "archive", "todayTabs"]},
-    {"ticked": ["structure", "settings", "openTabs", "todayTabs"], "announced": ["structure", "settings", "openTabs", "todayTabs"]},
-    {"ticked": ["structure", "archive", "openTabs", "todayTabs"], "announced": ["structure", "archive", "openTabs", "todayTabs"]},
-    {"ticked": ["settings", "archive", "openTabs", "todayTabs"], "announced": ["settings", "openTabs"]},
-    {"ticked": ["structure", "settings", "archive", "openTabs", "todayTabs"], "announced": ["structure", "settings", "archive", "openTabs", "todayTabs"]}
+    {"ticked": ["structure", "settings", "archive", "todayTabs"], "announced": ["structure", "settings", "archive", "todayTabs"]}
   ],
   "common": [
     {"ticked": [], "theirs": [], "common": []},
@@ -294,6 +278,9 @@
     {"ticked": ["structure", "settings", "archive", "todayTabs"], "theirs": ["settings", "archive", "todayTabs"], "common": ["settings"]},
     {"ticked": ["structure", "settings", "archive", "todayTabs"], "theirs": ["structure", "settings", "archive", "todayTabs"], "common": ["structure", "settings", "archive", "todayTabs"]},
     {"ticked": ["structure", "archive"], "theirs": ["structure", "archive", "library"], "common": ["structure", "archive"]},
-    {"ticked": ["archive", "todayTabs"], "theirs": ["archive", "todayTabs", "library"], "common": []}
+    {"ticked": ["archive", "todayTabs"], "theirs": ["archive", "todayTabs", "library"], "common": []},
+    {"ticked": ["structure", "settings"], "theirs": ["structure", "settings", "openTabs"], "common": ["structure", "settings"]},
+    {"ticked": ["structure"], "theirs": ["openTabs"], "common": []},
+    {"ticked": ["settings"], "theirs": ["settings", "openTabs"], "common": ["settings"]}
   ]
 }

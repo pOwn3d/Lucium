@@ -482,9 +482,9 @@ Choix de cette règle plutôt que d'une autre : traiter les espaces comme « con
 | `settings` | de rien (`setting` n'a pas de `spaceId`) | seule |
 | `archive` | de l'espace (`spaceId`, `folderId`) | **avec `structure`** |
 | `todayTabs` | de l'espace (`spaceId`) | **avec `structure`** |
-| `openTabs` (tant qu'elle existe) | de rien : une liste lue, jamais fusionnée, jamais écrite ; elle ne retire rien | seule |
+| ~~`openTabs`~~ | **retirée** (carte 511, §27.11) : une valeur de ce nom, lue ou annoncée par un appareil de développement, est ignorée | — |
 
-Une catégorie qui **n'a pas** besoin de la structure et qui est commune ne change donc pas : `settings` seule, `openTabs` seule ou avec `settings` passent comme avant.
+Une catégorie qui **n'a pas** besoin de la structure et qui est commune ne change donc pas : `settings` seule passe comme avant.
 
 Réservées, **pas dans la v1** : `library` (signets, « À lire plus tard » ; l'iPhone ne les a pas encore, `docs/ios.md` §4.1), `sessions`. Un genre ou un champ **inconnu** d'une version plus récente traverse sans être lu (§11.6).
 
