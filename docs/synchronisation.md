@@ -1076,7 +1076,7 @@ La **base est vide** (première séance, base perdue, plus de 30 jours, ou **pre
 ### 27.12 Performances
 
 - **Pas de rechargement.** Un onglet reçu est créé **endormi** : sans vue web ni connexion, avec son titre et son adresse ; il ne charge qu'à son ouverture. **À vérifier** : le Mac sait créer un onglet d'« Aujourd'hui » endormi avec une adresse (il le fait pour les onglets épinglés, `awake: false`, et pour ses endormis) ; l'iPhone sait garder un onglet sans vue web (`TabSleep`, `WebViewHost`) et n'en crée qu'à l'ouverture. Aucune icône n'est chargée pour un onglet endormi. Un onglet **navigué** n'est jamais rechargé par la synchronisation (l'adresse est une graine, [Q14]). Fermer un onglet éveillé est la fermeture ordinaire.
-- **Taille.** Un instantané de 200 onglets : environ 200 entités de quelques champs, de l'ordre de 60 Kio, quinze valeurs JSON par entité, soit trois mille valeurs sur les 150 000 permises par trame (§7.5). **À mesurer** avec 200 onglets réels.
+- **Taille.** Un instantané de 200 onglets : environ 200 entités de quelques champs, de l'ordre de 60 Kio, quinze valeurs JSON par entité, soit trois mille valeurs sur les 150 000 permises par trame (§7.5). **À mesurer** avec 200 onglets réels (**mesuré** par la carte 512 : §30.3).
 - **Fréquence.** Avec des séances toutes les 30 secondes (carte 505), un instantané complet par séance (§8.2) coûte une poignée de main TLS et deux fois cette taille, **même quand rien n'a changé**. L'**envoi par différences** que le §8.2 prévoit « plus tard » devient alors le premier chantier de performance ; il n'est **pas** dans cette carte, et la mesure ci-dessus dit s'il est nécessaire.
 - **Déclencheurs.** Une séance « après un changement local » (§8.1) ne se déclenche que sur un changement **d'un champ suivi** : l'ouverture, la fermeture, le déplacement, un nom, une icône ; **ni une navigation, ni `activeAt` seul** (§27.5), sinon chaque page lue ferait une séance.
 - **Application.** Les créations d'un échange (200 à la première séance) passent par **un seul** `sync/apply`, **une seule** écriture de l'état et un seul affichage, avec l'application en temps linéaire du §22 ; **à mesurer** avec 200 créations. Les onglets créés ne chargent rien : le coût est celui de l'état, pas celui des pages.
@@ -1157,7 +1157,7 @@ La carte 508 branche le contrat sur le Mac (PR #143). Les points qui touchent **
 
 ### 27.18 Ce que la carte 509 a précisé en l'écrivant (le genre `todayTab` sur l'iPhone)
 
-La carte 509 branche le contrat du §27.16 dans LuciumKit et dans l'application de l'iPhone (**sans interface**, sans texte, sans la case d'appairage : les cartes d'interface qui suivent). Les points ci-dessous sont des choix de l'iPhone ; **ceux que le Mac doit faire à l'identique pour que les deux fusions partent des mêmes entrées** sont marqués « Mac pareil » et ont été comparés au code du Mac fusionné (§27.17) : l'entité envoyée, l'ordre `today:<espace>`, l'ensemble admis qui entre à l'adoption et la règle des catégories sont les mêmes ; l'admission est tenue autrement (le Mac la lit dans les entités du livre, l'iPhone en garde la liste) sans autre effet. Une séance contre le vrai Mac reste à jouer (carte d'interopérabilité).
+La carte 509 branche le contrat du §27.16 dans LuciumKit et dans l'application de l'iPhone (**sans interface**, sans texte, sans la case d'appairage : les cartes d'interface qui suivent). Les points ci-dessous sont des choix de l'iPhone ; **ceux que le Mac doit faire à l'identique pour que les deux fusions partent des mêmes entrées** sont marqués « Mac pareil » et ont été comparés au code du Mac fusionné (§27.17) : l'entité envoyée, l'ordre `today:<espace>`, l'ensemble admis qui entre à l'adoption et la règle des catégories sont les mêmes ; l'admission est tenue autrement (le Mac la lit dans les entités du livre, l'iPhone en garde la liste) sans autre effet. Une séance contre le vrai Mac a été jouée par la carte 512 (§30).
 
 | Sujet | Ce que fait l'iPhone | Pourquoi |
 |---|---|---|
@@ -1176,7 +1176,7 @@ La carte 509 branche le contrat du §27.16 dans LuciumKit et dans l'application 
 | **Journal des conflits** | le genre se dit « Onglet » ; l'étiquette de la ligne est le **nom que la personne a donné** (`customTitle`), **jamais** le titre ni l'adresse | §27.8 |
 | **Catégorie** | `SyncCategory.todayTabs` (nom du protocole : `todayTabs`), **non cochée par défaut** [Q9] ; **annoncée dans le `hello` et prise comme commune seulement avec `structure`**, comme le Mac (`announcedCategories`, `commonCategories`) : sans les espaces, la fusion ne trouverait aucun espace et retirerait tous les onglets, ceux de l'autre appareil compris (`SyncCategory.announced`, `SyncCategory.common`) ; une catégorie inconnue d'un fichier `sync.json` est ignorée. La ligne de réglages n'est **pas** montrée (carte d'interface qui suit) | §27.1 |
 
-**Vérifié** (tests LuciumKit, `SyncTodayTabsTests`, et tests de l'application sur simulateur, `SyncTodayTabsAppTests`, sans fenêtre) : tout ce qui précède, y compris des séances entières contre le Mac écrit pour les tests (`SyncTestMac`, même fusion Swift). **Pas vu** : un vrai iPhone sur un vrai réseau, et une séance contre le **vrai** Mac (carte d'interopérabilité).
+**Vérifié** (tests LuciumKit, `SyncTodayTabsTests`, et tests de l'application sur simulateur, `SyncTodayTabsAppTests`, sans fenêtre) : tout ce qui précède, y compris des séances entières contre le Mac écrit pour les tests (`SyncTestMac`, même fusion Swift). **Pas vu** : un vrai iPhone sur un vrai réseau, et (avant la carte 512) une séance contre le **vrai** Mac : jouée depuis par la carte 512, §30.
 
 ### 27.19 Ce que la carte 510 a précisé en l'écrivant (l'interface et les textes, Mac et iPhone)
 
@@ -1234,3 +1234,62 @@ Décisions du chef de projet du 19 novembre 2026, une PR par groupe cohérent (#
 **Ce que le n° 38 ne corrige pas**. Le `hello` ne peut corriger qu'un port qui répond encore : un iPhone dont le port enregistré ne répond plus (le Mac a changé de port après un redémarrage, parce que le sien était pris) n'atteint jamais le `hello`. Le port de `pair.accept` règle le cas où le QR était déjà périmé à l'appairage ; pour l'autre cas, il faut appairer de nouveau, ou que le Mac garde son port (c'est ce qu'il fait : le port tiré est gardé et réutilisé, §6.1). Le choix de la carte (« le port dans `pair.accept`/`hello` ») est appliqué tel quel ; l'autre option du rapport (« le choisir une fois pour toutes à l'appairage ») n'est pas prise.
 
 **Ce que la carte n'a pas pu faire sans appareil** : rien de tout cela n'a tourné sur un iPhone réel ni avec un Electron lancé (`smoke-sync.ts` est mis à jour, pas lancé).
+
+## 30. Ce que la carte 512 a prouvé et mesuré (interopérabilité Mac ↔ iPhone, 19 novembre 2026)
+
+Le harnais est dans le dépôt : `scripts/sync-interop/` (son `README.md` dit comment le lancer : `scripts/sync-interop/run.sh`). Le **vrai code du Mac** (le `SyncService` de `src/main/sync/`, sous Node, sans Electron ni fenêtre) écoute sur **une vraie adresse locale de la machine** (aucun filtre assoupli : celui du §6.2 reste, et le connecteur de l'iPhone refuse le bouclage) ; le **vrai code de l'iPhone** (le `SyncController` de l'application, le vrai TLS `Network.framework`, `LuciumKit`) tourne sur un simulateur démarré en tâche de fond. Aucune fenêtre, aucun Lucium lancé. Ce qui n'est pas le vrai : le scellement de la clé du Mac (un XOR à la place de `safeStorage`, qui demande Electron) et l'objet qui tient l'état du Mac (un objet simple à la place du magasin de la fenêtre).
+
+### 30.1 Ce qui est prouvé, des deux côtés, par une séance réelle
+
+| Sujet | Résultat |
+|---|---|
+| **Appairage par engagement (§4.7)** | l'iPhone et le Mac montrent **les mêmes mots** (30 bits) ; un second iPhone avec le QR déjà utilisé n'obtient rien (`not-paired`) ; un appairage refusé sur l'iPhone ne laisse rien des deux côtés |
+| **Séance complète** | les deux appareils se retrouvent avec les mêmes espaces, dossiers, favoris, onglets épinglés et onglets d'« Aujourd'hui », et **la même base** (hash) |
+| **Onglets d'Aujourd'hui, ouvrir** | un onglet de moins de 20 s ne quitte aucun des deux appareils (preuve des deux côtés) ; une fois assez vieux il part avec **son adresse et son titre**, dans les deux sens ; un onglet reçu arrive **endormi** (aucune vue web) |
+| **Fermer** | fermé sur un appareil, archivé (source `sync`, même identifiant) sur l'autre, dans les deux sens ; avec `archive` commune, les deux archives ont les mêmes identifiants |
+| **Épingler, détacher** | l'onglet reste, change de liste, **garde sa page**, dans les deux sens |
+| **Lu là, fermé ici** | l'onglet que le Mac ferme pendant que l'iPhone le lit **reste** sur l'iPhone et **revient** sur le Mac (§27.5) |
+| **Espace verrouillé** | rien n'entre dans un espace verrouillé sur le Mac, rien n'en sort, **aucun onglet n'est fermé** de l'autre côté ; au déverrouillage l'onglet arrive |
+| **Plafond de 200** | avec 200 onglets de chaque côté, chacun a les 200 de l'autre ; le 201ᵉ et 30 de plus **restent là où ils sont**, « non partagés » |
+| **Suppressions de structure** | dossier, favori, espace et onglet épinglé supprimés sur un appareil le sont sur l'autre, dans les deux sens, **sans revenir** à la séance suivante |
+| **Catégories** | `todayTabs` ou `archive` cochées sans `structure` côté iPhone, `todayTabs` cochée d'un côté seulement, `structure` seule face à un Mac qui coche plus : **rien n'est retiré** d'aucun côté, et les onglets ne passent que si les deux cochent `todayTabs` avec `structure` |
+| **Séance toutes les 30 s** | la boucle de l'application tourne sur le vrai Mac : 19 séances en 10 minutes, aucune n'échoue |
+
+Preuve que le harnais voit un défaut : le seuil de 20 s du Mac mis à 0 et le calcul du code de comparaison du Mac changé (un nonce remplacé par l'autre) font chacun échouer le test principal, et les deux gardes de catégories de l'iPhone (`announced`, `common`) retirées font échouer le test des catégories (la séance diverge) ; six défauts du pair Mac (filtre d'adresse, tri des interfaces, âge des onglets semés, notification des marques, remise à zéro, écoute au démarrage) font chacun échouer un test de `scripts/sync-interop/mac-peer.test.ts`.
+
+### 30.2 Trouvé par l'essai
+
+1. **Le plafond compte les onglets reçus** (`admitTabs` : `plafond − déjà admis`, et un onglet reçu entre dans l'ensemble admis à l'adoption, §27.18). Un appareil qui a reçu 200 onglets de l'autre n'a **plus de place** pour un seul onglet à lui : le Mac qui reçoit les 200 de l'iPhone ne partage pas le premier onglet qu'il ouvre (essai `testADeviceThatReceived200TabsStillSharesItsOwnFirstOne`). Avec 100 onglets de chaque côté le plafond est déjà atteint des deux côtés. Le §27.4 dit « 200 par appareil, jusqu'à 400 ensemble » : le code donne **200 pour l'ensemble partagé que chaque appareil tient**. C'est un choix à faire (compter seulement ce que l'appareil a admis lui-même demande de distinguer, dans les deux livres de marques, un onglet admis ici d'un onglet adopté) : carte proposée dans le bilan, rien n'est changé. L'essai est écrit comme un échec attendu (`XCTExpectFailure`, strict) : il échoue le jour où la règle change, et on retire alors l'attente.
+2. **`archive` cochée sans `structure`** vidait l'archive de l'autre appareil (la fusion ne trouve aucun espace). Vu par un premier passage de l'essai, **corrigé entre-temps par la PR #146** (annoncée et commune seulement avec la structure, des deux côtés ; le Mac refuse même de la cocher sans elle) : l'essai joue maintenant le cas côté iPhone contre le vrai Mac, et passe, sans rien perdre des deux côtés.
+
+### 30.3 Mesures avec 200 onglets d'« Aujourd'hui » par appareil
+
+Les deux appareils sur la même machine, TLS 1.3 réel, sur l'adresse locale de la machine (la connexion passe par l'interface de bouclage de l'hôte : même pile TCP/TLS qu'un Wi-Fi, mais sans radio ; la durée est donc celle de la machine, pas d'un réseau). 400 entités `todayTab` dans chaque instantané (200 de chaque appareil).
+
+| Mesure | Résultat |
+|---|---|
+| Une séance où rien n'a changé | **93 Kio dans chaque sens** (233 octets par entité, marques comprises), **209 ms**, aucune application d'un côté ni de l'autre |
+| Une séance avec un onglet fermé de chaque côté | 93 Kio dans chaque sens, 210 ms ; application : **8,1 ms** sur l'iPhone, **1,9 ms** sur le Mac (un seul `sync/apply`) |
+| Première séance, 200 onglets de chaque côté (appairage compris) | 83 Kio envoyés, 82 Kio reçus ; application sur l'iPhone 7 ms |
+| Un iPhone vide adopte les 200 onglets du Mac | 82 Kio reçus, 1 Kio envoyés ; **une seule application de 200 créations : 19 ms** sur l'iPhone ; appairage et séance ensemble 332 ms |
+| **Séance toutes les 30 s pendant 10 minutes** (19 séances) | 1,72 Mio dans chaque sens, soit **environ 10 Mio par heure dans chaque sens** ; application cumulée 158 ms sur l'iPhone ; **CPU 5,4 s sur 602 s (0,9 % d'un cœur)** pour le processus de l'application (qui compte aussi le travail du test), **mémoire 36 Mio stable** du début à la fin ; Mac : CPU 1,55 s (0,26 % d'un cœur), mémoire 106 Mio au début, 102 Mio à la fin (pas de croissance) |
+
+Le prévu du §27.12 (« de l'ordre de 60 Kio ») valait pour 200 entités ; avec 400, 93 Kio, donc le même ordre. La borne de la trame (1 Mio) n'est pas approchée : le maximum permis, 500 entités `todayTab`, serait de l'ordre de 120 Kio.
+
+**Ce que ces mesures ne disent pas** : la batterie d'un vrai iPhone (la radio Wi-Fi, que l'essai n'utilise pas), la latence d'un vrai réseau, le coût des pages (aucune n'est chargée). Les chiffres de l'iPhone sont ceux du processus de test dans le simulateur ; les vues web sont d'autres processus.
+
+### 30.4 Faut-il un envoi par différences ?
+
+**Non pour 200 onglets** : une séance coûte 210 ms, 93 Kio et moins de 1 % d'un cœur, et l'application ne la fait que lorsqu'elle est à l'écran ; la mémoire ne croît pas. **Ce qui pourrait le demander** : un plafond relevé à 500 (option B du §27.4), ou une mesure d'autonomie sur un vrai iPhone qui montrerait que 120 réveils de la radio par heure pèsent. Dans ce cas, la forme la moins chère n'est pas un protocole nouveau : comme les deux appareils connaissent la même base (`baseHash` du `hello`, §8.2), un appareil peut n'envoyer que les entités qui **diffèrent de la base** et le condensat de son instantané, l'autre reconstruit l'instantané (base plus différences) et vérifie le condensat. C'est une carte proposée, à décider ; elle n'est pas faite ici.
+
+### 30.5 Ce qui n'est pas prouvé
+
+Un vrai iPhone, un vrai Wi-Fi entre deux machines, le nom `.local`, l'autorisation du réseau local, la caméra, `safeStorage`, le Node d'Electron (l'essai tourne sous le Node de la machine). `smoke-sync.ts` reste écrit et non lancé (AGENTS.md §1).
+
+### 30.6 L'essai réel du 19 novembre 2026 : un iPhone que le Mac connaît encore ne pouvait pas s'appairer de nouveau
+
+**Ce qui s'est passé.** Sur « Lucium Essai » n°4 et l'iPhone en TestFlight (même révision), l'appairage échouait deux fois avec « Le Mac et l'iPhone ne se sont pas compris ». **Cause (reproduite dans le harnais, `testAPhoneThatTheMacStillKnowsPairsAgain`)** : l'iPhone avait oublié le Mac (« Oublier ce Mac », le dernier mot `unpair` perdu parce que le Mac était éteint ou en cours de remplacement), mais le Mac gardait l'iPhone dans `sync.json`. À la connexion, le Mac décide par l'empreinte (§6.1) : une empreinte connue est **une séance**, il dit donc `hello` ; l'iPhone qui vient de scanner un QR attend `pair.challenge`, lit `hello`, et s'arrête sur `bad-message` (« hello is not allowed here »), que l'application dit par la phrase des erreurs de protocole. Ce n'est ni une différence entre Electron et Node, ni entre le simulateur et la build Release : le même défaut était déjà là avant l'appairage par engagement, que l'essai n'a fait que rencontrer (le harnais jouait un iPhone neuf, jamais un iPhone déjà connu).
+
+**Ce qui change** (Mac seulement : l'iPhone n'a rien à corriger, il faut une **nouvelle build du Mac**, pas une nouvelle build de l'iPhone) : quand un appairage est ouvert et que sa place est libre, un appareil que le Mac connaît déjà est **mené par l'appairage** (le QR est celui de la personne qui vient d'ouvrir « Ajouter un iPhone ») ; son enregistrement est remplacé (`addPeer` remplace par identifiant ou par empreinte). Sans appairage ouvert, ou si la place de l'appairage est prise, un appareil connu garde sa **séance** comme avant. L'appairage demande toujours le secret du QR : une empreinte connue ne donne rien de plus que le QR. **Coût assumé** : pendant les deux minutes d'une feuille « Ajouter un iPhone », la séance d'un iPhone déjà appairé qui se connecte alors reçoit `pair.challenge` au lieu de `hello` et échoue ; l'iPhone réessaie à son intervalle. Le fichier de base de l'ancien enregistrement (`sync-base-<ancien identifiant>.json`) reste jusqu'à la purge de 30 jours.
+
+**Contournement sans nouvelle build** : sur le Mac, « Oublier » l'iPhone dans la liste des appareils, puis « Ajouter un iPhone ».

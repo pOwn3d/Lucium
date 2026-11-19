@@ -47,6 +47,7 @@ ios/
   LuciumTests/           tests XCTest hébergés dans l'application (simulateur) ; Fixtures/ : la liste d'essai convertie (§6.3, §11)
   LuciumUITests/         tests XCUITest qui pilotent l'application comme une personne (vrai glissement depuis le bord, vrai toucher, arbre d'accessibilité) ; leur propre schéma `LuciumUI` (§3.4, §11)
 scripts/ios-check.sh     paquet + projet + tests sur simulateur sans fenêtre (+ captures sur demande)
+scripts/sync-interop/          l'essai Mac ↔ iPhone : le vrai Mac (Node) et l'application sur simulateur, sans fenêtre (`run.sh`, README ; synchronisation.md §30)
 scripts/ios-filter-lists.mjs   prépare les listes du bloqueur : télécharge celles du Mac, les convertit, écrit ios/Lucium/FilterLists/ (§6.3)
 scripts/ios-filter-lists/      le convertisseur (abp-to-webkit.ts), le registre des licences (embedded-lists.ts), la liste d'essai (fixtures/proof.txt) et leurs tests
 src/shared/ios-contract.test.ts   vecteurs d'adresses face au code du Mac ; catalogue de textes ; pas de couleur écrite

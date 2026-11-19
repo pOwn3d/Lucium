@@ -355,6 +355,38 @@ describe('SyncListener: a pairing', () => {
     socket.destroy()
   })
 
+  it('pairs a device the Mac already knows when a pairing is open: it forgot the Mac and the Mac did not forget it (the unpair was lost), and its record is replaced', async () => {
+    const r = await rig()
+    const phone = testIdentity('iphone-0000000010')
+    r.peers.set(phone.fingerprint.toString('hex'), peerOf(phone))
+    const { secret } = offer(r)
+    const answer = await pairOnce(r, phone, secret.secret)
+    // Without the fix the Mac took this for a session and said `hello`, which a pairing does not allow: the iPhone said « the Mac and the iPhone did not understand each other ».
+    expect(answer).toMatchObject({ t: 'pair.accept' })
+    expect(r.paired).toEqual([expect.objectContaining({ fingerprint: phone.fingerprint.toString('hex') })])
+    expect(r.sessions).toHaveLength(0)
+  })
+
+  it('keeps a session for a device it already knows when no pairing is open, and when the only place of the pairing is taken', async () => {
+    const r = await rig()
+    const phone = testIdentity('iphone-0000000011')
+    r.peers.set(phone.fingerprint.toString('hex'), peerOf(phone))
+    const { socket } = await connectTls(r.port, phone)
+    await sleep(50)
+    expect(r.sessions).toHaveLength(1)
+    socket.destroy()
+    // A pairing is open and a stranger holds its only place: the known device keeps its session (its sync is not stopped for the sheet of another).
+    const other = testIdentity('iphone-0000000012')
+    offer(r)
+    const stranger = await connectTls(r.port, other)
+    await sleep(50)
+    const known = await connectTls(r.port, phone)
+    await sleep(50)
+    expect(r.sessions).toHaveLength(2)
+    stranger.socket.destroy()
+    known.socket.destroy()
+  })
+
   it('says the pairing ended, with its outcome', async () => {
     const ended: unknown[] = []
     const r = await rig({ onPairingEnded: (outcome) => void ended.push(outcome) })

@@ -204,8 +204,12 @@ export class SyncListener {
     if (certificate === undefined) return this.failHandshake(tls, address, 'the client presented no certificate')
     const fingerprint = sha256(certificate.raw)
     const peer = this.deps.findPeer(fingerprint.toString('hex'))
-    if (peer !== undefined) return this.startSession(tls, address, peer)
     const offer = this.deps.openPairing(fingerprint)
+    // A device the Mac already knows, while a pairing is open and its place is free: the person opened « Ajouter un iPhone » and this is the device that scans. It forgot the Mac and
+    // the Mac did not forget it (the `unpair` was lost: the Mac was off, or was being replaced), so it is led through the pairing, which replaces its record. Taken for a session
+    // it would be told `hello` where it waits for `pair.challenge`, and could never pair again until the person forgot it on the Mac first (the trial of 19 November 2026).
+    // The pairing still needs the secret of the QR, so a known fingerprint gives nothing more than the QR does; with no pairing open, or its place taken, it keeps its session.
+    if (peer !== undefined && (offer === null || this.pairings.size >= MAX_PAIRING_CONNECTIONS)) return this.startSession(tls, address, peer)
     if (offer === null || (this.pairings.size >= MAX_PAIRING_CONNECTIONS && !this.takeSilentPlace())) {
       // A stranger, or a pairing already running: told once, closed, counted. What it sends is never read.
       this.deps.onEvent?.({ kind: 'not-paired', address })
