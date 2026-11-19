@@ -22,7 +22,7 @@ import { CONFIRM_MS, FINGERPRINT_BYTES, SECRET_BYTES } from './limits'
 import { MarkStore } from './mark-store'
 import type { MarkBook } from './marks'
 import type { OpenTab } from './messages'
-import { runSession as runExchange, type SessionHost } from './session'
+import { runSession as runExchange, type ClosedShownTab, type SessionHost } from './session'
 import { MarkTracker } from './sync-tracker'
 import { IdentityNotOpenableError, type IdentityStore, type SyncIdentity } from './identity'
 import { SyncListener, type ListenerDeps } from './listener'
@@ -94,6 +94,8 @@ export interface SessionPorts {
   stateVersion: number
   /** The tabs announced when the category « Onglets ouverts » is common. */
   openTabs?: () => OpenTab[]
+  /** Told when a session closed a Today tab that was the selected one of its space (§27.5, [Q11]); the line « Fermé sur l'iPhone » is the interface card's. */
+  onShownTabsClosed?: (peerId: string, tabs: ClosedShownTab[]) => void
 }
 
 /** The source address of a connection as a person reads it: no `::ffff:` in front of an IPv4 address, no zone (`%en0`), and nothing but what an address is made of. */
@@ -631,6 +633,7 @@ export class SyncService {
         hosts: () => ownHosts(this.deps.hostEnv()),
         ...(ports.openTabs !== undefined ? { openTabs: ports.openTabs } : {}),
         onOpenTabs: (id, items) => void this.announced.set(id, { items, at: this.deps.now() }),
+        ...(ports.onShownTabsClosed !== undefined ? { onShownTabsClosed: ports.onShownTabsClosed } : {}),
         onUnpair: (id) => this.forget(id, this.deps.settleMs ?? 2000),
         onRefused: (id, refused) => console.warn(`[sync] ${refused.length} entities of ${id} were not taken (${[...new Set(refused.map((one) => one.reason))].join(', ')})`),
         onDone: (id, at) => {

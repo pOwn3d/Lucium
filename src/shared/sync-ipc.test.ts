@@ -71,7 +71,7 @@ describe('parseSyncRequest: what is refused', () => {
 
 describe('the defaults of the categories [Q2]', () => {
   it('tick the structure alone', () => {
-    expect(DEFAULT_SYNC_CATEGORIES).toEqual({ structure: true, settings: false, archive: false, openTabs: false })
+    expect(DEFAULT_SYNC_CATEGORIES).toEqual({ structure: true, settings: false, archive: false, openTabs: false, todayTabs: false })
     expect(Object.keys(DEFAULT_SYNC_CATEGORIES)).toEqual([...SYNC_CATEGORIES])
   })
 })

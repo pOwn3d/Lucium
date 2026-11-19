@@ -8,7 +8,7 @@
 import { sameJson } from '@shared/sync-canonical'
 import type { PatchKind, PatchRemoval, PatchUpsert, SyncPatch } from '@shared/sidebar-sync'
 import type { SyncEntity, SyncSnapshot } from '@shared/sync-snapshot'
-import { KINDS, isKind } from './field-classes'
+import { SYNC_KINDS, isKind } from './field-classes'
 
 const emptyPatch = (): SyncPatch => ({ upserts: [], removals: [], order: {}, settings: {} })
 
@@ -17,15 +17,15 @@ export const patchIsEmpty = (patch: SyncPatch): boolean => patch.upserts.length 
 /** Whether an entity belongs to a space that is set aside: the space itself, or what holds its `spaceId`. */
 const setAside = (kind: string, id: string, entity: SyncEntity, withheld: ReadonlySet<string>): boolean => (kind === 'space' ? withheld.has(id) : typeof entity.fields['spaceId'] === 'string' && withheld.has(entity.fields['spaceId']))
 
-/** The list keys that name a space set aside. */
+/** The list keys that name a space set aside: its folders, its pinned tabs and its Today tabs (`today:<space>`, §27.3). */
 const listOfSpaceAside = (key: string, withheld: ReadonlySet<string>): boolean => {
   const [head, space] = key.split(':')
-  return (head === 'folders' || head === 'tabs') && space !== undefined && withheld.has(space)
+  return (head === 'folders' || head === 'tabs' || head === 'today') && space !== undefined && withheld.has(space)
 }
 
 export function buildPatch(frozen: SyncSnapshot, merged: SyncSnapshot, withheld: ReadonlySet<string>): SyncPatch {
   const patch = emptyPatch()
-  for (const kind of KINDS) {
+  for (const kind of SYNC_KINDS) {
     const before = frozen.entities[kind] ?? {}
     const after = merged.entities[kind] ?? {}
     for (const [id, entity] of Object.entries(after)) {
