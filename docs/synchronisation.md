@@ -1179,7 +1179,7 @@ La carte 509 branche le contrat du §27.16 dans LuciumKit et dans l'application 
 
 ## 29. Ce que la carte 517 a changé (revue de sécurité, points 35 à 42, 19 novembre 2026)
 
-Décisions du chef de projet du 19 novembre 2026, une PR par groupe cohérent (#147, #148 et celle de ce paragraphe). Le détail du protocole est au §4.7 ; l'état de chaque point, au §11.4 du rapport (`docs/securite-synchronisation.md`).
+Décisions du chef de projet du 19 novembre 2026, une PR par groupe cohérent (#147, #148 et #150). Le détail du protocole est au §4.7 ; l'état de chaque point, au §11.4 du rapport (`docs/securite-synchronisation.md`).
 
 | N° | Ce qui change | Où |
 |---|---|---|
