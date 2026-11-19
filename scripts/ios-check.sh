@@ -9,15 +9,21 @@
 # running it on a machine somebody is using. Nothing is signed, nothing is sent to Apple.
 #
 # LUCIUM_IOS_RUNTIME and LUCIUM_IOS_DEVICE choose the simulator (default: iOS 26.5 on an iPhone 17 Pro).
-# LUCIUM_IOS_KEEP=1 keeps the simulator for the next run instead of deleting it.
+# Each run creates its own simulator ("Lucium-iOS-Check-<epoch>-<pid>-<random>") and deletes it at the end, so runs in parallel do not touch each other;
+# at the start, simulators of that prefix older than 2 hours (left by a killed run) are deleted, younger ones are never touched.
+# LUCIUM_IOS_KEEP=1 keeps this run's simulator instead of deleting it (it is then reaped by a later run once it is 2 hours old).
 set -euo pipefail
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 runtime="${LUCIUM_IOS_RUNTIME:-com.apple.CoreSimulator.SimRuntime.iOS-26-5}"
 device="${LUCIUM_IOS_DEVICE:-com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro}"
-name="Lucium-iOS-Check"
+prefix="Lucium-iOS-Check"
 shots="${1:-}"
 bundle="app.lucium.browser.ios"
+
+# shellcheck source=scripts/simulator-lib.sh
+. "$root/scripts/simulator-lib.sh"
+name="$(sim_unique_name "$prefix")"
 
 command -v xcodegen >/dev/null || { echo "xcodegen is missing: brew install xcodegen (a development tool, MIT)" >&2; exit 1; }
 
@@ -27,19 +33,15 @@ echo "== LuciumKit (swift test, on the Mac)"
 echo "== Xcode project"
 (cd "$root/ios" && xcodegen generate)
 
-udid="$(xcrun simctl list devices | awk -v n="$name" '$0 ~ n" \\(" { match($0, /[0-9A-F]{8}-([0-9A-F]{4}-){3}[0-9A-F]{12}/); print substr($0, RSTART, RLENGTH); exit }')"
-created=0
-if [ -z "$udid" ]; then
-  udid="$(xcrun simctl create "$name" "$device" "$runtime")"
-  created=1
-fi
+sim_reap_orphans "$prefix"
+udid="$(xcrun simctl create "$name" "$device" "$runtime")"
 cleanup() {
   xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true
-  if [ "$created" = 1 ] && [ "${LUCIUM_IOS_KEEP:-0}" != 1 ]; then xcrun simctl delete "$udid" >/dev/null 2>&1 || true; fi
+  if [ "${LUCIUM_IOS_KEEP:-0}" != 1 ]; then xcrun simctl delete "$udid" >/dev/null 2>&1 || echo "could not delete simulator $name ($udid)" >&2; fi
 }
 trap cleanup EXIT
 
-echo "== Simulator $udid (background, no window)"
+echo "== Simulator $name $udid (background, no window)"
 xcrun simctl boot "$udid" 2>/dev/null || true
 xcrun simctl bootstatus "$udid" -b >/dev/null
 

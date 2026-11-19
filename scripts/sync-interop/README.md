@@ -14,7 +14,7 @@ LUCIUM_INTEROP_SOAK_SECONDS=600 scripts/sync-interop/run.sh --report /tmp/intero
 ```
 
 It opens **no window**: the Mac is a Node process, the simulator is booted in the background by `simctl` (never `Simulator.app`) and deleted at the end, like
-`scripts/ios-check.sh`. It is heavy (a Swift build, a simulator): say so before running it on a machine somebody is using (AGENTS.md §1). Nothing is signed for a
+`scripts/ios-check.sh`. Each run owns a simulator with a unique name (`Lucium-Interop-Check-<epoch>-<pid>-<random>`), so runs in parallel do not touch each other; a start also deletes simulators of that prefix older than 2 hours, never younger ones (`scripts/simulator-lib.sh`). It is heavy (a Swift build, a simulator): say so before running it on a machine somebody is using (AGENTS.md §1). Nothing is signed for a
 device and nothing leaves the machine's local network. Needs `xcodegen` (as `ios-check.sh`), Node 26 and the dependencies of the repository.
 
 | Variable | Meaning |

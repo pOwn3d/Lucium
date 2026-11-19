@@ -3,7 +3,8 @@
 #   1. the REAL Mac of the synchronisation (src/main/sync/, TypeScript, under Node via Vitest, no Electron) is started and listens on a real address of this machine;
 #   2. an iOS simulator is booted in the background by `simctl` (Simulator.app is never started), like scripts/ios-check.sh;
 #   3. the tests of ios/LuciumTests/SyncInteropTests.swift run the REAL Swift of the application on it, against that Mac, and drive it through its control port.
-# Both are stopped and the simulator is deleted at the end, whatever happens.
+# Both are stopped and the simulator is deleted at the end, whatever happens. The simulator is named "Lucium-Interop-Check-<epoch>-<pid>-<random>", owned by
+# this run alone (parallel runs do not touch each other); at the start, ones of that prefix older than 2 hours are deleted, younger ones never.
 #
 # Usage: scripts/sync-interop/run.sh [--only <Test>] [--report <dir>]
 #   --only    one test of SyncInteropTests (testPairingThenSessionsInBothDirections, testPairingRefusedOnThePhoneKeepsNothing,
@@ -21,7 +22,10 @@ set -euo pipefail
 root="$(cd "$(dirname "$0")/../.." && pwd)"
 runtime="${LUCIUM_IOS_RUNTIME:-com.apple.CoreSimulator.SimRuntime.iOS-26-5}"
 device="${LUCIUM_IOS_DEVICE:-com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro}"
-name="Lucium-Interop-Check"
+prefix="Lucium-Interop-Check"
+# shellcheck source=scripts/simulator-lib.sh
+. "$root/scripts/simulator-lib.sh"
+name="$(sim_unique_name "$prefix")"
 only=""
 report=""
 while [ $# -gt 0 ]; do
@@ -47,7 +51,7 @@ cleanup() {
   [ -n "$peerpid" ] && { sleep 1; kill "$peerpid" >/dev/null 2>&1 || true; }
   if [ -n "$udid" ]; then
     xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true
-    xcrun simctl delete "$udid" >/dev/null 2>&1 || true
+    xcrun simctl delete "$udid" >/dev/null 2>&1 || echo "could not delete simulator $name ($udid)" >&2
   fi
   echo "== stopped; the log of the Mac is $peerlog, the measures are in $report"
 }
@@ -63,6 +67,7 @@ grep LUCIUM_INTEROP_READY "$peerlog" || true
 echo "== Xcode project"
 (cd "$root/ios" && xcodegen generate)
 
+sim_reap_orphans "$prefix"
 udid="$(xcrun simctl create "$name" "$device" "$runtime")"
 echo "== Simulator $udid (background, no window)"
 xcrun simctl boot "$udid"
