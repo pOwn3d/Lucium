@@ -8,7 +8,10 @@ import XCTest
 /// does with the pins, the identities, the version and the ALPN. It records what its verification block saw of the client and every byte it received.
 final class TestTLSServer: @unchecked Sendable {
     let identity: SyncIdentity
-    private let listener: NWListener
+    private var listener: NWListener
+    private let parameters: NWParameters
+    /// Proof that the port is answered here and not by another process of the Mac (`LoopbackPort`).
+    private let ownership = LoopbackPort()
     private let queue = DispatchQueue(label: "app.lucium.tests.server")
     private let lock = NSLock()
     private var clientFingerprints: [Data] = []
@@ -22,7 +25,7 @@ final class TestTLSServer: @unchecked Sendable {
     var bytesReceived: Int { lock.withLock { chunks.reduce(0) { $0 + $1.count } } }
 
     init(identity: SyncIdentity, maxVersion: tls_protocol_version_t = .TLSv13, minVersion: tls_protocol_version_t = .TLSv13, alpn: String? = NetworkSyncConnector.alpn,
-         requireClientCertificate: Bool = true) throws {
+         requireClientCertificate: Bool = true, firstPort: UInt16? = nil) throws {
         self.identity = identity
         let tls = NWProtocolTLS.Options()
         let options = tls.securityProtocolOptions
@@ -38,7 +41,8 @@ final class TestTLSServer: @unchecked Sendable {
             }
             complete(true)
         }, DispatchQueue(label: "app.lucium.tests.server.verify"))
-        listener = try NWListener(using: NWParameters(tls: tls, tcp: NWProtocolTCP.Options()), on: .any)
+        parameters = NWParameters(tls: tls, tcp: NWProtocolTCP.Options())
+        listener = try NWListener(using: parameters, on: firstPort.flatMap { NWEndpoint.Port(rawValue: $0) } ?? .any)  // `firstPort`: for the test of the port itself
         recorderBox = recorder
     }
 
@@ -52,8 +56,29 @@ final class TestTLSServer: @unchecked Sendable {
     var shownByClients: [Data] { recorderBox?.lock.withLock { recorderBox?.seen ?? [] } ?? [] }
 
     func start() async throws {
+        // The kernel's pick can be a port that another process listens on (a connection to it would reach that process): the server keeps a port only
+        // when a connection to it really arrives here, and takes another one when it does not.
+        var firstError: Error?
+        for _ in 0..<20 {
+            do {
+                try await listenNow()
+                let found = listener.port?.rawValue ?? 0
+                if await ownership.owns(port: found) {
+                    port = found
+                    return
+                }
+            } catch {
+                firstError = firstError ?? error
+            }
+            listener.cancel()
+            listener = try NWListener(using: parameters, on: .any)
+        }
+        throw firstError ?? LoopbackPort.NoFreePort()
+    }
+
+    private func listenNow() async throws {
         listener.newConnectionHandler = { [weak self] connection in
-            guard let self else { return }
+            guard let self, !self.ownership.intercept(connection) else { return }
             let transport = NetworkSyncTransport(connection)
             self.lock.withLock { self.accepted.append(transport) }
             Task {
@@ -66,18 +91,18 @@ final class TestTLSServer: @unchecked Sendable {
                 }
             }
         }
+        let current = listener
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             let once = OnceFlag()
-            listener.stateUpdateHandler = { state in
+            current.stateUpdateHandler = { state in
                 switch state {
                 case .ready: if once.take() { continuation.resume() }
                 case .failed(let error): if once.take() { continuation.resume(throwing: error) }
                 default: break
                 }
             }
-            listener.start(queue: queue)
+            current.start(queue: queue)
         }
-        port = listener.port?.rawValue ?? 0
     }
 
     func stop() {
@@ -312,6 +337,30 @@ final class SyncNetworkTests: XCTestCase {
                 if word["t"] as? String == "bye" { try await mac.write("bye") }
             } catch { print("[test] mac script: \(error)") }
         }
+    }
+
+    /// The kernel can hand the server a port another process listens on; the connection would then reach that process (one run in several hundred
+    /// failed on `testAPairingGoesThrough…` this way). The server gives such a port up.
+    func testAServerGivesUpAPortThatAnotherProcessListensOnAndStillAnswersOnItsOwn() async throws {
+        let squatter = try Squatter()
+        try await squatter.start()
+        defer { squatter.stop() }
+        let made = try TestTLSServer(identity: mac, firstPort: squatter.port)
+        try await made.start()
+        servers.append(made)
+        XCTAssertNotEqual(made.port, squatter.port, "the port the other process listens on is not kept")
+        made.handler = { transport in
+            do {
+                made.note(try await transport.receive())
+                try await transport.send(Data("pong".utf8))
+            } catch { print("[test] server handler: \(error)") }
+        }
+        let connection = try await connector().connect(host: "127.0.0.1", port: made.port, pin: .fingerprint(mac.fingerprint), timeout: .seconds(5))
+        try await connection.transport.send(Data("ping".utf8))
+        let answer = try await connection.transport.receive()
+        XCTAssertEqual(answer, Data("pong".utf8), "the answer comes from this server")
+        XCTAssertEqual(made.bytesReceived, 4)
+        connection.transport.close()
     }
 
     func testAPairingGoesThroughAndTheMacIsKnownByWhatItProved() async throws {

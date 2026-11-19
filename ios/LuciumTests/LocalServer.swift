@@ -19,7 +19,8 @@ final class LocalServer: @unchecked Sendable {
         let headers: [String: String]
     }
 
-    private let listener: NWListener
+    private var listener: NWListener
+    private let ownership = LoopbackPort()
     private let routes: [String: Route]
     private let lock = NSLock()
     private var asked: [Request] = []
@@ -28,11 +29,10 @@ final class LocalServer: @unchecked Sendable {
     private var hung: [NWConnection] = []
     private let queue = DispatchQueue(label: "app.lucium.tests.local-server")
 
-    init(routes: [String: Route], silent: Bool = false) throws {
+    /// `firstPort` is for the test of the port itself: the first port the server tries (a port somebody else holds, to see it given up).
+    init(routes: [String: Route], silent: Bool = false, firstPort: UInt16? = nil) throws {
         self.silent = silent
-        let parameters = NWParameters.tcp
-        parameters.requiredInterfaceType = .loopback
-        listener = try NWListener(using: parameters)
+        listener = try LoopbackPort.makeListener(port: firstPort)
         self.routes = routes
     }
 
@@ -41,19 +41,41 @@ final class LocalServer: @unchecked Sendable {
 
     /// Starts listening and returns the port.
     func start() async throws -> UInt16 {
-        listener.newConnectionHandler = { [weak self] connection in self?.serve(connection) }
+        // The port is the kernel's pick, and the kernel can pick one that another process listens on (`LoopbackPort`): the server keeps a port only when a
+        // connection to it really arrives here, and takes another one when it does not.
+        var firstError: Error?
+        for _ in 0..<20 {
+            do {
+                let port = try await listenNow()
+                if await ownership.owns(port: port) { return port }
+            } catch {
+                firstError = firstError ?? error  // a port that cannot be had (somebody holds it exclusively) is given up like one that is not ours
+            }
+            listener.cancel()
+            listener = try LoopbackPort.makeListener()
+        }
+        throw firstError ?? LoopbackPort.NoFreePort()
+    }
+
+    /// Listens on the port of the current listener, and answers with it once the listener is ready.
+    private func listenNow() async throws -> UInt16 {
+        listener.newConnectionHandler = { [weak self] connection in
+            guard let self, !self.ownership.intercept(connection) else { return }
+            self.serve(connection)
+        }
         return try await withCheckedThrowingContinuation { continuation in
             let once = Once()
-            listener.stateUpdateHandler = { state in
+            let current = listener
+            current.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
-                    if once.first(), let port = self.listener.port?.rawValue { continuation.resume(returning: port) }
+                    if once.first(), let port = current.port?.rawValue { continuation.resume(returning: port) }
                 case .failed(let error):
                     if once.first() { continuation.resume(throwing: error) }
                 default: break
                 }
             }
-            listener.start(queue: queue)
+            current.start(queue: queue)
         }
     }
 
