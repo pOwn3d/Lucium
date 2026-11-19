@@ -4,7 +4,7 @@ Rapport de la carte 448 (synchro 6/6), écrit le 18 novembre 2026 (première pas
 
 **Résultat en une phrase.** Aucun défaut ne permet à quelqu'un qui n'est pas appairé de lire ou d'écrire des données : l'appairage, l'épinglage et le filtre d'adresses tiennent, et le faux QR scanné par la personne (n° 9) est fermé par le code à comparer. **Un appareil appairé hostile pouvait faire plus que ne le dit la spécification** (écrire dans le prototype du processus principal, empoisonner l'horloge, faire supprimer des données, bloquer le processus principal quelques secondes) : **les vingt-deux défauts n° 1 à 22 sont corrigés par quatorze PR** (§10 ; le n° 23 est une information acceptée), côté Mac et côté iPhone, chacun avec un test vu échouer sans lui. Les décisions du chef du 18 novembre 2026 (n° 9, 10 et 13) sont appliquées. **Ce qui reste n'est pas un défaut de code** : la relecture du corps de séance de l'iPhone (§6), la conformité du chiffrement (§9, décision du chef) et ce qui ne se vérifie que sur un appareil réel.
 
-**Seconde passe (19 novembre 2026, §11).** Les 22 correctifs de la première passe ont été **rejoués** (chacun retiré du code : son test échoue) et tiennent. Le corps de séance de l'iPhone et les correctifs de la carte 471 ont été relus par trois lecteurs indépendants : **onze défauts de plus**, dont deux de perte de données sans appareil hostile (n° 25) ou par un Mac appairé hostile (n° 33), **sont corrigés par onze PR** ; **huit points restent à décider** (§11.4). **Ce n'est donc toujours pas « sans point bloquant »** : voir la conclusion du §11.5.
+**Seconde passe (19 novembre 2026, §11).** Les 22 correctifs de la première passe ont été **rejoués** (chacun retiré du code : son test échoue) et tiennent. Le corps de séance de l'iPhone et les correctifs de la carte 471 ont été relus par trois lecteurs indépendants : **onze défauts de plus**, dont deux de perte de données sans appareil hostile (n° 25) ou par un Mac appairé hostile (n° 33), **sont corrigés par onze PR fusionnées** ; **huit points restent à décider** (§11.4). **Ce n'est donc toujours pas « sans point bloquant »** : voir la conclusion du §11.5.
 
 ## 1. Périmètre
 
@@ -252,29 +252,29 @@ Et ce qui est **noté, borné, non corrigé** : l'archive de la personne est év
 
 **Pas revu ou pas prouvé** : tout ce qui demande un appareil, un simulateur ou Electron (invite du réseau local, caméra, Network.framework, `safeStorage`, le comportement de SwiftUI avec des identifiants en double, un titre de page à substitut isolé dans Chromium, la mémoire du décodage de dizaines de Mio, le watchdog d'iOS) ; `smoke-sync.ts` n'a pas été lancé ; la cible de l'application iOS n'a pas été compilée (les changements qui la touchent tiennent en une ligne dans `BrowserModel+Sync.swift`) ; la page des Réglages, `SyncConflictScreen` et les textes n'ont pas été relus ; la liste « Sur l'iPhone » a été relue **à la fusion de la carte 491** (PR #124) : elle garde la liste en mémoire après la fenêtre, l'oublie au verrou, à la décoche, à l'arrêt, avec l'appareil et à la sortie (testé) ; je n'y ai rien trouvé de plus (la ligne d'aide n'est qu'un texte, un clic dessus n'ouvre rien) ; le n° 26 compte davantage depuis qu'elle dure. La conformité du chiffrement (§9) n'a pas été rouverte.
 
-**Conclusion : toujours pas « sans point bloquant »**, mais plus pour la même raison. Les onze défauts de ce paragraphe (n° 24 à 34), dont trois de gravité haute ou moyenne à haute, **sont corrigés** une fois les onze PR fusionnées (§11.7) ; aucun ne donnait accès à quelqu'un qui n'est pas appairé. Il reste **à décider** les n° 35, 36, 37 et 38 (une horloge reculée, la force du code, l'archive, le port) et à **corriger avant le prochain genre** le n° 40 ; les autres sont de peu de gravité. Aucun point ne justifie, seul, de retenir la première version TestFlight, **mais le n° 24 et le n° 33 le justifiaient tant qu'ils étaient ouverts** : leurs PR doivent être fusionnées avant. Et la synchronisation n'a toujours **jamais tourné sur un appareil réel** (premier paragraphe de ce §11.5) : un essai sur un iPhone et un Mac avant de l'inclure est la condition que cette revue ne peut pas lever.
+**Conclusion : toujours pas « sans point bloquant »**, mais plus pour la même raison. Les onze défauts de ce paragraphe (n° 24 à 34), dont trois de gravité haute ou moyenne à haute, **sont corrigés et fusionnés** (§11.7) ; aucun ne donnait accès à quelqu'un qui n'est pas appairé. Il reste **à décider** les n° 35, 36, 37 et 38 (une horloge reculée, la force du code, l'archive, le port) et à **corriger avant le prochain genre** le n° 40 ; les autres sont de peu de gravité. Aucun point ne justifie, seul, de retenir la première version TestFlight, **mais le n° 24 et le n° 33 le justifiaient tant qu'ils étaient ouverts** : leurs PR (#129, #135) sont fusionnées. Et la synchronisation n'a toujours **jamais tourné sur un appareil réel** (premier paragraphe de ce §11.5) : un essai sur un iPhone et un Mac avant de l'inclure est la condition que cette revue ne peut pas lever.
 
 ### 11.6 Écarts de méthode de cette passe
 
 - **Un premier push forcé** : la branche de la PR #131 a reçu un premier commit qui utilisait `String.prototype.toWellFormed` (absent de la bibliothèque TypeScript du projet : le contrôle de types échouait) ; je l'ai amendé et poussé de force quelques minutes après l'ouverture de la PR (`AGENTS.md` §7 le déconseille ; dit dans la PR). Rien d'autre n'était sur cette branche.
 - **Un second push forcé**, sur la branche de ce rapport, une minute après son premier envoi et avant l'ouverture de la PR (j'ai amendé une phrase) : même règle enfreinte, par inattention ; plus de push forcé ensuite.
 - Mes mutations ont d'abord été lancées dans la copie `.worktrees/C448b` que lisaient aussi les relecteurs, pendant quelques secondes ; je suis passé à une copie jetable (`C448b-mut`) dès que je l'ai vu. Je n'ai pas vu de trace dans leurs rapports.
-- La PR #127 change `AddressResolver.host(of:)`, qui sert partout sur l'iPhone ; la cible de l'application n'a pas été jouée sur simulateur.
+- La PR #127 (fusionnée) change `AddressResolver.host(of:)`, qui sert partout sur l'iPhone ; la cible de l'application n'a pas été jouée sur simulateur.
 
 ### 11.7 Liste des PR de la seconde passe
 
 | PR | Sujet | État |
 |---|---|---|
 | #125 | n° 27 : écarter l'onglet ouvert à l'adresse trop longue, au lieu de la couper | fusionnée |
-| #126 | n° 26 : nommer une ligne de « Sur l'iPhone » par l'adresse annoncée | voir la carte |
-| #127 | n° 28 : l'hôte ASCII d'une adresse sur l'iPhone | voir la carte |
-| #128 | n° 29 : une ligne par identifiant | voir la carte |
-| #129 | n° 24 : une catégorie non commune n'est pas appliquée | voir la carte |
-| #130 | n° 25 : garder les marques des espaces mis de côté | voir la carte |
-| #131 | n° 30 : le titre d'un onglet ouvert écrit comme un texte | voir la carte |
-| #132 | n° 31 : ne pas empiler une liste sur la pile d'appel | voir la carte |
-| #133 | n° 32 : appliquer un patch en temps linéaire sur l'iPhone | voir la carte |
-| #134 | n° 34 : retenir les genres de messages, pas chaque message | voir la carte |
-| #135 | n° 33 : ne pas écrire un état trop gros pour être relu | voir la carte |
+| #126 | n° 26 : nommer une ligne de « Sur l'iPhone » par l'adresse annoncée | fusionnée |
+| #127 | n° 28 : l'hôte ASCII d'une adresse sur l'iPhone | fusionnée |
+| #128 | n° 29 : une ligne par identifiant | fusionnée |
+| #129 | n° 24 : une catégorie non commune n'est pas appliquée | fusionnée |
+| #130 | n° 25 : garder les marques des espaces mis de côté | fusionnée |
+| #131 | n° 30 : le titre d'un onglet ouvert écrit comme un texte | fusionnée |
+| #132 | n° 31 : ne pas empiler une liste sur la pile d'appel | fusionnée |
+| #133 | n° 32 : appliquer un patch en temps linéaire sur l'iPhone | fusionnée |
+| #134 | n° 34 : retenir les genres de messages, pas chaque message | fusionnée |
+| #135 | n° 33 : ne pas écrire un état trop gros pour être relu | fusionnée |
 
-Chacune a un test qui échoue sans le correctif (vu), et la mutation a été faite côté Mac comme côté Swift.
+Chacune a un test qui échoue sans le correctif (vu), et la mutation a été faite côté Mac comme côté Swift. Rebasées sur `main` après les fusions des cartes voisines (#137 à #143 : synchro automatique, onglets d'Aujourd'hui) : la règle des espaces mis de côté (n° 25) couvre aussi la liste `today:<espace>` côté Mac ; **côté iPhone le genre `todayTab` n'est pas encore connu de `SyncMarkBook.listKind`**, donc la liste d'Aujourd'hui d'un espace verrouillé n'y garde pas sa marque (à reprendre avec la carte qui ajoute ce genre à l'iPhone).
