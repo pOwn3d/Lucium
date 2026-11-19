@@ -10,7 +10,7 @@
 //
 // The exchange of data itself (the session, §8) is a flow handed in (`runSession`): until it exists, a device that connects is told `internal`, honestly.
 
-import { randomInt, randomBytes } from 'node:crypto'
+import { createHash, randomInt, randomBytes } from 'node:crypto'
 import { encodeQr } from '@shared/qr'
 import { SYNC_CATEGORIES, type SyncCategory, type SyncLastExchange, type SyncPairingView, type SyncProblem, type SyncStatus } from '@shared/sync-ipc'
 import { BaseStore } from './bases'
@@ -499,7 +499,9 @@ export class SyncService {
       if (list === undefined) continue
       announcedAt = Math.max(announcedAt ?? 0, list.at)
       for (const tab of list.items) {
-        const id = `${phone.id}:${tab.id}`
+        // The line is named by the device, its tab AND a digest of the address it was announced with: a list that comes later with another page under the same tab
+        // identifier is another line (a click on the one the person saw opens nothing), and two lines of one list never share a name (the one clicked is the one opened).
+        const id = `${phone.id}:${tab.id}:${createHash('sha256').update(tab.url).digest('hex').slice(0, 12)}`
         if (isResumeId(id)) tabs.push({ ...tab, id })
       }
     }

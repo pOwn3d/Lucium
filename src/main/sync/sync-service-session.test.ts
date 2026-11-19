@@ -1,6 +1,7 @@
 // The service with the real exchange (docs/synchronisation.md §8): a paired iPhone, written in the test with the same session function, connects over real TLS to the door
 // the service opened, and the two end up with the same spaces. What the service adds to the session is what is asserted here: the marks follow the state while the switch is on
 // and only then, one session at a time, the device that says `unpair` is forgotten, the open tabs are kept in memory only, and what the last session was is told.
+import { createHash } from 'node:crypto'
 import { join } from 'node:path'
 import { existsSync } from 'node:fs'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -8,6 +9,7 @@ import { reduce } from '@shared/sidebar'
 import type { SidebarState } from '@shared/model'
 import type { SyncPatch } from '@shared/sidebar-sync'
 import { tempDir } from '../temp-dir'
+import { handleSyncResume } from '../shell/sync-ipc'
 import { Channel } from './channel'
 import { IdentityStore } from './identity'
 import { SafeClock } from './safe-clock'
@@ -157,7 +159,45 @@ describe('the service with the exchange of the data', () => {
       const source = r.service.resumeSource()
       expect(source).toMatchObject({ paired: true, categoryOnHere: true, listAnnounced: true, sessionHappened: true })
       expect(source.announcedAt).toBe(1_790_000_000_000 + r.time.t)
-      expect(source.rows).toEqual([{ id: `${PHONE_ID}:p1`, url: 'https://phone.example/', title: 'Phone page', host: 'phone.example', spaceId: 'sp-main', lastActiveAt: 5 }])
+      expect(source.rows).toEqual([{ id: `${PHONE_ID}:p1:${createHash('sha256').update('https://phone.example/').digest('hex').slice(0, 12)}`, url: 'https://phone.example/', title: 'Phone page', host: 'phone.example', spaceId: 'sp-main', lastActiveAt: 5 }])
+    })
+
+    /** The bar's way of opening a line: what `handleSyncResume` does with the service, and what it dispatched. */
+    function click(r: Awaited<ReturnType<typeof withList>>, id: string): unknown[] {
+      const dispatched: unknown[] = []
+      handleSyncResume(r.service, { state: () => ({ spaces: [{ id: 'sp-main' }], activeSpaceId: 'sp-main' }) as never, isSpaceLocked: () => false, dispatch: (action) => void dispatched.push(action) }, { kind: 'open', id })
+      return dispatched
+    }
+
+    it('opens the page of the line that was clicked when an iPhone gives two lines the same tab identifier (review, second pass)', async () => {
+      const r = rig({}, {})
+      r.store.setCategory('openTabs', true)
+      r.phone.categories.add('openTabs')
+      r.phone.openTabs = [
+        { id: 'x', spaceId: 'sp-main', url: 'https://evil.example/', title: 'Bank', lastActiveAt: 9 },
+        { id: 'x', spaceId: 'sp-main', url: 'https://good.example/', title: 'Bank', lastActiveAt: 5 }
+      ]
+      await r.service.setEnabled(true)
+      await r.service.openWindow()
+      r.phone.edit((s) => s)
+      await phoneSession(r, macDeviceId(r))
+      await sleep(30)
+      const lines = handleSyncResume(r.service, { state: () => ({ spaces: [], activeSpaceId: 'sp-main' }) as never, isSpaceLocked: () => false, dispatch: () => undefined }, { kind: 'list' })
+      const shown = lines.ok ? lines.view.lines : []
+      expect(shown.map((line) => line.host).sort()).toEqual(['evil.example', 'good.example'])
+      for (const line of shown) expect(click(r, line.id)).toEqual([{ type: 'tab/open', url: `https://${line.host}/`, spaceId: 'sp-main' }])
+    })
+
+    it('opens nothing for a line whose page was replaced by another session: the line the person saw is not the one that opens (review, second pass)', async () => {
+      const r = await withList()
+      const before = r.service.resumeSource().rows[0]!
+      expect(click(r, before.id)).toHaveLength(1)
+      r.phone.openTabs = [{ id: 'p1', spaceId: 'sp-main', url: 'https://evil.example/phish', title: 'Phone page', lastActiveAt: 6 }]
+      r.phone.edit((s) => s)
+      await phoneSession(r, macDeviceId(r))
+      await sleep(30)
+      expect(r.service.resumeSource().rows.map((row) => row.url)).toEqual(['https://evil.example/phish'])
+      expect(click(r, before.id)).toEqual([])
     })
 
     it('says nothing before any session, and tells « the iPhone sent nothing » only after one without a list', async () => {
