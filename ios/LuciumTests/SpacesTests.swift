@@ -71,6 +71,24 @@ final class SpacesTests: BrowserCoreTestCase {
         return names
     }
 
+    /// Waits until WebKit lists the disk cache of a site among the records of a profile. The network process writes the cache entry of a page a moment
+    /// after the page has loaded (tens of milliseconds on a quiet machine, seconds on a busy one) and the record exists only then: a `clearSiteData` made
+    /// before reads records that do not name it yet, and the entry that arrives afterwards is left behind (the test then found one record where it
+    /// expected none). The state is awaited, not a delay.
+    private func awaitCacheRecord(of host: String, in profileId: String, file: StaticString = #filePath, line: UInt = #line) async throws {
+        let store = WKWebsiteDataStore(forIdentifier: ProfileStore.identifier(for: profileId))
+        let deadline = ContinuousClock.now + .seconds(30)
+        while true {
+            let records = await store.dataRecords(ofTypes: [WKWebsiteDataTypeDiskCache])
+            if records.contains(where: { $0.displayName == host }) { return }
+            if ContinuousClock.now > deadline {
+                XCTFail("timed out waiting for the disk cache record of \(host) in \(profileId), it holds \(records.map(\.displayName))", file: file, line: line)
+                throw NavigationWaiter.TimedOut()
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        }
+    }
+
     // MARK: Profiles
 
     /// The fix of the card: two spaces with two profiles share no cookie; two spaces with the same profile do.
@@ -325,6 +343,7 @@ final class SpacesTests: BrowserCoreTestCase {
         try await waiter.load(in: view) { view.load(URLRequest(url: other)) }
         try await setCookie("b=2", in: model)
         try await awaitCookies(["a", "b"], of: "work")
+        try await awaitCacheRecord(of: "127.0.0.1", in: "work")  // what `clearSiteData` must find in one go
 
         model.selectSpace("home")
         try await load("/a.html", in: model)  // home, 127.0.0.1

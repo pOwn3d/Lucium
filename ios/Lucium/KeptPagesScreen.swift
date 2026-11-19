@@ -117,7 +117,7 @@ struct KeptPagesScreen: View {
                             .font(.footnote.weight(chosen ? .semibold : .regular))
                             .padding(.horizontal, Gap.m)
                             .frame(minHeight: 44)
-                            .background(chosen ? Color.accentColor.opacity(0.18) : Color(.secondarySystemFill), in: Capsule())
+                            .background(chosen ? AnyShapeStyle(.accentFill.opacity(0.18)) : AnyShapeStyle(Color(.secondarySystemFill)), in: Capsule())
                             .contentShape(Capsule())
                     }
                     .buttonStyle(.plain)

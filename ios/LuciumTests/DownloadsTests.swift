@@ -81,7 +81,10 @@ final class DownloadsTests: BrowserCoreTestCase {
         XCTAssertEqual(item.fraction, 1)
         XCTAssertEqual(item.receivedBytes, 11)
         XCTAssertEqual(model.downloads.strip, .saved(name: "_.._.evil name.txt"))
-        XCTAssertNotEqual(page.url?.path, "/get", "the tab did not navigate: the page stays where it was")
+        // WebKit shows the address of a navigation that is on its way (`url`) until it has told the page that the navigation became a download; a tiny
+        // file is saved before that, and a read at this point sees `/get` for a moment (once in about thirty runs, and on the runner). A tab that really
+        // navigated would show it for good, so the settled state is awaited: the check still fails then, after the wait.
+        try await eventually("the page is back where it was, not on the address of the file", { page.url?.path != "/get" })
     }
 
     func testATypeThatTheWebViewCannotShowIsDownloadedWithTheNameOfItsAddress() async throws {

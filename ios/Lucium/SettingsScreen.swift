@@ -245,7 +245,7 @@ struct SettingsChoiceRow: View {
                 title.foregroundStyle(Color.primary)
                 Spacer(minLength: 8)
                 if let detail { detail.foregroundStyle(Color.secondary) }
-                if selected { IconView(.check).foregroundStyle(Color.accentColor) }
+                if selected { IconView(.check).foregroundStyle(.accentText) }
             }
             .frame(minHeight: 44)
             .contentShape(Rectangle())
