@@ -234,7 +234,8 @@ public struct SyncExchangeBody: SyncSessionBody {
         // A state that would grow past what this version reads back is not written, and the merge is not adopted: the base and the marks stay as they were, and the session ends.
         if applied?.tooLarge == true { throw SyncFailure(.tooLarge, "the state would be larger than this phone keeps") }
         do {
-            try marks.adopt(merged.snapshot, exchanged: { SyncStateView.isExchanged(kind: $0, categories: context.categories) })
+            let written = await host.currentState()
+            try marks.adopt(merged.snapshot, exchanged: { SyncStateView.isExchanged(kind: $0, categories: context.categories) }, aside: SyncAside.of(SyncStateView.trackedView(of: written), spaces: Set(aside)))
             try bases.save(peerId: mac, snapshot: SyncStateView.base(of: merged.snapshot), now: now())
         } catch {
             log("the base or the marks could not be written after the state was: \(error)")

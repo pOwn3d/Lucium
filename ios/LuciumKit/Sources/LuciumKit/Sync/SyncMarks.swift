@@ -27,6 +27,30 @@ public struct SyncClock: Equatable, Sendable {
     }
 }
 
+/// What a session set aside, as `SyncMarkBook.adopt` is told: whether an entity, or a list, belongs to a space that was not exchanged. The twin of `Aside` in `src/main/sync/marks.ts`.
+public struct SyncAside: Sendable {
+    public let entity: @Sendable (_ kind: String, _ id: String) -> Bool
+    public let list: @Sendable (_ key: String) -> Bool
+
+    public static let nothing = SyncAside(entity: { _, _ in false }, list: { _ in false })
+
+    /// The entities of the spaces that were set aside (the space itself, and what holds its identifier as `spaceId`), and the lists that order what is in one
+    /// (`folders:<space>:<parent>` and `tabs:<space>:<folder>`).
+    public static func of(_ view: SyncTrackedView, spaces: Set<String>) -> SyncAside {
+        if spaces.isEmpty { return .nothing }
+        return SyncAside(
+            entity: { kind, id in
+                if kind == "space" { return spaces.contains(id) }
+                if case .string(let spaceId)? = view.entities[kind]?[id]?["spaceId"] { return spaces.contains(spaceId) }
+                return false
+            },
+            list: { key in
+                let parts = key.split(separator: ":", omittingEmptySubsequences: false)
+                return parts.count >= 2 && (parts[0] == "folders" || parts[0] == "tabs") && spaces.contains(String(parts[1]))
+            })
+    }
+}
+
 public struct SyncMarkBook: Equatable, Sendable {
     public static let version = 1
     /// A deletion is kept thirty days (§11.5).
@@ -175,9 +199,15 @@ public struct SyncMarkBook: Equatable, Sendable {
     /// What the session did not exchange (a category that was not ticked on both devices) is not in the merged snapshot, and is not forgotten with it: `exchanged` says which kinds
     /// the session carried, and the marks, tombstones and lists of the others stay as they were, or their fields would take a mark of the moment at the next look and their
     /// deletions could come back (review n° 17).
-    public mutating func adopt(_ merged: SyncSnapshot, exchanged: (String) -> Bool = { _ in true }) {
+    ///
+    /// Nor is what the session set aside (the spaces that are locked: nothing of them was sent or taken): `aside` says which entities and lists belong to such a space, and their
+    /// marks stay too, or the changes the other device made meanwhile would win over the ones made here once the space opens, or the reverse.
+    public mutating func adopt(_ merged: SyncSnapshot, exchanged: (String) -> Bool = { _ in true }, aside: SyncAside = .nothing) {
         var adopted: [String: [String: [String: FieldMark]]] = [:]
         for (kind, byID) in entities where !exchanged(kind) { adopted[kind] = byID }
+        for (kind, byID) in entities where exchanged(kind) {
+            for (id, record) in byID where aside.entity(kind, id) && merged.entities[kind]?[id] == nil { adopted[kind, default: [:]][id] = record }
+        }
         for (kind, byID) in merged.entities {
             for (id, entity) in byID {
                 var record: [String: FieldMark] = [:]
@@ -198,7 +228,7 @@ public struct SyncMarkBook: Equatable, Sendable {
         for byID in merged.tombstones.values { for stamp in byID.values { observe(stamp) } }
         var lists: [String: OrderMark] = [:]
         for (key, order) in orders {
-            if let kind = Self.listKind(of: key), !exchanged(kind) { lists[key] = order }
+            if let kind = Self.listKind(of: key), !exchanged(kind) { lists[key] = order } else if aside.list(key), merged.order[key] == nil { lists[key] = order }
         }
         for (key, ids) in merged.order {
             lists[key] = OrderMark(hash: Self.hash(of: .array(ids.map { .string($0) })), stamp: merged.orderStamps[key] ?? SyncStamp.zero)

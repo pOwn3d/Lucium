@@ -70,11 +70,11 @@ public final class SyncMarkKeeper: @unchecked Sendable {
 
     /// The state now holds what the merge decided (or as much of it as the person's changes allowed): the book takes the marks of the merged snapshot. The file is
     /// written, and a failure is the caller's: a session that could not keep its marks must not say it is done.
-    public func adopt(_ merged: SyncSnapshot, exchanged: (String) -> Bool = { _ in true }) throws {
+    public func adopt(_ merged: SyncSnapshot, exchanged: (String) -> Bool = { _ in true }, aside: SyncAside = .nothing) throws {
         lock.lock()
         defer { lock.unlock() }
         holding = false
-        book.adopt(merged, exchanged: exchanged)
+        book.adopt(merged, exchanged: exchanged, aside: aside)
         // What the state holds is compared with the book again at the next observation: what a session wrote is the book's own, what the person changed meanwhile is not.
         lastView = nil
         try file.save(book)
