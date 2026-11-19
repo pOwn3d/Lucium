@@ -59,19 +59,22 @@ export function isWebAddress(address: string): boolean {
 }
 
 /**
- * The rows of a list: web pages only (checked again here, whatever the receiver kept), the most recently read first, one per address and no more than the protocol
+ * The rows of a list: web pages only (checked again here, whatever the receiver kept), the most recently read first, one per address and per identifier, and no more than the protocol
  * allows. A page that has no host is not a page a person could be sent to.
  */
 export function resumeRows(tabs: readonly ResumeTab[]): ResumeRow[] {
   const seen = new Set<string>()
+  const named = new Set<string>()
   const rows: ResumeRow[] = []
   // Most recent first; the identifier breaks a tie, the smaller first (the order of SyncResume.swift, so that both devices keep the same address of two that are equal).
   const sorted = [...tabs].sort((a, b) => b.lastActiveAt - a.lastActiveAt || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
   for (const tab of sorted) {
-    if (!isWebAddress(tab.url) || seen.has(tab.url)) continue
+    // One line per address and per identifier: a list never holds two lines of one name (the bar names a line by it).
+    if (!isWebAddress(tab.url) || seen.has(tab.url) || named.has(tab.id)) continue
     const host = hostOf(tab.url)
     if (host === '') continue
     seen.add(tab.url)
+    named.add(tab.id)
     const title = tab.title.trim()
     rows.push({ id: tab.id, url: tab.url, title: title === '' ? host : title, host, spaceId: tab.spaceId, lastActiveAt: tab.lastActiveAt })
     if (rows.length === RESUME_MAX_TABS) break
