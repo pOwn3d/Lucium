@@ -22,6 +22,7 @@ struct SyncScreen: View {
             }
             if controller.settings.enabled {
                 macSection
+                if let last = controller.lastExchange, controller.settings.mac != nil { lastExchangeSection(last) }
                 if !controller.lastConflicts.isEmpty { conflictsSection }
                 if let resumeModel, controller.settings.mac != nil { resumeSection(resumeModel) }
                 categoriesSection
@@ -78,6 +79,22 @@ struct SyncScreen: View {
             }
         } header: {
             Text("sync.mac.header")
+        }
+    }
+
+    // MARK: « Dernier échange »
+
+    /// What the last session did, in words: « À jour » alone cannot be told from « nothing crossed » (a category ticked here and not on the Mac crosses nothing). Kept in
+    /// memory with the session, so the section is there from the first exchange of this run on.
+    private func lastExchangeSection(_ last: SyncExchangeSummary) -> some View {
+        let lines = Array(SyncLastExchange.lines(of: last, ticked: controller.settings.categories).enumerated())
+        return Section {
+            ForEach(lines, id: \.offset) { _, line in
+                SyncTexts.lastExchange(line)
+                    .frame(minHeight: 44, alignment: .leading)
+            }
+        } header: {
+            Text("sync.last.header")
         }
     }
 

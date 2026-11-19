@@ -595,6 +595,8 @@ Un interrupteur, **« Ajouter un Mac »** (caméra, puis « Saisir un code » ; 
 | Horloge | `clock-skew` | `sync.state.clockSkew` |
 | Erreur | un code fatal du §7.6 | `sync.error.<code>` |
 
+**« Dernier échange » (iPhone).** « À jour » seul ne dit pas ce qui a traversé : une catégorie cochée sur l'iPhone et pas sur le Mac ne passe pas, et les onglets d'« Aujourd'hui » ne passent jamais (seuls les onglets épinglés, avec « Espaces et dossiers », et la liste de « Reprendre un onglet du Mac », avec « Onglets ouverts »). Le premier essai réel (19 novembre 2026, carte 494) a montré un iPhone qui avait bien reçu l'espace « Perso » du Mac, sans que la page le dise. Une section **« Dernier échange »**, tant que l'application n'a pas été relancée (le résumé est gardé en mémoire avec la séance), dit : les catégories **échangées** (celles que les deux appareils ont cochées), celles **pas échangées parce que non cochées sur le Mac**, le nombre d'éléments **reçus du Mac** (entités faites ou changées, supprimées, réglages écrits) ou « rien de nouveau », et le nombre d'éléments du Mac **non pris** (refusés à l'entrée ou par l'écriture de l'état). Les lignes sont calculées dans LuciumKit (`SyncLastExchange`), les phrases sont les clés `sync.last.*`.
+
 Chaque code du §7.6 a **un texte et une action** (par exemple `pairing-expired` : « Ce code a expiré. Affichez-en un nouveau sur le Mac. » ; `fingerprint-mismatch` : « Ce n'est pas le Mac du code. » ; `state-too-new` : « L'autre Lucium est plus récent : mettez celui-ci à jour. » ; `divergence` : « Les deux appareils ne s'accordent pas : rien n'a été changé. » ). Un texte **ne montre jamais** un secret, un nom d'hôte brut ni une empreinte entière.
 
 ### 13.4 « Conflit réglé »
