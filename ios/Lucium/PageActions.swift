@@ -37,6 +37,22 @@ struct PageActionsMenu: View {
                 Button("page.share") {}.disabled(true)
             }
             Button("page.save-pdf") { Task { await model.savePageAsPDF() } }.disabled(!model.canSavePDF)
+            Divider()
+            // The text size is changed step by step: these stay open so that a few taps reach the size wanted (the menu closes on the others).
+            Button("page.zoom.in") { model.zoomPageIn() }
+                .disabled(!model.canChangeDisplay || !model.activeDisplay.canZoomIn)
+                .menuActionDismissBehavior(.disabled)
+            Button("page.zoom.out") { model.zoomPageOut() }
+                .disabled(!model.canChangeDisplay || !model.activeDisplay.canZoomOut)
+                .menuActionDismissBehavior(.disabled)
+            Button("page.zoom.reset \(model.activeDisplay.zoomPercent)") { model.resetPageZoom() }
+                .disabled(!model.canChangeDisplay || !model.activeDisplay.isZoomed)
+                .menuActionDismissBehavior(.disabled)
+            if model.offersDesktopVersion {
+                Toggle("page.desktop", isOn: Binding(get: { model.activeDisplay.desktop }, set: { model.setDesktopVersion($0) }))
+                    .disabled(!model.canChangeDisplay)
+            }
+            Divider()
             Button("page.downloads") { model.downloads.sheetShown = true }
         } label: {
             IconView(.more).frame(width: 44, height: 44).contentShape(Rectangle())

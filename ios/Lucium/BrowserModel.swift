@@ -64,9 +64,13 @@ final class BrowserModel {
     let unreadableLibraryEntries: [String: Int]
 
     /// What could not be written, by sort: the state file, the state of a page, the picture of a tab. A sort is cleared by its next success.
-    enum StorageKind: Hashable { case state, pageState, picture }
-    private(set) var storageProblems: [StorageKind: String] = [:]
+    enum StorageKind: Hashable { case state, pageState, picture, display }
+    var storageProblems: [StorageKind: String] = [:]
     func problem(_ kind: StorageKind) -> String? { storageProblems[kind] }
+
+    /// How each tab shows its page (desktop version, text size), read from the tab's folder the first time it is asked for (`BrowserModel+PageDisplay.swift`).
+    /// Only a tab that was changed has an entry; a private tab's entry never leaves this dictionary.
+    var pageDisplays: [String: PageDisplay] = [:]
 
     /// Changes when a picture of a tab is stored, so that the list of tabs redraws.
     var thumbnailRevision = 0

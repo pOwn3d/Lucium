@@ -39,6 +39,11 @@ final class NavigationWaiter: NSObject, WKNavigationDelegate {
         return await forwarded.webView(webView, decidePolicyFor: navigationAction)
     }
 
+    func webView(_ webView: WKWebView, decidePolicyFor navigationAction: WKNavigationAction, preferences: WKWebpagePreferences) async -> (WKNavigationActionPolicy, WKWebpagePreferences) {
+        guard let forwarded else { return (.allow, preferences) }
+        return await forwarded.webView(webView, decidePolicyFor: navigationAction, preferences: preferences)
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { finish(.success(())) }
     func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) { finish(.failure(error)) }
     func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) { finish(.failure(error)) }
