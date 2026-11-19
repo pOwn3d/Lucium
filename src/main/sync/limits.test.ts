@@ -7,7 +7,7 @@ import { messageVectors, pairingVectors } from './sync-vectors.test-support'
 describe('the limits of the synchronisation', () => {
   it('are the figures of the pairing vectors', () => {
     const c = pairingVectors.constants
-    expect({ secretBytes: limits.SECRET_BYTES, nonceBytes: limits.NONCE_BYTES, fingerprintBytes: limits.FINGERPRINT_BYTES, windowMs: limits.PAIRING_WINDOW_MS, maxInvalidProofs: limits.MAX_INVALID_PROOFS, qrMaxChars: limits.QR_MAX_CHARS, qrMaxHosts: limits.MAX_HOSTS, comparisonCodeChars: COMPARISON_CODE_CHARS }).toEqual(c)
+    expect({ secretBytes: limits.SECRET_BYTES, nonceBytes: limits.NONCE_BYTES, fingerprintBytes: limits.FINGERPRINT_BYTES, windowMs: limits.PAIRING_WINDOW_MS, maxInvalidProofs: limits.MAX_INVALID_PROOFS, qrMaxChars: limits.QR_MAX_CHARS, qrMaxHosts: limits.MAX_HOSTS, comparisonCodeChars: COMPARISON_CODE_CHARS, commitBytes: limits.COMMIT_BYTES, codeNonceBytes: limits.CODE_NONCE_BYTES }).toEqual(c)
   })
 
   it('are the figures of the message vectors', () => {

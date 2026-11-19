@@ -53,7 +53,11 @@ interface Envelope {
 
 export type Hello = Envelope & { t: 'hello'; device: DeviceInfo; nonce: string; categories: string[]; baseHash: string | null; stateVersion: number; appVersion: string; now: number; hosts?: string[] }
 export type PairChallenge = Envelope & { t: 'pair.challenge'; nonce: string }
-export type PairRequest = Envelope & { t: 'pair.request'; device: DeviceInfo; nonce: string; proof: string }
+export type PairRequest = Envelope & { t: 'pair.request'; device: DeviceInfo; nonce: string; proof: string; commit: string }
+/** The Mac's code nonce, sent after the commitment of the iPhone and a right proof (§4.7). */
+export type PairNonce = Envelope & { t: 'pair.nonce'; nonce: string }
+/** The iPhone's code nonce, which must open its commitment (§4.7). */
+export type PairReveal = Envelope & { t: 'pair.reveal'; nonce: string }
 export type PairAccept = Envelope & { t: 'pair.accept'; device: DeviceInfo; proof: string; hosts: string[] }
 export type SnapshotPart = Envelope & {
   t: 'snapshot.part'
@@ -73,7 +77,7 @@ export type Unpair = Envelope & { t: 'unpair' }
 export type ErrorMessage = Envelope & { t: 'error'; code: ErrorCode; fatal: boolean; supported?: number[]; detail?: string }
 export type Bye = Envelope & { t: 'bye' }
 
-export type Message = Hello | PairChallenge | PairRequest | PairAccept | SnapshotPart | SnapshotEnd | OpenTabs | ResultMessage | Commit | Unpair | ErrorMessage | Bye
+export type Message = Hello | PairChallenge | PairRequest | PairNonce | PairReveal | PairAccept | SnapshotPart | SnapshotEnd | OpenTabs | ResultMessage | Commit | Unpair | ErrorMessage | Bye
 export type MessageType = Message['t']
 
 // ---------- the walk over hostile JSON ----------
@@ -260,7 +264,9 @@ const readHello: Reader<Hello> = (m) => {
 const readPairRequest: Reader<PairRequest> = (m) => {
   const device = readDevice(m['device'])
   if (device === null || typeof m['nonce'] !== 'string' || !NONCE.test(m['nonce']) || typeof m['proof'] !== 'string' || !PROOF.test(m['proof'])) return null
-  return { device, nonce: m['nonce'], proof: m['proof'] }
+  // The commitment is a SHA-256 (§4.7): a request without one is the form that had none, and is refused as a message that is not well formed.
+  if (typeof m['commit'] !== 'string' || !PROOF.test(m['commit'])) return null
+  return { device, nonce: m['nonce'], proof: m['proof'], commit: m['commit'] }
 }
 
 const readPairAccept: Reader<PairAccept> = (m) => {
@@ -319,6 +325,8 @@ const READERS: { [T in MessageType]: Reader<Extract<Message, { t: T }>> } = {
   hello: readHello,
   'pair.challenge': (m) => (typeof m['nonce'] === 'string' && NONCE.test(m['nonce']) ? { nonce: m['nonce'] } : null),
   'pair.request': readPairRequest,
+  'pair.nonce': (m) => (typeof m['nonce'] === 'string' && NONCE.test(m['nonce']) ? { nonce: m['nonce'] } : null),
+  'pair.reveal': (m) => (typeof m['nonce'] === 'string' && NONCE.test(m['nonce']) ? { nonce: m['nonce'] } : null),
   'pair.accept': readPairAccept,
   'snapshot.part': readSnapshotPart,
   'snapshot.end': readSnapshotEnd,
@@ -400,7 +408,8 @@ export type Role = 'mac' | 'ios'
 
 /**
  * Which type may come after the ones already received (§7.4), for the one who receives. A message out of its phase is a bad message and the connection ends.
- * `error` and `bye` are always welcome. The pairing is `pair.challenge` → `pair.request` → `pair.accept`; a session is `hello` on both sides, then the snapshot
+ * `error` and `bye` are always welcome. The pairing is `pair.challenge` → `pair.request` → `pair.nonce` → `pair.reveal` → `pair.accept` (the Mac reads `pair.request`
+ * then `pair.reveal`, the iPhone `pair.challenge`, `pair.nonce`, `pair.accept`: §4.7); a session is `hello` on both sides, then the snapshot
  * parts and the end, `result`, `commit`.
  */
 export class PhaseTracker {
@@ -425,9 +434,10 @@ export class PhaseTracker {
   private allows(type: MessageType): boolean {
     const seen = (one: MessageType): boolean => this.seen.has(one)
     if (this.phase === 'pairing') {
-      if (this.receiver === 'mac') return type === 'pair.request' && !seen('pair.request')
+      if (this.receiver === 'mac') return (type === 'pair.request' && !seen('pair.request')) || (type === 'pair.reveal' && seen('pair.request') && !seen('pair.reveal'))
       if (this.seen.size === 0) return type === 'pair.challenge'
-      return this.seen.size === 1 && seen('pair.challenge') && type === 'pair.accept'
+      if (this.seen.size === 1) return seen('pair.challenge') && type === 'pair.nonce'
+      return this.seen.size === 2 && seen('pair.nonce') && type === 'pair.accept'
     }
     switch (type) {
       case 'hello':

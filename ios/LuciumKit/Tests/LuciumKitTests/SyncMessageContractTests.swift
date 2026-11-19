@@ -170,7 +170,7 @@ struct SyncMessageContractTests {
         for vector in try SyncContract.array(messages, "messages") where (vector["expect"] as? [String: Any])?["ok"] as? Bool == true {
             if case .success(let envelope) = SyncMessageCodec.decode(try text(of: vector)) { seen.insert(envelope.message.type) }
         }
-        #expect(seen == ["hello", "pair.challenge", "pair.request", "pair.accept", "snapshot.part", "snapshot.end", "open-tabs", "result", "commit", "unpair", "error", "bye"])
+        #expect(seen == ["hello", "pair.challenge", "pair.request", "pair.nonce", "pair.reveal", "pair.accept", "snapshot.part", "snapshot.end", "open-tabs", "result", "commit", "unpair", "error", "bye"])
     }
 
     @Test func aHelloIsReadFieldByField() throws {
@@ -191,7 +191,8 @@ struct SyncMessageContractTests {
         let device = SyncDeviceInfo(id: "phone-0001", name: "iPhone", platform: .ios)
         let nonce = Data((0..<16).map { UInt8($0) })
         let hello = SyncHello(device: device, nonce: nonce, categories: ["structure"], baseHash: nil, stateVersion: 1, appVersion: "0.1.0", now: 1_790_000_000_000)
-        let sent: [SyncMessage] = [.hello(hello), .pairRequest(device: device, nonce: nonce, proof: Data(repeating: 7, count: 32)), .unpair, .bye,
+        let sent: [SyncMessage] = [.hello(hello), .pairRequest(device: device, nonce: nonce, proof: Data(repeating: 7, count: 32), commit: Data(repeating: 9, count: 32)),
+                                   .pairReveal(nonce: Data(repeating: 3, count: 16)), .unpair, .bye,
                                    .error(code: .stateTooNew, fatal: true, supported: [1], detail: "state version 9"), .error(code: .clockSkew, fatal: false, supported: nil, detail: nil)]
         for (index, message) in sent.enumerated() {
             let data = try SyncMessageCodec.encode(message, number: index + 1)
@@ -200,18 +201,20 @@ struct SyncMessageContractTests {
         }
         // What only the Mac writes is not written by the phone (the messages of an exchange are written, and read back, in SyncPartsAndApplyTests).
         #expect(throws: SyncFailure.self) { try SyncMessageCodec.encode(.pairChallenge(nonce: nonce), number: 1) }
+        #expect(throws: SyncFailure.self) { try SyncMessageCodec.encode(.pairNonce(nonce: nonce), number: 1) }
     }
 
     @Test func aNonceOrAProofThatIsAnotherWritingOfTheSameBytesIsRefused() throws {
         // 22 characters for 16 bytes leave 4 bits over: they must be zero, or the same nonce has two writings (and a proof two transcriptions).
         let device = ["id": "phone-0001", "name": "iPhone", "platform": "ios"]
-        func request(nonce: String, proof: String) throws -> Data {
-            try JSONSerialization.data(withJSONObject: ["v": 1, "t": "pair.request", "n": 1, "device": device, "nonce": nonce, "proof": proof])
+        func request(nonce: String, proof: String, commit: String = String(repeating: "A", count: 43)) throws -> Data {
+            try JSONSerialization.data(withJSONObject: ["v": 1, "t": "pair.request", "n": 1, "device": device, "nonce": nonce, "proof": proof, "commit": commit])
         }
         let proof = String(repeating: "A", count: 43)
         if case .failure = SyncMessageCodec.decode(try request(nonce: "ABEiM0RVZneImaq7zN3u_w", proof: proof)) { Issue.record("a canonical nonce was refused") }
         if case .success = SyncMessageCodec.decode(try request(nonce: "ABEiM0RVZneImaq7zN3u_x", proof: proof)) { Issue.record("a nonce with bits left over was read") }
         if case .success = SyncMessageCodec.decode(try request(nonce: "ABEiM0RVZneImaq7zN3u_w", proof: String(repeating: "A", count: 42) + "B")) { Issue.record("a proof with bits left over was read") }
+        if case .success = SyncMessageCodec.decode(try request(nonce: "ABEiM0RVZneImaq7zN3u_w", proof: proof, commit: String(repeating: "A", count: 42) + "B")) { Issue.record("a commitment with bits left over was read") }
     }
 
     // MARK: Order

@@ -10,15 +10,17 @@ public struct SyncPairingOutcome: Equatable, Sendable {
 /// The phone's half of the pairing (docs/synchronisation.md §4.1, steps 3 to 9), over a connection that has finished its TLS handshake.
 ///
 /// Nothing is sent before the fingerprint the Mac showed has been compared with the QR's. After that the phone only answers: the Mac sends a nonce
-/// (`pair.challenge`), the phone proves it knows the secret (`pair.request`), the Mac asks its person (`pair.accept`, or an error), and the phone checks the
+/// (`pair.challenge`), the phone proves it knows the secret and commits to a code nonce it keeps back (`pair.request`, §4.7), the Mac sends its own code nonce
+/// (`pair.nonce`) once the proof is right, the phone reveals its nonce (`pair.reveal`), the Mac asks its person (`pair.accept`, or an error), and the phone checks the
 /// Mac's proof, which covers both fingerprints. A pairing whose proof is wrong stores nothing.
 ///
-/// Then the phone's person decides (§4.6, review n° 9): `confirm` is told the name the Mac gave itself and the code both devices show, and answers whether to pair.
+/// Then the phone's person decides (§4.6, review n° 9): `confirm` is told the name the Mac gave itself and the code both devices show (made of the two fingerprints and
+/// the two code nonces, review n° 36), and answers whether to pair.
 /// `false` (or no answer in time) sends `error pairing-refused` and keeps nothing; `true` sends `bye`, the Mac keeps the phone and answers `bye`, and only that last
 /// word makes the pairing: a Mac that could not keep the phone answers `error`, and the phone keeps nothing either. `confirm` must come back when its task is cancelled
 /// (the time given to the person, and the cancel of the pairing, both cancel it).
 public enum SyncPairingClient {
-    public static func pair(code: SyncPairingCode, connection: SyncConnection, ownFingerprint: Data, device: SyncDeviceInfo, nonce: Data,
+    public static func pair(code: SyncPairingCode, connection: SyncConnection, ownFingerprint: Data, device: SyncDeviceInfo, nonce: Data, codeNonce: Data,
                             handshakeTimeout: Duration = SyncLimits.handshakeTimeout, confirmationTimeout: Duration = SyncLimits.pairingConfirmationWait,
                             comparisonTimeout: Duration = SyncPairingCompare.personWait,
                             onRequestSent: @Sendable () -> Void = {}, confirm: @escaping @Sendable (SyncPairingProposal) async -> Bool,
@@ -34,7 +36,8 @@ public enum SyncPairingClient {
             transport.close()
             throw SyncFailure(.fingerprintMismatch, "the certificate shown is not the one of the code")
         }
-        guard nonce.count == 16, ownFingerprint.count == SyncPairingCode.fingerprintBytes, connection.presentedFingerprint.count == SyncPairingCode.fingerprintBytes else {
+        // `codeNonce` is the nonce of the commitment (§4.7): drawn for this pairing, never the proof's nonce (that one is said before the commitment).
+        guard nonce.count == 16, codeNonce.count == SyncPairingCommit.codeNonceBytes, codeNonce != nonce, ownFingerprint.count == SyncPairingCode.fingerprintBytes, connection.presentedFingerprint.count == SyncPairingCode.fingerprintBytes else {
             transport.close()
             throw SyncFailure(.internal, "a nonce or a fingerprint of the wrong size")
         }
@@ -45,22 +48,26 @@ public enum SyncPairingClient {
         var inputs = SyncProofInputs(secret: code.secret, fingerprintMac: connection.presentedFingerprint, fingerprintPhone: ownFingerprint, nonceMac: macNonce, noncePhone: nonce,
                                      idMac: "", idPhone: device.id)
         guard let requestTag = SyncProof.requestTag(inputs) else { throw SyncFailure(.internal, "no proof") }
-        try await channel.send(.pairRequest(device: device, nonce: nonce, proof: requestTag))
+        guard let commit = SyncPairingCommit.commitment(fingerprintPhone: ownFingerprint, nonce: codeNonce) else { throw SyncFailure(.internal, "no commitment") }
+        try await channel.send(.pairRequest(device: device, nonce: nonce, proof: requestTag, commit: commit))
         onRequestSent()
-        // 3. The Mac's person answers, which may take a minute.
+        // 3. The Mac's code nonce, which it gives only after the commitment and a right proof; the phone reveals its own only now (§4.7).
+        guard case .pairNonce(let macCodeNonce) = try await expectAnswer(channel, timeout: handshakeTimeout) else { throw SyncFailure(.badMessage, "no code nonce") }
+        try await channel.send(.pairReveal(nonce: codeNonce))
+        // 4. The Mac's person answers, which may take a minute.
         guard case .pairAccept(let mac, let proof, let hosts) = try await expectAnswer(channel, timeout: confirmationTimeout) else { throw SyncFailure(.badMessage, "no accept") }
         guard mac.platform == .mac else {
             await channel.close()
             throw SyncFailure(.badMessage, "the answer does not come from a Mac")
         }
-        // 4. The Mac's proof, which names its own identifier: a wrong one registers nothing.
+        // 5. The Mac's proof, which names its own identifier: a wrong one registers nothing.
         inputs.idMac = mac.id
         guard SyncProof.isValidAccept(proof, for: inputs) else {
             await channel.close()
             throw SyncFailure(.badProof, "the Mac's proof is not the right one")
         }
-        // 5. The phone's person compares the code and decides (§4.6). Nothing has been kept yet, here or on the Mac.
-        guard let comparison = SyncPairingCompare.code(fingerprintMac: connection.presentedFingerprint, fingerprintPhone: ownFingerprint) else {
+        // 6. The phone's person compares the code and decides (§4.6). Nothing has been kept yet, here or on the Mac.
+        guard let comparison = SyncPairingCompare.code(fingerprintMac: connection.presentedFingerprint, fingerprintPhone: ownFingerprint, nonceMac: macCodeNonce, noncePhone: codeNonce) else {
             await channel.close()
             throw SyncFailure(.internal, "no code to compare")
         }
@@ -70,7 +77,7 @@ public enum SyncPairingClient {
             await channel.close()
             throw SyncFailure(.pairingRefused, "the person did not agree to the pairing")
         }
-        // 6. « Appairer »: a `bye` says yes, and the Mac's own `bye` says it kept the phone, which is what makes the pairing. An `error` in its place is the Mac that could not.
+        // 7. « Appairer »: a `bye` says yes, and the Mac's own `bye` says it kept the phone, which is what makes the pairing. An `error` in its place is the Mac that could not.
         try await channel.send(.bye)
         guard case .bye = try await expectAnswer(channel, timeout: handshakeTimeout) else {
             await channel.close()

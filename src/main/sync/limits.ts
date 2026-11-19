@@ -15,6 +15,9 @@ export const QR_VERSION = 1
 export const SECRET_BYTES = 16
 export const NONCE_BYTES = 16
 export const FINGERPRINT_BYTES = 32
+/** The commitment of the iPhone at a pairing is a SHA-256, and a code nonce is drawn like any nonce (§4.7). */
+export const COMMIT_BYTES = 32
+export const CODE_NONCE_BYTES = 16
 export const DEVICE_ID_BYTES = 16
 
 /** The pairing window: how long a secret lives and how many wrong proofs lock it (§4.5). */

@@ -1031,10 +1031,99 @@
           "platform": "ios"
         },
         "nonce": "ABEiM0RVZneImaq7zN3u_w",
-        "proof": "4FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q"
+        "proof": "4FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q",
+        "commit": "dG_8ir9BVojoZoE2_2--zlpgUC5f700rUuNCSPJwye0"
       },
       "expect": {
         "ok": true
+      }
+    },
+    {
+      "name": "a pair.request without a commitment (the form before the commitment of §4.7)",
+      "message": {
+        "v": 1,
+        "t": "pair.request",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "proof": "4FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.request with a commitment of the wrong length",
+      "message": {
+        "v": 1,
+        "t": "pair.request",
+        "n": 1,
+        "device": {
+          "id": "vector-phone-000000002",
+          "name": "iPhone de test",
+          "platform": "ios"
+        },
+        "nonce": "ABEiM0RVZneImaq7zN3u_w",
+        "proof": "4FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q",
+        "commit": "G_8ir9BVojoZoE2_2--zlpgUC5f700rUuNCSPJwye0"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.nonce",
+      "message": {
+        "v": 1,
+        "t": "pair.nonce",
+        "n": 2,
+        "nonce": "iJmqu8zd7v8AESIzRFVmdw"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a pair.nonce with a nonce of the wrong length",
+      "message": {
+        "v": 1,
+        "t": "pair.nonce",
+        "n": 2,
+        "nonce": "iJmqu8zd7v8AESIzRFVm"
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "a pair.reveal",
+      "message": {
+        "v": 1,
+        "t": "pair.reveal",
+        "n": 2,
+        "nonce": "Dx4tPEtaaXiHlqW0w9Lh8A"
+      },
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "a pair.reveal without its nonce",
+      "message": {
+        "v": 1,
+        "t": "pair.reveal",
+        "n": 2
+      },
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
       }
     },
     {
@@ -1049,7 +1138,8 @@
           "platform": "ios"
         },
         "nonce": "ABEiM0RVZneImaq7zN3u_w",
-        "proof": "FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q"
+        "proof": "FeiODcA88a0aIEHurEboR149rjaXhKxjiIkcfLHe2Q",
+        "commit": "dG_8ir9BVojoZoE2_2--zlpgUC5f700rUuNCSPJwye0"
       },
       "expect": {
         "ok": false,
@@ -1620,7 +1710,80 @@
       }
     },
     {
-      "name": "the iPhone reads pair.challenge, then pair.accept",
+      "name": "the Mac reads pair.reveal after pair.request",
+      "receiver": "mac",
+      "phase": "pairing",
+      "history": [
+        "pair.request"
+      ],
+      "type": "pair.reveal",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "the Mac does not read pair.reveal before pair.request",
+      "receiver": "mac",
+      "phase": "pairing",
+      "history": [],
+      "type": "pair.reveal",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the Mac does not read a second pair.reveal",
+      "receiver": "mac",
+      "phase": "pairing",
+      "history": [
+        "pair.request",
+        "pair.reveal"
+      ],
+      "type": "pair.reveal",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the Mac does not read pair.nonce (it is the one that sends it)",
+      "receiver": "mac",
+      "phase": "pairing",
+      "history": [
+        "pair.request"
+      ],
+      "type": "pair.nonce",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the iPhone reads pair.nonce after pair.challenge",
+      "receiver": "ios",
+      "phase": "pairing",
+      "history": [
+        "pair.challenge"
+      ],
+      "type": "pair.nonce",
+      "expect": {
+        "ok": true
+      }
+    },
+    {
+      "name": "the iPhone does not read pair.nonce first",
+      "receiver": "ios",
+      "phase": "pairing",
+      "history": [],
+      "type": "pair.nonce",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the iPhone does not read pair.accept before pair.nonce",
       "receiver": "ios",
       "phase": "pairing",
       "history": [
@@ -1628,7 +1791,49 @@
       ],
       "type": "pair.accept",
       "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the iPhone reads pair.accept after pair.challenge and pair.nonce",
+      "receiver": "ios",
+      "phase": "pairing",
+      "history": [
+        "pair.challenge",
+        "pair.nonce"
+      ],
+      "type": "pair.accept",
+      "expect": {
         "ok": true
+      }
+    },
+    {
+      "name": "the iPhone does not read a second pair.nonce",
+      "receiver": "ios",
+      "phase": "pairing",
+      "history": [
+        "pair.challenge",
+        "pair.nonce"
+      ],
+      "type": "pair.nonce",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
+      }
+    },
+    {
+      "name": "the iPhone does not read pair.reveal (it is the one that sends it)",
+      "receiver": "ios",
+      "phase": "pairing",
+      "history": [
+        "pair.challenge",
+        "pair.nonce"
+      ],
+      "type": "pair.reveal",
+      "expect": {
+        "ok": false,
+        "code": "bad-message"
       }
     },
     {
