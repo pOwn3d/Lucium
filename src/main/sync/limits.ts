@@ -26,6 +26,11 @@ export const MAX_INVALID_PROOFS = 5
 /** How long the person has to answer « Autoriser / Refuser » (§4.1 step 7): no answer is a refusal. */
 export const CONFIRM_MS = 60_000
 /**
+ * How long an identity the Mac cannot use is kept before a new one is made (§3.3, review n° 41): a new identity has another fingerprint and takes every paired iPhone with it.
+ * The first refusal starts the minute; a try after it may replace the identity, a try within it only says so again. Measured on the clock of the windows (safe-clock.ts).
+ */
+export const IDENTITY_REPLACE_DELAY_MS = 60_000
+/**
  * How long a connection that took the only place of a pairing is safe from a newcomer while it has not yet sent its `pair.request` (§4.5, §6.1): the iPhone sends it as
  * soon as it has the challenge, so a connection still silent after this has no business being there. Past it, the next stranger takes the place and the silent one is cut
  * and counted; before it, the newcomer is told `busy`. Without this a neighbour holds the place with one idle connection for the sixty seconds of the silence timer, again

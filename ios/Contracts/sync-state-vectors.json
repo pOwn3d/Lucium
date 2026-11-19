@@ -1022,6 +1022,295 @@
     {
       "base": null,
       "categories": [
+        "archive",
+        "settings"
+      ],
+      "expect": {
+        "entities": {
+          "archived": {
+            "a1": {
+              "archivedAt": 1790000000500,
+              "source": "auto",
+              "spaceId": "s1",
+              "title": "Old 1",
+              "url": "https://old1.example/"
+            },
+            "a2": {
+              "anchorUrl": "https://old2.example/",
+              "archivedAt": 1790000000100,
+              "folderId": "f1",
+              "pinned": true,
+              "source": "manual",
+              "spaceId": "s1",
+              "title": "Old 2",
+              "url": "https://old2.example/"
+            },
+            "a3": {
+              "archivedAt": 1790000000900,
+              "spaceId": "s2",
+              "title": "Old 3",
+              "url": "https://old3.example/"
+            }
+          },
+          "setting": {
+            "autoArchiveHours": {
+              "value": 12
+            },
+            "httpsUpgrade": {
+              "value": true
+            },
+            "profileNames": {
+              "value": {
+                "default": "Perso",
+                "work": "Travail"
+              }
+            },
+            "protectionBaseline": {
+              "value": "renforcee"
+            },
+            "searchUrlTemplate": {
+              "value": "https://duckduckgo.com/?q=%s"
+            },
+            "sendGpc": {
+              "value": false
+            },
+            "stripCopiedLinks": {
+              "value": true
+            },
+            "stripTrackingParams": {
+              "value": true
+            }
+          }
+        },
+        "order": {}
+      },
+      "name": "the open tabs a deleted space left in the archive (source sync) are not sent, and do not use up a place (n° 37)",
+      "state": {
+        "activeSpaceId": "s1",
+        "activeTabBySpace": {
+          "s1": null,
+          "s2": null
+        },
+        "archive": [
+          {
+            "archivedAt": 1790000009000,
+            "id": "left-1",
+            "source": "sync",
+            "spaceId": "s1",
+            "title": "Open when the space was deleted",
+            "url": "https://secret.example/token?x=1"
+          },
+          {
+            "archivedAt": 1790000009100,
+            "id": "left-2",
+            "source": "sync",
+            "spaceId": "s2",
+            "title": "Another",
+            "url": "https://other.example/"
+          },
+          {
+            "archivedAt": 1790000000500,
+            "history": {
+              "entries": []
+            },
+            "id": "a1",
+            "source": "auto",
+            "spaceId": "s1",
+            "title": "Old 1",
+            "url": "https://old1.example/"
+          },
+          {
+            "anchorUrl": "https://old2.example/",
+            "archivedAt": 1790000000100,
+            "folderId": "f1",
+            "id": "a2",
+            "pinned": true,
+            "source": "manual",
+            "spaceId": "s1",
+            "title": "Old 2",
+            "url": "https://old2.example/"
+          },
+          {
+            "archivedAt": 1790000000900,
+            "container": "c1",
+            "id": "a3",
+            "spaceId": "s2",
+            "title": "Old 3",
+            "url": "https://old3.example/"
+          }
+        ],
+        "favorites": [
+          {
+            "faviconUrl": "https://fav1.example/i.png",
+            "id": "fav1",
+            "profileId": "default",
+            "title": "Fav 1",
+            "url": "https://fav1.example/"
+          },
+          {
+            "id": "fav2",
+            "profileId": "work",
+            "title": "Fav 2",
+            "url": "https://fav2.example/"
+          },
+          {
+            "id": "fav3",
+            "profileId": "default",
+            "title": "Fav 3",
+            "url": "https://fav3.example/"
+          }
+        ],
+        "folders": [
+          {
+            "atBottom": true,
+            "collapsed": true,
+            "id": "f1",
+            "name": "Réunions",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "icon": "📁",
+            "id": "f2",
+            "name": "Sous-dossier",
+            "noWake": true,
+            "parentId": "f1",
+            "spaceId": "s1"
+          },
+          {
+            "collapsed": false,
+            "id": "f3",
+            "live": {
+              "url": "https://feed.example/x"
+            },
+            "name": "Courses",
+            "spaceId": "s2"
+          }
+        ],
+        "revision": 2,
+        "settings": {
+          "autoArchiveHours": 12,
+          "httpsUpgrade": true,
+          "lockApp": false,
+          "lockEnabled": true,
+          "profileNames": {
+            "default": "Perso",
+            "work": "Travail"
+          },
+          "profiles": {
+            "work": {
+              "autoArchiveHours": 3
+            }
+          },
+          "protectionBaseline": "renforcee",
+          "proxyEnabled": true,
+          "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+          "sendGpc": false,
+          "stripCopiedLinks": true,
+          "stripTrackingParams": true,
+          "updateFeedUrl": "https://example.com/feed"
+        },
+        "spaces": [
+          {
+            "background": {
+              "kind": "video"
+            },
+            "emoji": "💼",
+            "futureSpaceField": {
+              "a": [
+                1,
+                2
+              ]
+            },
+            "hideHeader": true,
+            "id": "s1",
+            "image": "pic.png",
+            "name": "Travail",
+            "profileId": "work",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          },
+          {
+            "emoji": "🏠",
+            "iconColor": "#ff0000",
+            "iconKind": "letter",
+            "iconLetter": "M",
+            "iconRound": true,
+            "id": "s2",
+            "name": "Maison",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [
+          {
+            "anchorUrl": "https://a.example/",
+            "createdAt": 1,
+            "customTitle": "Doc",
+            "faviconUrl": "https://a.example/i.png",
+            "folderId": "f1",
+            "id": "t1",
+            "lastActiveAt": 9,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "A now",
+            "url": "https://a.example/now"
+          },
+          {
+            "anchorUrl": "https://b.example/",
+            "createdAt": 2,
+            "futureTabField": "x",
+            "id": "t2",
+            "keepAwake": true,
+            "lastActiveAt": 8,
+            "pinned": true,
+            "spaceId": "s1",
+            "title": "B",
+            "url": "https://b.example/"
+          },
+          {
+            "anchorUrl": "https://c.example/",
+            "createdAt": 3,
+            "id": "t3",
+            "lastActiveAt": 7,
+            "pinned": true,
+            "spaceId": "s2",
+            "title": "C",
+            "url": "https://c.example/"
+          },
+          {
+            "createdAt": 4,
+            "id": "today",
+            "lastActiveAt": 6,
+            "pinned": false,
+            "spaceId": "s1",
+            "title": "Today",
+            "url": "https://today.example/"
+          },
+          {
+            "anchorUrl": "https://secret.example/",
+            "createdAt": 5,
+            "id": "secret",
+            "lastActiveAt": 5,
+            "pinned": true,
+            "private": true,
+            "spaceId": "s1",
+            "title": "Private",
+            "url": "https://secret.example/"
+          }
+        ],
+        "version": 1
+      },
+      "withheld": []
+    },
+    {
+      "base": null,
+      "categories": [
         "openTabs"
       ],
       "expect": {
@@ -2494,6 +2783,111 @@
         }
       },
       "name": "a state with one space and nothing else",
+      "state": {
+        "activeSpaceId": "only",
+        "activeTabBySpace": {
+          "only": null
+        },
+        "archive": [],
+        "favorites": [],
+        "folders": [],
+        "revision": 2,
+        "settings": {},
+        "spaces": [
+          {
+            "emoji": "✨",
+            "id": "only",
+            "name": "Seul",
+            "profileId": "default",
+            "theme": {
+              "hue": 250,
+              "saturation": 0.5
+            }
+          }
+        ],
+        "tabs": [],
+        "version": 1
+      },
+      "withheld": []
+    },
+    {
+      "base": {
+        "entities": {
+          "widget": {
+            "w1": {
+              "fields": {
+                "label": "from a newer version",
+                "size": 3
+              },
+              "stamps": {
+                "label": "1790000000000-0000-ios",
+                "size": "1790000000000-0001-ios"
+              }
+            }
+          },
+          "space": {
+            "only": {
+              "fields": {
+                "name": "Seul"
+              },
+              "stamps": {
+                "name": "1790000000000-0000-mac"
+              }
+            }
+          }
+        },
+        "order": {
+          "gadgets:x": [
+            "g2",
+            "g1"
+          ],
+          "spaces": [
+            "only"
+          ]
+        },
+        "orderStamps": {
+          "gadgets:x": "1790000000000-0002-ios",
+          "spaces": "1790000000000-0000-mac"
+        },
+        "tombstones": {}
+      },
+      "categories": [
+        "structure",
+        "settings",
+        "archive",
+        "openTabs"
+      ],
+      "expect": {
+        "entities": {
+          "space": {
+            "only": {
+              "emoji": "✨",
+              "name": "Seul",
+              "profileId": "default",
+              "theme": {
+                "hue": 250,
+                "saturation": 0.5
+              }
+            }
+          },
+          "widget": {
+            "w1": {
+              "label": "from a newer version",
+              "size": 3
+            }
+          }
+        },
+        "order": {
+          "spaces": [
+            "only"
+          ],
+          "gadgets:x": [
+            "g2",
+            "g1"
+          ]
+        }
+      },
+      "name": "what the base holds of a kind or a list this version does not know is carried over unchanged, never left out (n° 40)",
       "state": {
         "activeSpaceId": "only",
         "activeTabBySpace": {

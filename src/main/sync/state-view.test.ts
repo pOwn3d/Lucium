@@ -6,6 +6,7 @@ import { MarkBook } from './marks'
 import { NOW, stateOf } from './session-rig.test-support'
 import { hasLoneSurrogate, parseMessage } from './messages'
 import { MAX_OPEN_TAB_TITLE_BYTES, MAX_OPEN_TAB_URL_BYTES } from './limits'
+import { mergeSnapshots } from '@shared/sync-merge'
 import { baseOf, follows, openTabsOf, snapshotOf, trackedViewOf, withheldSpaces } from './state-view'
 
 const all = new Set<SyncCategory>(['structure', 'settings', 'archive', 'openTabs'])
@@ -124,6 +125,59 @@ describe('snapshotOf', () => {
     expect(sent.entities['archived']?.['a019']).toBeUndefined()
     expect(sent.entities['archived']?.['a020']).toBeDefined()
     expect(Object.keys(snap(big, { categories: new Set(['structure']) }).entities)).not.toContain('archived')
+  })
+
+  it('does not send the open tabs a deleted space left in the archive (source `sync`), and they do not use up the places of the latest five hundred (review n° 37)', () => {
+    const closed = Array.from({ length: 500 }, (_, n) => ({ id: `c${String(n).padStart(3, '0')}`, spaceId: 's1', url: `https://c${n}.example/`, title: 'x', archivedAt: n }))
+    const left = [
+      { id: 'left-1', spaceId: 's1', url: 'https://secret.example/token?x=1', title: 'Open when the space was deleted', archivedAt: 10_000, source: 'sync' as const },
+      { id: 'left-2', spaceId: 's1', url: 'https://other.example/', title: 'Another', archivedAt: 10_001, source: 'sync' as const }
+    ]
+    const state = { ...stateOf({ spaces: [{ id: 's1' }] }), archive: [...closed, ...left] }
+    const sent = snap(state, { categories: new Set(['archive']) })
+    expect(sent.entities['archived']?.['left-1']).toBeUndefined()
+    expect(sent.entities['archived']?.['left-2']).toBeUndefined()
+    // The 500 closed tabs are all sent: the two entries that stay home are not counted, and the oldest closed one is not pushed out by them.
+    expect(Object.keys(sent.entities['archived'] ?? {})).toHaveLength(500)
+    expect(sent.entities['archived']?.['c000']).toBeDefined()
+    // Nor does the book follow them: no mark, and no tombstone when they go.
+    const marks = new MarkBook('mac')
+    marks.update(trackedViewOf(state), NOW)
+    expect(Object.keys(trackedViewOf(state).entities['archived'] ?? {})).not.toContain('left-1')
+    expect(marks.stampsOf('archived', 'left-1')).toEqual({})
+  })
+})
+
+describe('a kind this version does not know (§11.6, review n° 40)', () => {
+  const state = stateOf({ spaces: [{ id: 's1' }] })
+  const widget = { fields: { label: 'from a newer version' }, stamps: { label: '1790000000000-0000-ios' } }
+  const remote: SyncSnapshot = { entities: { widget: { w1: widget } }, tombstones: {}, order: { 'gadgets:x': ['g2', 'g1'] }, orderStamps: { 'gadgets:x': '1790000000000-0002-ios' } }
+
+  it('never says « deleted here » about it: the second session keeps what the first let through, and sends the other device no deletion', () => {
+    // Session 1: nothing of a kind this version does not know in the state, the other device sends one: it crosses into the merge and the base.
+    const first = mergeSnapshots(null, snap(state), remote)
+    expect(first.snapshot.entities['widget']?.['w1']).toBeDefined()
+    const base = baseOf(first.snapshot)
+    // Session 2: nothing changed on either side. The widget must still be there, and no tombstone for it.
+    const second = mergeSnapshots(base, snap(state, { base }), remote)
+    expect(second.snapshot.entities['widget']?.['w1']).toEqual(widget)
+    expect(second.snapshot.tombstones['widget']?.['w1']).toBeUndefined()
+    expect(second.conflicts).toEqual([])
+  })
+
+  it('carries what the base holds of it into the snapshot as it was, and a base without it adds nothing', () => {
+    const base: SyncSnapshot = { ...remote, tombstones: {} }
+    const sent = snap(state, { base })
+    expect(sent.entities['widget']).toEqual({ w1: widget })
+    expect(sent.order['gadgets:x']).toEqual(['g2', 'g1'])
+    expect(sent.orderStamps['gadgets:x']).toBe('1790000000000-0002-ios')
+    expect(snap(state).entities['widget']).toBeUndefined()
+    expect(snap(state, { base: { entities: {}, tombstones: {}, order: {}, orderStamps: {} } }).entities['widget']).toBeUndefined()
+  })
+
+  it('does not hand a known kind back from the base: what the state no longer holds of a kind it knows is a deletion, as before', () => {
+    const base: SyncSnapshot = { entities: { space: { gone: { fields: { name: 'x' }, stamps: { name: '1790000000000-0000-mac' } } } }, tombstones: {}, order: {}, orderStamps: {} }
+    expect(snap(state, { base }).entities['space']?.['gone']).toBeUndefined()
   })
 })
 
