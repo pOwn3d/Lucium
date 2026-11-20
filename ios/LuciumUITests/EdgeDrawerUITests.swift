@@ -165,4 +165,41 @@ final class EdgeDrawerUITests: XCTestCase {
             app.terminate()
         }
     }
+
+    /// The ready themes in the form of a space, as the simulator draws them: the form, then a ready theme picked, saved, and found again when the form is
+    /// opened a second time. Pictures are attached to the result (and written to `LUCIUM_UI_SHOTS` when it is set).
+    func testPicturesOfTheReadyThemesAndTheChoiceIsKept() {
+        for (language, settings, spaces, edit, save, theme) in [("en", "Settings", "Spaces and profiles", "Edit", "Save", "Dracula"),
+                                                                ("fr", "Réglages", "Espaces et profils", "Modifier", "Enregistrer", "Dracula")] {
+            let app = launch(language: language)
+            let gear = app.buttons[settings].firstMatch
+            XCTAssertTrue(gear.waitForExistence(timeout: 5), "\(language): the gear of the bottom bar")
+            gear.tap()
+            let row = app.staticTexts[spaces].firstMatch
+            XCTAssertTrue(row.waitForExistence(timeout: 3), "\(language): the settings list has the spaces row")
+            row.tap()
+            for round in 1...2 {
+                let space = app.buttons.matching(NSPredicate(format: "label CONTAINS 'tab' OR label CONTAINS 'onglet'")).firstMatch
+                XCTAssertTrue(space.waitForExistence(timeout: 3), "\(language): a space in the list")
+                space.swipeLeft()
+                let editButton = app.buttons[edit].firstMatch
+                XCTAssertTrue(editButton.waitForExistence(timeout: 3), "\(language): the swipe offers Edit")
+                editButton.tap()
+                let swatch = app.buttons[theme].firstMatch
+                var scrolls = 0
+                while !swatch.isHittable && scrolls < 6 { app.swipeUp(); scrolls += 1 }
+                XCTAssertTrue(swatch.waitForExistence(timeout: 3), "\(language): the form offers \(theme)")
+                if round == 1 {
+                    attach(app, "ready-themes-\(language)")
+                    swatch.tap()
+                    attach(app, "ready-themes-picked-\(language)")
+                    app.buttons[save].firstMatch.tap()
+                } else {
+                    XCTAssertTrue(swatch.isSelected, "\(language): the theme saved is the one selected when the form opens again")
+                    attach(app, "ready-themes-kept-\(language)")
+                }
+            }
+            app.terminate()
+        }
+    }
 }

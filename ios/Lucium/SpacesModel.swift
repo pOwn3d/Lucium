@@ -64,7 +64,7 @@ extension BrowserModel {
 
     /// Adds a space and shows it. A new profile is made first when `profile` is a name.
     @discardableResult
-    func addSpace(name: String, emoji: String, profile: ProfileChoice, hue: Double) -> Result<Space, SpaceFailure> {
+    func addSpace(name: String, emoji: String, profile: ProfileChoice, hue: Double, ready: ReadyTheme? = nil) -> Result<Space, SpaceFailure> {
         var next = state
         do throws(BrowserState.SpaceError) {
             let profileId: String
@@ -72,7 +72,7 @@ extension BrowserModel {
             case .existing(let id): profileId = id
             case .new(let profileName): profileId = try next.addProfile(named: profileName)
             }
-            let space = try next.addSpace(id: UUID().uuidString.lowercased(), name: name, emoji: emoji, profileId: profileId, hue: hue)
+            let space = try next.addSpace(id: UUID().uuidString.lowercased(), name: name, emoji: emoji, profileId: profileId, hue: hue, ready: ready)
             state = next
             selectSpace(space.id)  // takes the picture of the tab that leaves the screen
             scheduleSave()
@@ -82,10 +82,10 @@ extension BrowserModel {
         }
     }
 
-    func updateSpace(_ id: String, name: String, emoji: String, hue: Double?) -> Result<Void, SpaceFailure> {
+    func updateSpace(_ id: String, name: String, emoji: String, hue: Double?, ready: ReadyTheme? = nil) -> Result<Void, SpaceFailure> {
         var next = state
         do throws(BrowserState.SpaceError) {
-            try next.updateSpace(id, name: name, emoji: emoji, hue: hue)
+            try next.updateSpace(id, name: name, emoji: emoji, hue: hue, ready: ready)
             state = next
             scheduleSave()
             return .success(())

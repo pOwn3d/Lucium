@@ -136,22 +136,24 @@ extension BrowserState {
 
     // MARK: Spaces
 
-    /// Adds a space that uses a profile which exists (a new profile is made first, with `addProfile`), and gives it a theme from a hue.
+    /// Adds a space that uses a profile which exists (a new profile is made first, with `addProfile`), and gives it a theme from a hue, or a ready theme
+    /// when one is given (it wins over the hue).
     @discardableResult
-    public mutating func addSpace(id: String, name: String, emoji: String, profileId: String, hue: Double) throws(SpaceError) -> Space {
+    public mutating func addSpace(id: String, name: String, emoji: String, profileId: String, hue: Double, ready: ReadyTheme? = nil) throws(SpaceError) -> Space {
         guard let label = Self.cleanName(name, max: Self.spaceNameMax) else { throw SpaceError.emptyName }
         guard Self.isOneEmoji(emoji) else { throw SpaceError.notOneEmoji }
         guard profileIds.contains(profileId) else { throw SpaceError.unknownProfile }
         guard !spaces.contains(where: { $0.id == id }) else { throw SpaceError.idTaken }
-        let space = Space(id: id, name: label, emoji: emoji, profileId: profileId, rest: ["theme": SpaceTheme.make(hue: hue)])
+        let space = Space(id: id, name: label, emoji: emoji, profileId: profileId, rest: ["theme": ready?.theme ?? SpaceTheme.make(hue: hue)])
         spaces.append(space)
         activeTabBySpace[id] = .some(nil)
         return space
     }
 
     /// Changes what a person can change of a space: its name, its emoji, its colour. A colour picked here makes a new two-colour theme (the Mac's
-    /// `themeFromHue`); left alone, the theme the Mac made stays as it is. The profile never changes: its tabs would have to change data store.
-    public mutating func updateSpace(_ id: String, name: String? = nil, emoji: String? = nil, hue: Double? = nil) throws(SpaceError) {
+    /// `themeFromHue`), and a ready theme picked here is written as the Mac writes it (it wins over a hue); left alone, the theme the Mac made stays as
+    /// it is. The profile never changes: its tabs would have to change data store.
+    public mutating func updateSpace(_ id: String, name: String? = nil, emoji: String? = nil, hue: Double? = nil, ready: ReadyTheme? = nil) throws(SpaceError) {
         guard let index = spaces.firstIndex(where: { $0.id == id }) else { throw SpaceError.unknownSpace }
         var space = spaces[index]
         if let name {
@@ -166,7 +168,7 @@ extension BrowserState {
                 if space.rest["iconKind"] != nil { space.rest["iconKind"] = .string("emoji") }
             }
         }
-        if let hue { space.rest["theme"] = SpaceTheme.make(hue: hue) }
+        if let ready { space.rest["theme"] = ready.theme } else if let hue { space.rest["theme"] = SpaceTheme.make(hue: hue) }
         spaces[index] = space
     }
 

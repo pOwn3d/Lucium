@@ -183,6 +183,7 @@ struct SpaceForm: View {
     @State private var name = ""
     @State private var emoji = "🧩"
     @State private var hue: Double?
+    @State private var ready: ReadyTheme?  // a ready theme and a hue are two ways to colour a space: picking one clears the other
     @State private var profileTag = ""
     @State private var newProfileName = ""
     @State private var failure: BrowserModel.SpaceFailure?
@@ -212,7 +213,10 @@ struct SpaceForm: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 8), spacing: 6) {
                     ForEach(Array(SpaceTheme.huePresets.enumerated()), id: \.offset) { index, candidate in
                         let number = ordinal(index)
-                        Button { hue = candidate } label: {
+                        Button {
+                            hue = candidate
+                            ready = nil
+                        } label: {
                             Circle().fill(swatch(forHue: candidate)).frame(width: 30, height: 30)
                                 .overlay { if hue == candidate { Circle().strokeBorder(.accentFill, lineWidth: Stroke.ring).padding(-3) } }
                                 .frame(maxWidth: .infinity, minHeight: 44)
@@ -222,6 +226,13 @@ struct SpaceForm: View {
                         .accessibilityAddTraits(hue == candidate ? .isSelected : [])
                     }
                 }
+            }
+            Section {
+                ReadyThemePicker(selection: $ready) { hue = nil }
+            } header: {
+                Text("spaces.form.ready")
+            } footer: {
+                Text("spaces.form.ready.explain")
             }
             if case .add = mode {
                 Section {
@@ -259,7 +270,8 @@ struct SpaceForm: View {
             guard let space = model.state.spaces.first(where: { $0.id == id }) else { return }
             name = space.name
             emoji = space.emoji
-            hue = SpaceTheme.hue(of: space).flatMap { current in SpaceTheme.huePresets.first { $0 == current } }
+            ready = ReadyTheme.of(space)
+            hue = ready == nil ? SpaceTheme.hue(of: space).flatMap { current in SpaceTheme.huePresets.first { $0 == current } } : nil
         }
     }
 
@@ -267,12 +279,12 @@ struct SpaceForm: View {
         switch mode {
         case .add:
             let profile: BrowserModel.ProfileChoice = profileTag == Self.newProfileTag ? .new(newProfileName) : .existing(profileTag)
-            finish(model.addSpace(name: name, emoji: emoji, profile: profile, hue: hue ?? SpaceTheme.huePresets[0]).map { _ in () })
+            finish(model.addSpace(name: name, emoji: emoji, profile: profile, hue: hue ?? SpaceTheme.huePresets[0], ready: ready).map { _ in () })
         case .edit(let id):
             // A colour that was not touched leaves the theme the Mac made as it is.
-            let current = model.state.spaces.first(where: { $0.id == id }).flatMap(SpaceTheme.hue(of:))
-            let picked = hue.flatMap { $0 == current ? nil : $0 }
-            finish(model.updateSpace(id, name: name, emoji: emoji, hue: picked))
+            guard let space = model.state.spaces.first(where: { $0.id == id }) else { return }
+            let picked = SpaceColorEdit.patch(of: space, hue: hue, ready: ready)
+            finish(model.updateSpace(id, name: name, emoji: emoji, hue: picked.hue, ready: picked.ready))
         }
     }
 
