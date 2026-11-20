@@ -96,6 +96,7 @@ final class PrivacyNavigation: NSObject, WKNavigationDelegate {
     func request(for address: String) -> URLRequest? {
         guard let url = URL(string: address) else { return nil }
         var request = URLRequest(url: url)
+        if let limit = LoadFailure.requestTimeout(for: address) { request.timeoutInterval = limit }
         if currentOptions.globalPrivacyControl { request.setValue("1", forHTTPHeaderField: Self.gpcHeader) }
         return request
     }

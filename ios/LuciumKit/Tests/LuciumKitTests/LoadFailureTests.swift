@@ -29,9 +29,29 @@ final class LoadFailureTests: XCTestCase {
         XCTAssertNotNil(kind(103, domain: "WebKitErrorDomain"))
     }
 
-    func testARefusedCertificateKeepsItsOwnPromptAndGetsNoScreen() {
+    /// A refused certificate on an address the person asked for directly used to give no screen at all: a blank page (card 684, a Home Assistant with
+    /// a certificate of its own). The prompt of an upgrade of HTTPS first is another path (`HttpsUpgrades.failed`), which never comes here.
+    func testARefusedCertificateGetsItsOwnScreen() {
         for code in [NSURLErrorServerCertificateHasBadDate, NSURLErrorServerCertificateUntrusted, NSURLErrorServerCertificateHasUnknownRoot, NSURLErrorServerCertificateNotYetValid] {
-            XCTAssertNil(kind(code), "\(code)")
+            XCTAssertEqual(kind(code), .certificate, "\(code)")
+        }
+    }
+
+    func testARefusedCertificateOfAHomeDeviceOffersHttpAndNoOtherSiteDoes() {
+        XCTAssertEqual(failure(.certificate, "https://homeassistant.local:8123/").httpAddress, "http://homeassistant.local:8123/")
+        XCTAssertEqual(failure(.certificate, "https://192.168.1.20:8123/").httpAddress, "http://192.168.1.20:8123/")
+        XCTAssertNil(failure(.certificate, "https://example.org/").httpAddress, "a public site is never sent back to http")
+    }
+
+    /// WebKit waits 60 s for a device that does not answer, which is what a `.local` name that does not resolve costs (61 s measured on the
+    /// simulator): the devices of the person's network get a shorter wait, every other address keeps WebKit's.
+    func testADeviceOfTheLocalNetworkGetsAShorterWait() {
+        for address in ["http://homeassistant.local:8123/", "http://192.168.1.20:8123/lovelace", "https://nas.lan/", "http://10.0.0.5/", "http://[fd12::1]:8123/"] {
+            XCTAssertEqual(LoadFailure.requestTimeout(for: address), LoadFailure.localNetworkTimeout, address)
+        }
+        XCTAssertLessThan(LoadFailure.localNetworkTimeout, 60)
+        for address in ["https://example.org/", "http://8.8.8.8/", "http://local.example.com/", "http://localhost:3000/", "javascript:alert(1)", ""] {
+            XCTAssertNil(LoadFailure.requestTimeout(for: address), address)
         }
     }
 

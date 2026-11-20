@@ -9528,6 +9528,38 @@
           }
         }
       }
+    },
+    "loadfailure.certificate.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The site’s certificate isn’t trusted"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le certificat du site n’est pas reconnu"
+          }
+        }
+      }
+    },
+    "loadfailure.certificate.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ presented a security certificate that this iPhone doesn’t trust: it may be expired, signed by the site itself, or issued for another name. Nothing was loaded."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a présenté un certificat de sécurité que cet iPhone ne reconnaît pas : il est peut-être expiré, signé par le site lui-même ou émis pour un autre nom. Rien n’a été chargé."
+          }
+        }
+      }
     }
   },
   "version": "1.0"
