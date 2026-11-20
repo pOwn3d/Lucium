@@ -10,7 +10,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
-## [1.1.5] - 2026-11-25
+## [1.1.5] - 2026-11-20
 
 Your iPhone can now synchronize with your Mac, directly and without a server, and its Today tabs can be shared. On Windows the window draws its own title bar, and Windows and Linux say that they update by hand.
 
