@@ -5,6 +5,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { bookmarkKey, filterBookmarks, isBookmarkUrl } from './bookmarks'
 import { contrastRatio } from './contrast'
+import { COMMANDS } from './keybindings'
 import { BOOKMARKS_LIMIT, BOOKMARK_TITLE_MAX, BOOKMARK_URL_MAX, READ_LATER_LIMIT, READ_LATER_TITLE_MAX, READ_LATER_URL_MAX, type Bookmark } from './model'
 import { filterReadLater } from './read-later'
 import { LOCKED_SPACES_MAX } from './lock'
@@ -326,5 +327,18 @@ describe('iOS contract: bookmarks and read later', () => {
     expect(number('readLaterLimit')).toBe(READ_LATER_LIMIT)
     expect(number('readLaterTitleMax')).toBe(READ_LATER_TITLE_MAX)
     expect(number('readLaterUrlMax')).toBe(READ_LATER_URL_MAX)
+  })
+})
+
+// Hardware keyboard of the iPad: the shortcuts are the Mac's default ones, the same command ids and accelerators.
+describe('iOS contract: keyboard shortcuts', () => {
+  const { shortcuts } = JSON.parse(readFileSync(join(__dirname, '../../ios/Contracts/shortcut-vectors.json'), 'utf8')) as { shortcuts: { id: string; accelerator: string }[] }
+
+  it('has shortcuts to check', () => {
+    expect(shortcuts.length).toBeGreaterThan(10)
+  })
+
+  it.each(shortcuts)('$id is bound to $accelerator on the Mac too', ({ id, accelerator }) => {
+    expect(COMMANDS.find((command) => command.id === id)?.accelerator).toBe(accelerator)
   })
 })

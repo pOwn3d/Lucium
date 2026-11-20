@@ -39,6 +39,8 @@ final class BrowserModel {
     /// what closes it (`EdgeDrawer.isOpen(after:wasOpen:)`, in `LuciumKit`).
     private(set) var drawerShown = false
     var spacesSheetShown = false
+    /// The iPad's permanent sidebar: shown or put away (the button of its header and the keyboard shortcut). Kept here so that a turn or a narrow window does not forget it.
+    var padSidebarShown = true
     /// The settings screen (`SettingsScreen`), opened by the gear of the bottom bar and of the iPad's sidebar, and the page it opens on (the list when nil).
     var settingsShown = false
     /// The sheet of bookmarks and "Read later" (`KeptPagesScreen`), the list it shows, and the line that tells what keeping a page did (`KeepBanner`).

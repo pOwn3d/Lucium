@@ -108,7 +108,7 @@ Les icônes des maquettes sont dessinées par le projet (traits sur grille de 20
 - L'espace à l'écran est un **menu** (la maquette dessine un chevron sans dire ce qu'il ouvre) ; les pastilles d'espaces du pied gardent l'**anneau** de la barre du bas au lieu du carré grisé de la maquette, pour que l'espace actif se reconnaisse de la même façon des deux côtés.
 - Deux icônes de plus, `icon-sidebar` et `icon-download` (les dessins de la maquette, sur la grille de 20 px, comme les autres).
 
-**Ce que les tests ne prouvent pas.** Aucun essai sur un **vrai iPad** : la rotation réelle (la vue web survit-elle au passage barre du bas ↔ barre latérale sans rechargement ?), Split View, Slide Over et Stage Manager **réels** (la règle est prouvée par des tailles données à la vue, pas par une fenêtre qu'iOS redimensionne), le clavier matériel (les raccourcis de §4.1 ne sont pas repris ici), le glisser-déposer, la lisibilité sur l'écran réel, l'ordre de lecture de VoiceOver (les étiquettes sont posées et lues dans l'arbre d'accessibilité, aucun parcours n'a été écouté), la marge du bas sous l'indicateur d'accueil (la carte et la barre débordent la zone sûre du bas, comme la maquette). **Comment les tests lisent l'écran** : l'arbre d'accessibilité n'est pas publié dans un processus où personne n'écoute (essai fait : liste vide), donc les tests de `SidebarTests` ne lisent pas d'étiquettes ; ils lisent la couleur d'une bande du bord gauche pour savoir quelle navigation est dessinée (la page blanche, ou les couleurs de l'espace), et `SidebarContent` (`BrowserModel+Sidebar.swift`) pour ce que la barre liste, c'est là que le verrou s'applique. L'ouverture d'un dossier au toucher, le balayage et l'appui long ne sont pas joués : les dessins « dossier ouvert » le montrent, les gestes sont ceux de la feuille. Les dessins sont pris dans une fenêtre du processus de test à la taille de l'iPad Air 11 pouces en paysage (1180 × 820 pt), le simulateur étant resté droit : la mise en page est celle d'une fenêtre de cette taille, la barre d'état et l'indicateur d'accueil du paysage n'y sont pas.
+**Ce que les tests ne prouvent pas.** Aucun essai sur un **vrai iPad** : la rotation réelle (la vue web survit-elle au passage barre du bas ↔ barre latérale sans rechargement ?), Split View, Slide Over et Stage Manager **réels** (la règle est prouvée par des tailles données à la vue, pas par une fenêtre qu'iOS redimensionne), le clavier matériel réel (les raccourcis sont repris au §3.5, prouvés sur le modèle seulement), le glisser-déposer, la lisibilité sur l'écran réel, l'ordre de lecture de VoiceOver (les étiquettes sont posées et lues dans l'arbre d'accessibilité, aucun parcours n'a été écouté), la marge du bas sous l'indicateur d'accueil (la carte et la barre débordent la zone sûre du bas, comme la maquette). **Comment les tests lisent l'écran** : l'arbre d'accessibilité n'est pas publié dans un processus où personne n'écoute (essai fait : liste vide), donc les tests de `SidebarTests` ne lisent pas d'étiquettes ; ils lisent la couleur d'une bande du bord gauche pour savoir quelle navigation est dessinée (la page blanche, ou les couleurs de l'espace), et `SidebarContent` (`BrowserModel+Sidebar.swift`) pour ce que la barre liste, c'est là que le verrou s'applique. L'ouverture d'un dossier au toucher, le balayage et l'appui long ne sont pas joués : les dessins « dossier ouvert » le montrent, les gestes sont ceux de la feuille. Les dessins sont pris dans une fenêtre du processus de test à la taille de l'iPad Air 11 pouces en paysage (1180 × 820 pt), le simulateur étant resté droit : la mise en page est celle d'une fenêtre de cette taille, la barre d'état et l'indicateur d'accueil du paysage n'y sont pas.
 
 ### 3.2 La page de démarrage (fait)
 
@@ -209,6 +209,28 @@ Chaque ligne **pousse sa page dans la pile de l'écran** : « Retour » revient 
 - **Clair et sombre** : les couleurs sont celles du système et du thème de l'espace (`AGENTS.md` §4) ; le grisé est un voile noir, comme celui des feuilles du système.
 
 **Textes** : une clé de plus au catalogue, `sidebar.title` (« Barre latérale » / « Sidebar ») ; les autres (`sidebar.show`, `sidebar.hide`, et tout ce que la barre de l'iPad lisait) existent déjà en français et en anglais.
+
+### 3.5 Le clavier matériel de l'iPad (fait)
+
+Écrit par la carte « iPad, clavier matériel ». Un iPad avec clavier répond aux **raccourcis du Mac**, les mêmes par défaut : `ShortcutCommand` (`LuciumKit`) porte l'identifiant de commande et l'accélérateur du Mac (`CmdOrCtrl+Alt+Down`), `ios/Contracts/shortcut-vectors.json` les fige, et `src/shared/ios-contract.test.ts` les compare à `keybindings.ts` : un raccourci du Mac qui change fait échouer la garde.
+
+| Commande | Touches | Commande | Touches |
+|---|---|---|---|
+| Nouvel onglet | ⌘T | Page précédente / suivante | ⌘[ / ⌘] |
+| Archiver l'onglet | ⌘W | Actualiser ou arrêter | ⌘R |
+| Rouvrir le dernier onglet fermé | ⇧⌘T | Chercher dans la page | ⌘F |
+| Épingler / désépingler | ⌘D | Zoom avant / arrière / taille réelle | ⌘+ / ⌘- / ⌘0 |
+| Barre de commandes | ⌘L | Barre latérale (iPad), tiroir (iPhone) | ⌘S |
+| Tous les onglets | ⇧⌘A | Réglages | ⌘, |
+| Onglet suivant / précédent | ⌥⌘↓ / ⌥⌘↑ | Espace suivant / précédent | ⌥⌘→ / ⌥⌘← |
+
+**Où c'est écrit.** `KeyboardCommands` (`Lucium/`) déclare les `.commands` de la scène : trois menus (Onglets, Espaces, Page web), la barre latérale sous « Présentation » et les Réglages à leur place. Ce sont des boutons : la feuille que l'iPad montre quand on garde ⌘ enfoncé les liste, et VoiceOver ou la Commande vocale atteignent les mêmes actions sans touches. `BrowserModel.perform(_:)` fait l'action, `canPerform(_:)` dit si elle s'applique (la ligne est grisée sinon) ; `ShortcutCycle` (`LuciumKit`) choisit l'onglet ou l'espace suivant en revenant au début, comme le Mac. La barre latérale permanente de l'iPad a désormais son état dans le modèle (`padSidebarShown`) pour que ⌘S et le bouton de son en-tête agissent sur la même valeur.
+
+**Le verrou.** Ce qui a besoin d'un onglet (archiver, épingler, actualiser, chercher, onglet suivant, rouvrir) est éteint tant que l'espace à l'écran est verrouillé : un raccourci ne contourne pas le verrou (`activeTab` est vide, `lastClosed` ignore les espaces couverts).
+
+**Textes.** Quinze clés `shortcut.*` en français et en anglais ; les autres lignes reprennent des clés existantes (`tabs.new`, `bar.back`, `page.find`…). Tous les raccourcis portent ⌘, sans quoi une touche seule serait tapée dans la page (un test le refuse).
+
+**Preuves.** `swift test` : table et vecteurs, pas de doublon, ⌘ partout, cycle (4 tests ; mutation : accélérateur modifié et cycle sans retour au début, vus échouer). XCTest sur un simulateur iPad Pro 11 pouces : chaque raccourci joué sur le modèle, y compris le verrou et la bascule iPad / iPhone (mutation : verrou retiré et bascule unique, vus échouer). **Non prouvé** : l'appui réel sur un clavier (l'arbre des raccourcis n'est pas lisible hors d'une scène affichée), la feuille ⌘ maintenu, la rotation et Split View réels ; ⌘+ sur une disposition de clavier où « + » demande ⇧ (le système le traite comme ⌘= , à essayer sur un iPad avec son clavier). Aucune capture : l'écran ne change pas, seule la feuille du système apparaît.
 
 ## 4. Correspondance fonction par fonction
 

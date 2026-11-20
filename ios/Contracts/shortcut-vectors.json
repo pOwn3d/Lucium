@@ -1,0 +1,80 @@
+{
+  "shortcuts": [
+    {
+      "id": "newTab",
+      "accelerator": "CmdOrCtrl+T"
+    },
+    {
+      "id": "closeTab",
+      "accelerator": "CmdOrCtrl+W"
+    },
+    {
+      "id": "restoreClosed",
+      "accelerator": "CmdOrCtrl+Shift+T"
+    },
+    {
+      "id": "openLocation",
+      "accelerator": "CmdOrCtrl+L"
+    },
+    {
+      "id": "tabSearch",
+      "accelerator": "CmdOrCtrl+Shift+A"
+    },
+    {
+      "id": "nextTab",
+      "accelerator": "CmdOrCtrl+Alt+Down"
+    },
+    {
+      "id": "previousTab",
+      "accelerator": "CmdOrCtrl+Alt+Up"
+    },
+    {
+      "id": "nextSpace",
+      "accelerator": "CmdOrCtrl+Alt+Right"
+    },
+    {
+      "id": "previousSpace",
+      "accelerator": "CmdOrCtrl+Alt+Left"
+    },
+    {
+      "id": "back",
+      "accelerator": "CmdOrCtrl+["
+    },
+    {
+      "id": "forward",
+      "accelerator": "CmdOrCtrl+]"
+    },
+    {
+      "id": "reload",
+      "accelerator": "CmdOrCtrl+R"
+    },
+    {
+      "id": "find",
+      "accelerator": "CmdOrCtrl+F"
+    },
+    {
+      "id": "zoomIn",
+      "accelerator": "CmdOrCtrl+Plus"
+    },
+    {
+      "id": "zoomOut",
+      "accelerator": "CmdOrCtrl+-"
+    },
+    {
+      "id": "zoomReset",
+      "accelerator": "CmdOrCtrl+0"
+    },
+    {
+      "id": "toggleSidebar",
+      "accelerator": "CmdOrCtrl+S"
+    },
+    {
+      "id": "pin",
+      "accelerator": "CmdOrCtrl+D"
+    },
+    {
+      "id": "settings",
+      "accelerator": "CmdOrCtrl+,"
+    }
+  ]
+}

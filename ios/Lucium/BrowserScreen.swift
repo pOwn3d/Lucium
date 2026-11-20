@@ -12,7 +12,6 @@ struct BrowserScreen: View {
     @Environment(\.dynamicTypeSize) private var typeSize
     @State private var cover = PrivacyCover()
     /// What the iPad's sidebar remembers while the window is turned or narrowed and the bottom bar takes over: whether it is shown, and which folders are open.
-    @State private var sidebarShown = true
     @State private var expandedFolders: Set<String> = []
 
     var body: some View {
@@ -81,7 +80,7 @@ struct BrowserScreen: View {
                                                regularWidth: horizontalSizeClass == .regular, regularHeight: verticalSizeClass == .regular,
                                                largeText: typeSize.isAccessibilitySize) {
                 case .sidebar:
-                    SidebarLayout(model: model, sidebarShown: $sidebarShown, expandedFolders: $expandedFolders)
+                    SidebarLayout(model: model, sidebarShown: $model.padSidebarShown, expandedFolders: $expandedFolders)
                 case .bottomBar:
                     // On an iPhone the sidebar slides out from the left edge, above the page and the bar (decision of the project lead, 18 November 2026).
                     if EdgeDrawer.isAvailable(layout: .bottomBar, isPhone: model.isPhone) {
