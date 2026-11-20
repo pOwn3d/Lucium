@@ -11,5 +11,7 @@ struct LuciumApp: App {
                 // A link from another application (the default-browser requirement, docs/ios.md §9.4): cold start and running application alike.
                 .onOpenURL { model.receive($0) }
         }
+        // The hardware keyboard of an iPad: the Mac's shortcuts (docs/ios.md §3.5).
+        .commands { KeyboardCommands(model: model) }
     }
 }

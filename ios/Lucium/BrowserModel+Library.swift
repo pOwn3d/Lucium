@@ -28,7 +28,7 @@ extension BrowserModel {
     /// The archive, newest first, grouped by age (the day is the one of the clock the model was given): without the pages of the spaces that are covered.
     var archiveGroups: [ArchiveGroup] { Library.archiveGroups(visibleArchive, startOfToday: Library.startOfDay(clock())) }
     var archiveCount: Int { visibleArchive.count }
-    private var visibleArchive: [ArchivedTab] { state.archive.filter { !isCovered($0.spaceId) } }
+    var visibleArchive: [ArchivedTab] { state.archive.filter { !isCovered($0.spaceId) } }
 
     /// The page of a tab is the one on screen.
     func isShown(_ tab: TabItem) -> Bool { tab.id == activeTab?.id }
