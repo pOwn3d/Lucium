@@ -212,7 +212,7 @@ Chaque ligne **pousse sa page dans la pile de l'écran** : « Retour » revient 
 
 ### 3.5 Le clavier matériel de l'iPad (fait)
 
-Écrit par la carte 680 (audit LUC-159). Un iPad avec clavier répond aux **raccourcis du Mac**, les mêmes par défaut : `ShortcutCommand` (`LuciumKit`) porte l'identifiant de commande et l'accélérateur du Mac (`CmdOrCtrl+Alt+Down`), `ios/Contracts/shortcut-vectors.json` les fige, et `src/shared/ios-contract.test.ts` les compare à `keybindings.ts` : un raccourci du Mac qui change fait échouer la garde.
+Écrit par la carte « iPad, clavier matériel ». Un iPad avec clavier répond aux **raccourcis du Mac**, les mêmes par défaut : `ShortcutCommand` (`LuciumKit`) porte l'identifiant de commande et l'accélérateur du Mac (`CmdOrCtrl+Alt+Down`), `ios/Contracts/shortcut-vectors.json` les fige, et `src/shared/ios-contract.test.ts` les compare à `keybindings.ts` : un raccourci du Mac qui change fait échouer la garde.
 
 | Commande | Touches | Commande | Touches |
 |---|---|---|---|
