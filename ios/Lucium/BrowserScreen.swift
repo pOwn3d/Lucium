@@ -38,8 +38,8 @@ struct BrowserScreen: View {
                 TabsSheet(model: model)
                     .preferredColorScheme(model.forcedColorScheme)
             }
-            .fullScreenCover(isPresented: $model.commandBarShown) {
-                CommandBar(model: model)
+            .fullScreenCover(isPresented: $model.commandBarShown, onDismiss: { model.commandBarSeed = "" }) {
+                CommandBar(model: model, text: model.commandBarSeed)
                     .preferredColorScheme(model.forcedColorScheme)
             }
             .sheet(isPresented: $model.spacesSheetShown) {
@@ -129,7 +129,8 @@ struct PageArea: View {
                 // The load failed: the screen says why, over the web view (which keeps the page that was there, for a step back).
                 if let tab = model.activeTab?.id, let failure = model.loadFailures[tab] {
                     LoadFailureView(failure: failure, retry: { model.navigationPolicy.retry(tab: tab) },
-                                    openOverHttp: { model.navigationPolicy.openOverHttp(tab: tab) })
+                                    openOverHttp: { model.navigationPolicy.openOverHttp(tab: tab) },
+                                    editAddress: { model.commandBarSeed = failure.editableAddress ?? ""; model.commandBarShown = true })
                 }
             }
         } else {

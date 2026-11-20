@@ -52,6 +52,8 @@ final class BrowserModel {
     var siteDataAsked: String?
     /// The full-screen command bar (mockup `Commandes`): opened by the address pill.
     var commandBarShown = false
+    /// What the command bar opens with (« Change the address » on the error screen puts the address that failed there); emptied when the bar closes.
+    var commandBarSeed = ""
     var addressText = ""
     private(set) var host = ""
     private(set) var canGoBack = false
