@@ -24,3 +24,12 @@ struct CommandBarLayoutTests {
         #expect(CommandBarLayout.sections(enter: nil, hasTabs: false, hasCommands: false, hasFavorites: false).isEmpty)
     }
 }
+
+@Suite("Command bar: the history block")
+struct CommandBarHistoryLayoutTests {
+    @Test func theHistoryComesLastAndOnlyWhenItHasPages() {
+        #expect(CommandBarLayout.sections(enter: nil, hasTabs: true, hasCommands: true, hasFavorites: true, hasHistory: true) == [.tabs, .commands, .favorites, .history])
+        #expect(CommandBarLayout.sections(enter: nil, hasTabs: true, hasCommands: false, hasFavorites: false, hasHistory: false) == [.tabs])
+        #expect(CommandBarLayout.sections(enter: nil, hasTabs: false, hasCommands: false, hasFavorites: false, hasHistory: true) == [.history])
+    }
+}

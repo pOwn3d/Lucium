@@ -61,6 +61,24 @@ extension BrowserState {
         return true
     }
 
+    // MARK: History
+
+    /// Whether the profile keeps the pages it visits: the Mac's `profileRecordsHistory` (a profile's own `historyOff` first, else the general one; nothing
+    /// written means it keeps them).
+    public func recordsHistory(forProfile profileId: String) -> Bool {
+        if case .bool(let off)? = ownSettings(of: profileId)["historyOff"] { return !off }
+        if case .bool(let off)? = generalSettings["historyOff"] { return !off }
+        return true
+    }
+
+    /// Chooses whether a profile keeps its history, written where the Mac reads it (`historyOff`). Answers whether the state changed.
+    @discardableResult
+    public mutating func chooseRecordsHistory(_ records: Bool, forProfile profileId: String) -> Bool {
+        guard profileIds.contains(profileId), records != recordsHistory(forProfile: profileId) else { return false }
+        writeProfileSetting("historyOff", .bool(!records), forProfile: profileId)
+        return true
+    }
+
     // MARK: Writing
 
     private static func hours(_ value: JSONValue?) -> Double? {

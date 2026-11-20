@@ -8,6 +8,8 @@ public enum SettingsRow: String, CaseIterable, Identifiable, Hashable, Sendable 
     case searchEngine
     /// How long an idle Today tab waits before it is archived, and how many tabs keep a live page.
     case tabs
+    /// Whether the pages visited are kept on this phone, for how long, and the one-tap clearing (docs/ios.md, "Historique").
+    case history
     /// The protection level and the three rewrites of the privacy rules, and what is said of the blocker.
     case privacy
     /// What Lucium says of passwords and passkeys: it keeps none, and what iOS does in a page is the system's (docs/ios.md, "AutoFill et passkeys").
@@ -37,7 +39,7 @@ public enum SettingsSection: String, CaseIterable, Identifiable, Hashable, Senda
     /// The rows of the section, in the order they are listed.
     public var rows: [SettingsRow] {
         switch self {
-        case .navigation: [.searchEngine, .tabs, .appearance]
+        case .navigation: [.searchEngine, .tabs, .appearance, .history]
         case .privacy: [.privacy, .passwords, .lock]
         case .spaces: [.spaces]
         case .sync: [.sync]
