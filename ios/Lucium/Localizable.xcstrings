@@ -9560,6 +9560,38 @@
           }
         }
       }
+    },
+    "loadfailure.detail %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Technical detail: %@"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Détail technique : %@"
+          }
+        }
+      }
+    },
+    "loadfailure.local-name.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If you typed a name ending in .local, try the device’s IP address instead (for example 192.168.1.20:8123): a name like that is looked up with multicast DNS, which iOS can refuse to an app."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si vous avez saisi un nom en .local, essayez plutôt l’adresse IP de l’appareil (par exemple 192.168.1.20:8123) : un tel nom est cherché par DNS multicast, qu’iOS peut refuser à une application."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

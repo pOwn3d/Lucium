@@ -78,14 +78,17 @@ final class LoadFailureTests: XCTestCase {
         }
     }
 
-    func testTheSettingsAreSuggestedForAnUnreachableDeviceOfTheLocalNetworkOnly() {
+    /// TN3179: web view traffic needs no local network permission, resolving a `.local` name does. An IP address never gets the reminder (the Settings line
+    /// does not exist for an application that never asked), which would send the person looking for a switch that is not there.
+    func testTheSettingsAreSuggestedForAnUnansweredDotLocalNameOnly() {
         for kind in [LoadFailure.Kind.offline, .cannotConnect, .timedOut, .hostNotFound, .connectionLost] {
-            XCTAssertTrue(failure(kind, "http://192.168.1.20:8123/").suggestsLocalNetworkSettings, "\(kind)")
+            XCTAssertTrue(failure(kind, "http://homeassistant.local:8123/").suggestsLocalNetworkSettings, "\(kind)")
+            XCTAssertFalse(failure(kind, "http://192.168.1.20:8123/").suggestsLocalNetworkSettings, "an IP address needs no permission: \(kind)")
             XCTAssertFalse(failure(kind, "https://example.org/").suggestsLocalNetworkSettings, "a public site: \(kind)")
             XCTAssertFalse(failure(kind, "http://127.0.0.1:8123/").suggestsLocalNetworkSettings, "this machine: \(kind)")
         }
-        XCTAssertFalse(failure(.tooManyRedirects, "http://192.168.1.20/").suggestsLocalNetworkSettings, "the device answered")
-        XCTAssertFalse(failure(.secureConnection, "https://192.168.1.20/").suggestsLocalNetworkSettings, "the device answered")
+        XCTAssertFalse(failure(.tooManyRedirects, "http://homeassistant.local/").suggestsLocalNetworkSettings, "the device answered")
+        XCTAssertFalse(failure(.secureConnection, "https://homeassistant.local/").suggestsLocalNetworkSettings, "the device answered")
     }
 
     func testAFailedSecureConnectionToAHomeDeviceOffersHttp() {
@@ -102,5 +105,23 @@ final class LoadFailureTests: XCTestCase {
         XCTAssertNil(failure(.cannotConnect, "https://192.168.1.20/").httpAddress, "only a failed TLS handshake")
         XCTAssertNil(failure(.secureConnection, "http://192.168.1.20/").httpAddress, "already http")
         XCTAssertNil(failure(.secureConnection, "").httpAddress)
+    }
+
+    /// Card 684: on a phone nothing says why a page does not load, so the screen carries what the system said.
+    func testTheFailureKeepsWhatTheSystemSaid() throws {
+        let timedOut = try XCTUnwrap(LoadFailure.classify(domain: NSURLErrorDomain, code: NSURLErrorTimedOut, failingAddress: "http://192.168.1.20:8123/"))
+        XCTAssertEqual(timedOut.detail, "NSURLErrorDomain -1001")
+        XCTAssertEqual(LoadFailure.classify(domain: "WebKitErrorDomain", code: 103, failingAddress: "http://a/")?.detail, "WebKitErrorDomain 103")
+        XCTAssertNil(LoadFailure(kind: .other, address: "").detail)
+    }
+
+    func testAnIpAddressIsSuggestedForADotLocalNameThatDoesNotAnswerOnly() {
+        for kind in [LoadFailure.Kind.timedOut, .hostNotFound, .cannotConnect, .connectionLost, .offline] {
+            XCTAssertTrue(failure(kind, "http://homeassistant.local:8123/").suggestsIpAddress, "\(kind)")
+        }
+        XCTAssertFalse(failure(.timedOut, "http://192.168.1.20:8123/").suggestsIpAddress, "already an IP address")
+        XCTAssertFalse(failure(.timedOut, "https://local.example.com/").suggestsIpAddress, "a public name that contains local")
+        XCTAssertFalse(failure(.certificate, "https://homeassistant.local:8123/").suggestsIpAddress, "the device answered")
+        XCTAssertFalse(failure(.secureConnection, "https://homeassistant.local:8123/").suggestsIpAddress, "the device answered")
     }
 }

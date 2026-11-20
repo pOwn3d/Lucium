@@ -33,6 +33,12 @@ struct LoadFailureView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
                 }
+                if failure.suggestsIpAddress {
+                    Text("loadfailure.local-name.hint")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
                 if failure.retryAddress != nil {
                     Button(action: retry) {
                         Text("loadfailure.retry").frame(maxWidth: .infinity, minHeight: 44)
@@ -54,6 +60,15 @@ struct LoadFailureView: View {
                     }
                     .buttonStyle(.bordered)
                     .frame(maxWidth: 360)
+                }
+                if let detail = failure.detail {
+                    // What the system said, to read out when the page does not load and nothing says why (selectable, so that it can be copied).
+                    Text("loadfailure.detail \(detail)")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .textSelection(.enabled)
+                        .padding(.top, 8)
                 }
             }
             .padding(24)
