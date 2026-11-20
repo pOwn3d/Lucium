@@ -32,6 +32,9 @@ public struct LoadFailure: Equatable, Sendable {
     public let kind: Kind
     /// The address that could not be loaded, as the system reports it ("" when it did not say).
     public let address: String
+    /// What the system said, for whoever has to find the cause from a phone: the error domain and its code (« NSURLErrorDomain -1001 »). Shown small on the
+    /// screen, and nil when the failure was not made from an error (the tests, a screen built by hand).
+    public let detail: String?
 
     /// The name of the site for the sentence: the host without its "www.", or the address itself when it has none.
     public var site: String {
@@ -49,11 +52,16 @@ public struct LoadFailure: Equatable, Sendable {
     /// `isLocalNetworkHost` in `src/shared/error-pages.ts`. The machine itself (`localhost`, a loopback address) is not the network.
     public var isLocalNetwork: Bool { Self.isLocalNetworkHost(AddressResolver.host(of: address).replacing(/:\d+$/, with: "")) }
 
-    /// Whether to remind the person that iOS may not let Lucium reach the local network (and to offer the Settings of the application): the load of a
-    /// device of that network failed in a way a refused permission looks like (the Mac says the same in `LOCAL_NETWORK_ERRORS`).
-    public var suggestsLocalNetworkSettings: Bool {
-        isLocalNetwork && [.offline, .cannotConnect, .timedOut, .hostNotFound, .connectionLost].contains(kind)
-    }
+    private static let notAnswering: [Kind] = [.offline, .cannotConnect, .timedOut, .hostNotFound, .connectionLost]
+
+    /// A name that ends in `.local`: the system looks it up with multicast DNS.
+    private var isDotLocalName: Bool { AddressResolver.host(of: address).replacing(/:\d+$/, with: "").lowercased().hasSuffix(".local") }
+
+    /// Whether to remind the person that iOS may not let Lucium look up a `.local` name (and to offer the Settings of the application). Apple's technical
+    /// note on local network privacy (TN3179) says the traffic of a `WKWebView` needs no permission but that resolving a local DNS name does, so the
+    /// reminder is for such a name only: an IP address needs none, and the « Local Network » line of the Settings does not even exist for an application
+    /// whose web views are the only thing that reached the network (card 684).
+    public var suggestsLocalNetworkSettings: Bool { isDotLocalName && Self.notAnswering.contains(kind) }
 
     /// The `http://` address to offer on a failed or refused secure connection to a device of the person's own network (this machine or the local network):
     /// no certificate authority signs for such a device, and the traffic stays on the network. Nil for any other site, which is never sent back to http
@@ -96,10 +104,16 @@ public struct LoadFailure: Equatable, Sendable {
         return host.hasPrefix("fe80:") || (host.hasPrefix("fc") || host.hasPrefix("fd")) && host.contains(":")
     }
 
-    public init(kind: Kind, address: String) {
+    public init(kind: Kind, address: String, detail: String? = nil) {
         self.kind = kind
         self.address = address
+        self.detail = detail
     }
+
+    /// Whether to suggest the IP address of the device: a `.local` name is looked up by the system with multicast DNS, which a phone can refuse to an
+    /// application (the local network permission, a network that blocks multicast) while the same name works in Safari, and the IP address needs none of it.
+    /// Only for a failure that looks like the name not being found or the device not answering.
+    public var suggestsIpAddress: Bool { isDotLocalName && Self.notAnswering.contains(kind) }
 
     /// The failure for an error, or nil when it is not one the person needs a screen for:
     /// - a load that was replaced, stopped or turned into a download (`NSURLErrorCancelled`, WebKit's "frame load interrupted" 102, "cannot show
@@ -108,10 +122,11 @@ public struct LoadFailure: Equatable, Sendable {
     /// - a certificate WebKit refused after an upgrade of HTTPS first has its own prompt (`PrivacyNavigation` asks `HttpsUpgrades` first and only
     ///   comes here when no upgrade was under way); any other refused certificate is the `certificate` screen.
     public static func classify(domain: String, code: Int, failingAddress: String) -> LoadFailure? {
+        let detail = "\(domain) \(code)"
         if domain == "WebKitErrorDomain" {
-            return [100, 101, 102, 204].contains(code) ? nil : LoadFailure(kind: .other, address: failingAddress)
+            return [100, 101, 102, 204].contains(code) ? nil : LoadFailure(kind: .other, address: failingAddress, detail: detail)
         }
-        guard domain == NSURLErrorDomain else { return LoadFailure(kind: .other, address: failingAddress) }
+        guard domain == NSURLErrorDomain else { return LoadFailure(kind: .other, address: failingAddress, detail: detail) }
         let kind: Kind
         switch code {
         case NSURLErrorCancelled, NSURLErrorUnsupportedURL: return nil
@@ -128,7 +143,7 @@ public struct LoadFailure: Equatable, Sendable {
         case NSURLErrorSecureConnectionFailed: kind = .secureConnection
         default: kind = .other
         }
-        return LoadFailure(kind: kind, address: failingAddress)
+        return LoadFailure(kind: kind, address: failingAddress, detail: detail)
     }
 
     /// The same, from the `NSError` of the delegate: the address comes from the error's own `userInfo`.

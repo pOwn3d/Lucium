@@ -15,7 +15,7 @@ final class LoadFailureViewTests: XCTestCase {
                     XCTAssertNotEqual(bundle.localizedString(forKey: key, value: "MISSING", table: nil), "MISSING", "\(key) in \(language)")
                 }
             }
-            for key in ["loadfailure.retry", "loadfailure.local-network.hint", "loadfailure.local-network.settings", "privacy.refused.http"] {
+            for key in ["loadfailure.retry", "loadfailure.local-network.hint", "loadfailure.local-network.settings", "loadfailure.local-name.hint", "loadfailure.detail %@", "privacy.refused.http"] {
                 XCTAssertNotEqual(bundle.localizedString(forKey: key, value: "MISSING", table: nil), "MISSING", "\(key) in \(language)")
             }
         }
@@ -25,7 +25,8 @@ final class LoadFailureViewTests: XCTestCase {
         let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first, "the hosted tests run inside the application's scene")
         let shapes: [(String, CGSize)] = [("iphone", CGSize(width: 390, height: 844)), ("ipad", CGSize(width: 1024, height: 768))]
         let failures = [LoadFailure(kind: .offline, address: "https://www.example.org/a"), LoadFailure(kind: .hostNotFound, address: "https://exmple.org/"),
-                        LoadFailure(kind: .timedOut, address: "https://example.org/"),
+                        LoadFailure(kind: .timedOut, address: "https://example.org/", detail: "NSURLErrorDomain -1001"),
+                        LoadFailure(kind: .timedOut, address: "http://homeassistant.local:8123/", detail: "NSURLErrorDomain -1001"),
                         // A device of the local network: the sentence about « Local Network » and the button of the Settings, then « Open over HTTP ».
                         LoadFailure(kind: .cannotConnect, address: "http://192.168.1.20:8123/"), LoadFailure(kind: .secureConnection, address: "https://homeassistant.local:8123/"),
                         // A device with a certificate of its own (card 684: this used to be a blank page): the sentence, « Try again » and « Open over HTTP ».
