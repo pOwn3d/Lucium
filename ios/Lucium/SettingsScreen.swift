@@ -341,7 +341,7 @@ struct AppearanceScreen: View {
                         HStack(spacing: Gap.m) {
                             Text(SettingsScreen.name(of: appearance)).foregroundStyle(Color.primary)
                             Spacer(minLength: 8)
-                            if selected { IconView(.check).foregroundStyle(Color.accentColor) }
+                            if selected { IconView(.check).foregroundStyle(.accentText) }
                         }
                         .frame(minHeight: 44)
                         .contentShape(Rectangle())

@@ -3009,310 +3009,6 @@
         }
       }
     },
-    "loadfailure.bad-address.text %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This address isn’t valid. Check it, then try again."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cette adresse n’est pas valide. Vérifiez-la, puis réessayez."
-          }
-        }
-      }
-    },
-    "loadfailure.bad-address.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Invalid address"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adresse non valide"
-          }
-        }
-      }
-    },
-    "loadfailure.cannot-connect.text %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ refused the connection or can’t be reached from this network. Try again in a moment."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ a refusé la connexion ou n’est pas joignable depuis ce réseau. Réessayez dans un instant."
-          }
-        }
-      }
-    },
-    "loadfailure.cannot-connect.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Can’t connect to the site"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connexion au site impossible"
-          }
-        }
-      }
-    },
-    "loadfailure.connection-lost.text %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The connection to %@ was lost while the page was loading. Try again."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La connexion avec %@ s’est interrompue pendant le chargement de la page. Réessayez."
-          }
-        }
-      }
-    },
-    "loadfailure.connection-lost.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connection lost"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connexion interrompue"
-          }
-        }
-      }
-    },
-    "loadfailure.host-not-found.text %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The address of %@ can’t be found. Check that it’s spelled correctly, then try again."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L’adresse de %@ est introuvable. Vérifiez qu’elle est bien écrite, puis réessayez."
-          }
-        }
-      }
-    },
-    "loadfailure.host-not-found.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Site not found"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Site introuvable"
-          }
-        }
-      }
-    },
-    "loadfailure.offline.text %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ can’t be reached because this device isn’t connected to the internet. Check Wi-Fi or mobile data, then try again."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ est inaccessible : cet appareil n’est pas connecté à Internet. Vérifiez le Wi-Fi ou les données mobiles, puis réessayez."
-          }
-        }
-      }
-    },
-    "loadfailure.offline.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "You’re offline"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vous êtes hors ligne"
-          }
-        }
-      }
-    },
-    "loadfailure.other.text %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ couldn’t be loaded. Try again in a moment."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ n’a pas pu être chargé. Réessayez dans un instant."
-          }
-        }
-      }
-    },
-    "loadfailure.other.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The page didn’t load"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La page ne s’est pas chargée"
-          }
-        }
-      }
-    },
-    "loadfailure.retry": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Try again"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Réessayer"
-          }
-        }
-      }
-    },
-    "loadfailure.secure-connection.text %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ didn’t answer correctly over a secure connection. The site may not support it."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ n’a pas répondu correctement en connexion sécurisée. Le site ne la prend peut-être pas en charge."
-          }
-        }
-      }
-    },
-    "loadfailure.secure-connection.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Secure connection failed"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Connexion sécurisée impossible"
-          }
-        }
-      }
-    },
-    "loadfailure.timed-out.text %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ didn’t answer in time. It may be busy, or your connection may be slow."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ n’a pas répondu à temps. Il est peut-être surchargé, ou votre connexion est lente."
-          }
-        }
-      }
-    },
-    "loadfailure.timed-out.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The site took too long"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le site met trop de temps"
-          }
-        }
-      }
-    },
-    "loadfailure.too-many-redirects.text %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ sent you round in a circle. Clearing the cookies of this site may fix it."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ vous a renvoyé en boucle. Supprimer les cookies de ce site peut résoudre le problème."
-          }
-        }
-      }
-    },
-    "loadfailure.too-many-redirects.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Too many redirects"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Trop de redirections"
-          }
-        }
-      }
-    },
     "lock.alert.title": {
       "localizations": {
         "en": {
@@ -3697,22 +3393,6 @@
         }
       }
     },
-    "page.desktop": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Request desktop site"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version pour ordinateur"
-          }
-        }
-      }
-    },
     "page.downloads": {
       "localizations": {
         "en": {
@@ -3789,54 +3469,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Partager la page"
-          }
-        }
-      }
-    },
-    "page.zoom.in": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Make text larger"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Agrandir le texte"
-          }
-        }
-      }
-    },
-    "page.zoom.out": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Make text smaller"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Réduire le texte"
-          }
-        }
-      }
-    },
-    "page.zoom.reset %lld": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reset text size (%lld%%)"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rétablir la taille du texte (%lld %%)"
           }
         }
       }
@@ -4793,86 +4425,6 @@
         }
       }
     },
-    "settings.about.footer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Links open in Safari, only when you tap them. Lucium sends nothing on its own."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Les liens s’ouvrent dans Safari, seulement quand vous les touchez. Lucium n’envoie rien de lui-même."
-          }
-        }
-      }
-    },
-    "settings.about.help": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Help and community"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aide et communauté"
-          }
-        }
-      }
-    },
-    "settings.about.site": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lucium website"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Site de Lucium"
-          }
-        }
-      }
-    },
-    "settings.about.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "About Lucium"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "À propos de Lucium"
-          }
-        }
-      }
-    },
-    "settings.about.version": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "App version"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Version de l’application"
-          }
-        }
-      }
-    },
     "settings.appearance.dark": {
       "localizations": {
         "en": {
@@ -4949,22 +4501,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Apparence"
-          }
-        }
-      }
-    },
-    "settings.changed": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Changed"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modifié"
           }
         }
       }
@@ -5113,102 +4649,6 @@
         }
       }
     },
-    "settings.reset.button": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restore settings"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rétablir les réglages"
-          }
-        }
-      }
-    },
-    "settings.reset.confirm.action": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restore"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rétablir"
-          }
-        }
-      }
-    },
-    "settings.reset.confirm.message %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The search engine of the profile “%@” and the privacy settings go back to their original values. The lock, the spaces and the synchronisation do not change."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Le moteur de recherche du profil « %@ » et la vie privée reviennent à leur valeur d’origine. Le verrouillage, les espaces et la synchronisation ne changent pas."
-          }
-        }
-      }
-    },
-    "settings.reset.confirm.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Restore the settings?"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rétablir les réglages ?"
-          }
-        }
-      }
-    },
-    "settings.reset.footer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Puts the search engine and the privacy settings back to their original values."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Remet le moteur de recherche et la vie privée à leur valeur d’origine."
-          }
-        }
-      }
-    },
-    "settings.reset.none": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nothing has been changed: the settings are at their original values."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Rien n’a été modifié : les réglages sont à leur valeur d’origine."
-          }
-        }
-      }
-    },
     "settings.search.custom %@": {
       "localizations": {
         "en": {
@@ -5273,6 +4713,198 @@
         }
       }
     },
+    "settings.about.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About Lucium"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "À propos de Lucium"
+          }
+        }
+      }
+    },
+    "settings.about.version": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "App version"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version de l’application"
+          }
+        }
+      }
+    },
+    "settings.about.site": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lucium website"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site de Lucium"
+          }
+        }
+      }
+    },
+    "settings.about.help": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Help and community"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aide et communauté"
+          }
+        }
+      }
+    },
+    "settings.about.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Links open in Safari, only when you tap them. Lucium sends nothing on its own."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les liens s’ouvrent dans Safari, seulement quand vous les touchez. Lucium n’envoie rien de lui-même."
+          }
+        }
+      }
+    },
+    "settings.changed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Changed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifié"
+          }
+        }
+      }
+    },
+    "settings.reset.button": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore settings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir les réglages"
+          }
+        }
+      }
+    },
+    "settings.reset.confirm.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore the settings?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir les réglages ?"
+          }
+        }
+      }
+    },
+    "settings.reset.confirm.message %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The search engine of the profile “%@” and the privacy settings go back to their original values. The lock, the spaces and the synchronisation do not change."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le moteur de recherche du profil « %@ » et la vie privée reviennent à leur valeur d’origine. Le verrouillage, les espaces et la synchronisation ne changent pas."
+          }
+        }
+      }
+    },
+    "settings.reset.confirm.action": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir"
+          }
+        }
+      }
+    },
+    "settings.reset.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puts the search engine and the privacy settings back to their original values."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remet le moteur de recherche et la vie privée à leur valeur d’origine."
+          }
+        }
+      }
+    },
+    "settings.reset.none": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing has been changed: the settings are at their original values."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rien n’a été modifié : les réglages sont à leur valeur d’origine."
+          }
+        }
+      }
+    },
     "settings.section.about": {
       "localizations": {
         "en": {
@@ -5333,262 +4965,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Espaces"
-          }
-        }
-      }
-    },
-    "settings.tabs.archive.footer %@": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A Today tab you have not opened for this long goes to the archive, in the profile “%@”. Pinned tabs and favorites are never archived. The change applies the next time Lucium comes to the front."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un onglet d’« Aujourd’hui » que vous n’avez pas ouvert pendant ce délai part dans l’archive, dans le profil « %@ ». Les onglets épinglés et les favoris ne sont jamais archivés. Le changement s’applique à la prochaine ouverture de Lucium."
-          }
-        }
-      }
-    },
-    "settings.tabs.archive.header": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Archive inactive tabs"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Archiver les onglets inactifs"
-          }
-        }
-      }
-    },
-    "settings.tabs.archive.hours %lld": {
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "After %lld hour"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "After %lld hours"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Après %lld heure"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "Après %lld heures"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "settings.tabs.archive.inherited": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Same as the default profile"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comme le profil par défaut"
-          }
-        }
-      }
-    },
-    "settings.tabs.archive.never": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Never"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jamais"
-          }
-        }
-      }
-    },
-    "settings.tabs.archive.one-day": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After 1 day"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Après 1 jour"
-          }
-        }
-      }
-    },
-    "settings.tabs.archive.seven-days": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After 7 days"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Après 7 jours"
-          }
-        }
-      }
-    },
-    "settings.tabs.archive.twelve-hours": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After 12 hours"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Après 12 heures"
-          }
-        }
-      }
-    },
-    "settings.tabs.awake.count %lld": {
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld tab"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld tabs"
-                }
-              }
-            }
-          }
-        },
-        "fr": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld onglet"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "%lld onglets"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "settings.tabs.awake.footer": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "How many tabs keep their page loaded at once. The others go to sleep: they stay in the list and reload when you open them. The tab on screen and a tab that is playing sound or video, or using the camera or microphone, never sleep. Fewer tabs spare memory and battery. This setting belongs to this device and is not synchronized."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nombre d’onglets dont la page reste chargée en même temps. Les autres se mettent en veille : ils restent dans la liste et se rechargent à l’ouverture. L’onglet à l’écran et un onglet qui joue un son ou une vidéo, ou qui utilise la caméra ou le micro, ne dorment jamais. Moins d’onglets, c’est moins de mémoire et de batterie. Ce réglage est propre à cet appareil et n’est pas synchronisé."
-          }
-        }
-      }
-    },
-    "settings.tabs.awake.header": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tabs kept in memory"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Onglets gardés en mémoire"
-          }
-        }
-      }
-    },
-    "settings.tabs.awake.unlimited": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No limit"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sans limite"
-          }
-        }
-      }
-    },
-    "settings.tabs.title": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tabs"
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Onglets"
           }
         }
       }
@@ -8001,22 +7377,6 @@
         }
       }
     },
-    "sync.pairing.mac-knows-this-phone": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "This Mac already knows this iPhone. On the Mac, forget this iPhone in the list of devices, then try again."
-          }
-        },
-        "fr": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ce Mac connaît déjà cet iPhone. Sur le Mac, oubliez cet iPhone dans la liste des appareils, puis réessayez."
-          }
-        }
-      }
-    },
     "sync.pairing.mode": {
       "localizations": {
         "en": {
@@ -8061,6 +7421,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Saisir un code"
+          }
+        }
+      }
+    },
+    "sync.pairing.mac-knows-this-phone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This Mac already knows this iPhone. On the Mac, forget this iPhone in the list of devices, then try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ce Mac connaît déjà cet iPhone. Sur le Mac, oubliez cet iPhone dans la liste des appareils, puis réessayez."
           }
         }
       }
@@ -8853,6 +8229,630 @@
           "stringUnit": {
             "state": "translated",
             "value": "Désépingler"
+          }
+        }
+      }
+    },
+    "page.zoom.in": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make text larger"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Agrandir le texte"
+          }
+        }
+      }
+    },
+    "page.zoom.out": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Make text smaller"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réduire le texte"
+          }
+        }
+      }
+    },
+    "page.zoom.reset %lld": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Reset text size (%lld%%)"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rétablir la taille du texte (%lld %%)"
+          }
+        }
+      }
+    },
+    "page.desktop": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Request desktop site"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Version pour ordinateur"
+          }
+        }
+      }
+    },
+    "loadfailure.bad-address.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This address isn’t valid. Check it, then try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cette adresse n’est pas valide. Vérifiez-la, puis réessayez."
+          }
+        }
+      }
+    },
+    "loadfailure.bad-address.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid address"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Adresse non valide"
+          }
+        }
+      }
+    },
+    "loadfailure.cannot-connect.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ refused the connection or can’t be reached from this network. Try again in a moment."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ a refusé la connexion ou n’est pas joignable depuis ce réseau. Réessayez dans un instant."
+          }
+        }
+      }
+    },
+    "loadfailure.cannot-connect.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Can’t connect to the site"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion au site impossible"
+          }
+        }
+      }
+    },
+    "loadfailure.connection-lost.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The connection to %@ was lost while the page was loading. Try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La connexion avec %@ s’est interrompue pendant le chargement de la page. Réessayez."
+          }
+        }
+      }
+    },
+    "loadfailure.connection-lost.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connection lost"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion interrompue"
+          }
+        }
+      }
+    },
+    "loadfailure.host-not-found.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The address of %@ can’t be found. Check that it’s spelled correctly, then try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L’adresse de %@ est introuvable. Vérifiez qu’elle est bien écrite, puis réessayez."
+          }
+        }
+      }
+    },
+    "loadfailure.host-not-found.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site not found"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Site introuvable"
+          }
+        }
+      }
+    },
+    "loadfailure.offline.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ can’t be reached because this device isn’t connected to the internet. Check Wi-Fi or mobile data, then try again."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ est inaccessible : cet appareil n’est pas connecté à Internet. Vérifiez le Wi-Fi ou les données mobiles, puis réessayez."
+          }
+        }
+      }
+    },
+    "loadfailure.offline.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You’re offline"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vous êtes hors ligne"
+          }
+        }
+      }
+    },
+    "loadfailure.other.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ couldn’t be loaded. Try again in a moment."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ n’a pas pu être chargé. Réessayez dans un instant."
+          }
+        }
+      }
+    },
+    "loadfailure.other.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The page didn’t load"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La page ne s’est pas chargée"
+          }
+        }
+      }
+    },
+    "loadfailure.retry": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try again"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Réessayer"
+          }
+        }
+      }
+    },
+    "loadfailure.secure-connection.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ didn’t answer correctly over a secure connection. The site may not support it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ n’a pas répondu correctement en connexion sécurisée. Le site ne la prend peut-être pas en charge."
+          }
+        }
+      }
+    },
+    "loadfailure.secure-connection.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Secure connection failed"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connexion sécurisée impossible"
+          }
+        }
+      }
+    },
+    "loadfailure.timed-out.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ didn’t answer in time. It may be busy, or your connection may be slow."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ n’a pas répondu à temps. Il est peut-être surchargé, ou votre connexion est lente."
+          }
+        }
+      }
+    },
+    "loadfailure.timed-out.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The site took too long"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Le site met trop de temps"
+          }
+        }
+      }
+    },
+    "loadfailure.too-many-redirects.text %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ sent you round in a circle. Clearing the cookies of this site may fix it."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ vous a renvoyé en boucle. Supprimer les cookies de ce site peut résoudre le problème."
+          }
+        }
+      }
+    },
+    "loadfailure.too-many-redirects.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many redirects"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Trop de redirections"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.footer %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A Today tab you have not opened for this long goes to the archive, in the profile “%@”. Pinned tabs and favorites are never archived. The change applies the next time Lucium comes to the front."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un onglet d’« Aujourd’hui » que vous n’avez pas ouvert pendant ce délai part dans l’archive, dans le profil « %@ ». Les onglets épinglés et les favoris ne sont jamais archivés. Le changement s’applique à la prochaine ouverture de Lucium."
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archive inactive tabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Archiver les onglets inactifs"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.hours %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "After %lld hour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "After %lld hours"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Après %lld heure"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Après %lld heures"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.never": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Never"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jamais"
+          }
+        }
+      }
+    },
+    "settings.tabs.awake.count %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld tab"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld tabs"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld onglet"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld onglets"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "settings.tabs.awake.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "How many tabs keep their page loaded at once. The others go to sleep: they stay in the list and reload when you open them. The tab on screen and a tab that is playing sound or video, or using the camera or microphone, never sleep. Fewer tabs spare memory and battery. This setting belongs to this device and is not synchronized."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nombre d’onglets dont la page reste chargée en même temps. Les autres se mettent en veille : ils restent dans la liste et se rechargent à l’ouverture. L’onglet à l’écran et un onglet qui joue un son ou une vidéo, ou qui utilise la caméra ou le micro, ne dorment jamais. Moins d’onglets, c’est moins de mémoire et de batterie. Ce réglage est propre à cet appareil et n’est pas synchronisé."
+          }
+        }
+      }
+    },
+    "settings.tabs.awake.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabs kept in memory"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets gardés en mémoire"
+          }
+        }
+      }
+    },
+    "settings.tabs.awake.unlimited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No limit"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sans limite"
+          }
+        }
+      }
+    },
+    "settings.tabs.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tabs"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Onglets"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.inherited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Same as the default profile"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Comme le profil par défaut"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.twelve-hours": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 12 hours"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après 12 heures"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.one-day": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 1 day"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après 1 jour"
+          }
+        }
+      }
+    },
+    "settings.tabs.archive.seven-days": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After 7 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Après 7 jours"
           }
         }
       }
