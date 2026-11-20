@@ -40,6 +40,27 @@ extension BrowserModel {
         scheduleSave()
     }
 
+    /// The appearance of the whole application the person chose (system, light or dark).
+    var interfaceAppearance: InterfaceAppearance { state.interfaceAppearance }
+
+    /// The scheme the screen is forced to for the space on screen: the application's own choice, else the one the space's theme asks for, else nil (the
+    /// system's).
+    var forcedColorScheme: ColorScheme? {
+        switch state.forcedAppearance(forSpace: state.activeSpaceId) {
+        case .light?: .light
+        case .dark?: .dark
+        default: nil
+        }
+    }
+
+    /// Chooses the appearance of the application; kept like any other change.
+    func chooseInterfaceAppearance(_ appearance: InterfaceAppearance) {
+        var next = state
+        guard next.chooseInterfaceAppearance(appearance) else { return }
+        state = next
+        scheduleSave()
+    }
+
     /// What the settings list says of the protection level, for the row that opens the privacy page.
     var privacyLevelSummary: LocalizedStringKey {
         switch privacySettings.level {

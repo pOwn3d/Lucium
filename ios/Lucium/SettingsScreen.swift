@@ -61,6 +61,15 @@ struct SettingsScreen: View {
         }
     }
 
+    /// The name of an appearance, as the page and the row's value say it.
+    static func name(of appearance: InterfaceAppearance) -> LocalizedStringKey {
+        switch appearance {
+        case .auto: "settings.appearance.system"
+        case .light: "settings.appearance.light"
+        case .dark: "settings.appearance.dark"
+        }
+    }
+
     // MARK: Rows
 
     @ViewBuilder private func rowView(_ row: SettingsRow) -> some View {
@@ -69,6 +78,8 @@ struct SettingsScreen: View {
             link(row, "settings.search.title") { Text(verbatim: SearchEngine.name(forTemplate: model.searchTemplate)) }
         case .tabs:
             link(row, "settings.tabs.title") { TabsSettingsScreen.archiveName(hours: model.archiveHours) }
+        case .appearance:
+            link(row, "settings.appearance.title") { Text(Self.name(of: model.interfaceAppearance)) }
         case .privacy:
             link(row, "settings.privacy") { Text(model.privacyLevelSummary) }
         case .passwords:
@@ -115,6 +126,7 @@ struct SettingsScreen: View {
         switch row {
         case .searchEngine: SearchEngineScreen(model: model)
         case .tabs: TabsSettingsScreen(model: model)
+        case .appearance: AppearanceScreen(model: model)
         case .privacy: PrivacyForm(model: model)
         case .passwords: PasswordsScreen()
         case .lock:
@@ -311,6 +323,36 @@ struct PasswordsScreen: View {
             }
         }
         .navigationTitle("settings.passwords.title")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+/// System, light or dark for the whole application. It is written where the Mac keeps it (`settings.interfaceAppearance`) and stays on this device: the
+/// synchronisation does not carry it. With "System", the space on screen may still ask for its own appearance (the `appearance` of its theme).
+struct AppearanceScreen: View {
+    @Bindable var model: BrowserModel
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(InterfaceAppearance.allCases) { appearance in
+                    let selected = model.interfaceAppearance == appearance
+                    Button { model.chooseInterfaceAppearance(appearance) } label: {
+                        HStack(spacing: Gap.m) {
+                            Text(SettingsScreen.name(of: appearance)).foregroundStyle(Color.primary)
+                            Spacer(minLength: 8)
+                            if selected { IconView(.check).foregroundStyle(.accentText) }
+                        }
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            } footer: {
+                Text("settings.appearance.footer")
+            }
+        }
+        .navigationTitle("settings.appearance.title")
         .navigationBarTitleDisplayMode(.inline)
     }
 }

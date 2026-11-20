@@ -19,6 +19,8 @@ struct BrowserScreen: View {
         content
             // The accent of the interface is the one of the space on screen, worked out from its hue as on the Mac (`SpaceAccent`).
             .spaceAccent(of: model.activeSpace)
+            // The appearance the person chose, or the one of the space on screen's theme; nil follows the system. A sheet or a cover does not inherit it: each one is given it below.
+            .preferredColorScheme(model.forcedColorScheme)
             // The device lost its passcode, so the lock was turned off: the person is told, once, wherever they are.
             .alert("lock.alert.title", isPresented: switchedOffShown) {
                 Button("state.notice.ok") { model.lock?.dismissNotice() }
@@ -35,22 +37,28 @@ struct BrowserScreen: View {
             // The tabs and the command bar each take the whole screen, as on the mockups (`C2`, `Commandes`).
             .fullScreenCover(isPresented: $model.tabsSheetShown) {
                 TabsSheet(model: model)
+                    .preferredColorScheme(model.forcedColorScheme)
             }
             .fullScreenCover(isPresented: $model.commandBarShown) {
                 CommandBar(model: model)
+                    .preferredColorScheme(model.forcedColorScheme)
             }
             .sheet(isPresented: $model.spacesSheetShown) {
                 SpacesSheet(model: model)
+                    .preferredColorScheme(model.forcedColorScheme)
             }
             .sheet(isPresented: $model.settingsShown) {
                 SettingsScreen(model: model)
+                    .preferredColorScheme(model.forcedColorScheme)
             }
             .sheet(isPresented: $model.keptShown) {
                 KeptPagesScreen(model: model)
+                    .preferredColorScheme(model.forcedColorScheme)
             }
             .modifier(SiteDataFlow(model: model))
             .sheet(isPresented: Binding(get: { model.downloads.sheetShown }, set: { model.downloads.sheetShown = $0 })) {
                 DownloadsSheet(downloads: model.downloads)
+                    .preferredColorScheme(model.forcedColorScheme)
             }
             .alert("state.notice.title", isPresented: $model.startupNoticeShown) {
                 Button("state.notice.ok") {}
