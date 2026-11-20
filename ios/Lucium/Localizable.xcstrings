@@ -9577,6 +9577,22 @@
         }
       }
     },
+    "loadfailure.edit-address": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Change the address"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modifier l’adresse"
+          }
+        }
+      }
+    },
     "loadfailure.local-name.hint": {
       "localizations": {
         "en": {

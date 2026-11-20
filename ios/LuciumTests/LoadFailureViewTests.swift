@@ -15,7 +15,7 @@ final class LoadFailureViewTests: XCTestCase {
                     XCTAssertNotEqual(bundle.localizedString(forKey: key, value: "MISSING", table: nil), "MISSING", "\(key) in \(language)")
                 }
             }
-            for key in ["loadfailure.retry", "loadfailure.local-network.hint", "loadfailure.local-network.settings", "loadfailure.local-name.hint", "loadfailure.detail %@", "privacy.refused.http"] {
+            for key in ["loadfailure.retry", "loadfailure.local-network.hint", "loadfailure.local-network.settings", "loadfailure.local-name.hint", "loadfailure.edit-address", "loadfailure.detail %@", "privacy.refused.http"] {
                 XCTAssertNotEqual(bundle.localizedString(forKey: key, value: "MISSING", table: nil), "MISSING", "\(key) in \(language)")
             }
         }

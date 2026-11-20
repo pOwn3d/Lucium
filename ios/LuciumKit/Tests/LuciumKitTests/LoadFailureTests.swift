@@ -124,4 +124,13 @@ final class LoadFailureTests: XCTestCase {
         XCTAssertFalse(failure(.certificate, "https://homeassistant.local:8123/").suggestsIpAddress, "the device answered")
         XCTAssertFalse(failure(.secureConnection, "https://homeassistant.local:8123/").suggestsIpAddress, "the device answered")
     }
+
+    func testTheAddressToEditIsWhatThePersonTypedWithoutSchemeNorClosingSlash() {
+        XCTAssertEqual(failure(.timedOut, "http://homeassistant.local:8123/").editableAddress, "homeassistant.local:8123")
+        XCTAssertEqual(failure(.timedOut, "http://homeassistant.local:8123/lovelace/0").editableAddress, "homeassistant.local:8123/lovelace/0")
+        XCTAssertEqual(failure(.timedOut, "https://homeassistant.local/").editableAddress, "homeassistant.local")
+        XCTAssertEqual(failure(.timedOut, "http://homeassistant.local:8123/a/").editableAddress, "homeassistant.local:8123/a/", "a path keeps its own slash")
+        XCTAssertNil(failure(.timedOut, "").editableAddress)
+        XCTAssertNil(failure(.timedOut, "ftp://homeassistant.local/").editableAddress)
+    }
 }

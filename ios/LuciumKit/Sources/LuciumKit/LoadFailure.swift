@@ -115,6 +115,16 @@ public struct LoadFailure: Equatable, Sendable {
     /// Only for a failure that looks like the name not being found or the device not answering.
     public var suggestsIpAddress: Bool { isDotLocalName && Self.notAnswering.contains(kind) }
 
+    /// What « Change the address » puts back in the command bar: the address that failed, as the person typed it (no scheme, no closing slash), so that
+    /// the name can be replaced by the IP address of the device while the port and the path stay (`homeassistant.local:8123/lovelace/0`). Nil when the
+    /// system gave no http(s) address.
+    public var editableAddress: String? {
+        guard let url = URL(string: address), let scheme = url.scheme?.lowercased(), scheme == "http" || scheme == "https" else { return nil }
+        var text = String(address.dropFirst(scheme.count + 3))
+        if text.hasSuffix("/") && text.filter({ $0 == "/" }).count == 1 { text.removeLast() }
+        return text
+    }
+
     /// The failure for an error, or nil when it is not one the person needs a screen for:
     /// - a load that was replaced, stopped or turned into a download (`NSURLErrorCancelled`, WebKit's "frame load interrupted" 102, "cannot show
     ///   this type" 100, "plug-in handled" 204) says nothing about the site;

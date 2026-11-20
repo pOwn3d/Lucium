@@ -8,6 +8,8 @@ struct LoadFailureView: View {
     let retry: () -> Void
     /// « Open over HTTP » for a device of the person's own network whose secure connection failed (`LoadFailure.httpAddress`).
     var openOverHttp: () -> Void = {}
+    /// « Change the address » for a `.local` name that did not answer: the command bar opens with the address, to replace the name by the IP address.
+    var editAddress: () -> Void = {}
     @Environment(\.openURL) private var openURL
 
     var body: some View {
@@ -50,6 +52,13 @@ struct LoadFailureView: View {
                 if failure.httpAddress != nil {
                     Button(action: openOverHttp) {
                         Text("privacy.refused.http").frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: 360)
+                }
+                if failure.suggestsIpAddress, failure.editableAddress != nil {
+                    Button(action: editAddress) {
+                        Text("loadfailure.edit-address").frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.bordered)
                     .frame(maxWidth: 360)
