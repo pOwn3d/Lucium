@@ -27,7 +27,9 @@ final class LoadFailureViewTests: XCTestCase {
         let failures = [LoadFailure(kind: .offline, address: "https://www.example.org/a"), LoadFailure(kind: .hostNotFound, address: "https://exmple.org/"),
                         LoadFailure(kind: .timedOut, address: "https://example.org/"),
                         // A device of the local network: the sentence about « Local Network » and the button of the Settings, then « Open over HTTP ».
-                        LoadFailure(kind: .cannotConnect, address: "http://192.168.1.20:8123/"), LoadFailure(kind: .secureConnection, address: "https://homeassistant.local:8123/")]
+                        LoadFailure(kind: .cannotConnect, address: "http://192.168.1.20:8123/"), LoadFailure(kind: .secureConnection, address: "https://homeassistant.local:8123/"),
+                        // A device with a certificate of its own (card 684: this used to be a blank page): the sentence, « Try again » and « Open over HTTP ».
+                        LoadFailure(kind: .certificate, address: "https://homeassistant.local:8123/")]
         for language in ["en", "fr"] {
             for (shape, size) in shapes {
                 for failure in failures {

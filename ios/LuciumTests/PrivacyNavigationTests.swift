@@ -220,15 +220,17 @@ final class PrivacyNavigationTests: BrowserCoreTestCase {
         XCTAssertNil(model.loadFailures[tab], "a page that loaded leaves no error screen behind")
     }
 
-    func testACancelledLoadAndARefusedCertificateLeaveNoErrorScreen() async throws {
+    func testACancelledLoadLeavesNoErrorScreenAndARefusedCertificateGetsItsOwn() async throws {
         let model = await makeModel()
         let view = try XCTUnwrap(model.webView)
         let tab = try XCTUnwrap(model.activeTab).id
         let url = URL(string: "https://example.org/")!
-        for code in [NSURLErrorCancelled, NSURLErrorServerCertificateUntrusted] {
-            model.navigationPolicy.webView(view, didFailProvisionalNavigation: nil, withError: NSError(domain: NSURLErrorDomain, code: code, userInfo: [NSURLErrorFailingURLErrorKey: url]))
-            XCTAssertNil(model.loadFailures[tab], "\(code) has no error screen")
-        }
+        model.navigationPolicy.webView(view, didFailProvisionalNavigation: nil, withError: NSError(domain: NSURLErrorDomain, code: NSURLErrorCancelled, userInfo: [NSURLErrorFailingURLErrorKey: url]))
+        XCTAssertNil(model.loadFailures[tab], "a cancelled load has no error screen")
+        // No upgrade was under way: the page was asked for directly, and a blank page says nothing (card 684: a device with a certificate of its own).
+        model.navigationPolicy.webView(view, didFailProvisionalNavigation: nil, withError: NSError(domain: NSURLErrorDomain, code: NSURLErrorServerCertificateUntrusted, userInfo: [NSURLErrorFailingURLErrorKey: url]))
+        XCTAssertEqual(model.loadFailures[tab]?.kind, .certificate)
+        XCTAssertNil(model.privacyPrompts.refusal, "the prompt is the one of an upgrade of HTTPS first")
         model.navigationPolicy.webView(view, didFailProvisionalNavigation: nil, withError: NSError(domain: NSURLErrorDomain, code: NSURLErrorNotConnectedToInternet, userInfo: [NSURLErrorFailingURLErrorKey: url]))
         XCTAssertEqual(model.loadFailures[tab]?.kind, .offline)
     }
@@ -253,6 +255,18 @@ final class PrivacyNavigationTests: BrowserCoreTestCase {
         model.navigationPolicy.continueOverHttp(refusal)
         try await eventually("/a.html asked for after the click", timeout: .seconds(20), { server.requestedPaths.contains("/a.html") })
         XCTAssertNil(model.privacyPrompts.refusal)
+    }
+
+    /// Card 684: a `.local` name that does not resolve kept the page waiting 61 s; the loads of a device of the local network (typed, retried) wait 15 s.
+    func testTheLoadsOfADeviceOfTheLocalNetworkWaitLessThanWebKitsSixtySeconds() async throws {
+        let model = await makeModel()
+        let defaultWait = URLRequest(url: URL(string: "https://example.org/")!).timeoutInterval
+        let local = try XCTUnwrap(BrowserModel.request(for: "homeassistant.local:8123"))
+        XCTAssertEqual(local.timeoutInterval, LoadFailure.localNetworkTimeout, "an address typed without scheme")
+        XCTAssertEqual(try XCTUnwrap(model.navigationPolicy.request(for: "http://192.168.1.20:8123/")).timeoutInterval, LoadFailure.localNetworkTimeout,
+                       "a retry, an « Open over HTTP »")
+        XCTAssertEqual(try XCTUnwrap(BrowserModel.request(for: "example.org")).timeoutInterval, defaultWait, "another site keeps WebKit's wait")
+        XCTAssertEqual(try XCTUnwrap(model.navigationPolicy.request(for: "https://example.org/")).timeoutInterval, defaultWait)
     }
 
     func testWhatIsAndIsNotACertificateFailure() {

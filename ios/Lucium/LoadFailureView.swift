@@ -76,6 +76,7 @@ struct LoadFailureView: View {
         case .tooManyRedirects: "loadfailure.too-many-redirects.title"
         case .badAddress: "loadfailure.bad-address.title"
         case .secureConnection: "loadfailure.secure-connection.title"
+        case .certificate: "loadfailure.certificate.title"
         case .other: "loadfailure.other.title"
         }
     }
@@ -90,6 +91,7 @@ struct LoadFailureView: View {
         case .tooManyRedirects: "loadfailure.too-many-redirects.text \(site)"
         case .badAddress: "loadfailure.bad-address.text \(site)"
         case .secureConnection: "loadfailure.secure-connection.text \(site)"
+        case .certificate: "loadfailure.certificate.text \(site)"
         case .other: "loadfailure.other.text \(site)"
         }
     }

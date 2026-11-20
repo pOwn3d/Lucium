@@ -20,8 +20,11 @@ public struct LoadFailure: Equatable, Sendable {
         case tooManyRedirects = "too-many-redirects"
         /// The address is not valid.
         case badAddress = "bad-address"
-        /// The site does not speak TLS properly (not a refused certificate, which has its own prompt).
+        /// The site does not speak TLS properly (not a refused certificate, which is `certificate`).
         case secureConnection = "secure-connection"
+        /// The certificate of the site was refused (expired, self-signed, not trusted, not valid yet) on an address the person asked for directly. It
+        /// used to leave a blank page: only a page that HTTPS first had upgraded got the prompt of `PrivacyNavigation` (`HttpsUpgrades.refused`).
+        case certificate
         /// Anything else the system reports.
         case other
     }
@@ -52,11 +55,11 @@ public struct LoadFailure: Equatable, Sendable {
         isLocalNetwork && [.offline, .cannotConnect, .timedOut, .hostNotFound, .connectionLost].contains(kind)
     }
 
-    /// The `http://` address to offer on a failed secure connection to a device of the person's own network (this machine or the local network):
+    /// The `http://` address to offer on a failed or refused secure connection to a device of the person's own network (this machine or the local network):
     /// no certificate authority signs for such a device, and the traffic stays on the network. Nil for any other site, which is never sent back to http
     /// by this screen.
     public var httpAddress: String? {
-        guard kind == .secureConnection, address.lowercased().hasPrefix("https://"), var components = URLComponents(string: address),
+        guard kind == .secureConnection || kind == .certificate, address.lowercased().hasPrefix("https://"), var components = URLComponents(string: address),
               let host = components.host else { return nil }
         let bare = host.hasPrefix("[") ? String(host.dropFirst().dropLast()) : host
         guard Self.isLocalNetworkHost(bare) || Self.isThisMachine(bare) else { return nil }
@@ -69,6 +72,16 @@ public struct LoadFailure: Equatable, Sendable {
         if host == "localhost" || host.hasSuffix(".localhost") || host == "::1" { return true }
         let groups = host.split(separator: ".", omittingEmptySubsequences: false)
         return groups.count == 4 && groups[0] == "127" && groups.allSatisfy { $0.count <= 3 && $0.allSatisfy { $0.isASCII && $0.isNumber } }
+    }
+
+    /// How long a load of a device of the local network waits for the device to answer, in seconds. WebKit waits 60 s by default, which is what a
+    /// `.local` name that does not resolve costs (measured on the simulator: 61 s before « timed out »): a device of the person's own network answers
+    /// in a second or two, and a long silence there is a refused « Local Network » permission or a device that is off. The limit is on silence, not on
+    /// the whole load (`URLRequest.timeoutInterval`): a big page that keeps arriving is not cut. Nil for any other address.
+    public static let localNetworkTimeout: TimeInterval = 15
+
+    public static func requestTimeout(for address: String) -> TimeInterval? {
+        isLocalNetworkHost(AddressResolver.host(of: address).replacing(/:\d+$/, with: "")) ? localNetworkTimeout : nil
     }
 
     static func isLocalNetworkHost(_ hostname: String) -> Bool {
@@ -92,7 +105,8 @@ public struct LoadFailure: Equatable, Sendable {
     /// - a load that was replaced, stopped or turned into a download (`NSURLErrorCancelled`, WebKit's "frame load interrupted" 102, "cannot show
     ///   this type" 100, "plug-in handled" 204) says nothing about the site;
     /// - an address the application cannot show (`NSURLErrorUnsupportedURL`, WebKit 101) is an app link, which `ExternalLink` takes;
-    /// - a certificate WebKit refused has its own prompt, and is left exactly as it was (`PrivacyNavigation`).
+    /// - a certificate WebKit refused after an upgrade of HTTPS first has its own prompt (`PrivacyNavigation` asks `HttpsUpgrades` first and only
+    ///   comes here when no upgrade was under way); any other refused certificate is the `certificate` screen.
     public static func classify(domain: String, code: Int, failingAddress: String) -> LoadFailure? {
         if domain == "WebKitErrorDomain" {
             return [100, 101, 102, 204].contains(code) ? nil : LoadFailure(kind: .other, address: failingAddress)
@@ -103,7 +117,7 @@ public struct LoadFailure: Equatable, Sendable {
         case NSURLErrorCancelled, NSURLErrorUnsupportedURL: return nil
         case NSURLErrorServerCertificateHasBadDate, NSURLErrorServerCertificateUntrusted, NSURLErrorServerCertificateHasUnknownRoot,
              NSURLErrorServerCertificateNotYetValid:
-            return nil
+            kind = .certificate
         case NSURLErrorNotConnectedToInternet, NSURLErrorInternationalRoamingOff, NSURLErrorCallIsActive, NSURLErrorDataNotAllowed: kind = .offline
         case NSURLErrorCannotFindHost, NSURLErrorDNSLookupFailed: kind = .hostNotFound
         case NSURLErrorTimedOut: kind = .timedOut

@@ -262,7 +262,11 @@ final class BrowserModel {
     static func request(for text: String, searchTemplate: String = AddressResolver.defaultSearchTemplate) -> URLRequest? {
         guard let resolved = AddressResolver.resolve(text, searchTemplate: searchTemplate) else { return nil }
         switch resolved {
-        case .url(let address), .search(let address): return URL(string: address).map { URLRequest(url: $0) }
+        case .url(let address), .search(let address):
+            guard let url = URL(string: address) else { return nil }
+            var request = URLRequest(url: url)
+            if let limit = LoadFailure.requestTimeout(for: address) { request.timeoutInterval = limit }
+            return request
         }
     }
 
