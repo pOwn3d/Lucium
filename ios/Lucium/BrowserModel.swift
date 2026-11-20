@@ -71,7 +71,7 @@ final class BrowserModel {
     let unreadableLibraryEntries: [String: Int]
 
     /// What could not be written, by sort: the state file, the state of a page, the picture of a tab. A sort is cleared by its next success.
-    enum StorageKind: Hashable { case state, pageState, picture, display }
+    enum StorageKind: Hashable { case state, pageState, picture, display, history }
     var storageProblems: [StorageKind: String] = [:]
     func problem(_ kind: StorageKind) -> String? { storageProblems[kind] }
 
@@ -125,6 +125,12 @@ final class BrowserModel {
     /// The tabs as they were at the last change, while « Effacer à la fermeture » has a site to watch (`BrowserModel+SiteClear.swift`); nil when it has none.
     @ObservationIgnored var clearWatch: [TabItem]?
     @ObservationIgnored var stateFile: StateFile?
+    /// The pages visited on this phone (`BrowserModel+History.swift`): its own file, never the state, so nothing of it reaches the synchronisation.
+    var history = HistoryBook()
+    @ObservationIgnored var historyFile: HistoryFile?
+    @ObservationIgnored var historySaveTask: Task<Void, Never>?
+    /// The address each tab last noted as a visit, so that the many changes of one load note it once.
+    @ObservationIgnored var historyLastVisit: [String: String] = [:]
     @ObservationIgnored let sideStore: TabSideStore?
     @ObservationIgnored let awakeCap: Int
     @ObservationIgnored let clock: @MainActor () -> Double
@@ -139,7 +145,7 @@ final class BrowserModel {
     @ObservationIgnored var saveTask: Task<Void, Never>?
     @ObservationIgnored var thumbnailCache: [String: UIImage] = [:]
 
-    init(state: BrowserState, stateFile: StateFile? = nil, sideStore: TabSideStore? = nil,
+    init(state: BrowserState, stateFile: StateFile? = nil, historyFile: HistoryFile? = nil, sideStore: TabSideStore? = nil,
          startup: StateLoad = .fresh, awakeCap: Int = SleepPlanner.defaultCap,
          clock: @escaping @MainActor () -> Double = { (Date().timeIntervalSince1970 * 1000).rounded() },
          rules: @escaping @MainActor () throws -> String = { try ContentBlocker.builtinRules() },
@@ -153,6 +159,7 @@ final class BrowserModel {
         self.state = initial
         unreadableLibraryEntries = initial.unreadableLibraryEntries
         self.stateFile = stateFile
+        self.historyFile = historyFile
         self.sideStore = sideStore
         self.startup = startup
         self.awakeCap = awakeCap
@@ -168,6 +175,7 @@ final class BrowserModel {
         if !unreadableLibraryEntries.isEmpty {
             print("[state] entries that do not read, left out and lost when their list is next written: \(unreadableLibraryEntries.sorted { $0.key < $1.key })")
         }
+        loadHistory()
         ensureActiveTab()
         refreshClearWatch()
         navigationPolicy.model = self
@@ -364,6 +372,7 @@ final class BrowserModel {
         let before = state.tabs.first { $0.id == tabId }
         state.record(tabId: tabId, url: view.url?.absoluteString, title: view.title)
         if state.tabs.first(where: { $0.id == tabId }) != before { scheduleSave() }
+        noteVisit(view, tabId: tabId)
         if tabId == activeTab?.id { syncFrom(view) }
     }
 
@@ -390,6 +399,7 @@ final class BrowserModel {
 
     /// Writes the state now.
     func flush() {
+        flushHistory()
         saveTask?.cancel()
         saveTask = nil
         guard stateFile != nil else { return }
@@ -461,7 +471,7 @@ extension BrowserModel {
         let load = file.load()
         var state = defaultState()
         if case .loaded(let loaded) = load { state = loaded }
-        let model = BrowserModel(state: state, stateFile: file,
+        let model = BrowserModel(state: state, stateFile: file, historyFile: HistoryFile(url: directory.appending(path: HistoryFile.fileName)),
                                  sideStore: TabSideStore(directory: directory.appending(path: TabSideStore.directoryName, directoryHint: .isDirectory)), startup: load,
                                  awakeCap: awakeCap, rules: rules, embeddedLists: embeddedLists, pageGuard: pageGuard, store: store, downloadsDirectory: downloadsDirectory)
         if let lock { model.attach(lock) }

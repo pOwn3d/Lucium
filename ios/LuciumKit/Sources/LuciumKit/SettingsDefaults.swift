@@ -12,6 +12,7 @@ public enum SettingsDefaults {
         var rows: Set<SettingsRow> = []
         if state.searchChoice(forProfile: profileId) != originalSearchChoice(forProfile: profileId) { rows.insert(.searchEngine) }
         if state.privacy != .newProfile { rows.insert(.privacy) }
+        if !state.recordsHistory(forProfile: profileId) { rows.insert(.history) }
         if state.archiveChoice(forProfile: profileId) != originalArchiveChoice(forProfile: profileId) || (state.awakeTabLimit ?? SleepPlanner.defaultCap) != SleepPlanner.defaultCap { rows.insert(.tabs) }
         return rows
     }
@@ -24,6 +25,7 @@ public enum SettingsDefaults {
         state.chooseSearchEngine(originalSearchChoice(forProfile: profileId), forProfile: profileId)
         state.chooseArchiveDelay(originalArchiveChoice(forProfile: profileId), forProfile: profileId)
         state.chooseAwakeTabLimit(SleepPlanner.defaultCap)
+        state.chooseRecordsHistory(true, forProfile: profileId)
         if state.privacy != .newProfile { state.privacy = .newProfile }
         return state != before
     }

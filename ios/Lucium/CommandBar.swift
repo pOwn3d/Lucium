@@ -3,7 +3,7 @@ import SwiftUI
 
 /// The command bar (mockup `Commandes`): a full screen opened by the address pill. What is typed finds the open tabs (of every space, each with
 /// its space), the commands, the favourites of the profile, and ends with what Enter does: open the address, or search with the engine of the
-/// profile. The sources are the ones the Mac's bar has that the iPhone has too (docs/ios.md, §4.1), not "History" (the iPhone keeps none yet), which the drawing shows.
+/// profile. The sources are the ones the Mac's bar has that the iPhone has too (docs/ios.md, §4.1), and the history of this phone (§ "Historique").
 struct CommandBar: View {
     @Bindable var model: BrowserModel
     @State private var text: String
@@ -11,7 +11,7 @@ struct CommandBar: View {
     @FocusState private var focused: Bool
     @Environment(\.dynamicTypeSize) private var typeSize
 
-    enum Filter { case commands, tabs }
+    enum Filter { case commands, tabs, history }
 
     /// `text` and `filter` are what the bar opens with: nothing, for the person; something, for the tests that look at a screen.
     init(model: BrowserModel, text: String = "", filter: Filter? = nil) {
@@ -69,6 +69,8 @@ struct CommandBar: View {
         HStack(spacing: Gap.s) {
             chip(.commands, icon: .commands, title: "command.filter.commands")
             chip(.tabs, icon: .tabs, title: "command.filter.tabs")
+            // The chip leads somewhere only while the profile keeps pages (or has some): otherwise it is not drawn.
+            if model.historyAvailable || filter == .history { chip(.history, icon: .history, title: "command.filter.history") }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Gap.l)
@@ -112,6 +114,9 @@ struct CommandBar: View {
             case .favorites:
                 header("command.section.favorites")
                 ForEach(content.favorites) { favorite in favoriteRow(favorite) }
+            case .history:
+                header("command.section.history")
+                ForEach(content.history) { entry in historyRow(entry) }
             }
         }
     }
@@ -154,6 +159,15 @@ struct CommandBar: View {
         row(icon: AnyView(SiteTile(address: favorite.url, size: 28)), title: Text(verbatim: favorite.title),
             detail: Text(verbatim: AddressResolver.host(of: favorite.url)), selected: model.isShown(favorite),
             trailing: AnyView(IconView(.chevron, size: 18).foregroundStyle(.accentText))) { model.openFavorite(favorite) }
+    }
+
+    /// A page of the history. A long press (or the VoiceOver action) forgets it; the row opens it in the tab on screen, as the Go key does.
+    private func historyRow(_ entry: HistoryEntry) -> some View {
+        let name = entry.title.isEmpty ? AddressResolver.host(of: entry.url) : entry.title
+        return row(icon: AnyView(SiteTile(address: entry.url, size: 28)), title: Text(verbatim: name),
+                   detail: Text(verbatim: AddressResolver.host(of: entry.url)), selected: false) { model.open(entry.url) }
+            .contextMenu { Button("command.history.forget", role: .destructive) { model.forgetHistoryEntry(entry) } }
+            .accessibilityAction(named: Text("command.history.forget")) { model.forgetHistoryEntry(entry) }
     }
 
     private func commandRow(_ item: CommandItem) -> some View {
@@ -228,10 +242,11 @@ struct CommandBarContent {
     var tabs: [TabItem]
     var commands: [CommandItem]
     var favorites: [Favorite]
+    var history: [HistoryEntry] = []
     var enter: ResolvedInput?
 
     var sections: [CommandBarSection] {
-        CommandBarLayout.sections(enter: enter, hasTabs: !tabs.isEmpty, hasCommands: !commands.isEmpty, hasFavorites: !favorites.isEmpty)
+        CommandBarLayout.sections(enter: enter, hasTabs: !tabs.isEmpty, hasCommands: !commands.isEmpty, hasFavorites: !favorites.isEmpty, hasHistory: !history.isEmpty)
     }
 }
 
@@ -240,10 +255,17 @@ extension BrowserModel {
     /// a locked space are never offered, nor its favourites.
     func commandBarContent(for text: String, filter: CommandBar.Filter?) -> CommandBarContent {
         let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let tabs = filter == .commands ? [] : commandTabs(matching: text)
+        let tabs = filter == .commands || filter == .history ? [] : commandTabs(matching: text)
         let favorites = filter == nil ? commandFavorites(matching: text) : []
+        // Among the other answers the history shows a few lines for what is typed (the Mac lists four); under its own chip it lists the recent pages.
+        let history: [HistoryEntry]
+        switch filter {
+        case .history?: history = historyEntries(matching: text, limit: 50)
+        case nil: history = query.isEmpty ? [] : historyEntries(matching: text, limit: 4)
+        default: history = []
+        }
         var commands: [CommandItem] = []
-        if filter != .tabs {
+        if filter != .tabs, filter != .history {
             let all = CommandItem.available(in: self)
             if filter == .commands {
                 commands = query.isEmpty ? all : all.filter { Match.score($0.title, query: query) > 0 }
@@ -253,6 +275,6 @@ extension BrowserModel {
             }
         }
         let enter = filter == nil && !query.isEmpty ? AddressResolver.resolve(query, searchTemplate: state.searchTemplate(forSpace: activeSpace.id)) : nil
-        return CommandBarContent(query: query, tabs: tabs, commands: commands, favorites: favorites, enter: enter)
+        return CommandBarContent(query: query, tabs: tabs, commands: commands, favorites: favorites, history: history, enter: enter)
     }
 }

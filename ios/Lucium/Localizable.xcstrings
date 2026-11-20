@@ -409,6 +409,22 @@
         }
       }
     },
+    "command.filter.history": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historique"
+          }
+        }
+      }
+    },
     "command.filter.tabs": {
       "localizations": {
         "en": {
@@ -421,6 +437,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Onglets"
+          }
+        }
+      }
+    },
+    "command.history.forget": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Remove from history"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Retirer de l’historique"
           }
         }
       }
@@ -501,6 +533,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Favoris"
+          }
+        }
+      }
+    },
+    "command.section.history": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historique"
           }
         }
       }
@@ -4505,6 +4553,294 @@
         }
       }
     },
+    "settings.history.clear": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear history"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer l’historique"
+          }
+        }
+      }
+    },
+    "settings.history.clear.action": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer"
+          }
+        }
+      }
+    },
+    "settings.history.clear.message": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The pages noted on this iPhone for this profile are forgotten. Open tabs, favorites and the history of other profiles do not change."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les pages notées sur cet iPhone pour ce profil sont oubliées. Les onglets ouverts, les favoris et l’historique des autres profils ne changent pas."
+          }
+        }
+      }
+    },
+    "settings.history.clear.title %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear the history of the profile “%@”?"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effacer l’historique du profil « %@ » ?"
+          }
+        }
+      }
+    },
+    "settings.history.count %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld page kept"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld pages kept"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld page gardée"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld pages gardées"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "settings.history.keep.days %lld": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld day"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld days"
+                }
+              }
+            }
+          }
+        },
+        "fr": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jour"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld jours"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "settings.history.keep.footer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Older pages are forgotten on their own. This setting belongs to this iPhone."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les pages plus anciennes sont oubliées d’elles-mêmes. Ce réglage est propre à cet iPhone."
+          }
+        }
+      }
+    },
+    "settings.history.keep.header": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep pages for"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Durée de conservation"
+          }
+        }
+      }
+    },
+    "settings.history.keep.ninety-days": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "90 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "90 jours"
+          }
+        }
+      }
+    },
+    "settings.history.keep.one-day": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 day"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "1 jour"
+          }
+        }
+      }
+    },
+    "settings.history.keep.seven-days": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "7 jours"
+          }
+        }
+      }
+    },
+    "settings.history.keep.thirty-days": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 days"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 jours"
+          }
+        }
+      }
+    },
+    "settings.history.record": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Keep history"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Garder l’historique"
+          }
+        }
+      }
+    },
+    "settings.history.record.footer %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The pages you visit in the profile “%@” are noted on this iPhone so you can find them again from the command bar. Nothing is noted in a private tab, and the history is never synchronized with the Mac."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les pages que vous visitez dans le profil « %@ » sont notées sur cet iPhone, pour les retrouver depuis la barre de commandes. Rien n’est noté dans un onglet privé, et l’historique n’est jamais synchronisé avec le Mac."
+          }
+        }
+      }
+    },
+    "settings.history.title": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "History"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Historique"
+          }
+        }
+      }
+    },
     "settings.lock.off": {
       "localizations": {
         "en": {
@@ -4846,13 +5182,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "The search engine of the profile “%@” and the privacy settings go back to their original values. The lock, the spaces and the synchronisation do not change."
+            "value": "The search engine of the profile “%@”, the privacy settings and whether the history is kept go back to their original values. The pages already kept, the lock, the spaces and the synchronization do not change."
           }
         },
         "fr": {
           "stringUnit": {
             "state": "translated",
-            "value": "Le moteur de recherche du profil « %@ » et la vie privée reviennent à leur valeur d’origine. Le verrouillage, les espaces et la synchronisation ne changent pas."
+            "value": "Le moteur de recherche du profil « %@ », la vie privée et le choix de garder l’historique reviennent à leur valeur d’origine. Les pages déjà gardées, le verrouillage, les espaces et la synchronisation ne changent pas."
           }
         }
       }

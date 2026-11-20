@@ -80,6 +80,8 @@ struct SettingsScreen: View {
             link(row, "settings.tabs.title") { TabsSettingsScreen.archiveName(hours: model.archiveHours) }
         case .appearance:
             link(row, "settings.appearance.title") { Text(Self.name(of: model.interfaceAppearance)) }
+        case .history:
+            link(row, "settings.history.title") { Text(model.recordsHistory ? "settings.lock.on" : "settings.lock.off") }
         case .privacy:
             link(row, "settings.privacy") { Text(model.privacyLevelSummary) }
         case .passwords:
@@ -127,6 +129,7 @@ struct SettingsScreen: View {
         case .searchEngine: SearchEngineScreen(model: model)
         case .tabs: TabsSettingsScreen(model: model)
         case .appearance: AppearanceScreen(model: model)
+        case .history: HistorySettingsScreen(model: model)
         case .privacy: PrivacyForm(model: model)
         case .passwords: PasswordsScreen()
         case .lock:
@@ -240,6 +243,59 @@ struct TabsSettingsScreen: View {
 
     private static func awakeName(_ limit: Int) -> Text {
         limit == 0 ? Text("settings.tabs.awake.unlimited") : Text("settings.tabs.awake.count \(limit)")
+    }
+}
+
+/// The history of this phone: kept or not, for how long, and cleared in one gesture. The history is the iPhone's own: it is not in the state file the
+/// synchronisation carries, and a private tab never writes to it (the footers say both).
+struct HistorySettingsScreen: View {
+    @Bindable var model: BrowserModel
+    @State private var confirmingClear = false
+
+    static func retentionName(days: Int) -> Text {
+        switch days {
+        case 1: Text("settings.history.keep.one-day")
+        case 7: Text("settings.history.keep.seven-days")
+        case 30: Text("settings.history.keep.thirty-days")
+        case 90: Text("settings.history.keep.ninety-days")
+        default: Text("settings.history.keep.days \(days)")
+        }
+    }
+
+    var body: some View {
+        let count = model.historyCount
+        List {
+            Section {
+                Toggle("settings.history.record", isOn: Binding(get: { model.recordsHistory }, set: { model.chooseRecordsHistory($0) }))
+                    .frame(minHeight: 44)
+            } footer: {
+                Text("settings.history.record.footer \(model.profileTitle)")
+            }
+            Section {
+                ForEach(HistoryBook.retentionPresets, id: \.self) { days in
+                    SettingsChoiceRow(title: Self.retentionName(days: days), selected: model.history.retentionDays == days) { model.chooseHistoryRetention(days: days) }
+                }
+            } header: {
+                Text("settings.history.keep.header")
+            } footer: {
+                Text("settings.history.keep.footer")
+            }
+            Section {
+                Button("settings.history.clear", role: .destructive) { confirmingClear = true }
+                    .frame(minHeight: 44)
+                    .disabled(count == 0)
+                    .confirmationDialog("settings.history.clear.title \(model.profileTitle)", isPresented: $confirmingClear, titleVisibility: .visible) {
+                        Button("settings.history.clear.action", role: .destructive) { model.clearHistory() }
+                        Button("tabs.cancel", role: .cancel) {}
+                    } message: {
+                        Text("settings.history.clear.message")
+                    }
+            } footer: {
+                Text("settings.history.count \(count)")
+            }
+        }
+        .navigationTitle("settings.history.title")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

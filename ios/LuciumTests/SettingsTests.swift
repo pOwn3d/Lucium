@@ -209,10 +209,32 @@ final class SettingsScreenshotTests: BrowserCoreTestCase {
         try XCTUnwrap(image.pngData(), file: file, line: line).write(to: directory.appending(path: "settings-\(name).png"))
     }
 
+    /// The history of the phone: its settings page, and the command bar with the "History" chip, in both languages, in dark, and with the largest text.
+    func testTheHistoryPageAndTheCommandBarChipDraw() async throws {
+        let model = await model()
+        let now = 1_790_000_000_000.0
+        for (index, entry) in [("Bien nommer ses fichiers", "journal.example/lire"), ("Guide de style", "guide.example/"), ("Bibliothèque municipale", "biblio.example/")].enumerated() {
+            model.history.visit(url: "https://\(entry.1)", title: entry.0, profileId: model.historyProfileId, at: now - Double(index) * 3_600_000)
+        }
+        for language in ["fr", "en"] {
+            model.settingsStart = .history
+            try check("history-page-phone-light-\(language)", try await draw(SettingsScreen(model: model), size: Self.phone, regular: false, scheme: .light, language: language))
+            try check("history-page-phone-dark-\(language)", try await draw(SettingsScreen(model: model), size: Self.phone, regular: false, scheme: .dark, language: language))
+            try check("history-page-phone-large-\(language)", try await draw(SettingsScreen(model: model), size: Self.phone, regular: false, scheme: .light, language: language, textSize: .accessibility3))
+            try check("history-page-pad-light-\(language)", try await draw(SettingsScreen(model: model), size: Self.padPortrait, regular: true, scheme: .light, language: language))
+            try check("bar-chip-phone-light-\(language)", try await draw(CommandBar(model: model), size: Self.phone, regular: false, scheme: .light, language: language))
+            try check("bar-history-phone-light-\(language)", try await draw(CommandBar(model: model, filter: .history), size: Self.phone, regular: false, scheme: .light, language: language))
+            try check("bar-history-phone-dark-\(language)", try await draw(CommandBar(model: model, filter: .history), size: Self.phone, regular: false, scheme: .dark, language: language))
+            try check("bar-history-phone-large-\(language)", try await draw(CommandBar(model: model, filter: .history), size: Self.phone, regular: false, scheme: .light, language: language, textSize: .accessibility3))
+            try check("bar-typed-phone-light-\(language)", try await draw(CommandBar(model: model, text: "guide"), size: Self.phone, regular: false, scheme: .light, language: language))
+            try check("bar-history-pad-light-\(language)", try await draw(CommandBar(model: model, filter: .history), size: Self.padPortrait, regular: true, scheme: .light, language: language))
+        }
+    }
+
     /// The list and every page, on a phone, in light, in both languages.
     func testEveryPageOfTheSettingsDrawsOnAPhone() async throws {
         let model = await model()
-        let pages: [(String, SettingsRow?)] = [("list", nil), ("search", .searchEngine), ("tabs", .tabs), ("privacy", .privacy), ("passwords", .passwords), ("lock", .lock), ("spaces", .spaces), ("licenses", .licenses), ("about", .about)]
+        let pages: [(String, SettingsRow?)] = [("list", nil), ("search", .searchEngine), ("tabs", .tabs), ("history", .history), ("privacy", .privacy), ("passwords", .passwords), ("lock", .lock), ("spaces", .spaces), ("licenses", .licenses), ("about", .about)]
         for language in ["fr", "en"] {
             for (name, row) in pages {
                 model.settingsStart = row

@@ -4,7 +4,7 @@ import Foundation
 public enum CommandBarSection: Equatable, Sendable, Identifiable {
     /// What the keyboard's Go key does with the text: open the address, or search with the engine of the profile.
     case enter(ResolvedInput)
-    case tabs, commands, favorites
+    case tabs, commands, favorites, history
 
     public var id: String {
         switch self {
@@ -12,6 +12,7 @@ public enum CommandBarSection: Equatable, Sendable, Identifiable {
         case .tabs: "tabs"
         case .commands: "commands"
         case .favorites: "favorites"
+        case .history: "history"
         }
     }
 }
@@ -23,12 +24,13 @@ public enum CommandBarSection: Equatable, Sendable, Identifiable {
 public enum CommandBarLayout {
     /// The blocks that have something to show, top to bottom. `enter` is nil when the bar lists no line for the Go key (nothing typed, or a
     /// filter chosen).
-    public static func sections(enter: ResolvedInput?, hasTabs: Bool, hasCommands: Bool, hasFavorites: Bool) -> [CommandBarSection] {
+    public static func sections(enter: ResolvedInput?, hasTabs: Bool, hasCommands: Bool, hasFavorites: Bool, hasHistory: Bool = false) -> [CommandBarSection] {
         var sections: [CommandBarSection] = []
         if let enter { sections.append(.enter(enter)) }
         if hasTabs { sections.append(.tabs) }
         if hasCommands { sections.append(.commands) }
         if hasFavorites { sections.append(.favorites) }
+        if hasHistory { sections.append(.history) }
         return sections
     }
 }
