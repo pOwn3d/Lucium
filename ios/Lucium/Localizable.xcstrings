@@ -5609,6 +5609,70 @@
         }
       }
     },
+    "spaces.form.ready": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ready-made themes"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thèmes prêts"
+          }
+        }
+      }
+    },
+    "spaces.form.ready.dark %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Dark"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ sombre"
+          }
+        }
+      }
+    },
+    "spaces.form.ready.explain": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The colors of well-known palettes. The Mac recognizes them and shows them the same way."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Les couleurs de palettes connues. Le Mac les reconnaît et les affiche de la même façon."
+          }
+        }
+      }
+    },
+    "spaces.form.ready.light %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ Light"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ clair"
+          }
+        }
+      }
+    },
     "spaces.new.profile": {
       "localizations": {
         "en": {

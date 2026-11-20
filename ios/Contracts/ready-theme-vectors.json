@@ -1,0 +1,404 @@
+{
+  "ready": [
+    {
+      "id": "dracula",
+      "palette": "Dracula",
+      "variant": null,
+      "background": "#282a36",
+      "accent": "#bd93f9",
+      "theme": {
+        "baseColors": [
+          "#6a6e8f"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "dracula-alucard",
+      "palette": "Dracula Alucard",
+      "variant": null,
+      "background": "#fffbeb",
+      "accent": "#644ac9",
+      "theme": {
+        "baseColors": [
+          "#fff4cb"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "light",
+        "vibrant": false,
+        "appearance": "light"
+      }
+    },
+    {
+      "id": "nord",
+      "palette": "Nord",
+      "variant": null,
+      "background": "#2e3440",
+      "accent": "#88c0d0",
+      "theme": {
+        "baseColors": [
+          "#788aa8"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "solarized-dark",
+      "palette": "Solarized",
+      "variant": "dark",
+      "background": "#002b36",
+      "accent": "#268bd2",
+      "theme": {
+        "baseColors": [
+          "#01708f"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "solarized-light",
+      "palette": "Solarized",
+      "variant": "light",
+      "background": "#fdf6e3",
+      "accent": "#268bd2",
+      "theme": {
+        "baseColors": [
+          "#f9e8b4"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "light",
+        "vibrant": false,
+        "appearance": "light"
+      }
+    },
+    {
+      "id": "gruvbox-dark",
+      "palette": "Gruvbox",
+      "variant": "dark",
+      "background": "#282828",
+      "accent": "#fabd2f",
+      "theme": {
+        "baseColors": [
+          "#6a6968"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "gruvbox-light",
+      "palette": "Gruvbox",
+      "variant": "light",
+      "background": "#fbf1c7",
+      "accent": "#d79921",
+      "theme": {
+        "baseColors": [
+          "#f5d96c"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "light",
+        "vibrant": false,
+        "appearance": "light"
+      }
+    },
+    {
+      "id": "tokyo-night",
+      "palette": "Tokyo Night",
+      "variant": null,
+      "background": "#1a1b26",
+      "accent": "#7aa2f7",
+      "theme": {
+        "baseColors": [
+          "#444863"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "tokyo-night-storm",
+      "palette": "Tokyo Night Storm",
+      "variant": null,
+      "background": "#24283b",
+      "accent": "#7aa2f7",
+      "theme": {
+        "baseColors": [
+          "#5e6a9a"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "catppuccin-mocha",
+      "palette": "Catppuccin Mocha",
+      "variant": null,
+      "background": "#1e1e2e",
+      "accent": "#cba6f7",
+      "theme": {
+        "baseColors": [
+          "#504e78"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "catppuccin-macchiato",
+      "palette": "Catppuccin Macchiato",
+      "variant": null,
+      "background": "#24273a",
+      "accent": "#c6a0f6",
+      "theme": {
+        "baseColors": [
+          "#606699"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "catppuccin-frappe",
+      "palette": "Catppuccin Frappé",
+      "variant": null,
+      "background": "#303446",
+      "accent": "#ca9ee6",
+      "theme": {
+        "baseColors": [
+          "#7f88b9"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "catppuccin-latte",
+      "palette": "Catppuccin Latte",
+      "variant": null,
+      "background": "#eff1f5",
+      "accent": "#8839ef",
+      "theme": {
+        "baseColors": [
+          "#d6d9e5"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "light",
+        "vibrant": false,
+        "appearance": "light"
+      }
+    },
+    {
+      "id": "one-dark",
+      "palette": "One Dark",
+      "variant": null,
+      "background": "#282c34",
+      "accent": "#61afef",
+      "theme": {
+        "baseColors": [
+          "#687588"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "monokai",
+      "palette": "Monokai",
+      "variant": null,
+      "background": "#272822",
+      "accent": "#f92672",
+      "theme": {
+        "baseColors": [
+          "#676859"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "rose-pine",
+      "palette": "Rosé Pine",
+      "variant": null,
+      "background": "#191724",
+      "accent": "#c4a7e7",
+      "theme": {
+        "baseColors": [
+          "#433c5e"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "rose-pine-moon",
+      "palette": "Rosé Pine Moon",
+      "variant": null,
+      "background": "#232136",
+      "accent": "#c4a7e7",
+      "theme": {
+        "baseColors": [
+          "#5d568d"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "rose-pine-dawn",
+      "palette": "Rosé Pine Dawn",
+      "variant": null,
+      "background": "#faf4ed",
+      "accent": "#907aa9",
+      "theme": {
+        "baseColors": [
+          "#f3e1d0"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "light",
+        "vibrant": false,
+        "appearance": "light"
+      }
+    },
+    {
+      "id": "github-dark",
+      "palette": "GitHub",
+      "variant": "dark",
+      "background": "#0d1117",
+      "accent": "#4493f8",
+      "theme": {
+        "baseColors": [
+          "#232e3c"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "dark",
+        "vibrant": false,
+        "appearance": "dark"
+      }
+    },
+    {
+      "id": "github-light",
+      "palette": "GitHub",
+      "variant": "light",
+      "background": "#ffffff",
+      "accent": "#0969da",
+      "theme": {
+        "baseColors": [
+          "#fefeff"
+        ],
+        "harmony": "custom",
+        "angle": 155,
+        "intensity": 1,
+        "overlay": "grain",
+        "noise": 0,
+        "translucency": "light",
+        "vibrant": false,
+        "appearance": "light"
+      }
+    }
+  ]
+}

@@ -9,7 +9,8 @@ import { BOOKMARKS_LIMIT, BOOKMARK_TITLE_MAX, BOOKMARK_URL_MAX, READ_LATER_LIMIT
 import { filterReadLater } from './read-later'
 import { LOCKED_SPACES_MAX } from './lock'
 import { isProfileId, newProfileId, PRIVATE_PROFILE_ID } from './profiles'
-import { themeFromHue, themeHue } from './theme'
+import { cleanTheme, themeFromHue, themeHue, type SpaceTheme } from './theme'
+import { READY_THEMES, readyThemeOf } from './theme-presets'
 import { hostOf, resolveInput } from './url'
 import { isYouTubePage } from './youtube-rules'
 
@@ -71,6 +72,33 @@ describe('iOS contract: spaces and profiles', () => {
 
   it.each(themeVectors.profileId)('isProfileId($id) is $valid', ({ id, valid }) => {
     expect(isProfileId(id)).toBe(valid)
+  })
+})
+
+// The ready themes (the "Thèmes" row of the Mac's theme editor): the iPhone offers the same twenty and writes them into `theme`, where the Mac reads
+// them back as the ready theme they are (`readyThemeOf`). A theme added, removed, reordered or recoloured on the Mac fails here until the vector follows.
+interface ReadyThemeVectors {
+  ready: { id: string; palette: string; variant: 'dark' | 'light' | null; background: string; accent: string; theme: SpaceTheme }[]
+}
+
+const readyVectors = JSON.parse(readFileSync(join(__dirname, '../../ios/Contracts/ready-theme-vectors.json'), 'utf8')) as ReadyThemeVectors
+
+describe('iOS contract: ready themes', () => {
+  it('lists every ready theme of the Mac, in the order of its row', () => {
+    expect(readyVectors.ready.map((entry) => entry.id)).toEqual(READY_THEMES.map((entry) => entry.id))
+  })
+
+  it.each(readyVectors.ready)('$id is the theme the Mac makes', ({ id, palette, variant, background, accent, theme }) => {
+    const mac = READY_THEMES.find((entry) => entry.id === id)!
+    // The palette's own name is the same in every language; a variant is the word the application adds in its language.
+    if (variant === null) expect(mac.name).toBe(palette)
+    else expect(mac.name).toContain(palette)
+    expect(mac.theme.appearance).toBe(variant ?? mac.theme.appearance)
+    expect(theme).toEqual(mac.theme)
+    expect(background).toBe(mac.background)
+    expect(accent).toBe(mac.accent)
+    // What the iPhone writes is read back by the Mac as this very ready theme.
+    expect(readyThemeOf(cleanTheme(theme))?.id).toBe(id)
   })
 })
 
