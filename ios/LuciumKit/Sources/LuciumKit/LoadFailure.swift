@@ -42,6 +42,47 @@ public struct LoadFailure: Equatable, Sendable {
         return address
     }
 
+    /// Whether the address is a device of the local network (a name of that network or a private or link-local address), the Swift twin of
+    /// `isLocalNetworkHost` in `src/shared/error-pages.ts`. The machine itself (`localhost`, a loopback address) is not the network.
+    public var isLocalNetwork: Bool { Self.isLocalNetworkHost(AddressResolver.host(of: address).replacing(/:\d+$/, with: "")) }
+
+    /// Whether to remind the person that iOS may not let Lucium reach the local network (and to offer the Settings of the application): the load of a
+    /// device of that network failed in a way a refused permission looks like (the Mac says the same in `LOCAL_NETWORK_ERRORS`).
+    public var suggestsLocalNetworkSettings: Bool {
+        isLocalNetwork && [.offline, .cannotConnect, .timedOut, .hostNotFound, .connectionLost].contains(kind)
+    }
+
+    /// The `http://` address to offer on a failed secure connection to a device of the person's own network (this machine or the local network):
+    /// no certificate authority signs for such a device, and the traffic stays on the network. Nil for any other site, which is never sent back to http
+    /// by this screen.
+    public var httpAddress: String? {
+        guard kind == .secureConnection, address.lowercased().hasPrefix("https://"), var components = URLComponents(string: address),
+              let host = components.host else { return nil }
+        let bare = host.hasPrefix("[") ? String(host.dropFirst().dropLast()) : host
+        guard Self.isLocalNetworkHost(bare) || Self.isThisMachine(bare) else { return nil }
+        components.scheme = "http"
+        return components.string
+    }
+
+    private static func isThisMachine(_ host: String) -> Bool {
+        let host = host.lowercased()
+        if host == "localhost" || host.hasSuffix(".localhost") || host == "::1" { return true }
+        let groups = host.split(separator: ".", omittingEmptySubsequences: false)
+        return groups.count == 4 && groups[0] == "127" && groups.allSatisfy { $0.count <= 3 && $0.allSatisfy { $0.isASCII && $0.isNumber } }
+    }
+
+    static func isLocalNetworkHost(_ hostname: String) -> Bool {
+        var host = hostname.lowercased()
+        if host.hasPrefix("[") && host.hasSuffix("]") { host = String(host.dropFirst().dropLast()) }
+        if host.hasSuffix(".local") || host.hasSuffix(".lan") || host.hasSuffix(".home.arpa") { return true }
+        let groups = host.split(separator: ".", omittingEmptySubsequences: false)
+        if groups.count == 4, groups.allSatisfy({ (1...3).contains($0.count) && $0.allSatisfy { $0.isASCII && $0.isNumber } }),
+           let a = Int(groups[0]), let b = Int(groups[1]) {
+            return a == 10 || (a == 172 && (16...31).contains(b)) || (a == 192 && b == 168) || (a == 169 && b == 254)
+        }
+        return host.hasPrefix("fe80:") || (host.hasPrefix("fc") || host.hasPrefix("fd")) && host.contains(":")
+    }
+
     public init(kind: Kind, address: String) {
         self.kind = kind
         self.address = address

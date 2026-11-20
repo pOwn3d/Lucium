@@ -4,6 +4,7 @@
 
 import type { Settings } from './model'
 import { t } from './i18n'
+import { hasLocalOnlySuffix } from './url'
 
 export interface PrivacyOptions {
   /** A main-frame navigation to `http://` goes to `https://` first, and falls back to `http://` when the site does not answer. */
@@ -107,16 +108,13 @@ function isPrivateIp(hostname: string): boolean {
   return false
 }
 
-/** Names that never leave the machine or the local network: no certificate authority signs for them. */
-const LOCAL_SUFFIXES = ['.localhost', '.local', '.internal', '.lan', '.home', '.home.arpa', '.localdomain', '.intranet', '.corp']
-
 /** Whether a host may be tried over HTTPS: a public name (with a dot) or a public IP address. */
 export function isUpgradableHost(hostname: string): boolean {
   const host = hostname.toLowerCase().replace(/\.$/, '')
   if (!host) return false
   if (IPV4.test(host) || host.startsWith('[')) return !isPrivateIp(host)
   if (!host.includes('.')) return false
-  return !LOCAL_SUFFIXES.some((suffix) => host.endsWith(suffix))
+  return !hasLocalOnlySuffix(host)
 }
 
 /**

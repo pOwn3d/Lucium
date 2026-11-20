@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 import Network
 
@@ -11,6 +12,8 @@ final class LocalServer: @unchecked Sendable {
         static let hang = Route(contentType: "hang", body: "")
         /// A route that answers with a redirect to `location` (`{port}` is the port of this server, known once it listens).
         static func redirect(_ location: String) -> Route { Route(contentType: "redirect", body: location) }
+        /// A route that accepts a WebSocket upgrade and sends `body` as its first text message (a home-automation interface opens one as soon as it loads).
+        static func webSocket(sending body: String) -> Route { Route(contentType: "websocket", body: body) }
     }
 
     /// What the server was asked: the path, and the headers of the request (names in lower case).
@@ -104,6 +107,16 @@ final class LocalServer: @unchecked Sendable {
             self.lock.withLock { self.asked.append(Request(path: path, headers: headers)) }
             let route = self.routes[path]
             if route?.contentType == "hang" || self.silent {
+                self.lock.withLock { self.hung.append(connection) }
+                return
+            }
+            if route?.contentType == "websocket", let route, let key = headers["sec-websocket-key"] {
+                // RFC 6455: the answer proves the server read the key; then one unmasked text frame (the messages here are short).
+                let accept = Data(Insecure.SHA1.hash(data: Data((key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11").utf8))).base64EncodedString()
+                let head = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: \(accept)\r\n\r\n"
+                let payload = Data(route.body.utf8)
+                let frame = Data([0x81, UInt8(payload.count)]) + payload
+                connection.send(content: Data(head.utf8) + frame, completion: .contentProcessed { _ in })
                 self.lock.withLock { self.hung.append(connection) }
                 return
             }

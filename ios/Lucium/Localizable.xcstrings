@@ -8776,6 +8776,38 @@
           }
         }
       }
+    },
+    "loadfailure.local-network.hint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If this device is on your local network, Lucium may not be allowed to reach it. Check Settings › Lucium › Local Network."
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Si cet appareil est sur votre réseau local, Lucium n’a peut-être pas le droit de l’atteindre. Vérifiez Réglages › Lucium › Réseau local."
+          }
+        }
+      }
+    },
+    "loadfailure.local-network.settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Settings"
+          }
+        },
+        "fr": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ouvrir les Réglages"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -6,6 +6,9 @@ import SwiftUI
 struct LoadFailureView: View {
     let failure: LoadFailure
     let retry: () -> Void
+    /// « Open over HTTP » for a device of the person's own network whose secure connection failed (`LoadFailure.httpAddress`).
+    var openOverHttp: () -> Void = {}
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         ScrollView {
@@ -22,6 +25,14 @@ struct LoadFailureView: View {
                     .font(.body)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
+                if failure.suggestsLocalNetworkSettings {
+                    // iOS keeps a refused « Local Network » permission to itself: the page just does not load. The sentence says so, once, and the button
+                    // goes to the Settings of the application (the Mac says the same in `errpage.sur-macos-lucium-doit-etre-autorise-a`).
+                    Text("loadfailure.local-network.hint")
+                        .font(.callout)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
                 if failure.retryAddress != nil {
                     Button(action: retry) {
                         Text("loadfailure.retry").frame(maxWidth: .infinity, minHeight: 44)
@@ -29,6 +40,20 @@ struct LoadFailureView: View {
                     .buttonStyle(.borderedProminent)
                     .frame(maxWidth: 360)
                     .padding(.top, 8)
+                }
+                if failure.httpAddress != nil {
+                    Button(action: openOverHttp) {
+                        Text("privacy.refused.http").frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: 360)
+                }
+                if failure.suggestsLocalNetworkSettings, let settings = URL(string: UIApplication.openSettingsURLString) {
+                    Button { openURL(settings) } label: {
+                        Text("loadfailure.local-network.settings").frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.bordered)
+                    .frame(maxWidth: 360)
                 }
             }
             .padding(24)

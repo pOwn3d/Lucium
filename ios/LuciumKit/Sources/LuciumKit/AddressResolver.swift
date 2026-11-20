@@ -31,6 +31,9 @@ public enum AddressResolver {
         }
         if !text.contains(where: \.isWhitespace) {
             if matches(localHost, text), canParse("http://\(text)") { return .url("http://\(text)") }
+            // A name of the local network ("homeassistant.local:8123") is typed for a device that speaks plain HTTP: no certificate authority signs for
+            // it, so https:// could only fail (a blank page, in the first builds). An explicit "https://" is left as typed. Twin of `resolveInput`.
+            if matches(domainLike, text), !HttpsUpgrade.isUpgradableHost(typedHost(text)), canParse("http://\(text)") { return .url("http://\(text)") }
             if matches(domainLike, text), canParse("https://\(text)") { return .url("https://\(text)") }
         }
         return search(text, searchTemplate)
@@ -48,6 +51,13 @@ public enum AddressResolver {
         let defaultPort = ["http": 80, "https": 443][components.scheme?.lowercased() ?? ""]
         if let port = components.port, port != defaultPort { host += ":\(port)" }
         return host
+    }
+
+    /// The host of something typed without a scheme ("homeassistant.local:8123/x" gives "homeassistant.local").
+    private static func typedHost(_ text: String) -> String {
+        var host = text[..<(text.firstIndex { "/?#".contains($0) } ?? text.endIndex)]
+        if let colon = host.lastIndex(of: ":"), host[host.index(after: colon)...].allSatisfy(\.isNumber) { host = host[..<colon] }
+        return String(host)
     }
 
     private static func search(_ query: String, _ template: String) -> ResolvedInput {
