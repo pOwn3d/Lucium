@@ -41,6 +41,7 @@ There is no chat server or mailing list at the moment. If one is created it will
 - [maintainers.md](maintainers.md): reviewing, merging, response times, repository settings.
 - [public-repository.md](public-repository.md): how the public repository was made from one commit, and what was checked before.
 - [release-process.md](release-process.md): how a version is published, where it is downloaded from, and how it is signed and notarized. The maintainer alone builds and publishes.
+- [code-signing-policy.md](code-signing-policy.md): how the Windows installer would be signed through the SignPath Foundation, by whom and under which checks (a proposal, not in force).
 - [homebrew.md](homebrew.md): the Homebrew cask, made from the published disk image, and the project's tap (not created yet).
 
 ## Reading the project
