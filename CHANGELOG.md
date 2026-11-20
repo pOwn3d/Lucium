@@ -8,11 +8,14 @@ How to keep it: every pull request that a user would notice adds a line to the t
 
 The “Nouveautés” sheet of the application shows the section of its version, from [CHANGELOG.fr.md](CHANGELOG.fr.md) when the interface is in French: every line added here is added there too, in French, with the same bold title then a colon.
 
-## [Unreleased]
+## [1.1.5] - 2026-11-25
+
+Your iPhone can now synchronize with your Mac, directly and without a server, and its Today tabs can be shared. On Windows the window draws its own title bar, and Windows and Linux say that they update by hand.
 
 ### Added
 
 - **Synchronization with your iPhone**: Settings › Downloads and files › Synchronization pairs an iPhone by QR code or typed code, with Allow or Deny on the Mac. Off by default. Once paired, the iPhone synchronizes by itself, every minute or at your pace, deletions included. Cookies and passwords are never sent.
+- **Today tabs shared with your iPhone**: a “Today tabs” category of the Synchronization page, off by default and ticked on both devices. Opening or closing a Today tab on one does the same on the other at the next exchange. Addresses and titles are sent, never cookies or sign-ins.
 
 ### Changed
 

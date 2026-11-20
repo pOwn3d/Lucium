@@ -10,8 +10,9 @@ Fixes are made on `main` and released in the next version; **older releases are 
 
 | Version | Supported |
 |---|---|
-| 1.1.4, the latest release | yes |
+| 1.1.5, the latest release | yes |
 | `main` | yes, fixes are written there before they are released |
+| 1.1.4 | no, update to the latest release |
 | 1.1.3 | no, update to the latest release |
 | 1.1.2 | no, update to the latest release |
 | 1.1.1 | no, update to the latest release |

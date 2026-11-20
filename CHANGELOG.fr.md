@@ -2,11 +2,14 @@
 
 Les changements visibles de Lucium, en français. C'est ce texte que la feuille « Nouveautés » de l'application montre quand l'interface est en français ; la référence est [CHANGELOG.md](CHANGELOG.md), en anglais, publié avec chaque version. Chaque ligne ajoutée là-bas est ajoutée ici, avec le même titre en gras suivi de deux-points.
 
-## [Unreleased]
+## [1.1.5] - 2026-11-25
+
+Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.
 
 ### Ajouts
 
 - **Synchronisation avec votre iPhone** : Réglages › Téléchargements et fichiers › Synchronisation appaire un iPhone par code QR ou à saisir, avec Autoriser ou Refuser sur le Mac. Désactivée par défaut. Une fois appairé, l’iPhone se synchronise seul, chaque minute ou à votre rythme, suppressions comprises. Cookies et mots de passe ne sont jamais envoyés.
+- **Onglets du jour partagés avec votre iPhone** : une catégorie « Onglets du jour » de la page Synchronisation, désactivée par défaut et à cocher sur les deux appareils. Ouvrir ou fermer un onglet du jour sur l’un fait de même sur l’autre à l’échange suivant. Adresses et titres sont envoyés, jamais cookies ni connexions.
 
 ### Changements
 
