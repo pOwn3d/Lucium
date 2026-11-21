@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Interrupteur JavaScript par site** : une ligne « JavaScript » du panneau du site coupe les scripts d’un site. La page se recharge sans aucun script, et un avis ou la ligne les rétablit en un clic. Coupé pour aucun site par défaut ; les pages de Lucium ne sont jamais concernées.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.

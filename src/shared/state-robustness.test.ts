@@ -615,6 +615,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   autoplayPerSite: bool,
   siteDataClearOnCloseEnabled: bool,
   customFilterListsEnabled: bool,
+  siteJavascriptOff: (v) => Array.isArray(v) && v.length <= 500 && unique(v) && v.every((host) => typeof host === 'string' && parseSiteHost(host)?.host === host),
   siteDataClearOnClose: (v) => Array.isArray(v) && v.length <= 100 && unique(v) && v.every((host) => typeof host === 'string' && parseSiteHost(host)?.host === host),
   siteDataClearOnQuit: bool,
   customFilterLists: (v) =>

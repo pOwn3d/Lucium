@@ -9,6 +9,7 @@ import { profileLabel } from '@shared/profiles'
 import { connectionState, hostnameOf } from '@shared/url'
 import { isDeveloperUrl } from '@shared/developer-mode'
 import { MEDIA_PERMISSION, mayRemember, sitePermissionRows } from '@shared/permissions'
+import { isJavascriptOff, javascriptHostOf } from '@shared/site-javascript'
 import { AUTOPLAY_LABELS, autoplayHostOf, autoplayModeFor, siteAutoplayOf, type AutoplayMode } from '@shared/autoplay'
 import { BOOST_NAME_MAX } from '@shared/boost-share'
 import { renamedBoost } from '@shared/boost-rows'
@@ -41,6 +42,7 @@ const ROW_GLYPHS = {
   pip: 'M10 12.500a2.500 2.500 0 1 0 0-5 2.500 2.500 0 0 0 0 5ZM10 2.500v2M10 15.500v2M2.500 10h2M15.500 10h2M4.700 4.700l1.400 1.400M13.900 13.900l1.400 1.400M4.700 15.300l1.400-1.400M13.900 6.100l1.400-1.400',
   erase: 'M3.500 12.500 10 6l5 5-4.500 4.500H7zM7 15.500h8M8 8l5 5',
   sound: 'M4 8.500h2.500L10 5.500v9l-3.500-3H4zM13 7.500a3.500 3.500 0 0 1 0 5',
+  code: 'M7 6 3 10l4 4M13 6l4 4-4 4M11.500 4l-3 12',
   moon: 'M16 11.500A6.500 6.500 0 1 1 8.500 4a5.200 5.200 0 0 0 7.500 7.500z'
 } as const
 
@@ -462,6 +464,9 @@ export function SitePanel({ closing = false }: { closing?: boolean }) {
   const nextAutoplay = AUTOPLAY_CYCLE[(AUTOPLAY_CYCLE.indexOf(ownAutoplay) + 1) % AUTOPLAY_CYCLE.length] ?? null
   // What a private tab visits is not written to the settings: no per-site choice is offered for it.
   const clearable = !snapshot.private && tab.private !== true && clearHostOfUrl(tab.url) !== null
+  // JavaScript of the site: offered for every web page, but for a private tab (its sites are not kept).
+  const javascriptShown = tab.private !== true && javascriptHostOf(tab.url) !== null
+  const javascriptOff = isJavascriptOff(state.settings.siteJavascriptOff, tab.url)
   const clearOnClose = state.settings.siteDataClearOnCloseEnabled && isClearedOnClose(state.settings.siteDataClearOnClose, tab.url)
   // The readable mode of the site: its own choice, else the default. Nothing is written for a private tab or window (their sites are not kept).
   const ownReadable = siteReadableOf(state.settings.siteReadableMode, tab.url)
@@ -488,7 +493,7 @@ export function SitePanel({ closing = false }: { closing?: boolean }) {
     denied: decisions.filter((d) => d === 'deny').length,
     clearOnClose: clearable && clearOnClose,
     // What is on for this site. Automatic Picture in Picture is not counted: it is one setting for every site, shown here for its switch.
-    displayOn: [developer, readableShown && shownReadable !== 'original', autoplayShown && ownAutoplay === 'allow'].filter(Boolean).length,
+    displayOn: [developer, readableShown && shownReadable !== 'original', autoplayShown && ownAutoplay === 'allow', javascriptShown && javascriptOff].filter(Boolean).length,
     boosts: boosts.length,
     boostsOn: boosts.filter((b) => b.enabled).length,
     extensions: profileExtensions.length
@@ -578,6 +583,17 @@ export function SitePanel({ closing = false }: { closing?: boolean }) {
               <span className="scc-setting-text">
                 <strong>{t('site-panel.contraste-de-la-page')}</strong>
                 <span>{ownReadable === null ? t('site-panel.par-defaut-name', { name: READABLE_LABELS[state.settings.readableMode].name }) : READABLE_LABELS[ownReadable].name}</span>
+              </span>
+            </button>
+          )}
+          {javascriptShown && (
+            <button className="scc-setting" title={t('site-panel.javascript-hint')} role="switch" aria-checked={!javascriptOff} onClick={() => void act.dispatch({ type: 'javascript/site', site: tab.url, off: !javascriptOff, tabId: tab.id })}>
+              <Disc on={!javascriptOff}>
+                <RowGlyph path={ROW_GLYPHS.code} />
+              </Disc>
+              <span className="scc-setting-text">
+                <strong>{t('site-panel.javascript')}</strong>
+                <span>{javascriptOff ? t('site-panel.javascript-bloque') : t('site-panel.javascript-autorise')}</span>
               </span>
             </button>
           )}
