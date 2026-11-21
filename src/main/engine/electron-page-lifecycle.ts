@@ -9,12 +9,37 @@ import { SLEEP_WORLD, SLEEP_PROBE_TIMEOUT_MS, RELEASE_ANSWER_MS, TRACK_INPUT } f
 import { ElectronPageMedia } from './electron-page-media'
 
 export abstract class ElectronPageLifecycle extends ElectronPageMedia {
-  /** Starts watching what the user types in this document, for `probeForSleep`. */
+  private disarmTrackInput: (() => void) | null = null
+  /**
+   * Arms the watcher of what the user types in this document, for `probeForSleep`: nothing is put in the page until the first key or
+   * click reaches it (Chromium tells the main process of both, frames included), so a page nobody types in carries no listener.
+   */
   protected trackInput(): void {
-    this.webContents.executeJavaScriptInIsolatedWorld(SLEEP_WORLD, [{ code: TRACK_INPUT }]).catch((error: unknown) => {
-      // Without the watcher the page just reports no typed text: that costs a sleep decision some caution, not a failure.
-      if (!this.gone) console.warn(`[engine] cannot watch the fields of page ${this.id}:`, (error as Error).message)
-    })
+    this.disarmTrackInput?.()
+    const wc = this.webContents
+    const arm = (typedKey: boolean): void => {
+      this.disarmTrackInput?.()
+      // A key that types a character may have reached the field before the watcher was in: it is read from the field once it is.
+      const code = typedKey ? `${TRACK_INPUT};self.__luciumNoteFocused && self.__luciumNoteFocused()` : TRACK_INPUT
+      wc.executeJavaScriptInIsolatedWorld(SLEEP_WORLD, [{ code }]).catch((error: unknown) => {
+        // Without the watcher the page just reports no typed text: that costs a sleep decision some caution, not a failure.
+        if (!this.gone) console.warn(`[engine] cannot watch the fields of page ${this.id}:`, (error as Error).message)
+      })
+    }
+    const onKey = (_event: unknown, input: { type: string; key?: string; meta?: boolean; control?: boolean }): void => {
+      if (input.type !== 'keyDown') return
+      arm((input.key ?? '').length === 1 && !input.meta && !input.control)
+    }
+    const onMouse = (_event: unknown, mouse: { type: string }): void => {
+      if (mouse.type === 'mouseDown') arm(false)
+    }
+    wc.on('before-input-event', onKey)
+    wc.on('before-mouse-event', onMouse)
+    this.disarmTrackInput = () => {
+      this.disarmTrackInput = null
+      wc.off('before-input-event', onKey)
+      wc.off('before-mouse-event', onMouse)
+    }
   }
   async probeForSleep(): Promise<PageProbe | null> {
     if (this.gone || this.frozen) return null

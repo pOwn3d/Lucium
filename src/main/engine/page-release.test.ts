@@ -241,3 +241,42 @@ describe('the watcher of typed text (TRACK_INPUT)', () => {
     expect(w.unsent()).toBe(false)
   })
 })
+
+describe('when the watcher of typed text is put in the page', () => {
+  const watched = (wc: { executeJavaScriptInIsolatedWorld: { mock: { calls: unknown[][] } } }) =>
+    wc.executeJavaScriptInIsolatedWorld.mock.calls.filter((call) => (call[1] as Array<{ code: string }>)[0]!.code.includes('__luciumUnsent'))
+
+  it('puts nothing in a page where nothing is typed, and watches from the first key or click', async () => {
+    const { wc } = await makePage()
+    wc.emit('dom-ready')
+    await settle()
+    expect(watched(wc)).toHaveLength(0)
+    wc.emit('before-input-event', {}, { type: 'keyUp', key: 'a' })
+    wc.emit('before-mouse-event', {}, { type: 'mouseMove' })
+    expect(watched(wc)).toHaveLength(0)
+    wc.emit('before-input-event', {}, { type: 'keyDown', key: 'a', meta: false, control: false })
+    expect(watched(wc)).toHaveLength(1)
+    // Once is enough for this document.
+    wc.emit('before-input-event', {}, { type: 'keyDown', key: 'b', meta: false, control: false })
+    wc.emit('before-mouse-event', {}, { type: 'mouseDown' })
+    expect(watched(wc)).toHaveLength(1)
+    // A new document is not watched until something is typed in it.
+    wc.emit('dom-ready')
+    await settle()
+    expect(watched(wc)).toHaveLength(1)
+    wc.emit('before-mouse-event', {}, { type: 'mouseDown' })
+    expect(watched(wc)).toHaveLength(2)
+  })
+
+  it('does not keep a listener on the page after it is gone from the document or once the watcher is in', async () => {
+    const { wc } = await makePage()
+    const own = { key: wc.listenerCount('before-input-event'), mouse: wc.listenerCount('before-mouse-event') }
+    wc.emit('dom-ready')
+    wc.emit('dom-ready')
+    expect(wc.listenerCount('before-input-event')).toBe(own.key + 1)
+    expect(wc.listenerCount('before-mouse-event')).toBe(own.mouse + 1)
+    wc.emit('before-input-event', {}, { type: 'keyDown', key: 'a', meta: false, control: false })
+    expect(wc.listenerCount('before-input-event')).toBe(own.key)
+    expect(wc.listenerCount('before-mouse-event')).toBe(own.mouse)
+  })
+})

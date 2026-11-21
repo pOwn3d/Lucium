@@ -103,6 +103,7 @@ export const RELEASE_ANSWER_MS = 5000
 // watched from the moment the focus goes into it, which is before anything can be typed there. A frame of another site cannot be reached
 // from here (its `beforeunload` still holds a sleep: `release`). Elements are told by their tag, not by `instanceof`: a frame's
 // elements are of its own constructors.
+// It is put in the page by the first key or click of the user (ElectronPageLifecycle.trackInput), not with every document.
 export const TRACK_INPUT = `(() => {
   if (self.__luciumUnsent) return
   const typed = new Set()
@@ -136,7 +137,10 @@ export const TRACK_INPUT = `(() => {
     if (view) view.addEventListener('blur', () => setTimeout(() => reach(doc), 0), true)
   }
   hook(document)
+  reach(document)
   self.__luciumUnsent = () => { for (const el of [...typed]) { if (filled(el)) return true; typed.delete(el) } return false }
+  // The key that put the watcher in went to the page before it could hear it: the field it went into counts if it holds something.
+  self.__luciumNoteFocused = () => { const el = document.activeElement; if (isText(el) && filled(el)) typed.add(el) }
 })()`
 
 /** How long the page may take to answer the picture-in-picture request before the command gives up. */
