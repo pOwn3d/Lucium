@@ -235,7 +235,8 @@ export abstract class BrowserActions extends BrowserNetwork {
     if (host === undefined) return
     // The page is not rebuilt with a mark of its own, so the notice says it, and one click brings the scripts back.
     if (action.off === true) this.showToast(t('browser.javascript-desactive-pour-site', { site: host }), { label: t('browser.reactiver'), run: () => this.dispatch({ type: 'javascript/site', site: host, off: false }) })
-    for (const tab of this.store.get().tabs) if (javascriptHostOf(tab.url) === host) this.pages.get(tab.id)?.reload()
+    // Every window of the group: each holds the pages it shows, and they share one state.
+    for (const tab of this.store.get().tabs) if (javascriptHostOf(tab.url) === host) for (const browser of this.group) browser.pages.get(tab.id)?.reload()
   }
 
   /** Deletes the pictures of spaces that nothing refers to any more. The disk is only looked at when the state that was just replaced had a picture to lose. */

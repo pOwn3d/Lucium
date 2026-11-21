@@ -20,6 +20,10 @@ function window() {
   for (const url of ['https://shop.example/', 'https://shop.example/panier', 'https://news.example/']) state = reduce(state, { type: 'tab/open', url }, ctx)
   const reloads = new Map<string, number>()
   const pages = new Map(state.tabs.map((tab) => [tab.id, { reload: () => void reloads.set(tab.url, (reloads.get(tab.url) ?? 0) + 1) }]))
+  // A second window of the group, with its own pages for the same tabs.
+  const other = new Map<string, number>()
+  const otherPages = new Map(state.tabs.map((tab) => [tab.id, { reload: () => void other.set(tab.url, (other.get(tab.url) ?? 0) + 1) }]))
+  const group = new Set<unknown>([{ pages }, { pages: otherPages }])
   const toasts: Array<{ text: string; action?: { label: string; run: () => void } }> = []
   const configured = { n: 0 }
   const fake: ReturnType<typeof fakeBrowser> = fakeBrowser({
@@ -27,16 +31,23 @@ function window() {
     store: { get: () => state, root: () => ({ get: () => state }), dispatch: (action: Action) => void (state = reduce(state, action, ctx)) },
     closedHistoryCtx: () => ctx,
     pages,
+    group,
     showToast: (text: string, action?: { label: string; run: () => void }) => void toasts.push({ text, action }),
     configureBlocker: () => void configured.n++,
     javascriptChanged: shell.javascriptChanged,
     dispatch: (action: Action) => shell.dispatch!.call(fake.self, action)
   })
-  return { fake, reloads, toasts, configured, state: () => state, tab: (url: string) => state.tabs.find((tab) => tab.url === url)! }
+  return { fake, other, reloads, toasts, configured, state: () => state, tab: (url: string) => state.tabs.find((tab) => tab.url === url)! }
 }
 const dispatch = (w: ReturnType<typeof window>, action: Action) => shell.dispatch!.call(w.fake.self, action)
 
 describe('the shell applies the JavaScript switch of a site', () => {
+  it('reloads the pages of the other windows of the group too', () => {
+    const w = window()
+    dispatch(w, { type: 'javascript/site', site: 'shop.example', off: true })
+    expect([...w.other]).toEqual([['https://shop.example/', 1], ['https://shop.example/panier', 1]])
+  })
+
   it('brings the hook in line, reloads the tabs of that site only, and says so with a way back', () => {
     const w = window()
     dispatch(w, { type: 'javascript/site', site: 'https://shop.example/', off: true, tabId: w.tab('https://shop.example/').id })

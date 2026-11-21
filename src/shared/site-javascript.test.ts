@@ -43,6 +43,8 @@ describe('the JavaScript switch of a site', () => {
   it('gives the policy that stops scripts to a listed site only', () => {
     expect(javascriptPolicyFor(['shop.example'], 'https://shop.example/')).toBe(JAVASCRIPT_OFF_POLICY)
     expect(JAVASCRIPT_OFF_POLICY).toContain("script-src 'none'")
+    expect(JAVASCRIPT_OFF_POLICY).toContain("script-src-elem 'none'")
+    expect(JAVASCRIPT_OFF_POLICY).toContain("script-src-attr 'none'")
     expect(javascriptPolicyFor(['shop.example'], 'https://other.example/')).toBeNull()
     expect(javascriptPolicyFor([], 'https://shop.example/')).toBeNull()
   })

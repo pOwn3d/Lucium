@@ -12,7 +12,7 @@ export const SITE_JAVASCRIPT_MAX = 500
  * handlers, `javascript:` addresses, `eval`) of the main document. It is a Content-Security-Policy, so it adds to the site's own policy and can
  * only make it stricter. A frame the page embeds comes from its own answer and keeps its own scripts; `<noscript>` fallbacks are not shown.
  */
-export const JAVASCRIPT_OFF_POLICY = "script-src 'none'"
+export const JAVASCRIPT_OFF_POLICY = "script-src 'none'; script-src-elem 'none'; script-src-attr 'none'"
 
 /** The host of a web page's address (port included), or null for anything else: a start page, a file, the settings, a lucium:// page. */
 export function javascriptHostOf(url: string): string | null {

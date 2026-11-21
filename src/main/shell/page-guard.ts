@@ -99,12 +99,12 @@ export class PageGuard {
 
   /**
    * The Content-Security-Policy a main document is given: the blocker's (only while the scriptlets are on) and the one that stops the scripts of a
-   * site whose JavaScript is off, joined into one value. Read from the settings of this moment, so a site added later needs no new hook.
+   * site whose JavaScript is off, joined into one value, the JavaScript one FIRST: in one policy a repeated directive is ignored after the first, so the user's switch must win over a list rule such as `script-src 'self'`. Read from the settings of this moment, so a site added later needs no new hook.
    */
   private policyFor(url: string): string | null {
     const settings = this.deps.settings()
     const blocker = settings.blockScriptlets && blockerIsOn(settings) ? this.deps.blocker().cspFor(url, settings) : null
-    const parts = [blocker, javascriptPolicyFor(settings.siteJavascriptOff, url)].filter((part): part is string => part !== null && part !== '')
+    const parts = [javascriptPolicyFor(settings.siteJavascriptOff, url), blocker].filter((part): part is string => part !== null && part !== '')
     return parts.length > 0 ? parts.join('; ') : null
   }
 
