@@ -95,13 +95,14 @@ export abstract class ElectronPageContent extends ElectronPageNavigation {
     try {
       // The page may scroll in a container of its own, which the size of the document does not tell: walk it (it loads the lazy images), then make the
       // window as tall as the page needs, so that it draws whole and a fixed header shows once. The window is given back at the end.
-      let walked: { width: number; height: number } | null = null
+      let walked: { width: number; height: number; inner: boolean } | null = null
       try {
         walked = readCaptureSize(await wc.executeJavaScript(prepareFullCaptureScript(CAPTURE_MAX_HEIGHT)))
       } catch (error) {
         console.warn(`[capture] page ${this.id} could not be walked before the full-page capture:`, error instanceof Error ? error.message : error)
       }
-      if (walked) {
+      // Only a container of its own needs it: the document of an ordinary page already says its height, and a taller window would change how 100vh blocks draw.
+      if (walked?.inner) {
         const height = Math.min(Math.ceil(walked.height), CAPTURE_MAX_HEIGHT)
         await dbg.sendCommand('Emulation.setDeviceMetricsOverride', { width: Math.ceil(walked.width), height, deviceScaleFactor: 0, mobile: false })
         resized = true

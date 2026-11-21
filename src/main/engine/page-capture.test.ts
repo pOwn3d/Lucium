@@ -127,8 +127,30 @@ describe('the capture of a page that scrolls inside', () => {
   it('cuts at the maximum and says so, then still gives the window back', async () => {
     const { sent, cuts } = await shoot({ width: 1280, height: 90_000, inner: true })
     expect(clipOf(sent)).toMatchObject({ height: CAPTURE_MAX_HEIGHT })
+    // The window itself is never made taller than the maximum, whatever the walk found.
+    expect((sent[0]!.params as { height: number }).height).toBeLessThanOrEqual(CAPTURE_MAX_HEIGHT)
     expect(cuts).toEqual([CAPTURE_MAX_HEIGHT])
     expect(sent.at(-1)!.method).toBe('Emulation.clearDeviceMetricsOverride')
+  })
+
+  it('does not touch the window for an ordinary page, whose document already says its height', async () => {
+    const { sent } = await shoot({ width: 1280, height: 3000, inner: false }, 3000)
+    expect(sent.map((c) => c.method)).toEqual(['Page.getLayoutMetrics', 'Page.captureScreenshot'])
+  })
+
+  it('gives the window back and lets the debugger go when the shot fails', async () => {
+    const { page, wc } = await makePage()
+    const sent: string[] = []
+    wc.executeJavaScript.mockImplementation(async () => ({ width: 1280, height: 4200, inner: true }))
+    wc.debugger.sendCommand = async (method: string) => {
+      sent.push(method)
+      if (method === 'Page.captureScreenshot') throw new Error('shot failed')
+      return { cssContentSize: { width: 1280, height: 4200 }, contentSize: { width: 1280, height: 4200 } }
+    }
+    await expect(page.capture(true)).rejects.toThrow('shot failed')
+    expect(sent).toContain('Emulation.clearDeviceMetricsOverride')
+    expect(sent.at(-1)).toBe('Emulation.clearDeviceMetricsOverride')
+    expect(wc.debugger.detaches).toBe(1)
   })
 
   it('shoots as before, without touching the window, when the walk of the page fails', async () => {
@@ -137,7 +159,8 @@ describe('the capture of a page that scrolls inside', () => {
   })
 
   it('reads the answer of the walk field by field', () => {
-    expect(readCaptureSize({ width: 10, height: 20 })).toEqual({ width: 10, height: 20 })
+    expect(readCaptureSize({ width: 10, height: 20 })).toEqual({ width: 10, height: 20, inner: false })
+    expect(readCaptureSize({ width: 10, height: 20, inner: true })).toEqual({ width: 10, height: 20, inner: true })
     expect(readCaptureSize({ width: '10', height: 20 })).toBeNull()
     expect(readCaptureSize({ width: 10, height: Number.NaN })).toBeNull()
     expect(readCaptureSize(null)).toBeNull()

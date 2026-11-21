@@ -109,10 +109,10 @@ export function prepareFullCaptureScript(maxHeight: number): string {
 }
 
 /** What the preparation script answered, read field by field: a page can run scripts of its own, so nothing is taken as the type it should have. */
-export function readCaptureSize(raw: unknown): { width: number; height: number } | null {
+export function readCaptureSize(raw: unknown): { width: number; height: number; inner: boolean } | null {
   if (typeof raw !== 'object' || raw === null) return null
-  const { width, height } = raw as { width?: unknown; height?: unknown }
-  return typeof width === 'number' && typeof height === 'number' && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0 ? { width, height } : null
+  const { width, height, inner } = raw as { width?: unknown; height?: unknown; inner?: unknown }
+  return typeof width === 'number' && typeof height === 'number' && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0 ? { width, height, inner: inner === true } : null
 }
 
 // Eraser picker: highlights what is under the pointer; a click returns a CSS selector, Escape cancels.
