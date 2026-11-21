@@ -100,7 +100,7 @@ export const SETTINGS_KEYS = {
   // · Listes de filtres · DNS chiffré · Proxy
   protection: [
     'blockAds', 'blockCookieBanners', 'blockMode', 'blockCosmetic', 'blockExceptions', 'popupExceptions',
-    'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks',
+    'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions',
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
     'historyOff', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
@@ -269,6 +269,7 @@ export const KEPT_ON_RESET = {
   blockModeSites: 'a list of sites',
   popupExceptions: 'a list of sites',
   fingerprintExceptions: 'a list of sites',
+  thirdPartyCookieExceptions: 'a list of sites',
   mouseGestureExcludedHosts: 'a list of sites',
   vimKeysExcludedHosts: 'a list of sites',
   translateNeverSites: 'a list of sites',

@@ -202,6 +202,10 @@ export interface Settings {
   fingerprintStrict: boolean
   /** Sites (host and subdomains) where the fingerprint protection is left off, because it broke them. */
   fingerprintExceptions: string[]
+  /** Third-party cookies are neither sent nor kept (see third-party-cookies.ts). Off by default: some sign-ins and embedded services need them. */
+  blockThirdPartyCookies: boolean
+  /** Sites (host and subdomains) where third-party cookies are let through, because blocking them broke the site. */
+  thirdPartyCookieExceptions: string[]
   /** Names shown for profiles, by profile id. The id stays the storage key, so renaming never loses data. */
   profileNames: Record<string, string>
   /** Expose the space theme to web pages as `--arc-palette-*` CSS variables (a page can read it, so it is opt-in). */

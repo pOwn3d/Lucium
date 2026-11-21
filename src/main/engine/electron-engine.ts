@@ -271,6 +271,7 @@ export class ElectronEngine extends ElectronEngineDownloads implements Engine {
   scopeSetPrivacy(scope: Scope, options: PrivacyOptions | null): void {
     scope.privacy = options
     this.installRequestBlocker(scope.session, () => scope.blocker, scope.prefix, () => scope.privacy)
+    this.installResponsePolicy(scope.session, () => scope.responsePolicy)
   }
 
   /** @internal For `EphemeralScope`. */

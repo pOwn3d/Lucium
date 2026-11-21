@@ -208,6 +208,14 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'third-party-cookies',
+    key: 'blockThirdPartyCookies',
+    get label() { return t('privacy-settings.bloquer-les-cookies-tiers') },
+    group: 'privacy',
+    get description() { return t('features.ne-laisse-ni-partir-ni-rester-les-cookies-des', { settingsPath: settingsPath('thirdPartyCookies') }) },
+    cost: ['listeners']
+  },
+  {
     id: 'strip-tracking',
     key: 'stripTrackingParams',
     get label() { return t('privacy-settings.retirer-les-parametres-de-suivi-des-adresses') },
