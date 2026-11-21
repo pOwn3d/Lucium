@@ -203,7 +203,7 @@ describe('the entries of the menus', () => {
 
   it('space: the same entries, but one "Personnaliser l’espace…" in place of the icon and the theme colour', () => {
     const { items } = menu({ kind: 'space', id: f.space }, f.state)
-    const expected = [...BEFORE['space']!.filter((label) => label !== 'Changer l’icône de l’espace…' && label !== 'Modifier la couleur du thème…'), 'Personnaliser l’espace…']
+    const expected = [...BEFORE['space']!.filter((label) => label !== 'Changer l’icône de l’espace…' && label !== 'Modifier la couleur du thème…'), 'Personnaliser l’espace…', 'Exporter cet espace…', 'Importer un espace…']
     expect(sorted(flat(items))).toEqual(sorted(expected))
     expect(flat(items)).not.toContain('Changer l’icône de l’espace…')
     expect(flat(items)).not.toContain('Modifier la couleur du thème…')

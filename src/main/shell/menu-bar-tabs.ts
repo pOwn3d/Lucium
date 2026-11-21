@@ -12,6 +12,7 @@ import { newFolderRefusal } from '@shared/lock'
 import { t } from '@shared/i18n'
 import { moveTabsToSpace } from './context-menus'
 import { asideSpace } from './space-aside'
+import { exportSpace, importSpace } from './space-transfer'
 import { webPanelMenuItems } from './web-panel-menu'
 import type { MenuBarKit } from './menu-bar-kit'
 
@@ -72,6 +73,9 @@ export function spacesMenu({ browser, store, actions, options, state, acc, kept,
                 .slice(0, 20)
                 .map((session): MenuItemConstructorOptions => ({ label: `${spaceGlyph(session.space!.space)} ${session.name}`, click: () => browser.dispatch({ type: 'space/reopen', id: session.id }) }))
       },
+      // One space with its tabs to another Mac, as a file (no cookies, no passwords): see space-transfer.ts.
+      { label: t('space-transfer.exporter-cet-espace'), enabled: options.private !== true, click: () => void exportSpace(browser, store, actions.window(), state().activeSpaceId) },
+      { label: t('space-transfer.importer-un-espace'), enabled: options.private !== true, click: () => void importSpace(browser, store, actions.window()) },
       // Locks the application again, and the spaces that are set to be locked.
       ...(actions.lockNow && options.private !== true
         ? ([{ type: 'separator' }, { label: t('menu.verrouiller-maintenant'), accelerator: acc('lockNow'), click: actions.lockNow }] satisfies MenuItemConstructorOptions[])
