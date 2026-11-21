@@ -414,6 +414,9 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
         if (c.action === 'search-tabs') return act.openOverlay({ panel: 'commandbar', mode: 'tabs', initial: '' })
         if (c.action === 'archive') return act.openOverlay({ panel: 'archive' })
         if (c.action === 'capture-region') return act.openOverlay({ panel: 'capture' })
+        // As the File menu does: the main process closes the bar first, so that the page is what is captured, not the bar over it.
+        if (c.action === 'capture-full') return act.captureFullPage()
+        if (c.action === 'capture') return act.captureVisible()
         if (c.action === 'site-info') return act.openOverlay({ panel: 'site' })
         if (c.action === 'create-shortcut' && c.url) return act.openOverlay({ panel: 'shortcut', url: c.url, title: hostOf(c.url) })
         if (c.action === 'clear-site-data') return act.openOverlay({ panel: 'sitedata' })
