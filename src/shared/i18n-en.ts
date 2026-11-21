@@ -2881,6 +2881,7 @@ export const en: Record<MessageKey, string> = {
   'permissions.acceder-a-vos-appareils-midi': 'access your MIDI devices',
   'permissions.appareils-midi': 'MIDI devices',
   'permissions.autoriser': 'Allow',
+  'permissions.autoriser-cette-fois': 'Allow this time',
   'permissions.camera-et-micro': 'Camera and microphone',
   'permissions.ce-choix-n-est-pas-memorise': 'This choice is not remembered: you will be asked again next time.',
   'permissions.connaitre-votre-position': 'know your location',

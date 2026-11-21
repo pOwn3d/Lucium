@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { reduce, createInitialState } from './sidebar'
 import { SITE_PERMISSIONS_MAX } from './state-clean'
-import { ALL_SITES, GRANTED_PERMISSIONS, MEDIA_PERMISSION, REFUSED_PERMISSIONS, appLinkPermission, appLinkSchemeOf, externalSchemeOf, fileSystemDetail, hasQuestionPanel, decisionOfChoice, mayRemember, permissionName, permissionPhrase, permissionSheet, questionPlace, rememberedDecision, routePermission, sitePermissionRows, sitesWithAnswers } from './permissions'
+import { ALL_SITES, allowLabel, GRANTED_PERMISSIONS, MEDIA_PERMISSION, REFUSED_PERMISSIONS, appLinkPermission, appLinkSchemeOf, externalSchemeOf, fileSystemDetail, hasQuestionPanel, decisionOfChoice, mayRemember, permissionName, permissionPhrase, permissionSheet, questionPlace, rememberedDecision, routePermission, sitePermissionRows, sitesWithAnswers } from './permissions'
 import { frenchSpaces } from './french-typography'
 import { setLanguage } from './i18n'
 
@@ -490,5 +490,17 @@ describe('an answer for every site', () => {
     expect(state.sitePermissions['https://s6.example']).toEqual({ notifications: 'deny' })
     state = reduce(state, { type: 'permission/set', origin: ALL_SITES, permission: 'notifications', decision: null }, { now: 1, newId: () => 'x' })
     expect(state.sitePermissions[ALL_SITES]).toBeUndefined()
+  })
+})
+
+describe('allowLabel', () => {
+  it('says "this time" when a yes is held for the tab only: the answer could be remembered and the box is not ticked', () => {
+    expect(allowLabel(true, false)).toBe('Autoriser cette fois')
+  })
+
+  it('is the plain word once the box is ticked, and when no answer is ever held (private tab, permission asked each time)', () => {
+    expect(allowLabel(true, true)).toBe('Autoriser')
+    expect(allowLabel(false, false)).toBe('Autoriser')
+    expect(allowLabel(false, true)).toBe('Autoriser')
   })
 })
