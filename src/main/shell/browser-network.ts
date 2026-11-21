@@ -4,6 +4,8 @@
 import { blockingService } from '../blocking'
 import { tidyFilename } from '@shared/tidy'
 import { adsBlockingOn, blockerIsOn } from '@shared/blocker'
+import { focusBlock, focusIsConfigured, pauseFocusPatch } from '@shared/focus-mode'
+import { focusGate } from '../engine/focus-gate'
 import { anyPrivacy, privacyOptionsOf } from '@shared/privacy'
 import { planHostResolver } from '@shared/dns'
 import { planProxies } from '@shared/proxy'
@@ -44,13 +46,14 @@ export abstract class BrowserNetwork extends BrowserPublish {
       return this.refreshBlockerCss()
     }
     this.engine.setDownloadNamer(tidyDownloads ? (name) => tidyFilename(name) : null)
+    this.configureFocus()
     this.configureDownloads()
     this.configurePrivacy()
     this.guard.configure()
     this.configureNetwork()
     if (this.privateScope) this.configurePrivateContext(this.privateScope)
     for (const scope of this.containerScopes.values()) this.configurePrivateContext(scope)
-    const key = [adsOn, blockCookieBanners, blockCosmetic, disabledFilterLists.join(','), filterUpdateDays, blockExceptions.join(','), this.extraBlockedHosts.join(','), customFilterLists.map((l) => `${l.id}:${l.enabled}`).join(',')].join('|')
+    const key = [adsOn, blockCookieBanners, blockCosmetic, disabledFilterLists.join(','), filterUpdateDays, blockExceptions.join(','), this.extraBlockedHosts.join(','), customFilterLists.map((l) => `${l.id}:${l.enabled}`).join(','), focusIsConfigured(this.store.get().settings)].join('|')
     if (key === this.blockerKey) return
     this.blockerKey = key
     // The lists belong to the application, not to a window: the main window drives them, a private window only gets its own request filter.
@@ -75,9 +78,32 @@ export abstract class BrowserNetwork extends BrowserPublish {
     if (!this.isPrivate()) this.engine.setMediaBridge(this.store.get().settings.mediaPlayer)
   }
 
-  /** The request filter of the blocker settings (null while neither ad and tracker blocking nor banner blocking is on: `blockerIsOn`). */
+  /**
+   * The request filter: the focus mode first (it closes the main frame of a listed site while it is active, shared/focus-mode.ts), then the blocker
+   * settings. Null while neither the focus mode (switched on, with a site) nor ad and tracker blocking nor banner blocking is on: a request is then
+   * not even heard.
+   */
   protected requestFilter(): RequestBlocker | null {
-    return blockerIsOn(this.store.get().settings) ? (request) => blockingService().verdict(request, this.store.get().settings, this.extraBlockedHosts) : null
+    const filtering = blockerIsOn(this.store.get().settings)
+    const focusing = focusIsConfigured(this.store.get().settings)
+    if (!filtering && !focusing) return null
+    return (request) => {
+      if (focusing && request.resourceType === 'mainFrame' && focusBlock(this.store.get().settings, request.url, Date.now()) !== null) return true
+      return filtering ? blockingService().verdict(request, this.store.get().settings, this.extraBlockedHosts) : false
+    }
+  }
+
+  /** What the block page of the engine asks of the focus mode: whether an address is closed now, and the pause. Present while the feature is on. */
+  private configureFocus(): void {
+    if (!focusIsConfigured(this.store.get().settings)) return focusGate.set(null)
+    focusGate.set({
+      block: (url) => {
+        const hit = focusBlock(this.store.get().settings, url, Date.now())
+        if (hit === null) return null
+        return { until: hit.state.until, slotEnd: hit.state.until === null ? this.store.get().settings.focusTo : null }
+      },
+      pause: () => this.dispatch({ type: 'settings/update', patch: pauseFocusPatch(Date.now()) })
+    })
   }
 
   /**

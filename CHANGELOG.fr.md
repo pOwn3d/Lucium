@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Mode concentration** : Réglages › Fonctions en option › Mode concentration garde une liste de sites fermés pendant un minuteur (25 minutes par défaut) ou une plage horaire de la semaine. Un site bloqué affiche une page claire, avec « Faire une pause de 15 minutes » pour en sortir. Désactivé par défaut ; rien ne quitte votre Mac.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.

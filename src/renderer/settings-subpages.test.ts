@@ -155,7 +155,7 @@ describe('a subpage', () => {
 
 describe('the addresses of the subpages', () => {
   it('open each subpage on its page, by its name', async () => {
-    const on: Partial<Settings> = { pageWatch: true, userScripts: true, translateLocal: true, mouseGestures: true, tabContainers: true }
+    const on: Partial<Settings> = { focusMode: true, pageWatch: true, userScripts: true, translateLocal: true, mouseGestures: true, tabContainers: true }
     for (const subpage of SUBPAGES.filter((one) => one.id !== 'lockoptions')) {
       const window = await open(`#${subpage.pane}/${subpage.id}`, on)
       expect(current(window), subpage.id).toBe(subpage.pane)

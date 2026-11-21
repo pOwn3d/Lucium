@@ -440,6 +440,25 @@ export interface Settings {
    * that is gone and every `view/*` action changes nothing; the views saved stay in the file.
    */
   workViewsEnabled: boolean
+  /**
+   * Focus mode (focus-mode.ts): the sites of `focusSites` (host and subdomains) stay closed, in the main frame of a page, while a timer runs
+   * (`focusUntil`) or the weekly slot is on (`focusScheduleOn`, `focusDays`, `focusFrom`, `focusTo`). Off, nothing is filtered.
+   */
+  focusMode: boolean
+  focusSites: string[]
+  /** The weekly slot is on. */
+  focusScheduleOn: boolean
+  /** Days of the slot, 0 (Sunday) to 6. */
+  focusDays: number[]
+  /** The slot starts and ends at these minutes since midnight (local time); an end before the start runs over midnight. */
+  focusFrom: number
+  focusTo: number
+  /** The length of the timer « Démarrer » starts, in minutes. */
+  focusMinutes: number
+  /** When the timer ends (ms since the epoch); 0: no timer runs. Written by the Settings and by the block page only. */
+  focusUntil: number
+  /** Until when the user paused focus from the block page (ms since the epoch); 0: not paused. */
+  focusSnoozeUntil: number
   /** Hold the right button and move to go back, forward, open or reload (see gestures.ts). */
   mouseGestures: boolean
   /** Sites (host and subdomains) where the gestures are off. */

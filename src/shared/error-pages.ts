@@ -6,11 +6,12 @@
 /** Scheme of the action links. The engine cancels the navigation and does the work; the scheme is never loaded. */
 import { ERROR_PAGE_STYLE, errorButton, errorFrame, escapeText, type ErrorTone } from './error-page-template'
 import { getLanguage, t } from './i18n'
+import { formatClock } from './focus-mode'
 
 export const ERROR_SCHEME = 'lucium-error:'
-export type ErrorAction = 'retry' | 'proceed' | 'http' | 'back' | 'reload' | 'wait' | 'network-settings' | 'home' | 'copy-address' | 'open-mini-window' | 'toggle-blocker'
+export type ErrorAction = 'retry' | 'proceed' | 'http' | 'back' | 'reload' | 'wait' | 'network-settings' | 'home' | 'copy-address' | 'open-mini-window' | 'toggle-blocker' | 'end-focus'
 
-const ACTIONS: readonly ErrorAction[] = ['retry', 'proceed', 'http', 'back', 'reload', 'wait', 'network-settings', 'home', 'copy-address', 'open-mini-window', 'toggle-blocker']
+const ACTIONS: readonly ErrorAction[] = ['retry', 'proceed', 'http', 'back', 'reload', 'wait', 'network-settings', 'home', 'copy-address', 'open-mini-window', 'toggle-blocker', 'end-focus']
 
 /** The address of a button. `nonce` is drawn for each page shown and only that page contains it: a site cannot forge a click on it. */
 export function errorActionUrl(action: ErrorAction, nonce: string): string {
@@ -385,6 +386,11 @@ export type ErrorPageModel =
   /** A page whose renderer no longer answers (`unresponsive`): laid over it until it answers again, reloaded or waited for. */
   | { kind: 'hung'; url: string; nonce: string }
   /** A document that answered with an error status (404, 503…) and has nothing to show: Chromium would show its own page, Electron leaves a blank one. */
+  /**
+   * The focus mode closed this site (focus-mode.ts): `until` is when a timer ends (ms since the epoch), `slotEnd` when the weekly slot ends (minutes since
+   * midnight), one of the two; the page offers a pause, which is the way out.
+   */
+  | { kind: 'focus'; url: string; nonce: string; canGoBack: boolean; until: number | null; slotEnd: number | null }
   | { kind: 'status'; url: string; status: number; nonce: string; canGoBack: boolean; /** When the page was shown (ms since the epoch): the technical details give the time. */ at: number }
 
 export interface ErrorPage {
@@ -469,6 +475,19 @@ export function renderErrorPage(model: ErrorPageModel): ErrorPage {
         content: `<p class="addr">${escapeHtml(model.url)}</p><p>${reason}</p>${hints.length > 0 ? `<ul>${hints.slice(0, 3).map((hint) => `<li>${escapeHtml(hint)}</li>`).join('')}</ul>` : ''}`,
         actions: `${button('retry', model.nonce, t('errpage.reessayer'))}${local ? button('network-settings', model.nonce, t('errpage.ouvrir-les-reglages-reseau-local')) : ''}${button('copy-address', model.nonce, t('errpage.copier-l-adresse'), 'quiet')}${button('open-mini-window', model.nonce, t('errpage.ouvrir-dans-une-mini-fenetre'), 'quiet')}${button('toggle-blocker', model.nonce, t('errpage.desactiver-le-bloqueur-pour-ce-site'), 'quiet')}`,
         after: `<details><summary>${escapeHtml(t('errpage.details-techniques'))}</summary><p class="code">${escapeHtml(model.name)}</p></details>`
+      })
+    )
+  }
+  if (model.kind === 'focus') {
+    const time = model.until !== null ? new Date(model.until).toLocaleTimeString(getLanguage() === 'fr' ? 'fr-FR' : 'en-US', { hour: '2-digit', minute: '2-digit' }) : formatClock(model.slotEnd ?? 0)
+    return document_(
+      site,
+      errorFrame({
+        tone: 'accent',
+        icon: glyph('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><circle cx="12" cy="12" r="0.6"/>'),
+        title: t('errpage.focus-title'),
+        content: `<p class="addr">${escapeHtml(model.url)}</p><p>${t('errpage.focus-text', { site: host })}</p><p>${escapeHtml(t('errpage.focus-until', { time }))}</p>`,
+        actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : ''}${button('end-focus', model.nonce, t('errpage.focus-pause'), 'quiet')}`
       })
     )
   }

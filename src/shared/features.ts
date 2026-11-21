@@ -667,6 +667,15 @@ export const FEATURES = [
     cost: ['timer', 'network', 'process']
   },
   {
+    id: 'focus-mode',
+    key: 'focusMode',
+    get label() { return t('focus.label') },
+    group: 'tabs',
+    get description() { return t('focus.description', { settingsPath: settingsPath('focusSites') }) },
+    // While it is on, the request filter hears each request: one check of the address against a short list, only for the main frame of a page.
+    cost: ['listeners']
+  },
+  {
     id: 'read-aloud',
     key: 'readAloud',
     get label() { return t('web-tools-settings.lecture-a-voix-haute') },
@@ -1036,6 +1045,7 @@ export const NOT_OPTIONAL_SETTINGS: Partial<Record<BooleanSettingKey | 'blockTra
   forceHighContrast: 'préférence d’accessibilité (contraste), pas une fonction : une classe posée sur la racine des documents',
   forceReduceMotion: 'préférence d’accessibilité (mouvement), pas une fonction : une classe posée sur la racine des documents',
   forceReduceTransparency: 'préférence d’accessibilité (transparence), pas une fonction : une classe posée sur la racine des documents',
+  focusScheduleOn: 'option du mode concentration (focus-mode) : la plage horaire hebdomadaire, en plus du minuteur',
   blockCosmetic: 'option de « Bloquer les publicités et les traqueurs » (block-ads), sans effet quand celui-ci est désactivé',
   blockTrackers: 'option de « Bloquer les publicités et les traqueurs » (block-ads), gardée comme alias explicite pour les traqueurs',
   sleepSkipAudible: 'option de la mise en veille (sleep)',

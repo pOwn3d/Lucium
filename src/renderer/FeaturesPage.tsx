@@ -19,6 +19,7 @@ import { ContainersSettings } from './ContainersSettings'
 import { CatalogueFeature } from './FeaturesSettings'
 import { UserScriptsEntry, UserScriptsSettings } from './UserScriptsSettings'
 import { PageWatchesSettings, SummarySettings } from './WebToolsSettings'
+import { FocusSettings } from './FocusSettings'
 import { Check, Choice, Group, Row, SubpageEntry } from './settings-parts'
 import { FeatureFilterContext, SearchingContext, SettingsStateContext, type FeatureFilter } from './settings-context'
 import { radioGroupKeys } from './radio-keys'
@@ -116,6 +117,8 @@ function After({ id, snapshot, update }: PageProps & { id: FeatureId }) {
       return <UserScriptsEntry snapshot={snapshot} />
     case 'page-watch':
       return settings.pageWatch ? <SubpageEntry id="pagewatches" snapshot={snapshot} /> : null
+    case 'focus-mode':
+      return settings.focusMode ? <SubpageEntry id="focus" snapshot={snapshot} /> : null
     default:
       return null
   }
@@ -136,6 +139,7 @@ export function FeatureSubpages({ snapshot, update }: PageProps) {
       <ContainersSettings snapshot={snapshot} />
       <UserScriptsSettings snapshot={snapshot} />
       <PageWatchesSettings snapshot={snapshot} update={update} />
+      <FocusSettings snapshot={snapshot} update={update} />
     </>
   )
 }
