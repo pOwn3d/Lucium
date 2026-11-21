@@ -3,7 +3,7 @@
 
 import { type WebContents } from 'electron'
 import type { SettingsAnchor, SettingsPane, TooltipRequest } from '@shared/ipc'
-import { activeProfileId, knownProfiles, profileOfSpace } from '@shared/profiles'
+import { activeProfileId, isProfileId, knownProfiles, profileOfSpace } from '@shared/profiles'
 import { activeTab, splitFor } from '@shared/sidebar'
 import type { TabItem } from '@shared/model'
 import { internalPageUrl, type ExtensionsTarget } from '@shared/extension-page'
@@ -21,6 +21,8 @@ import { type ProfileHistoryLog } from './browser-base'
 import { usageCountOf } from '@shared/command-bar-usage'
 import { forgottenRanking } from './forgotten-ranking'
 import { BrowserReload } from './browser-reload'
+import { getPageIndex } from '../page-index'
+import type { PageMatch } from '@shared/page-index'
 
 export abstract class BrowserCapture extends BrowserReload {
   /**
@@ -119,6 +121,25 @@ export abstract class BrowserCapture extends BrowserReload {
   }
 
   /**
+   * The pages whose text holds the words of `query`, from the full-text index of the profile on screen (see page-index.ts). Nothing while the setting is
+   * off, in a private window, or for a panel that lists another profile than the one on screen. A page is only given when the history still holds it
+   * and the lock lets it be read: a page forgotten, or visited in a locked space, is not found by its text either.
+   */
+  searchPageContent(query: string, profileId?: string): PageMatch[] {
+    const book = getPageIndex()
+    const state = this.store.get()
+    if (book === null || this.isPrivate() || !state.settings.pageContentIndex) return []
+    if (profileId !== undefined && profileId !== activeProfileId(state)) return []
+    const history = this.activeHistory()
+    return book.of(activeProfileId(state)).search(query).filter((match) => history.get(match.url) !== undefined)
+  }
+
+  /** « Effacer l’index du contenu des pages »: every index of every profile, in memory and on the disk. Answers whether nothing is left. */
+  clearPageIndex(): boolean {
+    return getPageIndex()?.eraseAll() ?? true
+  }
+
+  /**
    * Forgets a page in the history of `profileId`: the profile whose list showed it. The panel sends this up to six seconds after the click
    * (the time to undo), or as it closes; the space on screen may be of another profile by then, whose history must not lose the same address
    * while the page stays in the one it was listed from. Without a profile: the one on screen. `undoable` (the command bar, which forgets at once and
@@ -136,6 +157,7 @@ export abstract class BrowserCapture extends BrowserReload {
     // The ranking of the command bar holds the address too: the page leaves it with the history. With a way back, and only when the history keeps
     // the page aside (it alone decides whether the page comes back), its count waits in memory for `putBackHistory`.
     const count = usageCountOf(this.store.get().commandBarUsage, id, url)
+    getPageIndex()?.of(id).remove(url)
     let aside = false
     if (undoable) aside = log.removeKept(url)
     else log.remove(url)
@@ -174,6 +196,7 @@ export abstract class BrowserCapture extends BrowserReload {
     // The pages of the day leave the ranking of the command bar with the history: read before they go, the same ones (those the lock lets be read).
     const urls = log.between(from, to).map((page) => page.url)
     const gone = log.removeBetween(from, to)
+    for (const url of urls) getPageIndex()?.of(profileId).remove(url)
     if (urls.length > 0) this.dispatch({ type: 'commandbar/forget', profileId, urls })
     return gone
   }
@@ -209,6 +232,7 @@ export abstract class BrowserCapture extends BrowserReload {
     try {
       return this.history.erase(profileId)
     } finally {
+      if (isProfileId(profileId)) getPageIndex()?.erase(profileId)
       this.forgetClosedPages(profileId)
     }
   }

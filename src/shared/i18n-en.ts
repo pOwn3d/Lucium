@@ -6380,4 +6380,11 @@ export const en: Record<MessageKey, string> = {
   'sync.error.locked': 'Lucium is locked: unlock it first.',
   'sync.error.network': 'This computer has no address on a local network. Connect it to the same Wi-Fi network as the iPhone.',
   'sync.error.internal': 'Synchronization ran into an error. The details are in the Lucium log.',
+  'features.recherche-dans-le-contenu-des-pages-visitees': 'Search the content of visited pages',
+  'features.garde-en-local-le-texte-des-pages-lues-pour': 'Keeps the text of the pages you read on your computer, to find a page by a sentence in History. Never in private tabs, passwords or typing.',
+  'manage-panels.dans-le-contenu-des-pages': 'In the content of pages',
+  'privacy-extra-settings.effacer-l-index-du-contenu-des-pages': 'Erase the page content index',
+  'privacy-extra-settings.efface-le-texte-garde-de-toutes-les-pages': 'Erases the kept text of all pages, for every profile. The setting stays as it is.',
+  'privacy-extra-settings.index-efface': 'Index erased',
+  'privacy-extra-settings.index-non-efface': 'The index could not be fully erased; the details are in the log.',
 } as const

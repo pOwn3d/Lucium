@@ -659,6 +659,14 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'page-content-index',
+    key: 'pageContentIndex',
+    get label() { return t('features.recherche-dans-le-contenu-des-pages-visitees') },
+    group: 'privacy',
+    get description() { return t('features.garde-en-local-le-texte-des-pages-lues-pour') },
+    cost: ['disk', 'listeners']
+  },
+  {
     id: 'page-watch',
     key: 'pageWatch',
     get label() { return t('web-tools-settings.surveiller-des-pages') },

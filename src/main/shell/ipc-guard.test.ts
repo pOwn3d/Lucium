@@ -206,6 +206,8 @@ describe('the door of a window while the application is locked', () => {
       [Channel.openOverlay, [{ panel: 'commandbar', mode: 'new', initial: '' }], 'openOverlay'],
       [Channel.searchHistory, ['x'], 'searchHistory'],
       [Channel.forgetHistory, ['https://a.example/'], 'forgetHistory'],
+      [Channel.searchPageContent, ['x'], 'searchPageContent'],
+      [Channel.clearPageIndex, [], 'clearPageIndex'],
       [Channel.nav, ['back'], 'nav']
     ] as const) {
       lock.locked = true
@@ -238,6 +240,19 @@ describe('the door of a window while the application is locked', () => {
       expect(argsOf('forgetHistory'), JSON.stringify(undoable)).toEqual(['https://a.example/', 'work', false])
       browser.calls.length = 0
     }
+  })
+
+  it('searches the page content only for a short text, with the profile the panel names', async () => {
+    lock.locked = false
+    await message(UI, Channel.searchPageContent, 'tarte tatin', 'work')
+    expect(browser.calls.find((call) => call.name === 'searchPageContent')?.args).toEqual(['tarte tatin', 'work'])
+    browser.calls.length = 0
+    for (const query of [42, null, { q: 'x' }, 'x'.repeat(501)]) {
+      expect(await message(UI, Channel.searchPageContent, query), JSON.stringify(query)?.slice(0, 20)).toEqual([])
+      expect(browser.names()).not.toContain('searchPageContent')
+    }
+    expect(await message(STRANGER, Channel.searchPageContent, 'x')).not.toEqual(expect.arrayContaining([expect.anything()]))
+    expect(browser.names()).not.toContain('searchPageContent')
   })
 
   it('puts a page back in the history only for a web address and a profile id, and only from the interface', async () => {

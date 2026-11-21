@@ -231,6 +231,11 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
       ? browser.searchHistory(query, typeof limit === 'number' && Number.isInteger(limit) ? Math.min(Math.max(limit, 1), HISTORY_LIMIT_MAX) : undefined, typeof profileId === 'string' ? profileId : undefined)
       : []
   )
+  // The words of the full-text search (the text is bounded and folded by the index); nothing from a window that is not the interface.
+  ipcMain.handle(Channel.searchPageContent, (e, query: unknown, profileId?: unknown) =>
+    guard(e.sender, Channel.searchPageContent) && typeof query === 'string' && query.length <= 500 ? browser.searchPageContent(query, typeof profileId === 'string' ? profileId : undefined) : []
+  )
+  ipcMain.handle(Channel.clearPageIndex, (e) => (guard(e.sender, Channel.clearPageIndex) ? browser.clearPageIndex() : false))
   ipcMain.handle(Channel.forgetHistory, (e, url: unknown, profileId?: unknown, undoable?: unknown) => {
     if (guard(e.sender, Channel.forgetHistory) && typeof url === 'string') browser.forgetHistory(url, typeof profileId === 'string' ? profileId : undefined, undoable === true)
   })

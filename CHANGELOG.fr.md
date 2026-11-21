@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Recherche dans le contenu des pages visitées** : garde en local le texte des pages lues pour retrouver une page par une phrase, dans l’Historique (Réglages › Vie privée et sécurité › Plus de réglages). Désactivée par défaut ; jamais en navigation privée ni mots de passe ; rien n’est envoyé.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.
