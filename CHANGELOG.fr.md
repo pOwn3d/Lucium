@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Corrections
+
+- **Capture de la page entière qui fait défiler la page** : « Page entière » parcourt désormais la page de haut en bas avant la capture : un site qui défile dans un panneau à lui est capturé en entier, les images paresseuses sont chargées et un en-tête fixe n’apparaît qu’une fois. Une page plus haute que 16 000 pixels est coupée là, et Lucium le dit.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.

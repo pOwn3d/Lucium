@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Fixed
+
+- **Full-page capture scrolls the page**: “Page entière” now walks the page from top to bottom before shooting, so a site that scrolls in a panel of its own is captured whole, lazy images are loaded, and a fixed header shows once. A page taller than 16 000 pixels is cut there, and Lucium says so.
+
 ## [1.1.5] - 2026-11-20
 
 Your iPhone can now synchronize with your Mac, directly and without a server, and its Today tabs can be shared. On Windows the window draws its own title bar, and Windows and Linux say that they update by hand.

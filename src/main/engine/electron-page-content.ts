@@ -18,7 +18,7 @@ import { PAGE_ANNOTATE_WORLD } from '@shared/page-annotate-layer'
 import type { PageColorScheme } from './color-scheme'
 import { innerGuardOf } from './inner-guard'
 import type { Bounds } from './types'
-import { PICK_ELEMENT, fullPageClip } from './electron-page-scripts'
+import { CAPTURE_MAX_HEIGHT, PICK_ELEMENT, fullPageClip, prepareFullCaptureScript, readCaptureSize } from './electron-page-scripts'
 import { ElectronPageNavigation } from './electron-page-navigation'
 
 export abstract class ElectronPageContent extends ElectronPageNavigation {
@@ -84,23 +84,39 @@ export abstract class ElectronPageContent extends ElectronPageNavigation {
     const small = image.getSize().width > width ? image.resize({ width, quality: 'good' }) : image
     return small.toJPEG(quality)
   }
-  async capture(full: boolean, region?: Bounds): Promise<Buffer> {
+  async capture(full: boolean, region?: Bounds, onCut?: (maxHeight: number) => void): Promise<Buffer> {
     const wc = this.webContents
     if (!full) return (await (region ? wc.capturePage(region) : wc.capturePage())).toPNG()
     // Beyond the viewport needs the DevTools protocol; attach only for the time of the shot.
     const dbg = wc.debugger
     const attachedByUs = !dbg.isAttached()
     if (attachedByUs) dbg.attach('1.3')
+    let resized = false
     try {
+      // The page may scroll in a container of its own, which the size of the document does not tell: walk it (it loads the lazy images), then make the
+      // window as tall as the page needs, so that it draws whole and a fixed header shows once. The window is given back at the end.
+      let walked: { width: number; height: number } | null = null
+      try {
+        walked = readCaptureSize(await wc.executeJavaScript(prepareFullCaptureScript(CAPTURE_MAX_HEIGHT)))
+      } catch (error) {
+        console.warn(`[capture] page ${this.id} could not be walked before the full-page capture:`, error instanceof Error ? error.message : error)
+      }
+      if (walked) {
+        const height = Math.min(Math.ceil(walked.height), CAPTURE_MAX_HEIGHT)
+        await dbg.sendCommand('Emulation.setDeviceMetricsOverride', { width: Math.ceil(walked.width), height, deviceScaleFactor: 0, mobile: false })
+        resized = true
+        // The page lays itself out again in the taller window.
+        await new Promise((done) => setTimeout(done, 250))
+      }
       const metrics = (await dbg.sendCommand('Page.getLayoutMetrics')) as { cssContentSize?: { width: number; height: number }; contentSize: { width: number; height: number } }
       const size = metrics.cssContentSize ?? metrics.contentSize
-      const shot = (await dbg.sendCommand('Page.captureScreenshot', {
-        format: 'png',
-        captureBeyondViewport: true,
-        clip: fullPageClip(size)
-      })) as { data: string }
+      const clip = fullPageClip(size)
+      if (walked && walked.height > CAPTURE_MAX_HEIGHT) onCut?.(CAPTURE_MAX_HEIGHT)
+      else if (size.height > CAPTURE_MAX_HEIGHT) onCut?.(CAPTURE_MAX_HEIGHT)
+      const shot = (await dbg.sendCommand('Page.captureScreenshot', { format: 'png', captureBeyondViewport: true, clip })) as { data: string }
       return Buffer.from(shot.data, 'base64')
     } finally {
+      if (resized && dbg.isAttached()) await dbg.sendCommand('Emulation.clearDeviceMetricsOverride').catch((error: unknown) => console.warn(`[capture] page ${this.id} kept the window of the capture:`, error instanceof Error ? error.message : error))
       if (attachedByUs && dbg.isAttached()) dbg.detach()
     }
   }

@@ -106,7 +106,7 @@ export interface PageDocument {
    */
   downloadImages(images: ReadonlyArray<{ reference: string; url: string }>, options?: DownloadOptions): Promise<ImageDownload>
   /** PNG of the visible area (or of `region`, in page coordinates), or of the whole document (capped in height) when `full`. */
-  capture(full: boolean, region?: Bounds): Promise<Buffer>
+  capture(full: boolean, region?: Bounds, onCut?: (maxHeight: number) => void): Promise<Buffer>
   /**
    * A small JPEG of the visible area, `width` wide at most: the picture is scaled and encoded straight from the capture, without the PNG of the
    * whole screen that `capture` encodes (and that a picture made from it decodes again). Empty when the page drew nothing.
