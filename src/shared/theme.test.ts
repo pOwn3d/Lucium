@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   backgroundColors, cleanTheme, defaultTheme, harmonize, hexToHsl, hslToHex, isHex, luminance, mix, noiseImage,
-  colorAtPadPoint, pagePaletteCss, pagePaletteVars, parseCssColor, resolveAppearance, themeFromArc, themeFromHue, themeHue, themeVars,
+  colorAtPadPoint, pagePaletteCss, pagePaletteVars, parseCssColor, sitePaletteCss, resolveAppearance, themeFromArc, themeFromHue, themeHue, themeVars,
   padPointOf, pageSchemeOf, themeSourceOf, toolbarTint, withColorAt, withColorCount, withHarmony,
   SPACE_HOVER, SPACE_INK, SPACE_WASH, spaceInks, type ResolvedAppearance, type SpaceTheme
 } from './theme'
@@ -130,6 +130,20 @@ describe('page palette (what is exposed to sites)', () => {
 
   it('renders a :root rule', () => {
     expect(pagePaletteCss(defaultTheme(), 'dark')).toMatch(/^:root \{\n(  --arc-[\w-]+: .+;\n)+\}$/)
+  })
+
+  // allowThemeToSites: a page is told the palette of its space only when the person allowed it.
+  it('gives a page the palette of its space only while the switch is on, and nothing while it is off', () => {
+    const theme = themeFromHue(220)
+    expect(sitePaletteCss(true, theme, false)).toBe(pagePaletteCss(theme, resolveAppearance(theme, false)))
+    expect(sitePaletteCss(true, theme, false)).toContain('--arc-palette-background')
+    expect(sitePaletteCss(false, theme, false)).toBe('')
+    expect(sitePaletteCss(true, undefined, false)).toBe('')
+  })
+
+  it('follows the dark mode of the system for a theme that follows it', () => {
+    const theme = { ...themeFromHue(220), appearance: 'auto' as const }
+    expect(sitePaletteCss(true, theme, true)).not.toBe(sitePaletteCss(true, theme, false))
   })
 })
 

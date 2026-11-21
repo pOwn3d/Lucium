@@ -9,7 +9,7 @@ import type { NavCommand } from '@shared/ipc'
 import type { RuntimeState, TabItem } from '@shared/model'
 import type { NamedWindow } from '@shared/window-names'
 import { changeWindowSidebar, cleanWindowSidebar, NO_WINDOW_SIDEBAR, type WindowSidebar, type WindowSidebarChange } from '@shared/window-sidebar'
-import { pagePaletteCss, parseCssColor, resolveAppearance } from '@shared/theme'
+import { parseCssColor, sitePaletteCss } from '@shared/theme'
 import { activeProfileId, profileOfSpace } from '@shared/profiles'
 import { guestWording } from '@shared/guest-window'
 import { chosenZoomOf, stepZoom, withSiteZoom, zoomSiteOf } from '@shared/site-zoom'
@@ -554,10 +554,9 @@ export abstract class BrowserCommands extends BrowserOverlay {
   /** The palette variables a page gets when "allow websites to get your theme data" is on. */
   private themeCssFor(tabId: string): string {
     const state = this.store.get()
-    if (!state.settings.allowThemeToSites) return ''
     const tab = state.tabs.find((t) => t.id === tabId)
     const space = tab && state.spaces.find((sp) => sp.id === tab.spaceId)
-    return space ? pagePaletteCss(space.theme, resolveAppearance(space.theme, this.systemDark)) : ''
+    return sitePaletteCss(state.settings.allowThemeToSites, space?.theme, this.systemDark)
   }
 
   protected applyThemeToPage(tabId: string, force = false): void {

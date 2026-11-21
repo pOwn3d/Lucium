@@ -392,6 +392,14 @@ export function pagePaletteCss(theme: SpaceTheme, appearance: ResolvedAppearance
   return `:root {\n${body}\n}`
 }
 
+/**
+ * What a page gets of the theme of its space: the palette while "allow websites to get your theme data" (`allowThemeToSites`) is on, nothing at all
+ * while it is off, and nothing for a tab with no space. The one place the switch is read for this.
+ */
+export function sitePaletteCss(allowed: boolean, theme: SpaceTheme | undefined, systemDark: boolean): string {
+  return allowed && theme ? pagePaletteCss(theme, resolveAppearance(theme, systemDark)) : ''
+}
+
 /** The WCAG contrast of two opaque colours. */
 export const contrastOf = (a: string, b: string): number => {
   const [la, lb] = [luminance(a), luminance(b)]
