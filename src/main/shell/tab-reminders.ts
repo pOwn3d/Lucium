@@ -16,7 +16,7 @@ export interface TabReminderDeps {
   now(): number
   setTimer(run: () => void, ms: number): unknown
   clearTimer(timer: unknown): void
-  /** A local notification for a reminder that falls due; choosing it shows the window. */
+  /** A local notification for a reminder that falls due. It has no click handler: the tab is already back in its space when it appears. */
   notify(reminder: TabReminder): void
   /** Brings the due tabs back: the reducer's `reminder/fire`. */
   fire(): void

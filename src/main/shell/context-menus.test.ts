@@ -277,6 +277,12 @@ describe('the blocks', () => {
     for (const gone of ['Lire plus tard', 'Ajouter aux signets', 'Ouvrir comme application', 'Ne jamais mettre cet onglet en veille']) expect(labels).not.toContain(gone)
   })
 
+  it('has no « Me le rappeler » in the menu of a tab while the setting is off, and has it back once it is on', () => {
+    const off = run(f.state, { type: 'settings/update', patch: { tabReminders: false } })
+    expect(flat(menu({ kind: 'tab', id: f.a }, off).items)).not.toContain('Me le rappeler')
+    expect(flat(menu({ kind: 'tab', id: f.a }, f.state).items)).toContain('Me le rappeler')
+  })
+
   it('shows a title as a section header only where the system can (macOS 14), and by itself decides from the system it runs on', () => {
     const real = Object.getOwnPropertyDescriptor(process, 'platform')!
     const version = (process as unknown as { getSystemVersion?: () => string }).getSystemVersion
