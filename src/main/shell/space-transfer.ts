@@ -5,6 +5,7 @@
 import { writeFileSync } from 'node:fs'
 import { app, dialog, type BrowserWindow } from 'electron'
 import { persistableState } from '@shared/sidebar'
+import { spaceTransferRefusal } from '@shared/space-transfer'
 import { t } from '@shared/i18n'
 import { ExportCryptoError, PASSPHRASE_MIN, exportErrorMessage } from '../export-crypto'
 import { getLockService } from '../lock-service'
@@ -35,6 +36,9 @@ export async function exportSpace(browser: Browser, store: StateStore, win: Brow
   const state = persistableState(store.root().get())
   const space = state.spaces.find((s) => s.id === spaceId)
   if (!space) return
+  // Asked before any box: a locked space, or a too large one, is refused at once instead of after the passphrase and the file name.
+  const refusal = spaceTransferRefusal(state, spaceId, getLockService()?.lockedSpaces() ?? [])
+  if (refusal !== null) return void dialog.showErrorBox(t('space-transfer.exportation-impossible'), refusal)
   const seal = await dialog.showMessageBox(win, {
     type: 'question',
     message: t('space-transfer.chiffrer-le-fichier-de-l-espace'),

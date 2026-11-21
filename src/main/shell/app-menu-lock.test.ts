@@ -161,6 +161,18 @@ describe('the menu bar', () => {
     expect(newFolder()?.enabled).toBe(true)
   })
 
+  it('greys out « Exporter cet espace… » while the space on screen is locked, with the reason, and gives it back once it is unlocked', () => {
+    const app = application()
+    const exportEntry = (): Item | undefined => (installed.menu ?? []).flatMap((item) => item.submenu ?? []).find((item) => item.label === t('space-transfer.exporter-cet-espace'))
+    expect(exportEntry()?.enabled).toBe(true)
+    app.lockState.spaces = [app.state.activeSpaceId]
+    app.refreshMenu()
+    expect(exportEntry()).toMatchObject({ enabled: false, toolTip: t('lock.deverrouillez-l-espace-d-abord') })
+    app.lockState.spaces = []
+    app.refreshMenu()
+    expect(exportEntry()?.enabled).toBe(true)
+  })
+
   // The menu is built from the state the interface is given, not from the real one (shell/lock-state.ts), and rebuilt when a space is locked or unlocked.
   it('is built from what the lock shows: the archive of a locked space is not there for « Rouvrir le dernier onglet fermé »', () => {
     const app = application()
