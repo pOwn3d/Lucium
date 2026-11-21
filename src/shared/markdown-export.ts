@@ -706,6 +706,15 @@ export function exportMarkdown(raw: unknown, options: MdOptions): MdResult | nul
   return result
 }
 
+/**
+ * The folder that holds the images of `file.md` saved on its own: `<name>-images`, next to it. The name of the file is already safe
+ * (`exportFileName`); only the extension goes.
+ */
+export const imagesFolderName = (fileName: string): string => `${fileName.replace(/\.md$/i, '')}-images`
+
+/** What a link in the .md says to reach an image of the archive (`images/image-001.png`) once it is kept in `folder` next to the file: relative, and percent-encoded where Markdown needs it. */
+export const folderImageLink = (folder: string, archiveName: string): string => `${folder.replace(/[%()\\\s<>]/g, (char) => `%${char.charCodeAt(0).toString(16).toUpperCase().padStart(2, '0')}`)}/${archiveName.replace(/^images\//, '')}`
+
 /** The file with the image list rewritten: `local` maps a reference to the path the image has now (an archive's `images/image-001.png`). */
 export function markdownWithImages(result: Pick<MdResult, 'text' | 'images'>, local: ReadonlyMap<string, string> = new Map()): string {
   if (result.images.length === 0) return result.text

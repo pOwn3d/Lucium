@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Enregistrer la page en Markdown** : Fichier › Enregistrer la page en Markdown… et la barre de commandes enregistrent le contenu principal de la page en un clic : un fichier `.md` et un dossier `<nom>-images/` à côté. Un onglet privé demande d’abord.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.

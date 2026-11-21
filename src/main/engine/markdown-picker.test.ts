@@ -2,7 +2,8 @@ import { Script, createContext, runInContext } from 'node:vm'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { WebContents } from 'electron'
 import { getLanguage, setLanguage, tIn } from '@shared/i18n'
-import { MarkdownPicker, MARKDOWN_WORLD, pickerScript, selectionScript } from './markdown-picker'
+import { Window } from 'happy-dom'
+import { MarkdownPicker, MARKDOWN_WORLD, pageScript, pickerScript, selectionScript } from './markdown-picker'
 
 // The scripts themselves run in a page and are checked by the engine test (smoke-markdown.ts); here, that they are valid programs with
 // what they are given, and what the main-process side does around them.
@@ -286,5 +287,60 @@ describe('MarkdownPicker', () => {
     await Promise.resolve()
     await Promise.resolve()
     expect(warn).toHaveBeenCalledWith('[markdown] cannot end the picker:', 'frame gone')
+  })
+})
+
+describe('the whole-page script', () => {
+  it('is a valid program that builds no markup and carries the converter lists', () => {
+    const script = pageScript()
+    expect(() => new Script(script)).not.toThrow()
+    expect(script).toContain('"dropped":["script","style"')
+    expect(script).not.toMatch(/innerHTML|outerHTML|insertAdjacentHTML|document\.write|eval\(/)
+  })
+
+  it('is run in the isolated world, and its answer is handed back as it is', async () => {
+    const fake = fakeContents()
+    fake.run.mockResolvedValue('{"action":"save"}')
+    await expect(new MarkdownPicker(fake.contents).page()).resolves.toBe('{"action":"save"}')
+    expect(fake.run).toHaveBeenCalledWith(MARKDOWN_WORLD, [{ code: pageScript() }])
+  })
+
+  it('answers null, with a visible warning, when the page was left while it ran', async () => {
+    const fake = fakeContents()
+    fake.run.mockRejectedValue(new Error('gone'))
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    await expect(new MarkdownPicker(fake.contents).page()).resolves.toBeNull()
+    expect(warn).toHaveBeenCalledWith('[markdown] the page could not be read:', 'gone')
+  })
+
+  describe('on a document', () => {
+    const run = (html: string): { nodes: unknown[] } => {
+      const window = new Window()
+      window.document.body.innerHTML = html
+      const reply = JSON.parse(window.eval(pageScript()) as string) as { snapshot: { nodes: unknown[] } }
+      return reply.snapshot
+    }
+    const text = (value: unknown): string => JSON.stringify(value)
+
+    it('keeps the main part and leaves navigation, side columns and dialogs out', () => {
+      const out = text(run('<nav>MENU</nav><main><h1>Titre</h1><p>Corps</p><aside>PUB</aside><div role="dialog">COOKIES</div></main><footer>PIED</footer>'))
+      expect(out).toContain('Corps')
+      for (const left of ['MENU', 'PUB', 'COOKIES', 'PIED']) expect(out).not.toContain(left)
+    })
+
+    it('leaves out the headers and footers of a page that has no main part, and keeps those of an article', () => {
+      expect(text(run('<header>BANDEAU</header><div><p>Texte</p></div><footer>PIED</footer>'))).not.toMatch(/BANDEAU|PIED/)
+      expect(text(run('<article><header><h1>Dans l’article</h1></header><p>x</p></article>'))).toContain('Dans l’article')
+    })
+
+    it('never takes what a person typed: fields, and editable regions', () => {
+      const out = text(run('<main><p>Public</p><input value="SECRET1"><textarea>SECRET2</textarea><input type="password" value="SECRET3"><div contenteditable="true">SECRET4</div></main>'))
+      expect(out).toContain('Public')
+      expect(out).not.toContain('SECRET')
+    })
+
+    it('reads the address a lazy image keeps until it scrolls into view', () => {
+      expect(text(run('<main><img data-src="https://img.example.com/lazy.png" alt="paresseuse"></main>'))).toContain('https://img.example.com/lazy.png')
+    })
   })
 })

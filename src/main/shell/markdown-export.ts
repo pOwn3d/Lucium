@@ -4,10 +4,10 @@
 // No state is kept anywhere: nothing here depends on the window being private. Copying writes nothing to disk, and saving writes the one
 // file the user chose, as File › Save Page As does; the images, if any, come with the session of the tab (a private window's own).
 
-import { writeFile } from 'node:fs/promises'
-import { basename } from 'node:path'
+import { mkdir, writeFile } from 'node:fs/promises'
+import { basename, dirname, join } from 'node:path'
 import { clipboard, dialog, shell, type BrowserWindow } from 'electron'
-import { exportFileName, exportMarkdown, markdownWithImages, parsePick, parseReply, safeUrl, type MdPick, type MdResult } from '@shared/markdown-export'
+import { exportFileName, exportMarkdown, folderImageLink, imagesFolderName, markdownWithImages, parsePick, parseReply, safeUrl, type MdPick, type MdResult } from '@shared/markdown-export'
 import { createZip } from '@shared/zip'
 import type { Page } from '../engine/types'
 import { t } from '@shared/i18n'
@@ -19,6 +19,8 @@ export interface MarkdownTarget {
   win: BrowserWindow
   url: string
   title: string
+  /** The tab, or the window, is private: saving its page is said first (see `savePage`). */
+  private?: boolean
   toast(message: string, action?: { label: string; run: () => void }): void
 }
 
@@ -28,6 +30,8 @@ export interface MarkdownUi {
   askImages(win: BrowserWindow, count: number): Promise<'zip' | 'md' | null>
   /** The save dialog; null when the user gave up. */
   chooseSave(win: BrowserWindow, name: string, extension: 'md' | 'zip'): Promise<string | null>
+  /** Before a page of a private tab is written to disk: the user agrees to leave a trace of it, or not. */
+  confirmPrivate(win: BrowserWindow): Promise<boolean>
   fail(title: string, message: string): void
   reveal(path: string): void
 }
@@ -51,6 +55,17 @@ const realUi: MarkdownUi = {
       filters: [extension === 'md' ? { name: 'Markdown', extensions: ['md'] } : { name: t('markdown-export.archive-zip'), extensions: ['zip'] }]
     })
     return saved.canceled || !saved.filePath ? null : saved.filePath
+  },
+  async confirmPrivate(win) {
+    const answer = await dialog.showMessageBox(win, {
+      type: 'warning',
+      message: t('markdown-export.page-privee-enregistrer'),
+      detail: t('markdown-export.page-privee-enregistrer-detail'),
+      buttons: [t('markdown-export.enregistrer-quand-meme'), t('markdown-export.annuler')],
+      defaultId: 1,
+      cancelId: 1
+    })
+    return answer.response === 0
   },
   fail: (title, message) => dialog.showErrorBox(title, message),
   reveal: (path) => shell.showItemInFolder(path)
@@ -152,4 +167,46 @@ export async function copySelection(target: MarkdownTarget): Promise<void> {
   const snapshot = parseReply(await target.page.markdownSelection())
   if (!snapshot) return target.toast(t('markdown-export.aucun-texte-selectionne-a-copier'))
   await finish(target, { action: 'copy', scope: 'selection', snapshot })
+}
+
+/**
+ * File › Save the page as Markdown… : the main content of the page, whole, no picker. A .md file with a folder `<name>-images/` beside it, the
+ * images linked by relative paths. A private tab is asked about first: the page would leave a trace on disk. The images come from the page's
+ * own list, downloaded with the session of the tab, under the same caps as the archive; one that fails stays a link to its site.
+ */
+export async function savePage(target: MarkdownTarget): Promise<void> {
+  if (!safeUrl(target.url, ['http:', 'https:'])) return target.toast(notAWebPage())
+  if (target.private === true && !(await ui.confirmPrivate(target.win))) return
+  const pick = parsePick(await target.page.markdownPage())
+  if (!pick) return ui.fail(t('boostshare.export-impossible'), t('markdown-export.la-page-n-a-pas-renvoye-un-contenu-lisible-trop'))
+  if ('error' in pick) return ui.fail(t('boostshare.export-impossible'), pick.error)
+  const result = exportMarkdown(pick.snapshot, { url: target.url, title: target.title, withTitle: true, withSource: true })
+  if (!result) return ui.fail(t('boostshare.export-impossible'), t('markdown-export.la-page-a-repondu-autre-chose-qu-un-contenu-a'))
+  if (!result.markdown) return target.toast(t('markdown-export.rien-a-exporter-page'))
+  const path = await ui.chooseSave(target.win, exportFileName(target.title, 'md'), 'md')
+  if (!path) return
+  try {
+    const local = new Map<string, string>()
+    let kept = 0
+    if (result.images.length > 0) {
+      target.toast(result.images.length > 1 ? t('markdown-export.telechargement-des-images', { count: result.images.length }) : t('markdown-export.telechargement-de-l-image'))
+      const downloaded = await target.page.downloadImages(result.images, { referrer: target.url })
+      const folder = imagesFolderName(basename(path))
+      if (downloaded.files.length > 0) {
+        await mkdir(join(dirname(path), folder), { recursive: true })
+        // The archive names its files `images/image-001.png`; here they sit straight in the folder.
+        for (const file of downloaded.files) await writeFile(join(dirname(path), folder, file.name.replace(/^images\//, '')), file.data)
+        for (const file of downloaded.files) local.set(file.reference, folderImageLink(folder, file.name))
+      }
+      kept = downloaded.files.length
+      for (const failure of downloaded.failures) console.warn('[markdown] image kept as a link:', failure)
+    }
+    await writeFile(path, markdownWithImages(result, local), 'utf8')
+    const saved = { name: basename(path), kept, total: result.images.length }
+    const message = result.images.length === 0 ? t('browser.enregistre-name', { name: saved.name }) : result.images.length > 1 ? t('markdown-export.enregistre-name-images', saved) : t('markdown-export.enregistre-name-image', saved)
+    target.toast(message, { label: t('browser.afficher'), run: () => ui.reveal(path) })
+  } catch (error) {
+    console.error('[markdown] cannot save the page:', error)
+    ui.fail(t('browser.enregistrement-impossible'), `${path}\n\n${String((error as Error).message ?? error)}`)
+  }
 }

@@ -8,7 +8,7 @@ import type { Page } from '../engine/types'
 const clipboard = vi.hoisted(() => ({ writeText: vi.fn() }))
 vi.mock('electron', () => ({ clipboard, dialog: {}, shell: {} }))
 
-import { copySelection, exportPage, setMarkdownUi, type MarkdownTarget, type MarkdownUi } from './markdown-export'
+import { copySelection, exportPage, savePage, setMarkdownUi, type MarkdownTarget, type MarkdownUi } from './markdown-export'
 import { frenchSpaces } from '@shared/french-typography'
 
 const PAGE = 'https://example.com/docs/a'
@@ -17,7 +17,7 @@ const picked = (action: 'copy' | 'save', scope: 'blocks' | 'selection', nodes: u
 const WITH_IMAGES = [{ t: 'p', c: ['Un chat ', { t: 'img', a: { src: 'https://img.example.com/cat.png', alt: 'chat' } }, { t: 'img', a: { src: 'https://img.example.com/dog.jpg', alt: 'chien' } }] }]
 
 let dir: string
-let page: { focus: ReturnType<typeof vi.fn>; pickMarkdown: ReturnType<typeof vi.fn>; markdownSelection: ReturnType<typeof vi.fn>; downloadImages: ReturnType<typeof vi.fn> }
+let page: { focus: ReturnType<typeof vi.fn>; pickMarkdown: ReturnType<typeof vi.fn>; markdownSelection: ReturnType<typeof vi.fn>; markdownPage: ReturnType<typeof vi.fn>; downloadImages: ReturnType<typeof vi.fn> }
 let ui: { [K in keyof MarkdownUi]: ReturnType<typeof vi.fn> }
 let toasts: Array<{ message: string; action?: { label: string; run: () => void } }>
 let restore: () => void
@@ -35,8 +35,8 @@ beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'lucium-md-'))
   toasts = []
   clipboard.writeText.mockReset().mockResolvedValue(undefined)
-  page = { focus: vi.fn(), pickMarkdown: vi.fn(), markdownSelection: vi.fn(), downloadImages: vi.fn() }
-  ui = { askImages: vi.fn(), chooseSave: vi.fn(), fail: vi.fn(), reveal: vi.fn() }
+  page = { focus: vi.fn(), pickMarkdown: vi.fn(), markdownSelection: vi.fn(), markdownPage: vi.fn(), downloadImages: vi.fn() }
+  ui = { askImages: vi.fn(), chooseSave: vi.fn(), confirmPrivate: vi.fn(), fail: vi.fn(), reveal: vi.fn() }
   restore = setMarkdownUi(ui as unknown as MarkdownUi)
 })
 
@@ -240,5 +240,98 @@ describe('copySelection', () => {
     await copySelection(target({ url: 'about:blank' }))
     expect(page.markdownSelection).not.toHaveBeenCalled()
     expect(toasts).toHaveLength(1)
+  })
+})
+
+describe('savePage', () => {
+  const whole = (nodes: unknown = WITH_IMAGES) => JSON.stringify({ action: 'save', scope: 'blocks', snapshot: snapshot(nodes) })
+  const downloaded = (files: Array<{ reference: string; name: string }>, failures: string[] = []) => ({
+    files: files.map((f) => ({ ...f, data: new Uint8Array([1, 2, 3]) })),
+    failures
+  })
+
+  it('asks for a web page only, and reads nothing from another', async () => {
+    for (const url of ['about:blank', 'file:///tmp/a.html', '']) await savePage(target({ url }))
+    expect(page.markdownPage).not.toHaveBeenCalled()
+    expect(toasts).toHaveLength(3)
+  })
+
+  it('writes the .md with its images in a folder beside it, linked by relative paths', async () => {
+    page.markdownPage.mockResolvedValue(whole())
+    ui.chooseSave.mockResolvedValue(join(dir, 'Cours.md'))
+    page.downloadImages.mockResolvedValue(downloaded([{ reference: 'image-1', name: 'images/image-001.png' }, { reference: 'image-2', name: 'images/image-002.jpg' }]))
+    await savePage(target())
+    expect(ui.chooseSave).toHaveBeenCalledWith(expect.anything(), 'Cours - Markdown.md', 'md')
+    const markdown = readFileSync(join(dir, 'Cours.md'), 'utf8')
+    expect(markdown).toContain('[image-1]: Cours-images/image-001.png')
+    expect(markdown).toContain('[image-2]: Cours-images/image-002.jpg')
+    expect(markdown).not.toContain('img.example.com')
+    expect(readFileSync(join(dir, 'Cours-images', 'image-001.png'))).toHaveLength(3)
+    expect(existsSync(join(dir, 'Cours-images', 'images'))).toBe(false)
+    expect(toasts.at(-1)!.message).toBe(frenchSpaces('Enregistré : Cours.md · 2/2 images'))
+  })
+
+  it('keeps as a link the image that could not be downloaded, and says how many were kept', async () => {
+    page.markdownPage.mockResolvedValue(whole())
+    ui.chooseSave.mockResolvedValue(join(dir, 'a b.md'))
+    page.downloadImages.mockResolvedValue(downloaded([{ reference: 'image-1', name: 'images/image-001.png' }], ['dog: HTTP 404']))
+    await savePage(target())
+    const markdown = readFileSync(join(dir, 'a b.md'), 'utf8')
+    expect(markdown).toContain('[image-1]: a%20b-images/image-001.png')
+    expect(markdown).toContain('[image-2]: https://img.example.com/dog.jpg')
+    expect(toasts.at(-1)!.message).toBe(frenchSpaces('Enregistré : a b.md · 1/2 images'))
+  })
+
+  it('makes no folder when no image could be kept, and none for a page without images', async () => {
+    page.markdownPage.mockResolvedValue(whole())
+    ui.chooseSave.mockResolvedValue(join(dir, 'none.md'))
+    page.downloadImages.mockResolvedValue(downloaded([], ['x']))
+    await savePage(target())
+    expect(existsSync(join(dir, 'none-images'))).toBe(false)
+    page.markdownPage.mockResolvedValue(whole([{ t: 'p', c: ['Seul'] }]))
+    ui.chooseSave.mockResolvedValue(join(dir, 'text.md'))
+    page.downloadImages.mockClear()
+    await savePage(target())
+    expect(page.downloadImages).not.toHaveBeenCalled()
+    expect(readFileSync(join(dir, 'text.md'), 'utf8')).toContain('Seul')
+    expect(toasts.at(-1)!.message).toBe(frenchSpaces('Enregistré : text.md'))
+  })
+
+  it('warns before saving a private page, and writes nothing when the user declines', async () => {
+    page.markdownPage.mockResolvedValue(whole())
+    ui.confirmPrivate.mockResolvedValue(false)
+    await savePage(target({ private: true }))
+    expect(ui.confirmPrivate).toHaveBeenCalledOnce()
+    expect(page.markdownPage).not.toHaveBeenCalled()
+    expect(ui.chooseSave).not.toHaveBeenCalled()
+    ui.confirmPrivate.mockResolvedValue(true)
+    ui.chooseSave.mockResolvedValue(null)
+    await savePage(target({ private: true }))
+    expect(ui.chooseSave).toHaveBeenCalledOnce()
+  })
+
+  it('does not ask about a page that is not private', async () => {
+    page.markdownPage.mockResolvedValue(whole())
+    ui.chooseSave.mockResolvedValue(null)
+    await savePage(target())
+    expect(ui.confirmPrivate).not.toHaveBeenCalled()
+  })
+
+  it('says so when the page gives nothing readable, when it has no text, and when the disk refuses', async () => {
+    page.markdownPage.mockResolvedValue(null)
+    await savePage(target())
+    expect(ui.fail).toHaveBeenCalledWith('Export impossible', expect.stringContaining('n’a pas renvoyé'))
+    page.markdownPage.mockResolvedValue(JSON.stringify({ error: 'boom' }))
+    await savePage(target())
+    expect(ui.fail).toHaveBeenLastCalledWith('Export impossible', 'boom')
+    page.markdownPage.mockResolvedValue(whole([]))
+    await savePage(target())
+    expect(toasts.at(-1)!.message).toBe(frenchSpaces('Rien à enregistrer : la page ne contient aucun texte'))
+    expect(ui.chooseSave).not.toHaveBeenCalled()
+    page.markdownPage.mockResolvedValue(whole([{ t: 'p', c: ['x'] }]))
+    ui.chooseSave.mockResolvedValue(join(dir, 'missing', 'x.md'))
+    vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    await savePage(target())
+    expect(ui.fail).toHaveBeenLastCalledWith('Enregistrement impossible', expect.stringContaining('x.md'))
   })
 })

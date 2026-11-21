@@ -193,6 +193,9 @@ export abstract class ElectronPageNavigation extends ElectronPageBase {
   markdownSelection(): Promise<string | null> {
     return this.gone ? Promise.resolve(null) : this.markdown.selection()
   }
+  markdownPage(): Promise<string | null> {
+    return this.gone ? Promise.resolve(null) : this.markdown.page()
+  }
   pickMarkdown(): Promise<string | null> {
     return this.gone ? Promise.resolve(null) : this.markdown.pick()
   }
