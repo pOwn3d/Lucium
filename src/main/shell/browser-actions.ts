@@ -3,6 +3,8 @@
 
 import type { ClosedHistory, SidebarState } from '@shared/model'
 import { newlyArchived } from '@shared/archive'
+import { javascriptHostOf } from '@shared/site-javascript'
+import { parseSiteHost } from '@shared/site-data'
 import { referencedImages } from '@shared/space-image'
 import { profilesInUse } from '@shared/profiles'
 import { changedSettings, inheritedSettings, privateAction } from '@shared/private-window'
@@ -188,6 +190,9 @@ export abstract class BrowserActions extends BrowserNetwork {
     if (action.type === 'developer/site' && this.store.get().settings.developerHosts !== state.settings.developerHosts) {
       this.showToast(action.enabled ? t('browser.mode-developpeur-active-pour-site-l', { site: action.site }) : t('browser.mode-developpeur-desactive-pour-site', { site: action.site }))
     }
+    // JavaScript was switched for a site: the response hook follows the list, and the pages of that site (every tab on it, here) load again, since
+    // the policy comes with the answer of the server and a page already loaded keeps the scripts it runs.
+    if (action.type === 'javascript/site' && this.store.get().settings.siteJavascriptOff !== state.settings.siteJavascriptOff) this.javascriptChanged(action)
     // A site's readable mode changed (from its panel, the menu or the command bar): the pages of that site, in every window, are looked at again.
     if (action.type === 'readable/site' && this.store.get().settings.siteReadableMode !== state.settings.siteReadableMode) this.refreshDark()
     // A restored session opens its pages in the background: the notice says how many came back (the command bar has no other feedback).
@@ -221,6 +226,16 @@ export abstract class BrowserActions extends BrowserNetwork {
     }
     // The user's own filter lists change what the blocker compiles.
     if (action.type === 'filterlist/add' || action.type === 'filterlist/remove' || action.type === 'filterlist/enable') this.configureBlocker()
+  }
+
+  /** Applies a change of the JavaScript list: configures the response hook, then reloads every tab on the site (the page of a sleeping tab loads it later, by itself). */
+  private javascriptChanged(action: { site: string; off: boolean }): void {
+    this.configureBlocker()
+    const host = javascriptHostOf(action.site) ?? parseSiteHost(action.site)?.host
+    if (host === undefined) return
+    // The page is not rebuilt with a mark of its own, so the notice says it, and one click brings the scripts back.
+    if (action.off === true) this.showToast(t('browser.javascript-desactive-pour-site', { site: host }), { label: t('browser.reactiver'), run: () => this.dispatch({ type: 'javascript/site', site: host, off: false }) })
+    for (const tab of this.store.get().tabs) if (javascriptHostOf(tab.url) === host) this.pages.get(tab.id)?.reload()
   }
 
   /** Deletes the pictures of spaces that nothing refers to any more. The disk is only looked at when the state that was just replaced had a picture to lose. */

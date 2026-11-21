@@ -39,6 +39,7 @@ import { cleanSiteZoom } from './site-zoom'
 import { cleanAutoplayPolicy, cleanSiteAutoplay } from './autoplay'
 import { cleanSpellCheck } from './spell-check'
 import { cleanClearOnClose } from './site-clear'
+import { cleanSiteJavascriptOff } from './site-javascript'
 import { cleanCustomFilterLists } from './custom-filter-lists'
 import { cleanDeveloperHosts } from './developer-mode'
 import { cleanReadableSettings, readableFromForcedDark, type ForcedDarkSettings } from './readable-mode'
@@ -398,6 +399,7 @@ export function clampSettings(input: Settings): Settings {
     autoplayPerSite: settings.autoplayPerSite !== false,
     siteDataClearOnCloseEnabled: settings.siteDataClearOnCloseEnabled === true,
     siteDataClearOnClose: cleanClearOnClose(settings.siteDataClearOnClose),
+    siteJavascriptOff: cleanSiteJavascriptOff(settings.siteJavascriptOff),
     siteDataClearOnQuit: settings.siteDataClearOnQuit === true,
     customFilterListsEnabled: settings.customFilterListsEnabled !== false,
     customFilterLists: cleanCustomFilterLists(settings.customFilterLists),

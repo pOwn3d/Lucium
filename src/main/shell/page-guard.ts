@@ -8,6 +8,7 @@ import type { Settings } from '@shared/model'
 import { fingerprintConfigFor, fingerprintFallback, webRtcPolicyFor, type WebRtcPolicy } from '@shared/fingerprint'
 import type { GuardPlan } from '@shared/page-guard'
 import { siteOf } from '@shared/party'
+import { javascriptPolicyFor } from '@shared/site-javascript'
 import type { ScriptletCall } from '@shared/scriptlets'
 import type { InnerGuardProvider, PageGuardProvider, ResponsePolicy } from '../engine/types'
 
@@ -87,11 +88,24 @@ export class PageGuard {
       this.innerOn = innerOn
       this.deps.engine.setInnerGuard(innerOn ? () => fingerprintFallback(this.deps.settings(), this.deps.seeds.salt()) : null)
     }
-    if (scriptlets !== this.cspOn) {
-      this.cspOn = scriptlets
-      this.deps.engine.setResponsePolicy(scriptlets ? (request) => this.deps.blocker().cspFor(request.url, this.deps.settings()) : null)
+    // The hook is on while the blocker has a policy to add or a site has its JavaScript off; with neither, no answer is looked at for it.
+    const policyOn = scriptlets || settings.siteJavascriptOff.length > 0
+    if (policyOn !== this.cspOn) {
+      this.cspOn = policyOn
+      this.deps.engine.setResponsePolicy(policyOn ? (request) => this.policyFor(request.url) : null)
     }
     this.refreshPages()
+  }
+
+  /**
+   * The Content-Security-Policy a main document is given: the blocker's (only while the scriptlets are on) and the one that stops the scripts of a
+   * site whose JavaScript is off, joined into one value. Read from the settings of this moment, so a site added later needs no new hook.
+   */
+  private policyFor(url: string): string | null {
+    const settings = this.deps.settings()
+    const blocker = settings.blockScriptlets && blockerIsOn(settings) ? this.deps.blocker().cspFor(url, settings) : null
+    const parts = [blocker, javascriptPolicyFor(settings.siteJavascriptOff, url)].filter((part): part is string => part !== null && part !== '')
+    return parts.length > 0 ? parts.join('; ') : null
   }
 
   /** What a document gets, from the settings of this moment. Never throws: a failure is a page that gets nothing (the engine reports it). */

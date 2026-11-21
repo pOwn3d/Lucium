@@ -128,7 +128,8 @@ const PRIVATE_ACTIONS = new Set<Action['type']>([
   // The private store is never written to disk: an exception made here lasts as long as the window.
   'blocking/exempt-site',
   // Same for a site's autoplay choice. "Effacer à la fermeture" (siteclear/site) is not here: a private session is thrown away whole, so there is nothing to list.
-  'autoplay/site'
+  'autoplay/site',
+  'javascript/site'
 ])
 
 /** The action to run, or null when the private window refuses it (spaces, profiles, pins, folders, favourites, Tweaks, archive, import). */

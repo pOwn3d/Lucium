@@ -72,6 +72,39 @@ describe('the page guard of a window', () => {
     expect(guards).toEqual([expect.any(Function), null])
   })
 
+  it('stops the scripts of a site whose JavaScript is off, with no blocker at all, and of that site only', () => {
+    const { guard, policies, cspFor, set } = setup({ ...adsBlockingPatch(false), siteJavascriptOff: ['shop.test'] })
+    guard.configure()
+    guard.configure()
+    expect(policies).toHaveLength(1)
+    expect(policies[0]!({ url: 'https://shop.test/panier' })).toBe("script-src 'none'")
+    expect(policies[0]!({ url: 'https://news.test/' })).toBeNull()
+    expect(cspFor).not.toHaveBeenCalled()
+    // A site added later is read from the settings of that moment: the hook is not installed again.
+    set({ siteJavascriptOff: ['shop.test', 'news.test'] })
+    guard.configure()
+    expect(policies).toHaveLength(1)
+    expect(policies[0]!({ url: 'https://news.test/' })).toBe("script-src 'none'")
+  })
+
+  it('joins the blocker\'s policy and the JavaScript one in a single value, and takes the hook away when the list is emptied', () => {
+    const { guard, policies, cspFor, set } = setup({ blockAds: true, blockScriptlets: true, siteJavascriptOff: ['shop.test'] })
+    cspFor.mockReturnValue("img-src 'self'")
+    guard.configure()
+    expect(policies[0]!({ url: 'https://shop.test/' })).toBe("img-src 'self'; script-src 'none'")
+    expect(policies[0]!({ url: 'https://news.test/' })).toBe("img-src 'self'")
+    set({ ...adsBlockingPatch(false), blockScriptlets: false, siteJavascriptOff: [] })
+    guard.configure()
+    expect(policies.map((p) => p !== null)).toEqual([true, false])
+  })
+
+  it('costs nothing with the list empty: no hook, nothing asked of the blocker', () => {
+    const { guard, policies, cspFor } = setup({ ...adsBlockingPatch(false), siteJavascriptOff: [] })
+    guard.configure()
+    expect(policies).toEqual([])
+    expect(cspFor).not.toHaveBeenCalled()
+  })
+
   it('takes both away again when the features go off, and only once', () => {
     const { guard, guards, policies, set } = setup({ blockAds: true, blockScriptlets: true })
     guard.configure()
