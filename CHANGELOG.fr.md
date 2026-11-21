@@ -6,7 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Ajouts
 
-- **Recherche dans le contenu des pages visitées** : garde en local le texte des pages lues pour retrouver une page par une phrase, dans l’Historique (Réglages › Vie privée et sécurité › Plus de réglages). Désactivée par défaut ; jamais en navigation privée ni mots de passe ; rien n’est envoyé.
+- **Recherche dans le contenu des pages visitées** : garde en local le texte des pages lues pour retrouver une page par une phrase, dans l’Historique (Réglages › Vie privée et sécurité › Plus de réglages). Désactivée par défaut ; rien n’est gardé quand l’historique est coupé ; jamais en navigation privée ni mots de passe ; rien n’est envoyé.
 
 ## [1.1.5] - 2026-11-20
 

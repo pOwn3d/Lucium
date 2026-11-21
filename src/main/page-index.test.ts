@@ -1,7 +1,8 @@
-import { existsSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { DATA_FILE_MAX_BYTES } from './persist'
 import { PageIndexBook, eraseIndexWhenSwitchedOff, pageIndexFileName } from './page-index'
 
 const body = (s: string): string => `${s} ${'lorem ipsum dolor sit amet '.repeat(3)}`
@@ -54,6 +55,37 @@ describe('PageIndexBook', () => {
     expect(existsSync(join(d, 'page-index.json'))).toBe(false)
     expect(existsSync(join(d, 'page-index-travail.json'))).toBe(false)
     expect(readFileSync(join(d, 'history.json'), 'utf8')).toBe('[]')
+  })
+  it('eraseAll and erase also remove the files set aside, left over or being written, and nothing else', () => {
+    const d = dir()
+    const leftovers = ['page-index.json.corrupt-1763000000000', 'page-index.json.corrupt-1763000000000-1', 'page-index.json.future-1763000000000', 'page-index.json.tmp', 'page-index-travail.json.tmp-async', 'page-index-travail.json.corrupt-1763000000001']
+    const others = ['history.json', 'history.json.corrupt-1763000000000', 'page-index-notes.txt', 'page-index.json.bak']
+    for (const name of [...leftovers, ...others]) writeFileSync(join(d, name), '"secret text of a page"')
+    expect(new PageIndexBook(d).eraseAll()).toBe(true)
+    expect(readdirSync(d).sort()).toEqual([...others].sort())
+    for (const name of leftovers) writeFileSync(join(d, name), '"secret text of a page"')
+    expect(new PageIndexBook(d).erase('travail')).toBe(true)
+    expect(readdirSync(d).filter((name) => name.startsWith('page-index-travail'))).toEqual([])
+    expect(readdirSync(d)).toContain('page-index.json.corrupt-1763000000000')
+  })
+  it('a file set aside because it could not be read is gone after eraseAll', () => {
+    const d = dir()
+    writeFileSync(join(d, 'page-index.json'), '{"secret text of a page"')
+    const book = new PageIndexBook(d)
+    expect(book.of('default').size()).toBe(0)
+    expect(readdirSync(d).some((name) => name.startsWith('page-index.json.corrupt-'))).toBe(true)
+    expect(book.eraseAll()).toBe(true)
+    expect(readdirSync(d)).toEqual([])
+  })
+  it('does not read a file past the bound: it is set aside unread, and the index starts from none', () => {
+    const d = dir()
+    const path = join(d, 'page-index.json')
+    // Valid JSON (an empty list and blanks): only the size can make it refused.
+    writeFileSync(path, Buffer.concat([Buffer.from('[]'), Buffer.alloc(DATA_FILE_MAX_BYTES, 0x20)]))
+    const book = new PageIndexBook(d)
+    expect(book.of('default').size()).toBe(0)
+    expect(existsSync(path)).toBe(false)
+    expect(readdirSync(d).filter((name) => name.startsWith('page-index.json.corrupt-'))).toHaveLength(1)
   })
   it('sets aside a file it cannot read and starts again from none', () => {
     const d = dir()

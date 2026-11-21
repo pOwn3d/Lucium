@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PAGE_INDEX_PAGES_MAX, PAGE_INDEX_SCRIPT, PAGE_INDEX_TEXT_MAX, PAGE_INDEX_TOTAL_MAX, cleanIndex, cleanIndexText, indexableUrl, searchIndex, withPage, type IndexedPage } from './page-index'
+import { PAGE_INDEX_PAGES_MAX, PAGE_INDEX_SCRIPT, PAGE_INDEX_TEXT_MAX, PAGE_INDEX_TITLE_MAX, PAGE_INDEX_TOTAL_MAX, cleanIndex, cleanIndexText, indexableUrl, searchIndex, withPage, type IndexedPage } from './page-index'
 
 const text = (s: string): string => `${s} ${'lorem ipsum dolor sit amet '.repeat(3)}`
 const page = (url: string, body: string, at = 1, title = 'T'): IndexedPage => ({ url, title, text: text(body), at })
@@ -60,6 +60,27 @@ describe('cleanIndex', () => {
     const good = { ...raw, text: cleanIndexText(raw.text) }
     expect(cleanIndex([good, good, { url: 'file:///x', text: good.text, at: 1 }, null, 'x', { url: 'https://b.org/', text: 'short', at: 1 }])).toEqual([good])
     expect(cleanIndex({ not: 'a list' })).toEqual([])
+  })
+  // A file on the disk is read back as hostile: the bounds the writes keep are applied again, whatever the file says.
+  it('keeps at most PAGE_INDEX_PAGES_MAX pages of a file that holds more, the first ones', () => {
+    const raw = Array.from({ length: PAGE_INDEX_PAGES_MAX + 25 }, (_, i) => ({ url: `https://a.org/${i}`, title: '', text: `page number ${i} with enough text to be kept`, at: i }))
+    const pages = cleanIndex(raw)
+    expect(pages).toHaveLength(PAGE_INDEX_PAGES_MAX)
+    expect(pages[0]!.url).toBe('https://a.org/0')
+    expect(pages.at(-1)!.url).toBe(`https://a.org/${PAGE_INDEX_PAGES_MAX - 1}`)
+  })
+  it('drops the oldest pages of a file whose text is past PAGE_INDEX_TOTAL_MAX characters in all', () => {
+    const text = 'x'.repeat(PAGE_INDEX_TEXT_MAX)
+    const count = Math.ceil(PAGE_INDEX_TOTAL_MAX / PAGE_INDEX_TEXT_MAX) + 20
+    const pages = cleanIndex(Array.from({ length: count }, (_, i) => ({ url: `https://a.org/${i}`, title: '', text, at: i })))
+    expect(pages.length).toBeLessThan(count)
+    expect(pages.reduce((n, p) => n + p.text.length + p.url.length + p.title.length, 0)).toBeLessThanOrEqual(PAGE_INDEX_TOTAL_MAX)
+    expect(pages[0]!.url).toBe('https://a.org/0')
+  })
+  it('cuts the text of one page of a file at PAGE_INDEX_TEXT_MAX characters, and its title at PAGE_INDEX_TITLE_MAX', () => {
+    const [only] = cleanIndex([{ url: 'https://a.org/', title: 't'.repeat(PAGE_INDEX_TITLE_MAX * 3), text: 'y'.repeat(PAGE_INDEX_TEXT_MAX * 5), at: 1 }])
+    expect(only!.text).toHaveLength(PAGE_INDEX_TEXT_MAX)
+    expect(only!.title).toHaveLength(PAGE_INDEX_TITLE_MAX)
   })
 })
 

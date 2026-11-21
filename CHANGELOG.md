@@ -12,7 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
-- **Search the content of visited pages**: keeps the text of the pages you read on your computer, to find a page by a sentence in History (Settings › Privacy and security › More settings). Off by default; never private tabs or passwords; nothing is sent.
+- **Search the content of visited pages**: keeps the text of the pages you read on your computer, to find a page by a sentence in History (Settings › Privacy and security › More settings). Off by default; nothing is kept while History is off; never private tabs or passwords; nothing is sent.
 
 ## [1.1.5] - 2026-11-20
 

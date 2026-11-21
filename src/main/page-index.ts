@@ -4,7 +4,7 @@
 // The text stays on this machine: no network, no log of it. See shared/page-index.ts for what is kept and the bounds.
 
 import { existsSync, readdirSync, rmSync } from 'node:fs'
-import { basename, join } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { PAGE_INDEX_TOTAL_MAX, cleanIndex, searchIndex, withPage, withoutSite, type IndexedPage, type PageMatch } from '@shared/page-index'
 import { isProfileId } from '@shared/profiles'
 import { DEFAULT_HISTORY_PROFILE, historyFileName } from './history'
@@ -18,7 +18,37 @@ export function pageIndexFileName(profileId: string): string {
   return historyFileName(profileId).replace(/^history/, 'page-index')
 }
 
-const isIndexFile = (name: string): boolean => name === 'page-index.json' || /^page-index-(?:[a-z0-9_-]|~[a-z])+\.json$/.test(name)
+/** What `persist.ts` leaves next to a file it could not read (`.corrupt-<time>`, `.future-<time>`) or was writing (`.tmp`, `.tmp-async`): still the text of pages. */
+const SIDE_SUFFIX = /^(?:\.(?:corrupt|future)-[\w-]+|\.tmp(?:-async)?)$/
+
+const isIndexFile = (name: string): boolean => {
+  const at = name.indexOf('.json')
+  if (at < 0) return false
+  const base = name.slice(0, at + '.json'.length)
+  const rest = name.slice(base.length)
+  return (base === 'page-index.json' || /^page-index-(?:[a-z0-9_-]|~[a-z])+\.json$/.test(base)) && (rest === '' || SIDE_SUFFIX.test(rest))
+}
+
+/** Removes the files set aside next to an index file: a file set aside is kept by `persist.ts` for recovery, but an index rebuilds itself and holds page text. */
+function removeSideFiles(path: string): boolean {
+  let all = true
+  const own = `${basename(path)}.`
+  try {
+    for (const name of readdirSync(dirname(path))) {
+      if (!name.startsWith(own) || !SIDE_SUFFIX.test(name.slice(own.length - 1))) continue
+      try {
+        rmSync(join(dirname(path), name), { force: true })
+      } catch (error) {
+        console.error(`[page-index] ${name} could not be removed:`, error)
+        all = false
+      }
+    }
+  } catch (error) {
+    console.error(`[page-index] cannot list the files next to ${basename(path)}:`, error)
+    all = false
+  }
+  return all
+}
 
 class ProfileIndex {
   private pages: IndexedPage[] | null = null
@@ -101,13 +131,14 @@ class ProfileIndex {
     this.timer = null
     this.pages = []
     this.dirty = false
+    let gone = true
     try {
       rmSync(this.path, { force: true })
-      return true
     } catch (error) {
       console.error(`[page-index] ${basename(this.path)} could not be removed:`, error)
-      return false
+      gone = false
     }
+    return removeSideFiles(this.path) && gone
   }
 }
 

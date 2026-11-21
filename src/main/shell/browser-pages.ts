@@ -9,7 +9,7 @@ import { sameData } from '@shared/row-equality'
 import type { UnreadReading } from '@shared/tab-messages'
 import { LEAVE_FULLSCREEN, fullscreenReported, type FullscreenStep } from '@shared/html-fullscreen'
 import { parseCssColor } from '@shared/theme'
-import { profileOfSpace } from '@shared/profiles'
+import { profileOfSpace, profileRecordsHistory } from '@shared/profiles'
 import { linkWindowDestination } from '@shared/little-modifier'
 import { isOwnSite } from '@shared/party'
 import { httpsFallbackNotice } from '@shared/privacy'
@@ -391,6 +391,15 @@ export abstract class BrowserPages extends BrowserTools {
   }
 
   /**
+   * Whether the text of the pages of this space may be kept: the setting is on, and the profile of the space keeps its history (`profileRecordsHistory`, as `HistoryBook` does:
+   * `historyOf` still answers a store when the history is off, only its `record` is silent). Text of pages must not outlive a history that was switched off.
+   */
+  private indexingOn(spaceId: string): boolean {
+    const state = this.store.get()
+    return state.settings.pageContentIndex && profileRecordsHistory(state.settings, profileOfSpace(state, spaceId))
+  }
+
+  /**
    * The text of a page just loaded goes to the full-text index (page-index.ts) a moment later, once its scripts have drawn it, if the setting is still on and the
    * tab still shows the same page. Only a tab whose visit the history keeps gets here (`historyOf`): not a private tab, not a container's.
    * A page the script refuses (a password field) or that fails to answer is not indexed; a failure is logged with the host of the page only.
@@ -403,12 +412,12 @@ export abstract class BrowserPages extends BrowserTools {
       const current = now.tabs.find((candidate) => candidate.id === id)
       const book = getPageIndex()
       const page = this.pages.get(id)
-      if (!now.settings.pageContentIndex || book === null || page?.runPageIndex === undefined || !current || current.url !== url || current.private === true || page.showsError()) return
+      if (!this.indexingOn(spaceId) || book === null || page?.runPageIndex === undefined || !current || current.url !== url || current.private === true || page.showsError()) return
       const profileId = profileOfSpace(now, spaceId)
       void page.runPageIndex(PAGE_INDEX_SCRIPT).then(
         (answer) => {
           // Read again after the wait: the setting may have gone off, and the page may have changed under the script.
-          if (typeof answer !== 'string' || !this.store.get().settings.pageContentIndex) return
+          if (typeof answer !== 'string' || !this.indexingOn(spaceId)) return
           const after = this.store.get().tabs.find((candidate) => candidate.id === id)
           if (after?.url !== url) return
           book.of(profileId).add({ url, title: after.title, text: answer, at: Date.now() })
@@ -470,7 +479,7 @@ export abstract class BrowserPages extends BrowserTools {
       if (tab && patch.visit !== false && this.pages.get(id)?.showsError() !== true) {
         const log = this.historyOf(tab)
         log?.record(tab.url, tab.title)
-        if (log !== null && this.store.get().settings.pageContentIndex) this.scheduleIndexing(id, tab)
+        if (log !== null && this.indexingOn(tab.spaceId)) this.scheduleIndexing(id, tab)
       }
       // The colour is read by a script in the page, which only the bar above a page on screen shows: a page that loaded off screen has it
       // read when it comes on screen (sync), not at each load of a tab in the background.

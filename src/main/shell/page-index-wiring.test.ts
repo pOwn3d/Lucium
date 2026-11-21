@@ -45,10 +45,10 @@ afterEach(() => {
 describe('scheduleIndexing', () => {
   const tab = (patch: Record<string, unknown> = {}) => ({ id: 't1', url: URL_A, title: 'Tatin', spaceId: 's1', ...patch })
   function window(options: { on?: boolean; tab?: Record<string, unknown> | null; answer?: unknown; showsError?: boolean; canRun?: boolean } = {}) {
-    const state = { settings: { pageContentIndex: options.on ?? true }, tabs: options.tab === null ? [] : [tab(options.tab ?? {})], spaces: [{ id: 's1', profileId: 'default' }] }
+    const state = { settings: { pageContentIndex: options.on ?? true, historyOff: false, profiles: {} as Record<string, { historyOff?: boolean }> }, tabs: options.tab === null ? [] : [tab(options.tab ?? {})], spaces: [{ id: 's1', profileId: 'default' }] }
     const runPageIndex = vi.fn(async () => ('answer' in options ? options.answer : BODY))
     const page = { runPageIndex: options.canRun === false ? undefined : runPageIndex, showsError: () => options.showsError === true }
-    const self = shell({ store: { get: () => state }, pages: new Map([['t1', page]]) })
+    const self = shell({ store: { get: () => state }, pages: new Map([['t1', page]]), indexingOn: method('indexingOn') })
     return { self, state, runPageIndex }
   }
   const settle = async () => {
@@ -71,6 +71,47 @@ describe('scheduleIndexing', () => {
     await settle()
     expect(runPageIndex).not.toHaveBeenCalled()
     expect(book.of('default').size()).toBe(0)
+  })
+
+  // The history of a profile that does not record still answers a store (`historyOf`), so the index must ask the setting itself: text of pages must not outlive a history switched off.
+  describe('with the history switched off', () => {
+    const off: Array<[string, (settings: { historyOff: boolean; profiles: Record<string, { historyOff?: boolean }> }) => void]> = [
+      ['everywhere', (settings) => void (settings.historyOff = true)],
+      ['for the profile of the space', (settings) => void (settings.profiles['default'] = { historyOff: true })]
+    ]
+    for (const [name, switchOff] of off) {
+      it(`schedules nothing and reads nothing when it is off ${name}`, async () => {
+        const { self, state, runPageIndex } = window()
+        switchOff(state.settings)
+        method('scheduleIndexing').call(self, 't1', tab())
+        await settle()
+        expect(runPageIndex).not.toHaveBeenCalled()
+        expect(book.of('default').size()).toBe(0)
+      })
+      it(`keeps nothing when it goes off ${name} during the wait, or while the script runs`, async () => {
+        const waiting = window()
+        method('scheduleIndexing').call(waiting.self, 't1', tab())
+        switchOff(waiting.state.settings)
+        await settle()
+        expect(waiting.runPageIndex).not.toHaveBeenCalled()
+        const running = window()
+        const page = (running.self.pages as Map<string, { runPageIndex: () => Promise<unknown> }>).get('t1')!
+        page.runPageIndex = async () => {
+          switchOff(running.state.settings)
+          return BODY
+        }
+        method('scheduleIndexing').call(running.self, 't1', tab())
+        await settle()
+        expect(book.of('default').size()).toBe(0)
+      })
+    }
+    it('still indexes a profile that keeps its history when another profile does not', async () => {
+      const { self, state } = window()
+      state.settings.profiles['other'] = { historyOff: true }
+      method('scheduleIndexing').call(self, 't1', tab())
+      await settle()
+      expect(book.of('default').size()).toBe(1)
+    })
   })
 
   it('keeps nothing when the setting goes off while the script runs', async () => {
