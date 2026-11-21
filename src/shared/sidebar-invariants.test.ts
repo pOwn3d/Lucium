@@ -107,6 +107,8 @@ const FEATURES: ReadonlyArray<readonly [string, number]> = [
 
 class Gen {
   state: SidebarState
+  /** The clock of the run, as `play` moves it: the reminders are set relative to it. */
+  now = 1_700_000_000_000
   /** Earlier states, for the actions that bring a whole saved state back. */
   readonly history: SidebarState[] = []
   private serial = 0
@@ -290,6 +292,11 @@ const GENERATORS: Generators = {
   'readlater/add': (g) => ({ type: 'readlater/add', tabId: g.tabId() }),
   'readlater/open': (g) => ({ type: 'readlater/open', id: g.idFrom(g.state.readLater.map((i) => i.id)) }),
   'readlater/remove': (g) => ({ type: 'readlater/remove', id: g.idFrom(g.state.readLater.map((i) => i.id)) }),
+  // Relative to the clock of the run, which moves forward between steps: some reminders come due, and the odd one is already past.
+  'reminder/add': (g) => ({ type: 'reminder/add', tabId: g.tabWhere((tab) => tab.private !== true && /^https?:/.test(tab.url)), dueAt: g.chance(0.15) ? g.pick([0, 1, Number.NaN]) : g.now + g.pick([10 ** 5, 10 ** 6, 10 ** 7, 3 * 10 ** 7]) }),
+  'reminder/cancel': (g) => ({ type: 'reminder/cancel', id: g.idFrom(g.state.tabReminders.map((r) => r.id)) }),
+  'reminder/open': (g) => ({ type: 'reminder/open', id: g.idFrom(g.state.tabReminders.map((r) => r.id)) }),
+  'reminder/fire': () => ({ type: 'reminder/fire' }),
   'readlater/clear': () => ({ type: 'readlater/clear' }),
   'readlater-folder/create': (g) => ({ type: 'readlater-folder/create', name: g.text() }),
   'readlater-folder/rename': (g) => ({ type: 'readlater-folder/rename', id: g.idFrom(g.state.readLaterFolders.map((f) => f.id)), name: g.text() }),
@@ -759,6 +766,7 @@ export function play(seed: number, steps: number, survey?: (failure: Failure) =>
   let beforeText = canonical(gen.state)
   for (let step = 0; step < steps; step++) {
     ctx.now += gen.int(3 * 3_600_000)
+    gen.now = ctx.now
     // Mostly the actions of everyday use, now and then any other.
     const type = gen.chance(0.7) ? gen.pick(EVERYDAY) : gen.pick(types)
     const action = GENERATORS[type](gen) as Action
@@ -810,6 +818,7 @@ const EVERYDAY: Array<Action['type']> = [
   'tab/open', 'tab/open', 'tab/open', 'tab/open', 'tab/open', 'tab/open', 'tab/update', 'tab/update', 'tab/move', 'tabs/move', 'folder/create', 'tab/pin', 'tab/pin', 'tab/select', 'tab/close', 'tab/pin', 'tab/unpin', 'tab/move', 'tabs/move', 'tab/archive', 'tab/duplicate', 'tab/move-to-space', 'tab/rename',
   'folder/create', 'folder/create-with', 'folder/move', 'folder/delete', 'folder/duplicate', 'folder/to-space', 'folder/toggle', 'folder/bottom', 'folder/bottom', 'tabs/tidy', 'tabs/tidy', 'tabs/tidy', 'tabs/untidy', 'tabs/untidy',
   'space/create', 'space/select', 'space/update', 'space/move',
+  'reminder/add', 'reminder/fire', 'reminder/open',
   'favorite/add', 'favorite/open', 'favorite/remove', 'favorite/place', 'favorite/move',
   'split/create', 'split/create', 'split/create', 'split/remove', 'split/move', 'split/ratios', 'split/orientation', 'split/orientation', 'split/restore', 'split/layout', 'split/layout', 'split/grid', 'split/grid',
   'archive/restore', 'archive/restore-last', 'archive/sweep', 'tab/tree-collapse', 'tab/tree-detach', 'settings/update', 'tab/back-to-origin', 'import/merge', 'import/revert',

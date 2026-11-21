@@ -486,6 +486,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-open-with', 'open-with', t('Mémoriser l’application d’ouverture par type', 'Remember the opening app by type'), 'files', 'openWithMemory', { fold: true, label: t('Mémoriser l’application d’ouverture par type de fichier', 'Remember the opening app for each file type'), patch: { openWithMemory: true }, on: true, why: needsDownload }),
   setting('fn-open-unsaved', 'open-unsaved', t('Ouvrir sans l’enregistrer', 'Open Without Saving'), 'features', 'openUnsaved', { patch: { openUnsaved: true }, on: true, why: needsDownload }),
   setting('fn-pdf-with-source', 'pdf-with-source', t('Enregistrer en PDF avec l’adresse', 'Save as PDF with the address'), 'features', 'pdfWithSource', { patch: { pdfWithSource: true }, on: true, why: 'agit sur le fichier PDF enregistré' }),
+  setting('fn-tab-reminders', 'tab-reminders', t('Rappel d’onglet', 'Tab reminders'), 'features', 'tabReminders', { patch: { tabReminders: true }, on: true, why: 'agit à l’heure choisie (notification locale) : la démonstration ne peut pas attendre' }),
   direct('fn-bookmarks', 'bookmarks', t('Bibliothèque de signets avec étiquettes', 'Bookmark library with tags'), t(
     'La bibliothèque de signets : trois pages gardées avec leurs étiquettes, prêtes à chercher ou à trier',
     'The bookmark library: three pages kept with their tags, ready to search or sort'

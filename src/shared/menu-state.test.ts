@@ -24,6 +24,18 @@ describe('menuKey', () => {
     expect(key(run(base, { type: 'settings/update', patch: { shortcutHelp: !base.settings.shortcutHelp } }))).not.toBe(key())
   })
 
+  // Without these keys, File › Rappels d’onglets would stay as it was when a reminder is added or cancelled, or when the function is switched.
+  it('changes when a reminder is added or cancelled, and when the reminders are switched on or off', () => {
+    const withReminder = run(base, { type: 'reminder/add', tabId: base.tabs[0]!.id, dueAt: 10 ** 7 })
+    expect(withReminder.tabReminders).toHaveLength(1)
+    expect(key(withReminder)).not.toBe(key())
+    // Cancelling brings the key back to the one of the same state without a reminder (the added tab was closed: compare with a state that has none waiting).
+    const cancelled = run(withReminder, { type: 'reminder/cancel', id: withReminder.tabReminders[0]!.id })
+    expect(cancelled.tabReminders).toHaveLength(0)
+    expect(key(cancelled)).not.toBe(key(withReminder))
+    expect(key(run(base, { type: 'settings/update', patch: { tabReminders: false } }))).not.toBe(key())
+  })
+
   it('changes when the profil invité is switched on or off (File › Nouvelle fenêtre invité comes and goes), and is the same as before while it is off', () => {
     const on = run(base, { type: 'settings/update', patch: { guestProfile: true } })
     expect(key(on)).not.toBe(key())

@@ -118,6 +118,9 @@ export function menuKey(state: SidebarState, extensionIds: readonly string[], fa
     ...(state.settings.passwordManager ? { passwordManager: true } : {}),
     // The library functions (bookmarks, live folders, sites as applications): their entries come and go with their switches.
     library: [state.settings.bookmarkManager, state.settings.liveFolders, state.settings.webAppWindows],
+    // File › Rappels d’onglets lists what waits (the ids stand for their titles and times, which never change); absent with the function off or nothing waiting.
+    ...(state.settings.tabReminders && state.tabReminders.length > 0 ? { reminders: state.tabReminders.map((r) => r.id) } : {}),
+    ...(state.settings.tabReminders ? {} : { noReminders: true }),
     // File › Notes… comes and goes with its switch. On by default, so the key says so only when it is off.
     ...(state.settings.notes ? {} : { noNotes: true }),
     // File › Résumer la page… comes once the local model is ready; File › Annoter cette page binds ⌥⌘M in the menu unless the shortcut is system-wide.

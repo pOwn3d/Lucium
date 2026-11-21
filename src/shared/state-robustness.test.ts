@@ -296,6 +296,7 @@ function rich(): SidebarState {
     webHardware: true,
     annotateCapture: true,
     urlAutomation: true,
+    tabReminders: false,
     bookmarkManager: true,
     liveFolders: true,
     webAppWindows: true,
@@ -410,6 +411,7 @@ function rich(): SidebarState {
     archive: [archived],
     readLater: [later],
     readLaterFolders: [{ id: 'rlf-1', name: 'À classer', collapsed: true }],
+    tabReminders: [{ id: 'tr-1', url: 'https://rappel.example/page', title: 'À relire', spaceId: work.id, dueAt: 9_000_000, createdAt: 3 }],
     bookmarks: [{ id: 'bm-1', url: 'https://marque.example/page', title: 'Une page', tags: ['lecture', 'à voir'], note: 'Une note', faviconUrl: 'https://marque.example/i.png', addedAt: 4 }],
     activeSpaceId: work.id,
     activeTabBySpace: { [home.id]: 't-a', [work.id]: 't-c' },
@@ -726,6 +728,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
         ['column', 'row'].includes(v['layout'] as string) &&
         [v['x'], v['y']].every((n) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 20_000))),
   urlAutomation: bool,
+  tabReminders: bool,
   bookmarkManager: bool,
   liveFolders: bool,
   webAppWindows: bool,
@@ -753,7 +756,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
 }
 
 const LOADABLE_URL = /^(https?|file|about|chrome-extension|devtools|view-source):/i
-const TOP_LEVEL = ['version', 'revision', 'spaces', 'tabs', 'folders', 'favorites', 'archive', 'readLater', 'readLaterFolders', 'bookmarks', 'activeSpaceId', 'activeTabBySpace', 'sitePermissions', 'sidePanelBehavior', 'commandBarUsage', 'splits', 'boosts', 'sessions', 'workViews', 'settings']
+const TOP_LEVEL = ['version', 'revision', 'spaces', 'tabs', 'folders', 'favorites', 'archive', 'readLater', 'readLaterFolders', 'tabReminders', 'bookmarks', 'activeSpaceId', 'activeTabBySpace', 'sitePermissions', 'sidePanelBehavior', 'commandBarUsage', 'splits', 'boosts', 'sessions', 'workViews', 'settings']
 
 /** Every way a state that went through `normalize` may still be unfit to use. Empty means well formed. */
 function problems(state: SidebarState): string[] {
@@ -925,6 +928,14 @@ function problems(state: SidebarState): string[] {
   for (const f of state.readLaterFolders) {
     check(text(f.name) && f.name.trim() === f.name && f.name !== '' && f.name.length <= 100, `read-later folder name ${show(f.name)}`)
     check(keysOf(f).every((k) => ['id', 'name', 'collapsed'].includes(k)) && (f.collapsed === undefined || f.collapsed === true), `read-later folder keys ${keysOf(f).join()}`)
+  }
+
+  // The reminders: bounded, a web page and a finite time each, soonest first, in a space that exists or none.
+  check(Array.isArray(state.tabReminders) && state.tabReminders.length <= 200 && unique(state.tabReminders.map((r) => r.id)), 'tabReminders: size or duplicate ids')
+  for (const [i, r] of state.tabReminders.entries()) {
+    check(typeof r.url === 'string' && /^https?:\/\//i.test(r.url) && r.url.length <= 4096, `reminder url ${show(r.url)}`)
+    check(Number.isFinite(r.dueAt) && Number.isFinite(r.createdAt) && (i === 0 || state.tabReminders[i - 1]!.dueAt <= r.dueAt), `reminder time ${show(r.dueAt)}`)
+    check(r.spaceId === '' || state.spaces.some((s) => s.id === r.spaceId), `reminder space ${show(r.spaceId)}`)
   }
 
   // The bookmark library: bounded, each page once, printable text, tags that are clean and each once.

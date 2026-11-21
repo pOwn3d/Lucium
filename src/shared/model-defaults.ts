@@ -335,6 +335,7 @@ export function defaultSettings(): Settings {
     annotateAutoClearSeconds: DEFAULT_AUTO_CLEAR_SECONDS,
     annotateLetterKeys: true,
     urlAutomation: false,
+    tabReminders: true,
     bookmarkManager: false,
     liveFolders: false,
     webAppWindows: false,
