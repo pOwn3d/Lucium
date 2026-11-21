@@ -67,6 +67,54 @@ export function fullPageClip(size: { width: number; height: number }): { x: 0; y
   const side = (value: number, max: number): number => (Number.isFinite(value) ? Math.min(Math.max(Math.ceil(value), 1), max) : 1)
   return { x: 0, y: 0, width: side(size.width, CAPTURE_MAX_WIDTH), height: side(size.height, CAPTURE_MAX_HEIGHT), scale: 1 }
 }
+/**
+ * Run in the page before a full-page capture. A page often scrolls in a container of its own (the document is as tall as the window): the
+ * size of the document says nothing then. This finds the main scroller (the document, or the widest and tallest element that scrolls
+ * and is bigger than the window), walks it from top to bottom one window at a time so that lazy images load and endless pages show how far
+ * they go (never past `maxHeight`), puts it back where it was, and answers how tall the window must be for the whole of it to show.
+ */
+export function prepareFullCaptureScript(maxHeight: number): string {
+  return `(async () => {
+    const view = { width: innerWidth, height: innerHeight }
+    const scrolls = (el) => {
+      const style = getComputedStyle(el)
+      return /(auto|scroll|overlay)/.test(style.overflowY) && el.scrollHeight > el.clientHeight + 1 && el.clientWidth >= view.width * 0.5 && el.clientHeight >= view.height * 0.5
+    }
+    const root = document.scrollingElement || document.documentElement
+    let scroller = root
+    if (root.scrollHeight <= view.height + 1) {
+      let best = 0
+      for (const el of document.body ? document.body.querySelectorAll('*') : []) {
+        if (!scrolls(el)) continue
+        const room = el.scrollHeight - el.clientHeight
+        if (room > best) { best = room; scroller = el }
+      }
+    }
+    const start = scroller.scrollTop
+    const extra = () => Math.max(0, scroller.scrollHeight - scroller.clientHeight)
+    const limit = ${maxHeight}
+    const step = Math.max(200, scroller.clientHeight || view.height)
+    let top = 0
+    for (let i = 0; i < 80 && top <= extra() && view.height + extra() < limit + step; i++) {
+      scroller.scrollTop = top
+      await new Promise((done) => setTimeout(done, 120))
+      top += step
+    }
+    scroller.scrollTop = extra()
+    await new Promise((done) => setTimeout(done, 150))
+    const height = view.height + extra()
+    scroller.scrollTop = start
+    return { width: view.width, height, inner: scroller !== root }
+  })()`
+}
+
+/** What the preparation script answered, read field by field: a page can run scripts of its own, so nothing is taken as the type it should have. */
+export function readCaptureSize(raw: unknown): { width: number; height: number; inner: boolean } | null {
+  if (typeof raw !== 'object' || raw === null) return null
+  const { width, height, inner } = raw as { width?: unknown; height?: unknown; inner?: unknown }
+  return typeof width === 'number' && typeof height === 'number' && Number.isFinite(width) && Number.isFinite(height) && width > 0 && height > 0 ? { width, height, inner: inner === true } : null
+}
+
 // Eraser picker: highlights what is under the pointer; a click returns a CSS selector, Escape cancels.
 export const PICK_ELEMENT = `new Promise((resolve) => {
   const box = document.createElement('div')

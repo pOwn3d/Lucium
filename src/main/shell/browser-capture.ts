@@ -76,7 +76,7 @@ export abstract class BrowserCapture extends BrowserReload {
   }
 
   async capture(full: boolean): Promise<Buffer | null> {
-    return (await this.activePage()?.capture(full)) ?? null
+    return (await this.activePage()?.capture(full, undefined, (max) => this.showToast(t('capture.page-coupee', { max })))) ?? null
   }
 
   /** A small JPEG of what the active tab shows, for its hover card (thumbnails.ts); null without a page, or when it drew nothing. */

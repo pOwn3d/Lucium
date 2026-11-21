@@ -639,6 +639,7 @@ export const fr = {
   'capture.capture-enregistree': 'Capture enregistrée',
   'capture.copiee-dans-le-presse-papiers': 'Copiée dans le presse-papiers.',
   'capture.l-image-envoyee-par-la-feuille-n-est-pas-valide': 'L’image envoyée par la feuille n’est pas valide.',
+  'capture.page-coupee': 'La page est plus haute que la limite : la capture s’arrête à {max} pixels.',
   'capture.la-capture-de-la-page-n-a-pas-pu-etre-faite': 'La capture de la page n’a pas pu être faite. Le détail est dans le journal.',
   'capture.la-capture-de-la-zone-n-a-pas-pu-etre-faite': 'La capture de la zone n’a pas pu être faite. Le détail est dans le journal.',
   'capture.la-capture-n-a-pas-pu-etre-copiee': 'La capture n’a pas pu être copiée.',
