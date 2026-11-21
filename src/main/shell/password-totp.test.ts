@@ -166,6 +166,12 @@ describe('the code', () => {
     expect(reply.totp).toBeUndefined()
   })
 
+  it('gives the milliseconds left with the seconds', async () => {
+    await withKey()
+    clock = 59_900
+    expect((await ask({ kind: 'totp-code', id: id() })).totp).toMatchObject({ secondsLeft: 1, msLeft: 100 })
+  })
+
   it('is told by a sentence, and a kind in the log, when it cannot be made; the log says nothing of the key', async () => {
     await withKey()
     vi.spyOn(vault, 'totpOf').mockReturnValue({ secret: '1!', algorithm: 'SHA1', digits: 6, period: 30 })
@@ -173,6 +179,38 @@ describe('the code', () => {
     expect(reply).toMatchObject({ ok: false, message: t('pwd.l-operation-a-echoue') })
     expect(logged.some((line) => line.includes('computing a one-time code failed'))).toBe(true)
     expect(logged.join('\n')).not.toContain('1!')
+  })
+})
+
+describe('the idle lock while a code is on screen', () => {
+  const LOCK_MS = 10 * 60_000
+
+  const open = async (): Promise<void> => {
+    service.stop()
+    service = new PasswordService({ settings: () => settings, vault, power: noPower, files, now: () => clock, clipboard, autoLockMs: LOCK_MS })
+    await ask({ kind: 'lock' })
+    expect((await ask({ kind: 'unlock', phrase: PHRASE })).ok).toBe(true)
+    await withKey()
+  }
+
+  it('is not pushed back by the panel asking again by itself, so a code left on screen does not keep the vault open', async () => {
+    vi.useFakeTimers()
+    await open()
+    for (let minute = 0; minute < 9; minute++) {
+      await vi.advanceTimersByTimeAsync(60_000)
+      expect((await ask({ kind: 'totp-code', id: id(), auto: true })).ok).toBe(true)
+    }
+    await vi.advanceTimersByTimeAsync(61_000)
+    expect(vault.isUnlocked()).toBe(false)
+  })
+
+  it('is pushed back by a person asking for the code', async () => {
+    vi.useFakeTimers()
+    await open()
+    await vi.advanceTimersByTimeAsync(LOCK_MS - 1000)
+    expect((await ask({ kind: 'totp-code', id: id() })).ok).toBe(true)
+    await vi.advanceTimersByTimeAsync(LOCK_MS - 1000)
+    expect(vault.isUnlocked()).toBe(true)
   })
 })
 

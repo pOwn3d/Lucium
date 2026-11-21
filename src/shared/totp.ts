@@ -35,6 +35,8 @@ export interface TotpCode {
   id: string
   code: string
   secondsLeft: number
+  /** The same time in milliseconds: the panel counts down by this one, so that a code is not shown up to a second after its end. */
+  msLeft: number
   period: number
 }
 
@@ -44,6 +46,8 @@ const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
 
 /** The bytes of a base32 text (spaces, hyphens, `=` padding and the case are not significant); null for anything else. */
 export function decodeBase32(text: string): Uint8Array | null {
+  // Checked before the case is changed: toUpperCase() turns « ß » into « SS » and « ﬁ » into « FI », which would be taken for base32.
+  if (!/^[A-Za-z2-7=\s-]*$/u.test(text)) return null
   const clean = text.replace(/[\s-]/gu, '').replace(/=+$/u, '').toUpperCase()
   // Lengths of 1, 3 and 6 characters (mod 8) cannot come out of an encoding.
   if (clean === '' || [1, 3, 6].includes(clean.length % 8)) return null

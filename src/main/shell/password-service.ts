@@ -299,7 +299,7 @@ export class PasswordService {
       case 'totp-remove':
         return this.totpRemove(request.id, window)
       case 'totp-code':
-        return this.totpCode(request.id, window)
+        return this.totpCode(request.id, request.auto === true, window)
       case 'totp-copy':
         return this.totpCopy(request.id, window)
     }
@@ -552,7 +552,7 @@ export class PasswordService {
   }
 
   /** The code of now for an entry, or the sentence for why there is none. */
-  private codeOf(id: string): { code: string; secondsLeft: number; period: number } | string {
+  private codeOf(id: string): { code: string; secondsLeft: number; msLeft: number; period: number } | string {
     const config = this.deps.vault.totpOf(id)
     if (config === null) return t('pwd.totp-absent')
     try {
@@ -562,11 +562,12 @@ export class PasswordService {
     }
   }
 
-  private totpCode(id: string, window: PasswordWindow): PasswordReply {
+  private totpCode(id: string, auto: boolean, window: PasswordWindow): PasswordReply {
     if (!this.deps.vault.isUnlocked()) return this.reply(window, false, t('pwd.le-coffre-est-verrouille'))
     const made = this.codeOf(id)
     if (typeof made === 'string') return this.reply(window, false, made)
-    this.touch()
+    // The panel asks again by itself when a code ends: that is a clock, not a person, and must not keep the vault open for ever.
+    if (!auto) this.touch()
     return this.reply(window, true, undefined, { totp: { id, ...made } })
   }
 

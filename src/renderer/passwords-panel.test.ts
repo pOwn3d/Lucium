@@ -147,10 +147,10 @@ describe('the one-time codes of an entry', () => {
   const row = (patch: Partial<PasswordsView['entries'][number]> = {}) => ({ id: 'a'.repeat(32), origin: 'https://example.com', host: 'example.com', username: 'ana', totp: true, updatedAt: 1, ...patch })
   const unlocked = (entries = [row()]): PasswordsView => view({ vault: 'unlocked', entries })
   /** The main process answers a request for a code with these digits and the seconds they last. */
-  const answersCode = (code: string, secondsLeft: number): void => {
+  const answersCode = (code: string, secondsLeft: number, msLeft = secondsLeft * 1000): void => {
     passwords.mockImplementation(async (request: PasswordRequest) => {
       if (request.kind === 'lock') held = view({ vault: 'locked' })
-      return { ok: true, view: held, ...(request.kind === 'totp-code' ? { totp: { id: request.id, code, secondsLeft, period: 30 } } : {}) } as PasswordReply
+      return { ok: true, view: held, ...(request.kind === 'totp-code' ? { totp: { id: request.id, code, secondsLeft, msLeft, period: 30 } } : {}) } as PasswordReply
     })
   }
 
@@ -187,6 +187,25 @@ describe('the one-time codes of an entry', () => {
     expect(passwords.mock.calls.filter(([request]) => request.kind === 'totp-code')).toHaveLength(2)
   })
 
+  it('does not keep a code on screen after its end: it counts down by the milliseconds, and asks again by itself (auto)', async () => {
+    vi.useFakeTimers()
+    answersCode('111111', 1, 100)
+    const container = await panel(unlocked())
+    await click(button(container, t('passwords-panel.totp-code')))
+    expect(passwords).toHaveBeenLastCalledWith({ kind: 'totp-code', id: 'a'.repeat(32) })
+    answersCode('222222', 30)
+    await settle(() => void vi.advanceTimersByTime(500))
+    expect(container.querySelector('.passwords-code')?.textContent).toBe('222 222')
+    expect(passwords).toHaveBeenLastCalledWith({ kind: 'totp-code', id: 'a'.repeat(32), auto: true })
+  })
+
+  it('names the code for a reader by its digits, not by a label on a plain span', async () => {
+    answersCode('654321', 20)
+    const container = await panel(unlocked())
+    await click(button(container, t('passwords-panel.totp-code')))
+    expect(container.querySelector('.passwords-code')?.hasAttribute('aria-label')).toBe(false)
+  })
+
   it('goes from the screen when the main process has no code to give, and is not asked for again in a loop', async () => {
     vi.useFakeTimers()
     passwords.mockImplementation(async () => ({ ok: false, message: 'no key', view: held }) as PasswordReply)
@@ -207,6 +226,9 @@ describe('the one-time codes of an entry', () => {
     await click(button(container, t('passwords-panel.totp-enregistrer-la-cle')))
     expect(passwords).toHaveBeenLastCalledWith({ kind: 'totp-set', id: 'a'.repeat(32), secret: 'gezd gnbv gy3t qojq gezd gnbv gy3t qojq' })
     expect(container.querySelector(`#pw-totp-${'a'.repeat(32)}`)).toBeNull()
+    // The key is gone from the state too, not only from the screen: opening the field again starts empty.
+    await click(button(container, t('passwords-panel.totp-ajouter')))
+    expect(field(container, `pw-totp-${'a'.repeat(32)}`).value).toBe('')
   })
 
   it('keeps what was typed when the key is refused, so that it can be corrected, and drops it on « Annuler »', async () => {

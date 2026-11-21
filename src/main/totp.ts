@@ -7,8 +7,8 @@ import { decodeBase32, type TotpAlgorithm, type TotpConfig } from '@shared/totp'
 
 const HASHES: Record<TotpAlgorithm, string> = { SHA1: 'sha1', SHA256: 'sha256', SHA512: 'sha512' }
 
-/** The code of `config` at the time `atMs` (milliseconds since the epoch), and the whole seconds left before it changes (1 to `period`). */
-export function totpAt(config: TotpConfig, atMs: number): { code: string; secondsLeft: number } {
+/** The code of `config` at the time `atMs` (milliseconds since the epoch), and the time left before it changes: whole seconds (1 to `period`) and milliseconds (what a screen counts down by, so that it never keeps a code past its end). */
+export function totpAt(config: TotpConfig, atMs: number): { code: string; secondsLeft: number; msLeft: number } {
   if (!Number.isFinite(atMs) || atMs < 0) throw new Error('the time is not a time')
   const key = decodeBase32(config.secret)
   if (key === null) throw new Error('the key is not base32')
@@ -20,5 +20,5 @@ export function totpAt(config: TotpConfig, atMs: number): { code: string; second
   const offset = mac[mac.length - 1]! & 0x0f
   const binary = ((mac[offset]! & 0x7f) << 24) | (mac[offset + 1]! << 16) | (mac[offset + 2]! << 8) | mac[offset + 3]!
   const code = String(binary % 10 ** config.digits).padStart(config.digits, '0')
-  return { code, secondsLeft: config.period - (seconds % config.period) }
+  return { code, secondsLeft: config.period - (seconds % config.period), msLeft: config.period * 1000 - (atMs % (config.period * 1000)) }
 }

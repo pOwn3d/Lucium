@@ -39,7 +39,9 @@ describe('the code of RFC 6238', () => {
   })
 
   it('counts the seconds left in the period, from the period down to 1', () => {
-    expect(totpAt(configOf('SHA1'), 60_000).secondsLeft).toBe(30)
+    expect(totpAt(configOf('SHA1'), 60_000)).toMatchObject({ secondsLeft: 30, msLeft: 30_000 })
+    expect(totpAt(configOf('SHA1'), 89_900)).toMatchObject({ secondsLeft: 1, msLeft: 100 })
+    expect(totpAt(configOf('SHA1', 6, 60), 61_250).msLeft).toBe(58_750)
     expect(totpAt(configOf('SHA1'), 60_999).secondsLeft).toBe(30)
     expect(totpAt(configOf('SHA1'), 89_000).secondsLeft).toBe(1)
     expect(totpAt(configOf('SHA1', 6, 60), 61_000).secondsLeft).toBe(59)

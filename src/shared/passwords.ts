@@ -283,7 +283,7 @@ export type PasswordRequest =
   | { kind: 'totp-set'; id: string; secret: string }
   | { kind: 'totp-remove'; id: string }
   /** The code of now for an entry, to show with its countdown. */
-  | { kind: 'totp-code'; id: string }
+  | { kind: 'totp-code'; id: string; auto?: true }
   /** Puts the code of now on the clipboard (from the main process: the page is not told), and takes it off after `clipboardClearMs`. */
   | { kind: 'totp-copy'; id: string }
 
@@ -374,10 +374,13 @@ export function parsePasswordRequest(raw: unknown): PasswordRequest | null {
       return only('address', 'username', 'password') && typeof raw['address'] === 'string' && raw['address'].length <= 2048 && typeof raw['username'] === 'string' && raw['username'].length <= PASSWORD_LIMITS.username * 2 && typeof raw['password'] === 'string' && raw['password'].length <= PASSWORD_LIMITS.password * 2
         ? { kind: 'add', address: raw['address'], username: raw['username'], password: raw['password'] }
         : null
+    case 'totp-code':
+      // `auto` is the panel's own refresh when a code ends; it does not count as the person's activity (the idle lock keeps running).
+      if (raw['auto'] !== undefined) return only('id', 'auto') && idOf(raw['id']) && raw['auto'] === true ? { kind: 'totp-code', id: raw['id'], auto: true } : null
+      return only('id') && idOf(raw['id']) ? { kind: 'totp-code', id: raw['id'] } : null
     case 'remove':
     case 'fill':
     case 'totp-remove':
-    case 'totp-code':
     case 'totp-copy':
       return only('id') && idOf(raw['id']) ? ({ kind: raw['kind'], id: raw['id'] } as PasswordRequest) : null
     case 'totp-set':

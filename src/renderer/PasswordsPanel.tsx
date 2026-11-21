@@ -150,16 +150,16 @@ export function PasswordsPanel() {
   // The code on screen is asked for again when its time is over: the digits shown are always the ones of now, never an old one left on screen.
   const shownSeconds = useCountdown(shown?.until ?? 0)
   const showCode = useCallback(
-    async (id: string) => {
-      const reply = await ask({ kind: 'totp-code', id })
+    async (id: string, auto = false) => {
+      const reply = await ask(auto ? { kind: 'totp-code', id, auto: true } : { kind: 'totp-code', id })
       if (!live.current) return
-      setShown(reply?.totp ? { id, code: reply.totp.code, until: Date.now() + reply.totp.secondsLeft * 1000 } : null)
+      setShown(reply?.totp ? { id, code: reply.totp.code, until: Date.now() + reply.totp.msLeft } : null)
     },
     [ask]
   )
   const shownId = shown?.id
   useEffect(() => {
-    if (shownId !== undefined && shownSeconds === 0) void showCode(shownId)
+    if (shownId !== undefined && shownSeconds === 0) void showCode(shownId, true)
   }, [shownId, shownSeconds, showCode])
 
   if (failure !== null) {
@@ -393,7 +393,13 @@ export function PasswordsPanel() {
                             {shown?.id === row.id ? t('passwords-panel.totp-cacher-le-code') : t('passwords-panel.totp-code')}
                           </button>
                         ) : (
-                          <button type="button" className="link-button" disabled={busy} aria-expanded={totpFor === row.id} aria-label={t('passwords-panel.totp-ajouter-a-username-sur-host', { username: row.username, host: row.host })} onClick={() => (setTotpKey(''), setTotpFor(totpFor === row.id ? null : row.id))}>
+                          <button type="button" className="link-button" disabled={busy} aria-expanded={totpFor === row.id} aria-label={t('passwords-panel.totp-ajouter-a-username-sur-host', { username: row.username, host: row.host })}
+                            // Opening a closed field starts from what the save, the cancel or the lock left (empty); closing it or going to another row drops what was typed.
+                            onClick={() => {
+                              if (totpFor !== null) setTotpKey('')
+                              setTotpFor(totpFor === row.id ? null : row.id)
+                            }}
+                          >
                             {t('passwords-panel.totp-ajouter')}
                           </button>
                         )}
@@ -404,7 +410,7 @@ export function PasswordsPanel() {
                     )}
                     {row.totp && shown?.id === row.id && (
                       <div className="passwords-totp">
-                        <span className="passwords-code" aria-label={t('passwords-panel.totp-code')}>
+                        <span className="passwords-code">
                           {groupedCode(shown.code)}
                         </span>
                         <span className="muted">{t('passwords-panel.totp-valable-seconds-s', { seconds: shownSeconds })}</span>

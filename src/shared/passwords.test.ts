@@ -239,6 +239,9 @@ describe('what the panel may ask', () => {
   it('knows the requests about one-time codes, each with exactly its fields', () => {
     expect(parsePasswordRequest({ kind: 'totp-set', id, secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' })).toEqual({ kind: 'totp-set', id, secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' })
     for (const kind of ['totp-remove', 'totp-code', 'totp-copy']) expect(parsePasswordRequest({ kind, id })).toEqual({ kind, id })
+    expect(parsePasswordRequest({ kind: 'totp-code', id, auto: true })).toEqual({ kind: 'totp-code', id, auto: true })
+    for (const auto of [false, 'yes', 1, null]) expect(parsePasswordRequest({ kind: 'totp-code', id, auto }), String(auto)).toBeNull()
+    expect(parsePasswordRequest({ kind: 'totp-copy', id, auto: true })).toBeNull()
     for (const bad of [
       { kind: 'totp-set', id },
       { kind: 'totp-set', id, secret: 5 },

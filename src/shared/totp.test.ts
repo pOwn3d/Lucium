@@ -21,6 +21,12 @@ describe('base32', () => {
     for (const bad of ['', '   ', 'MZXW6YT1', 'MZXW6YT!', 'M', 'MZX', 'MZXW6Y']) expect(decodeBase32(bad), bad).toBeNull()
   })
 
+  it('refuses what only becomes base32 once the case is changed (« ß » is « SS », « ﬁ » is « FI » in upper case)', () => {
+    expect(decodeBase32('MZXW6YTBOI======')).not.toBeNull()
+    for (const bad of ['ßßßßßßßßßß', 'MZXW6YTBﬁ', 'MZXW6YTBOß']) expect(decodeBase32(bad), bad).toBeNull()
+    expect(parseTotpInput('ßßßßßßßßßßßßßßßßßßßß')).toEqual({ ok: false, problem: 'invalid' })
+  })
+
   it('round-trips bytes of every length', () => {
     for (let length = 1; length <= 40; length++) {
       const bytes = Uint8Array.from({ length }, (_, i) => (i * 37 + length) & 0xff)
