@@ -71,6 +71,14 @@ describe('reminder/add', () => {
     expect(next.tabs.map((t) => t.url)).toEqual(['https://b.example/'])
   })
 
+  it('gives a tab with no title its host, so that the saved state reads back unchanged', () => {
+    const state = stateWithTabs(['https://a.example/x'], ctx)
+    const untitled = { ...state, tabs: state.tabs.map((t) => ({ ...t, title: '' })) }
+    const next = add(untitled, state.tabs[0]!.id)
+    expect(next.tabReminders[0]!.title).toBe('a.example')
+    expect(normalize(JSON.parse(JSON.stringify(next))).tabReminders).toEqual(next.tabReminders)
+  })
+
   it('keeps a pinned tab open', () => {
     const state = stateWithTabs(['https://a.example/'], ctx)
     const pinned = { ...state, tabs: state.tabs.map((t) => ({ ...t, pinned: true as const })) }

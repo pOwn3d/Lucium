@@ -4,7 +4,7 @@
 
 import { TAB_REMINDER_LIMIT, tabName, type TabItem, type TabReminder } from './model'
 import type { Ctx } from './sidebar'
-import { isReadLaterUrl, readLaterFavicon } from './state-clean'
+import { cleanTabReminders, isReadLaterUrl } from './state-clean'
 import { t } from './i18n'
 
 /** What a reminder asks of the list. `unsupported`: not a web page; `full`: the list is at its limit; `soon`: the time is not in the future. */
@@ -17,11 +17,9 @@ export function tabReminderOutcome(list: readonly TabReminder[], tab: Pick<TabIt
   return list.length >= TAB_REMINDER_LIMIT ? 'full' : 'saved'
 }
 
-/** The entry for a tab, null for a tab that cannot be put away. */
+/** The entry for a tab, null for a tab that cannot be put away. It is repaired as a file's entry is (a tab with no title gets its host), so that a saved state reads back unchanged. */
 export function tabReminderOf(tab: TabItem, dueAt: number, ctx: Ctx): TabReminder | null {
-  if (!isReadLaterUrl(tab.url)) return null
-  const favicon = readLaterFavicon(tab.faviconUrl)
-  return { id: ctx.newId(), url: tab.url, title: tabName(tab), ...(favicon ? { faviconUrl: favicon } : {}), spaceId: tab.spaceId, dueAt, createdAt: ctx.now }
+  return cleanTabReminders([{ id: ctx.newId(), url: tab.url, title: tabName(tab), faviconUrl: tab.faviconUrl, spaceId: tab.spaceId, dueAt, createdAt: ctx.now }], new Set([tab.spaceId]))[0] ?? null
 }
 
 /** The list with the entry added (or, for an address already there, moved to the new time), soonest first. */
