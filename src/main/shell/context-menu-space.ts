@@ -13,6 +13,7 @@ import { t, tp } from '@shared/i18n'
 import type { StateStore } from '../store'
 import type { Browser } from './browser'
 import { asideSpace, withEveryWindowsTabs } from './space-aside'
+import { exportSpace, importSpace } from './space-transfer'
 import { applyThemeToAll, copySpaceTheme, pasteTheme } from './theme-actions'
 import { themeEnvironment } from './theme-environment'
 import { runThemeFileRequest } from './boost-share'
@@ -149,6 +150,9 @@ export function spaceMenuItems(target: Extract<MenuTarget, { kind: 'space' }>, b
         ...webPanelMenuItems(browser, state, space).map((item) => entry('panel', item)),
         // Closes the pages and keeps the space (theme, settings, tabs) as a session, to open again later: the reversible way to get a space out of the way.
         entry('aside', { label: t('menu.mettre-l-espace-de-cote'), enabled: asideRefusal(withEveryWindowsTabs(store), space.id) === null, ...key('asideSpace'), click: () => asideSpace(browser, store, win, space.id) }),
+        // The space with its tabs, folders and archive in a file for another Mac (no cookies, no passwords); a locked space does not leave.
+        entry('export', { label: t('space-transfer.exporter-cet-espace'), enabled: free && !browser.isPrivate(), ...whyLocked, click: () => void exportSpace(browser, store, win, space.id) }),
+        entry('import', { label: t('space-transfer.importer-un-espace'), enabled: !browser.isPrivate(), click: () => void importSpace(browser, store, win) }),
         ...spaceLockItems(space.id, state, browser).map((item) => entry('lock', item)),
         entry('grid', { label: t('menu.gerer-les-espaces'), ...key('manageSpaces', true), click: () => browser.openOverlay({ panel: 'spaces' }) })
       ]),

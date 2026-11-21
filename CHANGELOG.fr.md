@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Un espace vers un autre Mac** : Espaces › Exporter cet espace… enregistre un espace avec ses onglets, ses dossiers et son archive dans un fichier, chiffré par une phrase secrète si vous le voulez ; Espaces › Importer un espace… l’ajoute sur un autre Mac, sans serveur. Ni cookies, ni mots de passe.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.
