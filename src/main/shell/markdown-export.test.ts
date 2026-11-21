@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync, existsSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, existsSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -315,6 +315,37 @@ describe('savePage', () => {
     ui.chooseSave.mockResolvedValue(null)
     await savePage(target())
     expect(ui.confirmPrivate).not.toHaveBeenCalled()
+  })
+
+  it('never writes into an images folder that already exists: it takes the next free name and links that one', async () => {
+    mkdirSync(join(dir, 'Cours-images'))
+    writeFileSync(join(dir, 'Cours-images', 'image-001.png'), 'USERFILE')
+    writeFileSync(join(dir, 'Cours-images', 'mine.png'), 'MINE')
+    page.markdownPage.mockResolvedValue(whole())
+    ui.chooseSave.mockResolvedValue(join(dir, 'Cours.md'))
+    page.downloadImages.mockResolvedValue(downloaded([{ reference: 'image-1', name: 'images/image-001.png' }, { reference: 'image-2', name: 'images/image-002.jpg' }]))
+    await savePage(target())
+    expect(readFileSync(join(dir, 'Cours-images', 'image-001.png'), 'utf8')).toBe('USERFILE')
+    expect(readdirSync(join(dir, 'Cours-images')).sort()).toEqual(['image-001.png', 'mine.png'])
+    expect(readdirSync(join(dir, 'Cours-images-2')).sort()).toEqual(['image-001.png', 'image-002.jpg'])
+    const markdown = readFileSync(join(dir, 'Cours.md'), 'utf8')
+    expect(markdown).toContain('[image-1]: Cours-images-2/image-001.png')
+    expect(markdown).not.toContain('Cours-images/')
+    // A third save finds -2 taken too.
+    await savePage(target())
+    expect(readFileSync(join(dir, 'Cours.md'), 'utf8')).toContain('[image-1]: Cours-images-3/image-001.png')
+    expect(readdirSync(join(dir, 'Cours-images-2')).sort()).toEqual(['image-001.png', 'image-002.jpg'])
+  })
+
+  it('does not follow a link that has the name of the images folder', async () => {
+    mkdirSync(join(dir, 'elsewhere'))
+    symlinkSync(join(dir, 'elsewhere'), join(dir, 'Cours-images'))
+    page.markdownPage.mockResolvedValue(whole())
+    ui.chooseSave.mockResolvedValue(join(dir, 'Cours.md'))
+    page.downloadImages.mockResolvedValue(downloaded([{ reference: 'image-1', name: 'images/image-001.png' }]))
+    await savePage(target())
+    expect(readdirSync(join(dir, 'elsewhere'))).toEqual([])
+    expect(readdirSync(join(dir, 'Cours-images-2'))).toEqual(['image-001.png'])
   })
 
   it('says so when the page gives nothing readable, when it has no text, and when the disk refuses', async () => {

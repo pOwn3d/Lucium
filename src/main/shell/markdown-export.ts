@@ -170,6 +170,24 @@ export async function copySelection(target: MarkdownTarget): Promise<void> {
 }
 
 /**
+ * Creates the images folder beside the .md and says its name. A folder (or a file, or a link) that already has the name is never touched, nor
+ * filled: `mkdir` without `recursive` fails on it, and the next free name `<name>-2`, `<name>-3`… is taken instead, so no file of the user is replaced
+ * and no file of two saves is mixed.
+ */
+async function newImagesFolder(parent: string, wanted: string): Promise<string> {
+  for (let attempt = 1; attempt <= 1000; attempt++) {
+    const name = attempt === 1 ? wanted : `${wanted}-${attempt}`
+    try {
+      await mkdir(join(parent, name))
+      return name
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error
+    }
+  }
+  throw new Error(`no free folder name for ${wanted}`)
+}
+
+/**
  * File › Save the page as Markdown… : the main content of the page, whole, no picker. A .md file with a folder `<name>-images/` beside it, the
  * images linked by relative paths. A private tab is asked about first: the page would leave a trace on disk. The images come from the page's
  * own list, downloaded with the session of the tab, under the same caps as the archive; one that fails stays a link to its site.
@@ -191,10 +209,9 @@ export async function savePage(target: MarkdownTarget): Promise<void> {
     if (result.images.length > 0) {
       target.toast(result.images.length > 1 ? t('markdown-export.telechargement-des-images', { count: result.images.length }) : t('markdown-export.telechargement-de-l-image'))
       const downloaded = await target.page.downloadImages(result.images, { referrer: target.url })
-      const folder = imagesFolderName(basename(path))
       if (downloaded.files.length > 0) {
-        await mkdir(join(dirname(path), folder), { recursive: true })
-        // The archive names its files `images/image-001.png`; here they sit straight in the folder.
+        const folder = await newImagesFolder(dirname(path), imagesFolderName(basename(path)))
+        // The archive names its files `images/image-001.png`; here they sit straight in the folder. The folder was just created by us, so nothing of the user's is replaced.
         for (const file of downloaded.files) await writeFile(join(dirname(path), folder, file.name.replace(/^images\//, '')), file.data)
         for (const file of downloaded.files) local.set(file.reference, folderImageLink(folder, file.name))
       }

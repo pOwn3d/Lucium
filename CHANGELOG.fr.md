@@ -6,7 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Ajouts
 
-- **Enregistrer la page en Markdown** : Fichier › Enregistrer la page en Markdown… et la barre de commandes enregistrent le contenu principal de la page en un clic : un fichier `.md` et un dossier `<nom>-images/` à côté. Un onglet privé demande d’abord.
+- **Enregistrer la page en Markdown** : Fichier › Enregistrer la page en Markdown… et la barre de commandes enregistrent le contenu principal de la page en un clic : un fichier `.md` et un dossier `<nom>-images/` à côté. Un onglet privé demande d’abord ; un dossier existant n’est jamais réutilisé (`-2`).
 
 ## [1.1.5] - 2026-11-20
 
