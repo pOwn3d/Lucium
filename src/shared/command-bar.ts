@@ -24,7 +24,7 @@ import type { BarScope } from './command-bar-groups'
 // Moved to modules of their own, still importable from here.
 export { type CommandAction, type Candidate } from './command-bar-types'
 export { foldedText, foldedQuery, matchScore, scoreFolded } from './command-bar-match'
-export { windowSidebarActions, windowSidebarChangeOf, jotCandidate } from './command-bar-sources'
+export { windowSidebarActions, windowSidebarChangeOf, jotCandidate, bookmarkCandidates } from './command-bar-sources'
 export { actionToDispatch, candidateDispatches } from './command-bar-actions'
 export { candidateHint, actionShortcut, actionDetail } from './command-bar-shortcuts'
 export { type CandidateGroup, candidateGroup, groupCandidates, groupStarts, groupTitle, type BarScope, SCOPE_PREFIX, splitScope, inScope } from './command-bar-groups'

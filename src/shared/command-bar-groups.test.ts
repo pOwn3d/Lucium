@@ -2,7 +2,7 @@
 // comes first and why) is in command-bar.test.ts and command-bar-search.test.ts; here it is only checked that grouping leaves it alone.
 
 import { describe, expect, it } from 'vitest'
-import { BAR_WIDTH, PREVIEW_WIDTH, actionShortcut, actionToDispatch, barLayout, candidateGroup, candidatePreview, groupCandidates, groupStarts, groupTitle, inScope, rankCandidates, siteHomeFor, splitScope, type Candidate } from './command-bar'
+import { bookmarkCandidates, BAR_WIDTH, PREVIEW_WIDTH, actionShortcut, actionToDispatch, barLayout, candidateGroup, candidatePreview, groupCandidates, groupStarts, groupTitle, inScope, rankCandidates, siteHomeFor, splitScope, type Candidate } from './command-bar'
 import type { HistoryEntry, SidebarState } from './model'
 import { createInitialState, reduce, type Action, type Ctx } from './sidebar'
 import { frenchSpaces } from './french-typography'
@@ -134,6 +134,40 @@ describe('the genre chips and the letters that name them', () => {
     expect(splitScope('>thème')).toEqual({ scope: 'commands', text: 'thème' })
     expect(splitScope('@agenda')).toEqual({ scope: 'tabs', text: 'agenda' })
     expect(splitScope('@')).toEqual({ scope: 'tabs', text: '' })
+  })
+
+  it('reads `*` as the bookmarks and `^` as the history, and the words `@bookmarks` and `@history` the same', () => {
+    expect(splitScope('* recette')).toEqual({ scope: 'bookmarks', text: 'recette' })
+    expect(splitScope('*')).toEqual({ scope: 'bookmarks', text: '' })
+    expect(splitScope('^météo')).toEqual({ scope: 'history', text: 'météo' })
+    expect(splitScope('@bookmarks recette')).toEqual({ scope: 'bookmarks', text: 'recette' })
+    expect(splitScope('@Bookmarks')).toEqual({ scope: 'bookmarks', text: '' })
+    expect(splitScope('@history  météo')).toEqual({ scope: 'history', text: 'météo' })
+  })
+
+  it('keeps `@` followed by any other word as the open tabs', () => {
+    expect(splitScope('@historyx')).toEqual({ scope: 'tabs', text: 'historyx' })
+    expect(splitScope('@bookmark')).toEqual({ scope: 'tabs', text: 'bookmark' })
+  })
+
+  it('keeps only the bookmarks in the bookmarks genre', () => {
+    const lines: Candidate[] = [
+      { kind: 'bookmark', id: 'bookmark:1', label: 'Recette', detail: '', bookmarkId: '1' },
+      { kind: 'history', id: 'history:u', label: 'u', detail: '', url: 'https://u.test/' },
+      { kind: 'open', id: 'q', label: 'q', detail: '', url: 'https://q.test/', search: true }
+    ]
+    expect(inScope(lines, 'bookmarks').map((c) => c.kind)).toEqual(['bookmark'])
+    expect(inScope(lines, 'history').map((c) => c.kind)).toEqual(['history'])
+  })
+
+  it('lists the bookmarks with nothing typed, up to the asked limit, and none in a private window or with the library off', () => {
+    const marks = Array.from({ length: 6 }, (_, i) => ({ id: `b${i}`, url: `https://m${i}.test/`, title: `Marque ${i}`, tags: [], addedAt: i }))
+    const state = { ...world({ bookmarkManager: true }), bookmarks: marks }
+    expect(bookmarkCandidates('', state, false)).toHaveLength(4)
+    expect(bookmarkCandidates('', state, false, 12)).toHaveLength(6)
+    expect(bookmarkCandidates('marque 3', state, false, 12).map((c) => c.id)).toEqual(['bookmark:b3'])
+    expect(bookmarkCandidates('', state, true, 12)).toEqual([])
+    expect(bookmarkCandidates('', { ...state, settings: { ...state.settings, bookmarkManager: false } }, false, 12)).toEqual([])
   })
 
   it('leaves `#` to the tag of a bookmark, and any other text without a genre', () => {

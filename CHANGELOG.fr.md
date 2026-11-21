@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Préfixes signets et historique dans la barre de commandes** : tapez `*` (ou `@bookmarks`) pour ne chercher que dans vos signets, `^` (ou `@history`) que dans l’historique. Sans texte, la barre les liste. Tout reste sur ce Mac.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.

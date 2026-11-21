@@ -304,12 +304,12 @@ export function jotCandidate(query: string, state: SidebarState, inPrivateWindow
 }
 
 /** The bookmarks the query names (every word, in the title, address, note or tags; a "#word" is a tag), the best title first. Only while the library is on, never in a private window. */
-export function bookmarkCandidates(q: string, state: SidebarState, inPrivateWindow: boolean): Candidate[] {
+export function bookmarkCandidates(q: string, state: SidebarState, inPrivateWindow: boolean, limit = MAX_BOOKMARKS): Candidate[] {
   if (inPrivateWindow || !state.settings.bookmarkManager) return []
   return filterBookmarks(state.bookmarks, q)
     .map((b) => ({ b, score: Math.max(matchScore(b.title, q), matchScore(b.url, q)) }))
     .sort(byScore)
-    .slice(0, MAX_BOOKMARKS)
+    .slice(0, limit)
     .map(({ b }): Candidate => ({ kind: 'bookmark', id: `bookmark:${b.id}`, label: b.title, detail: `${t('cmd.signet-host', { host: hostOf(b.url) })}${b.tags.length > 0 ? ` · ${b.tags.map((tag) => `#${tag}`).join(' ')}` : ''}`, bookmarkId: b.id, ...(b.faviconUrl ? { faviconUrl: b.faviconUrl } : {}) }))
 }
 

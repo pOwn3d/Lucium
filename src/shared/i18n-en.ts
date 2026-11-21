@@ -722,6 +722,7 @@ export const en: Record<MessageKey, string> = {
   'cmd.fermer-le-volet-web': 'Close Web Panel',
   'cmd.filtre-commandes': 'Commands',
   'cmd.filtre-historique': 'History',
+  'cmd.filtre-signets': 'Bookmarks',
   'cmd.filtre-onglets': 'Tabs',
   'cmd.filtrer-par-type': 'Filter by kind',
   'cmd.go-to-space': 'Go to Space {name}',
