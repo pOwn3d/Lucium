@@ -212,6 +212,14 @@ export function mayRemember(origin: string, permission: string): boolean {
   return /^https?:\/\/[^/\s]+$/i.test(origin) && origin !== 'null'
 }
 
+/**
+ * The text of the « Autoriser » button of the question. A yes the person did not ask to remember is held by the engine for the tab that asked, and goes with its page
+ * (tab-answers.ts): when the box could be ticked and is not, the button says so. When the answer is never held (a private tab, a permission asked each time) it is the plain word.
+ */
+export function allowLabel(canRemember: boolean, remember: boolean): string {
+  return canRemember && !remember ? t('permissions.autoriser-cette-fois') : t('permissions.autoriser')
+}
+
 /** The scheme an `openExternal` request wants to open, as shown in the prompt (`mailto:`), or '' when the address is not one. */
 export function externalSchemeOf(externalUrl: unknown): string {
   // Cut short: the scheme comes from a page, and it is printed in a prompt.

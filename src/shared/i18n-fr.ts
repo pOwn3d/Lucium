@@ -2885,6 +2885,7 @@ export const fr = {
   'permissions.acceder-a-vos-appareils-midi': 'accéder à vos appareils MIDI',
   'permissions.appareils-midi': 'Appareils MIDI',
   'permissions.autoriser': 'Autoriser',
+  'permissions.autoriser-cette-fois': 'Autoriser cette fois',
   'permissions.camera-et-micro': 'Caméra et micro',
   'permissions.ce-choix-n-est-pas-memorise': 'Ce choix n’est pas mémorisé : la question sera reposée la prochaine fois.',
   'permissions.connaitre-votre-position': 'connaître votre position',

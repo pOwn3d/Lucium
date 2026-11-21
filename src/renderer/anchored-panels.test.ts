@@ -108,6 +108,19 @@ describe('the permission bubble', () => {
     expect(source).toContain('if (allow && !armed) return')
   })
 
+  // The yes of an unticked box is held for the tab that asked and goes with its page: the button names it. A private tab keeps nothing, so its button stays plain.
+  it('names the yes that is held for the tab only: "Autoriser cette fois", in both languages, and the plain word where nothing is held', () => {
+    expect(ask()).toMatch(/class="tk-btn primary"[^>]*>Autoriser cette fois</)
+    expect(ask({ ephemeral: true })).toMatch(/class="tk-btn primary"[^>]*>Autoriser</)
+    expect(ask({ permission: 'openExternal' })).toMatch(/class="tk-btn primary"[^>]*>Autoriser</)
+    setLanguage('en')
+    try {
+      expect(ask()).toMatch(/class="tk-btn primary"[^>]*>Allow this time</)
+    } finally {
+      setLanguage('fr')
+    }
+  })
+
   it('offers "Se souvenir pour ce site" never ticked in advance', () => {
     const markup = ask()
     expect(markup).toContain('<label class="iv-remember"><input type="checkbox"/>Se souvenir pour ce site</label>')
