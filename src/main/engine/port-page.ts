@@ -93,6 +93,8 @@ export interface PageDocument {
   toggleReader(): Promise<'opened' | 'closed' | 'unavailable'>
   /** Markdown export: the text selected in the page, as the JSON text of a snapshot (shared/markdown-export.ts); null when nothing is selected. */
   markdownSelection(): Promise<string | null>
+  /** Markdown export: the main content of the page, whole, with no picker (`parsePick` reads it); null when the page does not answer. */
+  markdownPage(): Promise<string | null>
   /**
    * Markdown export: shows the picker over the page (the selection if there is one, else blocks to keep or leave out) and waits for the
    * user. Resolves with the JSON text of what they chose (`parsePick`), or null when they left. A second call ends the first.

@@ -111,11 +111,14 @@ export function readableActions(state: SidebarState, inPrivateWindow: boolean): 
   ]
 }
 
-/** "Exporter la page en Markdown": offered when typed, and only with a web page on screen (the one kind the export reads). */
+/** "Enregistrer la page en Markdown" (whole page, one click) and "Exporter la page en Markdown" (the picker): offered when typed, and only with a web page on screen (the one kind the export reads). */
 export function markdownActions(state: SidebarState): Candidate[] {
   const tab = activeTab(state)
   if (!tab || !/^https?:\/\//i.test(tab.url)) return []
-  return [{ kind: 'action', id: 'action:export-markdown', label: t('cmd.exporter-la-page-en-markdown'), detail: t('cmd.action'), action: 'export-markdown' }]
+  return [
+    { kind: 'action', id: 'action:save-markdown', label: t('cmd.enregistrer-la-page-en-markdown'), detail: t('cmd.action'), action: 'save-markdown' },
+    { kind: 'action', id: 'action:export-markdown', label: t('cmd.exporter-la-page-en-markdown'), detail: t('cmd.action'), action: 'export-markdown' }
+  ]
 }
 
 /**

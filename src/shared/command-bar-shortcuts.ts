@@ -55,6 +55,7 @@ const ACTION_SHORTCUT: Partial<Record<CommandAction, string>> = {
   'read-later': 'readLater',
   'read-later-list': 'readLaterList',
   'export-markdown': 'exportMarkdown',
+  'save-markdown': 'saveMarkdown',
   sessions: 'sessions',
   'save-session': 'saveSession',
   'lock-now': 'lockNow',

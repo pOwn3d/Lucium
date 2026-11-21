@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { archiveImageName, cleanText, edgesWithout, exportFileName, withoutTrailing, exportMarkdown, markdownWithImages, MD_LIMITS, parseSnapshot, safeUrl, type MdNode, type MdOptions } from './markdown-export'
+import { archiveImageName, cleanText, edgesWithout, exportFileName, folderImageLink, imagesFolderName, withoutTrailing, exportMarkdown, markdownWithImages, MD_LIMITS, parseSnapshot, safeUrl, type MdNode, type MdOptions } from './markdown-export'
 import { frenchSpaces } from './french-typography'
 
 // A tiny reader of well-formed markup for the tests: the converter takes the snapshot tree the page sends, and a tree written as HTML is
@@ -485,5 +485,19 @@ describe('archiveImageName', () => {
   it('numbers the images of an archive from 001', () => {
     expect(archiveImageName(0, 'png')).toBe('images/image-001.png')
     expect(archiveImageName(11, 'jpg')).toBe('images/image-012.jpg')
+  })
+})
+
+describe('the images folder', () => {
+  it('is named after the file, next to it', () => {
+    expect(imagesFolderName('Cours.md')).toBe('Cours-images')
+    expect(imagesFolderName('Cours.MD')).toBe('Cours-images')
+    expect(imagesFolderName('notes.v2.md')).toBe('notes.v2-images')
+  })
+
+  it('is linked by a relative path, encoded where Markdown reads it otherwise', () => {
+    expect(folderImageLink('Cours-images', 'images/image-001.png')).toBe('Cours-images/image-001.png')
+    expect(folderImageLink('a b (1)-images', 'images/image-002.jpg')).toBe('a%20b%20%281%29-images/image-002.jpg')
+    expect(folderImageLink('100%-images', 'images/image-003.gif')).toBe('100%25-images/image-003.gif')
   })
 })

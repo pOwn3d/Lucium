@@ -746,6 +746,7 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
   - accelerator="CmdOrCtrl+Alt+S" enabled=false label="Capturer la partie visible" click
   - accelerator=undefined enabled=false label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=false label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=false label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=false label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=false label="Imprimer…" click
   - type="separator"
@@ -1034,6 +1035,7 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - accelerator="CmdOrCtrl+Alt+S" enabled=false label="Capturer la partie visible" click(brings back)
   - accelerator=undefined enabled=false label="Capturer en mode portrait" click(brings back)
   - accelerator="CmdOrCtrl+Shift+S" enabled=false label="Enregistrer la page sous…" click(brings back)
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click(brings back)
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click(brings back)
   - accelerator="CmdOrCtrl+P" enabled=false label="Imprimer…" click(brings back)
   - accelerator=undefined enabled=false label="Enregistrer en PDF avec l’adresse…" click(brings back)
@@ -1348,6 +1350,7 @@ exports[`the menu bar, as built > in a private window 1`] = `
   - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
   - accelerator=undefined enabled=true label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
   - accelerator=undefined enabled=true label="Enregistrer en PDF avec l’adresse…" click
@@ -1655,6 +1658,7 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
   - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
   - accelerator=undefined enabled=true label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
   - accelerator=undefined enabled=true label="Enregistrer en PDF avec l’adresse…" click
@@ -1972,6 +1976,7 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
   - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
   - accelerator=undefined enabled=true label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
   - accelerator=undefined enabled=true label="Enregistrer en PDF avec l’adresse…" click
@@ -2283,6 +2288,7 @@ exports[`the menu bar, as built > with every optional setting off and windows th
   - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
   - accelerator=undefined enabled=true label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
   - type="separator"
