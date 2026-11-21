@@ -105,6 +105,7 @@
     }
   ],
   "readLaterFolders": [],
+  "tabReminders": [],
   "bookmarks": [],
   "activeSpaceId": "id-2",
   "activeTabBySpace": {
@@ -594,6 +595,7 @@
     "annotateAutoClearSeconds": 5,
     "annotateLetterKeys": true,
     "urlAutomation": false,
+    "tabReminders": true,
     "bookmarkManager": false,
     "liveFolders": false,
     "webAppWindows": false,

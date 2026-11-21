@@ -3,7 +3,7 @@
 // never costs the others), a field of the wrong kind falls back to its default, and nothing the file adds beyond the model is kept.
 // Pure rules, shared by the main process (loading) and the reducer (restoring, importing).
 
-import { SEARCH_DISCOVERY_SEEN_MAX, READ_LATER_FAVICON_MAX, READ_LATER_FAVICON_URL_MAX, READ_LATER_FOLDERS_LIMIT, READ_LATER_FOLDER_NAME_MAX, READ_LATER_LIMIT, READ_LATER_TITLE_MAX, READ_LATER_URL_MAX, TAB_NAME_MAX, defaultSettings, type ArchiveSource, type ArchivedTab, type Favorite, type Folder, type HistoryEntry, type LinkRoute, type ReadLaterFolder, type ReadLaterItem, type Settings, type SiteSearch, type Space, type GridSpan, type SplitGrid, type SplitOrientation, type SplitView, type TabItem } from './model'
+import { SEARCH_DISCOVERY_SEEN_MAX, READ_LATER_FAVICON_MAX, READ_LATER_FAVICON_URL_MAX, READ_LATER_FOLDERS_LIMIT, READ_LATER_FOLDER_NAME_MAX, READ_LATER_LIMIT, READ_LATER_TITLE_MAX, READ_LATER_URL_MAX, TAB_NAME_MAX, TAB_REMINDER_LIMIT, type TabReminder, defaultSettings, type ArchiveSource, type ArchivedTab, type Favorite, type Folder, type HistoryEntry, type LinkRoute, type ReadLaterFolder, type ReadLaterItem, type Settings, type SiteSearch, type Space, type GridSpan, type SplitGrid, type SplitOrientation, type SplitView, type TabItem } from './model'
 import { cleanAutoReload } from './auto-reload'
 import { cleanClosedHistory } from './closed-history'
 import { isContainerId } from './container-id'
@@ -344,6 +344,28 @@ export function cleanReadLater(raw: unknown, folderIds: ReadonlySet<string> = ne
     if (out.length >= READ_LATER_LIMIT) break
   }
   return out
+}
+
+/** The pending reminders of a file: a web page, a time, the space it was in (a gone space: the first valid space reads it as the active one, see tab-reminder.ts), soonest first, at most `TAB_REMINDER_LIMIT`. */
+export function cleanTabReminders(raw: unknown, spaceIds: ReadonlySet<string>): TabReminder[] {
+  const out: TabReminder[] = []
+  for (const [entry, id] of uniqueRecords(raw)) {
+    const url = entry['url']
+    const dueAt = entry['dueAt']
+    if (!isReadLaterUrl(url) || typeof dueAt !== 'number' || !Number.isFinite(dueAt)) continue
+    const favicon = readLaterFavicon(entry['faviconUrl'])
+    const spaceId = cleanId(entry['spaceId'])
+    out.push({
+      id,
+      url,
+      title: printable(entry['title'], READ_LATER_TITLE_MAX)?.trim() || cutText(hostOf(url) || url, READ_LATER_TITLE_MAX),
+      ...(favicon ? { faviconUrl: favicon } : {}),
+      spaceId: spaceId !== null && spaceIds.has(spaceId) ? spaceId : '',
+      dueAt,
+      createdAt: finite(entry['createdAt'], 0)
+    })
+  }
+  return out.sort((a, b) => a.dueAt - b.dueAt).slice(0, TAB_REMINDER_LIMIT)
 }
 
 const ORIENTATIONS: readonly SplitOrientation[] = ['horizontal', 'vertical']

@@ -290,6 +290,11 @@ const GENERATORS: Generators = {
   'readlater/add': (g) => ({ type: 'readlater/add', tabId: g.tabId() }),
   'readlater/open': (g) => ({ type: 'readlater/open', id: g.idFrom(g.state.readLater.map((i) => i.id)) }),
   'readlater/remove': (g) => ({ type: 'readlater/remove', id: g.idFrom(g.state.readLater.map((i) => i.id)) }),
+  // The run's clock starts at 1_700_000_000_000 and moves forward: some reminders come due, some never do.
+  'reminder/add': (g) => ({ type: 'reminder/add', tabId: g.tabId(), dueAt: g.chance(0.15) ? g.pick([0, 1, Number.NaN]) : 1_700_000_000_000 + g.pick([1, 60_000, 3_600_000, 10 ** 8]) }),
+  'reminder/cancel': (g) => ({ type: 'reminder/cancel', id: g.idFrom(g.state.tabReminders.map((r) => r.id)) }),
+  'reminder/open': (g) => ({ type: 'reminder/open', id: g.idFrom(g.state.tabReminders.map((r) => r.id)) }),
+  'reminder/fire': () => ({ type: 'reminder/fire' }),
   'readlater/clear': () => ({ type: 'readlater/clear' }),
   'readlater-folder/create': (g) => ({ type: 'readlater-folder/create', name: g.text() }),
   'readlater-folder/rename': (g) => ({ type: 'readlater-folder/rename', id: g.idFrom(g.state.readLaterFolders.map((f) => f.id)), name: g.text() }),

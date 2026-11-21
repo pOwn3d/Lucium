@@ -10,6 +10,14 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **Tab reminders**: right-click a tab › Remind me › This evening, Tomorrow morning or In a week. The tab comes back then, in its space, with a notification. File › Tab reminders lists them. Off in Settings › Optional features.
+
+### Fixed
+
+- **Command bar ranking of a lost profile**: when spaces of a missing profile go back to the default profile, the ranking of that profile's command bar is dropped with it, as it already was at the next launch.
+
 ## [1.1.5] - 2026-11-20
 
 Your iPhone can now synchronize with your Mac, directly and without a server, and its Today tabs can be shared. On Windows the window draws its own title bar, and Windows and Linux say that they update by hand.

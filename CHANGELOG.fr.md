@@ -4,6 +4,14 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Rappel d’onglet** : clic droit sur un onglet › Me le rappeler › Ce soir, Demain matin ou Dans une semaine. L’onglet revient à l’heure dite, dans son espace, avec une notification. Fichier › Rappels d’onglets les liste. Désactivable dans Réglages › Fonctions en option.
+
+### Corrections
+
+- **Classement de la barre de commandes d’un profil perdu** : quand les espaces d’un profil manquant reviennent au profil par défaut, le classement de la barre de commandes de ce profil disparaît avec lui, comme il le faisait déjà au lancement suivant.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.
