@@ -13,6 +13,7 @@ import { showSystemNotice } from './shell/system-notice'
 import { systemScrollBars, systemScrollBarsSource } from './shell/system-scroll-bars'
 import { applySingleStream } from './engine/single-stream'
 import { HistoryBook } from './history'
+import { PageIndexBook, eraseIndexWhenSwitchedOff, setPageIndex } from './page-index'
 import { Browser } from './shell/browser'
 import { containersNamedBeforeRestore, mayDeleteBackgroundMedia, readSessionCopies, sweepBackgroundMedia } from './shell/background-media-sweep'
 import { removeRetiredFiles } from './retired-files'
@@ -235,6 +236,11 @@ async function main(): Promise<void> {
   const store = new WindowView(sharedStore, selectionOf(sharedStore.get()), views, true)
   // One history per profile; history.json, the file of the single history of earlier versions, is the default profile's (see HistoryBook).
   const history = new HistoryBook(app.getPath('userData'), (profileId) => profileRecordsHistory(sharedStore.get().settings, profileId), !smoke)
+  // The full-text index of the pages visited (page-index.ts): written only while « Rechercher dans le contenu des pages » is on, and erased as soon as it goes off
+  // (not at launch: a state that could not be read starts from the defaults, and must not take the index with it).
+  const pageIndex = new PageIndexBook(app.getPath('userData'))
+  setPageIndex(pageIndex)
+  eraseIndexWhenSwitchedOff(sharedStore, pageIndex)
   const preload = join(__dirname, '../preload/index.js')
   const webPreferences = { preload, sandbox: true, contextIsolation: true, nodeIntegration: false, nodeIntegrationInSubFrames: false, webviewTag: false }
 
@@ -558,6 +564,7 @@ async function main(): Promise<void> {
   app.on('before-quit', () => {
     store.flush()
     history.flush()
+    pageIndex.flush()
     // The downloads in progress leave their records up to date (nothing happens while the resumption of downloads is off).
     engine.flushDownloadResume()
     // The hosts held to strict transport security whose write still waited (a site first visited in the last second).

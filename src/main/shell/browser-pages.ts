@@ -9,7 +9,7 @@ import { sameData } from '@shared/row-equality'
 import type { UnreadReading } from '@shared/tab-messages'
 import { LEAVE_FULLSCREEN, fullscreenReported, type FullscreenStep } from '@shared/html-fullscreen'
 import { parseCssColor } from '@shared/theme'
-import { profileOfSpace } from '@shared/profiles'
+import { profileOfSpace, profileRecordsHistory } from '@shared/profiles'
 import { linkWindowDestination } from '@shared/little-modifier'
 import { isOwnSite } from '@shared/party'
 import { httpsFallbackNotice } from '@shared/privacy'
@@ -34,6 +34,8 @@ import { getLanguage, t } from '@shared/i18n'
 import { targetLanguage } from '@shared/translate-local'
 import { FULLSCREEN_LEAVE_TIMEOUT_MS, MEMORY_MAX, pageRelays, type ProfileHistoryLog } from './browser-base'
 import { BrowserTools } from './browser-tools'
+import { getPageIndex } from '../page-index'
+import { PAGE_INDEX_SCRIPT, PAGE_INDEX_SETTLE_MS, indexableUrl } from '@shared/page-index'
 
 export abstract class BrowserPages extends BrowserTools {
   protected ensurePage(tab: TabItem): Page {
@@ -388,6 +390,43 @@ export abstract class BrowserPages extends BrowserTools {
     return tab.private !== true && this.containerKeyOf(tab) === '' ? this.history.of(profileOfSpace(this.store.get(), tab.spaceId), tab.spaceId) : null
   }
 
+  /**
+   * Whether the text of the pages of this space may be kept: the setting is on, and the profile of the space keeps its history (`profileRecordsHistory`, as `HistoryBook` does:
+   * `historyOf` still answers a store when the history is off, only its `record` is silent). Text of pages must not outlive a history that was switched off.
+   */
+  private indexingOn(spaceId: string): boolean {
+    const state = this.store.get()
+    return state.settings.pageContentIndex && profileRecordsHistory(state.settings, profileOfSpace(state, spaceId))
+  }
+
+  /**
+   * The text of a page just loaded goes to the full-text index (page-index.ts) a moment later, once its scripts have drawn it, if the setting is still on and the
+   * tab still shows the same page. Only a tab whose visit the history keeps gets here (`historyOf`): not a private tab, not a container's.
+   * A page the script refuses (a password field) or that fails to answer is not indexed; a failure is logged with the host of the page only.
+   */
+  private scheduleIndexing(id: string, tab: TabItem): void {
+    const { url, spaceId } = tab
+    if (!indexableUrl(url)) return
+    setTimeout(() => {
+      const now = this.store.get()
+      const current = now.tabs.find((candidate) => candidate.id === id)
+      const book = getPageIndex()
+      const page = this.pages.get(id)
+      if (!this.indexingOn(spaceId) || book === null || page?.runPageIndex === undefined || !current || current.url !== url || current.private === true || page.showsError()) return
+      const profileId = profileOfSpace(now, spaceId)
+      void page.runPageIndex(PAGE_INDEX_SCRIPT).then(
+        (answer) => {
+          // Read again after the wait: the setting may have gone off, and the page may have changed under the script.
+          if (typeof answer !== 'string' || !this.indexingOn(spaceId)) return
+          const after = this.store.get().tabs.find((candidate) => candidate.id === id)
+          if (after?.url !== url) return
+          book.of(profileId).add({ url, title: after.title, text: answer, at: Date.now() })
+        },
+        (error: unknown) => console.warn(`[page-index] the text of a page of ${hostOf(url)} could not be read:`, error)
+      )
+    }, PAGE_INDEX_SETTLE_MS).unref()
+  }
+
   /** What the row of a tab shows of its unread messages changed with no title to say it (a held badge ran out, or the tab came on screen): the windows are told. */
   protected refreshUnread(id: string): void {
     const entry = this.runtime.tabs[id]
@@ -437,7 +476,11 @@ export abstract class BrowserPages extends BrowserTools {
       // The page belongs to the history of the profile of its space, whichever space is shown. A private tab leaves no trace in it.
       // A tab in a container leaves none either: the profile's history would tell what was browsed in another identity.
       // Neither does a load that came to no page: a frame that loaded inside the page (`visit` false), a download, or one of our error pages (the site does not answer).
-      if (tab && patch.visit !== false && this.pages.get(id)?.showsError() !== true) this.historyOf(tab)?.record(tab.url, tab.title)
+      if (tab && patch.visit !== false && this.pages.get(id)?.showsError() !== true) {
+        const log = this.historyOf(tab)
+        log?.record(tab.url, tab.title)
+        if (log !== null && this.indexingOn(tab.spaceId)) this.scheduleIndexing(id, tab)
+      }
       // The colour is read by a script in the page, which only the bar above a page on screen shows: a page that loaded off screen has it
       // read when it comes on screen (sync), not at each load of a tab in the background.
       if (this.visible.has(id)) void this.refreshPageColor(id)

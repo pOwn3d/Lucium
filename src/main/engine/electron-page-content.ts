@@ -14,6 +14,7 @@ import { isInternalScheme } from '@shared/internal-page'
 import { TRANSLATE_WORLD } from '@shared/translate-page-script'
 import { READABLE_WORLD } from '@shared/readable-engine'
 import { SITE_DATA_OVERLAY_WORLD } from '@shared/site-data-overlay'
+import { PAGE_INDEX_WORLD } from '@shared/page-index'
 import { PAGE_ANNOTATE_WORLD } from '@shared/page-annotate-layer'
 import type { PageColorScheme } from './color-scheme'
 import { innerGuardOf } from './inner-guard'
@@ -144,6 +145,10 @@ export abstract class ElectronPageContent extends ElectronPageNavigation {
   runClearOverlay(code: string): Promise<unknown> {
     if (this.gone) return Promise.reject(new Error('the page is gone'))
     return this.webContents.executeJavaScriptInIsolatedWorld(SITE_DATA_OVERLAY_WORLD, [{ code }])
+  }
+  runPageIndex(code: string): Promise<unknown> {
+    if (this.gone) return Promise.reject(new Error('the page is gone'))
+    return this.webContents.executeJavaScriptInIsolatedWorld(PAGE_INDEX_WORLD, [{ code }])
   }
   runAnnotateLayer(code: string): Promise<unknown> {
     if (this.gone) return Promise.reject(new Error('the page is gone'))
