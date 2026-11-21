@@ -42,6 +42,19 @@ describe('the scroll memory', () => {
     expect(parseScrollFile('{"tabs":[1]}').size).toBe(0)
     expect(() => parseScrollFile('{ no')).toThrow()
   })
+
+  it('refuses, when reading the file, an entry with an address over 4096, an identifier over 100, or a time that is not finite', () => {
+    const ok = { url: 'https://a.example/', y: 500, at: 1 }
+    const text = `{"version":1,"tabs":{"ok":${JSON.stringify(ok)},"longUrl":${JSON.stringify({ ...ok, url: 'https://a.example/' + 'x'.repeat(4096) })},"${'i'.repeat(101)}":${JSON.stringify(ok)},"inf":{"url":"https://a.example/","y":500,"at":1e999},"str":{"url":"https://a.example/","y":500,"at":"1"}}}`
+    expect([...parseScrollFile(text).keys()]).toEqual(['ok'])
+    const edge = { ['i'.repeat(100)]: { ...ok, url: 'https://a.example/' + 'x'.repeat(4096 - 'https://a.example/'.length) } }
+    expect(parseScrollFile(JSON.stringify({ tabs: edge })).size).toBe(1)
+  })
+
+  it('reads no more than the limit of entries from a file that holds more', () => {
+    const tabs = Object.fromEntries(Array.from({ length: SCROLL_MEMORY_MAX + 50 }, (_, i) => [`t${i}`, { url: 'https://a.example/', y: 500, at: i }]))
+    expect(parseScrollFile(JSON.stringify({ version: 1, tabs })).size).toBe(SCROLL_MEMORY_MAX)
+  })
 })
 
 describe('the tool of the page', () => {

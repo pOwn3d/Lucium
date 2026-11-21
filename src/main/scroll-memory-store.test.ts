@@ -2,6 +2,7 @@ import { mkdtempSync, readFileSync, writeFileSync, existsSync, readdirSync } fro
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { SMALL_FILE_MAX_BYTES } from './persist'
 import { SCROLL_SAVE_DELAY_MS, ScrollMemoryStore } from './scroll-memory-store'
 
 let dir: string
@@ -70,5 +71,17 @@ describe('the scroll memory file', () => {
     const store = new ScrollMemoryStore(path)
     store.forget(new Set())
     expect(readdirSync(dir)).toEqual(['scroll.json'])
+  })
+
+  it('sets aside a file of more than 1 MB without reading it, even when it is valid JSON', () => {
+    const path = join(dir, 'scroll.json')
+    const padding = ' '.repeat(SMALL_FILE_MAX_BYTES)
+    writeFileSync(path, `{"version":1,"tabs":{"t1":{"url":"https://a.example/","y":900,"at":1}}}${padding}`)
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const store = new ScrollMemoryStore(path)
+    expect(store.positionFor('t1', 'https://a.example/')).toBeUndefined()
+    expect(error).toHaveBeenCalled()
+    expect(readdirSync(dir).some((name) => name.startsWith('scroll.json.corrupt'))).toBe(true)
+    error.mockRestore()
   })
 })
