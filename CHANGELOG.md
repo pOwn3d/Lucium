@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **Scroll position restored after a relaunch**: Settings › Tabs and windows › “Restore the scroll position of tabs”, off by default. A tab comes back to where its page was scrolled. Only a number per tab and its address is kept, on your Mac; never the page, nothing for private tabs.
+
 ## [1.1.5] - 2026-11-20
 
 Your iPhone can now synchronize with your Mac, directly and without a server, and its Today tabs can be shared. On Windows the window draws its own title bar, and Windows and Linux say that they update by hand.

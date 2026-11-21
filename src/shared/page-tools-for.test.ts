@@ -13,13 +13,13 @@ describe('the tools of a page', () => {
   })
 
   it('carry the Vim keys when the setting is on and the site is not in the list', () => {
-    expect(pageToolsFor(settings({ vimKeys: true }), SITE, false)).toEqual({ autoScroll: false, mouseGestures: false, scrollSync: false, vimKeys: true })
+    expect(pageToolsFor(settings({ vimKeys: true }), SITE, false)).toEqual({ autoScroll: false, mouseGestures: false, scrollSync: false, vimKeys: true, scrollMemory: false })
     expect(anyToolWanted(settings({ vimKeys: true }))).toBe(true)
   })
 
   it('leave the Vim keys off a site of the list, its subdomains too, and keep the other tools there', () => {
     const s = settings({ vimKeys: true, vimKeysExcludedHosts: ['example.org'], autoScroll: true })
-    expect(pageToolsFor(s, SITE, false)).toEqual({ autoScroll: true, mouseGestures: false, scrollSync: false, vimKeys: false })
+    expect(pageToolsFor(s, SITE, false)).toEqual({ autoScroll: true, mouseGestures: false, scrollSync: false, vimKeys: false, scrollMemory: false })
     expect(pageToolsFor(s, 'https://mail.example.org/', false).vimKeys).toBe(false)
     expect(pageToolsFor(s, 'https://example.com/', false).vimKeys).toBe(true)
   })

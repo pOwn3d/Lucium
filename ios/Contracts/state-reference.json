@@ -528,6 +528,7 @@
     "qrCode": false,
     "autoScroll": false,
     "scrollSync": false,
+    "rememberScroll": false,
     "workViewsEnabled": true,
     "mouseGestures": false,
     "mouseGestureExcludedHosts": [],

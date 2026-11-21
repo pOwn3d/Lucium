@@ -319,6 +319,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-auto-scroll', 'auto-scroll', t('Défilement automatique au clic du milieu', 'Auto-scroll on middle click'), 'keyboard', 'autoScroll', { label: t('Défilement automatique avec le clic du milieu', 'Auto-scroll with the middle click'), patch: { autoScroll: true }, on: true, why: behaviour }),
   // At the foot of the image, as fn-auto-pip, for the same reason.
   setting('fn-scroll-sync', 'scroll-sync', t('Défilement synchronisé des volets', 'Synchronized Scrolling of Panes'), 'tabs', 'scrollSync', { fold: true, label: t('Défilement synchronisé des volets d’une vue scindée', 'Synchronized scrolling of split view panes'), patch: { scrollSync: true }, on: true, why: behaviour, place: 'bottom' }),
+  setting('fn-remember-scroll', 'remember-scroll', t('Retrouver la position de défilement des onglets', 'Restore the scroll position of tabs'), 'tabs', 'rememberScroll', { fold: true, patch: { rememberScroll: true }, on: true, why: behaviour }),
   setting('fn-mouse-gestures', 'mouse-gestures', t('Gestes de souris', 'Mouse gestures'), 'keyboard', 'mouseGestures', { patch: { mouseGestures: true }, on: true, why: behaviour }),
   setting('fn-space-swipe', 'space-swipe', t('Balayer à deux doigts pour changer d’espace', 'Swipe with two fingers to switch Spaces'), 'keyboard', 'spaceSwipe', { why: needsHardware }),
   setting('fn-page-watch', 'page-watch', t('Surveiller des pages', 'Watch pages'), 'features', 'pageWatch', { why: background }),

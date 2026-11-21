@@ -52,6 +52,7 @@ import { isPrimaryInstance } from './shell/single-instance'
 import { announcePersistenceNotices, newestCopyAt } from './shell/announce-persistence'
 import { reportPersistenceNotice } from './persistence-notices'
 import { copyBeforeRestore, lastSetAsideAt } from './persist'
+import { initScrollMemory } from './scroll-memory-store'
 import { scheduleLaunchSheet, showLaunchSheet } from './shell/launch-sheets'
 import { SessionBackups, gateBackups, setSessionBackups } from './shell/backups'
 import { configureUserScripts } from './userscripts'
@@ -234,6 +235,9 @@ async function main(): Promise<void> {
   const views = new Set<WindowView>()
   const store = new WindowView(sharedStore, selectionOf(sharedStore.get()), views, true)
   // One history per profile; history.json, the file of the single history of earlier versions, is the default profile's (see HistoryBook).
+  // Where each tab's page was scrolled to (Réglages › Onglets › Retrouver la position de défilement): a small file, read only when the function is on.
+  const scrollPositions = initScrollMemory(join(app.getPath('userData'), 'scroll.json'))
+  app.on('will-quit', () => scrollPositions.flush())
   const history = new HistoryBook(app.getPath('userData'), (profileId) => profileRecordsHistory(sharedStore.get().settings, profileId), !smoke)
   const preload = join(__dirname, '../preload/index.js')
   const webPreferences = { preload, sandbox: true, contextIsolation: true, nodeIntegration: false, nodeIntegrationInSubFrames: false, webviewTag: false }

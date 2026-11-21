@@ -368,6 +368,7 @@ function rich(): SidebarState {
     qrCode: true,
     autoScroll: true,
     scrollSync: true,
+    rememberScroll: true,
     mouseGestures: true,
     mouseGestureExcludedHosts: ['maps.example.org'],
     pageWatch: true,
@@ -641,6 +642,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   qrCode: bool,
   autoScroll: bool,
   scrollSync: bool,
+  rememberScroll: bool,
   workViewsEnabled: bool,
   mouseGestures: bool,
   mouseGestureExcludedHosts: hostList(200),
@@ -1149,7 +1151,7 @@ describe('a state written by an older build', () => {
       extensionPaths: ['/Users/moi/extensions/une']
     })
     // The recent fields, one by one, so that a default that is silently missing is named.
-    for (const key of ['webStoreInstall', 'webStoreUpdates', 'sleepMode', 'sleepExcludedHosts', 'sleepSkipAudible', 'siteDataTypes', 'siteDataHttp', 'siteDataAnimation', 'siteZoom', 'blockExceptions', 'blockMode', 'blockModeSites', 'disabledFilterLists', 'developerHosts', 'usedProfiles', 'restoreWindows', 'chromeNativeHosts', 'profileNames', 'keyBindings', 'appIcon', 'updateFeedUrl', 'updateChannel', 'updateNotices', 'resolveFavicons', 'autoplayPolicy', 'spellCheck', 'siteAutoplay', 'autoplayPerSite', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'customFilterListsEnabled', 'customFilterLists', 'qrCode', 'autoScroll', 'scrollSync', 'mouseGestures', 'mouseGestureExcludedHosts', 'pageWatch', 'pageWatches', 'readAloud', 'batterySaver', 'downloadPause', 'downloadAskWhere', 'openWithMemory', 'openWithApps', 'openUnsaved', 'pdfWithSource', 'useReadLaterFolders', 'vimKeys', 'vimKeysExcludedHosts', 'tabGroupFolders', 'omniboxKeywords', 'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions'] as const) {
+    for (const key of ['webStoreInstall', 'webStoreUpdates', 'sleepMode', 'sleepExcludedHosts', 'sleepSkipAudible', 'siteDataTypes', 'siteDataHttp', 'siteDataAnimation', 'siteZoom', 'blockExceptions', 'blockMode', 'blockModeSites', 'disabledFilterLists', 'developerHosts', 'usedProfiles', 'restoreWindows', 'chromeNativeHosts', 'profileNames', 'keyBindings', 'appIcon', 'updateFeedUrl', 'updateChannel', 'updateNotices', 'resolveFavicons', 'autoplayPolicy', 'spellCheck', 'siteAutoplay', 'autoplayPerSite', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'customFilterListsEnabled', 'customFilterLists', 'qrCode', 'autoScroll', 'scrollSync', 'rememberScroll', 'mouseGestures', 'mouseGestureExcludedHosts', 'pageWatch', 'pageWatches', 'readAloud', 'batterySaver', 'downloadPause', 'downloadAskWhere', 'openWithMemory', 'openWithApps', 'openUnsaved', 'pdfWithSource', 'useReadLaterFolders', 'vimKeys', 'vimKeysExcludedHosts', 'tabGroupFolders', 'omniboxKeywords', 'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions'] as const) {
       expect(settings[key], key).toEqual(defaults[key])
     }
     expect(settings.siteDataTypes).toEqual(SITE_DATA_TYPES.filter((type) => type !== 'history'))
