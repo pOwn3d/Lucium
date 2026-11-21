@@ -31,6 +31,7 @@ import { popupApplicationMenu } from './app-menu-popup'
 import { SIDEBAR_SLIDE_MS, SIDEBAR_SLIDE_STEP_MS, THEME_MAX_HEIGHT, THEME_WIDTH } from './browser-base'
 import { BrowserPages } from './browser-pages'
 import { FullscreenNotice } from './fullscreen-notice'
+import { scrollMemory } from '../scroll-memory-store'
 
 export abstract class BrowserLayout extends BrowserPages {
   /** The site and Escape, said for a few seconds over a page that took the window in full screen (shared/fullscreen-notice.ts). */
@@ -58,6 +59,7 @@ export abstract class BrowserLayout extends BrowserPages {
     this.reopened.forget(tabIds)
     // Only the leader holds the lists of the sleeping tabs, and its state names every tab of the group.
     if (this.leader === this) this.slept.forget(tabIds)
+    if (this.leader === this) scrollMemory().forget(tabIds)
     // The last private tab is gone: its session goes with it.
     this.leader.releasePrivateContext()
     this.syncCycleWatch()

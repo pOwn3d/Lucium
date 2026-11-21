@@ -213,6 +213,7 @@ export abstract class BrowserPages extends BrowserTools {
         this.blankTabs.closeOpenedBy(tab.id)
         // A new document starts at the zoom the tab has: its site's, or the tab's own for a page that has no host (kept until the page goes, `dropPageState`).
         this.applyBoost(tab.id, true)
+        this.restoreScrollOnce(tab.id)
         this.applyUserScripts(tab.id)
         this.applyThemeToPage(tab.id, true)
         this.appliedDark.delete(tab.id)
@@ -285,6 +286,7 @@ export abstract class BrowserPages extends BrowserTools {
     this.privatePages.delete(id)
     this.pageContainer.delete(id)
     this.pageSession.delete(id)
+    this.scrollRestored.delete(id)
     this.cancelAuthOf(id)
     this.cancelDialogsOf(id)
     this.cancelLeaveOf(id)

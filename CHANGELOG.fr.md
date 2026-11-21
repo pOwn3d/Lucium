@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Position de défilement retrouvée après un redémarrage** : Réglages › Onglets et fenêtres › « Retrouver la position de défilement des onglets », désactivé par défaut. Un onglet revient là où sa page était défilée. Seuls un nombre par onglet et son adresse sont gardés, sur votre Mac ; jamais la page, rien pour les onglets privés.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.

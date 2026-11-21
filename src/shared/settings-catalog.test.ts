@@ -191,7 +191,7 @@ describe('the catalogue of the features to add', () => {
     }
   })
 
-  it('takes the 40 settings there (the 29 switches, their options and their lists), and leaves the 78 other features in their category', () => {
+  it('takes the 40 settings there (the 29 switches, their options and their lists), and leaves the 79 other features in their category', () => {
     // The rows of annexes/correspondance.csv whose new place is « Fonctions en option »: 33 lines of the catalogue and 3 lists; then the switch of document
     // Picture-in-Picture, the one of the work views and the second button of the notes.
     const moved = [
@@ -207,7 +207,7 @@ describe('the catalogue of the features to add', () => {
       if (listed.has(feature.id)) expect(categoryOfKey(feature.key), feature.id).toBe('features')
       else expect(categoryOfKey(feature.key), feature.id).not.toBe('features')
     }
-    expect(FEATURES.length - listed.size).toBe(78)
+    expect(FEATURES.length - listed.size).toBe(79)
   })
 
   it('keeps the state each feature starts with: six on, the others off', () => {

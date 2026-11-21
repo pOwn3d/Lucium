@@ -15,6 +15,7 @@ import { SAVER_CSS, saverNotice } from '@shared/battery-saver'
 import { gestureAction, type GestureAction } from '@shared/gestures'
 import { NO_PAGE_TOOLS, type PageTools, type ToolMessage } from '@shared/page-tools'
 import { anyToolWanted, pageToolsFor } from '@shared/page-tools-for'
+import { scrollMemory } from '../scroll-memory-store'
 import { carriesScrollSync, syncTargets } from '@shared/scroll-sync'
 import { isSiteExcluded, setSiteExcluded } from '@shared/sleep'
 import { summaryAvailable } from '@shared/ollama'
@@ -147,7 +148,8 @@ export abstract class BrowserTools extends BrowserMedia {
     if (!anyToolWanted(state.settings)) return NO_PAGE_TOOLS
     const tab = state.tabs.find((t) => t.id === tabId)
     if (!tab) return NO_PAGE_TOOLS
-    return pageToolsFor(state.settings, tab.url, carriesScrollSync(state.settings.scrollSync, this.syncedSplits, splitFor(state, tabId)?.id))
+    // Where a private tab or a private window scrolled is never kept: the tool is not even put in the page.
+    return pageToolsFor(state.settings, tab.url, carriesScrollSync(state.settings.scrollSync, this.syncedSplits, splitFor(state, tabId)?.id), tab.private !== true && !this.isPrivate())
   }
 
   /** Tells every live page which tools it carries now (a setting changed, a split view was told to scroll together). Nothing at all while the tools are off and were off. */
@@ -205,10 +207,29 @@ export abstract class BrowserTools extends BrowserMedia {
       if (action) this.runGesture(tabId, action)
       return
     }
+    if (message.tool === 'scrollpos') return this.keepScrollPosition(tabId, message.y)
     if (message.tool !== 'scroll') return
     const split = splitFor(this.store.get(), tabId)
     if (!split || !this.syncedSplits.has(split.id)) return
     for (const id of syncTargets(split.tabIds, tabId, true)) this.pages.get(id)?.toolCommand({ tool: 'scrollSync', x: message.x, y: message.y })
+  }
+
+  /** The page of a tab stopped scrolling: its position is kept for the next time the tab's page is made (shared/scroll-memory.ts). */
+  private keepScrollPosition(tabId: string, y: number): void {
+    const state = this.store.get()
+    const tab = state.tabs.find((t) => t.id === tabId)
+    if (!tab || !state.settings.rememberScroll || tab.private === true || this.isPrivate()) return
+    scrollMemory().remember(tabId, tab.url, y)
+  }
+
+  /** A new document of the tab's page is ready: the first one a page gets goes back to where the tab was left, once, at the same address. */
+  protected restoreScrollOnce(tabId: string): void {
+    const state = this.store.get()
+    const tab = state.tabs.find((t) => t.id === tabId)
+    if (!tab || !state.settings.rememberScroll || tab.private === true || this.isPrivate() || this.scrollRestored.has(tabId)) return
+    this.scrollRestored.add(tabId)
+    const y = scrollMemory().positionFor(tabId, tab.url)
+    if (y !== undefined) this.pages.get(tabId)?.toolCommand({ tool: 'scrollMemory', y })
   }
 
   private runGesture(tabId: string, action: GestureAction): void {

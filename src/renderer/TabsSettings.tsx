@@ -163,6 +163,7 @@ export function TabsSettings({ snapshot, update }: PaneProps) {
           onChange={(autoPictureInPicture) => update({ autoPictureInPicture })}
         />
         <Check settingKey="scrollSync" icon={<RowIcon color="purple">{ROW_ICONS.drag}</RowIcon>} label={t('web-tools-settings.defilement-synchronise-des-volets-d-une-vue')} info={t('web-tools-settings.ajoute-defilement-synchronise-au-menu-des')} checked={settings.scrollSync} onChange={(scrollSync) => update({ scrollSync })} />
+        <Check settingKey="rememberScroll" label={t('features.retrouver-la-position-de-defilement-des-onglets')} info={t('features.la-position-de-defilement-d-un-onglet-est-gardee')} checked={settings.rememberScroll} onChange={(rememberScroll) => update({ rememberScroll })} />
       </Group>
 
     </>
