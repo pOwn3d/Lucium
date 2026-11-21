@@ -39,6 +39,8 @@ describe('the request filter with the focus mode', () => {
     const filter = shell['requestFilter']!.call(windowWith(running).self) as Filter
     expect(filter(request('https://news.example.com/a'))).toBe(true)
     expect(filter(request('https://www.news.example.com/a'))).toBe(true)
+    expect(filter(request('https://m.news.example.com/a'))).toBe(true)
+    expect(filter(request('https://news.example.com./a'))).toBe(true)
     expect(filter(request('https://other.example.com/'))).toBe(false)
     // A subresource of the listed site is not the page: only the main frame is closed.
     expect(filter(request('https://news.example.com/app.js', 'script'))).toBe(false)

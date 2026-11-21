@@ -23,6 +23,24 @@ describe('focus mode: when it blocks', () => {
     expect(focusBlock(settings, 'https://notnews.example.com.evil.test/', now)).toBeNull()
   })
 
+  it('blocks a real subdomain, a port, a capitalised or percent-encoded host', () => {
+    const now = 1_000_000
+    const settings = base({ focusUntil: now + 60_000 })
+    expect(focusBlock(settings, 'https://m.news.example.com/a', now)?.site).toBe('news.example.com')
+    expect(focusBlock(settings, 'https://a.b.news.example.com:8443/a', now)?.site).toBe('news.example.com')
+    expect(focusBlock(settings, 'https://NEWS.Example.COM/a', now)?.site).toBe('news.example.com')
+    expect(focusBlock(settings, 'https://%6eews.example.com/a', now)?.site).toBe('news.example.com')
+  })
+
+  it('is not bypassed by a trailing dot on the host', () => {
+    const now = 1_000_000
+    const settings = base({ focusSites: ['facebook.com'], focusUntil: now + 60_000 })
+    for (const url of ['https://facebook.com./', 'https://www.facebook.com./', 'https://m.facebook.com./', 'https://facebook.com%2e/', 'https://facebook.com.:8443/x']) {
+      expect(focusBlock(settings, url, now)?.site, url).toBe('facebook.com')
+    }
+    expect(focusBlock(settings, 'https://notfacebook.com./', now)).toBeNull()
+  })
+
   it('stops blocking when the timer has ended', () => {
     const settings = base({ focusUntil: 5_000 })
     expect(focusState(settings, 4_999)).toEqual({ active: true, by: 'timer', until: 5_000 })
