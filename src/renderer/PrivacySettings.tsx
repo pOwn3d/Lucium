@@ -7,7 +7,7 @@ import { THIRD_PARTY_COOKIE_EXCEPTIONS_MAX, trackingParamList } from '@shared/pr
 import { fieldError } from './field-error'
 import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
-import { Check, Group, Row } from './settings-parts'
+import { Check, Group, Row, Subpage } from './settings-parts'
 import { t } from '@shared/i18n'
 
 const SHOWN_PARAMS = 8
@@ -57,7 +57,7 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
       />
     </Group>
 
-    <Group keys={['blockThirdPartyCookies', 'thirdPartyCookieExceptions']} title={t('privacy-settings.cookies-tiers')}>
+    <Group keys={['blockThirdPartyCookies']} title={t('privacy-settings.cookies-tiers')}>
       <Check
         settingKey="blockThirdPartyCookies"
         label={t('privacy-settings.bloquer-les-cookies-tiers')}
@@ -66,9 +66,12 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
         checked={settings.blockThirdPartyCookies}
         onChange={(blockThirdPartyCookies) => update({ blockThirdPartyCookies })}
       />
-      {settings.blockThirdPartyCookies && (
+    </Group>
+
+    {/* The sites where the cookies of a third party are accepted: on the subpage of the other exceptions, drawn whether the option is on or not. */}
+    <Subpage id="exceptions">
+      <Group keys={['thirdPartyCookieExceptions']} title={t('privacy-settings.sites-ou-les-cookies-tiers-sont-acceptes')} footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}>
         <>
-          <Row label={<strong>{t('privacy-settings.sites-ou-les-cookies-tiers-sont-acceptes')}</strong>} hint={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')} />
           {exceptions.length === 0 && <Row label={<span className="muted">{t('settings.aucun-site')}</span>} />}
           {exceptions.map((host) => (
             <div key={host} className="pref-row">
@@ -102,8 +105,8 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
             </div>
           )}
         </>
-      )}
-    </Group>
+      </Group>
+    </Subpage>
     </>
   )
 }

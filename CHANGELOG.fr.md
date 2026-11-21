@@ -6,7 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Ajouts
 
-- **Bloquer les cookies tiers** : Réglages › Vie privée et sécurité › Cookies tiers. Un contenu d’un autre site que l’onglet ne reçoit plus vos cookies et ne peut plus en déposer. Désactivé par défaut, avec une liste de sites où ils restent acceptés. `document.cookie` des scripts n’est pas touché.
+- **Bloquer les cookies tiers** : Réglages › Vie privée et sécurité › Cookies tiers. Un contenu d’un autre site que l’onglet ne reçoit plus vos cookies et ne peut plus en déposer, WebSocket compris. Désactivé par défaut, avec une liste de sites où ils restent acceptés. `document.cookie` des scripts n’est pas touché.
 
 ## [1.1.5] - 2026-11-20
 

@@ -60,6 +60,7 @@ function idleEngine(): Record<string, unknown> {
 
 const OFF = { httpsUpgrade: false, globalPrivacyControl: false, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] as string[] }
 const ON = { ...OFF, blockThirdPartyCookies: true }
+const WEB = ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*']
 const tab = (url: string) => ({ getURL: () => url, isDestroyed: () => false, id: 7 })
 const answer = (listener: Listener, details: Record<string, unknown>): Promise<Record<string, unknown>> => new Promise((resolve) => listener(details, resolve))
 
@@ -79,7 +80,7 @@ const reply = (url: string, top: string, resourceType = 'image') => ({ id: 1, ur
 describe('third-party cookies in the header hooks', () => {
   it('does not send the cookie of a request to another site, and sends the site\'s own', async () => {
     const { ses } = sessionWith(ON)
-    expect(ses.sending.filter).toEqual({ urls: ['http://*/*', 'https://*/*'] })
+    expect(ses.sending.filter).toEqual({ urls: WEB })
     expect(await answer(ses.sending.listener!, request('https://tracker.test/p.gif', 'https://news.test/a'))).toEqual({ requestHeaders: { Accept: '*/*' } })
     expect(await answer(ses.sending.listener!, request('https://cdn.news.test/p.gif', 'https://news.test/a'))).toEqual({})
   })
@@ -97,10 +98,34 @@ describe('third-party cookies in the header hooks', () => {
 
   it('does not keep the Set-Cookie of the answer to a request to another site, and keeps the site\'s own', async () => {
     const { ses } = sessionWith(ON)
-    expect(ses.received.filter?.urls).toEqual(['http://*/*', 'https://*/*'])
+    expect(ses.received.filter?.urls).toEqual(WEB)
     expect(await answer(ses.received.listener!, reply('https://tracker.test/p.gif', 'https://news.test/a'))).toEqual({ responseHeaders: { 'Content-Type': ['image/gif'] } })
     expect(await answer(ses.received.listener!, reply('https://news.test/p.gif', 'https://news.test/a'))).toEqual({})
     expect(await answer(ses.received.listener!, reply('https://tracker.test/', 'https://news.test/a', 'mainFrame'))).toEqual({})
+  })
+
+  it('cuts the cookies of the handshake of a WebSocket to another site, with the option alone: the filters take the ws and wss addresses', async () => {
+    const { ses } = sessionWith(ON)
+    expect(ses.sending.filter?.urls).toEqual(expect.arrayContaining(['ws://*/*', 'wss://*/*']))
+    expect(ses.received.filter?.urls).toEqual(expect.arrayContaining(['ws://*/*', 'wss://*/*']))
+    expect(await answer(ses.sending.listener!, request('wss://tracker.test/socket', 'https://news.test/a', 'webSocket'))).toEqual({ requestHeaders: { Accept: '*/*' } })
+    expect(await answer(ses.sending.listener!, request('wss://news.test/socket', 'https://news.test/a', 'webSocket'))).toEqual({})
+    const upgrade = { ...reply('wss://tracker.test/socket', 'https://news.test/a', 'webSocket'), statusCode: 101, statusLine: 'HTTP/1.1 101 Switching Protocols' }
+    expect(await answer(ses.received.listener!, upgrade)).toEqual({ responseHeaders: { 'Content-Type': ['image/gif'] } })
+    expect(await answer(ses.received.listener!, { ...upgrade, url: 'wss://news.test/socket' })).toEqual({})
+  })
+
+  it('installs the cookie cut of a private window or a container by the setPrivacy of its scope, on the request side and on the answer side', async () => {
+    const ses = fakeSession()
+    const engine = idleEngine()
+    const scope = { session: ses, blocker: null, prefix: '', privacy: null as typeof OFF | null, responsePolicy: null }
+    methods['scopeSetPrivacy']!.call(engine, scope, ON)
+    expect(ses.sending.filter?.urls).toEqual(WEB)
+    expect(ses.received.filter?.urls).toEqual(WEB)
+    expect(await answer(ses.sending.listener!, request('https://tracker.test/p.gif', 'https://news.test/a'))).toEqual({ requestHeaders: { Accept: '*/*' } })
+    expect(await answer(ses.received.listener!, reply('https://tracker.test/p.gif', 'https://news.test/a'))).toEqual({ responseHeaders: { 'Content-Type': ['image/gif'] } })
+    methods['scopeSetPrivacy']!.call(engine, scope, null)
+    expect(ses.received.filter).toEqual({ urls: ['https://*/*'], types: ['mainFrame'] })
   })
 
   it('costs nothing while the option is off: only the navigations are looked at, and no header is touched', async () => {
@@ -117,8 +142,8 @@ describe('third-party cookies in the header hooks', () => {
     methods['installResponsePolicy']!.call(engine, ses, () => null)
     expect(ses.received.filter).toEqual({ urls: ['https://*/*'], types: ['mainFrame'] })
     methods['setPrivacy']!.call(engine, ON)
-    expect(ses.sending.filter).toEqual({ urls: ['http://*/*', 'https://*/*'] })
-    expect(ses.received.filter).toEqual({ urls: ['http://*/*', 'https://*/*'] })
+    expect(ses.sending.filter).toEqual({ urls: WEB })
+    expect(ses.received.filter).toEqual({ urls: WEB })
     expect(await answer(ses.received.listener!, reply('https://tracker.test/p.gif', 'https://news.test/a'))).toEqual({ responseHeaders: { 'Content-Type': ['image/gif'] } })
     methods['setPrivacy']!.call(engine, null)
     expect(ses.received.filter).toEqual({ urls: ['https://*/*'], types: ['mainFrame'] })

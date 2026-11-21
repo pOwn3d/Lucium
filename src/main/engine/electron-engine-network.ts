@@ -681,7 +681,8 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     const net = this.extensionNets.get(ses)
     const needs = net?.needs()
     const forExtensions = needs !== undefined && (needs.responseHeaders || needs.events.has('onHeadersReceived') || needs.events.has('onAuthRequired'))
-    const filter = forExtensions ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : local || cookieCut ? { urls: ['http://*/*', 'https://*/*'] } : policyOf() ? { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame' as const] } : { urls: ['https://*/*'], types: ['mainFrame' as const] }
+    // The handshake of a WebSocket carries the cookies and may set some: it is looked at as soon as the cookies are cut.
+    const filter = forExtensions || cookieCut ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : local ? { urls: ['http://*/*', 'https://*/*'] } : policyOf() ? { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame' as const] } : { urls: ['https://*/*'], types: ['mainFrame' as const] }
     ses.webRequest.onHeadersReceived(filter, (details, callback) => {
       if (local && this.keptFromLocalPage(details)) return callback({ cancel: true })
       const sent = (details.responseHeaders ?? {}) as ResponseHeaders
@@ -951,7 +952,7 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     const trial = this.signIn
     const onSignIn = trial !== null && this.signInSessions.has(ses)
     const filter: { urls: string[]; types?: Array<'mainFrame' | 'subFrame'> } =
-      forExtensions || signal ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : cookieCut ? { urls: ['http://*/*', 'https://*/*'] } : local || onSignIn ? { urls: ['http://*/*', 'https://*/*'] } : { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame', 'subFrame'] }
+      forExtensions || signal || cookieCut ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : local || onSignIn ? { urls: ['http://*/*', 'https://*/*'] } : { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame', 'subFrame'] }
     ses.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
       // The method of every main-frame request, told before anything else can answer it: the redirect that follows is of this request, and a redirect that follows a POST is never taken over (google-sign-in-agent.ts).
       if (trial !== null && details.resourceType === 'mainFrame') trial.noteRequest(details.webContents?.id, details.method)

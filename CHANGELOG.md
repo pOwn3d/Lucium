@@ -12,7 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
-- **Block third-party cookies**: Settings › Privacy and security › Third-party cookies. Content from another site than the tab’s neither receives your cookies nor can set its own. Off by default, with a list of sites where they stay accepted. Scripts’ own `document.cookie` is not touched.
+- **Block third-party cookies**: Settings › Privacy and security › Third-party cookies. Content from another site than the tab’s neither receives your cookies nor can set its own, WebSocket included. Off by default, with a list of sites where they stay accepted. Scripts’ own `document.cookie` is not touched.
 
 ## [1.1.5] - 2026-11-20
 
