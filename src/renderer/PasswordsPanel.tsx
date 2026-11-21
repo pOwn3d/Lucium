@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type ReactNode } from 'react'
 import { DEFAULT_GENERATOR, GENERATOR_LENGTH, generatorLengthOf } from '@shared/password-generator'
 import { PASSWORD_LIMITS, phraseProblem, type PasswordReply, type PasswordRequest, type PasswordsView } from '@shared/passwords'
+import { TOTP_LIMITS } from '@shared/totp'
 import { api } from './api'
 import './site-data.css'
 import './passwords.css'
@@ -20,6 +21,9 @@ const sectionId = (id: Section): string => `pw-section-${id}`
 const sectionLabel = (id: Section): string => (id === 'add' ? t('passwords-panel.ajouter') : id === 'files' ? t('passwords-panel.importer-exporter') : t('passwords-panel.coffre'))
 
 const errorText = ipcErrorText
+
+/** A one-time code in two halves to read it by (« 123 456 »); the digits are the same ones. */
+export const groupedCode = (code: string): string => (code.length % 2 === 0 ? `${code.slice(0, code.length / 2)} ${code.slice(code.length / 2)}` : `${code.slice(0, 3)} ${code.slice(3)}`)
 
 /** A value of a sentence that `withBold` draws in bold, wherever the language puts it (a host or a username holds no control character). */
 const bold = (value: string): string => `\u0000${value}\u0000`
@@ -60,6 +64,12 @@ export function PasswordsPanel() {
   const [next, setNext] = useState('')
   const [destroyPhrase, setDestroyPhrase] = useState('')
   const [touchPhrase, setTouchPhrase] = useState('')
+  // The one-time code on screen (one at a time), with the time it stops being the code, as a time of this page.
+  const [shown, setShown] = useState<{ id: string; code: string; until: number } | null>(null)
+  // The row that a key for one-time codes is being added to, what was typed for it, and the row whose key is about to be removed.
+  const [totpFor, setTotpFor] = useState<string | null>(null)
+  const [totpKey, setTotpKey] = useState('')
+  const [removingTotp, setRemovingTotp] = useState<string | null>(null)
   // When another phrase may be tried, as a time of this page: the answer gives a delay once, and the seconds left are counted here.
   const [retryAt, setRetryAt] = useState(0)
   const retrySeconds = useCountdown(retryAt)
@@ -115,6 +125,10 @@ export function PasswordsPanel() {
   }, [view, filter])
 
   const forget = useCallback(() => {
+    setShown(null)
+    setTotpFor(null)
+    setTotpKey('')
+    setRemovingTotp(null)
     setPhrase('')
     setAgain('')
     setCurrent('')
@@ -132,6 +146,21 @@ export function PasswordsPanel() {
   useEffect(() => {
     if (vault === 'locked') forget()
   }, [vault, forget])
+
+  // The code on screen is asked for again when its time is over: the digits shown are always the ones of now, never an old one left on screen.
+  const shownSeconds = useCountdown(shown?.until ?? 0)
+  const showCode = useCallback(
+    async (id: string) => {
+      const reply = await ask({ kind: 'totp-code', id })
+      if (!live.current) return
+      setShown(reply?.totp ? { id, code: reply.totp.code, until: Date.now() + reply.totp.secondsLeft * 1000 } : null)
+    },
+    [ask]
+  )
+  const shownId = shown?.id
+  useEffect(() => {
+    if (shownId !== undefined && shownSeconds === 0) void showCode(shownId)
+  }, [shownId, shownSeconds, showCode])
 
   if (failure !== null) {
     return (
@@ -203,6 +232,13 @@ export function PasswordsPanel() {
     if (reply?.password !== undefined) {
       setDraft((d) => ({ ...d, password: reply.password! }))
       setReveal(true)
+    }
+  }
+  const saveTotp = async (id: string) => {
+    const reply = await ask({ kind: 'totp-set', id, secret: totpKey })
+    if (reply?.ok) {
+      setTotpKey('')
+      setTotpFor(null)
     }
   }
   const fill = async (id: string) => {
@@ -352,10 +388,77 @@ export function PasswordsPanel() {
                         <button type="button" className="button" disabled={busy || !here} title={here ? t('passwords-panel.remplir-la-page') : t('passwords-panel.l-adresse-de-la-page-n-est-pas-exactement-celle')} aria-label={t('passwords-panel.remplir-username-sur-host', { username: row.username, host: row.host })} onClick={() => void fill(row.id)}>
                           {t('passwords-panel.remplir')}
                         </button>
+                        {row.totp ? (
+                          <button type="button" className="link-button" disabled={busy} aria-expanded={shown?.id === row.id} aria-label={t('passwords-panel.totp-code-de-username-sur-host', { username: row.username, host: row.host })} onClick={() => (shown?.id === row.id ? setShown(null) : void showCode(row.id))}>
+                            {shown?.id === row.id ? t('passwords-panel.totp-cacher-le-code') : t('passwords-panel.totp-code')}
+                          </button>
+                        ) : (
+                          <button type="button" className="link-button" disabled={busy} aria-expanded={totpFor === row.id} aria-label={t('passwords-panel.totp-ajouter-a-username-sur-host', { username: row.username, host: row.host })} onClick={() => (setTotpKey(''), setTotpFor(totpFor === row.id ? null : row.id))}>
+                            {t('passwords-panel.totp-ajouter')}
+                          </button>
+                        )}
                         <button type="button" className="link-button" disabled={busy} aria-label={t('passwords-panel.supprimer-username-sur-host', { username: row.username, host: row.host })} onClick={() => setRemoving(row.id)}>
                           {t('passwords-panel.supprimer')}
                         </button>
                       </>
+                    )}
+                    {row.totp && shown?.id === row.id && (
+                      <div className="passwords-totp">
+                        <span className="passwords-code" aria-label={t('passwords-panel.totp-code')}>
+                          {groupedCode(shown.code)}
+                        </span>
+                        <span className="muted">{t('passwords-panel.totp-valable-seconds-s', { seconds: shownSeconds })}</span>
+                        <button type="button" className="button" disabled={busy} aria-label={t('passwords-panel.totp-copier-le-code-de-username-sur-host', { username: row.username, host: row.host })} onClick={() => void ask({ kind: 'totp-copy', id: row.id })}>
+                          {t('passwords-panel.totp-copier')}
+                        </button>
+                        {removingTotp === row.id ? (
+                          <>
+                            <button type="button" className="link-button" disabled={busy} onClick={() => setRemovingTotp(null)}>
+                              {t('passwords-panel.annuler')}
+                            </button>
+                            <button
+                              type="button"
+                              className="link-button passwords-danger"
+                              disabled={busy}
+                              aria-label={t('passwords-panel.totp-retirer-de-username-sur-host', { username: row.username, host: row.host })}
+                              onClick={async () => {
+                                const reply = await ask({ kind: 'totp-remove', id: row.id })
+                                setRemovingTotp(null)
+                                if (reply?.ok) setShown(null)
+                              }}
+                            >
+                              {t('passwords-panel.totp-retirer')}
+                            </button>
+                          </>
+                        ) : (
+                          <button type="button" className="link-button" disabled={busy} aria-label={t('passwords-panel.totp-retirer-de-username-sur-host', { username: row.username, host: row.host })} onClick={() => setRemovingTotp(row.id)}>
+                            {t('passwords-panel.totp-retirer')}
+                          </button>
+                        )}
+                      </div>
+                    )}
+                    {!row.totp && totpFor === row.id && (
+                      <form
+                        className="passwords-totp passwords-form"
+                        onSubmit={(e) => {
+                          e.preventDefault()
+                          void saveTotp(row.id)
+                        }}
+                      >
+                        <label className="field-label" htmlFor={`pw-totp-${row.id}`}>
+                          {t('passwords-panel.totp-cle')}
+                        </label>
+                        <input id={`pw-totp-${row.id}`} className="field" type="password" autoFocus autoComplete="off" spellCheck={false} maxLength={TOTP_LIMITS.inputMax} value={totpKey} onChange={(e) => setTotpKey(e.target.value)} />
+                        <p className="muted">{t('passwords-panel.totp-cle-aide')}</p>
+                        <div className="row end">
+                          <button type="button" className="button" disabled={busy} onClick={() => (setTotpKey(''), setTotpFor(null))}>
+                            {t('passwords-panel.annuler')}
+                          </button>
+                          <button type="submit" className="button primary" disabled={busy || totpKey.trim() === ''}>
+                            {t('passwords-panel.totp-enregistrer-la-cle')}
+                          </button>
+                        </div>
+                      </form>
                     )}
                   </li>
                 )

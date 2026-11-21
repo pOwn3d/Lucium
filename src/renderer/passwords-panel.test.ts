@@ -9,7 +9,7 @@ import type { LuciumApi } from '@shared/ipc'
 import { setLanguage, t } from '@shared/i18n'
 import { GENERATOR_LENGTH, generatorLengthOf } from '@shared/password-generator'
 import { NO_PASSWORDS_VIEW, PASSWORD_LIMITS, type PasswordReply, type PasswordRequest, type PasswordsView } from '@shared/passwords'
-import { PasswordsPanel } from './PasswordsPanel'
+import { PasswordsPanel, groupedCode } from './PasswordsPanel'
 import { button, click, mount, settle, type, type Mounted } from './dom.test-support'
 
 const view = (patch: Partial<PasswordsView>): PasswordsView => ({ ...NO_PASSWORDS_VIEW, enabled: true, ...patch })
@@ -140,5 +140,115 @@ describe('the form that creates the vault', () => {
     type(field(container, 'pw-again'), 'a phrase that is long enoug')
     expect(container.querySelector('[role="alert"]')?.textContent).toBe(t('passwords-panel.les-deux-phrases-ne-sont-pas-identiques'))
     expect(button(container, t('passwords-panel.creer-le-coffre')).disabled).toBe(true)
+  })
+})
+
+describe('the one-time codes of an entry', () => {
+  const row = (patch: Partial<PasswordsView['entries'][number]> = {}) => ({ id: 'a'.repeat(32), origin: 'https://example.com', host: 'example.com', username: 'ana', totp: true, updatedAt: 1, ...patch })
+  const unlocked = (entries = [row()]): PasswordsView => view({ vault: 'unlocked', entries })
+  /** The main process answers a request for a code with these digits and the seconds they last. */
+  const answersCode = (code: string, secondsLeft: number): void => {
+    passwords.mockImplementation(async (request: PasswordRequest) => {
+      if (request.kind === 'lock') held = view({ vault: 'locked' })
+      return { ok: true, view: held, ...(request.kind === 'totp-code' ? { totp: { id: request.id, code, secondsLeft, period: 30 } } : {}) } as PasswordReply
+    })
+  }
+
+  it('is read in two halves', () => {
+    expect(groupedCode('123456')).toBe('123 456')
+    expect(groupedCode('12345678')).toBe('1234 5678')
+    expect(groupedCode('1234567')).toBe('123 4567')
+  })
+
+  it('is asked for when « Code » is pressed, shown with the seconds it lasts, copied by the main process and hidden again', async () => {
+    answersCode('654321', 20)
+    const container = await panel(unlocked())
+    expect(container.textContent).not.toContain('654 321')
+    await click(button(container, t('passwords-panel.totp-code')))
+    expect(passwords).toHaveBeenLastCalledWith({ kind: 'totp-code', id: 'a'.repeat(32) })
+    expect(container.querySelector('.passwords-code')?.textContent).toBe('654 321')
+    expect(container.textContent).toContain(t('passwords-panel.totp-valable-seconds-s', { seconds: 20 }))
+    // Copying names the entry and nothing else: the digits are not sent back.
+    await click(button(container, t('passwords-panel.totp-copier')))
+    expect(passwords).toHaveBeenLastCalledWith({ kind: 'totp-copy', id: 'a'.repeat(32) })
+    await click(button(container, t('passwords-panel.totp-cacher-le-code')))
+    expect(container.querySelector('.passwords-code')).toBeNull()
+  })
+
+  it('is asked for again when its time is over: the digits on screen are the ones of now', async () => {
+    vi.useFakeTimers()
+    answersCode('111111', 2)
+    const container = await panel(unlocked())
+    await click(button(container, t('passwords-panel.totp-code')))
+    expect(container.querySelector('.passwords-code')?.textContent).toBe('111 111')
+    answersCode('222222', 30)
+    await settle(() => void vi.advanceTimersByTime(2600))
+    expect(container.querySelector('.passwords-code')?.textContent).toBe('222 222')
+    expect(passwords.mock.calls.filter(([request]) => request.kind === 'totp-code')).toHaveLength(2)
+  })
+
+  it('goes from the screen when the main process has no code to give, and is not asked for again in a loop', async () => {
+    vi.useFakeTimers()
+    passwords.mockImplementation(async () => ({ ok: false, message: 'no key', view: held }) as PasswordReply)
+    const container = await panel(unlocked())
+    await click(button(container, t('passwords-panel.totp-code')))
+    expect(container.querySelector('.passwords-code')).toBeNull()
+    await settle(() => void vi.advanceTimersByTime(5000))
+    expect(passwords.mock.calls.filter(([request]) => request.kind === 'totp-code')).toHaveLength(1)
+  })
+
+  it('has its key added from a field that hides what is typed: sent as typed, then gone from the field', async () => {
+    const container = await panel(unlocked([row({ totp: false })]))
+    await click(button(container, t('passwords-panel.totp-ajouter')))
+    const key = field(container, `pw-totp-${'a'.repeat(32)}`)
+    expect(key.type).toBe('password')
+    expect(button(container, t('passwords-panel.totp-enregistrer-la-cle')).disabled).toBe(true)
+    type(key, 'gezd gnbv gy3t qojq gezd gnbv gy3t qojq')
+    await click(button(container, t('passwords-panel.totp-enregistrer-la-cle')))
+    expect(passwords).toHaveBeenLastCalledWith({ kind: 'totp-set', id: 'a'.repeat(32), secret: 'gezd gnbv gy3t qojq gezd gnbv gy3t qojq' })
+    expect(container.querySelector(`#pw-totp-${'a'.repeat(32)}`)).toBeNull()
+  })
+
+  it('keeps what was typed when the key is refused, so that it can be corrected, and drops it on « Annuler »', async () => {
+    passwords.mockImplementation(async () => ({ ok: false, message: 'refused', view: held }) as PasswordReply)
+    const container = await panel(unlocked([row({ totp: false })]))
+    await click(button(container, t('passwords-panel.totp-ajouter')))
+    type(field(container, `pw-totp-${'a'.repeat(32)}`), 'GEZDGNBVGY3TQOJ')
+    await click(button(container, t('passwords-panel.totp-enregistrer-la-cle')))
+    expect(field(container, `pw-totp-${'a'.repeat(32)}`).value).toBe('GEZDGNBVGY3TQOJ')
+    await click(button(container, t('passwords-panel.annuler')))
+    await click(button(container, t('passwords-panel.totp-ajouter')))
+    expect(field(container, `pw-totp-${'a'.repeat(32)}`).value).toBe('')
+  })
+
+  it('has its key removed only after a second click', async () => {
+    answersCode('654321', 20)
+    const container = await panel(unlocked())
+    await click(button(container, t('passwords-panel.totp-code')))
+    await click(button(container, t('passwords-panel.totp-retirer')))
+    expect(passwords.mock.calls.some(([request]) => request.kind === 'totp-remove')).toBe(false)
+    await click(button(container, t('passwords-panel.annuler')))
+    expect(passwords.mock.calls.some(([request]) => request.kind === 'totp-remove')).toBe(false)
+    await click(button(container, t('passwords-panel.totp-retirer')))
+    await click(button(container, t('passwords-panel.totp-retirer')))
+    expect(passwords).toHaveBeenCalledWith({ kind: 'totp-remove', id: 'a'.repeat(32) })
+  })
+
+  it('leaves nothing on the screen once the vault is locked: not the digits, not a key that was being typed', async () => {
+    answersCode('654321', 20)
+    const container = await panel(unlocked([row(), row({ id: 'b'.repeat(32), username: 'bob', totp: false })]))
+    await click(button(container, t('passwords-panel.totp-code')))
+    await click(button(container, t('passwords-panel.totp-ajouter')))
+    type(field(container, `pw-totp-${'b'.repeat(32)}`), 'GEZDGNBVGY3TQOJQ')
+    expect(container.textContent).toContain('654 321')
+    await click(button(container, t('passwords-panel.verrouiller')))
+    expect(container.textContent).not.toContain('654 321')
+    expect(container.querySelector('.passwords-code')).toBeNull()
+    held = unlocked([row(), row({ id: 'b'.repeat(32), username: 'bob', totp: false })])
+    await settle(() => void window.dispatchEvent(new Event('focus')))
+    expect(container.querySelector('.passwords-code')).toBeNull()
+    expect(container.querySelector(`#pw-totp-${'b'.repeat(32)}`)).toBeNull()
+    await click(button(container, t('passwords-panel.totp-ajouter')))
+    expect(field(container, `pw-totp-${'b'.repeat(32)}`).value).toBe('')
   })
 })

@@ -6,6 +6,7 @@
 import { generatorOptionsOf, type GeneratorOptions } from './password-generator'
 import { t } from './i18n'
 import { isRecord } from './record'
+import { TOTP_LIMITS, type TotpCode, type TotpConfig } from './totp'
 
 export const PASSWORD_LIMITS = {
   /** Entries in the vault (an import stops there). */
@@ -20,7 +21,9 @@ export const PASSWORD_LIMITS = {
   /** How long a login seen on a page waits for the user's answer, in the main process only. */
   captureTtlMs: 3 * 60_000,
   /** The vault locks itself after this long without use. */
-  autoLockMs: 10 * 60_000
+  autoLockMs: 10 * 60_000,
+  /** A one-time code copied to the clipboard is taken off it after this long, if it is still the text there. */
+  clipboardClearMs: 30_000
 } as const
 
 /** A stored login. Only the main process ever holds one with its password. */
@@ -29,6 +32,8 @@ export interface PasswordEntry {
   origin: string
   username: string
   password: string
+  /** The key of its one-time codes (shared/totp.ts), sealed in the vault with the rest of the entry. Never in a row, a reply or a log. */
+  totp?: TotpConfig
   createdAt: number
   updatedAt: number
 }
@@ -39,12 +44,14 @@ export interface PasswordRow {
   origin: string
   host: string
   username: string
+  /** The entry has a key for one-time codes (never the key). */
+  totp: boolean
   updatedAt: number
 }
 
 /** The view of an entry for the interface. The one place a password could leak is here, and it is a copy of named fields. */
 export function rowOf(entry: PasswordEntry): PasswordRow {
-  return { id: entry.id, origin: entry.origin, host: hostLabel(entry.origin), username: entry.username, updatedAt: entry.updatedAt }
+  return { id: entry.id, origin: entry.origin, host: hostLabel(entry.origin), username: entry.username, totp: entry.totp !== undefined, updatedAt: entry.updatedAt }
 }
 
 // ---------- origins ----------
@@ -272,6 +279,13 @@ export type PasswordRequest =
   | { kind: 'touch-id-on'; phrase: string }
   /** Deletes the key from the keychain. */
   | { kind: 'touch-id-off' }
+  /** Adds (or replaces) the key of the one-time codes of an entry: a base32 key or an `otpauth://totp/…` address, as typed. */
+  | { kind: 'totp-set'; id: string; secret: string }
+  | { kind: 'totp-remove'; id: string }
+  /** The code of now for an entry, to show with its countdown. */
+  | { kind: 'totp-code'; id: string }
+  /** Puts the code of now on the clipboard (from the main process: the page is not told), and takes it off after `clipboardClearMs`. */
+  | { kind: 'totp-copy'; id: string }
 
 /** Touch ID for the vault: whether this Mac and this build can offer it, and whether it is on. */
 export interface TouchIdView {
@@ -324,6 +338,8 @@ export interface PasswordReply {
   view: PasswordsView
   /** Only for a `generate` request: the text the user asked to see in the field they are filling. */
   password?: string
+  /** Only for a `totp-code` request: the digits the user asked to see, with the seconds they last. */
+  totp?: TotpCode
   report?: ImportReport
 }
 
@@ -360,7 +376,12 @@ export function parsePasswordRequest(raw: unknown): PasswordRequest | null {
         : null
     case 'remove':
     case 'fill':
+    case 'totp-remove':
+    case 'totp-code':
+    case 'totp-copy':
       return only('id') && idOf(raw['id']) ? ({ kind: raw['kind'], id: raw['id'] } as PasswordRequest) : null
+    case 'totp-set':
+      return only('id', 'secret') && idOf(raw['id']) && typeof raw['secret'] === 'string' && raw['secret'].length <= TOTP_LIMITS.inputMax ? { kind: 'totp-set', id: raw['id'], secret: raw['secret'] } : null
     case 'capture':
       return only('op', 'offer') && (raw['op'] === 'confirm' || raw['op'] === 'dismiss') && Number.isSafeInteger(raw['offer']) && (raw['offer'] as number) > 0 ? { kind: 'capture', op: raw['op'], offer: raw['offer'] as number } : null
     case 'generate':

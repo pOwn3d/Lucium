@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **One-time codes (TOTP) in the password vault**: a login can hold the key of its two-step codes (base32 key or `otpauth://` address). The panel shows the code with its countdown and copies it, cleared after 30 seconds. The key stays encrypted in the vault and is never logged. RFC 6238, nothing filled into a page.
+
 ## [1.1.5] - 2026-11-20
 
 Your iPhone can now synchronize with your Mac, directly and without a server, and its Today tabs can be shared. On Windows the window draws its own title bar, and Windows and Linux say that they update by hand.
