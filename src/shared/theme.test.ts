@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   backgroundColors, cleanTheme, defaultTheme, harmonize, hexToHsl, hslToHex, isHex, luminance, mix, noiseImage,
-  colorAtPadPoint, nextOverlay, pagePaletteCss, pagePaletteVars, parseCssColor, resolveAppearance, themeFromArc, themeFromHue, themeHue, themeVars,
+  colorAtPadPoint, pagePaletteCss, pagePaletteVars, parseCssColor, resolveAppearance, themeFromArc, themeFromHue, themeHue, themeVars,
   padPointOf, pageSchemeOf, themeSourceOf, toolbarTint, withColorAt, withColorCount, withHarmony,
   SPACE_HOVER, SPACE_INK, SPACE_WASH, spaceInks, type ResolvedAppearance, type SpaceTheme
 } from './theme'
@@ -234,11 +234,6 @@ describe('editing helpers', () => {
     expect(withColorAt(custom, 1, '#abcdef')!.baseColors).toEqual(['#112233', '#abcdef'])
     expect(withColorAt(custom, 2, '#abcdef')).toBeNull()
     expect(withColorAt(custom, 0, 'red')).toBeNull()
-  })
-
-  it('cycles the texture through every option and back', () => {
-    expect(nextOverlay('none')).toBe('grain')
-    expect(nextOverlay('coarse')).toBe('none')
   })
 
   it('maps pad positions to colours and back: hue along x, light at the top and dark at the bottom', () => {

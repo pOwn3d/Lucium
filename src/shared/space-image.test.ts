@@ -10,7 +10,6 @@ import {
   orphanImages,
   parseSpaceImageRequest,
   referencedImages,
-  squareCrop
 } from './space-image'
 import { defaultTheme } from './theme'
 
@@ -136,15 +135,6 @@ describe('isSpaceImageName', () => {
     for (const bad of ['', '../0123456789abcdef01234567.png', '0123456789abcdef01234567.png/', '/etc/passwd', '0123456789abcdef01234567.PNG', '0123456789abcdef0123456.png', '0123456789abcdef012345678.png', '0123456789ABCDEF01234567.png', '0123456789abcdef01234567.png\n', 'a/../../b.png', '..', null, undefined, 12, {}]) { // gitleaks:allow (file names made of hexadecimal digits, not a key)
       expect(isSpaceImageName(bad), String(bad)).toBe(false)
     }
-  })
-})
-
-describe('squareCrop', () => {
-  it('takes the middle of a wide or a tall picture', () => {
-    expect(squareCrop(400, 200)).toEqual({ x: 100, y: 0, size: 200 })
-    expect(squareCrop(200, 400)).toEqual({ x: 0, y: 100, size: 200 })
-    expect(squareCrop(300, 300)).toEqual({ x: 0, y: 0, size: 300 })
-    expect(squareCrop(5, 2)).toEqual({ x: 1, y: 0, size: 2 })
   })
 })
 

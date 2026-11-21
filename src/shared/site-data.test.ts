@@ -23,7 +23,6 @@ import {
   sessionStorageScript,
   siteHostOf,
   siteOrigins,
-  siteScore,
   splitSiteHosts
 } from './site-data'
 import { frenchSpaces } from './french-typography'
@@ -365,11 +364,6 @@ describe('rememberSiteHosts', () => {
 describe('the result of a run', () => {
   const ok = (type: 'cookies' | 'cache') => ({ type, ok: true as const })
   const bad = (type: 'cookies' | 'cache') => ({ type, ok: false as const, error: 'boom' })
-
-  it('scores a site as the operations that went through out of all of them', () => {
-    expect(siteScore([ok('cache'), bad('cookies')])).toEqual({ ok: 1, total: 2 })
-    expect(siteScore([])).toEqual({ ok: 0, total: 0 })
-  })
 
   it('counts a run as cleared only when there is a site and every operation of every site went through', () => {
     expect(allSitesCleared([{ host: 'a', results: [ok('cache')] }, { host: 'b', results: [ok('cookies')] }])).toBe(true)

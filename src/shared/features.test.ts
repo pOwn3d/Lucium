@@ -3,7 +3,6 @@ import { adsBlockingOn, adsBlockingPatch, blockerIsOn } from './blocker'
 import { interfaceMayDispatch } from './ipc-policy'
 import { defaultSettings, type Settings } from './model'
 import {
-  changedFeatures,
   costSentence,
   defaultFeaturesPatch,
   FEATURE_GROUPS,
@@ -16,7 +15,6 @@ import {
   featurePatch,
   featureSwitchable,
   firstSentence,
-  groupedFeatures,
   isFeatureOn,
   isFeatureShownOn,
   featureShownPatch,
@@ -174,7 +172,6 @@ describe('defaults and patches', () => {
     expect(isFeatureOn(settings({ blockAds: false, blockTrackers: true }), 'block-ads')).toBe(true)
     expect(isFeatureOn(settings({ blockAds: true, blockTrackers: false }), 'block-ads')).toBe(true)
     expect(isFeatureOn(settings(adsOff), 'block-ads')).toBe(false)
-    expect(changedFeatures(settings({ blockAds: false, blockTrackers: true }))).toEqual([])
   })
 
   it('reads every feature as off after its switch is turned off, and as on after it is turned on', () => {
@@ -196,16 +193,9 @@ describe('defaults and patches', () => {
     expect(Object.keys(patch).sort()).toEqual(all.filter((f) => featureWritable(f.id as FeatureId)).flatMap((f) => Object.keys(featurePatch(f.id as FeatureId, true))).sort())
     const changed = settings({ ...adsOff, sleepAfterMinutes: 0, autoUpdate: false, searchUrlTemplate: 'https://exemple.org/?q=%s', sleepMode: 'freeze' })
     const back = { ...changed, ...patch }
-    expect(changedFeatures(back)).toEqual([])
+    for (const f of all.filter((x) => featureWritable(x.id as FeatureId))) expect(isFeatureOn(back, f.id as FeatureId), f.id).toBe(isFeatureOn(defaultSettings(), f.id as FeatureId))
     expect(back.searchUrlTemplate).toBe('https://exemple.org/?q=%s')
     expect(back.sleepMode).toBe('freeze')
-  })
-
-  it('lists the features that are not in their default state', () => {
-    expect(changedFeatures(settings())).toEqual([])
-    expect(changedFeatures(settings({ ...adsOff, sleepAfterMinutes: 0 })).sort()).toEqual(['block-ads', 'sleep'])
-    // 15 minutes is on like 30: the feature is in its default state.
-    expect(changedFeatures(settings({ sleepAfterMinutes: 15 }))).toEqual([])
   })
 })
 
@@ -229,7 +219,6 @@ describe('what the pane may write', () => {
   })
 
   it('leaves the features it cannot write out of what a reset would change', () => {
-    expect(changedFeatures(settings({ lockEnabled: true }))).toEqual([])
     expect(defaultFeaturesPatch()).not.toHaveProperty('lockEnabled')
   })
 
@@ -297,29 +286,6 @@ describe('the first sentence of a description', () => {
       }
     }
     setLanguage('fr')
-  })
-})
-
-describe('groupedFeatures', () => {
-  it('shows every feature once, by group, in the order of the pane', () => {
-    const sections = groupedFeatures()
-    expect(sections.map((s) => s.group)).toEqual(FEATURE_GROUPS.map((g) => g.id))
-    expect(sections.flatMap((s) => s.features.map((f) => f.id)).sort()).toEqual(all.map((f) => f.id).sort())
-  })
-
-  it('searches the label, the description and the id, ignoring accents and case', () => {
-    expect(groupedFeatures('VEILLE').flatMap((s) => s.features.map((f) => f.id))).toContain('sleep')
-    expect(groupedFeatures('image dans l image').flatMap((s) => s.features.map((f) => f.id))).toEqual(['auto-pip', 'document-pip'])
-    expect(groupedFeatures('verifie').flatMap((s) => s.features.map((f) => f.id))).toEqual([])
-    expect(groupedFeatures('mises a jour').flatMap((s) => s.features.map((f) => f.id))).toEqual(['auto-update'])
-    expect(groupedFeatures('hover-cards').flatMap((s) => s.features.map((f) => f.id))).toEqual(['hover-cards'])
-  })
-
-  it('needs every word of the query, drops empty groups, and shows everything for a blank query', () => {
-    expect(groupedFeatures('publicites traqueurs').flatMap((s) => s.features.map((f) => f.id))).toEqual(['block-ads'])
-    expect(groupedFeatures('publicites zzz')).toEqual([])
-    expect(groupedFeatures('   ')).toEqual(groupedFeatures())
-    expect(groupedFeatures('sommeil').map((s) => s.group)).toEqual([])
   })
 })
 
@@ -423,10 +389,6 @@ describe('the history (history-off)', () => {
     }
     expect(isFeatureShownOn(defaultSettings(), 'history-off')).toBe(true)
     expect(featureShownPatch('history-off', false)).toEqual({ historyOff: true })
-  })
-
-  it('is found by the search of the features under the words of its row', () => {
-    expect(groupedFeatures('garder historique').flatMap((section) => section.features.map((feature) => feature.id))).toContain('history-off')
   })
 })
 

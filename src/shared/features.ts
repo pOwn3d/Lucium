@@ -14,7 +14,6 @@ import { adsBlockingOn, adsBlockingPatch } from './blocker'
 import { interfaceMayDispatch } from './ipc-policy'
 import { defaultSettings, type Settings } from './model'
 import { getLanguage, t, type MessageKey } from './i18n'
-import { foldAccentsAndQuotes } from './fold'
 import { settingsPath } from './settings-path'
 
 /** What a feature costs while it is active. `none` stands alone: nothing runs for it except a check when its event happens. */
@@ -1137,11 +1136,6 @@ export function defaultFeaturesPatch(): Partial<Settings> {
   return patch
 }
 
-/** The features whose state is not the default one: what "Rétablir les valeurs par défaut" would change. */
-export function changedFeatures(settings: Settings): FeatureId[] {
-  return FEATURES.filter((feature) => featureWritable(feature.id) && isFeatureOn(settings, feature.id) !== featureDefault(feature.id)).map((feature) => feature.id)
-}
-
 /** The costs in the order a sentence says them: what reaches out of the Mac first, then what it keeps, then what merely runs. */
 const COST_ORDER: ReadonlyArray<Exclude<FeatureCost, 'none'>> = ['network', 'memory', 'process', 'disk', 'timer', 'listeners']
 
@@ -1216,23 +1210,3 @@ export function firstSentence(text: string): string {
   return end ? text.slice(0, end.index + 1) : text
 }
 
-const fold = foldAccentsAndQuotes
-
-export interface FeatureSection {
-  group: FeatureGroup
-  label: string
-  features: RegisteredFeature[]
-}
-
-/**
- * The features for the pane, by group in the pane's order. A query keeps the features whose label, description or id contains every word of
- * it (accents and case ignored); a group with none left is dropped.
- */
-export function groupedFeatures(query = ''): FeatureSection[] {
-  const words = fold(query).split(/\s+/).filter(Boolean)
-  const matches = (feature: Feature): boolean => {
-    const haystack = fold(`${feature.label} ${feature.description} ${feature.id}`)
-    return words.every((word) => haystack.includes(word))
-  }
-  return FEATURE_GROUPS.map(({ id, label }) => ({ group: id, label, features: FEATURES.filter((feature) => feature.group === id && matches(feature)) })).filter((section) => section.features.length > 0)
-}

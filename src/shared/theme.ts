@@ -192,9 +192,6 @@ export function withColorAt(theme: SpaceTheme, index: number, hex: string): Pick
   return { baseColors: theme.harmony === 'custom' ? colors : harmonize(hex.toLowerCase(), theme.harmony, colors.length) }
 }
 
-/** The next texture when the user cycles through them. */
-export const nextOverlay = (overlay: Overlay): Overlay => OVERLAYS[(OVERLAYS.indexOf(overlay) + 1) % OVERLAYS.length]!
-
 /** Lightness at the top and bottom of the colour pad: the pad runs from light (top) to dark (bottom). */
 const PAD_TOP_L = 0.86
 const PAD_BOTTOM_L = 0.14

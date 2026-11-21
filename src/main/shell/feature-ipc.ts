@@ -49,6 +49,7 @@ export function registerFeatureIpc(ipcMain: ScopedIpc, guard: (sender: WebConten
   // The messages of the import sheet: what they do is in importers/requests.ts (private window, request checked, profile of the history), where it is tested.
   const importEnv = (): ImportEnv => ({ service: getImportService(), isPrivate: browser.isPrivate(), historyProfile: activeProfileId(store.get()) })
   ipcMain.handle(Channel.importSources, (e) => (guard(e.sender, Channel.importSources) ? listImportSources(importEnv()) : []))
+  // `importRun` has no caller in the product (the sheet previews, then commits): it is kept for the engine suites of the import (smoke-history, smoke-import, smoke-import2), which drive the whole run in one request. The guard and the request checks are the same as the sheet's.
   ipcMain.handle(Channel.importRun, async (e, raw: unknown) => (guard(e.sender, Channel.importRun) ? importRequest(importEnv(), 'run', raw) : noReport(t('feature.demande-refusee'))))
   ipcMain.handle(Channel.importPreview, async (e, raw: unknown) => (guard(e.sender, Channel.importPreview) ? importRequest(importEnv(), 'preview', raw) : noReport(t('feature.demande-refusee'))))
   ipcMain.handle(Channel.importCommit, (e, raw: unknown) => (guard(e.sender, Channel.importCommit) ? confirmImport(importEnv(), raw) : noReport(t('feature.demande-refusee'))))
