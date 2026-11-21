@@ -12,7 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
-- **Bookmark and history prefixes in the command bar**: type `*` (or `@bookmarks`) to search only your bookmarks, `^` (or `@history`) only your history. With no text after it, the bar lists them. Everything stays on this Mac.
+- **Bookmark and history prefixes in the command bar**: type `*` or `^` alone or followed by a space (`* recipe`), or `@bookmarks` / `@history`, to search only your bookmarks or your history. A search such as `*.example.com` or `^2`, and a custom site search keyword that starts with `*` or `^`, stay what they were. With no text after it, the bar lists them. Everything stays on this Mac.
 
 ## [1.1.5] - 2026-11-20
 

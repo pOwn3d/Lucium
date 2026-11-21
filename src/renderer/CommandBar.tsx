@@ -111,7 +111,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
   // With the history switched off (Settings › Profils › Réglages de la recherche) the bar never asks for it.
   const wantHistory = snapshot ? snapshot.state.settings.suggestHistory : true
   // The genre the bar is narrowed to, and the text that is looked for: without the `>` or `@` that named the genre. The Mini-fenêtre has no genres.
-  const typed = little ? { scope: null, text: query } : splitScope(query)
+  const typed = little ? { scope: null, text: query } : splitScope(query, snapshot ? snapshot.state.settings.siteSearches.map((site) => site.keyword) : [])
   const barScope: BarScope | null = typed.scope ?? chipScope
   const lookFor = typed.scope ? typed.text : query
 
@@ -568,9 +568,9 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       // ⌘↩ (Ctrl+Enter away from macOS): the page of the line in a new tab, whatever Enter does on it.
       openInNewTab(candidates[selected]!)
     } else if (e.key === 'Enter') {
-      // Enter on raw text must always navigate, even before the candidate list has caught up. Inside a genre there is no raw text to send: `@abc` is not an address.
+      // Enter on raw text must always navigate, even before the candidate list has caught up. Inside `>` or `@` there is no raw text to send (`@abc` is not an address); a genre of bookmarks or history that finds nothing searches as typed.
       if (candidates[selected]) run(candidates[selected])
-      else if (query.trim() && barScope === null) go(query)
+      else if (query.trim() && (barScope === null || ((barScope === 'bookmarks' || barScope === 'history') && lookFor.trim()))) go(query)
     } else if (e.key === 'Home' || e.key === 'End') {
       // The first or the last result, once the caret is at that end of the text; before that the key moves the caret, as in any field.
       const to = resultAtEdge(e.key, e, e.currentTarget as HTMLInputElement, candidates.length)

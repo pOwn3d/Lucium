@@ -6,7 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Ajouts
 
-- **Préfixes signets et historique dans la barre de commandes** : tapez `*` (ou `@bookmarks`) pour ne chercher que dans vos signets, `^` (ou `@history`) que dans l’historique. Sans texte, la barre les liste. Tout reste sur ce Mac.
+- **Préfixes signets et historique dans la barre de commandes** : tapez `*` ou `^` seul ou suivi d’une espace (`* recette`), ou `@bookmarks` / `@history`, pour ne chercher que dans vos signets ou dans l’historique. Une recherche comme `*.example.com` ou `^2`, et un mot-clé de moteur perso qui commence par `*` ou `^`, restent ce qu’ils étaient. Sans texte, la barre les liste. Tout reste sur ce Mac.
 
 ## [1.1.5] - 2026-11-20
 

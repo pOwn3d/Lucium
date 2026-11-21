@@ -139,10 +139,18 @@ describe('the genre chips and the letters that name them', () => {
   it('reads `*` as the bookmarks and `^` as the history, and the words `@bookmarks` and `@history` the same', () => {
     expect(splitScope('* recette')).toEqual({ scope: 'bookmarks', text: 'recette' })
     expect(splitScope('*')).toEqual({ scope: 'bookmarks', text: '' })
-    expect(splitScope('^météo')).toEqual({ scope: 'history', text: 'météo' })
+    expect(splitScope('^ météo')).toEqual({ scope: 'history', text: 'météo' })
+    expect(splitScope('^')).toEqual({ scope: 'history', text: '' })
     expect(splitScope('@bookmarks recette')).toEqual({ scope: 'bookmarks', text: 'recette' })
     expect(splitScope('@Bookmarks')).toEqual({ scope: 'bookmarks', text: '' })
     expect(splitScope('@history  météo')).toEqual({ scope: 'history', text: 'météo' })
+  })
+
+  it('leaves `*` and `^` to ordinary searches unless alone or followed by a space, and to a site search keyword that starts with them', () => {
+    for (const typed of ['*.example.com', '^2', '*foo', '^météo']) expect(splitScope(typed)).toEqual({ scope: null, text: typed })
+    expect(splitScope('^ mot', ['^'])).toEqual({ scope: null, text: '^ mot' })
+    expect(splitScope('* mot', ['*x'])).toEqual({ scope: null, text: '* mot' })
+    expect(splitScope('* mot', ['^'])).toEqual({ scope: 'bookmarks', text: 'mot' })
   })
 
   it('keeps `@` followed by any other word as the open tabs', () => {
