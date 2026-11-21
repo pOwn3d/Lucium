@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { TOTP_LIMITS } from './totp'
 import {
   NO_PASSWORDS_VIEW,
   PASSWORD_LIMITS,
@@ -158,9 +159,18 @@ describe('which entry may be filled where', () => {
 describe('what the interface is told', () => {
   it('never carries a password: a row has named fields and the password is not one', () => {
     const row = rowOf(entry({ password: 'TOP-SECRET-VALUE' }))
-    expect(Object.keys(row).sort()).toEqual(['host', 'id', 'origin', 'updatedAt', 'username'])
+    expect(Object.keys(row).sort()).toEqual(['host', 'id', 'origin', 'totp', 'updatedAt', 'username'])
     expect(JSON.stringify(row)).not.toContain('TOP-SECRET-VALUE')
     expect(JSON.stringify(NO_PASSWORDS_VIEW)).not.toMatch(/password/i)
+  })
+
+  it('says that an entry has a key for one-time codes, and never what the key is', () => {
+    const key = { secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', algorithm: 'SHA1', digits: 6, period: 30 } as const
+    expect(rowOf(entry()).totp).toBe(false)
+    const row = rowOf(entry({ totp: key }))
+    expect(row.totp).toBe(true)
+    expect(JSON.stringify(row)).not.toContain(key.secret)
+    expect(JSON.stringify(row)).not.toContain('SHA1')
   })
 })
 
@@ -224,6 +234,26 @@ describe('what the panel may ask', () => {
     expect(parsePasswordRequest({ kind: 'unlock', phrase: 'x'.repeat(PASSWORD_LIMITS.phraseMax + 1) })).toBeNull()
     expect(parsePasswordRequest({ kind: 'capture', op: 'save-silently', offer: 1 })).toBeNull()
     expect(parsePasswordRequest({ kind: 'add', address: 'x', username: 'u' })).toBeNull()
+  })
+
+  it('knows the requests about one-time codes, each with exactly its fields', () => {
+    expect(parsePasswordRequest({ kind: 'totp-set', id, secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' })).toEqual({ kind: 'totp-set', id, secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ' })
+    for (const kind of ['totp-remove', 'totp-code', 'totp-copy']) expect(parsePasswordRequest({ kind, id })).toEqual({ kind, id })
+    expect(parsePasswordRequest({ kind: 'totp-code', id, auto: true })).toEqual({ kind: 'totp-code', id, auto: true })
+    for (const auto of [false, 'yes', 1, null]) expect(parsePasswordRequest({ kind: 'totp-code', id, auto }), String(auto)).toBeNull()
+    expect(parsePasswordRequest({ kind: 'totp-copy', id, auto: true })).toBeNull()
+    for (const bad of [
+      { kind: 'totp-set', id },
+      { kind: 'totp-set', id, secret: 5 },
+      { kind: 'totp-set', id: 'not-an-id', secret: 'x' },
+      { kind: 'totp-set', id, secret: 'x'.repeat(TOTP_LIMITS.inputMax + 1) },
+      { kind: 'totp-set', id, secret: 'x', origin: 'https://evil.test' },
+      { kind: 'totp-code' },
+      { kind: 'totp-code', id: id.toUpperCase() },
+      { kind: 'totp-code', id, digits: 8 },
+      { kind: 'totp-copy', id, to: 'somewhere' },
+      { kind: 'totp-remove', id: 5 }
+    ]) expect(parsePasswordRequest(bad), JSON.stringify(bad)).toBeNull()
   })
 
   it('holds the generator options to their bounds and keeps one class on', () => {

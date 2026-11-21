@@ -5,6 +5,7 @@
 
 import { PASSWORD_LIMITS, checkedLogin, siteAddress, type ImportReport, type PasswordEntry } from './passwords'
 import { t, tp } from './i18n'
+import { storedTotp, type TotpConfig } from './totp'
 
 export const CSV_LIMITS = {
   /** A larger file is not a list of passwords (20 000 logins are about 2 MiB). */
@@ -97,7 +98,7 @@ const TYPE_COLUMNS = ['type']
 
 export interface ParsedLogins {
   format: ImportReport['format']
-  logins: Array<{ origin: string; username: string; password: string }>
+  logins: Array<{ origin: string; username: string; password: string; totp?: TotpConfig }>
   /** Rows read, and the ones that were left out, by reason. */
   counts: Pick<ImportReport, 'read' | 'unsupported' | 'empty' | 'invalid'>
 }
@@ -169,7 +170,7 @@ const EXPORT_VERSION = 1
 
 /** The plain text sealed inside an export file (the file itself is sealed by vault-crypto.ts). */
 export function exportText(entries: readonly PasswordEntry[]): string {
-  return JSON.stringify({ kind: EXPORT_KIND, version: EXPORT_VERSION, entries: entries.map(({ origin, username, password }) => ({ origin, username, password })) })
+  return JSON.stringify({ kind: EXPORT_KIND, version: EXPORT_VERSION, entries: entries.map(({ origin, username, password, totp }) => ({ origin, username, password, ...(totp ? { totp } : {}) })) })
 }
 
 /** The logins inside an export, once opened. Every entry is checked like a login typed by hand; anything else in the text is ignored. */
@@ -194,8 +195,18 @@ export function parseExportText(text: string): { ok: true; parsed: ParsedLogins 
       continue
     }
     const checked = checkedLogin({ address: r['origin'], username: r['username'], password: r['password'] })
-    if (!checked.ok) counts[checked.problem === 'unsupported' ? 'unsupported' : checked.problem === 'password' ? 'empty' : 'invalid']++
-    else logins.push({ origin: checked.origin, username: checked.username, password: checked.password })
+    if (!checked.ok) {
+      counts[checked.problem === 'unsupported' ? 'unsupported' : checked.problem === 'password' ? 'empty' : 'invalid']++
+      continue
+    }
+    // The key of the one-time codes comes along when the entry has one. A key that is not what this version writes makes the entry invalid:
+    // adding the login without its key would be a quiet loss of the second factor.
+    const totp = r['totp'] === undefined ? undefined : storedTotp(r['totp'])
+    if (totp === null) {
+      counts.invalid++
+      continue
+    }
+    logins.push({ origin: checked.origin, username: checked.username, password: checked.password, ...(totp ? { totp } : {}) })
   }
   return { ok: true, parsed: { format: 'lucium', logins, counts } }
 }
