@@ -60,7 +60,8 @@ export const GUEST_INHERITED = [
   'httpsUpgrade',
   'sendGpc',
   'stripTrackingParams',
-  'stripCopiedLinks'
+  'stripCopiedLinks',
+  'blockThirdPartyCookies'
 ] as const satisfies readonly (keyof Settings)[]
 
 /** The settings of the main window a guest window follows. */

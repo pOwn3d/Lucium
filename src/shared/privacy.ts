@@ -4,6 +4,7 @@
 
 import type { Settings } from './model'
 import { t } from './i18n'
+import { cleanBlockExceptions } from './blocker'
 import { hasLocalOnlySuffix } from './url'
 
 export interface PrivacyOptions {
@@ -13,23 +14,33 @@ export interface PrivacyOptions {
   globalPrivacyControl: boolean
   /** The known tracking parameters (`utm_*`, `fbclid`, `gclid`…) are removed from the address a main-frame navigation goes to. */
   stripTrackingParams: boolean
+  /** The cookies of a request to another site than the tab's are not sent, and those of its answer are not kept (third-party-cookies.ts). */
+  blockThirdPartyCookies: boolean
+  /** The sites (and their subdomains) where third-party cookies are let through. */
+  thirdPartyCookieExceptions: readonly string[]
 }
 
-export const NO_PRIVACY: PrivacyOptions = { httpsUpgrade: false, globalPrivacyControl: false, stripTrackingParams: false }
+export const NO_PRIVACY: PrivacyOptions = { httpsUpgrade: false, globalPrivacyControl: false, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] }
 
-export type PrivacySettings = Pick<Settings, 'httpsUpgrade' | 'sendGpc' | 'stripTrackingParams' | 'stripCopiedLinks'>
+export type PrivacySettings = Pick<Settings, 'httpsUpgrade' | 'sendGpc' | 'stripTrackingParams' | 'stripCopiedLinks' | 'blockThirdPartyCookies' | 'thirdPartyCookieExceptions'>
+
+/** Sites in the list of exceptions: more than anyone writes by hand, and a bound for a hand-edited file. */
+export const THIRD_PARTY_COOKIE_EXCEPTIONS_MAX = 200
+
+/** The sites of the list as a saved file or a message may carry them: valid hosts, each once, at most `THIRD_PARTY_COOKIE_EXCEPTIONS_MAX`. */
+export const cleanThirdPartyCookieExceptions = (raw: unknown): string[] => cleanBlockExceptions(raw).slice(0, THIRD_PARTY_COOKIE_EXCEPTIONS_MAX)
 
 export function privacyOptionsOf(settings: Partial<PrivacySettings>): PrivacyOptions {
-  return { httpsUpgrade: settings.httpsUpgrade === true, globalPrivacyControl: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true }
+  return { httpsUpgrade: settings.httpsUpgrade === true, globalPrivacyControl: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true, blockThirdPartyCookies: settings.blockThirdPartyCookies === true, thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions) }
 }
 
 export function anyPrivacy(options: PrivacyOptions): boolean {
-  return options.httpsUpgrade || options.globalPrivacyControl || options.stripTrackingParams
+  return options.httpsUpgrade || options.globalPrivacyControl || options.stripTrackingParams || options.blockThirdPartyCookies
 }
 
 /** The privacy settings of a saved file: anything but `true` is off, so a damaged file never switches a rewrite on. */
 export function cleanPrivacySettings(settings: Partial<PrivacySettings>): PrivacySettings {
-  return { httpsUpgrade: settings.httpsUpgrade === true, sendGpc: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true, stripCopiedLinks: settings.stripCopiedLinks === true }
+  return { httpsUpgrade: settings.httpsUpgrade === true, sendGpc: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true, stripCopiedLinks: settings.stripCopiedLinks === true, blockThirdPartyCookies: settings.blockThirdPartyCookies === true, thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions) }
 }
 
 // ---------- Tracking parameters ----------

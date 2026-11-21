@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Bloquer les cookies tiers** : Réglages › Vie privée et sécurité › Cookies tiers. Un contenu d’un autre site que l’onglet ne reçoit plus vos cookies et ne peut plus en déposer, WebSocket compris. Désactivé par défaut, avec une liste de sites où ils restent acceptés. `document.cookie` des scripts n’est pas touché.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.

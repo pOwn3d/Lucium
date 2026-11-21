@@ -34,6 +34,7 @@ import { takesNavigationHints, withNavigationHints, type ClientHintHeaders } fro
 import { SIGN_IN_PRELOAD_EXCLUDES, isSignInRequest, signInRequestHeaders } from '@shared/google-sign-in'
 import { engineClientHints, type HintSource } from './engine-client-hints'
 import { documentOfRequest, siteOf } from '@shared/party'
+import { cookiesBlockedFor, withoutCookieHeader, withoutSetCookie } from '@shared/third-party-cookies'
 import { netResourceType } from '@shared/net-rules'
 import { isStorePage } from '@shared/web-store'
 import { authChallenge, ExtensionNet, listenerLogins, NET_LIMITS, ruleGivenUpNote, type FrameDocument, type HookRequest, type WebRequestEvent } from './extension-net'
@@ -143,7 +144,11 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     this.privacy = options
     // What the application asks for itself says what the pages say (own-requests.ts).
     this.ownRequests.set(options?.globalPrivacyControl === true)
-    for (const { session: ses } of this.profiles.values()) this.installRequestBlocker(ses)
+    for (const { session: ses } of this.profiles.values()) {
+      this.installRequestBlocker(ses)
+      // The answers lose their Set-Cookie in the response hook, which the request hook does not install.
+      this.installResponsePolicy(ses, this.headerHooks.get(ses)?.policyOf ?? (() => null))
+    }
   }
 
   setResponsePolicy(policy: ResponsePolicy | null): void {
@@ -671,10 +676,13 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     // The extended rules of the blocker are on for this session exactly while it has a policy: the stand-in resources are served then, and only then.
     this.syncStandIns(ses, policyOf() !== null)
     const local = this.localPageSessions.has(ses)
+    const privacyOf = this.headerHooks.get(ses)?.privacyOf
+    const cookieCut = privacyOf?.()?.blockThirdPartyCookies === true
     const net = this.extensionNets.get(ses)
     const needs = net?.needs()
     const forExtensions = needs !== undefined && (needs.responseHeaders || needs.events.has('onHeadersReceived') || needs.events.has('onAuthRequired'))
-    const filter = forExtensions ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : local ? { urls: ['http://*/*', 'https://*/*'] } : policyOf() ? { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame' as const] } : { urls: ['https://*/*'], types: ['mainFrame' as const] }
+    // The handshake of a WebSocket carries the cookies and may set some: it is looked at as soon as the cookies are cut.
+    const filter = forExtensions || cookieCut ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : local ? { urls: ['http://*/*', 'https://*/*'] } : policyOf() ? { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame' as const] } : { urls: ['https://*/*'], types: ['mainFrame' as const] }
     ses.webRequest.onHeadersReceived(filter, (details, callback) => {
       if (local && this.keptFromLocalPage(details)) return callback({ cancel: true })
       const sent = (details.responseHeaders ?? {}) as ResponseHeaders
@@ -693,12 +701,30 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
             console.error('[engine] the response policy failed, so the document keeps the headers it came with:', error instanceof Error ? error.message : error)
           }
         }
+        // A third-party answer is kept without its cookies.
+        if (cookieCut && details.resourceType !== 'mainFrame' && this.thirdPartyCookiesCut(details, privacyOf?.() ?? null)) headers = withoutSetCookie(headers)
         callback(fromExtensions.statusLine !== undefined ? { responseHeaders: headers, statusLine: fromExtensions.statusLine } : headers !== sent ? { responseHeaders: headers } : {})
       }
       const fromExtensions = net && forExtensions ? this.answerForExtensions(ses, net, details, sent) : { headers: sent }
       if (fromExtensions instanceof Promise) return void fromExtensions.then(finish)
       finish(fromExtensions)
     })
+  }
+
+  /**
+   * Whether the cookies of this request are cut (third-party-cookies.ts). The page of the tab is read from its web contents; a request without one
+   * (the browser's own) is left alone, and so is one whose page cannot be read, with a line in the log: nothing is cut on the strength of an unknown.
+   */
+  private thirdPartyCookiesCut(details: RequestDetails, options: PrivacyOptions | null): boolean {
+    if (options === null || !options.blockThirdPartyCookies) return false
+    let topUrl: string | null = null
+    try {
+      const owner = details.webContents
+      topUrl = owner && !owner.isDestroyed() ? owner.getURL() : null
+    } catch (error) {
+      console.error('[privacy] cannot tell which page a request belongs to, so its cookies are left alone:', error instanceof Error ? error.message : error)
+    }
+    return cookiesBlockedFor({ url: details.url, resourceType: details.resourceType, topUrl }, options)
   }
 
   /**
@@ -915,6 +941,7 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
   private installPrivacyHeaders(ses: Session, privacyOf: () => PrivacyOptions | null): void {
     this.headerHooks.set(ses, { ...this.headerHooks.get(ses), privacyOf })
     const signal = privacyOf()?.globalPrivacyControl === true
+    const cookieCut = privacyOf()?.blockThirdPartyCookies === true
     const local = this.localPageSessions.has(ses)
     const net = this.extensionNets.get(ses)
     const needs = net?.needs()
@@ -925,7 +952,7 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     const trial = this.signIn
     const onSignIn = trial !== null && this.signInSessions.has(ses)
     const filter: { urls: string[]; types?: Array<'mainFrame' | 'subFrame'> } =
-      forExtensions || signal ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : local || onSignIn ? { urls: ['http://*/*', 'https://*/*'] } : { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame', 'subFrame'] }
+      forExtensions || signal || cookieCut ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : local || onSignIn ? { urls: ['http://*/*', 'https://*/*'] } : { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame', 'subFrame'] }
     ses.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
       // The method of every main-frame request, told before anything else can answer it: the redirect that follows is of this request, and a redirect that follows a POST is never taken over (google-sign-in-agent.ts).
       if (trial !== null && details.resourceType === 'mainFrame') trial.noteRequest(details.webContents?.id, details.method)
@@ -942,7 +969,9 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
           if (rewritten === null) return callback({ cancel: true })
           // Whatever case a rule wrote the name in: the request carries the signal once.
           const headers = signal && /^(https?|wss?):/i.test(details.url) ? { ...Object.fromEntries(Object.entries(rewritten).filter(([name]) => name.toLowerCase() !== 'sec-gpc')), 'Sec-GPC': '1' } : rewritten
-          callback(headers !== details.requestHeaders ? { requestHeaders: headers } : {})
+          // Last of all, as the signal: what an extension added is cut too. A request whose cookies are cut leaves without the header.
+          const sentOut = cookieCut && this.thirdPartyCookiesCut(details, privacyOf()) ? withoutCookieHeader(headers) : headers
+          callback(sentOut !== details.requestHeaders ? { requestHeaders: sentOut } : {})
         }
         const rewritten = net && forExtensions ? this.requestForExtensions(net, details, sent) : sent
         if (rewritten instanceof Promise) return void rewritten.then(finish)
