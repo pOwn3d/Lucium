@@ -1209,7 +1209,7 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - accelerator=undefined enabled=true label="Mettre l’espace de côté…" click(brings back)
   - enabled=true label="Rouvrir un espace mis de côté"
     - label="📚 Lecture" click(brings back)
-  - enabled=true label="Exporter cet espace…" click(brings back)
+  - enabled=false label="Exporter cet espace…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." click(brings back)
   - enabled=true label="Importer un espace…" click(brings back)
   - type="separator"
   - accelerator=undefined label="Verrouiller maintenant" click
