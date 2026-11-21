@@ -56,6 +56,7 @@ export const SETTINGS_PLACES = {
   shortcuts: { key: 'keyBindings' },
   mouseGestureSites: { key: 'mouseGestureExcludedHosts' },
   vimKeySites: { key: 'vimKeysExcludedHosts' },
+  focusSites: { key: 'focusSites' },
   trackpad: { key: 'spaceSwipe', group: 'settings.pave-tactile' },
   profiles: { page: 'profiles' },
   webPanels: { key: 'webPanels', group: 'settings.fonctions-theme-fenetres' },

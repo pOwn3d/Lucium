@@ -19,7 +19,7 @@ interface Props {
 }
 
 /** A list of sites with a field to add one: used for the sites a feature leaves out. */
-function SiteList({ title, footnote, hosts, label, onChange, settingKey }: { title: string; footnote: string; hosts: readonly string[]; label: string; onChange: (hosts: string[]) => void; settingKey: SettingKey }) {
+export function SiteList({ title, footnote, hosts, label, onChange, settingKey }: { title: string; footnote: string; hosts: readonly string[]; label: string; onChange: (hosts: string[]) => void; settingKey: SettingKey }) {
   const [draft, setDraft] = useState('')
   const verdict = draft.trim() === '' ? null : checkSleepHost(draft, hosts)
   const error = fieldError(useId(), verdict !== null && 'error' in verdict)

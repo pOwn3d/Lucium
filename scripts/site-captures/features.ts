@@ -114,6 +114,7 @@ export const SUBPAGE_LABELS: Readonly<Record<SettingsSubpageKey, Localized<strin
   translatelists: { fr: 'Langues et sites', en: 'Languages and sites' },
   userscripts: { fr: 'Scripts importés', en: 'Imported scripts' },
   pagewatches: { fr: 'Pages surveillées', en: 'Watched pages' },
+  focus: { fr: 'Mode concentration', en: 'Focus mode' },
   shortcuts: { fr: 'Raccourcis clavier', en: 'Keyboard shortcuts' },
   siteexclusions: { fr: 'Sites sans gestes ni touches Vim', en: 'Sites without gestures or Vim keys' },
   sync: { fr: 'Synchronisation', en: 'Synchronization' }
@@ -322,6 +323,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-mouse-gestures', 'mouse-gestures', t('Gestes de souris', 'Mouse gestures'), 'keyboard', 'mouseGestures', { patch: { mouseGestures: true }, on: true, why: behaviour }),
   setting('fn-space-swipe', 'space-swipe', t('Balayer à deux doigts pour changer d’espace', 'Swipe with two fingers to switch Spaces'), 'keyboard', 'spaceSwipe', { why: needsHardware }),
   setting('fn-page-watch', 'page-watch', t('Surveiller des pages', 'Watch pages'), 'features', 'pageWatch', { why: background }),
+  setting('fn-focus-mode', 'focus-mode', t('Mode concentration', 'Focus mode'), 'features', 'focusMode', { patch: { focusMode: true }, on: true, why: behaviour }),
   setting('fn-read-aloud', 'read-aloud', t('Lecture à voix haute', 'Read aloud'), 'features', 'readAloud', { patch: { readAloud: true }, on: true, why: 'se fait entendre, pas voir' }),
   setting('fn-tab-cycle-recent', 'tab-cycle-recent', t('⌃Tab dans l’ordre d’utilisation récente', '⌃Tab in order of recent use'), 'keyboard', 'tabCycleRecent', { label: t('⌃Tab suit l’ordre d’utilisation récente', '⌃Tab follows the order of recent use'), why: 'le panneau de ⌃Tab ne reste ouvert que tant que la touche est tenue' }),
   setting('fn-drag-to-split', 'drag-to-split', t('Glisser un onglet sur la page pour scinder', 'Drag a tab onto the page to split'), 'tabs', 'dragToSplit', { fold: true, why: 'se voit pendant un glisser-déposer, que l’outil ne fait pas' }),

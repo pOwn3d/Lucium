@@ -180,7 +180,7 @@ describe('« Fonctions en option »', () => {
     expect(window.querySelector<HTMLInputElement>('main .pref-feature[data-setting="webPanels"] input[role="switch"]')!.checked).toBe(false)
     // Six are on in a new profile (the work views among them); the tree of tabs makes seven.
     expect(featuresOn(snapshotWith({ tabTree: true }).state.settings)).toBe(7)
-    expect(window.querySelector('main .pref-intro')?.textContent).toBe(tp('settings.fonctions-allumees', 7, { all: 29 }))
+    expect(window.querySelector('main .pref-intro')?.textContent).toBe(tp('settings.fonctions-allumees', 7, { all: 30 }))
     expect(window.querySelector('main .more-settings')?.hasAttribute('data-empty')).toBe(true)
   })
 
@@ -208,7 +208,7 @@ describe('« Fonctions en option »', () => {
   it('is reached from « Pour commencer », whose line counts the features on, and from Profils for the containers, the private tabs and the guest window', async () => {
     for (const [hash, selector] of [['#home', 'main .home-features button'], ['#profiles', 'main .profiles-features button']] as const) {
       const window = await open(hash)
-      if (hash === '#home') expect(window.querySelector('main .home-features span')?.textContent).toBe(tp('settings.home-fonctions', 6, { all: 29 }))
+      if (hash === '#home') expect(window.querySelector('main .home-features span')?.textContent).toBe(tp('settings.home-fonctions', 6, { all: 30 }))
       await click(window.querySelector<HTMLButtonElement>(selector)!)
       await settle(() => void globalThis.dispatchEvent(new HashChangeEvent('hashchange')))
       expect(current(window), hash).toBe('features')

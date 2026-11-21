@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **Focus mode**: Settings › Optional features › Focus mode keeps a list of sites closed during a timer (25 minutes by default) or a weekly time slot. A blocked site shows a clear page with “Take a 15-minute break” as the way out. Off by default; nothing leaves your Mac.
+
 ## [1.1.5] - 2026-11-20
 
 Your iPhone can now synchronize with your Mac, directly and without a server, and its Today tabs can be shared. On Windows the window draws its own title bar, and Windows and Linux say that they update by hand.
