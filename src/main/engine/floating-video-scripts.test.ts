@@ -251,6 +251,15 @@ describe('bringing the video to fill the page', () => {
     expect(run(FLOAT_STAGE, world)).toEqual({ staged: true, width: 1280, height: 720, live: true, protected: true })
   })
 
+  it('tells a live stream that reports a finite duration (a sliding window, as on Twitch)', () => {
+    const stream = new FakeVideo()
+    stream.duration = 4000
+    stream.seekable = { length: 1, start: () => 3400, end: () => 4000 }
+    const { world } = page(stream)
+    expect(run(FLOAT_STAGE, world)).toMatchObject({ live: true })
+    expect(run(FLOAT_FACTS, world)).toMatchObject({ live: true })
+  })
+
   it('keeps the video staged even when the top layer refuses it, and says so in the log', () => {
     const video = new FakeVideo()
     video.refusesPopover = true
@@ -426,6 +435,14 @@ describe('the commands', () => {
     expect(video.currentTime).toBe(120)
     video.duration = 600
     video.mediaKeys = {}
+    expect(command({ kind: 'seek', seconds: -10 })).toBe(false)
+    expect(video.currentTime).toBe(120)
+  })
+
+  it('never jumps in a live stream with a finite duration', () => {
+    const { video, command } = staged()
+    video.duration = 4000
+    video.seekable = { length: 1, start: () => 3400, end: () => 4000 }
     expect(command({ kind: 'seek', seconds: -10 })).toBe(false)
     expect(video.currentTime).toBe(120)
   })
