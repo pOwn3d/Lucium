@@ -24,7 +24,9 @@ describe('the password manager is off until it is switched on', () => {
   it('puts nothing about the vault in the state, in what is written, or in what is exported', () => {
     const state = withManager(true)
     const keys = Object.keys(state.settings).filter((key) => /pass|vault|secret|credential|phrase/i.test(key))
-    expect(keys).toEqual(['passwordManager'])
+    // The switch, and two preferences that hold no secret: a fingerprint before a fill (a boolean) and the sites where no save is offered (host names,
+    // like the other lists of sites). Nothing else of the vault: no entry, no phrase, no key, no count.
+    expect(keys).toEqual(['passwordManager', 'passwordTouchIdOnFill', 'passwordNeverSaveHosts'])
     for (const written of [JSON.stringify(persistableState(state)), JSON.stringify(exportableState(state))]) expect(written).not.toMatch(/vault|\"password\"|\"phrase\"|\"username\"/i)
   })
 

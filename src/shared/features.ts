@@ -1061,6 +1061,7 @@ export const NOT_OPTIONAL_SETTINGS: Partial<Record<BooleanSettingKey | 'blockTra
   autoplayPerSite: 'deprecated: « Un réglage pour chaque site » of the autoplay is gone, the choice of a site always applies and the site panel always offers it; nothing reads the key, which stays so that an older state file loads',
   siteDataClearOnQuit: 'option de « Effacer les données d’un site à la fermeture » (clear-on-close)',
   lockApp: 'option du verrouillage (lock) : verrouille aussi au lancement et à la sortie de veille',
+  passwordTouchIdOnFill: 'option du gestionnaire de mots de passe (`password-manager`) : la phrase ou l’empreinte du trousseau est redemandée avant chaque remplissage ; éteinte par défaut, rien ne tourne de plus ou de moins ; sans effet quand le gestionnaire est coupé',
   lockTouchId: 'option du verrouillage (lock) : Touch ID quand il est disponible',
   modifiedClickBackground: 'mode d’ouverture des liens (⌘-clic, clic du milieu), pas une fonction : le réglage choisit seulement si l’onglet s’ouvre au premier plan',
   blankLinkBackground: 'mode d’ouverture des liens (target="_blank"), pas une fonction : le réglage choisit seulement si l’onglet s’ouvre au premier plan',

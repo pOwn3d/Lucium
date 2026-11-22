@@ -10,14 +10,32 @@ const held = vi.hoisted(() => ({
   built: true,
   transportOf: vi.fn((_resources: string): unknown => ({ the: 'transport' })),
   stopped: vi.fn(),
-  translateStopped: vi.fn()
+  translateStopped: vi.fn(),
+  /** What the service was given, and what the clipboard of Electron was asked to write. */
+  deps: undefined as undefined | { clipboard?: { writeSecret?: (text: string) => Promise<void> }; updateSettings?: (patch: unknown) => void },
+  dispatched: [] as unknown[],
+  written: [] as unknown[]
 }))
 
 vi.mock('electron', async () => {
   const base = (await import('./ipc-fake.test-support')).fakeElectron()
   const app = { getPath: () => '/nowhere', on: (event: string, listener: () => void) => void (event === 'will-quit' && held.quits.push(listener)) }
-  return new Proxy(base, { has: () => true, get: (target, name: string) => (name === 'app' ? app : (target[name] as unknown)) })
+  class ClipboardItem {
+    constructor(readonly entries: Record<string, string>) {}
+  }
+  const clipboard = { readText: async () => '', writeText: async () => undefined, clear: () => undefined, write: async (items: unknown[]) => void held.written.push(...items) }
+  return new Proxy(base, { has: () => true, get: (target, name: string) => (name === 'app' ? app : name === 'ClipboardItem' ? ClipboardItem : name === 'clipboard' ? clipboard : (target[name] as unknown)) })
 })
+vi.mock('./password-service', async (original) => ({
+  ...(await original<typeof import('./password-service')>()),
+  PasswordService: class {
+    constructor(deps: NonNullable<typeof held.deps>) {
+      held.deps = deps
+    }
+    stop(): void {}
+    lock(): void {}
+  }
+}))
 vi.mock('../runtime', () => ({ isBuiltApp: () => held.built }))
 vi.mock('../translate/system', () => ({ stopSystemTranslateHelpers: () => held.translateStopped() }))
 vi.mock('../vault-keychain', async (original) => ({
@@ -38,7 +56,7 @@ function installed(options: { smoke?: boolean; touchId?: boolean } = {}) {
   held.runner = undefined
   held.quits.length = 0
   installPasswordVault({
-    sharedStore: { get: () => ({ settings: {} }) },
+    sharedStore: { get: () => ({ settings: {} }), dispatch: (action: unknown) => void held.dispatched.push(action) },
     gates: { gate: () => undefined },
     engine: { setPasswordBridge: () => undefined },
     lock: { subscribe: () => () => undefined, isAppLocked: () => false },
@@ -81,5 +99,24 @@ describe('the keychain of the password vault, as main() gives it its runner', ()
     for (const quit of held.quits) quit()
     expect(held.stopped).toHaveBeenCalledTimes(1)
     expect(held.translateStopped).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('the clipboard of the password vault, as main() gives it to the service', () => {
+  it('writes a password as one item that carries the text and the concealed marker, never through writeText', async () => {
+    held.written.length = 0
+    installed()
+    await held.deps!.clipboard!.writeSecret!('the-text')
+    expect(held.written).toHaveLength(1)
+    expect((held.written[0] as { entries: Record<string, string> }).entries).toMatchObject({ 'text/plain': 'the-text', 'electron application/osclipboard;format="org.nspasteboard.ConcealedType"': expect.any(String) })
+  })
+})
+
+describe('the settings the password service may write, as main() gives them', () => {
+  it('goes through the store as a settings update, which is how the list of sites that never offer to save is kept', () => {
+    held.dispatched.length = 0
+    installed()
+    held.deps!.updateSettings!({ passwordNeverSaveHosts: ['example.com'] })
+    expect(held.dispatched).toEqual([{ type: 'settings/update', patch: { passwordNeverSaveHosts: ['example.com'] } }])
   })
 })

@@ -114,12 +114,25 @@ describe('which entry may be filled where', () => {
     expect(entriesForPage(entries, 'https://example.com:8443/').map((e) => e.id)).toEqual(['3'.repeat(32)])
     expect(entriesForPage(entries, 'http://localhost:3000/x').map((e) => e.id)).toEqual(['2'.repeat(32)])
     expect(entriesForPage(entries, 'http://example.com/')).toEqual([])
-    expect(entriesForPage(entries, 'https://www.example.com/')).toEqual([])
     expect(entriesForPage(entries, 'https://example.com.evil.test/')).toEqual([])
     expect(entriesForPage(entries, 'https://evil-example.com/')).toEqual([])
     expect(entriesForPage(entries, 'https://sub.login.example.com/')).toEqual([])
     expect(entriesForPage(entries, null)).toEqual([])
     expect(entriesForPage(entries, 'file:///x')).toEqual([])
+  })
+
+  it('merges a site with its `www.` twin, for the same scheme and the same port, and nothing wider', () => {
+    expect(entriesForPage(entries, 'https://www.example.com/').map((e) => e.id)).toEqual(['1'.repeat(32)])
+    expect(entriesForPage(entries, 'https://www.example.com:8443/').map((e) => e.id)).toEqual(['3'.repeat(32)])
+    expect(entriesForPage([entry({ origin: 'https://www.example.com' })], 'https://example.com/').map((e) => e.id)).toEqual([entry().id])
+    // Not another port, another scheme, a second `www.`, another label, nor a name that only ends alike.
+    expect(entriesForPage(entries, 'https://www.example.com:9000/')).toEqual([])
+    expect(entriesForPage([entry({ origin: 'https://example.com:8443' })], 'https://www.example.com/')).toEqual([])
+    expect(entriesForPage(entries, 'https://www.www.example.com/')).toEqual([])
+    expect(entriesForPage(entries, 'https://www2.example.com/')).toEqual([])
+    expect(entriesForPage(entries, 'https://wwwexample.com/')).toEqual([])
+    expect(entriesForPage(entries, 'https://www.example.com.evil.test/')).toEqual([])
+    expect(entriesForPage([entry({ origin: 'http://localhost:3000' })], 'http://www.localhost:3000/')).toEqual([])
   })
 
   const ok: FillContext = { featureOn: true, privateTab: false, vaultUnlocked: true, pageUrl: 'https://example.com/login', entryOrigin: 'https://example.com' }
@@ -144,6 +157,14 @@ describe('which entry may be filled where', () => {
     expect(reasonOf({ pageUrl: 'https://example.com.evil.test/login' })).toBe('origin-differs')
     expect(reasonOf({ pageUrl: 'https://example.com:8443/login' })).toBe('origin-differs')
     expect(reasonOf({ entryOrigin: 'http://example.com' })).toBe('origin-differs')
+    expect(reasonOf({ pageUrl: 'https://www.www.example.com/login' })).toBe('origin-differs')
+  })
+
+  it('lets the entry of a site fill its `www.` twin, and hands over the origin of the page, not the entry’s', () => {
+    expect(fillVerdict({ ...ok, pageUrl: 'https://www.example.com/login' })).toEqual({ ok: true, origin: 'https://www.example.com' })
+    expect(fillVerdict({ ...ok, pageUrl: 'https://example.com/login', entryOrigin: 'https://www.example.com' })).toEqual({ ok: true, origin: 'https://example.com' })
+    expect(reasonOf({ pageUrl: 'http://www.example.com/login' })).toBe('not-eligible')
+    expect(reasonOf({ pageUrl: 'https://www.example.com:8443/login' })).toBe('origin-differs')
   })
 
   it('refuses a private tab before it looks at anything else', () => {
@@ -159,7 +180,7 @@ describe('which entry may be filled where', () => {
 describe('what the interface is told', () => {
   it('never carries a password: a row has named fields and the password is not one', () => {
     const row = rowOf(entry({ password: 'TOP-SECRET-VALUE' }))
-    expect(Object.keys(row).sort()).toEqual(['host', 'id', 'origin', 'totp', 'updatedAt', 'username'])
+    expect(Object.keys(row).sort()).toEqual(['host', 'id', 'origin', 'reused', 'totp', 'updatedAt', 'username', 'weak'])
     expect(JSON.stringify(row)).not.toContain('TOP-SECRET-VALUE')
     expect(JSON.stringify(NO_PASSWORDS_VIEW)).not.toMatch(/password/i)
   })

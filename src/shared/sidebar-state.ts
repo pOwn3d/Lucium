@@ -20,7 +20,7 @@ import { cleanProfileOverrides, isProfileId } from './profiles'
 import { isSearchTemplate } from './url'
 import { normalizeSiteDataPrefs } from './site-data'
 import { cleanSiteDataAnimation } from './site-data-overlay'
-import { cleanSleepSettings } from './sleep'
+import { cleanSleepHosts, cleanSleepSettings } from './sleep'
 import { cleanBlockingSettings } from './blocker'
 import { cleanFingerprintSettings } from './fingerprint'
 import { cleanPrivacySettings } from './privacy'
@@ -416,6 +416,8 @@ export function clampSettings(input: Settings): Settings {
     ...cleanExtensionBarSettings(settings),
     ...cleanWebToolsSettings(settings),
     ...cleanKeyExtSettings(settings),
+    passwordTouchIdOnFill: settings.passwordTouchIdOnFill === true,
+    passwordNeverSaveHosts: cleanSleepHosts(settings.passwordNeverSaveHosts),
     ...cleanFocusSettings(settings),
     openWithApps: cleanOpenWithApps(settings.openWithApps),
     annotateBar: cleanBarPosition(settings.annotateBar),

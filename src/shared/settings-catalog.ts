@@ -104,7 +104,7 @@ export const SETTINGS_KEYS = {
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
     'historyOff', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
-    'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager',
+    'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager', 'passwordTouchIdOnFill', 'passwordNeverSaveHosts',
     'disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists', 'dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'
   ],
   // Téléchargements et lecture · Ouverture des fichiers · Signets (the export) · Icônes des sites · Copies automatiques · Export
@@ -276,6 +276,7 @@ export const KEPT_ON_RESET = {
   mouseGestureExcludedHosts: 'a list of sites',
   vimKeysExcludedHosts: 'a list of sites',
   translateNeverSites: 'a list of sites',
+  passwordNeverSaveHosts: 'a list of sites',
   translateAlways: 'a list of languages',
   siteDataClearOnClose: 'a list of sites',
   siteJavascriptOff: 'a list of sites',

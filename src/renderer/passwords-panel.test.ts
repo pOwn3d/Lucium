@@ -144,7 +144,7 @@ describe('the form that creates the vault', () => {
 })
 
 describe('the one-time codes of an entry', () => {
-  const row = (patch: Partial<PasswordsView['entries'][number]> = {}) => ({ id: 'a'.repeat(32), origin: 'https://example.com', host: 'example.com', username: 'ana', totp: true, updatedAt: 1, ...patch })
+  const row = (patch: Partial<PasswordsView['entries'][number]> = {}) => ({ id: 'a'.repeat(32), origin: 'https://example.com', host: 'example.com', username: 'ana', totp: true, weak: false, reused: false, updatedAt: 1, ...patch })
   const unlocked = (entries = [row()]): PasswordsView => view({ vault: 'unlocked', entries })
   /** The main process answers a request for a code with these digits and the seconds they last. */
   const answersCode = (code: string, secondsLeft: number, msLeft = secondsLeft * 1000): void => {
@@ -272,5 +272,37 @@ describe('the one-time codes of an entry', () => {
     expect(container.querySelector(`#pw-totp-${'b'.repeat(32)}`)).toBeNull()
     await click(button(container, t('passwords-panel.totp-ajouter')))
     expect(field(container, `pw-totp-${'b'.repeat(32)}`).value).toBe('')
+  })
+})
+
+describe('the verdicts of a row', () => {
+  const row = (patch: Partial<PasswordsView['entries'][number]>) => ({ id: 'a'.repeat(32), origin: 'https://example.com', host: 'example.com', username: 'ana', totp: false, weak: false, reused: false, updatedAt: 1, ...patch })
+
+  it('are written in words on the rows that have them, and nowhere else', async () => {
+    const container = await panel(view({ vault: 'unlocked', entries: [row({}), row({ id: 'b'.repeat(32), username: 'bob', weak: true }), row({ id: 'c'.repeat(32), username: 'cat', weak: true, reused: true })] }))
+    const flags = [...container.querySelectorAll('.passwords-row')].map((li) => [...li.querySelectorAll('.passwords-flag')].map((flag) => flag.textContent))
+    expect(flags).toEqual([[], [t('passwords-panel.faible')], [t('passwords-panel.faible'), t('passwords-panel.reutilise')]])
+  })
+})
+
+describe('« Copier » on a row', () => {
+  it('asks the main process to copy that entry, and shows only what it answers, never a password', async () => {
+    const id = 'a'.repeat(32)
+    const entry = { id, origin: 'https://example.com', host: 'example.com', username: 'ana', totp: false, weak: false, reused: false, updatedAt: 1 }
+    passwords.mockImplementation(async (request: PasswordRequest) => ({ ok: true, message: request.kind === 'copy-password' ? 'copié' : undefined, view: held }) as PasswordReply)
+    const container = await panel(view({ vault: 'unlocked', entries: [entry] }))
+    await click(button(container, t('passwords-panel.copier-mdp')))
+    expect(passwords).toHaveBeenCalledWith({ kind: 'copy-password', id })
+    expect(container.textContent).toContain('copié')
+  })
+})
+
+describe('« Ne plus proposer pour ce site » on an offer', () => {
+  it('answers the offer that is on screen with « never », and nothing else', async () => {
+    const capture = { kind: 'new' as const, host: 'example.com', username: 'ana', offer: 7 }
+    passwords.mockImplementation(async () => ({ ok: true, view: held }) as PasswordReply)
+    const container = await panel(view({ vault: 'unlocked', capture }))
+    await click(button(container, t('passwords-panel.ne-plus-proposer')))
+    expect(passwords).toHaveBeenLastCalledWith({ kind: 'capture', op: 'never', offer: 7 })
   })
 })
