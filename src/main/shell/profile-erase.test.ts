@@ -91,21 +91,22 @@ describe('Browser.clearProfile', () => {
   it('reloads the tabs of the profile in every window of the group, not only in the one that erases', async () => {
     const reloaded: string[] = []
     const page = (name: string) => ({ reload: () => void reloaded.push(name) })
-    const state = { spaces: [{ id: 'work-space', profileId: 'travail' }, { id: 'home-space', profileId: 'default' }], tabs: [{ id: 'a', spaceId: 'work-space' }, { id: 'b', spaceId: 'work-space' }, { id: 'c', spaceId: 'home-space' }] }
+    const state = { settings: { siteDataRecents: [], searchDiscoverySeen: [] }, spaces: [{ id: 'work-space', profileId: 'travail' }, { id: 'home-space', profileId: 'default' }], tabs: [{ id: 'a', spaceId: 'work-space' }, { id: 'b', spaceId: 'work-space' }, { id: 'c', spaceId: 'home-space' }] }
     const here = { pages: new Map([['a', page('a here')], ['c', page('c here')]]) }
     const second = { pages: new Map([['b', page('b in the second window')], ['c', page('c in the second window')]]) }
-    const fake = fakeBrowser({ ...here, store: { get: () => state }, group: new Set([here, second]), engine: { clearProfileData: () => Promise.resolve() }, eraseProfileHistory: () => true })
+    const fake = fakeBrowser({ ...here, store: { get: () => state }, group: new Set([here, second]), engine: { clearProfileData: () => Promise.resolve() }, eraseProfileHistory: () => true, eraseHistory: shell['eraseHistory'] })
     await shell['clearProfile']!.call(fake.self, 'travail')
     expect(reloaded).toEqual(['a here', 'b in the second window'])
   })
 })
 
 describe('Browser.clearEverything (« Tout effacer »)', () => {
-  const state = { activeSpaceId: 'work-space', settings: { clearAllKeepHosts: ['exemple.org'] }, spaces: [{ id: 'work-space', profileId: 'travail' }, { id: 'home-space', profileId: 'default' }], tabs: [], sessions: [] }
+  const state = { activeSpaceId: 'work-space', settings: { clearAllKeepHosts: ['exemple.org'], siteDataRecents: ['visite.example'], searchDiscoverySeen: ['vu.example'] }, spaces: [{ id: 'work-space', profileId: 'travail' }, { id: 'home-space', profileId: 'default' }], tabs: [], sessions: [] }
   const make = (over: Record<string, unknown> = {}) => {
     const cleared: Array<{ id: string; keep: unknown }> = []
-    const fake = fakeBrowser({ store: { get: () => state }, group: new Set(), isPrivate: () => false, engine: { clearProfileData: async (id: string, keep: unknown) => void cleared.push({ id, keep }) }, eraseProfileHistory: () => true, clearProfile: shell['clearProfile'], ...over })
-    return { fake, cleared }
+    const dispatched: Array<Record<string, unknown>> = []
+    const fake = fakeBrowser({ store: { get: () => state }, group: new Set(), isPrivate: () => false, engine: { clearProfileData: async (id: string, keep: unknown) => void cleared.push({ id, keep }) }, eraseProfileHistory: () => true, eraseHistory: shell['eraseHistory'], dispatch: (action: { patch: Record<string, unknown> }) => void dispatched.push(action.patch), clearProfile: shell['clearProfile'], ...over })
+    return { fake, cleared, dispatched }
   }
 
   it('erases the profile in front and hands the engine the list of spared sites', async () => {
@@ -113,6 +114,13 @@ describe('Browser.clearEverything (« Tout effacer »)', () => {
     expect(await shell['clearEverything']!.call(fake.self, 'profile')).toBe(1)
     // Mutation: dropping the list from the engine call makes this fail.
     expect(cleared).toEqual([{ id: 'travail', keep: ['exemple.org'] }])
+  })
+
+  it('empties the “Récents” list and the sites offered their search, which hold hosts of visited pages', async () => {
+    const { fake, dispatched } = make()
+    await shell['clearEverything']!.call(fake.self, 'profile')
+    // Mutation: erasing the history without `eraseHistory` (the bare profile history) leaves both lists and fails this.
+    expect(dispatched).toEqual([{ siteDataRecents: [] }, { searchDiscoverySeen: [] }])
   })
 
   it('erases every profile a space uses when the confirmation chose them all', async () => {
@@ -139,24 +147,30 @@ describe('Browser.clearEverything (« Tout effacer »)', () => {
 
 describe('Browser.newIdentity (« Nouvelle identité »)', () => {
   const tab = (id: string, spaceId: string) => ({ id, spaceId, url: 'https://exemple.org/', title: id })
-  const state = { activeSpaceId: 'work-space', settings: { clearAllKeepHosts: [] }, spaces: [{ id: 'work-space', profileId: 'travail' }, { id: 'home-space', profileId: 'default' }], tabs: [tab('a', 'work-space'), tab('b', 'home-space')], sessions: [] }
+  const state = { activeSpaceId: 'work-space', settings: { clearAllKeepHosts: [], siteDataRecents: ['visite.example'], searchDiscoverySeen: [] }, spaces: [{ id: 'work-space', profileId: 'travail' }, { id: 'home-space', profileId: 'default' }], tabs: [tab('a', 'work-space'), tab('b', 'home-space')], sessions: [] }
   const make = (clearProfileData: (id: string) => Promise<void>) => {
     const dispatched: unknown[] = []
-    const fake = fakeBrowser({ store: { get: () => state }, group: new Set(), isPrivate: () => false, engine: { clearProfileData }, eraseProfileHistory: () => true, clearProfile: shell['clearProfile'], clearEverything: shell['clearEverything'], dispatch: (action: unknown) => void dispatched.push(action) })
+    const fake = fakeBrowser({ store: { get: () => state }, group: new Set(), isPrivate: () => false, engine: { clearProfileData }, eraseProfileHistory: () => true, eraseHistory: shell['eraseHistory'], clearProfile: shell['clearProfile'], clearEverything: shell['clearEverything'], dispatch: (action: unknown) => void dispatched.push(action) })
     return { fake, dispatched }
   }
 
   it('erases, then closes the tabs of the profile in front and empties its archive', async () => {
     const { fake, dispatched } = make(async () => undefined)
     await shell['newIdentity']!.call(fake.self, 'profile')
-    expect(dispatched).toEqual([{ type: 'tab/close', id: 'a' }, { type: 'archive/clear', keepSpaces: ['home-space'] }])
+    expect(dispatched.filter((a) => (a as { type: string }).type !== 'settings/update')).toEqual([{ type: 'tab/close', id: 'a' }, { type: 'archive/clear', keepSpaces: ['home-space'] }])
+  })
+
+  it('forgets the “Récents” hosts too', async () => {
+    const { fake, dispatched } = make(async () => undefined)
+    await shell['newIdentity']!.call(fake.self, 'profile')
+    expect(dispatched).toContainEqual({ type: 'settings/update', patch: { siteDataRecents: [] } })
   })
 
   it('closes nothing when the erasure failed: the identity is not new', async () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const { fake, dispatched } = make(() => Promise.reject(new Error('busy')))
     await expect(shell['newIdentity']!.call(fake.self, 'profile')).rejects.toThrow('travail')
-    expect(dispatched).toEqual([])
+    expect(dispatched.filter((a) => (a as { type: string }).type !== 'settings/update')).toEqual([])
   })
 })
 

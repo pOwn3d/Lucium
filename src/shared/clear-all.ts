@@ -72,6 +72,7 @@ export function clearAllPrompt(state: SidebarState, profileId: string, kind: Cle
   const parts = [erased]
   if (kind === 'identity') parts.push(t('clear-all.les-onglets-de-ce-profil-se-ferment-et-une-nouvelle'))
   else parts.push(t('clear-all.les-onglets-ouverts-se-rechargent'))
+  parts.push(t('clear-all.les-conteneurs-ne-sont-pas-effaces'))
   if (several) parts.push(t('clear-all.effacer-tous-les-profils-etend-l-effacement'))
   return { message, detail: parts.join('\n\n') }
 }

@@ -328,7 +328,8 @@ export abstract class BrowserActions extends BrowserNetwork {
     await eraseProfile(
       {
         clearEngine: (id) => this.engine.clearProfileData(id, keepHosts),
-        eraseHistory: (id) => this.eraseProfileHistory(id),
+        // Through `eraseHistory`, so that the “Récents” list and the sites offered their search (hosts of visited pages) go with the history.
+        eraseHistory: (id) => this.eraseHistory(id),
         // In every window of the group: a window that shows a space of the profile would keep a signed-in page on screen.
         reloadTabs: (id) => {
           // The windows of a group share one state; each holds the pages it shows, so a tab of the profile may have its page in another window.

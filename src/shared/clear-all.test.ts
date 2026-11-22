@@ -108,3 +108,10 @@ describe('a new identity', () => {
     expect(actions.at(-1)).toEqual({ type: 'archive/clear', keepSpaces: [] })
   })
 })
+
+describe('the confirmation says what it does not clear', () => {
+  it('names the containers, which keep their sign-ins', () => {
+    const state = createInitialState({ now: 1, newId: () => 'x' })
+    for (const kind of ['everything', 'identity'] as const) expect(clearAllPrompt(state, 'default', kind).detail).toContain('conteneurs')
+  })
+})
