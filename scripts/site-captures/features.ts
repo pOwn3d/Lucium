@@ -117,7 +117,8 @@ export const SUBPAGE_LABELS: Readonly<Record<SettingsSubpageKey, Localized<strin
   focus: { fr: 'Mode concentration', en: 'Focus mode' },
   shortcuts: { fr: 'Raccourcis clavier', en: 'Keyboard shortcuts' },
   siteexclusions: { fr: 'Sites sans gestes ni touches Vim', en: 'Sites without gestures or Vim keys' },
-  sync: { fr: 'Synchronisation', en: 'Synchronization' }
+  sync: { fr: 'Synchronisation', en: 'Synchronization' },
+  securitycheck: { fr: 'Vérification de sécurité', en: 'Security check' }
 }
 
 /**
@@ -418,6 +419,8 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
     'The password vault, unlocked over the notebook, with five logins'
   )),
   setting('fn-web-hardware', 'web-hardware', t('API matérielles du web (WebHID, WebUSB, Web Serial)', 'Web hardware APIs (WebHID, WebUSB, Web Serial)'), 'protection', 'webHardware', { fold: true, label: t('Autoriser les sites à demander l’accès à un appareil (WebHID, WebUSB, Web Serial)', 'Allow sites to request access to a device (WebHID, WebUSB, Web Serial)'), why: needsHardware }),
+
+  setting('fn-forget-unused-permissions', 'forget-unused-permissions', t('Oublier les autorisations des sites non visités', 'Forget the permissions of sites you have not visited'), 'protection', 'forgetUnusedPermissionsDays', { fold: true, why: background }),
 
   // ---- Liens et fenêtres ----
   shot('fn-vue-scindee', undefined, t('Vue scindée', 'Split View'), 'split-view-4', t(

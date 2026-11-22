@@ -540,6 +540,19 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     isNew: true
   },
   {
+    id: 'security-check',
+    task: 'protect',
+    level: 'beginner',
+    name: 'discover.verification-nom',
+    summary: 'discover.verification-resume',
+    where: 'discover.verification-ou',
+    whereVars: () => ({ path: settingsPath('protection') }),
+    keywords: 'verification securite revue controle extensions autorisations protection mises a jour coffre mots de passe security check review audit extensions permissions updates vault',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'protection', anchor: 'securitycheck' },
+    isNew: true
+  },
+  {
     id: 'blocked-hosts',
     task: 'protect',
     level: 'advanced',

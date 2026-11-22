@@ -264,6 +264,18 @@ describe('the scripts and the lock, whose subpage depends on their switch', () =
     expect(heading(on)?.textContent).toBe('Vie privée et sécurité')
   })
 
+  it('opens the security check from its row on the Protection page, says how many points are worth a look, and draws its lines read-only', async () => {
+    const window = await open('#protection', { httpsUpgrade: false, sendGpc: false })
+    const entry = entryOf(window, 'securitycheck')!
+    expect(entry.querySelector('.subpage-state')?.textContent).toMatch(/\d+ points? à relire/)
+    await andArrive(() => click(entry))
+    expect(location.hash).toBe('#protection/securitycheck')
+    expect(heading(window)?.textContent).toBe('Vérification de sécurité')
+    const page = window.querySelector('main [data-subpage="securitycheck"]')!
+    expect(page.textContent).toContain('Les sites ne sont pas ouverts en HTTPS d’abord.')
+    expect(page.querySelector('button, input, select')).toBeNull()
+  })
+
   it('counts the imported scripts on the row of their subpage, under the line of the feature in « Fonctions en option », while it is on', async () => {
     installBridge({ dispatch, userScripts: async () => ({ ok: true, scripts: [{ id: 's1', name: 'Un', version: '', matches: ['*://*/*'], excludes: [], warnings: [], enabled: true, allowPrivate: false }] }) })
     const off = await open('#features')

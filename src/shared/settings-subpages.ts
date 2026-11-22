@@ -38,6 +38,8 @@ export const SUBPAGES: readonly SettingsSubpageDef[] = [
   { id: 'exceptions', pane: 'protection', title: 'settings.sub-exceptions', intro: 'settings.sub-exceptions-intro', keys: ['blockExceptions', 'popupExceptions', 'fingerprintExceptions', 'thirdPartyCookieExceptions', 'unwrapExceptions', 'safeBrowsingExceptions', 'httpsOnlyExceptions'], at: 'page' },
   { id: 'clearonclose', pane: 'protection', title: 'settings.sub-clearonclose', intro: 'settings.sub-clearonclose-intro', keys: ['siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'siteDataClearOnQuitAll', 'clearAllKeepHosts'], at: 'page' },
   { id: 'permissions', pane: 'protection', title: 'settings.sub-permissions', intro: 'settings.sub-permissions-intro', keys: ['siteAutoplay'], at: 'page' },
+  // The security check reads the settings, the extensions and the answers to the sites: it holds no setting, and the pane that draws its row says its state (`securityCheckSummary`).
+  { id: 'securitycheck', pane: 'protection', title: 'security-check.title', intro: 'security-check.intro', keys: [], at: 'page' },
   { id: 'lockoptions', pane: 'protection', title: 'settings.sub-lockoptions', intro: 'settings.sub-lockoptions-intro', keys: ['lockApp', 'lockTouchId', 'lockPrivateIdle', 'lockedSpaces'], at: 'page' },
   { id: 'filterlists', pane: 'protection', title: 'feature.listes-de-filtres', intro: 'settings.sub-filterlists-intro', keys: ['disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists'], at: 'page' },
   { id: 'network', pane: 'protection', title: 'settings.sub-network', intro: 'settings.sub-network-intro', keys: ['dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'], at: 'page' },
@@ -130,6 +132,8 @@ export function subpageSummary(id: SettingsSubpage, facts: SubpageFacts): string
       return rules(settings.translateAlways.length + settings.translateNeverSites.length)
     case 'userscripts':
       // The scripts live in the main process: the pane that draws the row counts them (`scriptsSummary`).
+      return ''
+    case 'securitycheck':
       return ''
     case 'sync':
       // The synchronisation lives in the main process too: the row is drawn with its state (`syncSummary`).

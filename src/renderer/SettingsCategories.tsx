@@ -32,6 +32,8 @@ import { LinksSettings, LittleShortcutRow } from './LinksSettings'
 import { LockSettings } from './LockSettings'
 import { PasswordsSettings } from './PasswordsSettings'
 import { PrivacyDashboard } from './PrivacyDashboard'
+import { SecurityCheck } from './SecurityCheck'
+import { securityCheck, securityCheckSummary } from '@shared/security-check'
 import { HistorySettings, NetworkSettings } from './PrivacyExtraSettings'
 import { PrivacySettings } from './PrivacySettings'
 import { CommandBarSettings, SearchSettings } from './SearchSettings'
@@ -195,6 +197,12 @@ function BlockerCategory({ snapshot, update }: PaneProps) {
       <Group title={t('settings.section-protection')}>
         <ProtectionLevelRow snapshot={snapshot} update={update} />
       </Group>
+      <Group title={t('security-check.title')}>
+        <SubpageEntry id="securitycheck" snapshot={snapshot} summary={securityCheckSummary(securityCheck({ settings, sitePermissions: snapshot.state.sitePermissions, extensions: snapshot.extensions, engine: snapshot.engine }))} />
+      </Group>
+      <Subpage id="securitycheck">
+        <SecurityCheck snapshot={snapshot} />
+      </Subpage>
       <Place at="more">
         <PrivacyDashboard snapshot={snapshot} />
       </Place>
