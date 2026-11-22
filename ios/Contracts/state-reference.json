@@ -612,6 +612,9 @@
       "edge": "left"
     },
     "annotateBarHintSeen": false,
+    "discoverTip": true,
+    "discoverTipDay": "",
+    "discoverPath": [],
     "annotateAutoClear": false,
     "annotateAutoClearSeconds": 5,
     "annotateLetterKeys": true,

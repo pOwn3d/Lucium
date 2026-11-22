@@ -80,3 +80,35 @@
 }
 /* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
 :root[data-contrast='more'] .dv-card { border-color: var(--text-3); border-width: 2px; }
+
+/*
+ * The two guides at the head of the list (DiscoverPath.tsx, DiscoverTip.tsx): the path « Parcours de découverte » and the tip of the day. Tokens only; the
+ * contours of a box and of a button are `--text-3` like the rest of the panel. Nothing moves, so there is no animation to pause or to cut.
+ */
+.dv-guides { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); align-items: start; padding-top: var(--sp-3); }
+.dv-guide { display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-4); border: 1px solid var(--line-strong); border-radius: var(--r-l); background: var(--surface); }
+.dv-guide h3 { margin: 0; font-size: var(--t-xl); font-weight: var(--w-semibold); }
+.dv-guide p { margin: 0; user-select: text; }
+.dv-guide-name { font-size: var(--t-l); font-weight: var(--w-semibold); }
+.dv-guide-text { font-size: var(--t-m); line-height: 1.5; color: var(--text-2); }
+.dv-guide-where b { font-weight: var(--w-semibold); color: var(--text); }
+.dv-guide-actions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); }
+.dv-guide-progress { flex: 1 1 12em; font-size: var(--t-s); color: var(--text); }
+.dv-guide-note { min-height: 1.4em; font-size: var(--t-s); color: var(--text-2); }
+.dv-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-2); }
+.dv-step { display: flex; align-items: flex-start; gap: var(--sp-3); }
+.dv-step input[type='checkbox'], .dv-tipbox input[type='checkbox'] { flex: none; width: 24px; height: 24px; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.dv-step-body { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.dv-step-body label { font-size: var(--t-m); font-weight: var(--w-semibold); color: var(--text); cursor: pointer; }
+.dv-step .tk-btn { flex: none; }
+.dv-tipzone { display: grid; gap: var(--sp-2); align-content: start; }
+.dv-tipbox { display: inline-flex; align-items: center; gap: var(--sp-2); min-height: 32px; font-size: var(--t-m); color: var(--text); cursor: pointer; }
+.dv-guide input:focus-visible, .dv-tipbox input:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 2px; }
+.dv-guide .tk-btn.quiet { color: var(--text); text-decoration: underline; }
+@media (forced-colors: active) {
+  .dv-step input[type='checkbox'], .dv-tipbox input[type='checkbox'] { forced-color-adjust: auto; }
+}
+@media (prefers-contrast: more) {
+  .dv-guide { border-color: var(--text-3); border-width: 2px; }
+}
+:root[data-contrast='more'] .dv-guide { border-color: var(--text-3); border-width: 2px; }

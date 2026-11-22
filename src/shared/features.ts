@@ -1074,6 +1074,7 @@ export const NOT_OPTIONAL_SETTINGS: Partial<Record<BooleanSettingKey | 'blockTra
   showAdvancedSettings: 'ancien niveau de la fenêtre Réglages (Essentiel / Tous les réglages), retiré, pas une fonction : plus rien ne le lit, la clé reste pour qu’un ancien fichier d’état se charge',
   suggestionsNoticeSeen: 'mémoire d’une note déjà lue, pas une fonction',
   firstLaunchDone: 'mémoire de la feuille de premier lancement déjà montrée, pas une fonction',
+  discoverTip: 'interrupteur de l’astuce du jour de « Découvrir Lucium » (`discover-tips.ts`), pas une fonction : une carte en tête de la page, activée par défaut, que la carte éteint d’un clic (« Ne plus afficher ») et que la case de la page rallume ; rien ne tourne, rien n’est compté ni envoyé',
   annotateBarHintSeen: 'mémoire de l’astuce montrée une fois au-dessus de la poignée de la barre d’annotation, pas une fonction',
   arcGuideSeen: 'mémoire du guide « Vous venez d’Arc ? » déjà montré, pas une fonction : il ne s’ouvre seul qu’après un import depuis Arc, une fois',
   forceHighContrast: 'préférence d’accessibilité (contraste), pas une fonction : une classe posée sur la racine des documents',

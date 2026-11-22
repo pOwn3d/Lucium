@@ -627,6 +627,15 @@ export interface Settings {
    */
   annotateBarHintSeen: boolean
   /**
+   * The tip of the day of « Découvrir Lucium » (shared/discover-tips.ts): one function to discover, the next one each day. On by default for someone who is
+   * discovering Lucium; the card has a one-click « Ne plus afficher » and the page a box that turns it back on. Off: no tip is drawn. Nothing is counted or sent.
+   */
+  discoverTip: boolean
+  /** The day (`YYYY-MM-DD`, local) the tip was put away by « Compris » or « Essayer »: it is not drawn again the same day. '' before the first time. */
+  discoverTipDay: string
+  /** The ticked steps of the path « Parcours de découverte » (ids of `DISCOVER_PATH_STEPS`, in the order of the path). « Recommencer » empties it. */
+  discoverPath: string[]
+  /**
    * The marks of an annotated page fade out and are cleared after `annotateAutoClearSeconds` without activity on it (a mark drawn, a press on the
    * layer, a tool, a colour, an undo…), as « Page » clears them: ⌘Z brings them back. Off by default; the timer button of the annotation bar and the
    * Settings change it (shared/annotate-auto-clear.ts). The clock runs in the layer of each page, only while it has marks.
