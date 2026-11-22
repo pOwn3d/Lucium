@@ -3619,7 +3619,7 @@ export const en: Record<MessageKey, string> = {
   'settings-profiles.les-donnees-de-count-profils-seront-effacees.other': 'The cookies, sign-ins, storage, cache and browsing history of {count} profiles will be cleared. This can’t be undone.',
   'settings-profiles.mot-cle': 'Keyword',
   'settings-profiles.moteur-des-fenetres-privees': 'Search engine of private windows',
-  'settings-profiles.ce-moteur-ne-sert-que-dans-les-fenetres-privees-et-invite': 'This engine is used only in private and guest windows; what you type is still not sent to any engine for suggestions.',
+  'settings-profiles.ce-moteur-ne-sert-que-dans-les-fenetres-privees-et-invite': 'This engine is used only in private windows; what you type is still not sent to any engine for suggestions.',
   'settings-profiles.comme-les-autres-fenetres': 'Same as the other windows',
   'settings-profiles.moteur-de-recherche': 'Search engine',
   'settings-profiles.mots-cles-avec-w-planete': 'Keywords with “!” (!w planet)',

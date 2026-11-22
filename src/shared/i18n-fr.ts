@@ -3625,7 +3625,7 @@ export const fr = {
   'settings-profiles.les-donnees-de-count-profils-seront-effacees.other': 'Les cookies, connexions, stockage, cache et historique de {count} profils seront effacés. Cette action est irréversible.',
   'settings-profiles.mot-cle': 'Mot-clé',
   'settings-profiles.moteur-des-fenetres-privees': 'Moteur des fenêtres privées',
-  'settings-profiles.ce-moteur-ne-sert-que-dans-les-fenetres-privees-et-invite': 'Ce moteur ne sert que dans les fenêtres privées et invité ; ce que vous tapez n’est envoyé à aucun moteur pour des suggestions, comme avant.',
+  'settings-profiles.ce-moteur-ne-sert-que-dans-les-fenetres-privees-et-invite': 'Ce moteur ne sert que dans les fenêtres privées ; ce que vous tapez n’est envoyé à aucun moteur pour des suggestions, comme avant.',
   'settings-profiles.comme-les-autres-fenetres': 'Comme les autres fenêtres',
   'settings-profiles.moteur-de-recherche': 'Moteur de recherche',
   'settings-profiles.mots-cles-avec-w-planete': 'Mots-clés avec « ! » (!w planète)',

@@ -35,6 +35,8 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **Reminders keep the container**: a tab put away with “Me le rappeler” comes back in the container it was in, while that container exists.
 - **One-time codes (TOTP) in the password vault**: a login can hold the key of its two-step codes (base32 key or `otpauth://` address). The panel shows the code with its countdown and copies it, cleared after 30 seconds. The key stays encrypted in the vault and is never logged. RFC 6238, nothing filled into a page.
 - **Password vault care**: weak and reused passwords are flagged; “Copy password” clears itself after 30 seconds and at lock; Touch ID can be asked at every fill; “Never offer for this site” skips chosen sites. A login also fills on its `www.` twin. Nothing leaves your Mac.
+- **Find in page: case, whole words, accents**: with “Advanced find in page” on, the find bar has four buttons: case, whole words, accents and regular expression. Whole words skips “chat” inside “chatte”; accents tells e from é. Off, the bar is unchanged. Nothing is sent.
+- **Search engine for private windows**: Settings › Navigation › “Engine for private windows”. Empty by default, private windows follow the other windows’ engine. Chosen, only they use it; what you type is still never sent for suggestions, and no request is added.
 
 ### Changed
 

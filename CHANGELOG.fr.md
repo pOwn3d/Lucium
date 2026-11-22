@@ -29,6 +29,8 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 - **Les rappels gardent le conteneur** : un onglet mis de côté avec « Me le rappeler » revient dans le conteneur où il était, tant que ce conteneur existe.
 - **Codes à usage unique (TOTP) dans le coffre de mots de passe** : un identifiant peut garder la clé de ses codes de double authentification (clé en base32 ou adresse `otpauth://`). Le panneau montre le code avec son compte à rebours et le copie, effacé après 30 secondes. La clé reste chiffrée dans le coffre et n’est jamais journalisée. RFC 6238, rien n’est rempli dans une page.
 - **Soin du coffre** : mots de passe faibles et réutilisés signalés ; « Copier le mot de passe » s’efface après 30 secondes et au verrouillage ; Touch ID possible à chaque remplissage ; « Ne plus proposer pour ce site » écarte des sites. Une entrée se remplit aussi sur son jumeau `www.`. Rien ne quitte ton Mac.
+- **Recherche dans la page : casse, mots entiers, accents** : avec « Recherche avancée dans la page » activée, la barre de recherche a quatre boutons : casse, mots entiers, accents et expression régulière. Mots entiers écarte « chat » dans « chatte » ; accents distingue e et é. Désactivée, la barre ne change pas.
+- **Moteur de recherche des fenêtres privées** : Réglages › Navigation › « Moteur des fenêtres privées ». Vide par défaut, les fenêtres privées suivent le moteur des autres fenêtres. Choisi, elles seules l’utilisent ; ce que vous tapez n’est toujours pas envoyé pour des suggestions, et aucune requête n’est ajoutée.
 
 ### Changements
 
