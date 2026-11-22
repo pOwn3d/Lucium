@@ -85,7 +85,7 @@ export const SETTINGS_KEYS = {
     'sleepAfterMinutes', 'sleepAwakeMax', 'sleepFreezeAfterMinutes', 'sleepMode', 'sleepSkipAudible', 'sleepSkipPinned', 'sleepNotify', 'loadAllTabsAtLaunch', 'sleepExcludedHosts', 'sleepExcludedKeepAll',
     'autoArchiveHours', 'tidyPinnedTitles', 'reopenHistory', 'backClosesOpenedTab',
     'tabStateBadges', 'tidyFoldersPosition',
-    'dragToSplit', 'scrollSync', 'autoPictureInPicture', 'sitePictureInPictureInLucium',
+    'dragToSplit', 'scrollSync', 'rememberScroll', 'autoPictureInPicture', 'sitePictureInPictureInLucium',
     'restoreWindows', 'dragWindowFromToolbar', 'warnBeforeClosingWindow', 'warnBeforeQuitting'
   ],
   // Moteur de recherche · Propositions de la barre de commandes · Apparence · Recherches rapides · Recherche dans un site · Mots-clés des extensions

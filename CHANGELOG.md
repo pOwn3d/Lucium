@@ -20,6 +20,9 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Added
 
 - **One Space to another Mac**: Spaces › Export This Space… saves one Space with its tabs, folders and archive to a file, sealed with a passphrase if you wish; Spaces › Import a Space… adds it on another Mac, with no server. No cookies, no passwords.
+### Added
+
+- **Scroll position restored after a relaunch**: Settings › Tabs and windows › “Restore the scroll position of tabs”, off by default. A tab comes back to where its page was scrolled. Only a number per tab and its address is kept, on your Mac; never the page, nothing for private tabs.
 
 ## [1.1.5] - 2026-11-20
 

@@ -272,6 +272,7 @@ export function defaultSettings(): Settings {
     qrCode: false,
     autoScroll: false,
     scrollSync: false,
+    rememberScroll: false,
     // On: nothing exists, and nothing runs, until a view is saved.
     workViewsEnabled: true,
     mouseGestures: false,

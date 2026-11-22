@@ -499,6 +499,8 @@ export abstract class BrowserBase {
   protected readonly reopened = new ReopenLedger()
   /** The Back / Forward lists of the tabs whose page was let go for a sleep, given back to their next page (slept-history.ts). Held by the leader, for the whole group; in memory only. */
   protected readonly slept = new SleptHistory()
+  /** The tabs whose page already went back to its remembered scroll position (scroll-memory): once per page, whatever the document it loads after. Dropped with the page (`dropPageState`). */
+  protected readonly scrollRestored = new Set<string>()
   /** Unsubscribes from the lock (only while the lock is on). */
   protected unsubscribeLock: (() => void) | null = null
   /** Passphrases the main process asked for (the encrypted export being restored): one at a time, after what is on screen. */

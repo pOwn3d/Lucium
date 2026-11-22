@@ -11,6 +11,7 @@ import { FLOATING_WORLD, FLOAT_FACTS, FLOAT_FIND, FLOAT_STAGE, FLOAT_UNSTAGE, fl
 import { parseFacts, type FloatingVideoFacts, type VideoCommand } from '@shared/floating-video'
 import { FLOAT_FRAMES_MAX } from './sleep-probe'
 import { scrollSyncApplyScript } from '@shared/scroll-sync'
+import { scrollMemoryApplyScript } from '@shared/scroll-memory'
 import { TOOLS_WORLD, TOOL_NAMES, anyPageTool, parseToolMessage, samePageTools, type PageTools, type ToolCommand, type ToolMessage } from '@shared/page-tools'
 import { speakScript, speechChunks, speechLang, speechText, stopSpeakingScript } from '@shared/read-aloud'
 import { t } from '@shared/i18n'
@@ -122,8 +123,8 @@ export abstract class ElectronPageMedia extends ElectronPageContent {
   toolCommand(command: ToolCommand): void {
     const wc = this.liveContents()
     if (!wc || !this.installedTools.has(command.tool)) return
-    wc.executeJavaScriptInIsolatedWorld(TOOLS_WORLD, [{ code: scrollSyncApplyScript(command.x, command.y) }]).catch((error: unknown) => {
-      if (!this.gone) console.warn(`[page-tools] page ${this.id} did not take the scroll position:`, error instanceof Error ? error.message : String(error))
+    wc.executeJavaScriptInIsolatedWorld(TOOLS_WORLD, [{ code: command.tool === 'scrollMemory' ? scrollMemoryApplyScript(command.y) : scrollSyncApplyScript(command.x, command.y) }]).catch((error: unknown) => {
+      if (!this.gone) console.warn(`[page-tools] page ${this.id} did not take the scroll position (${command.tool}):`, error instanceof Error ? error.message : String(error))
     })
   }
 

@@ -6,21 +6,23 @@ import type { Settings } from './model'
 import { NO_PAGE_TOOLS, type PageTools } from './page-tools'
 import { vimKeysOn } from './vim-keys'
 
-type ToolSettings = Pick<Settings, 'autoScroll' | 'mouseGestures' | 'mouseGestureExcludedHosts' | 'scrollSync' | 'vimKeys' | 'vimKeysExcludedHosts'>
+type ToolSettings = Pick<Settings, 'autoScroll' | 'mouseGestures' | 'mouseGestureExcludedHosts' | 'scrollSync' | 'rememberScroll' | 'vimKeys' | 'vimKeysExcludedHosts'>
 
 /** Whether any tool may be wanted by some page at all (the settings alone): when not, no page is looked at. */
-export const anyToolWanted = (settings: ToolSettings): boolean => settings.autoScroll || settings.mouseGestures || settings.scrollSync || settings.vimKeys
+export const anyToolWanted = (settings: ToolSettings): boolean => settings.autoScroll || settings.mouseGestures || settings.scrollSync || settings.rememberScroll || settings.vimKeys
 
 /**
  * The tools of a page at `url`: what the settings switched on, minus the gestures and the Vim keys on a site that is left out of them.
  * `scrollSyncCarried` is whether the page is a pane of a split view that scrolls together (decided by the window, not by a setting).
+ * `mayRemember` is false for a private tab or a private window: where it scrolled is never kept.
  */
-export function pageToolsFor(settings: ToolSettings, url: string, scrollSyncCarried: boolean): PageTools {
+export function pageToolsFor(settings: ToolSettings, url: string, scrollSyncCarried: boolean, mayRemember = true): PageTools {
   if (!anyToolWanted(settings)) return NO_PAGE_TOOLS
   return {
     autoScroll: settings.autoScroll,
     mouseGestures: gesturesOn(settings.mouseGestures, settings.mouseGestureExcludedHosts, url),
     scrollSync: settings.scrollSync && scrollSyncCarried,
-    vimKeys: vimKeysOn(settings.vimKeys, settings.vimKeysExcludedHosts, url)
+    vimKeys: vimKeysOn(settings.vimKeys, settings.vimKeysExcludedHosts, url),
+    scrollMemory: settings.rememberScroll && mayRemember && /^https?:/.test(url)
   }
 }

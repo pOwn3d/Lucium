@@ -9,6 +9,7 @@ import { SELECTOR_FOR } from '@shared/element-selector'
 import { GESTURE_SCRIPTS } from '@shared/gestures'
 import type { PageTools, ToolScripts } from '@shared/page-tools'
 import { SCROLL_SYNC_SCRIPTS } from '@shared/scroll-sync'
+import { SCROLL_MEMORY_SCRIPTS } from '@shared/scroll-memory'
 import { VIM_KEY_SCRIPTS } from '@shared/vim-keys'
 
 /** A frame that does not answer a media question within this long is left out of it (a hung or frozen page must not hold the player). */
@@ -37,7 +38,7 @@ export const HELD_MENU_FALLBACK_MS = 350
 /** The script's answer to a release counts for the menu that follows it for this long (systems that ask for the menu at the release). */
 export const VERDICT_FRESH_MS = 400
 /** The scripts of each in-page tool. */
-export const TOOL_SCRIPTS: Record<keyof PageTools, ToolScripts> = { autoScroll: AUTOSCROLL_SCRIPTS, mouseGestures: GESTURE_SCRIPTS, scrollSync: SCROLL_SYNC_SCRIPTS, vimKeys: VIM_KEY_SCRIPTS }
+export const TOOL_SCRIPTS: Record<keyof PageTools, ToolScripts> = { autoScroll: AUTOSCROLL_SCRIPTS, mouseGestures: GESTURE_SCRIPTS, scrollSync: SCROLL_SYNC_SCRIPTS, vimKeys: VIM_KEY_SCRIPTS, scrollMemory: SCROLL_MEMORY_SCRIPTS }
 
 /** Electron 45's clipboard writes are asynchronous: a failure must be reported, not left as an unhandled rejection. */
 export function copyText(text: string): void {

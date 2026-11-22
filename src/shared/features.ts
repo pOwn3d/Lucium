@@ -635,6 +635,15 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'remember-scroll',
+    key: 'rememberScroll',
+    get label() { return t('features.retrouver-la-position-de-defilement-des-onglets') },
+    group: 'tabs',
+    get description() { return t('features.un-onglet-revient-la-ou-sa-page-etait-defilee') },
+    // A script in each page (one scroll listener, one timer armed after a scroll) and a small file written a few seconds after a change.
+    cost: ['listeners', 'timer', 'disk']
+  },
+  {
     id: 'work-views',
     key: 'workViewsEnabled',
     get label() { return t('features.vues-de-travail') },

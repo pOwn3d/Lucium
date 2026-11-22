@@ -73,7 +73,7 @@ describe('the tools of a page', () => {
   })
 
   it('are compared one by one', () => {
-    expect(samePageTools(NO_PAGE_TOOLS, { autoScroll: false, mouseGestures: false, scrollSync: false, vimKeys: false })).toBe(true)
+    expect(samePageTools(NO_PAGE_TOOLS, { autoScroll: false, mouseGestures: false, scrollSync: false, vimKeys: false, scrollMemory: false })).toBe(true)
     for (const name of TOOL_NAMES) {
       const on = { ...NO_PAGE_TOOLS, [name]: true }
       expect(samePageTools(NO_PAGE_TOOLS, on)).toBe(false)

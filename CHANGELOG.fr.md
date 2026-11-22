@@ -14,6 +14,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Ajouts
 
 - **Un espace vers un autre Mac** : Espaces › Exporter cet espace… enregistre un espace avec ses onglets, ses dossiers et son archive dans un fichier, chiffré par une phrase secrète si vous le voulez ; Espaces › Importer un espace… l’ajoute sur un autre Mac, sans serveur. Ni cookies, ni mots de passe.
+### Ajouts
+
+- **Position de défilement retrouvée après un redémarrage** : Réglages › Onglets et fenêtres › « Retrouver la position de défilement des onglets », désactivé par défaut. Un onglet revient là où sa page était défilée. Seuls un nombre par onglet et son adresse sont gardés, sur votre Mac ; jamais la page, rien pour les onglets privés.
 
 ## [1.1.5] - 2026-11-20
 

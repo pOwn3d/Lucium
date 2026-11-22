@@ -440,6 +440,8 @@ export interface Settings {
   autoScroll: boolean
   /** The split view's menu offers to scroll its panes together. */
   scrollSync: boolean
+  /** A tab comes back to where its page was scrolled after a relaunch or a sleep (see scroll-memory.ts): one number per tab, kept in a small file, never the page. Off by default. */
+  rememberScroll: boolean
   /**
    * Work views (work-views.ts): their tiles after the favourites, their entries in the menus and the command bar, the actions `view/*`. Off, all of
    * that is gone and every `view/*` action changes nothing; the views saved stay in the file.
