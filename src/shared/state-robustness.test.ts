@@ -467,6 +467,7 @@ const show = (v: unknown): string => {
 /** What each setting must be after loading. Typed on `Settings` so a new setting cannot be added without saying what it may hold. */
 const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   searchUrlTemplate: template,
+  privateSearchUrlTemplate: (v) => v === '' || template(v),
   siteSearches: (v) =>
     Array.isArray(v) && v.length <= 50 && unique(v.map((s) => (isRecord(s) ? s['keyword'] : s))) &&
     v.every((s) => isRecord(s) && keysOf(s).sort().join() === 'keyword,name,url' && typeof s['keyword'] === 'string' && /^[^\s\p{Cc}]{1,30}$/u.test(s['keyword']) && text(s['name']) && s['name'].trim() !== '' && s['name'].length <= 60 && template(s['url'])),

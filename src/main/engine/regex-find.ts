@@ -19,17 +19,28 @@ const DEBOUNCE_MS = 120
 // ---------- the worker: the only place the expression runs ----------
 
 /**
- * `findMatches(chunks, pattern, caseSensitive, limit)` answers `{ matches: [[chunk, start, end], …], more }` or `{ error }`. Unicode mode is tried
- * first (so `\p{L}` works) and plain mode when the expression is not valid in it. Empty matches are skipped. Kept as text: the worker runs
+ * `findMatches(chunks, pattern, caseSensitive, limit, wholeWord)` answers `{ matches: [[chunk, start, end], …], more }` or `{ error }`. Unicode mode is tried
+ * first (so `\p{L}` works) and plain mode when the expression is not valid in it. Empty matches are skipped. With `wholeWord`, a match that touches a letter,
+ * a digit or "_" on either side is skipped: the check is made on the text, so it does not depend on what the expression is. The letters are compared as they
+ * are, accents included. Kept as text: the worker runs
  * this very source, and the tests run it through `new Function`.
  */
-export const MATCH_SOURCE = `function findMatches(chunks, pattern, caseSensitive, limit) {
+export const MATCH_SOURCE = `function findMatches(chunks, pattern, caseSensitive, limit, wholeWord) {
   var flags = caseSensitive ? 'gm' : 'gim'
   var re = null
   try { re = new RegExp(pattern, flags + 'u') } catch (first) {
     try { re = new RegExp(pattern, flags) } catch (second) { return { error: 'invalid' } }
   }
   var matches = []
+  var inWord = /[\\p{L}\\p{N}_]/u
+  var edge = function (text, index, backwards) {
+    if (index < 0 || index >= text.length) return false
+    var unit = text.charAt(index)
+    // The other half of a surrogate pair is read with its first half, so that a letter outside the first plane is one letter.
+    if (backwards && unit >= '\\uDC00' && unit <= '\\uDFFF' && index > 0) unit = text.charAt(index - 1) + unit
+    else if (!backwards && unit >= '\\uD800' && unit <= '\\uDBFF') unit = unit + text.charAt(index + 1)
+    return inWord.test(unit)
+  }
   for (var c = 0; c < chunks.length; c++) {
     var text = chunks[c]
     re.lastIndex = 0
@@ -40,6 +51,7 @@ export const MATCH_SOURCE = `function findMatches(chunks, pattern, caseSensitive
         re.lastIndex += step
         continue
       }
+      if (wholeWord && (edge(text, m.index - 1, true) || edge(text, m.index + m[0].length, false))) continue
       matches.push([c, m.index, m.index + m[0].length])
       if (matches.length > limit) { matches.pop(); return { matches: matches, more: true } }
     }
@@ -51,13 +63,15 @@ const WORKER_SOURCE = `const { parentPort } = require('node:worker_threads')
 ${MATCH_SOURCE}
 parentPort.on('message', (job) => {
   var reply
-  try { reply = findMatches(job.chunks, job.pattern, job.caseSensitive, job.limit) } catch (error) { reply = { error: 'failed', message: String(error && error.message) } }
+  try { reply = findMatches(job.chunks, job.pattern, job.caseSensitive, job.limit, job.wholeWord) } catch (error) { reply = { error: 'failed', message: String(error && error.message) } }
   parentPort.postMessage(reply)
 })`
 
 export interface RegexJob {
   pattern: string
   caseSensitive: boolean
+  /** Only the matches that are whole words; absent when the option is off. */
+  wholeWord?: boolean
   chunks: string[]
 }
 
@@ -132,7 +146,7 @@ export class RegexRunner {
         finish({ ok: false, error: 'failed' })
       })
       this.running = { worker, finish }
-      worker.postMessage({ pattern: job.pattern, caseSensitive: job.caseSensitive, limit: this.limit, chunks: job.chunks })
+      worker.postMessage({ pattern: job.pattern, caseSensitive: job.caseSensitive, wholeWord: job.wholeWord === true, limit: this.limit, chunks: job.chunks })
     })
   }
 
@@ -312,6 +326,7 @@ export interface FinderOptions {
   next?: boolean
   forward?: boolean
   matchCase?: boolean
+  wholeWord?: boolean
 }
 
 /** The regular-expression search of one tab: scan, match, paint, step. A new search ends the one before it. */
@@ -319,6 +334,7 @@ export class RegexFinder {
   private generation = 0
   private pattern = ''
   private matchCase = false
+  private wholeWord = false
   private count = 0
   private index = 0
   private more = false
@@ -335,10 +351,12 @@ export class RegexFinder {
   find(pattern: string, options: FinderOptions = {}): void {
     if (!pattern) return this.stop()
     const matchCase = options.matchCase === true
-    if (options.next && pattern === this.pattern && matchCase === this.matchCase && this.count > 0) return void this.step(options.forward ?? true)
+    const wholeWord = options.wholeWord === true
+    if (options.next && pattern === this.pattern && matchCase === this.matchCase && wholeWord === this.wholeWord && this.count > 0) return void this.step(options.forward ?? true)
     this.cancelPending()
     this.pattern = pattern
     this.matchCase = matchCase
+    this.wholeWord = wholeWord
     this.count = 0
     this.index = 0
     this.more = false
@@ -350,7 +368,7 @@ export class RegexFinder {
     this.host.setCss(REGEX_HIGHLIGHT_CSS)
     const generation = this.generation
     // A key pressed after another replaces it: only the last text is searched.
-    this.timer = setTimeout(() => void this.search(pattern, matchCase, generation), this.debounceMs)
+    this.timer = setTimeout(() => void this.search(pattern, matchCase, wholeWord, generation), this.debounceMs)
   }
 
   /** The tab went to another document: what was painted is gone with the old one. */
@@ -390,7 +408,7 @@ export class RegexFinder {
     this.host.report({ matches: 0, ordinal: 0, error })
   }
 
-  private async search(pattern: string, matchCase: boolean, generation: number): Promise<void> {
+  private async search(pattern: string, matchCase: boolean, wholeWord: boolean, generation: number): Promise<void> {
     this.timer = null
     let scan: { chunks: string[]; partial: boolean }
     try {
@@ -401,7 +419,7 @@ export class RegexFinder {
     } catch (error) {
       return this.fail(generation, 'failed', error)
     }
-    const outcome = await this.runner.run({ pattern, caseSensitive: matchCase, chunks: scan.chunks })
+    const outcome = await this.runner.run({ pattern, caseSensitive: matchCase, ...(wholeWord ? { wholeWord: true } : {}), chunks: scan.chunks })
     if (generation !== this.generation) return
     if (!outcome.ok) {
       if (outcome.error === 'cancelled') return
@@ -432,7 +450,7 @@ export class RegexFinder {
       const moved = await this.host.run(currentScript(generation, next))
       if (generation !== this.generation) return
       // The page lost the search (a reload, a script that cleared the registry): search again.
-      if (moved !== true) return this.find(this.pattern, { matchCase: this.matchCase })
+      if (moved !== true) return this.find(this.pattern, { matchCase: this.matchCase, wholeWord: this.wholeWord })
       this.host.report({ matches: this.count, ordinal: next + 1, ...(this.more ? { more: true } : {}) })
     } catch (error) {
       this.fail(generation, 'failed', error)

@@ -6,6 +6,7 @@ import { isPdfViewerUrl } from '@shared/pdf-viewer'
 import { isInternalPageUrl, isInternalScheme } from '@shared/internal-page'
 import { getLanguage } from '@shared/i18n'
 import { FIND_HIGHLIGHT_CSS, type FindOptions } from '@shared/ipc'
+import { findPattern, usesOwnEngine } from '@shared/regex-find'
 import { physicalKey } from '@shared/keybindings'
 import { isClosedPageUrl } from '@shared/closed-history'
 import type { LoadFailure } from '@shared/dead-tabs'
@@ -289,7 +290,7 @@ export abstract class ElectronPageNavigation extends ElectronPageBase {
   }
   find(text: string, options: FindOptions): void {
     if (!text) return this.stopFind()
-    if (options.regex) {
+    if (usesOwnEngine(options)) {
       // Chromium's own search paints a selection of its own: end it before the regular expression takes over.
       if (!this.regexFinder?.active) this.webContents.stopFindInPage('clearSelection')
       this.regexFinder ??= new RegexFinder({
@@ -297,7 +298,7 @@ export abstract class ElectronPageNavigation extends ElectronPageBase {
         setCss: (css) => this.applyCss(css, 'find'),
         report: (result) => this.events.found(result)
       })
-      this.regexFinder.find(text, { next: options.next, forward: options.forward, matchCase: options.matchCase })
+      this.regexFinder.find(findPattern(text, options), { next: options.next, forward: options.forward, matchCase: options.matchCase, wholeWord: options.wholeWord })
       return
     }
     this.regexFinder?.stop()

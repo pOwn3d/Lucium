@@ -377,6 +377,7 @@ export function clampSettings(input: Settings): Settings {
     containers,
     containerRules: cleanContainerRules(settings.containerRules, containers),
     searchUrlTemplate: isSearchTemplate(settings.searchUrlTemplate) ? settings.searchUrlTemplate : defaults.searchUrlTemplate,
+    privateSearchUrlTemplate: isSearchTemplate(settings.privateSearchUrlTemplate) ? settings.privateSearchUrlTemplate : defaults.privateSearchUrlTemplate,
     siteSearches: cleanSavedSiteSearches(settings.siteSearches),
     linkRoutes: cleanLinkRoutes(settings.linkRoutes),
     keyBindings: cleanBindings(settings.keyBindings),

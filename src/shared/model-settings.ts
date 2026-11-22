@@ -57,6 +57,8 @@ export type ProtectionBaseline = 'standard' | 'renforcee'
 export interface Settings {
   /** `%s` is replaced by the URL-encoded query. */
   searchUrlTemplate: string
+  /** The search engine of private and guest windows: an address with `%s`, or '' to use `searchUrlTemplate` like the other windows (shared/profiles.ts, `profileSearch`). */
+  privateSearchUrlTemplate: string
   siteSearches: SiteSearch[]
   linkRoutes: LinkRoute[]
   sidebarVisible: boolean

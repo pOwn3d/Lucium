@@ -3,7 +3,7 @@
 // (a runaway expression is abandoned there, the page and the interface never wait for it), and the matches are painted back with the
 // CSS Custom Highlight API. The expression is never sent to the page. See main/engine/regex-find.ts for the machinery.
 
-import type { FindOptions } from './ipc'
+import { FIND_PANEL, FIND_PANEL_WIDE, type FindOptions } from './ipc'
 import type { FindState, Settings } from './model'
 import { t } from './i18n'
 
@@ -49,11 +49,39 @@ export function parseFindOptions(raw: unknown): FindOptions {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
   const source = raw as Record<string, unknown>
   const out: FindOptions = {}
-  for (const key of ['forward', 'next', 'matchCase', 'regex'] as const) {
+  for (const key of ['forward', 'next', 'matchCase', 'regex', 'wholeWord', 'accents'] as const) {
     if (Object.hasOwn(source, key) && typeof source[key] === 'boolean') out[key] = source[key]
   }
   return out
 }
 
-/** Whether a find request is a regular-expression search: asked for by the bar, and allowed by the setting. */
-export const regexSearchAllowed = (options: FindOptions, settings: Pick<Settings, 'findRegex'>): boolean => options.regex === true && settings.findRegex
+
+/**
+ * What the find bar asked for, as far as the setting allows: with `findRegex` off the buttons do not exist, so a request for the regular
+ * expression, the whole words or the accents is not honoured, whatever the interface sent. The case option is Chromium's own and always is.
+ */
+export function allowedFindOptions(options: FindOptions, settings: Pick<Settings, 'findRegex'>): FindOptions {
+  if (settings.findRegex) return options
+  const { regex: _regex, wholeWord: _wholeWord, accents: _accents, ...plain } = options
+  return plain
+}
+
+/** Whether the search is done by our engine: Chromium's own takes a plain string and nothing else: no expression, no whole words, no say on the accents. */
+export const usesOwnEngine = (options: FindOptions): boolean => options.regex === true || options.wholeWord === true || options.accents === true
+
+/** The expression our engine runs: what was typed when it is an expression, else that text taken literally. */
+export const findPattern = (text: string, options: FindOptions): string => (options.regex === true ? text : text.replace(/[\\^$.*+?()[\]{}|]/g, '\\$&'))
+
+/** The find panel with its buttons (setting on) is wider than the plain one. */
+export const findPanelFor = (settings: Pick<Settings, 'findRegex'>): typeof FIND_PANEL | typeof FIND_PANEL_WIDE => (settings.findRegex ? FIND_PANEL_WIDE : FIND_PANEL)
+
+export type FindToggle = 'regex' | 'matchCase' | 'wholeWord' | 'accents'
+export type FindToggles = Record<FindToggle, boolean>
+export const NO_FIND_TOGGLES: FindToggles = { regex: false, matchCase: false, wholeWord: false, accents: false }
+
+/** What the find bar sends: `more` (the step, the direction) and the buttons that are pressed, which exist only with the setting on. */
+export function findRequest(toggles: FindToggles, available: boolean, more: FindOptions = {}): FindOptions {
+  if (!available) return more
+  const pressed = Object.fromEntries((Object.keys(toggles) as FindToggle[]).filter((key) => toggles[key]).map((key) => [key, true])) as FindOptions
+  return { ...more, ...pressed }
+}

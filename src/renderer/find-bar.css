@@ -23,7 +23,7 @@
 .fb-btn:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
 .fb-btn:disabled { opacity: 0.4; }
 /* The ".*" button (regular expression), which only exists when Settings ask for it. */
-.fb-toggle { flex: none; height: 22px; margin: 0 1px; padding: 0 6px; border-radius: 6px; color: var(--text-2); font: 600 12px/22px ui-monospace, SFMono-Regular, Menlo, monospace; }
+.fb-toggle { flex: none; height: 22px; margin: 0 1px; padding: 0 5px; border-radius: 6px; color: var(--text-2); font: 600 12px/22px ui-monospace, SFMono-Regular, Menlo, monospace; }
 .fb-toggle:hover { background: var(--tile); }
 .fb-toggle:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: -2px; }
 .fb-toggle[aria-pressed='true'] { background: var(--accent-soft); color: var(--text); }

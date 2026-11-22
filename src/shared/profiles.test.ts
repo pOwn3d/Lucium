@@ -3,7 +3,7 @@ import { defaultSettings } from './model'
 import { setLanguage } from './i18n'
 import {
   PROFILE_NAME_LIMIT, profileNameInvalid, profileNameTaken, archiveDelayLabel, archiveDelayNotice, archiveDelayPatch, cleanProfileOverrides, isProfileId, knownProfiles, newProfileId, planProfileCreation,
-  cleanDisabledExtensions, profileArchiveHours, profileDownloadDir, profileLabel, profileLabels, profileOfSpace, profileRecordsHistory, profileSearch, profilesFollowingDefault, spaceOfProfile, validateProfileName, withExtensionEnabled, withExtensionTabCapture
+  PRIVATE_PROFILE_ID, cleanDisabledExtensions, profileArchiveHours, profileDownloadDir, profileLabel, profileLabels, profileOfSpace, profileRecordsHistory, profileSearch, profilesFollowingDefault, spaceOfProfile, validateProfileName, withExtensionEnabled, withExtensionTabCapture
 } from './profiles'
 import { PROFILE_NAME_MAX, createInitialState, normalize, reduce, type Action } from './sidebar'
 import { frenchSpaces } from './french-typography'
@@ -26,6 +26,13 @@ describe('what a profile uses', () => {
     expect(profileArchiveHours(own, 'work')).toBe(0)
     expect(profileDownloadDir(own, 'work')).toBe('/tmp/work')
     expect(profileArchiveHours(own, 'other')).toBe(12)
+  })
+
+  it('gives the private and guest windows the engine picked for them, and no other profile', () => {
+    const picked = { ...settings, privateSearchUrlTemplate: 'https://private.example/?q=%s', searchSuggestions: false }
+    expect(profileSearch(picked, PRIVATE_PROFILE_ID)).toEqual({ url: 'https://private.example/?q=%s', suggestions: false })
+    expect(profileSearch(picked, 'work').url).toBe('https://default.example/?q=%s')
+    expect(profileSearch({ ...picked, privateSearchUrlTemplate: '' }, PRIVATE_PROFILE_ID).url).toBe('https://default.example/?q=%s')
   })
 
   it('finds the profile of a space, and uses the default one for a space that is gone', () => {

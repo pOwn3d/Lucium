@@ -2,13 +2,14 @@
 // views with the state, the stage, the split view, the overlay, the traffic lights, the sliding sidebar.
 
 import { Menu, screen, type View } from 'electron'
-import { FIND_PANEL, FIND_REPLACE_PANEL, PEEK_HEADER_HEIGHT, TOOLBAR_BAR_HEIGHT, type OverlayRequest } from '@shared/ipc'
+import { FIND_REPLACE_PANEL, PEEK_HEADER_HEIGHT, TOOLBAR_BAR_HEIGHT, type OverlayRequest } from '@shared/ipc'
 import type { SplitView } from '@shared/model'
 import { ZAP_PANEL } from '@shared/boost'
 import { PEEK_BORDER, PEEK_PAGE_RADIUS, peekPageRect } from '@shared/peek'
 import { DOCK_WIDTH, floatingBox, frameLayout, stageTop, trafficLightsAt, type Frame } from '@shared/frame-layout'
 import { fullscreenAfterSync } from '@shared/html-fullscreen'
 import { resolveAppearance } from '@shared/theme'
+import { findPanelFor } from '@shared/regex-find'
 import { findLayerBounds, scaled, uiFactor } from '@shared/ui-scale'
 import { PANEL_NEED, panelFactor, panelIsScaled, screenOf } from '@shared/panel-scale'
 import { opensPlayer } from '@shared/media-player'
@@ -352,7 +353,7 @@ export abstract class BrowserLayout extends BrowserPages {
     // The sizes of the panels are in CSS pixels of the interface; the layer is placed in points.
     const f = (n: number) => scaled(n, this.k())
     // The panel's own size and offsets, plus a transparent margin for its shadow.
-    if (request.panel === 'find') return findLayerBounds(stage, FIND_PANEL, this.k())
+    if (request.panel === 'find') return findLayerBounds(stage, findPanelFor(this.store.get().settings), this.k())
     if (request.panel === 'findreplace') return findLayerBounds(stage, FIND_REPLACE_PANEL, this.k())
     if (request.panel === 'theme') {
       // Beside the sidebar, so that it shows the theme live: at the card's left edge, or its right edge when the sidebar is at the right.

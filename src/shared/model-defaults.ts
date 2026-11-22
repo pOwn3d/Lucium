@@ -114,6 +114,7 @@ export function referenceSettings(settings: Pick<Settings, 'protectionBaseline'>
 export function defaultSettings(): Settings {
   return {
     searchUrlTemplate: DEFAULT_SEARCH_URL,
+    privateSearchUrlTemplate: '',
     siteSearches: DEFAULT_SITE_SEARCHES,
     linkRoutes: [],
     sidebarVisible: true,

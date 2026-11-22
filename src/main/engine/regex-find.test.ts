@@ -8,7 +8,7 @@ import { CLEAR_SCRIPT, MATCH_SOURCE, RegexFinder, RegexRunner, applyScript, coll
 // matching itself (the very source the worker runs), the worker's lifecycle with real threads, and the finder around them with stand-ins.
 
 type Matches = { matches: Array<[number, number, number]>; more: boolean } | { error: string }
-const findMatches = new Function(`return (${MATCH_SOURCE})`)() as (chunks: string[], pattern: string, caseSensitive: boolean, limit: number) => Matches
+const findMatches = new Function(`return (${MATCH_SOURCE})`)() as (chunks: string[], pattern: string, caseSensitive: boolean, limit: number, wholeWord?: boolean) => Matches
 
 afterEach(() => vi.restoreAllMocks())
 
@@ -231,6 +231,36 @@ describe('RegexRunner failures', () => {
     } as unknown as WorkerLike
     expect(await new RegexRunner(50, 10, () => worker).run(job)).toEqual({ ok: false, error: 'slow' })
     expect(() => late({ matches: [[0, 0, 1]], more: false })).not.toThrow()
+  })
+})
+
+describe('whole words and accents, in the engine', () => {
+  const ok = (r: Matches) => {
+    if ('error' in r) throw new Error(r.error)
+    return r
+  }
+  const found = (chunks: string[], pattern: string, caseSensitive: boolean, wholeWord: boolean) => ok(findMatches(chunks, pattern, caseSensitive, 10, wholeWord)).matches
+
+  it('keeps only the matches that are not inside a longer word', () => {
+    // "chat" in "chatte", "achat", "chat_", "chat1" is part of a longer word; at either end of the text, or beside punctuation, it is a word.
+    const text = 'chat chatte achat, chat. chat_ chat1 (Chat)'
+    expect(found([text], 'chat', false, true)).toEqual([[0, 0, 4], [0, 19, 23], [0, 38, 42]])
+    expect(found([text], 'chat', false, false)).toHaveLength(7)
+  })
+
+  it('counts an accented letter as a letter of the word, so that "cole" is not a word of "école"', () => {
+    expect(found(['école'], 'cole', false, true)).toEqual([])
+    expect(found(['l’école, cole'], 'cole', false, true)).toEqual([[0, 9, 13]])
+  })
+
+  it('checks each block of text on its own (the end of one block is not the start of the next)', () => {
+    expect(found(['un chat', 'chat noir'], 'chat', false, true)).toEqual([[0, 3, 7], [1, 0, 4]])
+  })
+
+  it('distinguishes the accents (a regular expression has no way not to) and still honours the case option', () => {
+    expect(found(['ete été Été'], 'ete', false, false)).toEqual([[0, 0, 3]])
+    expect(found(['été Été'], 'été', false, false)).toHaveLength(2)
+    expect(found(['été Été'], 'été', true, false)).toEqual([[0, 0, 3]])
   })
 })
 
@@ -554,5 +584,33 @@ describe('readScan (the text of the page, checked in this process)', () => {
     })
     expect(readScan({ chunks: endless }, 50)).toEqual({ ok: false, reason: 'the page gave more text than a search reads' })
     expect(reads).toBe(51)
+  })
+})
+
+describe('RegexFinder, whole words', () => {
+  it('hands the option to the runner only when it is on (the job of the other searches is unchanged)', async () => {
+    const r = rig()
+    r.finder.find('a', { wholeWord: true })
+    await vi.waitFor(() => expect(r.reports).toHaveLength(1))
+    expect(r.runner.run).toHaveBeenCalledWith({ pattern: 'a', caseSensitive: false, wholeWord: true, chunks: ['a b', 'c'] })
+  })
+
+  it('searches again, instead of stepping, when only the option changes', async () => {
+    const r = rig()
+    r.finder.find('a')
+    await vi.waitFor(() => expect(r.reports).toHaveLength(1))
+    r.finder.find('a', { next: true, wholeWord: true })
+    await vi.waitFor(() => expect(r.runner.run).toHaveBeenCalledTimes(2))
+    expect(r.runner.run.mock.calls[1]![0]).toMatchObject({ wholeWord: true })
+  })
+
+  it('keeps the option when the page lost the search and the finder starts it again', async () => {
+    const r = rig()
+    r.finder.find('a', { wholeWord: true })
+    await vi.waitFor(() => expect(r.reports).toHaveLength(1))
+    r.page['current'] = () => false
+    r.finder.find('a', { next: true, wholeWord: true })
+    await vi.waitFor(() => expect(r.runner.run).toHaveBeenCalledTimes(2))
+    expect(r.runner.run.mock.calls[1]![0]).toMatchObject({ wholeWord: true })
   })
 })

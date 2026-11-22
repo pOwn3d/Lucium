@@ -115,6 +115,35 @@ describe('a profile of the user that has the id of the private window (made befo
   })
 })
 
+describe('the search engine of the private window', () => {
+  const mainWith = (privateSearchUrlTemplate: string) => {
+    const state = createInitialState(ctx)
+    return { ...state, settings: { ...state.settings, searchUrlTemplate: 'https://default.example/?q=%s', searchSuggestions: true, privateSearchUrlTemplate } }
+  }
+
+  it('follows the engine of the other windows until one is picked for it', () => {
+    const state = createPrivateState(mainWith(''), ctx)
+    expect(profileSearch(state.settings, state.spaces[0]!.profileId)).toEqual({ url: 'https://default.example/?q=%s', suggestions: true })
+  })
+
+  it('uses the engine picked for it, in a new window and under an open one, and the suggestions setting is still the main one', () => {
+    const picked = 'https://private.example/?q=%s'
+    const state = createPrivateState(mainWith(picked), ctx)
+    expect(profileSearch(state.settings, state.spaces[0]!.profileId)).toEqual({ url: picked, suggestions: true })
+    const open = createPrivateState(mainWith(''), ctx)
+    const changes = changedSettings(open.settings, inheritedSettings(mainWith(picked).settings))
+    expect(changes.privateSearchUrlTemplate).toBe(picked)
+    expect(profileSearch({ ...open.settings, ...changes }, open.spaces[0]!.profileId).url).toBe(picked)
+  })
+
+  it('leaves the other profiles on the engine of the main window, and does not let a private window change it', () => {
+    const settings = mainWith('https://private.example/?q=%s').settings
+    expect(profileSearch(settings, 'default').url).toBe('https://default.example/?q=%s')
+    expect(profileSearch(settings, 'work').url).toBe('https://default.example/?q=%s')
+    expect(privateAction({ type: 'settings/update', patch: { privateSearchUrlTemplate: 'https://x.example/?q=%s' } })).toBeNull()
+  })
+})
+
 describe('scrubPrivateState', () => {
   it('drops the archive, the favourites and the Tweaks, and hands back the same object when there is nothing to drop', () => {
     const clean = createInitialState(ctx)
