@@ -40,6 +40,9 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 - **Full-page capture scrolls the page**: “Page entière” now walks the page from top to bottom before shooting, so a site that scrolls in a panel of its own is captured whole, lazy images are loaded, and a fixed header shows once. A page taller than 16 000 pixels is cut there, and Lucium says so.
 - **Permission prompt, “Allow this time”**: with “Remember for this site” unticked, the button reads “Allow this time”. That yes was already held for the tab only and forgotten with its page, never written or sent. Private tabs keep “Allow”.
+### Added
+
+- **Bookmark and history prefixes in the command bar**: type `*` or `^` alone or followed by a space (`* recipe`), or `@bookmarks` / `@history`, to search only your bookmarks or your history. A search such as `*.example.com` or `^2`, and a custom site search keyword that starts with `*` or `^`, stay what they were. With no text after it, the bar lists them. Everything stays on this Mac.
 
 ## [1.1.5] - 2026-11-20
 

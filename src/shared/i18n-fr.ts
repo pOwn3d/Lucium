@@ -727,6 +727,7 @@ export const fr = {
   'cmd.fermer-le-volet-web': 'Fermer le volet web',
   'cmd.filtre-commandes': 'Commandes',
   'cmd.filtre-historique': 'Historique',
+  'cmd.filtre-signets': 'Signets',
   'cmd.filtre-onglets': 'Onglets',
   'cmd.filtrer-par-type': 'Filtrer par type',
   'cmd.go-to-space': 'Aller à l’espace {name}',

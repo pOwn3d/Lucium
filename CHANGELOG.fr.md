@@ -36,6 +36,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Changements
 
 - **Demande de permission, « Autoriser cette fois »** : « Se souvenir pour ce site » décochée, le bouton se lit « Autoriser cette fois ». Ce oui était déjà gardé pour l’onglet seul et oublié avec sa page, jamais écrit ni envoyé. Les onglets privés gardent « Autoriser ».
+### Ajouts
+
+- **Préfixes signets et historique dans la barre de commandes** : tapez `*` ou `^` seul ou suivi d’une espace (`* recette`), ou `@bookmarks` / `@history`, pour ne chercher que dans vos signets ou dans l’historique. Une recherche comme `*.example.com` ou `^2`, et un mot-clé de moteur perso qui commence par `*` ou `^`, restent ce qu’ils étaient. Sans texte, la barre les liste. Tout reste sur ce Mac.
 
 ## [1.1.5] - 2026-11-20
 
