@@ -18,7 +18,7 @@ const KNOWN: Readonly<Record<string, readonly [concluding: number, all: number]>
   'smoke-autoreload.ts': [2, 11],
   'smoke-blocker.ts': [1, 3],
   'smoke-boostfonts.ts': [2, 3],
-  'smoke-capture.ts': [1, 14],
+  'smoke-capture.ts': [1, 15],
   'smoke-cleardata2.ts': [1, 11],
   'smoke-commandbar.ts': [0, 4],
   'smoke-containers.ts': [0, 1],

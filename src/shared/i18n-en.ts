@@ -635,6 +635,7 @@ export const en: Record<MessageKey, string> = {
   'capture.capture-enregistree': 'Capture saved',
   'capture.copiee-dans-le-presse-papiers': 'Copied to the clipboard.',
   'capture.l-image-envoyee-par-la-feuille-n-est-pas-valide': 'The image sent by the sheet isn’t valid.',
+  'capture.page-coupee': 'The page is taller than the limit: the capture stops at {max} pixels.',
   'capture.la-capture-de-la-page-n-a-pas-pu-etre-faite': 'The page couldn’t be captured. The details are in the log.',
   'capture.la-capture-de-la-zone-n-a-pas-pu-etre-faite': 'The capture of the area could not be made. The details are in the log.',
   'capture.la-capture-n-a-pas-pu-etre-copiee': 'The capture couldn’t be copied.',

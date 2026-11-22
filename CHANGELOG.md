@@ -36,6 +36,9 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Added
 
 - **Focus mode**: Settings › Optional features › Focus mode keeps a list of sites closed during a timer (25 minutes by default) or a weekly time slot. A blocked site shows a clear page with “Take a 15-minute break” as the way out. Off by default; nothing leaves your Mac.
+### Fixed
+
+- **Full-page capture scrolls the page**: “Page entière” now walks the page from top to bottom before shooting, so a site that scrolls in a panel of its own is captured whole, lazy images are loaded, and a fixed header shows once. A page taller than 16 000 pixels is cut there, and Lucium says so.
 
 ## [1.1.5] - 2026-11-20
 

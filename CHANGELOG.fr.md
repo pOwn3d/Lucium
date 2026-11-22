@@ -30,6 +30,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Ajouts
 
 - **Mode concentration** : Réglages › Fonctions en option › Mode concentration garde une liste de sites fermés pendant un minuteur (25 minutes par défaut) ou une plage horaire de la semaine. Un site bloqué affiche une page claire, avec « Faire une pause de 15 minutes » pour en sortir. Désactivé par défaut ; rien ne quitte votre Mac.
+### Corrections
+
+- **Capture de la page entière qui fait défiler la page** : « Page entière » parcourt désormais la page de haut en bas avant la capture : un site qui défile dans un panneau à lui est capturé en entier, les images paresseuses sont chargées et un en-tête fixe n’apparaît qu’une fois. Une page plus haute que 16 000 pixels est coupée là, et Lucium le dit.
 
 ## [1.1.5] - 2026-11-20
 

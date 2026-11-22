@@ -4,7 +4,7 @@
 
 import { describe, expect, it, vi } from 'vitest'
 import { makePage } from './electron-page.test-support'
-import { CAPTURE_MAX_HEIGHT, CAPTURE_MAX_WIDTH } from './electron-page-scripts'
+import { CAPTURE_MAX_HEIGHT, CAPTURE_MAX_WIDTH, readCaptureSize } from './electron-page-scripts'
 
 vi.mock('electron', async () => (await import('./electron-page.test-support')).electronStub())
 vi.mock('electron-chrome-extensions', () => ({ ElectronChromeExtensions: { fromSession: () => undefined } }))
@@ -91,5 +91,78 @@ describe('a page that was given the camera, the microphone or the screen', () =>
     expect(page.usesCapture()).toBe(true)
     wc.emit('did-navigate', {}, 'https://site.example/left')
     expect(page.usesCapture()).toBe(false)
+  })
+})
+
+// A page that scrolls in a container of its own is as tall as the window for the document: the capture has to walk it and make the window as tall.
+describe('the capture of a page that scrolls inside', () => {
+  const shoot = async (walked: unknown, documentHeight = 800) => {
+    const { page, wc } = await makePage()
+    const sent: Array<{ method: string; params?: Record<string, unknown> }> = []
+    let tall = 800
+    wc.executeJavaScript.mockImplementation(async () => walked)
+    wc.debugger.sendCommand = async (method: string, params?: unknown) => {
+      sent.push({ method, params: params as Record<string, unknown> })
+      if (method === 'Emulation.setDeviceMetricsOverride') tall = (params as { height: number }).height
+      if (method === 'Page.getLayoutMetrics') {
+        const size = { width: 1280, height: Math.max(tall, documentHeight) }
+        return { cssContentSize: size, contentSize: size }
+      }
+      return { data: Buffer.from('png').toString('base64') }
+    }
+    const cuts: number[] = []
+    await page.capture(true, undefined, (max) => cuts.push(max))
+    return { sent, cuts }
+  }
+  const clipOf = (sent: Array<{ method: string; params?: Record<string, unknown> }>) => sent.find((c) => c.method === 'Page.captureScreenshot')!.params!.clip
+
+  it('makes the window as tall as the page the walk found, shoots it, and gives the window back', async () => {
+    const { sent, cuts } = await shoot({ width: 1280, height: 4200.4, inner: true })
+    expect(sent.map((c) => c.method)).toEqual(['Emulation.setDeviceMetricsOverride', 'Page.getLayoutMetrics', 'Page.captureScreenshot', 'Emulation.clearDeviceMetricsOverride'])
+    expect(sent[0]!.params).toMatchObject({ width: 1280, height: 4201, mobile: false })
+    expect(clipOf(sent)).toEqual({ x: 0, y: 0, width: 1280, height: 4201, scale: 1 })
+    expect(cuts).toEqual([])
+  })
+
+  it('cuts at the maximum and says so, then still gives the window back', async () => {
+    const { sent, cuts } = await shoot({ width: 1280, height: 90_000, inner: true })
+    expect(clipOf(sent)).toMatchObject({ height: CAPTURE_MAX_HEIGHT })
+    // The window itself is never made taller than the maximum, whatever the walk found.
+    expect((sent[0]!.params as { height: number }).height).toBeLessThanOrEqual(CAPTURE_MAX_HEIGHT)
+    expect(cuts).toEqual([CAPTURE_MAX_HEIGHT])
+    expect(sent.at(-1)!.method).toBe('Emulation.clearDeviceMetricsOverride')
+  })
+
+  it('does not touch the window for an ordinary page, whose document already says its height', async () => {
+    const { sent } = await shoot({ width: 1280, height: 3000, inner: false }, 3000)
+    expect(sent.map((c) => c.method)).toEqual(['Page.getLayoutMetrics', 'Page.captureScreenshot'])
+  })
+
+  it('gives the window back and lets the debugger go when the shot fails', async () => {
+    const { page, wc } = await makePage()
+    const sent: string[] = []
+    wc.executeJavaScript.mockImplementation(async () => ({ width: 1280, height: 4200, inner: true }))
+    wc.debugger.sendCommand = async (method: string) => {
+      sent.push(method)
+      if (method === 'Page.captureScreenshot') throw new Error('shot failed')
+      return { cssContentSize: { width: 1280, height: 4200 }, contentSize: { width: 1280, height: 4200 } }
+    }
+    await expect(page.capture(true)).rejects.toThrow('shot failed')
+    expect(sent).toContain('Emulation.clearDeviceMetricsOverride')
+    expect(sent.at(-1)).toBe('Emulation.clearDeviceMetricsOverride')
+    expect(wc.debugger.detaches).toBe(1)
+  })
+
+  it('shoots as before, without touching the window, when the walk of the page fails', async () => {
+    const { sent } = await shoot('not a size', 3000)
+    expect(sent.map((c) => c.method)).toEqual(['Page.getLayoutMetrics', 'Page.captureScreenshot'])
+  })
+
+  it('reads the answer of the walk field by field', () => {
+    expect(readCaptureSize({ width: 10, height: 20 })).toEqual({ width: 10, height: 20, inner: false })
+    expect(readCaptureSize({ width: 10, height: 20, inner: true })).toEqual({ width: 10, height: 20, inner: true })
+    expect(readCaptureSize({ width: '10', height: 20 })).toBeNull()
+    expect(readCaptureSize({ width: 10, height: Number.NaN })).toBeNull()
+    expect(readCaptureSize(null)).toBeNull()
   })
 })
