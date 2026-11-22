@@ -11,9 +11,9 @@ const { ExtensionShims } = await import('./extension-shims')
 const EXT = 'abcdefghijklmnopabcdefghijklmnop'
 
 /** The archive of two profiles; `restore` is what the reducer does to it, made small: the entry leaves and a tab with its address comes. */
-function rig(refuseRestore = false) {
+function rig(refuseRestore = false, extensionDataApis = true) {
   const state = {
-    settings: {},
+    settings: { extensionDataApis },
     spaces: [
       { id: 's-default', profileId: 'default' },
       { id: 's-work', profileId: 'work' }
@@ -46,6 +46,13 @@ function rig(refuseRestore = false) {
 }
 
 describe('chrome.sessions in the main process', () => {
+  it('is refused, like history, when the switch of the data APIs is off', async () => {
+    const r = rig(false, false)
+    await expect(r.call('getRecentlyClosed')).rejects.toThrow('switched off')
+    await expect(r.call('restore', ['a1'])).rejects.toThrow('switched off')
+    expect(r.dispatch).not.toHaveBeenCalled()
+  })
+
   it('lists the closed tabs of the profile of the caller, newest first, and honours maxResults', async () => {
     const r = rig()
     const all = (await r.call('getRecentlyClosed')) as Array<{ tab: { sessionId: string } }>
