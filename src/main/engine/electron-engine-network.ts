@@ -304,7 +304,7 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     this.installPrivacyHeaders(ses, privacyOf)
     const rewrites = (): boolean => {
       const options = privacyOf()
-      return options !== null && (options.httpsUpgrade || options.stripTrackingParams)
+      return options !== null && (options.httpsUpgrade || options.stripTrackingParams || options.unwrapRedirects)
     }
     // The extensions of the session: their rules are judged here, after the application's own, and their listeners are told (extension-net.ts).
     const net = this.extensionNets.get(ses)

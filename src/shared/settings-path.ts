@@ -48,6 +48,7 @@ export const SETTINGS_PLACES = {
   proxy: { key: 'proxyEnabled' },
   siteExceptions: { key: 'fingerprintExceptions' },
   thirdPartyCookies: { key: 'blockThirdPartyCookies', group: 'privacy-settings.cookies-tiers' },
+  redirectBypass: { key: 'unwrapRedirects', group: 'privacy-settings.confidentialite-renforcee' },
   clearOnClose: { key: 'siteDataClearOnClose' },
   webHardware: { key: 'webHardware', group: 'hardware-settings.api-materielles-du-web' },
   passwords: { key: 'passwordManager', group: 'passwords-panel.mots-de-passe' },

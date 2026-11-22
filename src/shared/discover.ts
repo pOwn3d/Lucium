@@ -453,6 +453,18 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     isNew: true
   },
   {
+    id: 'bypass-redirects',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'bypass-redirects',
+    summary: 'discover.contournement-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('redirectBypass') }),
+    keywords: 'redirection suivi lien amp pistage deplier adresse finale redirect tracking link unwrap debounce de-amp canonical',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
     id: 'site-javascript',
     task: 'protect',
     level: 'advanced',
@@ -1012,6 +1024,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'global-privacy-control': 'protect',
   'third-party-cookies': 'protect',
   'strip-tracking': 'protect',
+  'bypass-redirects': 'protect',
   'search-suggestions': 'fast',
   'theme-to-sites': 'read',
   'peek-shift': 'read',
