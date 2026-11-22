@@ -6,6 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Ajouts
 
+- **Vue d’ensemble des onglets** : Onglets › Vue d’ensemble des onglets (⇧⌘O) ouvre une grille de vignettes des onglets ouverts, avec recherche, fermeture et déplacement vers un autre espace. Désactivée par défaut.
 - **Découvrir Lucium** : Aide › Découvrir Lucium, la barre de commandes et un bouton de « Pour commencer », de la bienvenue et des nouveautés ouvrent un panneau qui montre toutes les fonctions de Lucium, par tâche, avec où les trouver, leur raccourci, « Essayer » et « Régler ». Rien n’est compté ni envoyé.
 - **Un espace vers un autre Mac** : Espaces › Exporter cet espace… enregistre un espace avec ses onglets, ses dossiers et son archive dans un fichier, chiffré par une phrase secrète si vous le voulez ; Espaces › Importer un espace… l’ajoute sur un autre Mac, sans serveur. Ni cookies, ni mots de passe.
 - **Position de défilement retrouvée après un redémarrage** : Réglages › Onglets et fenêtres › « Retrouver la position de défilement des onglets », désactivé par défaut. Un onglet revient là où sa page était défilée. Seuls un nombre par onglet et son adresse sont gardés, sur votre Mac ; jamais la page, rien pour les onglets privés.

@@ -934,6 +934,7 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
 - label="Onglets"
   - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
   - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+Shift+O" enabled=false label="Vue d’ensemble des onglets" visible=false click
   - accelerator="CmdOrCtrl+D" enabled=false label="Épingler l’onglet" click
   - accelerator=undefined enabled=true label="Nouveau dossier…" click
   - accelerator=undefined enabled=false label="Nouveau dossier en direct…" visible=false click
@@ -1245,6 +1246,7 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
 - label="Onglets"
   - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click(brings back)
   - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click(brings back)
+  - accelerator="CmdOrCtrl+Shift+O" enabled=false label="Vue d’ensemble des onglets" visible=false click(brings back)
   - accelerator="CmdOrCtrl+D" enabled=false label="Épingler l’onglet" click(brings back)
   - accelerator=undefined enabled=false label="Nouveau dossier…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." click(brings back)
   - accelerator=undefined enabled=false label="Nouveau dossier en direct…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." visible=true click(brings back)
@@ -1559,6 +1561,7 @@ exports[`the menu bar, as built > in a private window 1`] = `
 - label="Onglets"
   - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
   - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+Shift+O" enabled=false label="Vue d’ensemble des onglets" visible=false click
   - accelerator="CmdOrCtrl+D" enabled=false label="Épingler l’onglet" click
   - accelerator=undefined enabled=false label="Nouveau dossier…" click
   - accelerator=undefined enabled=false label="Nouveau dossier en direct…" visible=false click
@@ -1886,6 +1889,7 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
 - label="Onglets"
   - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
   - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+Shift+O" enabled=false label="Vue d’ensemble des onglets" visible=false click
   - accelerator="CmdOrCtrl+D" enabled=true label="Épingler l’onglet" click
   - accelerator=undefined enabled=true label="Nouveau dossier…" click
   - accelerator=undefined enabled=true label="Nouveau dossier en direct…" visible=true click
@@ -2213,6 +2217,7 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
 - label="Onglets"
   - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
   - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+Shift+O" enabled=false label="Vue d’ensemble des onglets" visible=false click
   - accelerator="CmdOrCtrl+D" enabled=true label="Désépingler l’onglet" click
   - accelerator=undefined enabled=true label="Nouveau dossier…" click
   - accelerator=undefined enabled=true label="Nouveau dossier en direct…" visible=true click
@@ -2521,6 +2526,7 @@ exports[`the menu bar, as built > with every optional setting off and windows th
 - label="Onglets"
   - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
   - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
+  - accelerator="CmdOrCtrl+Shift+O" enabled=false label="Vue d’ensemble des onglets" visible=false click
   - accelerator="CmdOrCtrl+D" enabled=true label="Épingler l’onglet" click
   - accelerator=undefined enabled=true label="Nouveau dossier…" click
   - accelerator=undefined enabled=false label="Nouveau dossier en direct…" visible=false click

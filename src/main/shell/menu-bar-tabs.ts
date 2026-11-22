@@ -96,6 +96,7 @@ export function tabsMenu({ browser, store, actions, options, state, acc, kept, o
   const newFolder: Pick<MenuItemConstructorOptions, 'toolTip'> = folderRefusal === null ? {} : { toolTip: folderRefusal }
   // Optional: the "Onglets" mode of the command bar (⌘⇧A) and the sheet of the shortcuts (⌘/). Their entries are hidden and their keys dead while the function is off.
   const tabSearchOn = state().settings.tabSearch
+  const tabGridOn = state().settings.tabGrid
   // Tabs menu: the folder the tab on screen sits in, and the spaces before and after the current one (null with a single space).
   const tabFolder = tabNow?.folderId ? state().folders.find((f) => f.id === tabNow.folderId) : undefined
   const nextSpace = stepSpace(state(), 1)
@@ -126,6 +127,7 @@ export function tabsMenu({ browser, store, actions, options, state, acc, kept, o
       // The same shortcut as File › New Tab: shown here, registered once.
       { label: t('menu.nouvel-onglet'), accelerator: acc('newTab'), registerAccelerator: false, click: () => browser.openOverlay({ panel: 'commandbar', mode: 'new', initial: '' }) },
       { label: t('menu.rechercher-un-onglet'), accelerator: acc('tabSearch'), visible: tabSearchOn, enabled: tabSearchOn, click: toggleOverlay({ panel: 'commandbar', mode: 'tabs', initial: '' }) },
+      { label: t('menu.vue-d-ensemble-des-onglets'), accelerator: acc('tabGrid'), visible: tabGridOn, enabled: tabGridOn, click: toggleOverlay({ panel: 'tabgrid' }) },
       {
         label: tabNow?.pinned ? t('menu.desepingler-l-onglet') : t('menu.epingler-l-onglet'),
         accelerator: acc('pin'),

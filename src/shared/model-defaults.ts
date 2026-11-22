@@ -333,6 +333,7 @@ export function defaultSettings(): Settings {
     commandBarSize: COMMAND_BAR_SIZE_DEFAULT,
     commandBarShape: COMMAND_BAR_SHAPE_DEFAULT,
     tabSearch: true,
+    tabGrid: false,
     shortcutHelp: true,
     findRegex: false,
     compactMode: false,

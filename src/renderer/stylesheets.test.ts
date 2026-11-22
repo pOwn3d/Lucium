@@ -82,6 +82,7 @@ const MIGRATED: Record<string, { exempt?: RegExp[]; why?: string }> = {
   'arc-guide.css': {},
   // « Découvrir Lucium »: the features by task, with a search, cards and the other functions.
   'discover.css': {},
+  'tab-grid.css': {},
   // « Signaler un problème » (Aide): the report to read, copy or save.
   'problem-report.css': {},
   // « Notifications récentes »: the notices of the window, in the same card as the news.

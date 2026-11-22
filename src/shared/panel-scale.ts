@@ -295,6 +295,7 @@ export const PANEL_PLACEMENT: Record<OverlayRequest['panel'], 'centred' | 'place
   passwords: 'centred',
   splitdrop: 'placed',
   tabcycle: 'placed',
+  tabgrid: 'centred',
   notes: 'centred'
 }
 

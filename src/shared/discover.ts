@@ -139,6 +139,19 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     needs: 'tabSearch'
   },
   {
+    id: 'tab-grid',
+    task: 'fast',
+    level: 'beginner',
+    feature: 'tab-grid',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.onglets', 'menu.vue-d-ensemble-des-onglets'] },
+    keywords: 'grille vignettes apercu onglets ouverts visuel retrouver fermer deplacer overview grid thumbnails tabs visual',
+    shortcut: 'tabGrid',
+    try: open({ panel: 'tabgrid' }),
+    needs: 'tabGrid',
+    isNew: true
+  },
+  {
     id: 'page-text-search',
     task: 'fast',
     level: 'advanced',
@@ -1027,6 +1040,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'tidy-downloads': 'keep',
   'native-hosts': 'read',
   'hover-cards': 'organise',
+  'tab-grid': 'fast',
   'tidy-pinned-titles': 'organise',
   'reload-all-button': 'organise',
   'full-url': 'fast',

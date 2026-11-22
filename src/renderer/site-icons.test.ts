@@ -67,7 +67,7 @@ describe('the components that draw an icon of the state', () => {
 
   it('are the eight that did, each drawing what iconSource gives', () => {
     const using = sources.filter(({ text }) => /iconSource\(/.test(text)).map(({ file }) => file).sort()
-    expect(using).toEqual(['Bookmarks.tsx', 'CommandBar.tsx', 'Panels.tsx', 'ReadLater.tsx', 'SidebarRows.tsx', 'TabCycle.tsx', 'TabSearch.tsx', 'littlearc.tsx'])
+    expect(using).toEqual(['Bookmarks.tsx', 'CommandBar.tsx', 'Panels.tsx', 'ReadLater.tsx', 'SidebarRows.tsx', 'TabCycle.tsx', 'TabGrid.tsx', 'TabSearch.tsx', 'littlearc.tsx'])
   })
 })
 

@@ -588,6 +588,8 @@ export interface Settings {
   commandBarShape: CommandBarShape
   /** ⌘⇧A: the command bar in "Onglets" mode, over the tabs of every space, with filters and the closing of duplicates. */
   tabSearch: boolean
+  /** The overview of the open tabs as a grid of thumbnails, with a search, the closing and the moving of a tab (⌘⇧O). Off by default; the side column is not changed. */
+  tabGrid: boolean
   /** ⌘/: the sheet that lists the shortcuts by context, with a search and the ones the user changed marked. */
   shortcutHelp: boolean
   /** The find bar gets a ".*" button that reads the text as a regular expression. Off by default. */

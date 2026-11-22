@@ -347,6 +347,8 @@ export const FEATURES = [
     get label() { return t('features.apercus-au-survol-des-onglets') },
     group: 'interface',
     get description() { return t('features.une-carte-montre-le-titre-l-adresse-et-une') },
+    // The pictures of the pages are also what the tab overview shows: they are taken while either of the two is on.
+    runsWhen: (settings) => settings.hoverCards || settings.tabGrid,
     cost: ['timer', 'listeners', 'memory']
   },
   {
@@ -876,6 +878,14 @@ export const FEATURES = [
     group: 'tabs',
     get description() { return t('features.la-barre-de-commandes-en-mode-onglets-sur-tous-les') },
     cost: ['none']
+  },
+  {
+    id: 'tab-grid',
+    key: 'tabGrid',
+    get label() { return t('features.vue-d-ensemble-des-onglets') },
+    group: 'tabs',
+    get description() { return t('features.tous-les-onglets-en-grille-de-vignettes-avec-recherche') },
+    cost: ['memory']
   },
   {
     id: 'shortcut-help',

@@ -131,7 +131,7 @@ export const SETTINGS_KEYS = {
   // The catalogue of the features to add (`FEATURE_THEMES`), theme by theme: the switch of each feature, then what goes with it (its options, its list,
   // the settings of the page annotation and of the summary by a local model, which are no feature of the registry).
   features: [
-    'tabTree', 'tabReminders', 'tabSearch', 'tabGroupFolders', 'showReloadAllButton', 'reloadAllWakes', 'showTabMemory', 'workViewsEnabled',
+    'tabTree', 'tabReminders', 'tabSearch', 'tabGrid', 'tabGroupFolders', 'showReloadAllButton', 'reloadAllWakes', 'showTabMemory', 'workViewsEnabled',
     'webPanels', 'nameWindows', 'independentWindows', 'webAppWindows', 'documentPictureInPicture',
     'tabContainers', 'privateTabs', 'guestProfile', 'containers', 'containerRules',
     'bookmarkManager', 'liveFolders', 'notes', 'notesListButton',
@@ -183,7 +183,7 @@ export interface FeatureTheme {
 }
 
 export const FEATURE_THEMES: readonly FeatureTheme[] = [
-  { id: 'tabs', title: 'settings.fonctions-theme-onglets', features: ['tab-tree', 'tab-reminders', 'tab-search', 'tab-groups-ext', 'reload-all-button', 'tab-memory', 'work-views'] },
+  { id: 'tabs', title: 'settings.fonctions-theme-onglets', features: ['tab-tree', 'tab-reminders', 'tab-search', 'tab-grid', 'tab-groups-ext', 'reload-all-button', 'tab-memory', 'work-views'] },
   { id: 'windows', title: 'settings.fonctions-theme-fenetres', features: ['web-panels', 'name-windows', 'independent-windows', 'pwa', 'document-pip'] },
   { id: 'separate', title: 'settings.fonctions-theme-separer', features: ['containers', 'private-tabs', 'guest-profile'] },
   { id: 'bookmarks', title: 'settings.fonctions-theme-signets', features: ['bookmarks', 'live-folders', 'notes'] },

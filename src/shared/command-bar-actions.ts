@@ -76,6 +76,7 @@ export function actionToDispatch(action: CommandAction, state: SidebarState): Ac
       return null
     // The bar changes mode instead of dispatching anything (CommandBar.tsx).
     case 'search-tabs':
+    case 'tab-grid':
       return null
     case 'toggle-tab-branch':
       return tab && state.settings.tabTree ? { type: 'tab/tree-collapse', id: tab.id } : null
