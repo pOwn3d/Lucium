@@ -28,7 +28,7 @@ describe('the options', () => {
     expect(settings.sendGpc).toBe(true)
     expect(settings.stripTrackingParams).toBe(true)
     expect(settings.stripCopiedLinks).toBe(true)
-    expect(privacyOptionsOf(settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: true, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] })
+    expect(privacyOptionsOf(settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: true, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [], unwrapRedirects: false, unwrapExceptions: [] })
     expect(anyPrivacy(NO_PRIVACY)).toBe(false)
   })
 
@@ -43,14 +43,14 @@ describe('the options', () => {
   })
 
   it('switch off in a damaged file: only a real true turns a rewrite on', () => {
-    expect(cleanPrivacySettings({ httpsUpgrade: 'yes' as unknown as boolean, sendGpc: 1 as unknown as boolean, stripTrackingParams: true, stripCopiedLinks: 'oui' as unknown as boolean })).toEqual({ httpsUpgrade: false, sendGpc: false, stripTrackingParams: true, stripCopiedLinks: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] })
+    expect(cleanPrivacySettings({ httpsUpgrade: 'yes' as unknown as boolean, sendGpc: 1 as unknown as boolean, stripTrackingParams: true, stripCopiedLinks: 'oui' as unknown as boolean })).toEqual({ httpsUpgrade: false, sendGpc: false, stripTrackingParams: true, stripCopiedLinks: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [], unwrapRedirects: false, unwrapExceptions: [] })
     expect(cleanPrivacySettings({ stripCopiedLinks: true }).stripCopiedLinks).toBe(true)
   })
 
   it('are kept by the reducer and cleaned there', () => {
     const state = createInitialState(ctx)
     const on = reduce(state, { type: 'settings/update', patch: { httpsUpgrade: true, sendGpc: true, stripTrackingParams: false } }, ctx)
-    expect(privacyOptionsOf(on.settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] })
+    expect(privacyOptionsOf(on.settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [], unwrapRedirects: false, unwrapExceptions: [] })
     const damaged = reduce(state, { type: 'settings/update', patch: { stripTrackingParams: 'x' as unknown as boolean } }, ctx)
     expect(damaged.settings.stripTrackingParams).toBe(false)
   })
@@ -186,5 +186,34 @@ describe('rewriteNavigation', () => {
     const first = rewriteNavigation(nav('http://exemple.fr/p?gclid=1'), all, (url) => httpsUpgradeOf(url))!
     expect(first).toBe('https://exemple.fr/p')
     expect(rewriteNavigation(nav(first), all, (url) => httpsUpgradeOf(url))).toBeNull()
+  })
+})
+
+describe('the bypass of redirects in the privacy options', () => {
+  const wrapped = 'https://l.facebook.com/l.php?u=https%3A%2F%2Fexemple.fr%2Fa%3Futm_source%3Dfb'
+  const nav = (url: string) => ({ url, method: 'GET', isMainFrame: true })
+
+  it('reads the switch and the list from the settings, off for a file that has neither', () => {
+    expect(privacyOptionsOf({})).toMatchObject({ unwrapRedirects: false, unwrapExceptions: [] })
+    expect(privacyOptionsOf({ unwrapRedirects: true, unwrapExceptions: ['Exemple.org', 'pas un site', 12 as unknown as string] })).toMatchObject({ unwrapRedirects: true, unwrapExceptions: ['exemple.org'] })
+    expect(cleanPrivacySettings({ unwrapRedirects: 'oui' as unknown as boolean })).toMatchObject({ unwrapRedirects: false, unwrapExceptions: [] })
+  })
+
+  it('counts as a privacy option: the engine listens to the web for it', () => {
+    expect(anyPrivacy(NO_PRIVACY)).toBe(false)
+    expect(anyPrivacy({ ...NO_PRIVACY, unwrapRedirects: true })).toBe(true)
+  })
+
+  it('unwraps first, then strips, then upgrades: one rewrite for the chain', () => {
+    const all = { ...NO_PRIVACY, unwrapRedirects: true, stripTrackingParams: true, httpsUpgrade: true }
+    expect(rewriteNavigation(nav(wrapped), { ...NO_PRIVACY, unwrapRedirects: true }, () => null)).toBe('https://exemple.fr/a?utm_source=fb')
+    expect(rewriteNavigation(nav(wrapped), all, () => null)).toBe('https://exemple.fr/a')
+    expect(rewriteNavigation(nav('https://l.facebook.com/l.php?u=http%3A%2F%2Fexemple.fr%2Fa'), all, (u) => u.replace('http:', 'https:'))).toBe('https://exemple.fr/a')
+  })
+
+  it('does not unwrap with the switch off, or for a request that is not a main-frame GET', () => {
+    expect(rewriteNavigation(nav(wrapped), NO_PRIVACY, () => null)).toBeNull()
+    expect(rewriteNavigation({ ...nav(wrapped), method: 'POST' }, { ...NO_PRIVACY, unwrapRedirects: true }, () => null)).toBeNull()
+    expect(rewriteNavigation({ ...nav(wrapped), isMainFrame: false }, { ...NO_PRIVACY, unwrapRedirects: true }, () => null)).toBeNull()
   })
 })

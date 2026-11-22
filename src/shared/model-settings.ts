@@ -206,6 +206,10 @@ export interface Settings {
   blockThirdPartyCookies: boolean
   /** Sites (host and subdomains) where third-party cookies are let through, because blocking them broke the site. */
   thirdPartyCookieExceptions: string[]
+  /** A link through a tracking redirector (l.facebook.com, google.com/url…) or an AMP viewer opens the address it leads to, locally (see redirect-bypass.ts). Off by default: it changes where a click goes. */
+  unwrapRedirects: boolean
+  /** Sites (host and subdomains) whose links are left as they are, at either end of the link, because unwrapping them broke the site. */
+  unwrapExceptions: string[]
   /** Names shown for profiles, by profile id. The id stays the storage key, so renaming never loses data. */
   profileNames: Record<string, string>
   /** Expose the space theme to web pages as `--arc-palette-*` CSS variables (a page can read it, so it is opt-in). */

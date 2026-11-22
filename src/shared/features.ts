@@ -223,6 +223,14 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'bypass-redirects',
+    key: 'unwrapRedirects',
+    get label() { return t('privacy-settings.contourner-les-redirections-de-suivi-et-les-pages-amp') },
+    group: 'privacy',
+    get description() { return t('features.ouvre-l-adresse-finale-d-un-lien-de-suivi-ou-d-une', { settingsPath: settingsPath('redirectBypass') }) },
+    cost: ['listeners']
+  },
+  {
     id: 'search-suggestions',
     key: 'searchSuggestions',
     get label() { return t('settings-profiles.suggestions-du-moteur-de-recherche') },
