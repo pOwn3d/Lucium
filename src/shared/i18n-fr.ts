@@ -1685,7 +1685,7 @@ export const fr = {
   'features-settings.se-regle-dans-place': 'Se règle dans {place}.',
   'features-settings.son-propre-volet': 'son propre volet',
   'features.12-3-4-affiche-84-en-tete-de-liste-entree': '« 12*(3+4) » affiche « = 84 » en tête de liste ; Entrée copie le résultat.',
-  'features.accepte-lucium-open-url-lucium-new-tab-et': 'Accepte « lucium://open?url=… », « lucium://new-tab » et « lucium://search?q=… » envoyées par un script, l’application Raccourcis ou le Terminal ; rien n’est lu ni effacé.',
+  'features.accepte-lucium-open-url-lucium-new-tab-et': 'Accepte « lucium://open?url=… », « lucium://new-tab » et « lucium://search?q=… » envoyées par un script, l’application Raccourcis ou le Terminal, ainsi que les options « --new-window » et « --private-window » de la ligne de commande ; rien n’est lu ni effacé.',
   'features.des-scripts-et-l-application-raccourcis': 'Des scripts et l’application Raccourcis ouvrent des pages par une adresse lucium://.',
   'features.active-le-bouton-d-installation-des-fiches-du-store': 'Active le bouton d’installation des fiches du Store ; aucune requête sans action de votre part.',
   'features.adresse-complete-dans-la-barre-d-outils': 'Adresse complète dans la barre d’outils',

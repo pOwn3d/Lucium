@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { linksFromArgv } from '@shared/platform'
-import { handleSecondLaunch, hasOwnDataFolder, isPrimaryInstance } from './single-instance'
+import { handleFirstLaunchSwitches, handleSecondLaunch, hasOwnDataFolder, isPrimaryInstance } from './single-instance'
 
 const OWN_FOLDER = ['/Applications/Electron.app/Contents/MacOS/Electron', '.', '--smoke', '--user-data-dir=/tmp/lucium-smoke-1']
 
@@ -61,9 +61,16 @@ describe('the links of a second launch', () => {
 })
 
 describe('a second launch of the program, in the instance that runs', () => {
-  function launch(argv: string[], locked: boolean) {
+  function launch(argv: string[], locked: boolean, switches = false) {
     const done: string[] = []
-    handleSecondLaunch(argv, { openLink: (url) => void done.push(`link ${url}`), isAppLocked: () => locked, newWindow: () => void done.push('new window'), focusMain: () => void done.push('focus') })
+    handleSecondLaunch(argv, {
+      openLink: (url) => void done.push(`link ${url}`),
+      isAppLocked: () => locked,
+      newWindow: () => void done.push('new window'),
+      focusMain: () => void done.push('focus'),
+      windowSwitchesAllowed: () => switches,
+      openLaunchWindow: (kind) => void done.push(`launch ${kind}`)
+    })
     return done
   }
 
@@ -82,5 +89,59 @@ describe('a second launch of the program, in the instance that runs', () => {
   it('opens no window while the application is locked: the launch only brings the lock screen forward', () => {
     expect(launch(['/opt/Lucium/lucium'], true)).toEqual(['focus'])
     expect(launch(['/opt/Lucium/lucium', '--no-sandbox'], true)).toEqual(['focus'])
+  })
+
+  // --new-window and --private-window (shared/launch-flags.ts): the switch is the setting of the commands by address.
+  describe('with --new-window and --private-window', () => {
+    it('opens the windows asked for, in the order written, when the setting is on, and nothing else', () => {
+      expect(launch(['lucium', '--private-window', '--new-window'], false, true)).toEqual(['launch private', 'launch new'])
+      expect(launch(['lucium', '--private-window'], false, true)).toEqual(['launch private'])
+    })
+
+    it('ignores them, with a line in the log, while the setting is off: the launch is what it was (a window of its own, or the addresses)', () => {
+      const logged = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      try {
+        expect(launch(['lucium', '--private-window'], false, false)).toEqual(['new window'])
+        expect(launch(['lucium', '--new-window', 'https://example.org/a'], false, false)).toEqual(['link https://example.org/a', 'focus'])
+        expect(logged).toHaveBeenCalledWith(expect.stringContaining('urlAutomation'))
+      } finally {
+        logged.mockRestore()
+      }
+    })
+
+    it('opens no window while the application is locked, even with the setting on', () => {
+      expect(launch(['lucium', '--private-window'], true, true)).toEqual(['focus'])
+    })
+
+    it('still hands the addresses over before it opens the windows', () => {
+      expect(launch(['lucium', '--private-window', 'https://example.org/a'], false, true)).toEqual(['link https://example.org/a', 'launch private'])
+    })
+  })
+})
+
+describe('the first launch, with --private-window', () => {
+  const first = (argv: string[], allowed: boolean, locked: boolean) => {
+    const opened: string[] = []
+    const logged = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const done = handleFirstLaunchSwitches(argv, { isAppLocked: () => locked, windowSwitchesAllowed: () => allowed, openLaunchWindow: (kind) => void opened.push(kind) })
+      return { done, opened, lines: logged.mock.calls.map((call) => String(call[0])) }
+    } finally {
+      logged.mockRestore()
+    }
+  }
+
+  it('opens a private window when the setting is on and the application is not locked', () => {
+    expect(first(['electron', '.', '--private-window'], true, false)).toMatchObject({ done: true, opened: ['private'] })
+  })
+
+  it('ignores it, with a line in the log, while the setting is off or the application is locked', () => {
+    expect(first(['electron', '.', '--private-window'], false, false)).toMatchObject({ done: false, opened: [], lines: [expect.stringContaining('urlAutomation')] })
+    expect(first(['electron', '.', '--private-window'], true, true)).toMatchObject({ done: false, opened: [], lines: [expect.stringContaining('locked')] })
+  })
+
+  it('asks for nothing for --new-window or a plain launch: the first window is the one that opens', () => {
+    expect(first(['electron', '.', '--new-window'], true, false)).toMatchObject({ done: false, opened: [] })
+    expect(first(['electron', '.'], true, false)).toMatchObject({ done: false, opened: [] })
   })
 })

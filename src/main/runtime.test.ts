@@ -78,6 +78,13 @@ describe('isSmokeRun: the engine test runs from the sources only', () => {
 describe('refusedSwitches: what the built application does not start with', () => {
   const EXE = '/Applications/Lucium.app/Contents/MacOS/Lucium'
 
+  it('does not refuse --new-window and --private-window: they ask for a window, and the setting of the commands by address decides (shell/single-instance.ts)', () => {
+    expect(refusedSwitches([EXE, '--new-window'], true)).toEqual([])
+    expect(refusedSwitches([EXE, '--private-window', '--new-window'], true)).toEqual([])
+    expect(REFUSED_SWITCHES).not.toContain('new-window')
+    expect(REFUSED_SWITCHES).not.toContain('private-window')
+  })
+
   it('refuses the engine test and the DevTools protocol, in every form Chromium reads', () => {
     expect(refusedSwitches([EXE, '--smoke', '--user-data-dir=/tmp/p'], true)).toEqual(['smoke'])
     expect(refusedSwitches([EXE, '--remote-debugging-port=9222', '--remote-allow-origins=*'], true)).toEqual(['remote-debugging-port', 'remote-allow-origins'])
