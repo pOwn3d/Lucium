@@ -43,6 +43,9 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Added
 
 - **Bookmark and history prefixes in the command bar**: type `*` or `^` alone or followed by a space (`* recipe`), or `@bookmarks` / `@history`, to search only your bookmarks or your history. A search such as `*.example.com` or `^2`, and a custom site search keyword that starts with `*` or `^`, stay what they were. With no text after it, the bar lists them. Everything stays on this Mac.
+### Added
+
+- **Block third-party cookies**: Settings › Privacy and security › Third-party cookies. Content from another site than the tab’s neither receives your cookies nor can set its own, WebSocket included. Off by default, with a list of sites where they stay accepted. Scripts’ own `document.cookie` is not touched.
 
 ## [1.1.5] - 2026-11-20
 

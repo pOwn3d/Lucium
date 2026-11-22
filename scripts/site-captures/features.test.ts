@@ -90,10 +90,10 @@ const settingScenarios = FEATURE_SCENARIOS.filter((s) => s.evidence === 'setting
 describe('the table of the features page', () => {
   // 130 since the card of document Picture-in-Picture (`fn-document-pip`), 131 since the one of the work views (`fn-work-views`), 132 since the one of the
   // capture of the sound of a tab by an extension (`fn-extension-tab-capture`): the features page of the site has yet to show them. 134 since the two
-  // cards that had no scenario (`fn-extensions-page`, `fn-background-framing`), 135 since the tab reminders (`fn-tab-reminders`), 136 since the full-text search of the pages, 137 since the focus mode (`fn-focus-mode`).
-  it('has one scenario per card, 137 of them, with one name per image, made from the id of the card', () => {
+  // cards that had no scenario (`fn-extensions-page`, `fn-background-framing`), 135 since the tab reminders (`fn-tab-reminders`), 136 since the full-text search of the pages, 137 since the focus mode (`fn-focus-mode`), 138 since the third-party cookies (`fn-third-party-cookies`).
+  it('has one scenario per card, 138 of them, with one name per image, made from the id of the card', () => {
     const cards = FEATURE_SCENARIOS.map((s) => s.card)
-    expect(cards).toHaveLength(137)
+    expect(cards).toHaveLength(138)
     expect(new Set(cards).size).toBe(cards.length)
     const names = FEATURE_SCENARIOS.flatMap((s) => (['fr', 'en'] as const).map((lang) => outputName(s.card, lang)))
     expect(new Set(names).size).toBe(names.length)

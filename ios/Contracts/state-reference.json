@@ -419,6 +419,8 @@
     "reduceFingerprint": false,
     "fingerprintStrict": false,
     "fingerprintExceptions": [],
+    "blockThirdPartyCookies": false,
+    "thirdPartyCookieExceptions": [],
     "profileNames": {},
     "externalLinksInLittleArc": true,
     "peekOnExternalLinks": false,

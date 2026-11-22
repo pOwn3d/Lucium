@@ -176,6 +176,8 @@ export function defaultSettings(): Settings {
     reduceFingerprint: false,
     fingerprintStrict: false,
     fingerprintExceptions: [],
+    blockThirdPartyCookies: false,
+    thirdPartyCookieExceptions: [],
     profileNames: {},
     externalLinksInLittleArc: true,
     peekOnExternalLinks: false,
