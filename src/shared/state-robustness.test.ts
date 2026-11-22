@@ -413,7 +413,8 @@ function rich(): SidebarState {
     blankLinkBackground: true,
     showZoomIndicator: false,
     nameWindows: false,
-    uiScale: 125
+    uiScale: 125,
+    minimumFontSize: 14
   }
   return {
     ...base,
@@ -711,6 +712,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   showAdvancedSettings: bool,
   nameWindows: bool,
   uiScale: (v) => Number.isInteger(v) && (v as number) >= 100 && (v as number) <= 200,
+  minimumFontSize: (v) => Number.isInteger(v) && ((v as number) === 0 || ((v as number) >= 9 && (v as number) <= 32)),
   panelSizes: (v) =>
     isRecord(v) &&
     Object.getPrototypeOf(v) === Object.prototype &&

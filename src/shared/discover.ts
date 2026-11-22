@@ -722,7 +722,7 @@ export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
     summary: 'discover.lecture-resume',
     where: 'discover.menu-ou',
     menus: { menu: ['menu.affichage', 'menu.mode-lecture'] },
-    keywords: 'lecture article epure lisible texte sans pub readability reader article clean readable text distraction',
+    keywords: 'lecture article epure lisible texte sans pub readability reader article clean readable text distraction interligne espacement dyslexie contraste gris focus ligne line spacing letter spacing dyslexia high contrast gray line focus assisted',
     shortcut: 'readerMode',
     try: { kind: 'hint' }
   },
@@ -1084,6 +1084,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'drag-to-split': 'organise',
   'warn-close-window': 'protect',
   'zoom-indicator': 'read',
+  'minimum-font-size': 'read',
   'name-windows': 'organise',
   'search-bangs': 'fast',
   'search-discovery': 'fast',

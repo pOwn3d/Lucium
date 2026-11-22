@@ -222,6 +222,7 @@ export abstract class BrowserActions extends BrowserNetwork {
       if ('windowVibrancy' in action.patch || 'sidebarOpacity' in action.patch) this.applyWindowLook()
       this.configureBlocker()
       this.configureAutoplay()
+      this.configureMinimumFontSize()
       this.configureMediaBridge()
     }
     // The user's own filter lists change what the blocker compiles.

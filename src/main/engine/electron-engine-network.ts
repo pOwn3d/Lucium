@@ -7,6 +7,7 @@ import { readFile, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app, session, ipcMain, type Session, type IpcMainEvent, type WebContents, type WebFrameMain } from 'electron'
 import type { EngineInfo } from '@shared/ipc'
+import { cleanMinimumFontSize } from '@shared/min-font-size'
 import type { SiteDataResult } from '@shared/site-data'
 import { NO_PLAN, PAGE_GUARD, guardPageUrl, type GuardPlan } from '@shared/page-guard'
 import { pageOrigin } from '@shared/inner-guard'
@@ -1017,6 +1018,10 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
 
   setDefaultAutoplay(mode: AutoplayMode): void {
     this.defaultAutoplay = mode
+  }
+
+  setMinimumFontSize(size: number): void {
+    this.minimumFontSize = cleanMinimumFontSize(size)
   }
 
   siteCookieCount(profileId: string, host: string, subdomains: boolean): Promise<number> {

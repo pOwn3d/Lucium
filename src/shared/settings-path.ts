@@ -32,6 +32,7 @@ export const SETTINGS_PLACES = {
   appIcon: { key: 'appIcon', group: 'settings.icone-de-l-application' },
   // The state of Lucium: its log of errors, its report
   engineStatus: { page: 'about', fold: true, group: 'engine-status.etat-d-lucium' },
+  minimumFontSize: { key: 'minimumFontSize', group: 'settings.accessibilite' },
   archive: { key: 'autoArchiveHours', group: 'settings.archivage-et-organisation' },
   sleep: { key: 'sleepAfterMinutes', group: 'settings.mise-en-veille' },
   language: { key: 'language', group: 'lang.langue' },

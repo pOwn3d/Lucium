@@ -72,6 +72,12 @@ export abstract class BrowserNetwork extends BrowserPublish {
     if (!this.isPrivate()) this.engine.setDefaultAutoplay(this.store.get().settings.autoplayPolicy)
   }
 
+  /** The minimum text size the pages made from now on get (Settings › Apparence › Accessibilité); the main window's setting holds for every window, a private one included. */
+  protected configureMinimumFontSize(): void {
+    if (this.isSecondary() && this.leader !== this) return this.leader.configureMinimumFontSize()
+    this.engine.setMinimumFontSize(this.store.get().settings.minimumFontSize)
+  }
+
   /** The media player's script is in the pages only while the player is on (Settings › Fonctions); the main window's setting holds for every session. */
   protected configureMediaBridge(): void {
     if (this.isSecondary() && this.leader !== this) return this.leader.configureMediaBridge()

@@ -49,7 +49,7 @@ export class ElectronEngine extends ElectronEngineDownloads implements Engine {
     }
     const view = new WebContentsView({
       // The policy is fixed when the page is made (Electron has no way to change it afterwards): see shared/autoplay.ts.
-      webPreferences: { session: sessionOfPage, sandbox: true, contextIsolation: true, nodeIntegration: false, nodeIntegrationInSubFrames: false, webviewTag: false, ...pageDialogPreferences(), autoplayPolicy: webAutoplayPolicy(opts.autoplay ?? this.defaultAutoplay) }
+      webPreferences: { session: sessionOfPage, sandbox: true, contextIsolation: true, nodeIntegration: false, nodeIntegrationInSubFrames: false, webviewTag: false, ...pageDialogPreferences(), autoplayPolicy: webAutoplayPolicy(opts.autoplay ?? this.defaultAutoplay), minimumFontSize: this.minimumFontSize }
     })
     const wc = view.webContents
     const contentsId = wc.id

@@ -81,13 +81,13 @@ describe('the pill of the reader', () => {
     expect(first.cover.loaded[0]).toContain('data-font="serif"')
 
     // A choice of the pill (its title, under the nonce of the document) is kept for the next article; a title without it is the article's own.
-    first.cover.webContents.emit('page-title-updated', {}, `${nonce}:${JSON.stringify({ font: 'sans', size: 2, width: 'wide', theme: 'sepia' })}`)
-    first.cover.webContents.emit('page-title-updated', {}, `autre:${JSON.stringify({ font: 'serif', size: 0, width: 'narrow', theme: 'night' })}`)
+    first.cover.webContents.emit('page-title-updated', {}, `${nonce}:${JSON.stringify({ font: 'sans', size: 2, width: 'wide', theme: 'sepia', lineHeight: 'wide', letters: 'normal', words: 'normal', focus: 3 })}`)
+    first.cover.webContents.emit('page-title-updated', {}, `autre:${JSON.stringify({ font: 'serif', size: 0, width: 'narrow', theme: 'night', lineHeight: 'normal', letters: 'normal', words: 'normal', focus: 0 })}`)
     first.reader.close()
 
     const second = await opened()
     expect(second.cover.nonce()).not.toBe(nonce)
-    expect(second.cover.loaded[0]).toContain('data-font="sans" data-width="wide" data-theme="sepia" style="--step:2"')
+    expect(second.cover.loaded[0]).toContain('data-font="sans" data-width="wide" data-theme="sepia" data-lh="wide" data-ls="normal" data-ws="normal" data-focus="3" style="--step:2"')
     second.reader.close()
   })
 

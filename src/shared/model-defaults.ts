@@ -319,6 +319,7 @@ export function defaultSettings(): Settings {
     showZoomIndicator: true,
     nameWindows: false,
     uiScale: 100,
+    minimumFontSize: 0,
     panelSizes: {},
     showAdvancedSettings: false,
     suggestHistory: true,
