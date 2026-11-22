@@ -177,7 +177,9 @@ export const MEDIA_BRIDGE = {
   /** The main frame tells which MediaSession actions the site registered (send). */
   actions: 'lucium-media-actions',
   /** The shell asks the frames of a page to set the volume or to run a MediaSession action (send). */
-  command: 'lucium-media-command'
+  command: 'lucium-media-command',
+  /** A video of the main frame entered the system's Picture in Picture, by the page's own button or script (send, no payload). */
+  pip: 'lucium-media-pip'
 } as const
 
 /** The MediaSession actions the shell can run in a page. */

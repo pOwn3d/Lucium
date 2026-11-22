@@ -3558,6 +3558,8 @@ export const en: Record<MessageKey, string> = {
   'settings-shortcuts.saisissez-une-commande-ou-un-raccourci-comme': 'Enter a command or a shortcut (like “{example}”)',
   'settings-shortcuts.voir-tous-les-raccourcis': 'See all shortcuts',
   'settings.rouvrir-les-fenetres-de-la-session-precedente': 'Reopen windows from the previous session',
+  'settings.image-dans-l-image-d-un-site-dans-la-fenetre-de-lucium': 'A site’s Picture in Picture button opens Lucium’s window',
+  'settings.le-bouton-d-un-site-ouvre-la-fenetre-de-lucium': 'Lucium’s own window shows “LIVE” for a stream, with no progress line and no ±10 s. Off: the system’s window, as the site draws it.',
   'settings.activer-l-image-dans-l-image-quand-vous': 'Picture in Picture when leaving a video tab',
   'settings.activer-les-retouches-sur-les-sites-web-que': 'Enable Tweaks on the websites you visit',
   'settings.actualiser-tous-les-onglets-reveille-aussi': 'Also wake sleeping tabs',

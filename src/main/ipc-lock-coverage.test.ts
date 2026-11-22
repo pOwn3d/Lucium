@@ -37,7 +37,8 @@ const PAGE_CHANNELS: Readonly<Record<string, string>> = {
   'PAGE_GUARD.plan': 'the plan of the page guard, asked before the first script of a page (preload/page-guard.ts)',
   'PASSWORD_BRIDGE.submitted': 'a form with a password submitted in the main frame of a tab (preload/password-bridge.ts)',
   'MEDIA_BRIDGE.hello': 'the volume of a tab, asked by its media bridge (preload/media-bridge.ts)',
-  'MEDIA_BRIDGE.actions': 'the track actions a page registers (preload/media-bridge.ts)'
+  'MEDIA_BRIDGE.actions': 'the track actions a page registers (preload/media-bridge.ts)',
+  'MEDIA_BRIDGE.pip': 'a video of a page entered the system\'s Picture in Picture by the site\'s own button (preload/media-bridge.ts); only a real event of the main frame is heard, and with the application locked there is no page left to take the video from'
 }
 
 /** The functions that consult the lock: the guard of `registerIpc` (handed to the modules it registers as `guard`) and the gate of the surfaces. */

@@ -166,6 +166,15 @@ if (api) {
       console.warn('[lucium] a media action of the page failed:', error instanceof Error ? error.message : String(error))
     }
   })
+  // The site's own Picture in Picture button (Twitch, YouTube…) opens the system's window, whose design is not ours: the shell is told, and takes the
+  // video into Lucium's floating window instead. Only a real event counts (isTrusted): a page cannot forge one to have its tab pulled out.
+  document.addEventListener(
+    'enterpictureinpicture',
+    (event) => {
+      if (event.isTrusted) ipcRenderer.send(MEDIA_BRIDGE.pip)
+    },
+    true
+  )
   // A page that has just loaded starts at the level its tab has (a new document of a tab the user turned down stays down).
   ipcRenderer
     .invoke(MEDIA_BRIDGE.hello)

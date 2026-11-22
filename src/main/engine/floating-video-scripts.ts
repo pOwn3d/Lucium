@@ -16,8 +16,21 @@ import { MEDIA_WALK, VIDEO_CAN_FLOAT } from './media-scripts'
 /** The isolated world of these scripts (the other worlds of Lucium: 4_200_017 to 4_200_097, see `*_WORLD`). */
 export const FLOATING_WORLD = 4_200_053
 
+/** A seekable range that starts later than this is a live stream's sliding window, not a recorded video's. */
+export const LIVE_WINDOW_START_SECONDS = 2
+
 /** Where the controller of the floating video is kept, in the script's world. */
 const KEY = `Symbol.for('lucium.floating-video')`
+
+/**
+ * Whether the video is a live stream. Most players report an infinite duration; others (Twitch) report a finite one that keeps growing and play a
+ * sliding window: what can be reached does not start at the beginning of the stream any more. A recorded video's range starts at 0.
+ */
+const IS_LIVE = `const isLive = (v) => {
+    if (v.duration === Infinity) return true
+    if (!Number.isFinite(v.duration) || !v.seekable || v.seekable.length === 0) return false
+    return v.seekable.start(0) > ${LIVE_WINDOW_START_SECONDS}
+  }`
 
 /** The video that floats: the one PIP_ENTER would float (one that plays before a paused one, the largest first). */
 const CHOOSE = `const choose = () => { ${MEDIA_WALK}
@@ -56,6 +69,7 @@ export const FLOAT_STAGE = `(() => {
   if (self[key]) return self[key].info()
   ${CHOOSE}
   ${SUCCESSOR}
+  ${IS_LIVE}
   const first = choose()
   if (!first) return { staged: false, reason: 'no-video' }
   const STAGE = { position: 'fixed', top: '0px', right: '0px', bottom: '0px', left: '0px', width: '100vw', height: '100vh', 'max-width': 'none', 'max-height': 'none', 'min-width': '0px', 'min-height': '0px', margin: '0px', padding: '0px', 'border-style': 'none', transform: 'none', overflow: 'hidden', 'box-sizing': 'border-box', 'background-color': 'black', 'z-index': '2147483647' }
@@ -169,7 +183,7 @@ export const FLOAT_STAGE = `(() => {
     retry: () => reconcile([]),
     info: () => {
       const v = current ? current.video : null
-      return v ? { staged: true, width: v.videoWidth, height: v.videoHeight, live: v.duration === Infinity, protected: !!v.mediaKeys } : { staged: false, reason: 'no-video' }
+      return v ? { staged: true, width: v.videoWidth, height: v.videoHeight, live: isLive(v), protected: !!v.mediaKeys } : { staged: false, reason: 'no-video' }
     },
     end: () => {
       observer.disconnect()
@@ -193,11 +207,12 @@ export const FLOAT_UNSTAGE = `(() => {
 
 /** What the bar shows of the video (shared/floating-video.ts, FloatingVideoFacts), or null when there is none to read. */
 export const FLOAT_FACTS = `(() => {
+  ${IS_LIVE}
   const controller = self[${KEY}]
   if (controller && !(controller.video() && controller.video().isConnected)) controller.retry()
   const v = controller ? controller.video() : null
   if (!v || !v.isConnected) return null
-  const live = v.duration === Infinity
+  const live = isLive(v)
   let behindLive = false
   if (live && v.seekable && v.seekable.length > 0) behindLive = v.seekable.end(v.seekable.length - 1) - v.currentTime > ${FLOATING_LIVE_LAG_SECONDS}
   return { paused: v.paused, ended: v.ended, muted: v.muted, volume: v.volume, currentTime: v.currentTime, duration: Number.isFinite(v.duration) ? v.duration : null, live, behindLive, protected: !!v.mediaKeys, width: v.videoWidth, height: v.videoHeight }
@@ -212,6 +227,7 @@ export function floatCommandScript(command: VideoCommand): string {
   const controller = self[${KEY}]
   const v = controller ? controller.video() : null
   if (!v) return false
+  ${IS_LIVE}
   const command = ${JSON.stringify(command)}
   switch (command.kind) {
     case 'toggle':
@@ -230,7 +246,7 @@ export function floatCommandScript(command: VideoCommand): string {
       if (command.value > 0) v.muted = false
       return true
     case 'seek':
-      if (!Number.isFinite(v.duration) || v.mediaKeys) return false
+      if (!Number.isFinite(v.duration) || isLive(v) || v.mediaKeys) return false
       v.currentTime = Math.min(v.duration, Math.max(0, v.currentTime + command.seconds))
       return true
     case 'live':

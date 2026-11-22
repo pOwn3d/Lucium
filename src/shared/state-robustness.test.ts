@@ -249,6 +249,7 @@ function rich(): SidebarState {
     searchSuggestions: false,
     peekOnExternalLinks: true,
     autoPictureInPicture: false,
+    sitePictureInPictureInLucium: false,
     mediaPlayer: false,
     autoArchiveHours: 5,
     profiles: { work: { searchUrlTemplate: 'https://s.example/?q=%s', searchSuggestions: false, autoArchiveHours: 2, downloadDir: '/tmp/telechargements', disabledExtensions: ['a'.repeat(32), 'p'.repeat(32)] } },
@@ -533,6 +534,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   searchSuggestions: bool,
   peekOnExternalLinks: bool,
   autoPictureInPicture: bool,
+  sitePictureInPictureInLucium: bool,
   mediaPlayer: bool,
   autoArchiveHours: num(0),
   profiles: (v) =>

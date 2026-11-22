@@ -196,7 +196,7 @@ const INVENTORY: Entry[] = [
   { kind: 'code run in a page', file: 'engine/electron-page-base.ts', count: 2, why: "on a command or a switch: the style slots (applyCss; empty while their function is off: the theme, the dark mode, the blocker's hiding, the Boosts), and the one call that takes a question or a command of the media player to every frame of the page (inFrames)" },
   { kind: 'code run in a page', file: 'engine/electron-page-content.ts', count: 11, why: "the layer of the page annotation (runAnnotateLayer, in its own isolated world): only while an annotation the user started runs, on the pages it was shown on, and taken away when it stops; the animation of « Effacer les données du site » (runClearOverlay, in its own isolated world): only while a run the user started (the sheet, the shortcut, a menu) erases a site, never with « Aucune » or while motion is reduced, and gone with the run; the readable mode (runReadable: its probe and its recolouring engine, in its own isolated world), only for a page of a site that is not on Original, never while every site is (readableInUse, Browser.applyDarkToPage); the fake-data fill of a form (readFormFields, fillFormFields): only on the right-click command on an editable field, never on its own; on a command or a switch: the panels, the Boost scripts, the element picker, the translation, the password fill" },
   { kind: 'code run in a page', file: 'engine/electron-page-lifecycle.ts', count: 2, why: "the probe of the sleep, and the one that is always there: the typing watcher (TRACK_INPUT, every document). The probe of the sleep, of the automatic reload and of « Actualiser tous les onglets » reads it to leave a page with unsent text alone, so it is a base of the safety of the typed text, not of the sleep (docs/fonctions.md)" },
-  { kind: 'code run in a page', file: 'engine/electron-page-media.ts', count: 17, why: "on a command or a switch: the page tools (only those whose setting is on: syncTools), scroll sync, reading aloud, Picture in Picture (asked whether to float in a world of its own when a tab is left) and Lucium's floating video window (its search in the page and its frames, the staging of the video, its reading while the bar is on screen, its commands: only from the menu or the media player's button), the media volume (media-player)" },
+  { kind: 'code run in a page', file: 'engine/electron-page-media.ts', count: 18, why: "on a command or a switch: the page tools (only those whose setting is on: syncTools), scroll sync, reading aloud, Picture in Picture (asked whether to float in a world of its own when a tab is left, for the system's window or Lucium's) and Lucium's floating video window (its search in the page and its frames, the staging of the video, its reading while the bar is on screen, its commands: only from the menu or the media player's button), the media volume (media-player)" },
   { kind: 'code run in a page', file: 'engine/electron-page-navigation.ts', count: 3, why: "on a command: the PDF zoom, the regex find, the search discovery" },
   { kind: 'code run in a page', file: 'engine/electron-page.ts', count: 2, why: "the language of each loaded page, read once to offer the translation entry for another language (did-stop-loading), only while 'translate-local' is on and in the translation's isolated world (its lang attribute, or for a web page without one its visible text: sampleScript), nothing leaves the machine" },
   { kind: 'code run in a page', file: 'engine/devtools-open.ts', count: 2, why: "the front-end of the developer tools (devtools://, not a web page): asks it to show a panel or to enter the inspect mode, on a command (⌥⌘I/J/C, F12, the page menu), never otherwise" },
@@ -348,6 +348,26 @@ describe('the wiring that keeps a function out of the sessions while it is off',
     expect(second.registerPreloadScript).not.toHaveBeenCalled()
     constructed.setMediaBridge(true)
     expect(electronWorld.ipcHandle.has(MEDIA_BRIDGE.hello)).toBe(true)
+  })
+
+  it('hears the site’s Picture in Picture button from the main frame of a page only, and stops hearing it with the bridge', async () => {
+    const constructed = (await constructEngine()) as unknown as { setMediaBridge(on: boolean): void; pageByContents: Map<number, string>; pages: Map<string, unknown> }
+    const sitePictureInPicture = vi.fn()
+    constructed.pageByContents.set(7, 'tab')
+    constructed.pages.set('tab', { sitePictureInPicture })
+    const main = { id: 'main' }
+    const pip = electronWorld.ipcOn.get(MEDIA_BRIDGE.pip) as (event: unknown) => void
+    expect(pip).toBeTypeOf('function')
+    // A frame of another site inside the page does not speak for it.
+    pip({ senderFrame: { id: 'child' }, sender: { id: 7, mainFrame: main } })
+    expect(sitePictureInPicture).not.toHaveBeenCalled()
+    pip({ senderFrame: main, sender: { id: 7, mainFrame: main } })
+    expect(sitePictureInPicture).toHaveBeenCalledTimes(1)
+    // The bridge off: the channel has no one behind it, and back on it is served again.
+    constructed.setMediaBridge(false)
+    expect(electronWorld.ipcOn.has(MEDIA_BRIDGE.pip)).toBe(false)
+    constructed.setMediaBridge(true)
+    expect(electronWorld.ipcOn.has(MEDIA_BRIDGE.pip)).toBe(true)
   })
 
   it('loads the Web Store library for a profile only when something installed from the store is to be updated', () => {

@@ -10,6 +10,14 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Changed
+
+- **Picture in Picture in Lucium’s window, from the site too**: a site’s Picture in Picture button (Twitch, YouTube…) and the automatic picture open Lucium’s floating window, not the system’s. A live stream shows “LIVE”, with no progress line and no ±10 s. A switch in Settings › Tabs and windows turns it off for the site’s button.
+
+### Fixed
+
+- **Live stream with a finite duration**: a live stream whose player reports a finite, growing duration (Twitch) is recognised as live in Lucium’s floating window, so the ±10 s buttons are hidden.
+
 ## [1.1.5] - 2026-11-20
 
 Your iPhone can now synchronize with your Mac, directly and without a server, and its Today tabs can be shared. On Windows the window draws its own title bar, and Windows and Linux say that they update by hand.

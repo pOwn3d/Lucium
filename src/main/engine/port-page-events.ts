@@ -138,6 +138,8 @@ export interface PageEvents {
   screenShareBlocked?(notice: string, openSettings?: boolean): void
   /** A tool running in the page reported something (a gesture drawn, the page scrolled): already checked against the page's secret and the allowed shapes. */
   toolMessage?(message: ToolMessage): void
+  /** The site's own Picture in Picture button put a video of the page in the system's window (not a request of Lucium's): the shell may take it into Lucium's floating window instead. */
+  sitePictureInPicture?(): void
   /** Which web tools the page carries, asked when a new document is ready (the site of the page may be one the gestures are left out of). */
   pageTools?(): PageTools
   /** Which entries the page's menu adds (see `PageMenuOptions`); absent: none. */

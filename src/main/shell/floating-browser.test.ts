@@ -94,6 +94,107 @@ describe('« Image dans l’image » asked from Lucium', () => {
   })
 })
 
+function siteButton(options: { setting?: boolean; private?: boolean; floatingTab?: string | null; floatOutcome?: FloatOutcome } = {}) {
+  const calls: string[] = []
+  const page = {
+    setPictureInPicture: vi.fn(async (on: boolean) => (calls.push(`system-${on ? 'in' : 'out'}`), true)),
+    floatMainVideo: vi.fn(async () => (calls.push('system-float'), { ok: true }))
+  }
+  const floating = {
+    floatingTab: () => options.floatingTab ?? null,
+    float: vi.fn(async () => (calls.push('lucium'), options.floatOutcome ?? { ok: true }))
+  }
+  const own: Record<string, unknown> = {
+    pages: new Map([['tab', page]]),
+    autoPip: { floatedByHand: vi.fn() },
+    floatingVideo: floating,
+    store: { get: () => ({ settings: { sitePictureInPictureInLucium: options.setting !== false } }) },
+    isPrivate: () => options.private === true,
+    ownerOf: () => undefined,
+    showToast: vi.fn(),
+    floatTabVideo: shell['floatTabVideo'],
+    floatingOwner: () => ({ owner: true })
+  }
+  const fake = fakeBrowser(own)
+  own['leader'] = fake.self
+  return { take: () => shell['takeSitePictureInPicture']!.call(fake.self, 'tab') as Promise<void>, page, floating, calls }
+}
+
+describe('the site’s own Picture in Picture button', () => {
+  it('leaves the system’s window, then floats the video in Lucium’s', async () => {
+    const { take, calls, page } = siteButton()
+    await take()
+    expect(calls).toEqual(['system-out', 'lucium'])
+    expect(page.floatMainVideo).not.toHaveBeenCalled()
+  })
+
+  it('is left to the system when the setting is off, in a private window, or when the tab already floats in Lucium’s window', async () => {
+    for (const options of [{ setting: false }, { private: true }, { floatingTab: 'tab' }]) {
+      const { take, calls } = siteButton(options)
+      await take()
+      expect(calls).toEqual([])
+    }
+  })
+
+  it('gives the system’s window back when Lucium’s refuses and nothing floats', async () => {
+    const { take, calls } = siteButton({ floatOutcome: { ok: false, reason: 'busy' } })
+    await take()
+    expect(calls).toEqual(['system-out', 'lucium', 'system-float'])
+  })
+
+  it('floats a protected video the same way: the page is lent, not copied (the window takes the page as it is)', async () => {
+    // The lent view keeps the page's own player and its protection; what is asked of the window is the same call whatever the video.
+    const { take, floating } = siteButton()
+    await take()
+    expect(floating.float).toHaveBeenCalledWith({ owner: true }, 'tab', expect.anything())
+  })
+})
+
+describe('the automatic picture when a tab with a watched video is left', () => {
+  function left(options: { can?: boolean; outcome?: FloatOutcome; private?: boolean; noFloating?: boolean } = {}) {
+    const calls: string[] = []
+    const page = {
+      watchedVideoCanFloat: vi.fn(async () => options.can !== false),
+      setPictureInPicture: vi.fn(async () => (calls.push('system'), true))
+    }
+    const floating = { float: vi.fn(async () => (calls.push('lucium'), options.outcome ?? { ok: true })) }
+    const own: Record<string, unknown> = { pages: new Map([['tab', page]]), visible: new Set<string>(), floatingVideo: options.noFloating ? null : floating, isPrivate: () => options.private === true, ownerOf: () => undefined, floatingOwner: () => ({ owner: true }) }
+    const fake = fakeBrowser(own)
+    own['leader'] = fake.self
+    return { run: () => shell['floatWatchedVideo']!.call(fake.self, 'tab', page) as Promise<boolean>, calls, page, own }
+  }
+
+  it('floats it in Lucium’s window', async () => {
+    const { run, calls } = left()
+    expect(await run()).toBe(true)
+    expect(calls).toEqual(['lucium'])
+  })
+
+  it('does not float a tab that was chosen again while the page was being asked, whose view it would lend away', async () => {
+    const { run, calls, page, own } = left()
+    page.watchedVideoCanFloat.mockImplementation(async () => {
+      ;(own['visible'] as Set<string>).add('tab')
+      return true
+    })
+    expect(await run()).toBe(false)
+    expect(calls).toEqual([])
+  })
+
+  it('floats nothing when no video is being watched', async () => {
+    const { run, calls } = left({ can: false })
+    expect(await run()).toBe(false)
+    expect(calls).toEqual([])
+  })
+
+  it('uses the system’s window when Lucium’s cannot take the page, in a private window, or does not exist', async () => {
+    for (const options of [{ outcome: { ok: false, reason: 'refused' } as const }, { private: true }, { noFloating: true }]) {
+      const { run, calls } = left(options)
+      expect(await run()).toBe(true)
+      expect(calls.at(-1)).toBe('system')
+    }
+  })
+})
+
 describe('what the floating window is given of the tab’s window', () => {
   function owner(muted: boolean) {
     const own: Record<string, unknown> = {
@@ -161,10 +262,11 @@ describe('a floating tab taken to another window', () => {
 
 describe('a tab left while its video floats in Lucium’s window', () => {
   /** A window that shows `t2` after `t1`, with the page of `t1` left (it made sound, and was committed), and the tab whose video floats in Lucium's window. */
-  function leaving(floats: 'left' | 'arrived' | null) {
+  function leaving(floats: 'left' | 'arrived' | null, autoSite: string | null = null) {
     const left = { hide: vi.fn(), setPictureInPicture: vi.fn(async () => true), focus: vi.fn() }
     const arrived = { hide: vi.fn(), setPictureInPicture: vi.fn(async () => false), focus: vi.fn() }
     const opened: string[] = []
+    const closed = vi.fn()
     const host = syncHost(['https://www.twitch.tv/lucium', 'https://journal.example/'], (tab, pages) => void pages.set(tab.id, tab.url.includes('twitch') ? left : arrived))
     const [first, second] = host.state().tabs.map((tab) => tab.id) as [string, string]
     host.pages.set(first, left)
@@ -177,11 +279,12 @@ describe('a tab left while its video floats in Lucium’s window', () => {
       visible: new Set([first]),
       committed: new Set([first]),
       runtime: { tabs: { [first]: { loading: false, audible: true, muted: false, awake: true } } },
-      leader: { releasePrivateContext: () => undefined, floatingVideo: { floatingTab: () => floating, show: () => void opened.push('show') }, autoPip: { allows: () => true, floated: vi.fn(), returning: () => null, closed: vi.fn() } },
+      leader: { releasePrivateContext: () => undefined, floatingVideo: { floatingTab: () => floating, show: () => void opened.push('show'), release: (id: string) => void opened.push(`release ${id}`) }, autoPip: { allows: () => true, floated: vi.fn(), returning: () => autoSite, closed } },
+      floatWatchedVideo: (_id: string, page: { setPictureInPicture(on: boolean, by: string): Promise<boolean> }) => page.setPictureInPicture(true, 'tab-switch'),
       openMediaPlayer: (id: string) => void opened.push(`player ${id}`),
       engine: { activatePage: (id: string) => void opened.push(`activate ${id}`) }
     })
-    return { host, first, second, left, arrived, opened }
+    return { host, first, second, left, arrived, opened, closed }
   }
 
   it('opens neither the system’s picture nor the media player for it', () => {
@@ -203,5 +306,36 @@ describe('a tab left while its video floats in Lucium’s window', () => {
     const other = leaving(null)
     shell['sync']!.call(other.host.fake.self)
     expect(other.opened).not.toContain('show')
+  })
+
+  it('gives the video back to its tab when the automatic picture opened the window, without counting a closing', async () => {
+    const chosen = leaving('arrived', 'twitch.tv')
+    shell['sync']!.call(chosen.host.fake.self)
+    await Promise.resolve()
+    expect(chosen.opened.filter((what) => what === 'show' || what.startsWith('release'))).toEqual([`release ${chosen.second}`])
+    expect(chosen.closed).not.toHaveBeenCalled()
+  })
+
+  it('opens no media player for a tab that came back on screen while the automatic picture was being tried', async () => {
+    const away = leaving(null)
+    const self = away.host.fake.self
+    self['floatWatchedVideo'] = async () => {
+      await Promise.resolve()
+      ;(self['visible'] as Set<string>).add(away.first)
+      return false
+    }
+    shell['sync']!.call(self)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(away.opened.filter((what) => what.startsWith('player'))).toEqual([])
+  })
+
+  it('counts a closing when the window the automatic picture opened was closed while the tab was away', async () => {
+    const chosen = leaving(null, 'twitch.tv')
+    ;(chosen.host.fake.self['committed'] as Set<string>).add(chosen.second)
+    shell['sync']!.call(chosen.host.fake.self)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(chosen.closed).toHaveBeenCalledWith('twitch.tv')
   })
 })

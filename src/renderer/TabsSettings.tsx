@@ -162,6 +162,14 @@ export function TabsSettings({ snapshot, update }: PaneProps) {
           checked={settings.autoPictureInPicture}
           onChange={(autoPictureInPicture) => update({ autoPictureInPicture })}
         />
+        <Check
+          settingKey="sitePictureInPictureInLucium"
+          icon={<RowIcon color="purple">{ROW_ICONS.pip}</RowIcon>}
+          label={t('settings.image-dans-l-image-d-un-site-dans-la-fenetre-de-lucium')}
+          hint={t('settings.le-bouton-d-un-site-ouvre-la-fenetre-de-lucium')}
+          checked={settings.sitePictureInPictureInLucium}
+          onChange={(sitePictureInPictureInLucium) => update({ sitePictureInPictureInLucium })}
+        />
         <Check settingKey="scrollSync" icon={<RowIcon color="purple">{ROW_ICONS.drag}</RowIcon>} label={t('web-tools-settings.defilement-synchronise-des-volets-d-une-vue')} info={t('web-tools-settings.ajoute-defilement-synchronise-au-menu-des')} checked={settings.scrollSync} onChange={(scrollSync) => update({ scrollSync })} />
       </Group>
 

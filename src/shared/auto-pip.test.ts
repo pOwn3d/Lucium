@@ -2,7 +2,7 @@
 // where the user closed the floating window twice gets no more of it for the session.
 
 import { describe, expect, it } from 'vitest'
-import { AUTO_PIP_CLOSES_PER_SITE, AUTO_PIP_MIN_BOX, AUTO_PIP_MIN_CALL_TILE, AUTO_PIP_MIN_PLAYED_SECONDS, AutoPipMemory, autoFloatVerdict, type WatchedVideoFacts } from './auto-pip'
+import { AUTO_PIP_CLOSES_PER_SITE, AUTO_PIP_MIN_BOX, AUTO_PIP_MIN_CALL_TILE, AUTO_PIP_MIN_PLAYED_SECONDS, AutoPipMemory, autoFloatVerdict, autoWindowWasClosed, floatingOnReturn, type WatchedVideoFacts } from './auto-pip'
 import { en } from './i18n-en'
 import { fr } from './i18n-fr'
 
@@ -118,5 +118,21 @@ describe('the sites where the floating window was closed', () => {
     memory.floated('tab-2', 'films.example')
     expect(memory.returning('tab-1')).toBeNull()
     expect(memory.returning('tab-2')).toBe('films.example')
+  })
+})
+
+describe('Lucium’s floating window when the tab it shows comes back', () => {
+  it('goes back to the tab when the automatic picture opened it, comes back in front when it was asked for by hand, and is left alone when there is none', () => {
+    expect(floatingOnReturn('twitch.tv', true)).toBe('release')
+    expect(floatingOnReturn(null, true)).toBe('show')
+    expect(floatingOnReturn('twitch.tv', false)).toBe('none')
+    expect(floatingOnReturn(null, false)).toBe('none')
+  })
+
+  it('does not count a window that gave its video back as one the user closed, but counts one that is gone', () => {
+    expect(autoWindowWasClosed('twitch.tv', true, false)).toBe(false)
+    expect(autoWindowWasClosed('twitch.tv', false, true)).toBe(false)
+    expect(autoWindowWasClosed('twitch.tv', false, false)).toBe(true)
+    expect(autoWindowWasClosed(null, false, false)).toBe(false)
   })
 })

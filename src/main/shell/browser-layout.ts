@@ -12,6 +12,7 @@ import { resolveAppearance } from '@shared/theme'
 import { findLayerBounds, scaled, uiFactor } from '@shared/ui-scale'
 import { PANEL_NEED, panelFactor, panelIsScaled, screenOf } from '@shared/panel-scale'
 import { opensPlayer } from '@shared/media-player'
+import { autoWindowWasClosed, floatingOnReturn } from '@shared/auto-pip'
 import { hostOf } from '@shared/url'
 import { visibleTabIds } from '@shared/window-selection'
 import { pageRadius, paneContent, splitLayout, splitPaneStage } from '@shared/split'
@@ -86,10 +87,10 @@ export abstract class BrowserLayout extends BrowserPages {
         const wantsPlayer = state.settings.mediaPlayer && opensPlayer(this.runtime.tabs[previous])
         const site = hostOf(state.tabs.find((t) => t.id === previous)?.url ?? '')
         if (state.settings.autoPictureInPicture && this.leader.autoPip.allows(site)) {
-          void left.setPictureInPicture(true, 'tab-switch').then(
+          void this.floatWatchedVideo(previous, left).then(
             (entered) => {
               if (entered) this.leader.autoPip.floated(previous, site)
-              else if (wantsPlayer) this.openMediaPlayer(previous)
+              else if (wantsPlayer && !this.visible.has(previous)) this.openMediaPlayer(previous)
             },
             (error: unknown) => {
               console.error('[pip] cannot enter Picture in Picture:', error)
@@ -153,16 +154,21 @@ export abstract class BrowserLayout extends BrowserPages {
     if (this.overlayRequest?.panel === 'theme' && this.overlayRequest.spaceId !== state.activeSpaceId) this.closeOverlay()
     this.layout()
     if (active && changed) {
-      // Its video floats in Lucium's window: choosing the tab brings that window back in front (the place of its page offers to bring the video back).
-      if (this.leader.floatingVideo?.floatingTab() === active.id) this.leader.floatingVideo.show()
+      // A window the automatic picture opened for this tab: the site it was for, if one was open, which is forgotten from now on.
+      const floatedSite = this.leader.autoPip.returning(active.id)
+      const floatingHere = this.leader.floatingVideo?.floatingTab() === active.id
+      // Its video floats in Lucium's window: the one the automatic picture opened goes back to the tab, as the system's window does (it is no
+      // closing: the site is not told); one asked for by hand comes back in front (the place of its page offers to bring the video back).
+      const onReturn = floatingOnReturn(floatedSite, floatingHere)
+      if (onReturn === 'release') this.leader.floatingVideo?.release(active.id)
+      else if (onReturn === 'show') this.leader.floatingVideo?.show()
       const page = this.pages.get(active.id)
       if (page) {
         this.engine.activatePage(active.id)
         if (this.committed.has(active.id)) {
           // A window the automatic picture opened for this tab that no longer floats was closed while the tab was away: the site is told so.
-          const floatedSite = this.leader.autoPip.returning(active.id)
           void page.setPictureInPicture(false).then(
-            (wasFloating) => (floatedSite !== null && !wasFloating ? this.leader.autoPip.closed(floatedSite) : undefined),
+            (wasFloating) => (floatedSite !== null && autoWindowWasClosed(floatedSite, floatingHere, wasFloating) ? this.leader.autoPip.closed(floatedSite) : undefined),
             (error: unknown) => console.error('[pip] cannot leave Picture in Picture:', error)
           )
         }
