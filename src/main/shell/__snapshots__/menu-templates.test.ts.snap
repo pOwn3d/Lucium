@@ -987,6 +987,7 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
 - label="Fenêtre" role="windowMenu"
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click
@@ -1310,6 +1311,7 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - checked=false label="Fenêtre privée" type="checkbox" click
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click(brings back)
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click(brings back)
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click(brings back)
   - label="Raccourcis clavier essentiels" click
@@ -1623,6 +1625,7 @@ exports[`the menu bar, as built > in a private window 1`] = `
   - checked=false label="Fenêtre privée" type="checkbox" click
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=false label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click
@@ -1949,6 +1952,7 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
   - checked=false label="Fenêtre privée" type="checkbox" click
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click
@@ -2275,6 +2279,7 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
   - checked=false label="Fenêtre privée" type="checkbox" click
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click
@@ -2569,6 +2574,7 @@ exports[`the menu bar, as built > with every optional setting off and windows th
 - label="Fenêtre" role="windowMenu"
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click

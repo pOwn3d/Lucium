@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { gotoTabCommand } from '@shared/little-picker'
 import { actionToDispatch, bookmarkCandidates, BAR_WIDTH, barBox, barLayout, candidateDispatches, candidateHint, candidatePreview, cardSurface, completedRow, groupCandidates, groupStarts, groupTitle, inScope, littleCandidates, littleGroupStarts, newTabOf, pageColorBehind, typedStaysPrivate, inlineCompletion, rankCandidates, resultAtEdge, scopeSiteFor, SCOPE_PREFIX, splitScope, suggestionQuery, usageKey, windowSidebarChangeOf, type BarScope, type Candidate, type CommandAction } from '@shared/command-bar'
+import { DISCOVER_REQUEST } from '@shared/discover'
 import type { CommandBarMode } from '@shared/ipc'
 import { commandHeld, effectiveAccelerator, formatAccelerator } from '@shared/keybindings'
 import { ariaKeyShortcut, commandPress, platformOf } from '@shared/platform'
@@ -439,6 +440,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
           break
         }
         if (c.action === 'recent-notices') return act.openOverlay({ panel: 'notices' })
+        if (c.action === 'discover') return act.openOverlay(DISCOVER_REQUEST)
         if (c.action === 'web-panel-add') {
           act.webPanel({ op: 'add' })
           break

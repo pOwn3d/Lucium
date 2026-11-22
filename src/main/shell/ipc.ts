@@ -124,6 +124,8 @@ export function validOverlay(request: unknown, store: Pick<StateStore, 'get'>): 
     case 'sitedata':
     case 'readlater':
     case 'spacecreate':
+    // « Découvrir Lucium »: a list the interface opens from Pour commencer, the welcome and the command bar; nothing in the request.
+    case 'discover':
     // Recent notices: the list is the window's own, filled in by the main process whatever the request carries.
     case 'notices':
       return true

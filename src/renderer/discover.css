@@ -1,0 +1,74 @@
+/*
+ * « Découvrir Lucium » (Discover.tsx): a panel of the family of the shortcut sheet (`tk-panel`), a header with the search and the chips, a body that scrolls, one
+ * grid of cards for each task. Tokens only. The contour of a field, of a chip and of a button is `--text-3` (5,6 : 1 on the surface, WCAG 1.4.11 asks 3 : 1), never
+ * `--line-strong`, which is 1,5 : 1 in the light scheme and is kept for what only decorates (a card, a key capsule). Nothing moves by itself; the few transitions
+ * are cut by « Réduire les animations ».
+ */
+.dv { display: flex; flex-direction: column; width: min(1040px, calc(100% - 2 * var(--sp-4))); max-height: calc(100vh - 8vh - var(--sp-5)); overflow: hidden; border-radius: var(--r-xl); }
+
+.dv-head { display: grid; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5) var(--sp-3); background: linear-gradient(135deg, var(--space-a), var(--space-b)); }
+.dv-title { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.dv-title h2 { margin: 0; font-size: var(--t-2xl); line-height: 1.15; font-weight: var(--w-semibold); }
+.dv-lead { margin: 0; max-width: 64ch; font-size: var(--t-m); line-height: 1.5; color: var(--text); }
+.dv .tk-field { border-color: var(--text-3); }
+.dv .tk-btn { border-color: var(--text-3); }
+.dv .tk-btn.primary { border-color: var(--accent); }
+.dv .tk-btn.quiet { border-color: transparent; }
+.dv .tk-search .tk-field { height: 36px; font-size: var(--t-l); }
+.dv .tk-search svg { stroke: var(--text-3); }
+
+.dv-filters { display: flex; flex-wrap: wrap; gap: var(--sp-2) var(--sp-5); align-items: center; }
+.dv-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.dv-chips .dv-label { font-size: var(--t-s); font-weight: var(--w-semibold); color: var(--text); }
+.dv .tk-chip { border: 1px solid var(--text-3); background: var(--surface); color: var(--text); font-weight: var(--w-semibold); cursor: pointer; transition: background var(--dur); }
+.dv .tk-chip:hover { background: var(--tile); }
+.dv .tk-chip[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.dv .dv-n { font-weight: var(--w-regular); font-variant-numeric: tabular-nums; opacity: 0.85; }
+.dv-status { min-height: 1.4em; margin: 0; font-size: var(--t-s); color: var(--text); }
+
+.dv-body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--sp-2) var(--sp-5) var(--sp-4); border-top: 1px solid var(--line); background: var(--surface-2); }
+.dv-group { padding-top: var(--sp-3); }
+.dv-group h3 { margin: 0 0 var(--sp-3); font-size: var(--t-xl); font-weight: var(--w-semibold); }
+.dv-grid, .dv-others { list-style: none; margin: 0; padding: 0; }
+.dv-grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
+.dv-grid > li { display: flex; }
+
+.dv-card { display: flex; flex-direction: column; gap: var(--sp-2); width: 100%; padding: var(--sp-4); border: 1px solid var(--line-strong); border-radius: var(--r-l); background: var(--surface); }
+.dv-badges { display: flex; flex-wrap: wrap; gap: var(--sp-2); min-height: 20px; }
+.dv-badge { display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 99px; background: var(--accent-soft); color: var(--accent-text); font-size: var(--t-xs); font-weight: var(--w-semibold); line-height: 1; }
+.dv-badge.level { background: var(--tile); color: var(--text-2); }
+.dv-badge.off { background: transparent; border: 1px solid var(--warn-ink); color: var(--warn-ink); }
+.dv-card h4 { margin: 0; font-size: var(--t-xl); font-weight: var(--w-semibold); }
+.dv-card p { margin: 0; font-size: var(--t-m); line-height: 1.5; user-select: text; }
+.dv-summary { color: var(--text); }
+.dv-where { color: var(--text-2); }
+.dv-where b { font-weight: var(--w-semibold); color: var(--text); }
+.dv-note { color: var(--text-2); font-size: var(--t-s); }
+.dv-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-top: auto; padding-top: var(--sp-3); }
+.dv-keys { display: inline-flex; gap: 3px; }
+.dv-keys .tk-kbd { min-width: 22px; text-align: center; font-variant-numeric: tabular-nums; }
+.dv-nokey { font-size: var(--t-s); color: var(--text-2); }
+.dv-actions { display: inline-flex; flex-wrap: wrap; gap: var(--sp-2); margin-left: auto; }
+
+.dv-others { display: grid; gap: var(--sp-2); }
+.dv-other { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); }
+.dv-other > div { display: grid; gap: 2px; min-width: 0; }
+.dv-other b { font-size: var(--t-m); font-weight: var(--w-semibold); }
+.dv-other span { font-size: var(--t-s); line-height: 1.4; color: var(--text-2); }
+.dv-empty { padding: var(--sp-5) var(--sp-4); }
+.dv-empty p { max-width: 44ch; }
+
+.dv-foot-note { padding: var(--sp-2) var(--sp-5) var(--sp-3); border-top: 1px solid var(--line); font-size: var(--t-s); color: var(--text-2); }
+
+@media (max-width: 680px) {
+  .dv-head, .dv-body, .dv-foot-note { padding-left: var(--sp-3); padding-right: var(--sp-3); }
+  .dv-other { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .dv .tk-chip { transition: none; }
+}
+@media (prefers-contrast: more) {
+  .dv-card, .dv-other { border-color: var(--text-3); border-width: 2px; }
+}
+/* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
+:root[data-contrast='more'] .dv-card, :root[data-contrast='more'] .dv-other { border-color: var(--text-3); border-width: 2px; }

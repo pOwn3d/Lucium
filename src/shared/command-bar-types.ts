@@ -30,6 +30,8 @@ export type CommandAction =
   | 'clear-site-now'
   | 'reload-all'
   | 'recent-notices'
+  /** « Découvrir Lucium »: opens the panel of the features by task (shared/discover.ts). */
+  | 'discover'
   | 'web-store'
   | 'aside-space'
   | 'lock-now'

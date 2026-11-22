@@ -4,6 +4,7 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { GUIDED_SETUP_REQUEST } from '@shared/settings-guide'
 import { ARC_GUIDE_REQUEST } from '@shared/arc-guide'
+import { DISCOVER_REQUEST } from '@shared/discover'
 import { PROBLEM_REPORT_REQUEST } from '@shared/problem-report'
 import { extensionMenuCommands, takenExtensionShortcuts } from '@shared/keybindings'
 import { windowEntryLabel } from '@shared/window-names'
@@ -98,6 +99,8 @@ export function helpMenu({ browser, actions, state, acc, alone, kept, withSecond
     role: 'help',
     submenu: [
       { label: t('menu.premiers-pas'), click: alone(() => actions.openDocumentation('start')) },
+      // Greyed out in a private window: the panel leads to others that window does not open (shared/private-window.ts).
+      { label: t('discover.titre'), ...kept, click: () => browser.openOverlay(DISCOVER_REQUEST) },
       ...withSecondKey('shortcutHelp', { label: t('menu.aide-des-raccourcis'), accelerator: acc('shortcutHelp'), visible: shortcutHelpOn, enabled: shortcutHelpOn, click: toggleOverlay({ panel: 'shortcuts' }) }),
       { label: t('menu.raccourcis-clavier-essentiels'), click: alone(() => browser.openOverlay({ panel: 'settings', pane: 'keyboard', anchor: 'shortcuts' })) },
       { label: t('menu.documentation-d-lucium'), click: alone(() => actions.openDocumentation('folder')) },

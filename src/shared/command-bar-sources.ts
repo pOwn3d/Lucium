@@ -176,7 +176,8 @@ export function searchOnlyActions(state: Pick<SidebarState, 'settings'>, platfor
     { kind: 'action', id: 'action:clear-site-data', label: t('cmd.effacer-les-donnees-du-site'), detail: actionDetail('clear-site-data', state, platform), action: 'clear-site-data' },
     { kind: 'action', id: 'action:clear-site-now', label: t('cmd.effacer-les-donnees-du-site-maintenant'), detail: actionDetail('clear-site-now', state, platform), action: 'clear-site-now' },
     { kind: 'action', id: 'action:reload-all', label: t('cmd.actualiser-tous-les-onglets'), detail: t('cmd.action'), action: 'reload-all' },
-    { kind: 'action', id: 'action:recent-notices', label: t('cmd.notifications-recentes'), detail: t('cmd.action'), action: 'recent-notices' }
+    { kind: 'action', id: 'action:recent-notices', label: t('cmd.notifications-recentes'), detail: t('cmd.action'), action: 'recent-notices' },
+    { kind: 'action', id: 'action:discover', label: t('discover.titre'), detail: t('cmd.action'), action: 'discover' }
   ]
 }
 

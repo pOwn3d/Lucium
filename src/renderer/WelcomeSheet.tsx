@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react'
 import type { ImportSourceInfo } from '@shared/import-sources'
 import type { Settings } from '@shared/model'
 import { api, useSnapshot } from './api'
+import { DISCOVER_REQUEST } from '@shared/discover'
 import { t } from '@shared/i18n'
 import './welcome-sheet.css'
 
@@ -29,10 +30,12 @@ interface ViewProps {
   onAppearance: (value: Appearance) => void
   onDefault: () => void
   onClose: () => void
+  /** Opens « Découvrir Lucium »; without it (the sheet drawn alone) the sheet has no such button. */
+  onDiscover?: () => void
 }
 
 /** The sheet as it is drawn from what it is given (the container below fetches it). */
-export function WelcomeView({ sources, appearance, isDefault, onImport, onAppearance, onDefault, onClose }: ViewProps) {
+export function WelcomeView({ sources, appearance, isDefault, onImport, onAppearance, onDefault, onClose, onDiscover }: ViewProps) {
   const found = (sources ?? []).filter((source) => (WELCOME_SOURCES as readonly string[]).includes(source.id) && source.found)
   return (
     <div className="card welcome" role="dialog" aria-modal="true" aria-labelledby="welcome-title" aria-describedby="welcome-lead">
@@ -80,6 +83,11 @@ export function WelcomeView({ sources, appearance, isDefault, onImport, onAppear
 
       <div className="row end">
         <span className="muted welcome-again">{t('welcome.aide-premier-lancement-rouvre-cette-feuille')}</span>
+        {onDiscover && (
+          <button type="button" className="button" onClick={onDiscover}>
+            {t('discover.lien-bienvenue')}
+          </button>
+        )}
         <button type="button" className="button" onClick={onClose}>
           {t('welcome.plus-tard')}
         </button>
@@ -144,6 +152,7 @@ export function WelcomeSheet() {
       onAppearance={(interfaceAppearance) => void act.dispatch({ type: 'settings/update', patch: { interfaceAppearance } })}
       onDefault={setDefault}
       onClose={() => act.closeOverlay()}
+      onDiscover={() => act.openOverlay(DISCOVER_REQUEST)}
     />
   )
 }
