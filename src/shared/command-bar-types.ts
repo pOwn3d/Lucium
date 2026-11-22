@@ -28,6 +28,8 @@ export type CommandAction =
   | 'save-session'
   | 'sessions'
   | 'clear-site-now'
+  | 'clear-everything'
+  | 'new-identity'
   | 'reload-all'
   | 'recent-notices'
   /** « Découvrir Lucium »: opens the panel of the features by task (shared/discover.ts). */

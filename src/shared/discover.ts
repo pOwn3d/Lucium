@@ -869,6 +869,34 @@ export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
     setting: { panel: 'settings', pane: 'protection', anchor: 'sitedata' }
   },
   {
+    id: 'clear-everything',
+    task: 'protect',
+    level: 'advanced',
+    isNew: true,
+    name: 'discover.tout-effacer-nom',
+    summary: 'discover.tout-effacer-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.archive', 'menu.tout-effacer'] },
+    keywords: 'tout effacer bouton feu cookies stockage cache historique sites exclus clear all fire button cookies storage cache history excluded sites',
+    shortcut: 'clearEverything',
+    try: { kind: 'hint' },
+    setting: { panel: 'settings', pane: 'protection' }
+  },
+  {
+    id: 'new-identity',
+    task: 'protect',
+    level: 'advanced',
+    isNew: true,
+    name: 'discover.nouvelle-identite-nom',
+    summary: 'discover.nouvelle-identite-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.archive', 'menu.nouvelle-identite'] },
+    keywords: 'nouvelle identite repartir de zero fermer onglets effacer tout nouvelle fenetre new identity start fresh close tabs clear everything new window',
+    shortcut: 'newIdentity',
+    try: { kind: 'hint' },
+    setting: { panel: 'settings', pane: 'protection' }
+  },
+  {
     id: 'profiles',
     task: 'protect',
     level: 'advanced',

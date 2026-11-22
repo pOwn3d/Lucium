@@ -972,3 +972,17 @@ describe('Home and End in the field (resultAtEdge)', () => {
     expect(resultAtEdge('Home', none, caret('abc', 0), 0)).toBeNull()
   })
 })
+
+describe('« Tout effacer » and « Nouvelle identité »', () => {
+  const state = world().state
+  const found = (query: string, action: string) => rankCandidates(query, state).filter((c) => c.kind === 'action' && c.action === action)
+
+  it('are found by what is typed, never listed on an empty bar, and run without an action of the reducer', () => {
+    expect(found('tout effacer', 'clear-everything')).toHaveLength(1)
+    expect(found('nouvelle identité', 'new-identity')).toHaveLength(1)
+    expect(found('', 'clear-everything')).toEqual([])
+    expect(found('', 'new-identity')).toEqual([])
+    expect(actionToDispatch('clear-everything', state)).toBeNull()
+    expect(actionToDispatch('new-identity', state)).toBeNull()
+  })
+})

@@ -148,6 +148,8 @@ export interface LuciumApi {
   clearSites(request: SiteDataBatchRequest): Promise<SiteDataSiteResult[]>
   /** Clears the site of the current page with the choices the panel remembers, and tells how it went (the shortcut without the panel). */
   clearSiteNow(): void
+  /** « Tout effacer » (`everything`) or « Nouvelle identité » (`identity`) from the command bar: the main process asks for confirmation, then erases. */
+  clearEverything(kind: 'everything' | 'identity'): void
   /**
    * Reloads the tabs of every space ("Actualiser tous les onglets"); the toast tells how many. `everything`: the button of the sidebar, which wakes
    * the sleeping tabs too whatever the setting `reloadAllWakes` says; without it (the command bar), the setting decides.

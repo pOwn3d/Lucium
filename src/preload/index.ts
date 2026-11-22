@@ -73,6 +73,7 @@ const api: LuciumApi = {
   siteCookieCount: (host, subdomains) => ipcRenderer.invoke(Channel.siteCookieCount, host, subdomains),
   clearSites: (request) => ipcRenderer.invoke(Channel.clearSites, request),
   clearSiteNow: () => ipcRenderer.send(Channel.clearSiteNow),
+  clearEverything: (kind) => ipcRenderer.send(Channel.clearEverything, kind),
   reloadAllTabs: (everything?: boolean) => ipcRenderer.send(Channel.reloadAllTabs, everything === true),
   reloadSpaceTabs: () => ipcRenderer.send(Channel.reloadSpaceTabs),
   splitDrag: (phase, tabId) => ipcRenderer.send(Channel.splitDrag, phase, tabId),

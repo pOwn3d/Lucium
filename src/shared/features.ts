@@ -1060,6 +1060,7 @@ export const NOT_OPTIONAL_SETTINGS: Partial<Record<BooleanSettingKey | 'blockTra
   readableToolbarButton: 'option du contraste de la page (réglages `readableMode`, `siteReadableMode`) : le bouton « Contraste de la page » de la barre d’outils, qui montre le mode du site affiché et ouvre le menu qui le change ; absent d’une page qui n’est pas web, d’un PDF, d’un onglet privé et d’une fenêtre privée',
   autoplayPerSite: 'deprecated: « Un réglage pour chaque site » of the autoplay is gone, the choice of a site always applies and the site panel always offers it; nothing reads the key, which stays so that an older state file loads',
   siteDataClearOnQuit: 'option de « Effacer les données d’un site à la fermeture » (clear-on-close)',
+  siteDataClearOnQuitAll: 'option de « Effacer les données d’un site à la fermeture » (clear-on-close) : tous les sites à la fermeture de Lucium',
   lockApp: 'option du verrouillage (lock) : verrouille aussi au lancement et à la sortie de veille',
   lockTouchId: 'option du verrouillage (lock) : Touch ID quand il est disponible',
   modifiedClickBackground: 'mode d’ouverture des liens (⌘-clic, clic du milieu), pas une fonction : le réglage choisit seulement si l’onglet s’ouvre au premier plan',

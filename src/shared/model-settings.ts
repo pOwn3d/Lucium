@@ -370,6 +370,10 @@ export interface Settings {
   siteDataClearOnClose: string[]
   /** …and when the application quits. */
   siteDataClearOnQuit: boolean
+  /** With `siteDataClearOnQuit`: at quit, every site goes (cookies and storage of each profile), but the sites of `clearAllKeepHosts`, not only the listed ones. Off by default. */
+  siteDataClearOnQuitAll: boolean
+  /** Sites (host, subdomains included) that « Tout effacer » and « Nouvelle identité » spare: their cookies and storage stay (see clear-all.ts). Empty by default: everything goes. */
+  clearAllKeepHosts: string[]
   /** Sites (exact host) whose pages load without running any script: the JavaScript row of the site panel (see site-javascript.ts). Empty by default, and then nothing runs for it. */
   siteJavascriptOff: string[]
   /** The user's own filter lists can be added and are compiled with the blocker's. Off, none is compiled (their rules stay on disk). */

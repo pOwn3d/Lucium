@@ -435,6 +435,10 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
           act.clearSiteNow()
           break
         }
+        if (c.action === 'clear-everything' || c.action === 'new-identity') {
+          act.clearEverything(c.action === 'new-identity' ? 'identity' : 'everything')
+          break
+        }
         if (c.action === 'reload-all') {
           act.reloadAllTabs()
           break

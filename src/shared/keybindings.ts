@@ -180,6 +180,8 @@ export const COMMANDS: readonly CommandDef[] = [
   // What that shortcut does in the extension itself: no panel, the site of the page is cleared with the remembered choices, then a notice.
   { id: 'clearSiteDataNow', get label() { return t('menu.effacer-les-donnees-du-site-maintenant') }, get group() { return t('settings.site') }, accelerator: 'CmdOrCtrl+Alt+Shift+X' },
   // No default key, the user can give one.
+  { id: 'clearEverything', get label() { return t('menu.tout-effacer') }, get group() { return t('menu.archive') }, accelerator: '' },
+  { id: 'newIdentity', get label() { return t('menu.nouvelle-identite') }, get group() { return t('menu.archive') }, accelerator: '' },
   { id: 'cookieManager', get label() { return t('menu.cookies-par-site') }, get group() { return t('settings.site') }, accelerator: '' }
 ]
 

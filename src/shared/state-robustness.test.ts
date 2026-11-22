@@ -349,6 +349,8 @@ function rich(): SidebarState {
     siteDataClearOnCloseEnabled: true,
     siteDataClearOnClose: ['example.org', 'localhost:3000'],
     siteDataClearOnQuit: true,
+    siteDataClearOnQuitAll: true,
+    clearAllKeepHosts: ['example.org'],
     customFilterListsEnabled: false,
     customFilterLists: [{ id: 'custom-0123abcd', title: 'Mes règles', source: 'paste', sourceName: 'Règles collées', enabled: false, addedAt: 5 }],
     autoBackup: false,
@@ -646,6 +648,8 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   siteJavascriptOff: (v) => Array.isArray(v) && v.length <= 500 && unique(v) && v.every((host) => typeof host === 'string' && parseSiteHost(host)?.host === host),
   siteDataClearOnClose: (v) => Array.isArray(v) && v.length <= 100 && unique(v) && v.every((host) => typeof host === 'string' && parseSiteHost(host)?.host === host),
   siteDataClearOnQuit: bool,
+  siteDataClearOnQuitAll: bool,
+  clearAllKeepHosts: (v) => Array.isArray(v) && v.length <= 200 && unique(v) && v.every((host) => typeof host === 'string' && keepHostOf(host) === host),
   customFilterLists: (v) =>
     Array.isArray(v) && v.length <= 20 && unique(v.map((l) => (isRecord(l) ? l['id'] : l))) &&
     v.every((l) => isRecord(l) && keysOf(l).sort().join() === 'addedAt,enabled,id,source,sourceName,title' && typeof l['id'] === 'string' && /^custom-[0-9a-f]{8}$/.test(l['id']) && text(l['title']) && l['title'].trim() !== '' && l['title'].length <= 80 && text(l['sourceName']) && l['sourceName'].trim() !== '' && (l['source'] === 'file' || l['source'] === 'paste') && bool(l['enabled']) && num(0)(l['addedAt'])),

@@ -102,7 +102,7 @@ export const SETTINGS_KEYS = {
     'blockAds', 'blockCookieBanners', 'blockMode', 'blockCosmetic', 'blockExceptions', 'popupExceptions',
     'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions',
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
-    'historyOff', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
+    'historyOff', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'siteDataClearOnQuitAll', 'clearAllKeepHosts',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
     'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager',
     'disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists', 'dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'
@@ -278,6 +278,7 @@ export const KEPT_ON_RESET = {
   translateNeverSites: 'a list of sites',
   translateAlways: 'a list of languages',
   siteDataClearOnClose: 'a list of sites',
+  clearAllKeepHosts: 'a list of sites',
   siteJavascriptOff: 'a list of sites',
   siteAutoplay: 'a list of sites',
   linkRoutes: 'the routes of the links',
