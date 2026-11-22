@@ -3,7 +3,7 @@
 // docs/architecture.md).
 
 import { totalmem } from 'node:os'
-import { dialog, session } from 'electron'
+import { Notification, dialog, session } from 'electron'
 import type { UiSnapshot } from '@shared/ipc'
 import type { DownloadInfo, PeekState, SidebarState } from '@shared/model'
 import { PROMPT_CANCELLED } from '@shared/page-dialog'
@@ -22,6 +22,7 @@ import { rememberedDecision } from '@shared/permissions'
 import type { ExtensionTabHooks } from '../engine/types'
 import { ExtensionShims } from './extension-shims'
 import { gateAutoArchive } from './auto-archive'
+import { gateTabReminders } from './tab-reminders'
 import { AutoReloader } from './auto-reload'
 import { showSystemNotice } from './system-notice'
 import { batterySaver } from './battery-saver'
@@ -296,6 +297,20 @@ export class Browser extends BrowserLayout {
     if (!this.isPrivate() && !this.isSecondary()) this.gates.gate('resource-gauge', { start: () => this.startResourceWatch() })
     // A private window has no archive to sweep into; the main window sweeps the shared one. No timer and no pass while archiving is off everywhere.
     if (!this.isPrivate() && !this.isSecondary()) gateAutoArchive(this.gates, () => this.dispatch({ type: 'archive/sweep' }))
+    // "Rappel d'onglet": one timer for the earliest reminder, in the main window only (a private window keeps none). The notification is local and names the page.
+    if (!this.isPrivate() && !this.isSecondary()) {
+      gateTabReminders(this.gates, {
+        store: this.store,
+        now: () => Date.now(),
+        setTimer: (run, ms) => setTimeout(run, ms),
+        clearTimer: (timer) => clearTimeout(timer as NodeJS.Timeout),
+        notify: (reminder) => {
+          if (!Notification.isSupported()) return
+          new Notification({ title: t('reminder.onglet-rappele'), body: reminder.title, silent: false }).show()
+        },
+        fire: () => this.dispatch({ type: 'reminder/fire' })
+      })
+    }
     // The launch loads what the windows show (this sync, and the sync of each window restored) and the tabs the user keeps alive, not every tab
     // at once: index.ts calls `wakeAtLaunch` of the main window once the windows are restored, so that what they show is known.
     this.sync()

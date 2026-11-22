@@ -950,6 +950,15 @@ export const FEATURES = [
     cost: ['none']
   },
   {
+    id: 'tab-reminders',
+    key: 'tabReminders',
+    get label() { return t('features.rappel-d-onglet') },
+    group: 'tabs',
+    get description() { return t('features.un-onglet-quitte-la-colonne-et-revient-a-l') },
+    // One timer, armed for the earliest pending reminder only: none while nothing waits (main/shell/tab-reminders.ts).
+    cost: ['timer']
+  },
+  {
     id: 'bookmarks',
     key: 'bookmarkManager',
     get label() { return t('features.bibliotheque-de-signets-avec-etiquettes') },

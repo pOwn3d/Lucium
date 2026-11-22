@@ -1,9 +1,10 @@
 // A family of the reducer of the sidebar (sidebar.ts composes them in `reduceCore`): the archive, the favourites, read later, the bookmarks, the
 // live folders, the sessions.
 
-import { READ_LATER_FOLDERS_LIMIT, type ArchivedTab, type Favorite, type Folder, type Session, type SidebarState, isListedTab, TAB_NAME_MAX } from './model'
+import { READ_LATER_FOLDERS_LIMIT, type ArchivedTab, type Favorite, type Folder, type Session, type SidebarState, type TabReminder, isListedTab, TAB_NAME_MAX } from './model'
 import { containerById } from './containers'
 import { SESSIONS_MAX, SESSION_SPACE_EMOJI, appendSessionTabs, autoSessionName, cleanSessionName, restorableTabs, sessionTabsOf } from './sessions'
+import { dueReminders, tabReminderOf, tabReminderOutcome, withReminder } from './tab-reminder'
 import { moveReadLater, readLaterItemOf, readLaterOutcome } from './read-later'
 import { LIVE_FOLDERS_MAX, afterFailure, afterLook, cleanLiveSource, defaultLiveName, isLiveFolder, liveText } from './live-folders'
 import { bookmarkAddressProblem, bookmarkOf, bookmarkOutcome, cleanBookmarks, cleanTags, mergeBookmarks, removeTag, renameTag } from './bookmarks'
@@ -22,6 +23,11 @@ import { sessionSourceTabs, tabOpenedSince } from './sidebar-selectors'
 import { HOUR_MS, replaceTab, onlyPrivateTabsOn, select, archiveTabs, moveTabs, shownElsewhereOf, withSplitPanes } from './sidebar-helpers'
 import type { Reducers } from './sidebar-helpers'
 import { usageAfterForgetting } from './command-bar-usage'
+
+/** The tab that brings a reminder back: in its space while that space exists, else in the one on screen. */
+function reopenReminder(state: SidebarState, entry: TabReminder, background: boolean): Action {
+  return { type: 'tab/open', url: entry.url, ...(state.spaces.some((s) => s.id === entry.spaceId) ? { spaceId: entry.spaceId } : {}), ...(background ? { background: true } : {}) }
+}
 
 /** The actions on the library: archive, read later, bookmarks, live folders, favourites, their icons and the sessions (archive/, readlater/, readlater-folder/, bookmark/, bookmarks/, livefolder/, favorite/, favicon/, session/); undefined for the others. */
 export function reduceLibrary(state: SidebarState, action: Action, ctx: Ctx, again: Reducers): SidebarState | undefined {
@@ -100,6 +106,31 @@ export function reduceLibrary(state: SidebarState, action: Action, ctx: Ctx, aga
         saved = { ...state, readLater: [item, ...state.readLater] }
       }
       return tab.pinned ? saved : again.core(saved, { type: 'tab/close', id: tab.id }, ctx)
+    }
+    // The reminders belong to the setting: with it off none is made, opened or fired (a pending one waits for it to come back).
+    case 'reminder/add': {
+      const tab = state.tabs.find((t) => t.id === action.tabId)
+      // The list is saved: a private page is not put in it.
+      if (!state.settings.tabReminders || !tab || tab.private === true) return state
+      const outcome = tabReminderOutcome(state.tabReminders, tab, action.dueAt, ctx.now)
+      if (outcome !== 'saved' && outcome !== 'updated') return state
+      const entry = tabReminderOf(tab, action.dueAt, ctx)
+      if (!entry) return state
+      const saved = { ...state, tabReminders: withReminder(state.tabReminders, entry) }
+      return tab.pinned ? saved : again.core(saved, { type: 'tab/close', id: tab.id }, ctx)
+    }
+    case 'reminder/cancel':
+      return state.tabReminders.some((r) => r.id === action.id) ? { ...state, tabReminders: state.tabReminders.filter((r) => r.id !== action.id) } : state
+    case 'reminder/open': {
+      const entry = state.settings.tabReminders ? state.tabReminders.find((r) => r.id === action.id) : undefined
+      return entry ? again.reduce({ ...state, tabReminders: state.tabReminders.filter((r) => r.id !== entry.id) }, reopenReminder(state, entry, false), ctx) : state
+    }
+    case 'reminder/fire': {
+      if (!state.settings.tabReminders) return state
+      const due = dueReminders(state.tabReminders, ctx.now)
+      if (due.length === 0) return state
+      const ids = new Set(due.map((r) => r.id))
+      return due.reduce((s, entry) => again.reduce(s, reopenReminder(state, entry, true), ctx), { ...state, tabReminders: state.tabReminders.filter((r) => !ids.has(r.id)) })
     }
     case 'readlater/open': {
       const item = state.readLater.find((i) => i.id === action.id)

@@ -80,6 +80,7 @@ interface Entry {
 
 const INVENTORY: Entry[] = [
   { kind: 'recurring timer', file: 'shell/auto-archive.ts', count: 1, why: "gate 'auto-archive': no timer while the general delay and every profile's are 'Jamais' (feature-wiring.test.ts)" },
+  { kind: 'subscription to the state', file: 'shell/tab-reminders.ts', count: 1, why: "gate 'tab-reminders': subscribed and armed only while the setting is on, and the timer only while a reminder waits (tab-reminders.test.ts)" },
   { kind: 'recurring timer', file: 'shell/auto-update.ts', count: 1, why: "gate 'auto-update' (feature-wiring.test.ts)" },
   { kind: 'recurring timer', file: 'shell/little.ts', count: 1, why: "gate 'little-archive' (smoke-features.ts)" },
   { kind: 'recurring timer', file: 'shell/browser.ts', count: 1, why: "the sleep sweep, gate 'sleep' (smoke-features.ts)" },

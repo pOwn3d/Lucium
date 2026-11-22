@@ -59,6 +59,12 @@ describe('revertMissing', () => {
     expect(spacesOf(used, [pro]).map((s) => s.name)).toEqual(['Travail'])
   })
 
+  it('drops the command bar ranking of a lost profile that has no name, and keeps the default one', () => {
+    // A profile that has neither a name nor a setting exists only through its spaces: once they leave it, nothing else keeps its ranking.
+    const bare = { ...state, spaces: state.spaces.map((sp, i) => (i === 1 ? { ...sp, profileId: 'lost' } : sp)), commandBarUsage: { lost: { 'url:https://a.example/': 1 }, default: { 'url:https://b.example/': 2 } } }
+    expect(reduce(bare, { type: 'profile/revert-missing', ids: ['lost'] }, ctx).commandBarUsage).toEqual({ default: { 'url:https://b.example/': 2 } })
+  })
+
   it('does nothing for a profile no space uses, or for ids that are not a list', () => {
     expect(revertMissing(state, ['nobody'])).toBe(state)
     expect(reduce(state, { type: 'profile/revert-missing', ids: 'x' as unknown as string[] }, ctx)).toBe(state)

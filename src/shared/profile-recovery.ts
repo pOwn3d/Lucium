@@ -3,6 +3,7 @@
 // only a profile that was *used* can be missing: the first page of a profile marks it (`usedProfiles`).
 
 import type { SidebarState, Space } from './model'
+import { pruneUsageProfiles } from './command-bar-usage'
 import { isProfileId } from './profiles'
 import { t } from './i18n'
 
@@ -34,11 +35,12 @@ export const spacesOf = (state: SidebarState, profiles: readonly string[]): Spac
 export function revertMissing(state: SidebarState, profiles: readonly string[]): SidebarState {
   const affected = spacesOf(state, profiles)
   if (affected.length === 0) return state
-  return {
+  // The command bar's ranking of a profile that is no longer used goes with it, as `normalize` would drop it at the next launch (the invariants test caught the gap).
+  return pruneUsageProfiles({
     ...state,
     spaces: state.spaces.map((space) => (profiles.includes(space.profileId) ? { ...space, profileId: 'default' } : space)),
     settings: { ...state.settings, usedProfiles: state.settings.usedProfiles.filter((id) => !profiles.includes(id)) }
-  }
+  })
 }
 
 /**

@@ -226,6 +226,18 @@ export type Action =
   | { type: 'readlater/open'; id: string }
   | { type: 'readlater/remove'; id: string }
   | { type: 'readlater/clear' }
+  /**
+   * "Me le rappeler" (setting `tabReminders`; with it off every one of these changes nothing): puts the page of a tab away until `dueAt` (a time
+   * in the future) and closes the tab (a pinned tab stays). A page already waiting has its time moved; a full list, a page that is not a web
+   * page, a private tab or a time that is not ahead changes nothing and leaves the tab open.
+   */
+  | { type: 'reminder/add'; tabId: string; dueAt: number }
+  /** Forgets a reminder (the tab does not come back). */
+  | { type: 'reminder/cancel'; id: string }
+  /** Brings a reminder back now, as a tab of its space. */
+  | { type: 'reminder/open'; id: string }
+  /** Brings back every reminder whose time has come, in the background, one tab each (the main process sends it when its timer fires, after the notifications). */
+  | { type: 'reminder/fire' }
   /** Creates a folder in the read-later list (with the setting `useReadLaterFolders` on, up to `READ_LATER_FOLDERS_LIMIT`). A blank name gives "Dossier". */
   | { type: 'readlater-folder/create'; name: string }
   | { type: 'readlater-folder/rename'; id: string; name: string }

@@ -349,6 +349,10 @@ exports[`the context menus of the sidebar, as built > of a tab in a private wind
   - type="separator"
   - label="Nouvelle fenêtre" click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - label="Veille" type="header"
 - enabled=false label="Mettre en veille" icon=sleep(template) click
 - enabled=false label="Geler (garde la page en mémoire)" icon=freeze(template) click
@@ -401,6 +405,10 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - label="Nouvelle fenêtre" click
 - label="Replier les onglets enfants" icon=branch(template) click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - enabled=true label="Ajouter aux signets" icon=bookmark(template) click
 - enabled=true label="Ouvrir comme application" icon=app(template) click
 - label="Ouvrir dans un conteneur" icon=container(template)
@@ -463,6 +471,10 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - label="Nouvelle fenêtre" click
 - label="Sortir l’onglet de son parent" icon=branch(template) click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - enabled=true label="Ajouter aux signets" icon=bookmark(template) click
 - enabled=true label="Ouvrir comme application" icon=app(template) click
 - label="Ouvrir dans un conteneur" icon=container(template)
@@ -528,6 +540,10 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - type="separator"
   - label="Nouvelle fenêtre" click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - enabled=true label="Ajouter aux signets" icon=bookmark(template) click
 - enabled=true label="Ouvrir comme application" icon=app(template) click
 - label="Ouvrir dans un conteneur" icon=container(template)
@@ -590,6 +606,10 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - type="separator"
   - label="Nouvelle fenêtre" click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - enabled=true label="Ajouter aux signets" icon=bookmark(template) click
 - enabled=true label="Ouvrir comme application" icon=app(template) click
 - label="Ouvrir dans un conteneur" icon=container(template)
@@ -757,6 +777,9 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
   - type="separator"
   - accelerator=undefined enabled=false label="Lire plus tard" click
   - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - enabled=false label="Me le rappeler" visible=true
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=false label="Mots de passe…" visible=false click
   - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=false click
   - accelerator=undefined enabled=false label="Ajouter aux signets" visible=false click
@@ -1048,6 +1071,9 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - type="separator"
   - accelerator=undefined enabled=false label="Lire plus tard" click(brings back)
   - accelerator=undefined enabled=true label="Liste de lecture…" click(brings back)
+  - enabled=false label="Me le rappeler" visible=true
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=true label="Mots de passe…" visible=true click(brings back)
   - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=true click(brings back)
   - accelerator=undefined enabled=false label="Ajouter aux signets" visible=true click(brings back)
@@ -1364,6 +1390,12 @@ exports[`the menu bar, as built > in a private window 1`] = `
   - type="separator"
   - accelerator=undefined enabled=false label="Lire plus tard" click
   - accelerator=undefined enabled=false label="Liste de lecture…" click
+  - enabled=false label="Me le rappeler" visible=false
+    - label="Ce soir" click
+    - label="Demain matin" click
+    - label="Dans une semaine" click
+  - enabled=false label="Rappels d’onglets" visible=false
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=false label="Mots de passe…" visible=false click
   - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=false click
   - accelerator=undefined enabled=false label="Ajouter aux signets" visible=false click
@@ -1673,6 +1705,12 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
   - type="separator"
   - accelerator=undefined enabled=true label="Lire plus tard" click
   - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - enabled=true label="Me le rappeler" visible=true
+    - label="Ce soir" click
+    - label="Demain matin" click
+    - label="Dans une semaine" click
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=true label="Mots de passe…" visible=true click
   - accelerator=undefined enabled=true label="Remplir l’identifiant et le mot de passe" visible=true click
   - accelerator=undefined enabled=true label="Ajouter aux signets" visible=true click
@@ -1992,6 +2030,12 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
   - type="separator"
   - accelerator=undefined enabled=true label="Lire plus tard" click
   - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - enabled=true label="Me le rappeler" visible=true
+    - label="Ce soir" click
+    - label="Demain matin" click
+    - label="Dans une semaine" click
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=true label="Mots de passe…" visible=true click
   - accelerator=undefined enabled=true label="Remplir l’identifiant et le mot de passe" visible=true click
   - accelerator=undefined enabled=true label="Ajouter aux signets" visible=true click
@@ -2304,6 +2348,12 @@ exports[`the menu bar, as built > with every optional setting off and windows th
   - type="separator"
   - accelerator=undefined enabled=true label="Lire plus tard" click
   - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - enabled=true label="Me le rappeler" visible=true
+    - label="Ce soir" click
+    - label="Demain matin" click
+    - label="Dans une semaine" click
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=false label="Mots de passe…" visible=false click
   - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=false click
   - accelerator=undefined enabled=false label="Ajouter aux signets" visible=false click

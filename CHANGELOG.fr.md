@@ -17,6 +17,13 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Ajouts
 
 - **Position de défilement retrouvée après un redémarrage** : Réglages › Onglets et fenêtres › « Retrouver la position de défilement des onglets », désactivé par défaut. Un onglet revient là où sa page était défilée. Seuls un nombre par onglet et son adresse sont gardés, sur votre Mac ; jamais la page, rien pour les onglets privés.
+### Ajouts
+
+- **Rappel d’onglet** : clic droit sur un onglet › Me le rappeler › Ce soir, Demain matin ou Dans une semaine. L’onglet revient à l’heure dite, dans son espace, avec une notification. Fichier › Rappels d’onglets les liste. Désactivable dans Réglages › Fonctions en option.
+
+### Corrections
+
+- **Classement de la barre de commandes d’un profil perdu** : quand les espaces d’un profil manquant reviennent au profil par défaut, le classement de la barre de commandes de ce profil disparaît avec lui, comme il le faisait déjà au lancement suivant.
 
 ## [1.1.5] - 2026-11-20
 

@@ -23,6 +23,13 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Added
 
 - **Scroll position restored after a relaunch**: Settings › Tabs and windows › “Restore the scroll position of tabs”, off by default. A tab comes back to where its page was scrolled. Only a number per tab and its address is kept, on your Mac; never the page, nothing for private tabs.
+### Added
+
+- **Tab reminders**: right-click a tab › Remind me › This evening, Tomorrow morning or In a week. The tab comes back then, in its space, with a notification. File › Tab reminders lists them. Off in Settings › Optional features.
+
+### Fixed
+
+- **Command bar ranking of a lost profile**: when spaces of a missing profile go back to the default profile, the ranking of that profile's command bar is dropped with it, as it already was at the next launch.
 
 ## [1.1.5] - 2026-11-20
 
