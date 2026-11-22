@@ -27,6 +27,9 @@ class FakeBrowser {
   constructor(readonly win: FakeWindow) {}
   joinGroup(): void {}
   onPublish(): void {}
+  windowSidebar(): Record<string, never> {
+    return {}
+  }
   putAway(away: boolean): void {
     this.away.push(away)
   }

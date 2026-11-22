@@ -521,6 +521,7 @@
     "lockApp": false,
     "lockedSpaces": [],
     "lockTouchId": true,
+    "lockPrivateIdle": 0,
     "reopenHistory": false,
     "interfaceTranslated": true,
     "language": "auto",

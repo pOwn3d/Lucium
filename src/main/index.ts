@@ -222,8 +222,8 @@ async function main(): Promise<void> {
   // is written (store.ts, `keepStateOfOtherVersion`).
   const loadedState = readState(statePath, app.getVersion())
   const sharedStore = new StateStore(loadedState.state, statePath, undefined, { appVersion: app.getVersion() })
-  // The sign of a clean exit (shell/clean-exit.ts): still there from the last run means that run ended abnormally. The engine test runs in a folder of its own and keeps none.
-  const lastRun = smoke ? { abnormal: false } : noteLaunch(app.getPath('userData'))
+  // The sign of a clean exit (shell/clean-exit.ts): still there from the last run means that run ended abnormally. The engine test runs in a data folder of its own (and opens no launch sheet).
+  const lastRun = noteLaunch(app.getPath('userData'))
   // What the state no longer names is deleted at this launch only when the state was read, was not written by a later version (which may name what
   // this one does not know), and no set-aside copy of it is kept beside it: otherwise what it named would be taken for unused. The same answer holds
   // for the background media here and the folders of deleted containers below.
@@ -486,9 +486,7 @@ async function main(): Promise<void> {
     smoke,
     quitClearMarker,
     copyOnExit: () => void backups.backUp('quit'),
-    markCleanExit: () => {
-      if (!smoke) noteCleanExit(app.getPath('userData'))
-    },
+    markCleanExit: () => noteCleanExit(app.getPath('userData')),
     confirmed: () => quitConfirmed,
     confirm: () => {
       quitConfirmed = true

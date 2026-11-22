@@ -43,6 +43,9 @@ class FakeBrowser {
   }
   stop(): void {}
   republish(): void {}
+  setPrivateLock(): void {}
+  windowLockChanged(): void {}
+  inheritSettings(): void {}
   windowSidebar(): WindowSidebar {
     return this.sidebar
   }

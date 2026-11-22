@@ -41,6 +41,7 @@ function twoWindows(options: { private?: boolean; locked?: boolean } = {}) {
     const own: Record<string, unknown> = {
       options: key === MAIN_WINDOW_KEY ? {} : { windowId: key },
       isPrivate: () => options.private === true,
+      isWindowLocked: () => false,
       namesLockedTarget: () => options.locked === true,
       store: { get: () => state, root: () => ({ get: () => state }) },
       group,
@@ -79,7 +80,7 @@ describe('the channels', () => {
       { kind: 'send', channel: Channel.tabDrag, args: ['end', undefined] },
       { kind: 'send', channel: Channel.dropWindowTabs, args: [{ kind: 'today' }] }
     ])
-    const browser = fakeBrowser()
+    const browser = fakeBrowser({ isWindowLocked: () => false })
     registerIpc(browser.self as never, { get: () => state, subscribe: () => () => {} } as never, {} as never, new Set([1]))
     browser.calls.length = 0
     sendFrom(1, Channel.tabDrag, 'start', ['a'])
