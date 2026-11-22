@@ -33,6 +33,8 @@ export interface SiteDataEnvironment {
   history: { removeSite(host: string, subdomains: boolean): number; hosts(): string[] }
   /** The pages the closed tabs of this profile went through (their Back lists, in the archive and in the copies of the session): the site's go with its history. */
   closedPages: { removeSite(host: string, subdomains: boolean): void }
+  /** The day of last visit kept for the site (for the permissions of sites not visited): it goes with the site's history. */
+  visits: { forgetSite(host: string, subdomains: boolean): void }
   /** The tabs of this profile that have a live page. sessionStorage belongs to a page, not to the profile. */
   tabs: Array<{ url: string; page: { evaluate(js: string): Promise<unknown> } }>
   /** The tab the user is looking at, if it has a page. */
@@ -81,6 +83,11 @@ export async function clearSiteFor(env: SiteDataEnvironment, request: SiteDataRe
     // Whatever became of the visits: the pages of the site in the Back lists of the archived tabs are history too, and they are shown as not erased if they stayed.
     try {
       env.closedPages.removeSite(site.host, request.subdomains)
+    } catch (error) {
+      byType.set('history', { type: 'history', ok: false, error: errorText(error) })
+    }
+    try {
+      env.visits.forgetSite(site.host, request.subdomains)
     } catch (error) {
       byType.set('history', { type: 'history', ok: false, error: errorText(error) })
     }

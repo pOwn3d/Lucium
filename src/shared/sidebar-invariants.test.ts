@@ -422,6 +422,7 @@ const GENERATORS: Generators = {
   'sidepanel/behavior': (g) => ({ type: 'sidepanel/behavior', extensionId: g.pick(['ext1', 'ext2']), openOnActionClick: g.chance(0.5) }),
   // A visit means something only for a site that holds an answer: the run draws one of them when there is one.
   'permission/visit': (g) => ({ type: 'permission/visit', origin: g.chance(0.8) && Object.keys(g.state.sitePermissions).length > 0 ? g.pick(Object.keys(g.state.sitePermissions)) : `https://o${g.int(30)}.example`, day: g.int(30_000) }),
+  'permission/forget-visits': (g) => (g.chance(0.5) ? { type: 'permission/forget-visits' } : { type: 'permission/forget-visits', host: `o${g.int(30)}.example`, subdomains: g.chance(0.5) }),
   'permission/sweep': (g) => ({ type: 'permission/sweep', day: g.int(30_000) }),
   'permission/set': (g) => ({ type: 'permission/set', origin: `https://o${g.int(30)}.example`, permission: g.pick(['camera', 'geolocation', 'notifications']), decision: g.pick(['allow', 'deny', null] as const) }),
   'favorite/add': (g) => ({ type: 'favorite/add', url: g.goodUrl(), title: g.text(), ...(g.chance(0.3) ? { faviconUrl: 'https://a.example/i.png' } : {}), ...(g.chance(0.5) ? { toIndex: g.maybeIndex() } : {}), ...(g.chance(0.5) ? { spaceId: g.spaceId() } : {}) }),

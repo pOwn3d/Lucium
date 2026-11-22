@@ -13,7 +13,7 @@ import { setClearedOnClose } from './site-clear'
 import { CUSTOM_LISTS_MAX, cleanCustomFilterLists, withCustomListEnabled } from './custom-filter-lists'
 import { setDeveloperHost } from './developer-mode'
 import { boundSitePermissions, isRecordKey } from './state-clean'
-import { cleanUnusedPermissionDays, sweepUnused, withVisit } from './unused-permissions'
+import { cleanUnusedPermissionDays, forgetVisits, sweepUnused, withVisit } from './unused-permissions'
 import { readScreen, withNoticed, withPanelSize } from './panel-scale'
 import type { Ctx, Action } from './sidebar-actions'
 import { BOOST_ID, uniqueBoostName, cleanBoost, clampSettings } from './sidebar-state'
@@ -210,6 +210,10 @@ export function reduceSettings(state: SidebarState, action: Action, ctx: Ctx): S
     }
     case 'permission/visit': {
       const visits = withVisit(state.siteVisits, state.sitePermissions, action.origin, action.day)
+      return visits === state.siteVisits ? state : { ...state, siteVisits: visits }
+    }
+    case 'permission/forget-visits': {
+      const visits = forgetVisits(state.siteVisits, action.host, action.subdomains === true)
       return visits === state.siteVisits ? state : { ...state, siteVisits: visits }
     }
     case 'permission/sweep': {

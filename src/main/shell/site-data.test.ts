@@ -13,6 +13,7 @@ function environment(over: Partial<{ clear: SiteDataEnvironment['clear']; tabs: 
   const navigation: string[] = []
   const history: Array<[string, boolean]> = []
   const closedPages: Array<[string, boolean]> = []
+  const visits: Array<[string, boolean]> = []
   const env: SiteDataEnvironment = {
     clear: over.clear ?? (async (request) => {
       engine.push(request)
@@ -26,10 +27,11 @@ function environment(over: Partial<{ clear: SiteDataEnvironment['clear']; tabs: 
       hosts: () => over.hosts ?? []
     },
     closedPages: over.closedPages ?? { removeSite: (host, subdomains) => void closedPages.push([host, subdomains]) },
+    visits: { forgetSite: (host, subdomains) => void visits.push([host, subdomains]) },
     tabs: over.tabs ?? [],
     active: over.activeUrl ? { url: over.activeUrl, page: { reload: () => navigation.push('reload'), loadURL: (url) => navigation.push(`load ${url}`) } } : null
   }
-  return { env, engine, scripts, navigation, history, closedPages }
+  return { env, engine, scripts, navigation, history, closedPages, visits }
 }
 
 const request = (over: Partial<SiteDataRequest> = {}): SiteDataRequest => ({ host: 'example.com', types: [...SITE_DATA_TYPES], subdomains: false, http: true, reload: false, ...over })
@@ -127,6 +129,15 @@ describe('clearSiteFor', () => {
     const results = await clearSiteFor(env, request({ types: ['history'] }))
     expect(history).toEqual([['example.com', false]])
     expect(results).toEqual([{ type: 'history', ok: false, error: 'copies unreadable' }])
+  })
+
+  it('forgets the day of last visit of the site with its history, and only when the history is asked for (this fails if the call is dropped)', async () => {
+    const withHistory = environment()
+    await clearSiteFor(withHistory.env, request({ types: ['history'], subdomains: true }))
+    expect(withHistory.visits).toEqual([['example.com', true]])
+    const without = environment()
+    await clearSiteFor(without.env, request({ types: ['cookies'] }))
+    expect(without.visits).toEqual([])
   })
 
   it('still takes the pages out of the Back lists when the visit history could not be erased', async () => {

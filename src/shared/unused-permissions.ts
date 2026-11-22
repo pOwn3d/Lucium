@@ -7,6 +7,7 @@
 // it: switching the setting on never takes anything back at once. The answer for every site (`ALL_SITES`) is the user's own menu, never a site, and stays.
 
 import { ALL_SITES } from './permissions'
+import { hostBelongsToSite } from './site-data'
 import { isRecordKey } from './state-clean'
 import type { PermissionDecision } from './model'
 
@@ -50,6 +51,18 @@ export function withVisit(visits: Record<string, number>, sitePermissions: SiteP
   // The site goes to the end of the table: what goes when the ceiling is reached is the longest unvisited.
   const { [origin]: _old, ...others } = visits
   return { ...others, [origin]: day }
+}
+
+/**
+ * The table once the visits of `host` (and of its subdomains when asked) are forgotten, or all of them when no host is given: a last-visit day is a
+ * trace of browsing, so it goes with the history that says the same. The same table comes back when nothing is dropped.
+ */
+export function forgetVisits(visits: Record<string, number>, host?: string, subdomains = false): Record<string, number> {
+  const entries = Object.entries(visits)
+  if (entries.length === 0) return visits
+  if (host === undefined) return {}
+  const kept = entries.filter(([origin]) => !(URL.canParse(origin) && hostBelongsToSite(new URL(origin).host, host, subdomains)))
+  return kept.length === entries.length ? visits : Object.fromEntries(kept)
 }
 
 /** What a sweep took back from one site: its address and the permissions that were remembered for it. */

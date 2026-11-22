@@ -136,9 +136,19 @@ describe('the reducer', () => {
     const visited = play(given(90), { type: 'permission/visit', origin: A, day: 100 })
     expect(play(visited, { type: 'permission/set', origin: A, permission: 'camera', decision: null }).siteVisits).toEqual({})
   })
+  it('forgets the visits of a host, of its subdomains when asked, or all of them (this fails if the action does nothing)', () => {
+    const state = { ...given(90), siteVisits: { 'https://a.example': 5, 'https://sub.a.example': 6, 'https://b.example': 7 } }
+    expect(reduce(state, { type: 'permission/forget-visits' }, ctx).siteVisits).toEqual({})
+    expect(reduce(state, { type: 'permission/forget-visits', host: 'a.example' }, ctx).siteVisits).toEqual({ 'https://sub.a.example': 6, 'https://b.example': 7 })
+    expect(reduce(state, { type: 'permission/forget-visits', host: 'a.example', subdomains: true }, ctx).siteVisits).toEqual({ 'https://b.example': 7 })
+    expect(reduce(state, { type: 'permission/forget-visits', host: 'none.example' }, ctx)).toBe(state)
+    const empty = given(90)
+    expect(reduce(empty, { type: 'permission/forget-visits' }, ctx)).toBe(empty)
+  })
   it('the interface cannot send a visit or a sweep: they are the main process’', () => {
     const known: string[] = []
     expect(interfaceMayDispatch({ type: 'permission/visit', origin: A, day: 1 }, known)).toBe(false)
+    expect(interfaceMayDispatch({ type: 'permission/forget-visits' }, known)).toBe(false)
     expect(interfaceMayDispatch({ type: 'permission/sweep', day: 1 }, known)).toBe(false)
   })
 })
