@@ -453,6 +453,42 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     isNew: true
   },
   {
+    id: 'block-pings',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'block-pings',
+    summary: 'discover.pings-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('blockPings') }),
+    keywords: 'ping sendbeacon balise suivi pistage hyperlink auditing beacon tracking',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
+    id: 'trim-referer',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'trim-referer',
+    summary: 'discover.referer-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('trimReferer') }),
+    keywords: 'referer referrer provenance adresse origine suivi pistage vie privee origin privacy',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
+    id: 'https-only',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'https-only',
+    summary: 'discover.https-seul-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('httpsOnly') }),
+    keywords: 'https seul http chiffre connexion securise avertissement only encrypted secure warning insecure',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
     id: 'site-javascript',
     task: 'protect',
     level: 'advanced',
@@ -1011,6 +1047,9 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'https-first': 'protect',
   'global-privacy-control': 'protect',
   'third-party-cookies': 'protect',
+  'block-pings': 'protect',
+  'trim-referer': 'protect',
+  'https-only': 'protect',
   'strip-tracking': 'protect',
   'search-suggestions': 'fast',
   'theme-to-sites': 'read',

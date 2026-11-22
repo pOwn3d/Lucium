@@ -391,6 +391,8 @@ export type ErrorPageModel =
    * midnight), one of the two; the page offers a pause, which is the way out.
    */
   | { kind: 'focus'; url: string; nonce: string; canGoBack: boolean; until: number | null; slotEnd: number | null }
+  /** « HTTPS seul » (https-upgrade.ts): the site has no HTTPS, or does not answer on it. `http` is the address the page may go to, on a click only (« Continuer en HTTP »). */
+  | { kind: 'https-only'; url: string; http: string; nonce: string; canGoBack: boolean }
   | { kind: 'status'; url: string; status: number; nonce: string; canGoBack: boolean; /** When the page was shown (ms since the epoch): the technical details give the time. */ at: number }
 
 export interface ErrorPage {
@@ -488,6 +490,18 @@ export function renderErrorPage(model: ErrorPageModel): ErrorPage {
         title: t('errpage.focus-title'),
         content: `<p class="addr">${escapeHtml(model.url)}</p><p>${t('errpage.focus-text', { site: host })}</p><p>${escapeHtml(t('errpage.focus-until', { time }))}</p>`,
         actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : ''}${button('end-focus', model.nonce, t('errpage.focus-pause'), 'quiet')}`
+      })
+    )
+  }
+  if (model.kind === 'https-only') {
+    return document_(
+      site,
+      errorFrame({
+        tone: 'warn',
+        icon: ICON_LOCK,
+        title: t('errpage.https-only-title'),
+        content: `<p class="addr">${escapeHtml(model.http)}</p><p>${t('errpage.https-only-text', { site: host })}</p><p>${escapeHtml(t('errpage.https-only-risk'))}</p>`,
+        actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : button('retry', model.nonce, t('errpage.reessayer'))}${button('http', model.nonce, t('errpage.https-only-continue'), 'quiet')}`
       })
     )
   }

@@ -3,7 +3,7 @@
 
 import { useId, useState } from 'react'
 import { checkBlockException } from '@shared/blocker'
-import { THIRD_PARTY_COOKIE_EXCEPTIONS_MAX, trackingParamList } from '@shared/privacy'
+import { HTTPS_ONLY_EXCEPTIONS_MAX, THIRD_PARTY_COOKIE_EXCEPTIONS_MAX, trackingParamList } from '@shared/privacy'
 import { fieldError } from './field-error'
 import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
@@ -22,6 +22,16 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
     if (!verdict || !('host' in verdict)) return
     update({ thirdPartyCookieExceptions: [...exceptions, verdict.host] })
     setDraft('')
+  }
+  // The sites « HTTPS seul » opens over http with no warning: the same form as the sites of the third-party cookies.
+  const httpOk = settings.httpsOnlyExceptions
+  const [httpDraft, setHttpDraft] = useState('')
+  const httpVerdict = httpDraft.trim() === '' ? null : httpOk.length >= HTTPS_ONLY_EXCEPTIONS_MAX ? { error: t('guard-settings.la-liste-est-pleine') } : checkBlockException(httpDraft, httpOk)
+  const httpError = fieldError(useId(), httpVerdict !== null && 'error' in httpVerdict)
+  const addHttp = () => {
+    if (!httpVerdict || !('host' in httpVerdict)) return
+    update({ httpsOnlyExceptions: [...httpOk, httpVerdict.host] })
+    setHttpDraft('')
   }
   return (
     <>
@@ -68,6 +78,33 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
       />
     </Group>
 
+    <Group keys={['blockPings', 'trimReferer', 'httpsOnly']} title={t('privacy-settings.protection-du-reseau')}>
+      <Check
+        settingKey="blockPings"
+        label={t('privacy-settings.bloquer-les-pings-de-suivi')}
+        hint={t('privacy-settings.pings-hint')}
+        more={t('privacy-settings.pings-more')}
+        checked={settings.blockPings}
+        onChange={(blockPings) => update({ blockPings })}
+      />
+      <Check
+        settingKey="trimReferer"
+        label={t('privacy-settings.rogner-le-referer')}
+        hint={t('privacy-settings.referer-hint')}
+        more={t('privacy-settings.referer-more')}
+        checked={settings.trimReferer}
+        onChange={(trimReferer) => update({ trimReferer })}
+      />
+      <Check
+        settingKey="httpsOnly"
+        label={t('privacy-settings.https-seul')}
+        hint={t('privacy-settings.https-seul-hint')}
+        more={t('privacy-settings.https-seul-more')}
+        checked={settings.httpsOnly}
+        onChange={(httpsOnly) => update({ httpsOnly })}
+      />
+    </Group>
+
     {/* The sites where the cookies of a third party are accepted: on the subpage of the other exceptions, drawn whether the option is on or not. */}
     <Subpage id="exceptions">
       <Group keys={['thirdPartyCookieExceptions']} title={t('privacy-settings.sites-ou-les-cookies-tiers-sont-acceptes')} footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}>
@@ -102,6 +139,42 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
           {verdict && 'error' in verdict && (
             <div className="pref-row pref-message pref-error" {...error.message}>
               {verdict.error}
+            </div>
+          )}
+        </>
+      </Group>
+      <Group keys={['httpsOnlyExceptions']} title={t('privacy-settings.sites-autorises-en-http')} footnote={t('privacy-settings.https-seul-liste-note')}>
+        <>
+          {httpOk.length === 0 && <Row label={<span className="muted">{t('settings.aucun-site')}</span>} />}
+          {httpOk.map((host) => (
+            <div key={host} className="pref-row">
+              <div className="pref-label">
+                <code>{host}</code>
+              </div>
+              <div className="pref-control">
+                <button className="link-button" onClick={() => update({ httpsOnlyExceptions: httpOk.filter((h) => h !== host) })} aria-label={t('settings.retirer-name', { name: host })}>
+                  {t('settings.retirer')}
+                </button>
+              </div>
+            </div>
+          ))}
+          <div className="pref-row pref-form">
+            <input
+              className="field"
+              placeholder={t('settings.exemple-org')}
+              aria-label={t('privacy-settings.site-a-ouvrir-en-http')}
+              {...httpError.field}
+              value={httpDraft}
+              onChange={(e) => setHttpDraft(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && addHttp()}
+            />
+            <button className="button" disabled={!httpVerdict || 'error' in httpVerdict} onClick={addHttp}>
+              {t('settings.ajouter')}
+            </button>
+          </div>
+          {httpVerdict && 'error' in httpVerdict && (
+            <div className="pref-row pref-message pref-error" {...httpError.message}>
+              {httpVerdict.error}
             </div>
           )}
         </>

@@ -18,11 +18,18 @@ export interface PrivacyOptions {
   blockThirdPartyCookies: boolean
   /** The sites (and their subdomains) where third-party cookies are let through. */
   thirdPartyCookieExceptions: readonly string[]
+  /** A request to another site carries the origin of the page as `Referer`, never its path or its query (referer-trim.ts). */
+  trimReferer: boolean
+  /** « HTTPS seul »: an `http://` page opens only on a click on « Continuer en HTTP », and a site with no HTTPS is never fallen back to by itself (https-upgrade.ts). */
+  httpsOnly: boolean
+  /** The sites (and their subdomains) that open over `http://` with no warning in « HTTPS seul ». */
+  httpsOnlyExceptions: readonly string[]
 }
 
-export const NO_PRIVACY: PrivacyOptions = { httpsUpgrade: false, globalPrivacyControl: false, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] }
+export const NO_PRIVACY: PrivacyOptions = { httpsUpgrade: false, globalPrivacyControl: false, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [], trimReferer: false, httpsOnly: false, httpsOnlyExceptions: [] }
 
-export type PrivacySettings = Pick<Settings, 'httpsUpgrade' | 'sendGpc' | 'stripTrackingParams' | 'stripCopiedLinks' | 'blockThirdPartyCookies' | 'thirdPartyCookieExceptions'>
+/** `blockPings` is not an option of the engine's hooks (the shell's request filter reads it, ping-block.ts), but it is cleaned with the others. */
+export type PrivacySettings = Pick<Settings, 'httpsUpgrade' | 'sendGpc' | 'stripTrackingParams' | 'stripCopiedLinks' | 'blockThirdPartyCookies' | 'thirdPartyCookieExceptions' | 'blockPings' | 'trimReferer' | 'httpsOnly' | 'httpsOnlyExceptions'>
 
 /** Sites in the list of exceptions: more than anyone writes by hand, and a bound for a hand-edited file. */
 export const THIRD_PARTY_COOKIE_EXCEPTIONS_MAX = 200
@@ -30,17 +37,32 @@ export const THIRD_PARTY_COOKIE_EXCEPTIONS_MAX = 200
 /** The sites of the list as a saved file or a message may carry them: valid hosts, each once, at most `THIRD_PARTY_COOKIE_EXCEPTIONS_MAX`. */
 export const cleanThirdPartyCookieExceptions = (raw: unknown): string[] => cleanBlockExceptions(raw).slice(0, THIRD_PARTY_COOKIE_EXCEPTIONS_MAX)
 
+/** Sites in the list of exceptions of « HTTPS seul »: the same bound. */
+export const HTTPS_ONLY_EXCEPTIONS_MAX = 200
+
+/** The sites of the list as a saved file or a message may carry them: valid hosts, each once, at most `HTTPS_ONLY_EXCEPTIONS_MAX`. */
+export const cleanHttpsOnlyExceptions = (raw: unknown): string[] => cleanBlockExceptions(raw).slice(0, HTTPS_ONLY_EXCEPTIONS_MAX)
+
 export function privacyOptionsOf(settings: Partial<PrivacySettings>): PrivacyOptions {
-  return { httpsUpgrade: settings.httpsUpgrade === true, globalPrivacyControl: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true, blockThirdPartyCookies: settings.blockThirdPartyCookies === true, thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions) }
+  return {
+    httpsUpgrade: settings.httpsUpgrade === true,
+    globalPrivacyControl: settings.sendGpc === true,
+    stripTrackingParams: settings.stripTrackingParams === true,
+    blockThirdPartyCookies: settings.blockThirdPartyCookies === true,
+    thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions),
+    trimReferer: settings.trimReferer === true,
+    httpsOnly: settings.httpsOnly === true,
+    httpsOnlyExceptions: cleanHttpsOnlyExceptions(settings.httpsOnlyExceptions)
+  }
 }
 
 export function anyPrivacy(options: PrivacyOptions): boolean {
-  return options.httpsUpgrade || options.globalPrivacyControl || options.stripTrackingParams || options.blockThirdPartyCookies
+  return options.httpsUpgrade || options.globalPrivacyControl || options.stripTrackingParams || options.blockThirdPartyCookies || options.trimReferer || options.httpsOnly
 }
 
 /** The privacy settings of a saved file: anything but `true` is off, so a damaged file never switches a rewrite on. */
 export function cleanPrivacySettings(settings: Partial<PrivacySettings>): PrivacySettings {
-  return { httpsUpgrade: settings.httpsUpgrade === true, sendGpc: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true, stripCopiedLinks: settings.stripCopiedLinks === true, blockThirdPartyCookies: settings.blockThirdPartyCookies === true, thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions) }
+  return { httpsUpgrade: settings.httpsUpgrade === true, sendGpc: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true, stripCopiedLinks: settings.stripCopiedLinks === true, blockThirdPartyCookies: settings.blockThirdPartyCookies === true, thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions), blockPings: settings.blockPings === true, trimReferer: settings.trimReferer === true, httpsOnly: settings.httpsOnly === true, httpsOnlyExceptions: cleanHttpsOnlyExceptions(settings.httpsOnlyExceptions) }
 }
 
 // ---------- Tracking parameters ----------
@@ -176,7 +198,8 @@ export function rewriteNavigation(request: NavigationRequest, options: PrivacyOp
       changed = true
     }
   }
-  if (options.httpsUpgrade) {
+  // « HTTPS seul » upgrades the same way; what differs is what happens when the site does not answer (https-upgrade.ts): there is no fall back.
+  if (options.httpsUpgrade || options.httpsOnly) {
     const upgraded = upgrade(url)
     if (upgraded && upgraded !== url) return upgraded
   }

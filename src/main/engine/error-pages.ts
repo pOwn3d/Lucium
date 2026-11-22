@@ -212,6 +212,9 @@ export class PageErrors {
     const focus = name === 'ERR_BLOCKED_BY_CLIENT' && isMainFrame ? (focusGate.get()?.block(url) ?? null) : null
     if (focus !== null) {
       this.pending = { kind: 'focus', url, nonce, canGoBack: false, until: focus.until, slotEnd: focus.slotEnd }
+    } else if (upgrade.kind === 'refused' && upgrade.only === true && !isCertificateError(name) && this.host.continueOverHttp) {
+      // « HTTPS seul »: no fall back to http by itself, whatever the failure; the page says so and offers the address on a click.
+      this.pending = { kind: 'https-only', url, http: upgrade.http, nonce, canGoBack: false }
     } else if (isCertificateError(name)) {
       const seen = this.lastCertificate?.host === exceptionHost(url) ? this.lastCertificate : null
       // What was refused belongs to this failure only: a later one without its own certificate must not borrow it.
@@ -230,7 +233,7 @@ export class PageErrors {
     const model = this.pending
     if (!model || this.wc.isDestroyed()) return
     this.pending = null
-    const shown: ErrorPageModel = model.kind === 'certificate' || model.kind === 'focus' ? { ...model, canGoBack: this.wc.navigationHistory.canGoBack() } : model
+    const shown: ErrorPageModel = model.kind === 'certificate' || model.kind === 'focus' || model.kind === 'https-only' ? { ...model, canGoBack: this.wc.navigationHistory.canGoBack() } : model
     this.shown = shown
     const page = renderErrorPage(shown)
     const markup = `<head>${page.head}</head><body>${page.body}</body>`
@@ -269,7 +272,7 @@ export class PageErrors {
       this.host.reload()
     } else if (action === 'retry' && shown.kind !== 'crash') {
       this.host.reload()
-    } else if (action === 'back' && (shown.kind === 'certificate' || shown.kind === 'status' || shown.kind === 'focus')) {
+    } else if (action === 'back' && (shown.kind === 'certificate' || shown.kind === 'status' || shown.kind === 'focus' || shown.kind === 'https-only')) {
       this.host.goBack()
     } else if (action === 'home' && shown.kind === 'status') {
       // The home of the site the answer came from (its origin, a web address by construction): the page that answered goes, and so does our page with it.
@@ -288,6 +291,9 @@ export class PageErrors {
       // Disable the ad/tracker blocker for this site
       this.host.toggleBlockException(shown.url)
       this.host.reload()
+    } else if (action === 'http' && shown.kind === 'https-only') {
+      // The address the user asked for, in http: only this click opens it, once.
+      this.host.continueOverHttp?.(shown.http)
     } else if (action === 'http' && shown.kind === 'certificate' && shown.http !== undefined) {
       // The address the user asked for, in http, as it was before HTTPS first tried it: nothing of the page decides where it goes.
       this.host.continueOverHttp?.(shown.http)

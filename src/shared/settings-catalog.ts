@@ -101,6 +101,7 @@ export const SETTINGS_KEYS = {
   protection: [
     'blockAds', 'blockCookieBanners', 'blockMode', 'blockCosmetic', 'blockExceptions', 'popupExceptions',
     'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions',
+    'blockPings', 'trimReferer', 'httpsOnly', 'httpsOnlyExceptions',
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
     'historyOff', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
@@ -273,6 +274,7 @@ export const KEPT_ON_RESET = {
   popupExceptions: 'a list of sites',
   fingerprintExceptions: 'a list of sites',
   thirdPartyCookieExceptions: 'a list of sites',
+  httpsOnlyExceptions: 'a list of sites',
   mouseGestureExcludedHosts: 'a list of sites',
   vimKeysExcludedHosts: 'a list of sites',
   translateNeverSites: 'a list of sites',

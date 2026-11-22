@@ -206,6 +206,14 @@ export interface Settings {
   blockThirdPartyCookies: boolean
   /** Sites (host and subdomains) where third-party cookies are let through, because blocking them broke the site. */
   thirdPartyCookieExceptions: string[]
+  /** Pings to another site (the `ping=` of a link, `sendBeacon`) are cancelled and counted by the blocker (see ping-block.ts). Off by default. Sites left off: `blockExceptions`. */
+  blockPings: boolean
+  /** A request to another site carries only the origin of the page as `Referer`, never its path or its query (see privacy.ts). Off by default: some sites check the full address. */
+  trimReferer: boolean
+  /** « HTTPS seul »: an `http://` page is never opened without a click on « Continuer en HTTP », and there is no fall back by itself (see https-only.ts). Off by default. */
+  httpsOnly: boolean
+  /** Sites (host and subdomains) that may be opened over `http://` with no warning, because they have no HTTPS. */
+  httpsOnlyExceptions: string[]
   /** Names shown for profiles, by profile id. The id stays the storage key, so renaming never loses data. */
   profileNames: Record<string, string>
   /** Expose the space theme to web pages as `--arc-palette-*` CSS variables (a page can read it, so it is opt-in). */

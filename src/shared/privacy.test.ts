@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest'
 import { defaultSettings } from './model'
 import { createInitialState, normalize, reduce, type Ctx } from './sidebar'
 import {
+  HTTPS_ONLY_EXCEPTIONS_MAX,
   HTTPS_UPGRADE_TIMEOUT_MS,
   NO_PRIVACY,
   anyPrivacy,
+  cleanHttpsOnlyExceptions,
   cleanPrivacySettings,
   httpsFallbackNotice,
   httpsUpgradeOf,
@@ -17,6 +19,7 @@ import {
   type PrivacyOptions
 } from './privacy'
 import { frenchSpaces } from './french-typography'
+import { cleanBlockExceptions } from './blocker'
 
 let counter = 0
 const ctx: Ctx = { now: 0, newId: () => `id${++counter}` }
@@ -28,7 +31,7 @@ describe('the options', () => {
     expect(settings.sendGpc).toBe(true)
     expect(settings.stripTrackingParams).toBe(true)
     expect(settings.stripCopiedLinks).toBe(true)
-    expect(privacyOptionsOf(settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: true, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] })
+    expect(privacyOptionsOf(settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: true, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [], trimReferer: false, httpsOnly: false, httpsOnlyExceptions: [] })
     expect(anyPrivacy(NO_PRIVACY)).toBe(false)
   })
 
@@ -43,14 +46,32 @@ describe('the options', () => {
   })
 
   it('switch off in a damaged file: only a real true turns a rewrite on', () => {
-    expect(cleanPrivacySettings({ httpsUpgrade: 'yes' as unknown as boolean, sendGpc: 1 as unknown as boolean, stripTrackingParams: true, stripCopiedLinks: 'oui' as unknown as boolean })).toEqual({ httpsUpgrade: false, sendGpc: false, stripTrackingParams: true, stripCopiedLinks: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] })
+    expect(cleanPrivacySettings({ httpsUpgrade: 'yes' as unknown as boolean, sendGpc: 1 as unknown as boolean, stripTrackingParams: true, stripCopiedLinks: 'oui' as unknown as boolean })).toEqual({ httpsUpgrade: false, sendGpc: false, stripTrackingParams: true, stripCopiedLinks: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [], blockPings: false, trimReferer: false, httpsOnly: false, httpsOnlyExceptions: [] })
     expect(cleanPrivacySettings({ stripCopiedLinks: true }).stripCopiedLinks).toBe(true)
+  })
+
+  it('keep the Referer, the pings and « HTTPS seul » off in a new profile and in a damaged file, and count the two the hooks read as on', () => {
+    const settings = defaultSettings()
+    expect([settings.blockPings, settings.trimReferer, settings.httpsOnly, settings.httpsOnlyExceptions]).toEqual([false, false, false, []])
+    const damaged = cleanPrivacySettings({ blockPings: 'yes' as unknown as boolean, trimReferer: 1 as unknown as boolean, httpsOnly: 'true' as unknown as boolean, httpsOnlyExceptions: 'a.test' as unknown as string[] })
+    expect([damaged.blockPings, damaged.trimReferer, damaged.httpsOnly, damaged.httpsOnlyExceptions]).toEqual([false, false, false, []])
+    expect(cleanPrivacySettings({ blockPings: true, trimReferer: true, httpsOnly: true, httpsOnlyExceptions: ['a.test'] })).toMatchObject({ blockPings: true, trimReferer: true, httpsOnly: true, httpsOnlyExceptions: ['a.test'] })
+    expect(anyPrivacy({ ...NO_PRIVACY, trimReferer: true })).toBe(true)
+    expect(anyPrivacy({ ...NO_PRIVACY, httpsOnly: true })).toBe(true)
+    expect(privacyOptionsOf({ trimReferer: true, httpsOnly: true, httpsOnlyExceptions: ['a.test'] })).toMatchObject({ trimReferer: true, httpsOnly: true, httpsOnlyExceptions: ['a.test'] })
+  })
+
+  it('bound the list of exceptions of « HTTPS seul » and keep valid hosts, each once', () => {
+    const many = Array.from({ length: HTTPS_ONLY_EXCEPTIONS_MAX + 20 }, (_, i) => `site${i}.test`)
+    expect(cleanHttpsOnlyExceptions(many)).toHaveLength(HTTPS_ONLY_EXCEPTIONS_MAX)
+    expect(cleanHttpsOnlyExceptions(['a.test', 'A.test', 'http://b.test', 'not a host', 42, 'a.test'])).toEqual(cleanBlockExceptions(['a.test', 'A.test', 'http://b.test', 'not a host', 42, 'a.test']))
+    expect(cleanHttpsOnlyExceptions(undefined)).toEqual([])
   })
 
   it('are kept by the reducer and cleaned there', () => {
     const state = createInitialState(ctx)
     const on = reduce(state, { type: 'settings/update', patch: { httpsUpgrade: true, sendGpc: true, stripTrackingParams: false } }, ctx)
-    expect(privacyOptionsOf(on.settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] })
+    expect(privacyOptionsOf(on.settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [], trimReferer: false, httpsOnly: false, httpsOnlyExceptions: [] })
     const damaged = reduce(state, { type: 'settings/update', patch: { stripTrackingParams: 'x' as unknown as boolean } }, ctx)
     expect(damaged.settings.stripTrackingParams).toBe(false)
   })
@@ -147,6 +168,12 @@ describe('HTTPS first', () => {
 })
 
 describe('rewriteNavigation', () => {
+  it('upgrades an http address in « HTTPS seul » as HTTPS first does, with HTTPS first off', () => {
+    const only = { ...NO_PRIVACY, httpsOnly: true }
+    expect(rewriteNavigation({ url: 'http://exemple.fr/a', method: 'GET', isMainFrame: true }, only, (u) => u.replace('http:', 'https:'))).toBe('https://exemple.fr/a')
+    expect(rewriteNavigation({ url: 'http://exemple.fr/a', method: 'GET', isMainFrame: true }, NO_PRIVACY, (u) => u.replace('http:', 'https:'))).toBeNull()
+  })
+
   const all: PrivacyOptions = { ...NO_PRIVACY, httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: true }
   const accept = (url: string) => url.replace('http:', 'https:')
   const nav = (url: string, patch: Partial<{ method: string; isMainFrame: boolean }> = {}) => ({ url, method: 'GET', isMainFrame: true, ...patch })
