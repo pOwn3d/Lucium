@@ -9,7 +9,7 @@ import { activeTab } from '@shared/sidebar'
 import { spaceGlyph } from '@shared/space-icon'
 import { resolveAppearance, themeHue } from '@shared/theme'
 import { hostnameOf } from '@shared/url'
-import { PERMISSION_ANCHOR, PERMISSION_ARM_MS, appLinkSchemeOf, mayRemember, permissionPhrase } from '@shared/permissions'
+import { PERMISSION_ANCHOR, PERMISSION_ARM_MS, allowLabel, appLinkSchemeOf, mayRemember, permissionPhrase } from '@shared/permissions'
 import { type ArchiveSource, type DownloadInfo, type PermissionRequest, type Space } from '@shared/model'
 import { speedOf, withSpeed } from '@shared/download-speed'
 import { canPauseDownload, downloadProgress, downloadStatus, fileExtension, finishedDownloads, offersResume, shownDownload, sortDownloads } from '@shared/downloads-view'
@@ -329,7 +329,7 @@ export function PermissionPrompt({ request }: { request: PermissionRequest }) {
         lead={look.lead?.()}
         remember={canRemember ? { label: rememberLabel, checked: remember, onChange: setRemember } : undefined}
         dismiss={{ label: t('permissions.refuser'), onClick: () => answer(false) }}
-        accept={{ label: t('permissions.autoriser'), onClick: () => answer(true), disabled: !armed }}
+        accept={{ label: allowLabel(canRemember, remember), onClick: () => answer(true), disabled: !armed }}
       />
     </AnchoredBubble>
   )

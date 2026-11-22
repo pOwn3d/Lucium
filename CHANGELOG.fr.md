@@ -33,6 +33,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Corrections
 
 - **Capture de la page entière qui fait défiler la page** : « Page entière » parcourt désormais la page de haut en bas avant la capture : un site qui défile dans un panneau à lui est capturé en entier, les images paresseuses sont chargées et un en-tête fixe n’apparaît qu’une fois. Une page plus haute que 16 000 pixels est coupée là, et Lucium le dit.
+### Changements
+
+- **Demande de permission, « Autoriser cette fois »** : « Se souvenir pour ce site » décochée, le bouton se lit « Autoriser cette fois ». Ce oui était déjà gardé pour l’onglet seul et oublié avec sa page, jamais écrit ni envoyé. Les onglets privés gardent « Autoriser ».
 
 ## [1.1.5] - 2026-11-20
 

@@ -39,6 +39,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Fixed
 
 - **Full-page capture scrolls the page**: “Page entière” now walks the page from top to bottom before shooting, so a site that scrolls in a panel of its own is captured whole, lazy images are loaded, and a fixed header shows once. A page taller than 16 000 pixels is cut there, and Lucium says so.
+- **Permission prompt, “Allow this time”**: with “Remember for this site” unticked, the button reads “Allow this time”. That yes was already held for the tab only and forgotten with its page, never written or sent. Private tabs keep “Allow”.
 
 ## [1.1.5] - 2026-11-20
 
