@@ -62,7 +62,7 @@
 
 @media (max-width: 680px) {
   .dv-head, .dv-body, .dv-foot-note { padding-left: var(--sp-3); padding-right: var(--sp-3); }
-  }
+}
 /* A short window, or text at 200 %: the header would take the whole height and leave none to the cards, so the panel scrolls as one. */
 @media (max-height: 640px) {
   .dv { overflow-y: auto; }
@@ -76,6 +76,7 @@
   .dv .tk-chip { transition: none; }
 }
 @media (prefers-contrast: more) {
-  .dv-card, }
+  .dv-card { border-color: var(--text-3); border-width: 2px; }
+}
 /* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
-:root[data-contrast='more'] .dv-card, :root[data-contrast='more'] 
+:root[data-contrast='more'] .dv-card { border-color: var(--text-3); border-width: 2px; }

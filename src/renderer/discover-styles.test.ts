@@ -94,7 +94,12 @@ describe('the motion', () => {
   })
 
   it('draws the cards at 2 px with more contrast, as the other panels do, and by the setting that forces it', () => {
-    expect(code).toMatch(/@media \(prefers-contrast: more\)\s*\{[^}]*\.dv-card/)
-    expect(code).toMatch(/:root\[data-contrast='more'\] \.dv-card/)
+    const media = code.match(/@media \(prefers-contrast: more\)\s*\{\s*([^{}]+)\{([^{}]*)\}\s*\}/)
+    expect(media?.[1]?.trim()).toBe('.dv-card')
+    expect(media?.[2]).toMatch(/border-color:\s*var\(--text-3\)/)
+    expect(media?.[2]).toMatch(/border-width:\s*2px/)
+    const forced = rule(":root[data-contrast='more'] .dv-card")?.body ?? ''
+    expect(forced).toMatch(/border-color:\s*var\(--text-3\)/)
+    expect(forced).toMatch(/border-width:\s*2px/)
   })
 })

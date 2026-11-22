@@ -353,3 +353,35 @@ describe('the fixed palette', () => {
     expect(readers.filter(([, sheet]) => !sheet.includes("@import './palette.css';")).map(([name]) => name)).toEqual([])
   })
 })
+
+describe('the syntax of every sheet', () => {
+  // A sheet cut in the middle of a rule (a bad edit) is still read by the bundler's recovery, which drops the rule without a word. No parser is a direct
+  // dependency, so the braces are counted: outside comments and strings they must close, never go below zero, and no rule may be left without its braces.
+  const balance = (css: string): { depth: number; minDepth: number; dangling: string } => {
+    const code = css.replace(/\/\*[\s\S]*?\*\//g, '').replace(/"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, '""')
+    let depth = 0
+    let minDepth = 0
+    for (const ch of code) {
+      if (ch === '{') depth += 1
+      if (ch === '}') depth -= 1
+      minDepth = Math.min(minDepth, depth)
+    }
+    return { depth, minDepth, dangling: code.replace(/\s+/g, ' ').trim().replace(/^.*[};]\s*/, '') }
+  }
+
+  it('closes every brace of every sheet and ends each one after a closed rule', () => {
+    const all = Object.entries({ ...sheets, ...templateSheets })
+    expect(all.length).toBeGreaterThan(40)
+    const broken = all.filter(([, css]) => {
+      const { depth, minDepth, dangling } = balance(css)
+      return depth !== 0 || minDepth < 0 || dangling !== ''
+    })
+    expect(broken.map(([name]) => name)).toEqual([])
+  })
+
+  it('sees a sheet that stops in the middle of a rule', () => {
+    expect(balance('.a { color: red; }\n.b, ').dangling).not.toBe('')
+    expect(balance('.a { color: red;').depth).toBe(1)
+    expect(balance('.a { color: red; }\n.b { }').dangling).toBe('')
+  })
+})
