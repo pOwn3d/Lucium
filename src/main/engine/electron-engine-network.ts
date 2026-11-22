@@ -11,6 +11,7 @@ import { cleanMinimumFontSize } from '@shared/min-font-size'
 import type { SiteDataResult } from '@shared/site-data'
 import { NO_PLAN, PAGE_GUARD, guardPageUrl, type GuardPlan } from '@shared/page-guard'
 import { pageOrigin } from '@shared/inner-guard'
+import type { UploadPart } from '@shared/extension-request-body'
 import type { FingerprintConfig } from '@shared/fingerprint'
 import { guardWorld } from '../../preload/guard-world'
 import { InnerGuard, innerGuardFor, innerGuardOf } from './inner-guard'
@@ -62,6 +63,8 @@ export interface RequestDetails {
   initiatorOrigin?: string | undefined
   webContents?: WebContents | undefined
   frame?: WebFrameMain | null | undefined
+  /** The upload of a request that has a body (`onBeforeRequest` only): handed to an extension that asked for `requestBody`, bounded (shared/extension-request-body.ts). */
+  uploadData?: ReadonlyArray<UploadPart> | undefined
 }
 
 /** What the extensions make of the headers of an answer: the headers, or a cancel, and the status line of a redirect a listener asked for. */
@@ -441,7 +444,7 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     const origin = typeof details.initiatorOrigin === 'string' && details.initiatorOrigin !== '' && details.initiatorOrigin !== 'null' ? details.initiatorOrigin : null
     const asking = origin ?? documents[0]?.url ?? null
     const initiator = asking !== null && URL.canParse(asking) && new URL(asking).origin !== 'null' ? new URL(asking).origin : asking
-    return { id: details.id, url: details.url, method: details.method, type, initiator, tabId, documents, frameId, parentFrameId, timeStamp: details.timestamp ?? Date.now() }
+    return { id: details.id, url: details.url, method: details.method, type, initiator, tabId, documents, frameId, parentFrameId, timeStamp: details.timestamp ?? Date.now(), ...(details.uploadData && details.uploadData.length > 0 ? { upload: details.uploadData } : {}) }
   }
 
   /** The object that holds the rules and the listeners of the extensions of a profile session, made with the session. */

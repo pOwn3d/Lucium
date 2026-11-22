@@ -264,6 +264,15 @@ describe('the calls of the shims about the request rules', () => {
     expect(handled).toEqual([])
   })
 
+  it('answer getMatchedRules from the rules that decided a request, only to an extension that holds declarativeNetRequestFeedback', async () => {
+    const { net, call } = engineWith(['declarativeNetRequest', 'declarativeNetRequestFeedback'])
+    await call('declarativeNetRequest', 'mirror', [{ session: [{ id: 1, action: { type: 'block' }, condition: { urlFilter: '/ads/' } }], dynamic: [] }])
+    net.beforeRequest({ id: 1, url: 'https://x.example/ads/a.js', method: 'GET', type: 'script', initiator: 'https://page.example', tabId: 3, documents: [{ url: 'https://page.example/', top: true }], frameId: 0, parentFrameId: -1, timeStamp: 9 })
+    expect(await call('declarativeNetRequest', 'getMatchedRules', [{}])).toEqual({ rulesMatchedInfo: [{ rule: { ruleId: 1, rulesetId: '_session' }, tabId: 3, timeStamp: 9 }] })
+    const without = engineWith(['declarativeNetRequest'])
+    await expect(without.call('declarativeNetRequest', 'getMatchedRules', [{}])).rejects.toThrow('no permission to use chrome.declarativeNetRequest.getMatchedRules')
+  })
+
   it('are refused to an extension that does not hold the permission', async () => {
     const { net, call } = engineWith(['storage'])
     await expect(call('declarativeNetRequest', 'mirror', [{ session: [], dynamic: [] }])).rejects.toThrow('no permission to use chrome.declarativeNetRequest.mirror')

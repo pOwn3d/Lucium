@@ -713,3 +713,65 @@ describe('a page of the extension shown by the DevTools (its devtools_page and i
     expect(Object.isFrozen(await inFrame(['https://example.com']))).toBe(true)
   })
 })
+
+describe('chrome.management.getAll', () => {
+  const setup = async (permissions: string[], management: Record<string, unknown> | undefined = { getSelf: vi.fn() }) => {
+    const run = await injected()
+    const lib = library({ manifest_version: 3, permissions })
+    if (management) lib.chrome['management'] = management
+    runBothPasses(run, lib.chrome)
+    return lib
+  }
+
+  it('is asked of the main process, with a promise and with a callback, for an extension that holds "management"', async () => {
+    const { chrome, bridge } = await setup(['management'])
+    bridge.call.mockResolvedValue([{ id: 'x' }])
+    expect(await chrome.management.getAll()).toEqual([{ id: 'x' }])
+    expect(bridge.call).toHaveBeenCalledWith(ID, 'management', 'getAll', [])
+    const callback = vi.fn()
+    chrome.management.getAll(callback)
+    await vi.waitFor(() => expect(callback).toHaveBeenCalledWith([{ id: 'x' }]))
+  })
+
+  it('does not exist for an extension without the permission', async () => {
+    const { chrome } = await setup(['storage'])
+    expect(chrome.management.getAll).toBeUndefined()
+  })
+
+  it('leaves a getAll that exists alone', async () => {
+    const own = vi.fn()
+    const { chrome } = await setup(['management'], { getAll: own })
+    expect(chrome.management.getAll).toBe(own)
+  })
+
+  it('is defined with its namespace when the platform has none', async () => {
+    const { chrome } = await setup(['management'], undefined)
+    expect(typeof chrome.management.getAll).toBe('function')
+  })
+})
+
+describe('chrome.sessions', () => {
+  const setup = async (permissions: string[]) => {
+    const run = await injected()
+    const lib = library({ manifest_version: 3, permissions })
+    runBothPasses(run, lib.chrome)
+    return lib
+  }
+
+  it('is asked of the main process, with a promise and with a callback, for an extension that holds "sessions"', async () => {
+    const { chrome, bridge } = await setup(['sessions'])
+    bridge.call.mockResolvedValue([{ lastModified: 1 }])
+    expect(await chrome.sessions.getRecentlyClosed({ maxResults: 3 })).toEqual([{ lastModified: 1 }])
+    expect(bridge.call).toHaveBeenCalledWith(ID, 'sessions', 'getRecentlyClosed', [{ maxResults: 3 }])
+    const callback = vi.fn()
+    chrome.sessions.restore('a1', callback)
+    await vi.waitFor(() => expect(callback).toHaveBeenCalled())
+    expect(bridge.call).toHaveBeenCalledWith(ID, 'sessions', 'restore', ['a1'])
+    expect(chrome.sessions.MAX_SESSION_RESULTS).toBe(25)
+    expect(typeof chrome.sessions.onChanged.addListener).toBe('function')
+  })
+
+  it('does not exist for an extension without the permission', async () => {
+    expect((await setup(['storage'])).chrome.sessions).toBeUndefined()
+  })
+})

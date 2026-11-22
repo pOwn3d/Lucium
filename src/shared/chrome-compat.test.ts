@@ -173,6 +173,15 @@ describe('normalizeWindowUrl', () => {
   })
 })
 
+describe('shimAllowed: getMatchedRules', () => {
+  it('needs the feedback permission on top of one of the two request-rule permissions', () => {
+    expect(shimAllowed({ permissions: ['declarativeNetRequest', 'declarativeNetRequestFeedback'] }, 'declarativeNetRequest', 'getMatchedRules')).toBe(true)
+    expect(shimAllowed({ permissions: ['declarativeNetRequestWithHostAccess', 'declarativeNetRequestFeedback'] }, 'declarativeNetRequest', 'getMatchedRules')).toBe(true)
+    expect(shimAllowed({ permissions: ['declarativeNetRequest'] }, 'declarativeNetRequest', 'getMatchedRules')).toBe(false)
+    expect(shimAllowed({ permissions: ['declarativeNetRequestFeedback'] }, 'declarativeNetRequest', 'getMatchedRules')).toBe(false)
+  })
+})
+
 describe('shimAllowed', () => {
   const manifest = (permissions: string[], host_permissions: string[] = []) => ({ permissions, host_permissions })
 
@@ -186,7 +195,8 @@ describe('shimAllowed', () => {
       ['nativeMessaging', 'connect', 'nativeMessaging'],
       ['identity', 'launchWebAuthFlow', 'identity'],
       ['downloads', 'download', 'downloads'],
-      ['contextMenus', 'update', 'contextMenus']
+      ['contextMenus', 'update', 'contextMenus'],
+      ['management', 'getAll', 'management']
     ]
     for (const [api, method, permission] of cases) {
       expect(shimAllowed(manifest([permission]), api, method)).toBe(true)

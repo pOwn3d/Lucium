@@ -31,6 +31,7 @@ import { updaterSession, type UpdaterExtensions } from './web-store-updates'
 import { createSessionTransport } from './web-store-transport'
 import { STAGING_DIR, STORE_DIR, closeStoreDirectory, extensionDirectory, ownerOnlyDirectory, profileDirectory, storedExtensions, type StoredExtension } from './web-store-files'
 import { t } from '@shared/i18n'
+import { blockedExtension, blockedInstallMessage, type BlockedExtension } from '@shared/extension-blocklist'
 import { prepareContentPreludeSafely } from './content-prelude'
 import { registerLimitedPreload } from './extension-runtime'
 import { settingsPath } from '@shared/settings-path'
@@ -77,6 +78,8 @@ export interface InstalledExtension {
 /** What the web store needs from the engine. */
 export interface WebStoreHost {
   userData(): string
+  /** The block list's entry for an extension, or undefined. Left out, the list embedded in the application is read (tests give theirs). */
+  blocked?(id: string): BlockedExtension | undefined
   ledger(): ExtensionLedger
   /** The profile a session belongs to. */
   profileOfSession(session: Session): string | undefined
@@ -403,6 +406,13 @@ export class WebStore {
     // The gate has judged the call; the library hands the frame over again, and the answer must not depend on a single check.
     if (!this.enabled || !isExtensionId(id) || !isStoreOrigin(details.frame.origin) || !this.attached.has(profileId)) {
       console.warn(`[webstore] install of ${String(id)} refused before download (origin ${details.frame.origin})`)
+      return deny
+    }
+    // The list travels with the application: a listed extension is refused before its package is fetched. The name is the store page's claim, shown as text only.
+    const listed = (this.host.blocked ?? blockedExtension)(id)
+    if (listed) {
+      console.warn(`[webstore] install of ${id} refused: it is on the block list (${listed.reason})`)
+      this.host.notify(blockedInstallMessage(listed, typeof details.localizedName === 'string' && details.localizedName.trim() !== '' ? details.localizedName.trim().slice(0, 80) : id))
       return deny
     }
     if (this.host.isInstalled(profileId, id)) {

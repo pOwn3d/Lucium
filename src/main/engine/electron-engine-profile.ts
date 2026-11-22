@@ -214,8 +214,8 @@ export abstract class ElectronEngineProfile extends ElectronEngineExtensions {
         console.warn(`[extensions] ${extension.name} was loaded in profile ${profileId} without the runtime being prepared: its scripts are put in now`)
         runtime.activate()
       }
-      if (this.isDisabled(profileId, extension.id)) {
-        // Switched off in this profile (a folder loaded for the first time): it does not stay.
+      if (this.turnedOff(profileId, extension.id, extension.name)) {
+        // Switched off in this profile (a folder loaded for the first time), or on the block list: it does not stay.
         this.known.set(`${profileId}:${extension.id}`, { info: { ...this.placeholder(profileId, extension.id, extension.path), name: extension.name, version: extension.version }, path: extension.path, manifest: extension.manifest })
         ses.extensions.removeExtension(extension.id)
         this.extensionsChanged()
