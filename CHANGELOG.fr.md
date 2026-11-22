@@ -48,6 +48,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Ajouts
 
 - **Enregistrer la page en Markdown** : Fichier › Enregistrer la page en Markdown… et la barre de commandes enregistrent le contenu principal de la page en un clic : un fichier `.md` et un dossier `<nom>-images/` à côté. Un onglet privé demande d’abord ; un dossier existant n’est jamais réutilisé (`-2`) ; les images chargées au défilement ne sont pas récupérées.
+### Ajouts
+
+- **Codes à usage unique (TOTP) dans le coffre de mots de passe** : un identifiant peut garder la clé de ses codes de double authentification (clé en base32 ou adresse `otpauth://`). Le panneau montre le code avec son compte à rebours et le copie, effacé après 30 secondes. La clé reste chiffrée dans le coffre et n’est jamais journalisée. RFC 6238, rien n’est rempli dans une page.
 
 ## [1.1.5] - 2026-11-20
 

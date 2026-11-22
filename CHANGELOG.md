@@ -52,6 +52,9 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Added
 
 - **Save Page as Markdown**: File › Save Page as Markdown… and the command bar save the page’s main content in one click: a `.md` file and a `<name>-images/` folder beside it. A private tab asks first; a folder that exists is never reused (`-2`); images that load only on scroll are not fetched.
+### Added
+
+- **One-time codes (TOTP) in the password vault**: a login can hold the key of its two-step codes (base32 key or `otpauth://` address). The panel shows the code with its countdown and copies it, cleared after 30 seconds. The key stays encrypted in the vault and is never logged. RFC 6238, nothing filled into a page.
 
 ## [1.1.5] - 2026-11-20
 

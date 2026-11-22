@@ -11,6 +11,8 @@
 //  - the interface is told rows and counts, never a password (the one exception is the text of the generator, which it asked for);
 //  - a login seen on a page is kept in memory for three minutes and written only after the user said so;
 //  - no identifier, password, phrase or address is ever in a log line: the logs say what failed, as a kind;
+//  - the key of an entry's one-time codes (TOTP) stays in this process: the interface is given the digits it asked for and the seconds they last,
+//    never the key; a code copied is put on the clipboard from here and taken off it after a delay, and at once when the vault locks;
 //  - Touch ID (vault-keychain.ts) opens the vault only with the key the keychain released after a fingerprint, never with a key kept here;
 //    whatever goes wrong with it, the phrase is asked (password-touch-id.test.ts).
 
@@ -19,6 +21,7 @@ import { generatePassword } from '@shared/password-generator'
 import { CSV_LIMITS, CSV_MESSAGES, describeReport, parseLoginCsv } from '@shared/password-csv'
 import { FILL_FAILURE_MESSAGES, parseFillOutcome, type FillOutcome, type FillPlan } from '@shared/login-form'
 import { siteOf } from '@shared/party'
+import { parseTotpInput } from '@shared/totp'
 import {
   NEW_LOGIN_MESSAGES,
   NO_PASSWORDS_VIEW,
@@ -42,6 +45,7 @@ import type { PowerPort } from '../lock-service'
 import { PasswordVault, VaultError, openExport } from '../password-vault'
 import { SEALED_FILE_MAX, vaultErrorMessage } from '../vault-crypto'
 import { KeychainError, type VaultKeychainPort } from '../vault-keychain'
+import { totpAt } from '../totp'
 import { getLanguage, t, tp } from '@shared/i18n'
 
 /** The tab on screen of the window that asked: what the fill needs to know of it, and the one way to write into it. */
@@ -76,6 +80,13 @@ export interface PasswordFiles {
   writePrivate(path: string, text: string): void
 }
 
+/** The system clipboard, as the service uses it (the application's own is Electron's, whose text calls answer by promise). */
+export interface ClipboardPort {
+  readText(): Promise<string>
+  clear(): void
+  writeText(text: string): Promise<void>
+}
+
 export interface PasswordDeps {
   settings: () => Settings
   vault: PasswordVault
@@ -87,6 +98,10 @@ export interface PasswordDeps {
   autoLockMs?: number
   /** The key of the vault behind Touch ID (macOS); absent, Touch ID is never offered and the phrase is the only way in. */
   keychain?: VaultKeychainPort
+  /** Where a copied one-time code goes; absent, a code is never copied (it can still be read in the panel). */
+  clipboard?: ClipboardPort
+  /** How long a copied code stays on the clipboard; the default is `PASSWORD_LIMITS.clipboardClearMs`. */
+  clipboardClearMs?: number
 }
 
 interface Pending {
@@ -116,6 +131,8 @@ export class PasswordService {
   private readonly pending = new Map<PasswordWindow, Pending>()
   private readonly lastOffer = new WeakMap<PasswordWindow, number>()
   private offers = 0
+  /** The code this service put on the clipboard, until it is taken off. */
+  private copied: { code: string; timer: NodeJS.Timeout } | null = null
   private readonly onPower = (): void => this.lock()
 
   constructor(private readonly deps: PasswordDeps) {}
@@ -159,6 +176,7 @@ export class PasswordService {
     this.deps.vault.lock()
     this.disarm()
     this.forgetCaptures()
+    void this.clearCopiedCode()
   }
 
   /**
@@ -276,6 +294,14 @@ export class PasswordService {
         return this.touchIdOn(request.phrase, window)
       case 'touch-id-off':
         return this.touchIdOff(window)
+      case 'totp-set':
+        return this.totpSet(request.id, request.secret, window)
+      case 'totp-remove':
+        return this.totpRemove(request.id, window)
+      case 'totp-code':
+        return this.totpCode(request.id, request.auto === true, window)
+      case 'totp-copy':
+        return this.totpCopy(request.id, window)
     }
   }
 
@@ -340,6 +366,7 @@ export class PasswordService {
     }
     this.disarm()
     this.forgetCaptures()
+    void this.clearCopiedCode()
     // The vault is gone, and so is its key in the keychain.
     if (this.deps.keychain?.enabled()) await this.forgetTouchId('the vault was deleted')
     return this.reply(window, true, t('pwd.coffre-supprime'))
@@ -494,6 +521,109 @@ export class PasswordService {
       return this.reply(window, removed, removed ? t('pwd.identifiant-supprime') : t('pwd.cet-identifiant-n-existe-plus'))
     } catch (error) {
       return this.reply(window, false, this.failure('removing a login', error))
+    }
+  }
+
+  // ---------- one-time codes ----------
+
+  /** Adds, or replaces, the key of the one-time codes of an entry. The text is a secret: the refusal says what is wrong with it, never what it was. */
+  private async totpSet(id: string, text: string, window: PasswordWindow): Promise<PasswordReply> {
+    if (!this.deps.vault.isUnlocked()) return this.reply(window, false, t('pwd.le-coffre-est-verrouille'))
+    const parsed = parseTotpInput(text)
+    if (!parsed.ok) return this.reply(window, false, parsed.problem === 'unsupported' ? t('pwd.totp-non-pris-en-charge') : t('pwd.totp-cle-invalide'))
+    try {
+      const done = await this.deps.vault.setTotp(id, parsed.config)
+      this.touch()
+      return this.reply(window, done, done ? t('pwd.totp-enregistre') : t('pwd.cet-identifiant-n-existe-plus'))
+    } catch (error) {
+      return this.reply(window, false, this.failure('saving a one-time code key', error))
+    }
+  }
+
+  private async totpRemove(id: string, window: PasswordWindow): Promise<PasswordReply> {
+    if (!this.deps.vault.isUnlocked()) return this.reply(window, false, t('pwd.le-coffre-est-verrouille'))
+    try {
+      const done = await this.deps.vault.removeTotp(id)
+      this.touch()
+      return this.reply(window, done, done ? t('pwd.totp-retire') : t('pwd.totp-absent'))
+    } catch (error) {
+      return this.reply(window, false, this.failure('removing a one-time code key', error))
+    }
+  }
+
+  /** The code of now for an entry, or the sentence for why there is none. */
+  private codeOf(id: string): { code: string; secondsLeft: number; msLeft: number; period: number } | string {
+    const config = this.deps.vault.totpOf(id)
+    if (config === null) return t('pwd.totp-absent')
+    try {
+      return { ...totpAt(config, this.now()), period: config.period }
+    } catch (error) {
+      return this.failure('computing a one-time code', error)
+    }
+  }
+
+  private totpCode(id: string, auto: boolean, window: PasswordWindow): PasswordReply {
+    if (!this.deps.vault.isUnlocked()) return this.reply(window, false, t('pwd.le-coffre-est-verrouille'))
+    const made = this.codeOf(id)
+    if (typeof made === 'string') return this.reply(window, false, made)
+    // The panel asks again by itself when a code ends: that is a clock, not a person, and must not keep the vault open for ever.
+    if (!auto) this.touch()
+    return this.reply(window, true, undefined, { totp: { id, ...made } })
+  }
+
+  /** Puts the code of now on the clipboard, from this process; it comes off after `clipboardClearMs`, and when the vault locks. */
+  private async totpCopy(id: string, window: PasswordWindow): Promise<PasswordReply> {
+    if (!this.deps.vault.isUnlocked()) return this.reply(window, false, t('pwd.le-coffre-est-verrouille'))
+    const clipboard = this.deps.clipboard
+    if (!clipboard) return this.reply(window, false, t('pwd.totp-presse-papiers-indisponible'))
+    const made = this.codeOf(id)
+    if (typeof made === 'string') return this.reply(window, false, made)
+    // A code that was copied before is replaced, not left for its timer to wipe the new one. The new one is noted before the write is
+    // awaited: a vault that locks meanwhile finds it and takes it off.
+    this.forgetCopiedCode()
+    const delay = this.deps.clipboardClearMs ?? PASSWORD_LIMITS.clipboardClearMs
+    const timer = setTimeout(() => void this.clearCopiedCode(), delay)
+    timer.unref?.()
+    const mine = { code: made.code, timer }
+    this.copied = mine
+    try {
+      await clipboard.writeText(made.code)
+    } catch (error) {
+      console.error('[passwords] a one-time code could not be copied:', error instanceof Error ? error.name : typeof error)
+      if (this.copied === mine) this.forgetCopiedCode()
+      return this.reply(window, false, t('pwd.totp-copie-impossible'))
+    }
+    // The vault locked while the code was being written: it is already on the clipboard, so it comes off at once.
+    if (!this.deps.vault.isUnlocked()) {
+      await this.takeOffClipboard(mine.code)
+      return this.reply(window, false, t('pwd.le-coffre-est-verrouille'))
+    }
+    this.touch()
+    return this.reply(window, true, t('pwd.totp-copie', { seconds: Math.ceil(delay / 1000) }))
+  }
+
+  private forgetCopiedCode(): void {
+    if (this.copied) clearTimeout(this.copied.timer)
+    this.copied = null
+  }
+
+  /**
+   * Takes the copied code off the clipboard, only if it is still what is there: something the user copied since is theirs. A clipboard that
+   * cannot be read or cleared is logged as a kind (the code is not said), and the code is no longer the code after its own period.
+   */
+  private async clearCopiedCode(): Promise<void> {
+    const copied = this.copied
+    if (!copied) return
+    this.forgetCopiedCode()
+    await this.takeOffClipboard(copied.code)
+  }
+
+  private async takeOffClipboard(code: string): Promise<void> {
+    const clipboard = this.deps.clipboard
+    try {
+      if (clipboard && (await clipboard.readText()) === code) clipboard.clear()
+    } catch (error) {
+      console.error('[passwords] the copied one-time code could not be taken off the clipboard:', error instanceof Error ? error.name : typeof error)
     }
   }
 

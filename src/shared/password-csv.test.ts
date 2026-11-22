@@ -166,6 +166,23 @@ describe("Lucium's own export", () => {
     expect(back.ok && back.parsed.logins).toEqual([{ origin: 'https://example.com', username: 'ana', password: 'pw1' }])
   })
 
+  it('carries the key of the one-time codes of an entry that has one, and only that key', () => {
+    const key = { secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', algorithm: 'SHA256', digits: 8, period: 60 } as const
+    const text = exportText([{ ...entries[0]!, totp: key }, { ...entries[0]!, username: 'bob' }])
+    expect(JSON.parse(text).entries).toEqual([{ origin: 'https://example.com', username: 'ana', password: 'pw1', totp: key }, { origin: 'https://example.com', username: 'bob', password: 'pw1' }])
+    const back = parseExportText(text)
+    expect(back.ok && back.parsed.logins.map((login) => login.totp)).toEqual([key, undefined])
+  })
+
+  it('refuses the entry whose key is not what this version writes, rather than adding the login without its second factor', () => {
+    const entry = (totp: unknown) => ({ origin: 'https://ok.test', username: 'a', password: 'p', totp })
+    const good = { secret: 'GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ', algorithm: 'SHA1', digits: 6, period: 30 }
+    const bad = [{ ...good, secret: 'nope!' }, { ...good, algorithm: 'MD5' }, { ...good, digits: 5 }, { ...good, extra: 1 }, 'text', null, 5]
+    const result = parseExportText(JSON.stringify({ kind: 'lucium-passwords', version: 1, entries: [entry(good), ...bad.map(entry)] }))
+    expect(result.ok && result.parsed.logins).toEqual([{ origin: 'https://ok.test', username: 'a', password: 'p', totp: good }])
+    expect(result.ok && result.parsed.counts).toEqual({ read: 8, unsupported: 0, empty: 0, invalid: 7 })
+  })
+
   it('checks every entry like a login typed by hand, and refuses anything else', () => {
     const hostile = JSON.stringify({ kind: 'lucium-passwords', version: 1, entries: [{ origin: 'http://remote.test', username: 'a', password: 'p' }, { origin: 'https://ok.test', username: 'a\n', password: 'p' }, 'string', null, { origin: 'https://ok.test', username: 'a', password: '' }, { origin: 'https://fine.test', username: 'a', password: 'p', extra: 1 }] })
     const result = parseExportText(hostile)
