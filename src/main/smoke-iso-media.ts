@@ -516,11 +516,14 @@ export async function smokeIsoMedia(ctx: SmokeContext, check: Check): Promise<vo
   browser.dispatch({ type: 'settings/update', patch: { autoPictureInPicture: true } })
   await select(quietTab)
   const justLeft = await inPage<unknown>(videoTab, FACTS).catch((error: unknown) => String(error))
-  const floatedByItself = await waitFor(async () => (await inPage<boolean>(videoTab, '!!document.pictureInPictureElement')) === true, 5000)
+  // The rule floats the video in Lucium's own window (the tab is lent to it, as for the button above); the system's window is only the fallback
+  // for a page Lucium cannot lend, which this page is not: the system's window opening here would be a regression, not a pass.
+  const floatedByItself = await waitFor(lent, 5000)
   await sleep(1200)
+  const inSystemWindow = await inPage<boolean>(videoTab, '!!document.pictureInPictureElement').catch(() => null)
   // When it did not float: what the rule says of the page now, and what the page answers when asked to float the same way (its reason).
   const why = floatedByItself ? null : { canEnter: await contentsOf(videoTab).executeJavaScript(PIP_AUTO_CAN_ENTER).catch((error: unknown) => String(error)), enter: await contentsOf(videoTab).executeJavaScript(PIP_AUTO_ENTER, true).catch((error: unknown) => String(error)) }
-  check('media: with Picture in Picture on, leaving a playing video floats it, and no player opens', floatedByItself && !(runtime().media ?? []).includes(videoTab), `floating ${floatedByItself} / ${JSON.stringify(runtime().media)} / before ${JSON.stringify(before)} / just left ${JSON.stringify(justLeft)} / ${JSON.stringify(why)}`)
+  check('media: with Picture in Picture on, leaving a playing video floats it, and no player opens', floatedByItself && inSystemWindow === false && !(runtime().media ?? []).includes(videoTab), `floating ${floatedByItself} / system window ${inSystemWindow} / ${JSON.stringify(runtime().media)} / before ${JSON.stringify(before)} / just left ${JSON.stringify(justLeft)} / ${JSON.stringify(why)}`)
   await select(videoTab)
   await hush(videoTab)
   await sleep(300)
