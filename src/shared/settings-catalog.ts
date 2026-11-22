@@ -110,7 +110,7 @@ export const SETTINGS_KEYS = {
   ],
   // Téléchargements et lecture · Ouverture des fichiers · Signets (the export) · Icônes des sites · Copies automatiques · Export
   files: [
-    'tidyDownloads', 'downloadStatusChip', 'downloadResume', 'downloadAskWhere', 'useReadLaterFolders',
+    'tidyDownloads', 'downloadStatusChip', 'downloadResume', 'downloadAskWhere', 'warnExecutableDownload', 'useReadLaterFolders',
     'openWithMemory', 'openWithApps',
     'resolveFavicons',
     'autoBackup', 'autoBackupMinutes', 'autoBackupKeep'

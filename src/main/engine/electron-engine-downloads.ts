@@ -8,7 +8,7 @@ import type { DownloadInfo } from '@shared/model'
 import { interruptedBecause } from '@shared/downloads-view'
 import { safeDownloadName } from '@shared/chrome-compat'
 import { isAuthContents } from './web-auth'
-import { logOrigin } from '@shared/url'
+import { hostOf as hostOfUrl, logOrigin } from '@shared/url'
 import { uniquePath } from './download-paths'
 import { chosenFilePath } from './download-names'
 import { DownloadStaging, stagedOutcome, stagingRootFor } from './download-staging'
@@ -19,6 +19,7 @@ import { RESUME_FILE, type ItemView, type ProbeAnswer } from '@shared/download-r
 import { suggestedFileName } from '@shared/file-names'
 import { currentPlatform } from '../platform'
 import { isExecutableDownload } from '@shared/open-with'
+import { warnsBeforeSaving } from '@shared/download-warning'
 import type { DownloadPolicy, DownloadResumeOptions, SaveRequest } from './types'
 import { t } from '@shared/i18n'
 import { DOWNLOAD_EMIT_INTERVAL_MS, RESUME_PROBE_TIMEOUT_MS, type Scope, type ActiveDownload, freeBytesOf } from './electron-engine-base'
@@ -216,6 +217,9 @@ export abstract class ElectronEngineDownloads extends ElectronEnginePermissions 
       const proposed = wanted ?? namer?.(item.getFilename(), item.getURL()) ?? item.getFilename()
       // The place the user is asked for: not for a file an extension named, nor one opened without keeping.
       const ask = !requested && !temporary && !resumed ? policy.ask : null
+      // A file that can run is not written to its place before the user has said yes (never on a resumption, nor for a file kept in the temporary folder).
+      const confirmExecutable = policy.confirmExecutable ?? null
+      const warn = confirmExecutable !== null && warnsBeforeSaving({ enabled: true, resumed: resumed !== null, temporary: Boolean(temporary), filename: basename(proposed), mimeType })
       let path: string
       let reserved = false
       let staging: DownloadStaging | null = null
@@ -225,7 +229,7 @@ export abstract class ElectronEngineDownloads extends ElectronEnginePermissions 
           path = resumed.path
           this.reservedPaths.reserve(path)
           reserved = true
-        } else if (temporary || ask) {
+        } else if (temporary || ask || warn) {
           staging = this.stagingFolder()
           path = staging.allocate(id, proposed)
         } else {
@@ -309,29 +313,46 @@ export abstract class ElectronEngineDownloads extends ElectronEnginePermissions 
       }
       emit(restarted ? 'progressing' : 'interrupted', true)
       // Asked once, at the start: the file downloads into the temporary folder meanwhile, and moves when the user has answered and the file is complete.
-      const answered: Promise<void> = ask
-        ? Promise.resolve()
-            .then(() => ask({ filename: suggestedFileName(proposed, { platform: currentPlatform().id, folder }), folder, url: item.getURL() } satisfies SaveRequest))
-            .then((answer) => {
-              if (answer === null) {
+      // First the warning (a file that can run), then the place when it is asked; a « no » to either cancels the download.
+      let reservedChosen: string | null = null
+      const answered: Promise<void> =
+        ask || warn
+          ? Promise.resolve()
+              .then(() => (warn && confirmExecutable ? confirmExecutable({ filename: basename(proposed), host: hostOfUrl(item.getURL()) }) : true))
+              .then(async (go) => {
+                if (!go) {
+                  placeRefused = true
+                  return item.cancel()
+                }
+                if (!ask) {
+                  // Allowed, with no place to ask: the file goes where it would have gone without the question.
+                  if (wanted?.includes('/')) mkdirSync(dirname(join(folder, wanted)), { recursive: true })
+                  chosen = uniquePath(folder, proposed, this.reservedPaths, existsSync)
+                  this.reservedPaths.reserve(chosen)
+                  reservedChosen = chosen
+                  if (!finished) emit(item.getState() === 'interrupted' ? 'interrupted' : 'progressing', true)
+                  return
+                }
+                const answer = await ask({ filename: suggestedFileName(proposed, { platform: currentPlatform().id, folder }), folder, url: item.getURL() } satisfies SaveRequest)
+                if (answer === null) {
+                  placeRefused = true
+                  return item.cancel()
+                }
+                const place = chosenFilePath(answer)
+                if (place === null) {
+                  console.error(`[downloads] the place chosen for download ${id} is not a file path, it is cancelled:`, answer)
+                  placeRefused = true
+                  return item.cancel()
+                }
+                chosen = place
+                if (!finished) emit(item.getState() === 'interrupted' ? 'interrupted' : 'progressing', true)
+              })
+              .catch((error: unknown) => {
+                console.error(`[downloads] the question before download ${id} (the place, or the warning about a file that can run) failed, it is cancelled:`, error)
                 placeRefused = true
-                return item.cancel()
-              }
-              const place = chosenFilePath(answer)
-              if (place === null) {
-                console.error(`[downloads] the place chosen for download ${id} is not a file path, it is cancelled:`, answer)
-                placeRefused = true
-                return item.cancel()
-              }
-              chosen = place
-              if (!finished) emit(item.getState() === 'interrupted' ? 'interrupted' : 'progressing', true)
-            })
-            .catch((error: unknown) => {
-              console.error(`[downloads] the save dialog of download ${id} failed, it is cancelled:`, error)
-              placeRefused = true
-              item.cancel()
-            })
-        : Promise.resolve()
+                item.cancel()
+              })
+          : Promise.resolve()
       // A change of state (a drop of the connection) is always told: it would be the last word of an interrupted download.
       // The file carries the mark of the system while it is still being written, not only once it is whole (download-quarantine.ts, `earlyQuarantine`).
       const markEarly = earlyQuarantine(() => path)
@@ -379,6 +400,7 @@ export abstract class ElectronEngineDownloads extends ElectronEnginePermissions 
             }
           }
           finished = true
+          if (reservedChosen !== null) this.reservedPaths.release(reservedChosen)
           emit(outcome, true)
           // The folder of a file that waited for a place goes, moved or not; one opened without keeping stays until the application quits.
           if (staging && !keepStaged) {

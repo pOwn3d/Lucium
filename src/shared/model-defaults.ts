@@ -312,6 +312,7 @@ export function defaultSettings(): Settings {
     downloadPause: false,
     downloadResume: false,
     downloadAskWhere: false,
+    warnExecutableDownload: true,
     openWithMemory: false,
     openWithApps: {},
     openUnsaved: false,

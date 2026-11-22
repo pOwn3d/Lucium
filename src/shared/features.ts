@@ -795,6 +795,14 @@ export const FEATURES = [
     cost: ['disk']
   },
   {
+    id: 'warn-executable-download',
+    key: 'warnExecutableDownload',
+    get label() { return t('download-settings.prevenir-avant-un-fichier-executable') },
+    group: 'data',
+    get description() { return t('features.demande-avant-d-enregistrer-un-fichier-qui-peut') },
+    cost: ['none']
+  },
+  {
     id: 'open-with',
     key: 'openWithMemory',
     get label() { return t('features.memoriser-l-application-d-ouverture-par-type') },

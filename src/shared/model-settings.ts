@@ -525,6 +525,8 @@ export interface Settings {
   downloadResume: boolean
   /** Ask where each file is saved (the system's save box), instead of putting it in the downloads folder at once. */
   downloadAskWhere: boolean
+  /** Ask before a file that can run (a program, a script, a disk image…) is saved, and save nothing when the user says no (see download-warning.ts). On by default. */
+  warnExecutableDownload: boolean
   /** "Ouvrir avec…" on a downloaded file: the application chosen is remembered for that type of file and used by "Ouvrir" (see open-with.ts). */
   openWithMemory: boolean
   /** The applications remembered by type of file (extension → path of an `.app`). Only the main process adds to it; the interface can take from it. */

@@ -1414,6 +1414,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'download-pause': 'keep',
   'download-resume': 'keep',
   'download-ask-where': 'keep',
+  'warn-executable-download': 'protect',
   'open-with': 'keep',
   'open-unsaved': 'keep',
   'pdf-with-source': 'keep',

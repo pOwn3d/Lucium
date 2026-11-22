@@ -55,9 +55,20 @@ export interface SaveRequest {
 export interface DownloadPolicy {
   ask: ((request: SaveRequest) => Promise<string | null>) | null
   openUnsaved: boolean
+  /**
+   * Called before a file that can run is saved (see download-warning.ts): true saves it, false cancels the download and keeps nothing. Absent or
+   * null means the warning is off. The file waits in the temporary folder meanwhile, as it does when the place is asked.
+   */
+  confirmExecutable?: ((request: ExecutableRequest) => Promise<boolean>) | null
 }
 
-export const NO_DOWNLOAD_POLICY: DownloadPolicy = { ask: null, openUnsaved: false }
+/** What the user is told before a file that can run is saved: the name it would have, and the host it comes from (never the full address). */
+export interface ExecutableRequest {
+  filename: string
+  host: string
+}
+
+export const NO_DOWNLOAD_POLICY: DownloadPolicy = { ask: null, openUnsaved: false, confirmExecutable: null }
 
 /** What the shell gives the engine to resume downloads after a restart. */
 export interface DownloadResumeOptions {
