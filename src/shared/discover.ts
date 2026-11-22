@@ -276,8 +276,9 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     level: 'beginner',
     name: 'cmd.rechercher-dans-la-page',
     summary: 'discover.chercher-resume',
-    where: 'discover.menu-ou',
-    menus: { menu: ['menu.edition', 'menu.rechercher', 'menu.rechercher-2'] },
+    where: 'discover.recherche-ou',
+    whereVars: () => ({ item: t('menu.rechercher-2') }),
+    menus: { menu: ['menu.edition', 'menu.rechercher'] },
     keywords: 'chercher mot texte page occurrence trouver remplacer find word text occurrence replace',
     shortcut: 'find',
     try: open({ panel: 'find' }),
@@ -889,6 +890,102 @@ export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
     where: 'discover.certificat-ou',
     keywords: 'certificat securite connexion pas privee https site dangereux avertissement certificate security connection not private https unsafe warning',
     try: { kind: 'hint' }
+  },
+
+  // ---- Added after the review: what the menus, the context menus and the Settings hold that the first pass left out ----
+  {
+    id: 'fake-fill',
+    task: 'fast',
+    level: 'advanced',
+    name: 'discover.fausses-donnees-nom',
+    summary: 'discover.fausses-donnees-resume',
+    where: 'discover.fausses-donnees-ou',
+    whereVars: () => ({ item: t('fake-fill.menu') }),
+    keywords: 'formulaire remplir fausses donnees test faux nom adresse champ clic droit form fill fake data test dummy name address field right click',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'share-annotated-window',
+    task: 'keep',
+    level: 'advanced',
+    name: 'discover.partage-annote-nom',
+    summary: 'discover.partage-annote-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.partager-une-fenetre-annotee'] },
+    keywords: 'partager fenetre annotee visio visioconference presenter ecran dessiner share annotated window video call present screen draw',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'blank-window',
+    task: 'fast',
+    level: 'advanced',
+    name: 'menu.fenetre-vierge',
+    summary: 'discover.fenetre-vierge-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.fenetre-vierge'] },
+    keywords: 'fenetre vierge nouvelle vide sans barre commandes blank window new empty without command bar',
+    shortcut: 'blankWindow',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'site-searches',
+    task: 'fast',
+    level: 'advanced',
+    name: 'discover.recherches-site-nom',
+    summary: 'discover.recherches-site-resume',
+    where: 'discover.recherches-site-ou',
+    whereVars: () => ({ path: settingsPath('siteSearches') }),
+    keywords: 'recherche site mot cle raccourci tab yt youtube wikipedia moteur ajouter site search keyword shortcut tab engine add',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'navigation' }
+  },
+  {
+    id: 'space-videos',
+    task: 'organise',
+    level: 'advanced',
+    name: 'discover.videos-lucium-nom',
+    summary: 'discover.videos-lucium-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.espaces', 'menu.modifier-le-theme'] },
+    keywords: 'video fond espace fournies lucium pause arriere plan animee background space bundled paused animated wallpaper',
+    shortcut: 'editTheme',
+    try: { kind: 'hint' },
+    setting: { panel: 'settings', pane: 'appearance' }
+  },
+  {
+    id: 'annotate-bar-position',
+    task: 'keep',
+    level: 'advanced',
+    name: 'discover.position-annotation-nom',
+    summary: 'discover.position-annotation-resume',
+    where: 'discover.position-annotation-ou',
+    menus: { menu: ['menu.fichier', 'menu.annoter-cette-page'] },
+    keywords: 'barre annotation position poignee deplacer droite gauche haut bas flottante annotate bar position handle move right left top bottom floating',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'delete-profile',
+    task: 'protect',
+    level: 'advanced',
+    name: 'discover.supprimer-profil-nom',
+    summary: 'discover.supprimer-profil-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('profiles') }),
+    keywords: 'supprimer profil effacer donnees cookies historique delete profile erase data cookies history remove',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'profiles' }
+  },
+  {
+    id: 'command-bar-preview',
+    task: 'fast',
+    level: 'beginner',
+    name: 'discover.apercu-lignes-nom',
+    summary: 'discover.apercu-lignes-resume',
+    where: 'discover.apercu-lignes-ou',
+    whereVars: () => ({ path: settingsPath('commandBarSize') }),
+    keywords: 'apercu ligne barre commandes surbrillance colonne droite icone preview line command bar highlighted column right icon',
+    try: { kind: 'hint' },
+    setting: { panel: 'settings', pane: 'navigation' }
   }
 ]
 

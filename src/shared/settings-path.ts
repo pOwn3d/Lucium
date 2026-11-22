@@ -71,7 +71,9 @@ export const SETTINGS_PLACES = {
   workViews: { key: 'workViewsEnabled' },
   glance: { key: 'peekWithShift' },
   rememberScroll: { key: 'rememberScroll' },
-  compactMode: { key: 'compactMode' }
+  compactMode: { key: 'compactMode' },
+  siteSearches: { key: 'siteSearches' },
+  commandBarSize: { key: 'commandBarSize' }
 } as const satisfies Record<string, SettingsPlace>
 
 export type SettingsPlaceId = keyof typeof SETTINGS_PLACES

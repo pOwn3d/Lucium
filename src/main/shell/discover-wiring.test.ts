@@ -164,6 +164,9 @@ describe('the menu paths the cards announce', () => {
   it('say the path of the search in the page as the menu has it', () => {
     setLanguage('fr')
     const card = ALL_DISCOVER_ENTRIES.find((entry) => entry.id === 'find')!
-    expect(discoverWhere(card)).toBe('Menu Édition › Rechercher › Rechercher.')
+    expect(discoverWhere(card)).toBe('Menu Édition › Rechercher, puis «\u00a0Rechercher…\u00a0».')
+    setLanguage('en')
+    expect(discoverWhere(card)).toBe('Edit › Find menu, then “Find…”.')
+    setLanguage('fr')
   })
 })

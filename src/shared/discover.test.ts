@@ -280,7 +280,8 @@ describe('a card for every function', () => {
 
 describe('the functions without a switch', () => {
   it('number a score and more, each with words in both languages, a name, a line and a place', () => {
-    expect(DISCOVER_EXTRAS.length).toBeGreaterThanOrEqual(25)
+    expect(DISCOVER_EXTRAS.length).toBe(37)
+    expect(ALL_DISCOVER_ENTRIES.length).toBe(165)
     for (const language of ['fr', 'en'] as const) {
       setLanguage(language)
       for (const entry of DISCOVER_EXTRAS) {
@@ -294,8 +295,27 @@ describe('the functions without a switch', () => {
   })
 
   it('name what docs/fonctions.md lists as without a switch, and what the menus hold', () => {
-    const wanted = ['reader-mode', 'auto-reload', 'task-manager', 'import-browser', 'clear-site-data', 'extensions-page', 'private-window', 'window-sidebar', 'move-to-window', 'move-tab', 'guided-setup', 'annotate-page', 'panel-size', 'glass-effect', 'drop-links', 'app-icon', 'presets', 'certificate-warning', 'developer-tools', 'page-summary']
+    const wanted = ['reader-mode', 'auto-reload', 'task-manager', 'import-browser', 'clear-site-data', 'extensions-page', 'private-window', 'window-sidebar', 'move-to-window', 'move-tab', 'guided-setup', 'annotate-page', 'panel-size', 'glass-effect', 'drop-links', 'app-icon', 'presets', 'certificate-warning', 'developer-tools', 'page-summary', 'fake-fill', 'share-annotated-window', 'blank-window', 'site-searches', 'space-videos', 'annotate-bar-position', 'delete-profile', 'command-bar-preview']
     for (const id of wanted) expect(ids(DISCOVER_EXTRAS), id).toContain(id)
+  })
+
+  it('say where the eight functions added after the first review are, as the menus and the Settings name the place', () => {
+    const where = (id: string): string => discoverWhere(DISCOVER_EXTRAS.find((entry) => entry.id === id)!)
+    setLanguage('fr')
+    expect(where('blank-window')).toBe('Menu Fichier › Fenêtre vierge.')
+    expect(where('share-annotated-window')).toBe('Menu Fichier › Partager une fenêtre annotée.')
+    expect(where('space-videos')).toBe('Menu Espaces › Modifier le thème.')
+    expect(where('site-searches')).toContain('Réglages › Navigation › Recherches par mot-clé')
+    expect(where('delete-profile')).toBe('Se règle dans Réglages › Profils.')
+    expect(where('fake-fill')).toContain('Remplir avec de fausses données')
+    expect(where('annotate-bar-position')).toContain('Menu Fichier › Annoter cette page')
+    expect(where('command-bar-preview')).toContain('Réglages › Navigation')
+    const pane = (id: string) => discoverSettingsRequest(DISCOVER_EXTRAS.find((entry) => entry.id === id)!).pane
+    expect([pane('delete-profile'), pane('site-searches'), pane('command-bar-preview'), pane('space-videos')]).toEqual(['profiles', 'navigation', 'navigation', 'appearance'])
+    setLanguage('en')
+    expect(where('blank-window')).toBe('Menu File › Blank Window.')
+    expect(where('delete-profile')).toContain('Settings › Profiles')
+    setLanguage('fr')
   })
 
   it('show the keys of a shortcut that no command carries as they are, and of the others as they are set', () => {
