@@ -6708,4 +6708,6 @@ export const fr = {
   'discover.traqueurs-nom': 'Détail des traqueurs par site',
   'discover.traqueurs-resume': 'Le panneau du site liste les sites que le bloqueur a empêché de répondre à la page : le nom de chaque site et le nombre de requêtes. Compté en mémoire, vidé à chaque nouvelle page, jamais dans un onglet privé.',
   'discover.traqueurs-ou': 'Dans le panneau du site (bouton « {button} »), sous le blocage : « Voir quels sites ont été bloqués ».',
+  'auto-update.lucium-version-corrige-une-faille': 'Lucium {version} corrige une faille de sécurité. Installez-la dès que possible.',
+  'auto-update.lucium-version-corrige-une-faille-et-attend': 'Lucium {version} corrige une faille de sécurité et attend d’être installé.',
 } as const
