@@ -92,7 +92,7 @@ export function securityCheck(facts: SecurityFacts): CheckRow[] {
   rows.push(switched('protection', settings.sendGpc, 'prot-gpc', 'security-check.prot-gpc-on', 'security-check.prot-gpc-off', 'protection'))
   rows.push(switched('protection', settings.reduceFingerprint, 'prot-fingerprint', 'security-check.prot-fingerprint-on', 'security-check.prot-fingerprint-off', 'protection'))
 
-  // Updates: whether Lucium looks every day, and the version that runs.
+  // Updates: whether the automatic check is switched on (it makes no request in a build that has no feed address, so the line promises no frequency), and the version that runs.
   rows.push(switched('updates', settings.autoUpdate, 'upd-auto', 'security-check.upd-auto-on', 'security-check.upd-auto-off', 'autoUpdate'))
   if (facts.engine) rows.push({ id: 'upd-version', area: 'updates', status: 'info', text: t('security-check.upd-version', { name: facts.engine.name, version: facts.engine.version }) })
 

@@ -7011,7 +7011,7 @@ export const en: Record<MessageKey, string> = {
   'security-check.prot-gpc-off': 'Sites do not receive the Global Privacy Control signal.',
   'security-check.prot-fingerprint-on': 'Fingerprinting is reduced.',
   'security-check.prot-fingerprint-off': 'Fingerprinting is not reduced.',
-  'security-check.upd-auto-on': 'Lucium looks for a new version every day.',
+  'security-check.upd-auto-on': 'Automatic update checking is switched on in Settings.',
   'security-check.upd-auto-off': 'Lucium does not look for a new version by itself: remember the Lucium › Check for Updates menu.',
   'security-check.upd-version': 'Browser engine: {name} {version}.',
   'security-check.vault-lock-on': 'Lucium’s lock is on: a phrase is asked for what you chose to protect.',

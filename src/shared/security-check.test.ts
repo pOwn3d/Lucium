@@ -26,6 +26,14 @@ describe('the lines of the security check', () => {
     expect(checksToReview(off)).toBeGreaterThanOrEqual(7)
   })
 
+  it('says the automatic check is on, and promises no frequency: a build with no feed address makes no request at all', () => {
+    for (const language of ['fr', 'en'] as const) {
+      setLanguage(language)
+      const text = row(securityCheck(facts({ autoUpdate: true })), 'upd-auto')?.text ?? ''
+      expect(text, language).not.toMatch(/chaque jour|every day|daily|quotidien/i)
+    }
+  })
+
   it('names the engine that runs, only when the interface knows it', () => {
     expect(row(securityCheck(facts()), 'upd-version')).toBeUndefined()
     expect(row(securityCheck(facts({}, { engine: { name: 'Electron', version: '45.2.1' } })), 'upd-version')?.text).toBe('Moteur du navigateur\u00a0: Electron 45.2.1.')
