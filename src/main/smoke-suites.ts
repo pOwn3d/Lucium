@@ -444,6 +444,13 @@ export const SUITES: readonly SuiteEntry[] = [
     run: async (context) => (await import('./smoke-work-views')).runWorkViewsSmoke(context)
   },
   {
+    name: 'discover',
+    chain: false,
+    what: 'The checks of « Découvrir Lucium » in a real application: Aide › Découvrir Lucium right after « Premiers pas » opens the panel with the focus in its search, one card for each chosen function (each named by its heading, each shortcut a named group), a typed search narrows them, Escape empties it then closes the panel, Tab goes from the search to a chip with a visible ring, « Essayer » of the command bar card gives way to the bar, « Régler » of the protection card opens the Settings, and the contour of the search field and of a chip is 3 : 1 in the light and the dark scheme. Reports LUCIUM_SMOKE_DISCOVER.',
+    order: 'Written with the panel and never run by its author (AGENTS.md §1: a run opens windows): it stays out of the chain until a maintainer has run it with LUCIUM_SMOKE_ONLY=discover and seen it green. It opens panels and puts the colour scheme back as it was; it presses no button that writes a file or opens a tab.',
+    run: async (context) => (await import('./smoke-discover')).runDiscoverSmoke(context)
+  },
+  {
     name: 'probes-web',
     chain: true,
     what: 'The answers to three open questions about pages: what a page of a local file reads of a web site and of the disk, and whether a web page reaches a local file; what a page reads of the notifications after « Autoriser » without « Se souvenir »; window.open after a click in a frame of another site.',

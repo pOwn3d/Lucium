@@ -6,6 +6,8 @@
 
 Les choix que presque tout le monde fait en arrivant, réunis sur une page : le navigateur par défaut, l'import depuis un autre navigateur, la langue, l'apparence et la taille de l'interface, le côté de la barre latérale, le niveau de protection, le gestionnaire de mots de passe, le moteur de recherche, les liens venus d'autres applications, ce qui se rouvre au lancement, la mise en veille et l'archivage des onglets, le dossier des téléchargements. Ce sont les mêmes réglages que dans leur catégorie, pas des copies : le lien « Ouvrir « … » » au pied d'un groupe mène à sa catégorie.
 
+Au pied de la page, le bouton **« Découvrir ce que Lucium sait faire »** ouvre « Découvrir Lucium » (le panneau qui montre toutes les fonctions par tâche, avec où les trouver, leur raccourci, « Essayer » et « Régler » vers le réglage), à côté de « Voir les fonctions » qui mène à « Fonctions en option ». Chaque « Régler » de ce panneau ouvre la page des Réglages qui tient la fonction ; le panneau ne change jamais un réglage lui-même.
+
 La carte **« Régler en quelques questions »** pose les questions les plus courantes, une à la fois (34 au plus), puis montre ce qui va changer. Rien ne change avant « Appliquer », et « Annuler » remet tout comme avant.
 
 ## Chercher un réglage

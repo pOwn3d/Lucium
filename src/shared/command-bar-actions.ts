@@ -35,6 +35,7 @@ export function actionToDispatch(action: CommandAction, state: SidebarState): Ac
     case 'clear-site-now':
     case 'reload-all':
     case 'recent-notices':
+    case 'discover':
     case 'web-store':
     case 'name-window':
     case 'aside-space':

@@ -21,6 +21,7 @@ import { isReadableWebPage, siteReadableOf, type ReadableMode } from './readable
 import type { Candidate, CommandAction } from './command-bar-types'
 import { actionDetail } from './command-bar-shortcuts'
 import type { PlatformId } from './platform'
+import { canOpenInPrivate } from './private-window'
 import { fold, matchScore, byScore, nameScore } from './command-bar-match'
 
 export const MAX_TABS = 6
@@ -178,6 +179,12 @@ export function searchOnlyActions(state: Pick<SidebarState, 'settings'>, platfor
     { kind: 'action', id: 'action:reload-all', label: t('cmd.actualiser-tous-les-onglets'), detail: t('cmd.action'), action: 'reload-all' },
     { kind: 'action', id: 'action:recent-notices', label: t('cmd.notifications-recentes'), detail: t('cmd.action'), action: 'recent-notices' }
   ]
+}
+
+/** « Découvrir Lucium »: offered when typed, except in a private window, which does not open the panel (its entry of the Aide menu is greyed out for the same reason). */
+export function discoverActions(inPrivateWindow: boolean): Candidate[] {
+  if (inPrivateWindow && !canOpenInPrivate('discover')) return []
+  return [{ kind: 'action', id: 'action:discover', label: t('discover.titre'), detail: t('cmd.action'), action: 'discover' }]
 }
 
 /** "Rechercher un onglet…": offered when typed, while the function is on; choosing it puts the bar in "Onglets" mode (the shortcut is ⇧⌘A). */

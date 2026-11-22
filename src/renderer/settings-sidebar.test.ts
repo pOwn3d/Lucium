@@ -209,7 +209,9 @@ describe('« Fonctions en option »', () => {
     for (const [hash, selector] of [['#home', 'main .home-features button'], ['#profiles', 'main .profiles-features button']] as const) {
       const window = await open(hash)
       if (hash === '#home') expect(window.querySelector('main .home-features span')?.textContent).toBe(tp('settings.home-fonctions', 7, { all: 31 }))
-      await click(window.querySelector<HTMLButtonElement>(selector)!)
+      // « Voir les fonctions » (« Pour commencer » has a button that opens « Découvrir Lucium » before it).
+      const toFeatures = [...window.querySelectorAll<HTMLButtonElement>(selector)].find((b) => b.textContent === t('settings.home-voir-fonctions') || hash === '#profiles')!
+      await click(toFeatures)
       await settle(() => void globalThis.dispatchEvent(new HashChangeEvent('hashchange')))
       expect(current(window), hash).toBe('features')
       mounted!.unmount()

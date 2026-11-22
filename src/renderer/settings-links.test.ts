@@ -33,6 +33,7 @@ interface Link {
 /** Every `pane/anchor` the sources ask for, with the place it announces. */
 const LINKS: Readonly<Record<string, Link>> = {
   'about/status': { from: 'Aide › État de Lucium… ; la notice d’une erreur interne (« Voir le journal »)', labels: ['menu.etat-d-lucium', 'app.voir-le-journal'], page: 'about', title: 'engine-status.etat-d-lucium', fold: true },
+  'about/icon': { from: '« Découvrir Lucium » : la carte « Icône de l’application » (« Régler »)', page: 'about', title: 'settings.icone-de-l-application' },
   'about/about': { from: 'chrome://settings/help, chrome://settings/about', page: 'about', title: 'about-settings.a-propos' },
   'tools/extensions': { from: 'Extensions › Gérer les extensions ; le menu d’une extension ; la page des extensions', labels: ['menu.gerer-les-extensions'], page: 'tools', title: 'settings.extensions' },
   'keyboard/shortcuts': { from: 'Aide › Raccourcis clavier essentiels ; la barre de commandes ; l’aide des raccourcis', labels: ['menu.raccourcis-clavier-essentiels'], page: 'keyboard', title: 'settings.section-raccourcis-clavier' },
