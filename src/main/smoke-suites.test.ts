@@ -11,7 +11,7 @@ const source = (file: string): string => readFileSync(join(__dirname, file), 'ut
 const packageJson = JSON.parse(readFileSync(join(__dirname, '../../package.json'), 'utf8')) as { scripts: Record<string, string> }
 
 /** The files of the suites: every smoke*.ts but the tools of the run and the tests. */
-const suiteFiles = readdirSync(__dirname).filter((file) => /^smoke.*\.ts$/.test(file) && !file.endsWith('.test.ts') && !['smoke-kit.ts', 'smoke-probe-kit.ts', 'smoke-run.ts', 'smoke-suites.ts'].includes(file))
+const suiteFiles = readdirSync(__dirname).filter((file) => /^smoke.*\.ts$/.test(file) && !file.endsWith('.test.ts') && !['smoke-kit.ts', 'smoke-probe-kit.ts', 'smoke-engine-facts-kit.ts', 'smoke-run.ts', 'smoke-suites.ts'].includes(file))
 
 describe('the table of the engine suites', () => {
   it('gives each suite one name', () => {
