@@ -10,7 +10,7 @@ import { clipboard, dialog, shell, type BrowserWindow } from 'electron'
 import { exportFileName, exportMarkdown, folderImageLink, imagesFolderName, markdownWithImages, parsePick, parseReply, safeUrl, type MdPick, type MdResult } from '@shared/markdown-export'
 import { createZip } from '@shared/zip'
 import type { Page } from '../engine/types'
-import { t } from '@shared/i18n'
+import { t, tp } from '@shared/i18n'
 import { assertTestRun } from '../test-seam'
 
 /** The tab that is exported, and the window that shows what the export has to say. */
@@ -221,7 +221,8 @@ export async function savePage(target: MarkdownTarget): Promise<void> {
     await writeFile(path, markdownWithImages(result, local), 'utf8')
     const saved = { name: basename(path), kept, total: result.images.length }
     const message = result.images.length === 0 ? t('browser.enregistre-name', { name: saved.name }) : result.images.length > 1 ? t('markdown-export.enregistre-name-images', saved) : t('markdown-export.enregistre-name-image', saved)
-    target.toast(message, { label: t('browser.afficher'), run: () => ui.reveal(path) })
+    // The images the walk of the page could not get an address for are not in the file: the user is told how many.
+    target.toast(result.missingImages > 0 ? `${message}. ${tp('markdown-export.images-non-recuperees', result.missingImages)}` : message, { label: t('browser.afficher'), run: () => ui.reveal(path) })
   } catch (error) {
     console.error('[markdown] cannot save the page:', error)
     ui.fail(t('browser.enregistrement-impossible'), `${path}\n\n${String((error as Error).message ?? error)}`)

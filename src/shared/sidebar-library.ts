@@ -24,9 +24,9 @@ import { HOUR_MS, replaceTab, onlyPrivateTabsOn, select, archiveTabs, moveTabs, 
 import type { Reducers } from './sidebar-helpers'
 import { usageAfterForgetting } from './command-bar-usage'
 
-/** The tab that brings a reminder back: in its space while that space exists, else in the one on screen. */
+/** The tab that brings a reminder back: in its space while that space exists, else in the one on screen; in its container while that container exists, else outside any. */
 function reopenReminder(state: SidebarState, entry: TabReminder, background: boolean): Action {
-  return { type: 'tab/open', url: entry.url, ...(state.spaces.some((s) => s.id === entry.spaceId) ? { spaceId: entry.spaceId } : {}), ...(background ? { background: true } : {}) }
+  return { type: 'tab/open', url: entry.url, ...(state.spaces.some((s) => s.id === entry.spaceId) ? { spaceId: entry.spaceId } : {}), ...(entry.container !== undefined && containerById(state.settings, entry.container) ? { container: entry.container } : {}), ...(background ? { background: true } : {}) }
 }
 
 /** The actions on the library: archive, read later, bookmarks, live folders, favourites, their icons and the sessions (archive/, readlater/, readlater-folder/, bookmark/, bookmarks/, livefolder/, favorite/, favicon/, session/); undefined for the others. */

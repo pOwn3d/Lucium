@@ -5432,6 +5432,8 @@ export const en: Record<MessageKey, string> = {
   'markdown-export.telechargement-de-l-image': 'Downloading the image…',
   'markdown-export.telechargement-des-images': 'Downloading {count} images…',
   'markdown-export.enregistre-name-image': 'Saved: {name} · {kept}/{total} image',
+  'markdown-export.images-non-recuperees.one': '{count} image without an address could not be fetched',
+  'markdown-export.images-non-recuperees.other': '{count} images without an address could not be fetched',
   'markdown-export.enregistre-name-images': 'Saved: {name} · {kept}/{total} images',
   'markdown-export.rien-a-exporter': 'Nothing to export: what you picked contains no text',
   'cmd.enregistrer-la-page-en-markdown': 'Save Page as Markdown',

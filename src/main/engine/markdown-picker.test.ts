@@ -4,6 +4,7 @@ import type { WebContents } from 'electron'
 import { getLanguage, setLanguage, tIn } from '@shared/i18n'
 import { Window } from 'happy-dom'
 import { MarkdownPicker, MARKDOWN_WORLD, pageScript, pickerScript, selectionScript } from './markdown-picker'
+import { SCROLL_WALK_MAX_HEIGHT, SCROLL_WALK_MAX_STEPS, SCROLL_WALK_STEP_MS } from './page-scroll-walk'
 
 // The scripts themselves run in a page and are checked by the engine test (smoke-markdown.ts); here, that they are valid programs with
 // what they are given, and what the main-process side does around them.
@@ -314,33 +315,90 @@ describe('the whole-page script', () => {
   })
 
   describe('on a document', () => {
-    const run = (html: string): { nodes: unknown[] } => {
+    const run = async (html: string, prepare?: (window: Window) => void): Promise<{ nodes: unknown[] }> => {
       const window = new Window()
       window.document.body.innerHTML = html
-      const reply = JSON.parse(window.eval(pageScript()) as string) as { snapshot: { nodes: unknown[] } }
+      prepare?.(window)
+      const reply = JSON.parse((await window.eval(pageScript())) as string) as { snapshot: { nodes: unknown[] } }
       return reply.snapshot
     }
     const text = (value: unknown): string => JSON.stringify(value)
 
-    it('keeps the main part and leaves navigation, side columns and dialogs out', () => {
-      const out = text(run('<nav>MENU</nav><main><h1>Titre</h1><p>Corps</p><aside>PUB</aside><div role="dialog">COOKIES</div></main><footer>PIED</footer>'))
+    it('keeps the main part and leaves navigation, side columns and dialogs out', async () => {
+      const out = text(await run('<nav>MENU</nav><main><h1>Titre</h1><p>Corps</p><aside>PUB</aside><div role="dialog">COOKIES</div></main><footer>PIED</footer>'))
       expect(out).toContain('Corps')
       for (const left of ['MENU', 'PUB', 'COOKIES', 'PIED']) expect(out).not.toContain(left)
     })
 
-    it('leaves out the headers and footers of a page that has no main part, and keeps those of an article', () => {
-      expect(text(run('<header>BANDEAU</header><div><p>Texte</p></div><footer>PIED</footer>'))).not.toMatch(/BANDEAU|PIED/)
-      expect(text(run('<article><header><h1>Dans l’article</h1></header><p>x</p></article>'))).toContain('Dans l’article')
+    it('leaves out the headers and footers of a page that has no main part, and keeps those of an article', async () => {
+      expect(text(await run('<header>BANDEAU</header><div><p>Texte</p></div><footer>PIED</footer>'))).not.toMatch(/BANDEAU|PIED/)
+      expect(text(await run('<article><header><h1>Dans l’article</h1></header><p>x</p></article>'))).toContain('Dans l’article')
     })
 
-    it('never takes what a person typed: fields, and editable regions', () => {
-      const out = text(run('<main><p>Public</p><input value="SECRET1"><textarea>SECRET2</textarea><input type="password" value="SECRET3"><div contenteditable="true">SECRET4</div></main>'))
+    it('never takes what a person typed: fields, and editable regions', async () => {
+      const out = text(await run('<main><p>Public</p><input value="SECRET1"><textarea>SECRET2</textarea><input type="password" value="SECRET3"><div contenteditable="true">SECRET4</div></main>'))
       expect(out).toContain('Public')
       expect(out).not.toContain('SECRET')
     })
 
-    it('reads the address a lazy image keeps until it scrolls into view', () => {
-      expect(text(run('<main><img data-src="https://img.example.com/lazy.png" alt="paresseuse"></main>'))).toContain('https://img.example.com/lazy.png')
+    it('reads the address a lazy image keeps until it scrolls into view', async () => {
+      expect(text(await run('<main><img data-src="https://img.example.com/lazy.png" alt="paresseuse"></main>'))).toContain('https://img.example.com/lazy.png')
+    })
+
+    /** A page 5 000 px tall whose lazy images get their address only when the scroller reaches them, as a lazy-loading script does. */
+    const lazyPage = (window: Window, log: number[], reached = { top: 0 }): void => {
+      const root = window.document.documentElement
+      let top = 0
+      Object.defineProperty(root, 'scrollHeight', { get: () => 5000 })
+      Object.defineProperty(root, 'clientHeight', { get: () => 800 })
+      Object.defineProperty(root, 'scrollTop', {
+        get: () => top,
+        set: (value: number) => {
+          top = value
+          log.push(value)
+          reached.top = Math.max(reached.top, value)
+          if (value >= 4000) for (const img of window.document.querySelectorAll('img[data-late]')) img.setAttribute('src', 'https://img.example.com/late.png')
+        }
+      })
+      top = 300
+    }
+    const LATE = '<main><p>Début</p><img data-late="1" alt="tardive"></main>'
+
+    it('scrolls the page before it reads, so that an image that loads on scroll has its address', async () => {
+      const out = text(await run(LATE, (window) => lazyPage(window, [])))
+      expect(out).toContain('https://img.example.com/late.png')
+    })
+
+    it('gives the scroll position back once it has read', async () => {
+      const log: number[] = []
+      await run(LATE, (window) => lazyPage(window, log))
+      expect(log.length).toBeGreaterThan(2)
+      expect(log.at(-1)).toBe(300)
+    })
+
+    it('stops walking an endless page at the bound of steps', async () => {
+      const log: number[] = []
+      // The page grows by a screen at each step: only the bound of steps ends the walk.
+      const endless = (window: Window): void => {
+        const root = window.document.documentElement
+        let top = 0
+        Object.defineProperty(root, 'scrollHeight', { get: () => 800 + top + 800 })
+        Object.defineProperty(root, 'clientHeight', { get: () => 800 })
+        Object.defineProperty(root, 'scrollTop', { get: () => top, set: (value: number) => { top = value; log.push(value) } })
+      }
+      const script = pageScript().replace(String(SCROLL_WALK_MAX_HEIGHT), '1000000000').replace(', ' + SCROLL_WALK_STEP_MS + ')', ', 0)')
+      const window = new Window()
+      window.document.body.innerHTML = '<main><p>x</p></main>'
+      endless(window)
+      await window.eval(script)
+      // The steps, the jump to the bottom and the return to the start.
+      expect(log.length).toBeLessThanOrEqual(SCROLL_WALK_MAX_STEPS + 2)
+      expect(log.length).toBeGreaterThan(SCROLL_WALK_MAX_STEPS)
+    }, 30_000)
+
+    it('still reads a page whose scroller cannot be walked', async () => {
+      const out = text(await run('<main><p>Lisible</p></main>', (window) => Object.defineProperty(window.document, 'scrollingElement', { get: () => { throw new Error('no scroller') } })))
+      expect(out).toContain('Lisible')
     })
   })
 })

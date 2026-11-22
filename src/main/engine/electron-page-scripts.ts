@@ -11,6 +11,7 @@ import type { PageTools, ToolScripts } from '@shared/page-tools'
 import { SCROLL_SYNC_SCRIPTS } from '@shared/scroll-sync'
 import { SCROLL_MEMORY_SCRIPTS } from '@shared/scroll-memory'
 import { VIM_KEY_SCRIPTS } from '@shared/vim-keys'
+import { SCROLL_WALK_MAX_HEIGHT, scrollWalkSource } from './page-scroll-walk'
 
 /** A frame that does not answer a media question within this long is left out of it (a hung or frozen page must not hold the player). */
 export const MEDIA_SCRIPT_TIMEOUT_MS = 3000
@@ -59,7 +60,7 @@ export function isShellNavigable(url: string): boolean {
 }
 
 // Pages taller than this are cut: a 100 000 px screenshot would exhaust memory.
-export const CAPTURE_MAX_HEIGHT = 16_000
+export const CAPTURE_MAX_HEIGHT = SCROLL_WALK_MAX_HEIGHT
 // Pages wider than this too: a page sets its own width as freely as its height.
 export const CAPTURE_MAX_WIDTH = 16_000
 
@@ -76,36 +77,10 @@ export function fullPageClip(size: { width: number; height: number }): { x: 0; y
  */
 export function prepareFullCaptureScript(maxHeight: number): string {
   return `(async () => {
-    const view = { width: innerWidth, height: innerHeight }
-    const scrolls = (el) => {
-      const style = getComputedStyle(el)
-      return /(auto|scroll|overlay)/.test(style.overflowY) && el.scrollHeight > el.clientHeight + 1 && el.clientWidth >= view.width * 0.5 && el.clientHeight >= view.height * 0.5
-    }
-    const root = document.scrollingElement || document.documentElement
-    let scroller = root
-    if (root.scrollHeight <= view.height + 1) {
-      let best = 0
-      for (const el of document.body ? document.body.querySelectorAll('*') : []) {
-        if (!scrolls(el)) continue
-        const room = el.scrollHeight - el.clientHeight
-        if (room > best) { best = room; scroller = el }
-      }
-    }
-    const start = scroller.scrollTop
-    const extra = () => Math.max(0, scroller.scrollHeight - scroller.clientHeight)
-    const limit = ${maxHeight}
-    const step = Math.max(200, scroller.clientHeight || view.height)
-    let top = 0
-    for (let i = 0; i < 80 && top <= extra() && view.height + extra() < limit + step; i++) {
-      scroller.scrollTop = top
-      await new Promise((done) => setTimeout(done, 120))
-      top += step
-    }
-    scroller.scrollTop = extra()
-    await new Promise((done) => setTimeout(done, 150))
-    const height = view.height + extra()
-    scroller.scrollTop = start
-    return { width: view.width, height, inner: scroller !== root }
+    const walk = await ${scrollWalkSource(maxHeight)}
+    const height = walk.view.height + walk.extra()
+    walk.restore()
+    return { width: walk.view.width, height, inner: walk.inner }
   })()`
 }
 

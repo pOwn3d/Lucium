@@ -268,6 +268,8 @@ export interface TabReminder {
   faviconUrl?: string
   /** The space the tab was in; the tab comes back there when it still exists, else in the active space. */
   spaceId: string
+  /** The container the tab was in (setting `tabContainers`); the tab comes back there while the container exists, else outside any. */
+  container?: string
   /** When the tab comes back, in milliseconds since the epoch. */
   dueAt: number
   createdAt: number
