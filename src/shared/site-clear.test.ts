@@ -11,6 +11,8 @@ import {
   clearHostOfUrl,
   describeClearFailure,
   isClearedOnClose,
+  profilesToWipeOnQuit,
+  quitClearPending,
   setClearedOnClose,
   sitesToClearOnClose,
   sitesToClearOnQuit
@@ -254,5 +256,40 @@ describe('the notice of a failure', () => {
     expect(describeClearFailure(['a.example'])).toBe(frenchSpaces('Effacement à la fermeture incomplet : a.example'))
     expect(describeClearFailure(['a.example', 'b.example', 'c.example', 'd.example', 'e.example'])).toBe(frenchSpaces('Effacement à la fermeture incomplet : a.example, b.example, c.example et 2 autres'))
     expect(describeClearFailure(['a.example', 'b.example', 'c.example', 'd.example'])).toBe(frenchSpaces('Effacement à la fermeture incomplet : a.example, b.example, c.example et 1 autre'))
+  })
+})
+
+describe('what quitting erases in « tous les sites » mode', () => {
+  const on = (extra: Partial<SidebarState['settings']> = {}, tabs: TabItem[] = []) => world(tabs, { siteDataClearOnCloseEnabled: true, siteDataClearOnQuit: true, siteDataClearOnQuitAll: true, ...extra })
+
+  it('wipes every profile the spaces use, whatever the list holds, and no longer names sites', () => {
+    const state = on({ siteDataClearOnClose: [] })
+    expect([...profilesToWipeOnQuit(state, { private: false })].sort()).toEqual([...new Set(state.spaces.map((space) => space.profileId))].sort())
+    expect(profilesToWipeOnQuit(state, { private: false }).length).toBeGreaterThan(1)
+    // The list of sites of the closing tabs is another function: at quit the sites are not named one by one.
+    expect(sitesToClearOnQuit(on({ siteDataClearOnClose: ['shop.example'] }), { private: false })).toEqual([])
+  })
+
+  it('does nothing unless the function is on, the quit option is on and the mode is « tous »; nothing in a private window', () => {
+    // Mutation: ignoring the mode (always listing profiles) fails the first line; ignoring the switches fails the next ones.
+    expect(profilesToWipeOnQuit(on({ siteDataClearOnQuitAll: false }), { private: false })).toEqual([])
+    expect(profilesToWipeOnQuit(on({ siteDataClearOnQuit: false }), { private: false })).toEqual([])
+    expect(profilesToWipeOnQuit(on({ siteDataClearOnCloseEnabled: false }), { private: false })).toEqual([])
+    expect(profilesToWipeOnQuit(on(), { private: true })).toEqual([])
+  })
+
+  it('keeps the closing of a tab by list: the mode of the quit changes nothing for it', () => {
+    const open = [tab('a', home, 'https://shop.example/')]
+    const before = on({ siteDataClearOnClose: ['shop.example'] }, open)
+    expect(sitesToClearOnClose(before, run(before, { type: 'tab/close', id: 'a' }), { private: false })).toHaveLength(1)
+    const unlisted = on({ siteDataClearOnClose: ['autre.example'] }, open)
+    expect(sitesToClearOnClose(unlisted, run(unlisted, { type: 'tab/close', id: 'a' }), { private: false })).toEqual([])
+  })
+
+  it('is pending when either the list or the « tous » mode has something to erase at quit', () => {
+    expect(quitClearPending(on({ siteDataClearOnClose: [] }), { private: false })).toBe(true)
+    expect(quitClearPending(on({ siteDataClearOnQuitAll: false, siteDataClearOnClose: ['shop.example'] }), { private: false })).toBe(true)
+    expect(quitClearPending(on({ siteDataClearOnQuitAll: false, siteDataClearOnClose: [] }), { private: false })).toBe(false)
+    expect(quitClearPending(on(), { private: true })).toBe(false)
   })
 })

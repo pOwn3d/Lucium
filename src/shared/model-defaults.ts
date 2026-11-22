@@ -252,6 +252,8 @@ export function defaultSettings(): Settings {
     siteDataClearOnClose: [],
     siteJavascriptOff: [],
     siteDataClearOnQuit: false,
+    siteDataClearOnQuitAll: false,
+    clearAllKeepHosts: [],
     customFilterListsEnabled: true,
     customFilterLists: [],
     autoBackup: true,

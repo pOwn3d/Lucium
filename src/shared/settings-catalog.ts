@@ -103,7 +103,7 @@ export const SETTINGS_KEYS = {
     'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions', 'unwrapRedirects', 'unwrapExceptions', 'safeBrowsing', 'safeBrowsingExceptions',
     'blockPings', 'trimReferer', 'httpsOnly', 'httpsOnlyExceptions',
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
-    'historyOff', 'historyKeepDays', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
+    'historyOff', 'historyKeepDays', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'siteDataClearOnQuitAll', 'clearAllKeepHosts',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
     'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager', 'passwordTouchIdOnFill', 'passwordNeverSaveHosts',
     'disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists', 'dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'
@@ -286,6 +286,7 @@ export const KEPT_ON_RESET = {
   passwordNeverSaveHosts: 'a list of sites',
   translateAlways: 'a list of languages',
   siteDataClearOnClose: 'a list of sites',
+  clearAllKeepHosts: 'a list of sites',
   siteJavascriptOff: 'a list of sites',
   siteAutoplay: 'a list of sites',
   linkRoutes: 'the routes of the links',

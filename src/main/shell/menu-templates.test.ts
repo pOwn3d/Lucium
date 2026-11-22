@@ -207,6 +207,8 @@ function menuActions(rich: boolean): MenuActions {
     exportBookmarks: () => {},
     loadExtension: () => {},
     clearHistory: () => {},
+    clearEverything: () => {},
+    newIdentity: () => {},
     setDefaultBrowser: () => {},
     isDefaultBrowser: () => rich,
     savePage: () => {},

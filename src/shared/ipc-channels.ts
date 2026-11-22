@@ -71,6 +71,7 @@ export const Channel = {
   siteCookieCount: 'lucium:site-cookie-count',
   clearSites: 'lucium:clear-sites',
   clearSiteNow: 'lucium:clear-site-now',
+  clearEverything: 'lucium:clear-everything',
   reloadAllTabs: 'lucium:reload-all-tabs',
   reloadSpaceTabs: 'lucium:reload-space-tabs',
   defaultBrowser: 'lucium:default-browser',

@@ -22,7 +22,7 @@ import { userScripts } from '../userscripts'
 import { fontScript } from './boost-fonts'
 import { animationPageOf, clearSiteFor, clearSitesFor, clearSitesWithAnimation, runAndTell, type AnimatedPage, type RunReport, type SiteDataEnvironment } from './site-data'
 import { prefersReducedMotion } from './motion'
-import { describeClearFailure, sitesToClearOnClose, sitesToClearOnQuit, type ClearOnCloseJob } from '@shared/site-clear'
+import { describeClearFailure, profilesToWipeOnQuit, sitesToClearOnClose, sitesToClearOnQuit, type ClearOnCloseJob } from '@shared/site-clear'
 import { showSystemNotice } from './system-notice'
 import { currentPlatform } from '../platform'
 import { getPageIndex } from '../page-index'
@@ -327,8 +327,25 @@ export abstract class BrowserSite extends BrowserCapture {
   async clearSitesOnQuit(): Promise<string[]> {
     await this.clearTail
     const failed: string[] = []
-    for (const job of sitesToClearOnQuit(this.store.get(), { private: this.isPrivate() })) failed.push(...(await this.runClearJob(job)))
+    const state = this.store.get()
+    for (const job of sitesToClearOnQuit(state, { private: this.isPrivate() })) failed.push(...(await this.runClearJob(job)))
+    for (const profileId of profilesToWipeOnQuit(state, { private: this.isPrivate() })) failed.push(...(await this.wipeProfileOnQuit(profileId, state.settings.clearAllKeepHosts)))
     return failed
+  }
+
+  /**
+   * « Tous les sites » at quit: the cookies, storage and cache of one profile, but the spared sites (engine.clearProfileData). The visit history stays: it has
+   * its own setting. A failure is logged with its context and told to the user, and the profile is named to the caller (the quit leaves its marker).
+   */
+  private async wipeProfileOnQuit(profileId: string, keepHosts: readonly string[]): Promise<string[]> {
+    try {
+      await this.engine.clearProfileData(profileId, keepHosts)
+      return []
+    } catch (error) {
+      console.error(`[site] the data of every site of the profile ${profileId} was not fully erased at quit:`, error)
+      this.tellClearFailure(t('site-clear.effacement-de-tous-les-sites-incomplet'))
+      return [`profile:${profileId}`]
+    }
   }
 
   /** Waits for the erasures started by closed tabs (the engine test reads the outcome; quitting must not cut one short). */

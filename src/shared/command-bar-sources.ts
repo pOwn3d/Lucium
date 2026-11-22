@@ -176,6 +176,8 @@ export function searchOnlyActions(state: Pick<SidebarState, 'settings'>, platfor
     { kind: 'action', id: 'action:edit-shortcuts', label: t('cmd.modifier-les-raccourcis-clavier'), detail: t('cmd.action'), action: 'edit-shortcuts' },
     { kind: 'action', id: 'action:clear-site-data', label: t('cmd.effacer-les-donnees-du-site'), detail: actionDetail('clear-site-data', state, platform), action: 'clear-site-data' },
     { kind: 'action', id: 'action:clear-site-now', label: t('cmd.effacer-les-donnees-du-site-maintenant'), detail: actionDetail('clear-site-now', state, platform), action: 'clear-site-now' },
+    { kind: 'action', id: 'action:clear-everything', label: t('cmd.tout-effacer'), detail: actionDetail('clear-everything', state, platform), action: 'clear-everything' },
+    { kind: 'action', id: 'action:new-identity', label: t('cmd.nouvelle-identite'), detail: actionDetail('new-identity', state, platform), action: 'new-identity' },
     { kind: 'action', id: 'action:reload-all', label: t('cmd.actualiser-tous-les-onglets'), detail: t('cmd.action'), action: 'reload-all' },
     { kind: 'action', id: 'action:recent-notices', label: t('cmd.notifications-recentes'), detail: t('cmd.action'), action: 'recent-notices' }
   ]

@@ -6,6 +6,7 @@ import { useState, type ReactNode } from 'react'
 import { AUTOPLAY_LABELS, AUTOPLAY_MODES, autoplayKeyOf, type AutoplayMode } from '@shared/autoplay'
 import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
+import { CLEAR_ALL_KEEP_MAX, withClearAllKept } from '@shared/clear-all'
 import { SITE_CLEAR_MAX, setClearedOnClose } from '@shared/site-clear'
 import { SITE_DATA_ANIMATIONS, SITE_DATA_ANIMATION_GLYPHS, SITE_DATA_ANIMATION_LABELS } from '@shared/site-data-overlay'
 import { api } from './api'
@@ -167,7 +168,36 @@ export function ClearOnCloseSettings({ snapshot, update }: { snapshot: UiSnapsho
   return (
     <Subpage id="clearonclose">
       <ClearOnCloseList snapshot={snapshot} update={update} />
+      <ClearAllKeepList snapshot={snapshot} update={update} />
     </Subpage>
+  )
+}
+
+/** The sites « Tout effacer » and « Nouvelle identité » spare: their cookies and storage stay (rules: shared/clear-all.ts). */
+function ClearAllKeepList({ snapshot, update }: { snapshot: UiSnapshot; update: (patch: Partial<Settings>) => void }) {
+  const hosts = snapshot.state.settings.clearAllKeepHosts
+  return (
+    <Group keys={['clearAllKeepHosts']} title={t('site-privacy-settings.sites-epargnes-par-tout-effacer')} footnote={t('site-privacy-settings.tout-effacer-et-nouvelle-identite-gardent-les-cookies')}>
+      {hosts.length === 0 && (
+        <div className="pref-row pref-message" role="status">
+          {t('site-privacy-settings.aucun-site-exclu-tout-est-efface')}
+        </div>
+      )}
+      {hosts.map((host) => (
+        <Row key={host} label={<code>{host}</code>}>
+          <button className="link-button" aria-label={t('settings.retirer-name', { name: host })} onClick={() => update({ clearAllKeepHosts: withClearAllKept(hosts, host, false) })}>
+            {t('settings.retirer')}
+          </button>
+        </Row>
+      ))}
+      <SiteForm
+        label={t('site-privacy-settings.site-a-epargner-avec-tout-effacer')}
+        known={hosts}
+        normalize={(site) => withClearAllKept([], site, true)[0] ?? null}
+        max={CLEAR_ALL_KEEP_MAX}
+        onAdd={(host) => update({ clearAllKeepHosts: withClearAllKept(hosts, host, true) })}
+      />
+    </Group>
   )
 }
 
@@ -223,6 +253,14 @@ function ClearOnCloseList({ snapshot, update }: { snapshot: UiSnapshot; update: 
         disabled={!settings.siteDataClearOnCloseEnabled}
         checked={settings.siteDataClearOnQuit}
         onChange={(siteDataClearOnQuit) => update({ siteDataClearOnQuit })}
+      />
+      <Check
+        settingKey="siteDataClearOnQuitAll"
+        label={t('site-privacy-settings.tous-les-sites-a-la-fermeture-pas-seulement-ceux-de')}
+        hint={t('site-privacy-settings.les-cookies-et-le-stockage-de-tous-les-sites')}
+        disabled={!settings.siteDataClearOnCloseEnabled || !settings.siteDataClearOnQuit}
+        checked={settings.siteDataClearOnQuitAll}
+        onChange={(siteDataClearOnQuitAll) => update({ siteDataClearOnQuitAll })}
       />
     </Group>
   )

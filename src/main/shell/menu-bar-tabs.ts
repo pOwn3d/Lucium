@@ -190,6 +190,8 @@ export function archiveMenu({ browser, actions, state, acc, kept, onTab, facts, 
       { type: 'separator' },
       { label: t('menu.vider-l-archive'), accelerator: acc('clearArchive'), enabled: state().archive.length > 0, click: actions.clearArchive },
       { label: t('menu.effacer-l-historique-de-navigation'), accelerator: acc('clearHistory'), ...kept, click: actions.clearHistory },
+      { label: t('menu.tout-effacer'), accelerator: acc('clearEverything'), ...kept, click: actions.clearEverything },
+      { label: t('menu.nouvelle-identite'), accelerator: acc('newIdentity'), ...kept, click: actions.newIdentity },
       ...withSecondKey('clearSiteData', { label: t('menu.effacer-les-donnees-du-site'), accelerator: acc('clearSiteData'), ...onTab, click: () => browser.openOverlay({ panel: 'sitedata' }) }),
       { label: t('menu.effacer-les-donnees-du-site-maintenant'), accelerator: acc('clearSiteDataNow'), ...onTab, click: () => void browser.quickClearSite().catch(report('clear site data')) }
     ]

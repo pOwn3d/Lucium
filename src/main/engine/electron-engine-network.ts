@@ -25,6 +25,7 @@ import { applyHostResolver, type ProxyFollow, type ProxySession } from './networ
 import type { SignedSession } from './own-requests'
 import { SiteIconCopies, type SiteIconDeps } from './site-icons'
 import type { SiteIconOwner } from '@shared/site-icon'
+import { clearProfileSession } from './clear-profile'
 import { listCookies as listJarCookies, removeCookies as removeJarCookies } from './cookie-book'
 import { appliedFor, type ProxyPlan } from '@shared/proxy'
 import type { HostResolverConfig } from '@shared/dns'
@@ -229,11 +230,10 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     await clearInterfaceIcons(session.defaultSession)
   }
 
-  async clearProfileData(profileId: string): Promise<void> {
+  async clearProfileData(profileId: string, keepHosts: readonly string[] = []): Promise<void> {
     const ses = session.fromPartition(profilePartition(profileId, 'clearing a profile'))
     // Extensions keep their storage and service workers in the same session: wiping them would break every extension of the profile.
-    const excludeOrigins = profileExtensionOrigins(this.loaded, profileId)
-    await ses.clearData(excludeOrigins.length > 0 ? { excludeOrigins } : {})
+    await clearProfileSession(ses, { extensionOrigins: profileExtensionOrigins(this.loaded, profileId), keepHosts })
     // HTTP authentication (the box a 401 opens) is cached outside the data `clearData` covers: a cleared profile must not stay signed in.
     await ses.clearAuthCache()
     // The hosts held to strict transport security tell which sites were visited (by a digest of their name): they go with the rest.

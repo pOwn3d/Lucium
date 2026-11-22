@@ -976,6 +976,8 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
   - type="separator"
   - accelerator=undefined enabled=false label="Vider l’archive" click
   - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click
+  - accelerator=undefined enabled=true label="Tout effacer…" click
+  - accelerator=undefined enabled=true label="Nouvelle identité…" click
   - accelerator="CmdOrCtrl+Shift+X" enabled=false label="Effacer les données du site…" click
   - accelerator="Ctrl+CmdOrCtrl+X" enabled=false label="Effacer les données du site…" visible=false click
   - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=false label="Effacer les données du site maintenant" click
@@ -1288,6 +1290,8 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - type="separator"
   - accelerator=undefined enabled=true label="Vider l’archive" click(brings back)
   - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click(brings back)
+  - accelerator=undefined enabled=true label="Tout effacer…" click(brings back)
+  - accelerator=undefined enabled=true label="Nouvelle identité…" click(brings back)
   - accelerator="CmdOrCtrl+Shift+X" enabled=false label="Effacer les données du site…" click(brings back)
   - accelerator="Ctrl+CmdOrCtrl+X" enabled=false label="Effacer les données du site…" visible=false click(brings back)
   - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=false label="Effacer les données du site maintenant" click(brings back)
@@ -1603,6 +1607,8 @@ exports[`the menu bar, as built > in a private window 1`] = `
   - type="separator"
   - accelerator=undefined enabled=true label="Vider l’archive" click
   - accelerator=undefined enabled=false label="Effacer l’historique de navigation…" click
+  - accelerator=undefined enabled=false label="Tout effacer…" click
+  - accelerator=undefined enabled=false label="Nouvelle identité…" click
   - accelerator="CmdOrCtrl+Shift+X" enabled=true label="Effacer les données du site…" click
   - accelerator="Ctrl+CmdOrCtrl+X" enabled=true label="Effacer les données du site…" visible=false click
   - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=true label="Effacer les données du site maintenant" click
@@ -1931,6 +1937,8 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
   - type="separator"
   - accelerator=undefined enabled=true label="Vider l’archive" click
   - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click
+  - accelerator=undefined enabled=true label="Tout effacer…" click
+  - accelerator=undefined enabled=true label="Nouvelle identité…" click
   - accelerator="CmdOrCtrl+Shift+X" enabled=true label="Effacer les données du site…" click
   - accelerator="Ctrl+CmdOrCtrl+X" enabled=true label="Effacer les données du site…" visible=false click
   - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=true label="Effacer les données du site maintenant" click
@@ -2259,6 +2267,8 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
   - type="separator"
   - accelerator=undefined enabled=true label="Vider l’archive" click
   - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click
+  - accelerator=undefined enabled=true label="Tout effacer…" click
+  - accelerator=undefined enabled=true label="Nouvelle identité…" click
   - accelerator="CmdOrCtrl+Shift+X" enabled=true label="Effacer les données du site…" click
   - accelerator="Ctrl+CmdOrCtrl+X" enabled=true label="Effacer les données du site…" visible=false click
   - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=true label="Effacer les données du site maintenant" click
@@ -2568,6 +2578,8 @@ exports[`the menu bar, as built > with every optional setting off and windows th
   - type="separator"
   - accelerator=undefined enabled=true label="Vider l’archive" click
   - accelerator=undefined enabled=true label="Effacer l’historique de navigation…" click
+  - accelerator=undefined enabled=true label="Tout effacer…" click
+  - accelerator=undefined enabled=true label="Nouvelle identité…" click
   - accelerator="CmdOrCtrl+Shift+X" enabled=true label="Effacer les données du site…" click
   - accelerator="Ctrl+CmdOrCtrl+X" enabled=true label="Effacer les données du site…" visible=false click
   - accelerator="CmdOrCtrl+Alt+Shift+X" enabled=true label="Effacer les données du site maintenant" click
