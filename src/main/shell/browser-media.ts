@@ -146,6 +146,8 @@ export abstract class BrowserMedia extends BrowserActions {
     const owner = this.ownerOf(tabId) ?? this
     if (floating && page.watchedVideoCanFloat && !owner.isPrivate()) {
       if (!(await page.watchedVideoCanFloat())) return false
+      // The tab may have been chosen again while the page was asked: floating would lend away the view it shows, leaving its page empty.
+      if (this.visible.has(tabId)) return false
       const outcome = await floating.float(owner.floatingOwner(), tabId, page)
       if (outcome.ok) return true
       console.warn(`[pip] the automatic picture could not use Lucium's window (${outcome.reason}${outcome.detail ? `: ${outcome.detail}` : ''}): the system's window instead`)

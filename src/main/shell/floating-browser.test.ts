@@ -158,16 +158,26 @@ describe('the automatic picture when a tab with a watched video is left', () => 
       setPictureInPicture: vi.fn(async () => (calls.push('system'), true))
     }
     const floating = { float: vi.fn(async () => (calls.push('lucium'), options.outcome ?? { ok: true })) }
-    const own: Record<string, unknown> = { pages: new Map([['tab', page]]), floatingVideo: options.noFloating ? null : floating, isPrivate: () => options.private === true, ownerOf: () => undefined, floatingOwner: () => ({ owner: true }) }
+    const own: Record<string, unknown> = { pages: new Map([['tab', page]]), visible: new Set<string>(), floatingVideo: options.noFloating ? null : floating, isPrivate: () => options.private === true, ownerOf: () => undefined, floatingOwner: () => ({ owner: true }) }
     const fake = fakeBrowser(own)
     own['leader'] = fake.self
-    return { run: () => shell['floatWatchedVideo']!.call(fake.self, 'tab', page) as Promise<boolean>, calls, page }
+    return { run: () => shell['floatWatchedVideo']!.call(fake.self, 'tab', page) as Promise<boolean>, calls, page, own }
   }
 
   it('floats it in Lucium’s window', async () => {
     const { run, calls } = left()
     expect(await run()).toBe(true)
     expect(calls).toEqual(['lucium'])
+  })
+
+  it('does not float a tab that was chosen again while the page was being asked, whose view it would lend away', async () => {
+    const { run, calls, page, own } = left()
+    page.watchedVideoCanFloat.mockImplementation(async () => {
+      ;(own['visible'] as Set<string>).add('tab')
+      return true
+    })
+    expect(await run()).toBe(false)
+    expect(calls).toEqual([])
   })
 
   it('floats nothing when no video is being watched', async () => {
@@ -304,6 +314,20 @@ describe('a tab left while its video floats in Lucium’s window', () => {
     await Promise.resolve()
     expect(chosen.opened.filter((what) => what === 'show' || what.startsWith('release'))).toEqual([`release ${chosen.second}`])
     expect(chosen.closed).not.toHaveBeenCalled()
+  })
+
+  it('opens no media player for a tab that came back on screen while the automatic picture was being tried', async () => {
+    const away = leaving(null)
+    const self = away.host.fake.self
+    self['floatWatchedVideo'] = async () => {
+      await Promise.resolve()
+      ;(self['visible'] as Set<string>).add(away.first)
+      return false
+    }
+    shell['sync']!.call(self)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(away.opened.filter((what) => what.startsWith('player'))).toEqual([])
   })
 
   it('counts a closing when the window the automatic picture opened was closed while the tab was away', async () => {

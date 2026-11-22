@@ -90,7 +90,7 @@ export abstract class BrowserLayout extends BrowserPages {
           void this.floatWatchedVideo(previous, left).then(
             (entered) => {
               if (entered) this.leader.autoPip.floated(previous, site)
-              else if (wantsPlayer) this.openMediaPlayer(previous)
+              else if (wantsPlayer && !this.visible.has(previous)) this.openMediaPlayer(previous)
             },
             (error: unknown) => {
               console.error('[pip] cannot enter Picture in Picture:', error)
