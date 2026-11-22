@@ -49,7 +49,7 @@ Fonction que le volet ne peut pas écrire : l'interface n'a pas le droit de modi
 
 ## Où se règle chaque fonction
 
-**Dans Réglages › Fonctions en option** : les 29 fonctions qui répondent à « voulez-vous cette chose ? ». Chaque ligne a l'interrupteur de la fonction, sa ligne courte (ou la première phrase de sa description, `featureLine` dans `src/shared/features.ts`), son coût en une phrase, tiré de la colonne « Coût actif » (« Allumée : utilise le réseau, garde des données en mémoire et fait tourner une minuterie. Coupée : rien. », ou « Ne coûte rien, même allumée. »), et « En savoir plus », qui déplie la description entière et ce que disait la rangée de la fonction dans son ancienne catégorie. Six sont allumées sur un profil neuf : `tab-search`, `work-views`, `private-tabs`, `notes`, `cookie-manager`, `shortcut-help`.
+**Dans Réglages › Fonctions en option** : les 31 fonctions qui répondent à « voulez-vous cette chose ? ». Chaque ligne a l'interrupteur de la fonction, sa ligne courte (ou la première phrase de sa description, `featureLine` dans `src/shared/features.ts`), son coût en une phrase, tiré de la colonne « Coût actif » (« Allumée : utilise le réseau, garde des données en mémoire et fait tourner une minuterie. Coupée : rien. », ou « Ne coûte rien, même allumée. »), et « En savoir plus », qui déplie la description entière et ce que disait la rangée de la fonction dans son ancienne catégorie. Six sont allumées sur un profil neuf : `tab-search`, `work-views`, `private-tabs`, `notes`, `cookie-manager`, `shortcut-help`.
 
 | Thème | Fonctions | Ce qui suit la ligne |
 |---|---|---|
@@ -66,7 +66,7 @@ Fonction que le volet ne peut pas écrire : l'interface n'a pas le droit de modi
 
 L'option d'une fonction coupée reste affichée, grisée, quand elle n'est pas à sa valeur par défaut (pour qu'on la voie et la rétablisse), et dans les résultats d'une recherche.
 
-**Dans leur catégorie** : les 78 autres fonctions du registre sont des préférences (bloqueur, veille, archivage, HTTPS d'abord, traduction…). Leur interrupteur est dans la catégorie de leur réglage, sans repère de coût : ce qu'elles coûtent est dit dans les tableaux ci-dessous.
+**Dans leur catégorie** : les 81 autres fonctions du registre sont des préférences (bloqueur, veille, archivage, HTTPS d'abord, traduction…). Leur interrupteur est dans la catégorie de leur réglage, sans repère de coût : ce qu'elles coûtent est dit dans les tableaux ci-dessous.
 
 **La fenêtre, page par page** (guide d'utilisation : [reglages.md](reglages.md)). La barre latérale de la fenêtre montre « Pour commencer », les huit catégories (Apparence, Onglets et fenêtres, Navigation, Vie privée et sécurité, Téléchargements et fichiers, Extensions et outils, Clavier et souris, Profils), puis « Fonctions en option » et « À propos et mises à jour ». En haut d'une page, ce qu'on change dans les premières semaines (`PAGE_KEYS`, `src/shared/settings-placement.ts`) ; le reste attend dans **« Plus de réglages »**, au pied de la page, dont la ligne nomme les groupes qu'il contient et compte ses réglages. « Pour commencer », Profils et « Fonctions en option » n'ont pas ce repli. Une liste ou un éditeur a sa **sous-page** (`SUBPAGES`, `src/shared/settings-subpages.ts`), qu'ouvre une rangée de sa page ; la rangée dit son état (« 3 sites », « Coupé »…) et porte le point « modifié » des réglages de la sous-page :
 

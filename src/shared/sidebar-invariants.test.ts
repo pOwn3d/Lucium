@@ -280,7 +280,8 @@ const GENERATORS: Generators = {
   'filterlist/remove': (g) => ({ type: 'filterlist/remove', id: `custom-${g.int(4).toString(16).padStart(8, '0')}` }),
   'filterlist/enable': (g) => ({ type: 'filterlist/enable', id: `custom-${g.int(4).toString(16).padStart(8, '0')}`, enabled: g.chance(0.5) }),
   'profile/used': (g) => ({ type: 'profile/used', id: g.pick(PROFILES) }),
-  'profile/revert-missing': (g) => ({ type: 'profile/revert-missing', ids: [g.pick(PROFILES)] }),
+  // Mostly a profile some space really uses, so that the action changes something in the run (a blind pick among five names rarely meets one).
+  'profile/revert-missing': (g) => ({ type: 'profile/revert-missing', ids: [g.chance(0.7) ? g.pick(g.state.spaces.map((space) => space.profileId)) : g.pick(PROFILES)] }),
   'developer/site': (g) => ({ type: 'developer/site', site: g.pick(['a.example', 'b.example']), enabled: g.chance(0.5) }),
   'extension/set-enabled': (g) => ({ type: 'extension/set-enabled', profileId: g.pick(PROFILES), extensionId: 'a'.repeat(32), enabled: g.chance(0.5) }),
   'today/clear': (g) => ({ type: 'today/clear', ...(g.chance(0.5) ? { spaceId: g.spaceId() } : {}) }),

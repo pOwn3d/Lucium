@@ -179,11 +179,11 @@ describe('the catalogue of the features to add', () => {
     'find-regex', 'cookie-manager', 'shortcut-help', 'applescript'
   ]
 
-  it('lists the 30 features to add, each once, theme by theme, each theme named in both languages', async () => {
+  it('lists the 31 features to add, each once, theme by theme, each theme named in both languages', async () => {
     const { en } = await import('./i18n-en')
     const { fr } = await import('./i18n-fr')
     expect([...CATALOGUE_FEATURES]).toEqual(LISTED)
-    expect(new Set(CATALOGUE_FEATURES).size).toBe(30)
+    expect(new Set(CATALOGUE_FEATURES).size).toBe(31)
     expect(FEATURE_THEMES.map((theme) => theme.id)).toEqual(['tabs', 'windows', 'separate', 'bookmarks', 'pages', 'files', 'search', 'privacy', 'keyboard', 'automation'])
     for (const theme of FEATURE_THEMES) {
       expect((fr as Record<string, string>)[theme.title], theme.title).toBeTruthy()
