@@ -6,7 +6,7 @@ import { CHECK_AREAS, securityCheck, type CheckArea, type CheckStatus } from '@s
 import { settingsPath } from '@shared/settings-path'
 import { t, type MessageKey } from '@shared/i18n'
 import { Group, Row } from './settings-parts'
-import './security-check.css'
+import './insight.css'
 
 const AREA_TITLES: Record<CheckArea, MessageKey> = {
   extensions: 'security-check.area-extensions',

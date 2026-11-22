@@ -7017,7 +7017,7 @@ export const fr = {
   'security-check.prot-fingerprint-off': 'L’empreinte numérique n’est pas réduite.',
   'security-check.upd-auto-on': 'Lucium cherche une nouvelle version chaque jour.',
   'security-check.upd-auto-off': 'Lucium ne cherche pas de nouvelle version de lui-même : pensez au menu Lucium › Rechercher les mises à jour.',
-  'security-check.upd-version': 'Moteur du navigateur : {name} {version}, Chromium {chromium}.',
+  'security-check.upd-version': 'Moteur du navigateur : {name} {version}.',
   'security-check.vault-lock-on': 'Le verrouillage de Lucium est activé : une phrase est demandée pour ce que vous avez choisi de protéger.',
   'security-check.vault-lock-off': 'Le verrouillage de Lucium est désactivé : ni l’application ni un espace ne demande de phrase.',
   'security-check.vault-touch-on': 'L’empreinte est demandée à chaque remplissage.',

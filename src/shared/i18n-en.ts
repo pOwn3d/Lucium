@@ -7013,7 +7013,7 @@ export const en: Record<MessageKey, string> = {
   'security-check.prot-fingerprint-off': 'Fingerprinting is not reduced.',
   'security-check.upd-auto-on': 'Lucium looks for a new version every day.',
   'security-check.upd-auto-off': 'Lucium does not look for a new version by itself: remember the Lucium › Check for Updates menu.',
-  'security-check.upd-version': 'Browser engine: {name} {version}, Chromium {chromium}.',
+  'security-check.upd-version': 'Browser engine: {name} {version}.',
   'security-check.vault-lock-on': 'Lucium’s lock is on: a phrase is asked for what you chose to protect.',
   'security-check.vault-lock-off': 'Lucium’s lock is off: neither the application nor a space asks for a phrase.',
   'security-check.vault-touch-on': 'The fingerprint is asked for at every fill.',

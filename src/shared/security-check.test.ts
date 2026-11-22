@@ -10,7 +10,7 @@ const row = (rows: ReturnType<typeof securityCheck>, id: string) => rows.find((r
 
 describe('the lines of the security check', () => {
   it('files every line under one of the five areas, in the order the page shows them, and gives each a sentence', () => {
-    const rows = securityCheck(facts({ passwordManager: true }, { engine: { name: 'Electron', version: '45.2.1', chromium: '150' } }))
+    const rows = securityCheck(facts({ passwordManager: true }, { engine: { name: 'Electron', version: '45.2.1' } }))
     for (const r of rows) {
       expect(CHECK_AREAS).toContain(r.area)
       expect(r.text.length).toBeGreaterThan(10)
@@ -28,7 +28,7 @@ describe('the lines of the security check', () => {
 
   it('names the engine that runs, only when the interface knows it', () => {
     expect(row(securityCheck(facts()), 'upd-version')).toBeUndefined()
-    expect(row(securityCheck(facts({}, { engine: { name: 'Electron', version: '45.2.1', chromium: '150.0' } })), 'upd-version')?.text).toBe('Moteur du navigateur\u00a0: Electron 45.2.1, Chromium 150.0.')
+    expect(row(securityCheck(facts({}, { engine: { name: 'Electron', version: '45.2.1' } })), 'upd-version')?.text).toBe('Moteur du navigateur\u00a0: Electron 45.2.1.')
   })
 
   it('counts the extensions that are on once each, and flags a folder and a pending update', () => {
