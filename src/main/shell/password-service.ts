@@ -839,7 +839,10 @@ export class PasswordService {
     const update = this.deps.updateSettings
     if (!update) return this.reply(window, false, t('pwd.ne-plus-proposer-impossible'))
     const host = new URL(seen.origin).hostname
-    update({ passwordNeverSaveHosts: setSiteExcluded(this.deps.settings().passwordNeverSaveHosts, host, true) })
+    const hosts = setSiteExcluded(this.deps.settings().passwordNeverSaveHosts, host, true)
+    // A full list drops the new host: say so instead of answering « done » for a site that will be offered again.
+    if (!hosts.includes(host) && !hosts.some((entry) => host.endsWith(`.${entry}`))) return this.reply(window, false, t('pwd.ne-plus-proposer-pleine'))
+    update({ passwordNeverSaveHosts: hosts })
     this.forgetCapture(window)
     return this.reply(window, true, t('pwd.ne-plus-proposer-fait', { host: hostLabel(seen.origin) }))
   }

@@ -17,6 +17,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 - **Interrupteur JavaScript par site** : une ligne « JavaScript » du panneau du site coupe les scripts d’un site. La page se recharge sans aucun script, et un avis ou la ligne les rétablit en un clic. Coupé pour aucun site par défaut ; les pages de Lucium ne sont jamais concernées.
 - **Enregistrer la page en Markdown** : Fichier › Enregistrer la page en Markdown… et la barre de commandes enregistrent le contenu principal de la page en un clic : un fichier `.md` et un dossier `<nom>-images/` à côté. Un onglet privé demande d’abord ; un dossier existant n’est jamais réutilisé (`-2`) ; les images chargées au défilement ne sont pas récupérées.
 - **Codes à usage unique (TOTP) dans le coffre de mots de passe** : un identifiant peut garder la clé de ses codes de double authentification (clé en base32 ou adresse `otpauth://`). Le panneau montre le code avec son compte à rebours et le copie, effacé après 30 secondes. La clé reste chiffrée dans le coffre et n’est jamais journalisée. RFC 6238, rien n’est rempli dans une page.
+- **Soin du coffre** : mots de passe faibles et réutilisés signalés ; « Copier le mot de passe » s’efface après 30 secondes et au verrouillage ; Touch ID possible à chaque remplissage ; « Ne plus proposer pour ce site » écarte des sites. Une entrée se remplit aussi sur son jumeau `www.`. Rien ne quitte ton Mac.
 
 ### Changements
 

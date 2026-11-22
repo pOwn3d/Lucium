@@ -9,6 +9,7 @@ import { PASSWORD_LIMITS, type PasswordReply, type PasswordRequest } from '@shar
 import { PasswordVault, writePrivateFile } from '../password-vault'
 import { VAULT_FORMAT, newSealKeys, seal } from '../vault-crypto'
 import { t, tp } from '@shared/i18n'
+import { SLEEP_HOSTS_MAX } from '@shared/sleep'
 import type { PowerEvent } from '../lock-service'
 import { PasswordService, type PasswordFiles, type PasswordTarget, type PasswordWindow } from './password-service'
 import { frenchSpaces } from '@shared/french-typography'
@@ -681,6 +682,20 @@ describe('the sites that never offer to save', () => {
     expect((await ask(s, window, { kind: 'capture', op: 'never', offer: 999 })).ok).toBe(false)
     expect(s.settings.passwordNeverSaveHosts).toEqual([])
     expect(s.service.view(window).capture?.host).toBe('other.example')
+  })
+
+  it('refuse, and keep the offer, when the list is full: no « done » for a site that will be offered again', async () => {
+    const s = setup()
+    await withVault(s, [])
+    s.settings.passwordNeverSaveHosts = Array.from({ length: SLEEP_HOSTS_MAX }, (_, index) => `site${index}.test`)
+    const window = new FakeWindow()
+    submit(s, window, `${SITE}/login`)
+    const reply = await ask(s, window, answerTo(s, window, 'never'))
+    expect(reply.ok).toBe(false)
+    expect(reply.message).toBe(t('pwd.ne-plus-proposer-pleine'))
+    expect(s.settings.passwordNeverSaveHosts).toHaveLength(SLEEP_HOSTS_MAX)
+    expect(s.settings.passwordNeverSaveHosts).not.toContain('example.com')
+    expect(s.service.view(window).capture).not.toBeNull()
   })
 
   it('say so, and add nothing, when the settings cannot be written', async () => {

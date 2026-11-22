@@ -3191,6 +3191,7 @@ export const fr = {
   'pwd.mdp-copie': 'Mot de passe copié. Il sera retiré du presse-papiers dans {seconds} s, ou au verrouillage.',
   'pwd.mdp-copie-impossible': 'Le mot de passe n’a pas pu être copié.',
   'pwd.ne-plus-proposer-fait': 'Lucium ne proposera plus d’enregistrer de mot de passe pour {host}. La liste se règle dans Réglages › Vie privée et sécurité › Mots de passe.',
+  'pwd.ne-plus-proposer-pleine': 'La liste des sites sans offre est pleine (200). Retires-en d’abord un, dans Réglages › Vie privée et sécurité › Mots de passe.',
   'pwd.ne-plus-proposer-impossible': 'Le réglage n’a pas pu être modifié.',
   'pwd.totp-presse-papiers-indisponible': 'Le presse-papiers n’est pas disponible : le code n’a pas été copié.',
   'pwd.aucun-mot-de-passe-sur-une-page-au-certificat-non-valide': 'Aucun mot de passe n’est rempli ni enregistré sur cette page : son certificat n’est pas valide (« Non sécurisé »).',

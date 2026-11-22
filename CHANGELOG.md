@@ -23,6 +23,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **JavaScript switch per site**: a “JavaScript” row in the site panel turns the scripts of a site off. The page reloads without any script, and a notice or the row turns them back on in one click. Off for no site by default; Lucium’s own pages are never affected.
 - **Save Page as Markdown**: File › Save Page as Markdown… and the command bar save the page’s main content in one click: a `.md` file and a `<name>-images/` folder beside it. A private tab asks first; a folder that exists is never reused (`-2`); images that load only on scroll are not fetched.
 - **One-time codes (TOTP) in the password vault**: a login can hold the key of its two-step codes (base32 key or `otpauth://` address). The panel shows the code with its countdown and copies it, cleared after 30 seconds. The key stays encrypted in the vault and is never logged. RFC 6238, nothing filled into a page.
+- **Password vault care**: weak and reused passwords are flagged; “Copy password” clears itself after 30 seconds and at lock; Touch ID can be asked at every fill; “Never offer for this site” skips chosen sites. A login also fills on its `www.` twin. Nothing leaves your Mac.
 
 ### Changed
 

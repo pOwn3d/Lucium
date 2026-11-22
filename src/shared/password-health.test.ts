@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { passwordHealth, passwordIsWeak } from './password-health'
 
 describe('passwordIsWeak', () => {
-  it.each(['abc', 'abcdefgh', '12345678', 'aaaaaaaaaaaa', 'abababababab', 'Password1', 'azerty123', 'motdepasse2', 'QWERTY!', '12341234123'])('judges %s weak', (password) => {
+  it.each(['abc', 'abcdefgh', '12345678', 'aaaaaaaaaaaa', 'abababababab', 'Password1', 'azerty123', 'motdepasse2', 'QWERTY!', '12341234123', 'abcdefghijklmnop', 'zyxwvutsrqponmlkjihg'])('judges %s weak', (password) => {
     expect(passwordIsWeak(password)).toBe(true)
   })
 

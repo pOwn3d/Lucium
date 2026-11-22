@@ -3187,6 +3187,7 @@ export const en: Record<MessageKey, string> = {
   'pwd.mdp-copie': 'Password copied. It leaves the clipboard in {seconds} s, or when the vault locks.',
   'pwd.mdp-copie-impossible': 'The password could not be copied.',
   'pwd.ne-plus-proposer-fait': 'Lucium will no longer offer to save a password for {host}. The list is in Settings › Privacy and security › Passwords.',
+  'pwd.ne-plus-proposer-pleine': 'The list of sites that never get an offer is full (200). Remove one first, in Settings › Privacy and security › Passwords.',
   'pwd.ne-plus-proposer-impossible': 'The setting could not be changed.',
   'pwd.totp-presse-papiers-indisponible': 'The clipboard is not available: the code was not copied.',
   'pwd.aucun-mot-de-passe-sur-une-page-au-certificat-non-valide': 'No password is filled or saved on this page: its certificate is not valid (“Not secure”).',

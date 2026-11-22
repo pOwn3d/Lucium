@@ -133,6 +133,9 @@ describe('which entry may be filled where', () => {
     expect(entriesForPage(entries, 'https://wwwexample.com/')).toEqual([])
     expect(entriesForPage(entries, 'https://www.example.com.evil.test/')).toEqual([])
     expect(entriesForPage([entry({ origin: 'http://localhost:3000' })], 'http://www.localhost:3000/')).toEqual([])
+    // Not another scheme either, in both directions (same host, same default port).
+    expect(entriesForPage([entry({ origin: 'http://app.localhost' })], 'https://www.app.localhost/')).toEqual([])
+    expect(entriesForPage([entry({ origin: 'https://www.app.localhost' })], 'http://app.localhost/')).toEqual([])
   })
 
   const ok: FillContext = { featureOn: true, privateTab: false, vaultUnlocked: true, pageUrl: 'https://example.com/login', entryOrigin: 'https://example.com' }
