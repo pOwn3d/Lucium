@@ -9,15 +9,18 @@ import { tabStep } from '@shared/tab-step'
 import { spaceGlyph } from '@shared/space-icon'
 import { asideRefusal, asideSessions } from '@shared/sessions'
 import { newFolderRefusal } from '@shared/lock'
+import { spaceTransferRefusal } from '@shared/space-transfer'
 import { t } from '@shared/i18n'
 import { moveTabsToSpace } from './context-menus'
-import { asideSpace } from './space-aside'
+import { asideSpace, withEveryWindowsTabs } from './space-aside'
+import { exportSpace, importSpace } from './space-transfer'
 import { webPanelMenuItems } from './web-panel-menu'
 import type { MenuBarKit } from './menu-bar-kit'
 
 export function spacesMenu({ browser, store, actions, options, state, acc, kept, withSecondKey }: MenuBarKit): MenuItemConstructorOptions {
   const profiles = [...new Set(['default', ...state().spaces.map((sp) => sp.profileId)])]
   const currentSpace = state().spaces.find((sp) => sp.id === state().activeSpaceId)
+  const transferRefusal = spaceTransferRefusal(withEveryWindowsTabs(store), state().activeSpaceId, options.lockedSpaces ?? [])
   const profileName = (id: string) => state().settings.profileNames[id] ?? (id === 'default' ? t('menu.profil-par-defaut') : id)
 
   const spaceItems: MenuItemConstructorOptions[] = state().spaces.slice(0, 9).flatMap((space, i) =>
@@ -72,6 +75,10 @@ export function spacesMenu({ browser, store, actions, options, state, acc, kept,
                 .slice(0, 20)
                 .map((session): MenuItemConstructorOptions => ({ label: `${spaceGlyph(session.space!.space)} ${session.name}`, click: () => browser.dispatch({ type: 'space/reopen', id: session.id }) }))
       },
+      // One space with its tabs to another Mac, as a file (no cookies, no passwords): see space-transfer.ts.
+      // Greyed out, with the reason under the pointer, while the space on screen is locked (it would leave in the clear) or too large.
+      { label: t('space-transfer.exporter-cet-espace'), enabled: options.private !== true && transferRefusal === null, ...(transferRefusal === null ? {} : { toolTip: transferRefusal }), click: () => void exportSpace(browser, store, actions.window(), state().activeSpaceId) },
+      { label: t('space-transfer.importer-un-espace'), enabled: options.private !== true, click: () => void importSpace(browser, store, actions.window()) },
       // Locks the application again, and the spaces that are set to be locked.
       ...(actions.lockNow && options.private !== true
         ? ([{ type: 'separator' }, { label: t('menu.verrouiller-maintenant'), accelerator: acc('lockNow'), click: actions.lockNow }] satisfies MenuItemConstructorOptions[])

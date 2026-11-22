@@ -18,7 +18,7 @@ import { PANEL_SCREENS_MAX } from './panel-scale'
 import { isClosedPageUrl } from './closed-history'
 import { FOLDER_MAX_DEPTH, folderDepth, type FolderSide } from './folders'
 import { LIVE_FOLDERS_MAX } from './live-folders'
-import { SESSIONS_MAX } from './sessions'
+import { SESSIONS_MAX, asideOf } from './sessions'
 import { SPLIT_MAX_PANES, SPLIT_MIN_RATIO } from './split'
 import { STATE_VERSION, type SidebarState, type SplitArrangement } from './model'
 import type { JoinZone } from './split-grid'
@@ -449,6 +449,8 @@ const GENERATORS: Generators = {
   'session/delete': (g) => ({ type: 'session/delete', id: g.sessionId() }),
   'space/aside': (g) => ({ type: 'space/aside', id: g.spaceId() }),
   'space/reopen': (g) => ({ type: 'space/reopen', id: g.sessionId() }),
+  // A space of the state itself, as a transfer file would hold it: its ids are taken, so the import has to make them anew.
+  'space/import': (g) => ({ type: 'space/import', aside: asideOf(g.state, g.spaceId()) ?? { space: g.state.spaces[0]!, index: 0, folders: [], tabs: [], splits: [], selected: null, archive: [] } }),
   'backup/restore': (g) => {
     const from = g.history.length > 0 && !g.chance(0.2) ? g.pick(g.history) : g.state
     const { spaces, tabs, folders, activeSpaceId, activeTabBySpace, splits, archive } = from

@@ -17,6 +17,9 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Fixed
 
 - **Live stream with a finite duration**: a live stream whose player reports a finite, growing duration (Twitch) is recognised as live in Lucium’s floating window, so the ±10 s buttons are hidden.
+### Added
+
+- **One Space to another Mac**: Spaces › Export This Space… saves one Space with its tabs, folders and archive to a file, sealed with a passphrase if you wish; Spaces › Import a Space… adds it on another Mac, with no server. No cookies, no passwords.
 
 ## [1.1.5] - 2026-11-20
 

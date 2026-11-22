@@ -1,7 +1,7 @@
 // The actions of the sidebar reducer (shared/sidebar.ts) and the context it runs in. Types only: every reader of an action imports them from
 // `@shared/sidebar`, which re-exports them.
 
-import type { ArchiveSource, ClosedHistory, Favorite, Boost, BoostInput, BlockMode, Folder, PermissionDecision, Settings, SplitArrangement, SplitGrid, SplitOrientation, SplitView, SidebarState, Space, TabItem, WorkView, WorkViewTarget } from './model'
+import type { ArchiveSource, AsideSpace, ClosedHistory, Favorite, Boost, BoostInput, BlockMode, Folder, PermissionDecision, Settings, SplitArrangement, SplitGrid, SplitOrientation, SplitView, SidebarState, Space, TabItem, WorkView, WorkViewTarget } from './model'
 import type { JoinZone } from './split-grid'
 import type { SyncPatch } from './sidebar-sync'
 import type { SharedBoost } from './boost-share'
@@ -444,6 +444,11 @@ export type Action =
   | { type: 'space/aside'; id: string }
   /** Rouvrir: the space of the session `id` (a space put aside) comes back as it was and is shown; the session is spent. */
   | { type: 'space/reopen'; id: string }
+  /**
+   * Espaces › Importer un espace… : the space a transfer file holds (space-transfer.ts) is added after the others, with its folders, tabs, split views and
+   * archive, and shown. Every id the state already has is made anew. Main process only: the file is read and cleaned there.
+   */
+  | { type: 'space/import'; aside: AsideSpace }
   /**
    * A copy of the session (see session-backups.ts) replaces the spaces, tabs, folders, split views, archive and what is on screen; the
    * favourites, Tweaks, sessions and settings stay as they are. Main process only: it makes a copy of what it replaces first.

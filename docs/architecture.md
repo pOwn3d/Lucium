@@ -223,6 +223,7 @@ src/main/
   shell/feature-gate.ts  portail d'activation : démarre une fonction quand son réglage est vrai, la défait quand il devient faux (minuteries, écouteurs, services), à la fermeture d'une fenêtre et à la sortie
   shell/backups.ts   service des copies : quand copier (minuteur, fermeture), restaurer après une copie de ce qu'on remplace, annuler (sans Electron)
   shell/space-aside.ts  « Mettre l'espace de côté… » : la question, puis l'action `space/aside`
+  shell/space-transfer.ts  « Exporter cet espace… » / « Importer un espace… » : les boîtes, la phrase secrète, puis l'action `space/import` (le fichier : `main/space-transfer-file.ts`, son contenu : `shared/space-transfer.ts`)
   shell/space-images.ts / space-image-sweep.ts / space-images-electron.ts  image d'un espace : le dossier `space-images/` (importer, lire, balayer ; `runSpaceImageRequest`), ce que le balayage garde pour les copies de la session, puis le décodeur (page sandboxée sans réseau), la boîte de dialogue et le magasin créé au premier usage
   shell/web-panel-menu.ts  les entrées « Volets web » des menus (menu de l'espace, menu Espaces)
   shell/ipc-scope.ts un seul handler IPC par canal, routé vers la fenêtre de l'expéditeur ; un expéditeur qu'aucune fenêtre ne reconnaît n'est pas répondu (`undefined`) avant tout handler, `guard()` des handlers restant une seconde ligne

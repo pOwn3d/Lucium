@@ -416,6 +416,8 @@ export function reduceSpaces(state: SidebarState, action: Action, ctx: Ctx, agai
       if (!session?.space) return state
       return normalize({ ...reopenAside(state, session.space, ctx), sessions: state.sessions.filter((s) => s.id !== session.id) })
     }
+    case 'space/import':
+      return normalize(reopenAside(state, { ...action.aside, index: state.spaces.length }, ctx))
     case 'backup/restore': {
       // Only the parts a copy holds: everything else of the state is what it is now. A copy with no usable space is refused, not replaced by an empty browser.
       const { spaces, tabs, folders, activeSpaceId, activeTabBySpace, splits, archive } = action.copy

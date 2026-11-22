@@ -11,6 +11,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Corrections
 
 - **Direct à durée finie** : un direct dont le lecteur annonce une durée finie qui grandit (Twitch) est reconnu comme direct dans la fenêtre flottante de Lucium : les boutons ±10 s sont masqués.
+### Ajouts
+
+- **Un espace vers un autre Mac** : Espaces › Exporter cet espace… enregistre un espace avec ses onglets, ses dossiers et son archive dans un fichier, chiffré par une phrase secrète si vous le voulez ; Espaces › Importer un espace… l’ajoute sur un autre Mac, sans serveur. Ni cookies, ni mots de passe.
 
 ## [1.1.5] - 2026-11-20
 
