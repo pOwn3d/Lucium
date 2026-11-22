@@ -196,7 +196,10 @@ describe('shimAllowed', () => {
       ['identity', 'launchWebAuthFlow', 'identity'],
       ['downloads', 'download', 'downloads'],
       ['contextMenus', 'update', 'contextMenus'],
-      ['management', 'getAll', 'management']
+      ['management', 'getAll', 'management'],
+      ['sessions', 'getRecentlyClosed', 'sessions'],
+      ['sessions', 'restore', 'sessions'],
+      ['sessions', 'getDevices', 'sessions']
     ]
     for (const [api, method, permission] of cases) {
       expect(shimAllowed(manifest([permission]), api, method)).toBe(true)
