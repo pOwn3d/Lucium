@@ -129,7 +129,7 @@ describe('how the shell uses the shown state', () => {
 
   it('opens no panel over the lock screen', () => {
     const opened = vi.fn()
-    const shell = { tooltipWindow: { hide: () => undefined }, littleBarOpener: null, zapping: false, isPrivate: () => false, overlayRequest: null, store: { get: sample }, settingsOpener: opened }
+    const shell = { tooltipWindow: { hide: () => undefined }, littleBarOpener: null, zapping: false, isPrivate: () => false, isWindowLocked: () => false, overlayRequest: null, store: { get: sample }, settingsOpener: opened }
     lock(true, [])
     shellMethods['openOverlay']!.call(shell, { panel: 'settings', pane: 'general' })
     expect(opened).not.toHaveBeenCalled()
@@ -140,7 +140,7 @@ describe('how the shell uses the shown state', () => {
 
   it('copies no address of a tab the lock hides', async () => {
     writeText.mockClear()
-    const shell = { store: { get: sample }, isTabLocked: shellMethods['isTabLocked'], activePage: () => undefined, followPaneFocus: () => undefined, copyable: (url: string) => url, showToast: () => undefined }
+    const shell = { store: { get: sample }, isTabLocked: shellMethods['isTabLocked'], isWindowLocked: () => false, activePage: () => undefined, followPaneFocus: () => undefined, copyable: (url: string) => url, showToast: () => undefined }
     lock(false, ['work'])
     await shellMethods['copyUrl']!.call(shell, 'plain')
     lock(true, [])

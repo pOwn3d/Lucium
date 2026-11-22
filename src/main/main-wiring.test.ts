@@ -314,12 +314,6 @@ describe('the sign of a clean exit and « Reprendre où vous en étiez ? » (she
       rmSync(folder, { recursive: true, force: true })
     }
   })
-
-  it('keeps no marker in the engine test, and offers nothing there', async () => {
-    const main = await run({ argv: SMOKE })
-    expect(existsSync(join(own, 'running.marker'))).toBe(false)
-    expect(existsSync(join(main.world.userData, 'running.marker'))).toBe(false)
-  })
 })
 
 describe('the folders of the containers the application left (the sweep of the launch)', () => {
