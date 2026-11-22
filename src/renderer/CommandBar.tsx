@@ -1,6 +1,7 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { gotoTabCommand } from '@shared/little-picker'
-import { actionToDispatch, BAR_WIDTH, barBox, barLayout, candidateDispatches, candidateHint, candidatePreview, cardSurface, completedRow, groupCandidates, groupStarts, groupTitle, inScope, littleCandidates, littleGroupStarts, newTabOf, pageColorBehind, typedStaysPrivate, inlineCompletion, rankCandidates, resultAtEdge, scopeSiteFor, SCOPE_PREFIX, splitScope, suggestionQuery, usageKey, windowSidebarChangeOf, type BarScope, type Candidate, type CommandAction } from '@shared/command-bar'
+import { actionToDispatch, bookmarkCandidates, BAR_WIDTH, barBox, barLayout, candidateDispatches, candidateHint, candidatePreview, cardSurface, completedRow, groupCandidates, groupStarts, groupTitle, inScope, littleCandidates, littleGroupStarts, newTabOf, pageColorBehind, typedStaysPrivate, inlineCompletion, rankCandidates, resultAtEdge, scopeSiteFor, SCOPE_PREFIX, splitScope, suggestionQuery, usageKey, windowSidebarChangeOf, type BarScope, type Candidate, type CommandAction } from '@shared/command-bar'
+import { DISCOVER_REQUEST } from '@shared/discover'
 import type { CommandBarMode } from '@shared/ipc'
 import { commandHeld, effectiveAccelerator, formatAccelerator } from '@shared/keybindings'
 import { ariaKeyShortcut, commandPress, platformOf } from '@shared/platform'
@@ -24,6 +25,7 @@ const HISTORY_DEBOUNCE_MS = 60
 const SUGGEST_DEBOUNCE_MS = 140
 /** The recent pages listed in "Historique" while nothing is typed. */
 const HISTORY_RECENT = 8
+const BOOKMARKS_SHOWN = 12
 
 /** Commands that have a picture of their own rather than the bolt. */
 const ACTION_ICONS: Partial<Record<CommandAction, ReactNode>> = {
@@ -93,7 +95,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
   // A site search the text is scoped to ("yt" + space or Tab makes a pill); Backspace on an empty field removes it.
   const [scope, setScope] = useState<SiteSearch | null>(null)
   const [help, setHelp] = useState(false)
-  // The bar narrowed to one genre by a chip (the letters `>` and `@` typed first do the same, see `splitScope`).
+  // The bar narrowed to one genre by a chip (the letters `>`, `@`, `*`, `^` typed first do the same, see `splitScope`).
   const [chipScope, setChipScope] = useState<BarScope | null>(null)
   // Whether the highlighted line was chosen with the arrows (or Home and End), not left there by what is typed. ⇧⌫ forgets a page of the history only
   // then: with Shift still held while a fault is corrected, the key is the field's and takes a letter away, whatever the first line is.
@@ -110,7 +112,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
   // With the history switched off (Settings › Profils › Réglages de la recherche) the bar never asks for it.
   const wantHistory = snapshot ? snapshot.state.settings.suggestHistory : true
   // The genre the bar is narrowed to, and the text that is looked for: without the `>` or `@` that named the genre. The Mini-fenêtre has no genres.
-  const typed = little ? { scope: null, text: query } : splitScope(query)
+  const typed = little ? { scope: null, text: query } : splitScope(query, snapshot ? snapshot.state.settings.siteSearches.map((site) => site.keyword) : [])
   const barScope: BarScope | null = typed.scope ?? chipScope
   const lookFor = typed.scope ? typed.text : query
 
@@ -257,6 +259,8 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
     if (barScope === null) return found
     // Narrowed to a genre: its lines only. The history has no line of its own while nothing is typed (the ranking lists it only for a text), so the recent pages are the list.
     if (barScope === 'history' && lookFor.trim() === '') return history.slice(0, HISTORY_RECENT).map((h): Candidate => ({ kind: 'history', id: `history:${h.url}`, label: h.title || h.url, detail: t('cmd.history-host', { host: hostOf(h.url) }), url: h.url }))
+    // The bookmarks have the room of a list of their own, not the four lines they get among the other genres.
+    if (barScope === 'bookmarks') return bookmarkCandidates(lookFor, snapshot.state, snapshot.private === true, BOOKMARKS_SHOWN)
     return inScope(found, barScope)
   }, [snapshot, query, lookFor, barScope, history, suggestions, scope, little, mode, platform])
   // Narrowed to a genre, no letters are completed: the field holds a prefix and a search, not an address.
@@ -414,12 +418,15 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
         if (c.action === 'search-tabs') return act.openOverlay({ panel: 'commandbar', mode: 'tabs', initial: '' })
         if (c.action === 'archive') return act.openOverlay({ panel: 'archive' })
         if (c.action === 'capture-region') return act.openOverlay({ panel: 'capture' })
+        // As the File menu does: the main process closes the bar first, so that the page is what is captured, not the bar over it.
+        if (c.action === 'capture-full') return act.captureFullPage()
+        if (c.action === 'capture') return act.captureVisible()
         if (c.action === 'site-info') return act.openOverlay({ panel: 'site' })
         if (c.action === 'create-shortcut' && c.url) return act.openOverlay({ panel: 'shortcut', url: c.url, title: hostOf(c.url) })
         if (c.action === 'clear-site-data') return act.openOverlay({ panel: 'sitedata' })
-        if (c.action === 'export-markdown') {
-          // The main process closes the bar and gives the page the keyboard before its picker opens.
-          act.markdownExport()
+        if (c.action === 'export-markdown' || c.action === 'save-markdown') {
+          // The main process closes the bar and gives the page the keyboard before its picker opens (or the save starts).
+          act.markdownExport(c.action === 'save-markdown' ? 'save' : 'pick')
           break
         }
         if (c.action === 'sessions') return act.openOverlay({ panel: 'sessions' })
@@ -433,6 +440,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
           break
         }
         if (c.action === 'recent-notices') return act.openOverlay({ panel: 'notices' })
+        if (c.action === 'discover') return act.openOverlay(DISCOVER_REQUEST)
         if (c.action === 'web-panel-add') {
           act.webPanel({ op: 'add' })
           break
@@ -565,9 +573,9 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       // ⌘↩ (Ctrl+Enter away from macOS): the page of the line in a new tab, whatever Enter does on it.
       openInNewTab(candidates[selected]!)
     } else if (e.key === 'Enter') {
-      // Enter on raw text must always navigate, even before the candidate list has caught up. Inside a genre there is no raw text to send: `@abc` is not an address.
+      // Enter on raw text must always navigate, even before the candidate list has caught up. Inside `>` or `@` there is no raw text to send (`@abc` is not an address); a genre of bookmarks or history that finds nothing searches as typed.
       if (candidates[selected]) run(candidates[selected])
-      else if (query.trim() && barScope === null) go(query)
+      else if (query.trim() && (barScope === null || ((barScope === 'bookmarks' || barScope === 'history') && lookFor.trim()))) go(query)
     } else if (e.key === 'Home' || e.key === 'End') {
       // The first or the last result, once the caret is at that end of the text; before that the key moves the caret, as in any field.
       const to = resultAtEdge(e.key, e, e.currentTarget as HTMLInputElement, candidates.length)
@@ -596,6 +604,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
   const scopes: Array<{ id: BarScope; label: string }> = [
     { id: 'commands', label: t('cmd.filtre-commandes') },
     { id: 'tabs', label: t('cmd.filtre-onglets') },
+    { id: 'bookmarks', label: t('cmd.filtre-signets') },
     { id: 'history', label: t('cmd.filtre-historique') }
   ]
   // An address typed in full opens a new tab with Enter; the tab already on it is the next line.
@@ -682,7 +691,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       </div>
       {!little && (
         <div className="cb-chips">
-          {/* The genres, as buttons: `>` for the commands and `@` for the open tabs may also be typed first; the history has a button only (`#` is the tag of a bookmark). */}
+          {/* The genres, as buttons: `>`, `@`, `*` and `^` (or the words `@bookmarks`, `@history`) may also be typed first; `#` is the tag of a bookmark. */}
           <div className="cb-genres" role="group" aria-label={t('cmd.filtrer-par-type')}>
             {scopes.map(({ id, label }) => (
               <button
@@ -698,7 +707,7 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
                   input.current?.focus()
                 }}
               >
-                {SCOPE_PREFIX[id] && <kbd aria-hidden="true">{SCOPE_PREFIX[id]}</kbd>}
+                <kbd aria-hidden="true">{SCOPE_PREFIX[id]}</kbd>
                 {label}
               </button>
             ))}

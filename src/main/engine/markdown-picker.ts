@@ -200,6 +200,32 @@ ${library()}
   return snapshot ? JSON.stringify(snapshot) : null
 })()`
 
+/**
+ * The main content of the page, whole, with no picker: the snapshot of `<main>`, `[role=main]` or the first `<article>` (else the body),
+ * without navigation, side columns, dialogs, and, when the page has no main part to hold them, headers and footers. Nothing a person typed
+ * goes in: the form fields are dropped by the converter's own list, and an editable region (a mail being written, a document in a web editor)
+ * is left out here. Hidden things are skipped by the walk itself. Resolves with the same JSON text as the picker (`parsePick`), as a whole-page save.
+ */
+export const pageScript = (): string => `(() => {
+${library()}
+  try {
+    const root = document.querySelector('main, [role="main"]') || document.querySelector('article') || document.body || document.documentElement
+    const wholeBody = root === document.body || root === document.documentElement
+    const AROUND = 'nav, aside, dialog, [role="navigation"], [role="banner"], [role="complementary"], [role="contentinfo"], [role="dialog"], [role="alertdialog"]'
+    const snapshot = snapshotOf(
+      {
+        skip: (element) => element.isContentEditable === true || element.matches(AROUND) || (wholeBody && (element.localName === 'header' || element.localName === 'footer') && !closest(element.parentElement || element, 'article')),
+        element: () => true,
+        text: (node) => node.data
+      },
+      [{ node: root, included: true }]
+    )
+    return JSON.stringify({ action: 'save', scope: 'blocks', snapshot })
+  } catch (error) {
+    return JSON.stringify({ error: String(error && error.message ? error.message : error) })
+  }
+})()`
+
 const PICKER_CSS = [
   '*{box-sizing:border-box}',
   '.boxes{position:fixed;inset:0;pointer-events:none}',
@@ -529,6 +555,11 @@ export class MarkdownPicker {
   /** The selection of the page as a JSON snapshot; null when there is none (or the page does not answer). */
   async selection(): Promise<string | null> {
     return this.run(selectionScript())
+  }
+
+  /** The main content of the page, whole (see pageScript); null when the page does not answer. */
+  async page(): Promise<string | null> {
+    return this.run(pageScript())
   }
 
   /** Shows the picker and waits for the user (see pickerScript). A second call while one is under way ends the first and answers null. */

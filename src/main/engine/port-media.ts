@@ -24,6 +24,8 @@ export interface PageMedia {
    * whatever can float does; on a tab switch, only a video being watched (shared/auto-pip.ts).
    */
   setPictureInPicture(on: boolean, by?: PictureInPictureAsker): Promise<boolean>
+  /** Whether a video being watched (shared/auto-pip.ts) is on the page: what leaving the tab would float. Asked without a gesture. */
+  watchedVideoCanFloat?(): Promise<boolean>
   /** "Image dans l'image" of the page's main video, asked by the user; says why nothing floated. */
   floatMainVideo(): Promise<PictureInPictureOutcome>
   /**

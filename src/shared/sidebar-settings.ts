@@ -5,6 +5,7 @@ import { checkSharedBoost } from './boost-share'
 import { unreadableCode } from './boost-css'
 import { knownProfiles, profileOfSpace, profileRecordsHistory, withExtensionEnabled, withExtensionTabCapture } from './profiles'
 import { normalizeSleepHost, setSiteExcluded } from './sleep'
+import { setJavascriptOff } from './site-javascript'
 import { normalizeBlockHost, setBlockingExempt, withSiteBlockMode } from './blocker'
 import { withSiteAutoplay } from './autoplay'
 import { withSiteReadable } from './readable-mode'
@@ -49,6 +50,13 @@ export function reduceSettings(state: SidebarState, action: Action, ctx: Ctx): S
       // the key. A file that holds a choice keeps the key on, so that the version that reads it again applies the choice it was told to make.
       const perSite = Object.keys(next).length > 0 ? true : state.settings.autoplayPerSite
       return JSON.stringify(next) === JSON.stringify(before) && perSite === state.settings.autoplayPerSite ? state : { ...state, settings: { ...state.settings, siteAutoplay: next, autoplayPerSite: perSite } }
+    }
+    case 'javascript/site': {
+      if (fromPrivateTab(state, action.tabId)) return state
+      const before = state.settings.siteJavascriptOff
+      // Only a real true turns JavaScript off (the interface is not trusted); anything else puts the site back.
+      const next = setJavascriptOff(before, action.site, action.off === true)
+      return next.length === before.length && next.every((host, i) => host === before[i]) ? state : { ...state, settings: { ...state.settings, siteJavascriptOff: next } }
     }
     case 'readable/site': {
       if (fromPrivateTab(state, action.tabId)) return state

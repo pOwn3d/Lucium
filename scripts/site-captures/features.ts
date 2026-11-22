@@ -114,6 +114,7 @@ export const SUBPAGE_LABELS: Readonly<Record<SettingsSubpageKey, Localized<strin
   translatelists: { fr: 'Langues et sites', en: 'Languages and sites' },
   userscripts: { fr: 'Scripts importés', en: 'Imported scripts' },
   pagewatches: { fr: 'Pages surveillées', en: 'Watched pages' },
+  focus: { fr: 'Mode concentration', en: 'Focus mode' },
   shortcuts: { fr: 'Raccourcis clavier', en: 'Keyboard shortcuts' },
   siteexclusions: { fr: 'Sites sans gestes ni touches Vim', en: 'Sites without gestures or Vim keys' },
   sync: { fr: 'Synchronisation', en: 'Synchronization' }
@@ -319,9 +320,12 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-auto-scroll', 'auto-scroll', t('Défilement automatique au clic du milieu', 'Auto-scroll on middle click'), 'keyboard', 'autoScroll', { label: t('Défilement automatique avec le clic du milieu', 'Auto-scroll with the middle click'), patch: { autoScroll: true }, on: true, why: behaviour }),
   // At the foot of the image, as fn-auto-pip, for the same reason.
   setting('fn-scroll-sync', 'scroll-sync', t('Défilement synchronisé des volets', 'Synchronized Scrolling of Panes'), 'tabs', 'scrollSync', { fold: true, label: t('Défilement synchronisé des volets d’une vue scindée', 'Synchronized scrolling of split view panes'), patch: { scrollSync: true }, on: true, why: behaviour, place: 'bottom' }),
+  setting('fn-remember-scroll', 'remember-scroll', t('Retrouver la position de défilement des onglets', 'Restore the scroll position of tabs'), 'tabs', 'rememberScroll', { fold: true, patch: { rememberScroll: true }, on: true, why: behaviour }),
   setting('fn-mouse-gestures', 'mouse-gestures', t('Gestes de souris', 'Mouse gestures'), 'keyboard', 'mouseGestures', { patch: { mouseGestures: true }, on: true, why: behaviour }),
   setting('fn-space-swipe', 'space-swipe', t('Balayer à deux doigts pour changer d’espace', 'Swipe with two fingers to switch Spaces'), 'keyboard', 'spaceSwipe', { why: needsHardware }),
+  setting('fn-page-content-index', 'page-content-index', t('Rechercher dans le contenu des pages visitées', 'Search the content of visited pages'), 'protection', 'pageContentIndex', { fold: true, why: background }),
   setting('fn-page-watch', 'page-watch', t('Surveiller des pages', 'Watch pages'), 'features', 'pageWatch', { why: background }),
+  setting('fn-focus-mode', 'focus-mode', t('Mode concentration', 'Focus mode'), 'features', 'focusMode', { patch: { focusMode: true }, on: true, why: behaviour }),
   setting('fn-read-aloud', 'read-aloud', t('Lecture à voix haute', 'Read aloud'), 'features', 'readAloud', { patch: { readAloud: true }, on: true, why: 'se fait entendre, pas voir' }),
   setting('fn-tab-cycle-recent', 'tab-cycle-recent', t('⌃Tab dans l’ordre d’utilisation récente', '⌃Tab in order of recent use'), 'keyboard', 'tabCycleRecent', { label: t('⌃Tab suit l’ordre d’utilisation récente', '⌃Tab follows the order of recent use'), why: 'le panneau de ⌃Tab ne reste ouvert que tant que la touche est tenue' }),
   setting('fn-drag-to-split', 'drag-to-split', t('Glisser un onglet sur la page pour scinder', 'Drag a tab onto the page to split'), 'tabs', 'dragToSplit', { fold: true, why: 'se voit pendant un glisser-déposer, que l’outil ne fait pas' }),
@@ -377,6 +381,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-fingerprint', 'fingerprint', t('Protection contre l’empreinte numérique', 'Fingerprinting protection'), 'protection', 'reduceFingerprint', { patch: { reduceFingerprint: true }, on: true, why: network }),
   setting('fn-https-first', 'https-first', t('HTTPS d’abord', 'HTTPS first'), 'protection', 'httpsUpgrade', { fold: true, label: t('Toujours essayer HTTPS d’abord', 'Always try HTTPS first'), why: network }),
   setting('fn-global-privacy-control', 'global-privacy-control', t('Envoyer le signal Global Privacy Control', 'Send the Global Privacy Control signal'), 'protection', 'sendGpc', { fold: true, label: t('Demander aux sites de ne pas me suivre (signal GPC)', 'Ask sites not to track me (GPC signal)'), on: true, why: network }),
+  setting('fn-third-party-cookies', 'third-party-cookies', t('Bloquer les cookies tiers', 'Block third-party cookies'), 'protection', 'blockThirdPartyCookies', { fold: true, patch: { blockThirdPartyCookies: true }, on: true, why: network }),
   setting('fn-strip-tracking', 'strip-tracking', t('Retirer les paramètres de suivi des adresses', 'Remove tracking parameters from addresses'), 'protection', 'stripTrackingParams', { on: true, why: network }),
   // The demonstration asks no search engine anything (demo.ts): the row shows the default of the application; nothing is typed while it is on.
   setting('fn-search-suggestions', 'search-suggestions', t('Suggestions du moteur de recherche', 'Search engine suggestions'), 'navigation', 'searchSuggestions', { label: t('Inclure les suggestions de recherche', 'Include search suggestions'), patch: { searchSuggestions: true }, why: network }),
@@ -486,6 +491,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-open-with', 'open-with', t('Mémoriser l’application d’ouverture par type', 'Remember the opening app by type'), 'files', 'openWithMemory', { fold: true, label: t('Mémoriser l’application d’ouverture par type de fichier', 'Remember the opening app for each file type'), patch: { openWithMemory: true }, on: true, why: needsDownload }),
   setting('fn-open-unsaved', 'open-unsaved', t('Ouvrir sans l’enregistrer', 'Open Without Saving'), 'features', 'openUnsaved', { patch: { openUnsaved: true }, on: true, why: needsDownload }),
   setting('fn-pdf-with-source', 'pdf-with-source', t('Enregistrer en PDF avec l’adresse', 'Save as PDF with the address'), 'features', 'pdfWithSource', { patch: { pdfWithSource: true }, on: true, why: 'agit sur le fichier PDF enregistré' }),
+  setting('fn-tab-reminders', 'tab-reminders', t('Rappel d’onglet', 'Tab reminders'), 'features', 'tabReminders', { patch: { tabReminders: true }, on: true, why: 'agit à l’heure choisie (notification locale) : la démonstration ne peut pas attendre' }),
   direct('fn-bookmarks', 'bookmarks', t('Bibliothèque de signets avec étiquettes', 'Bookmark library with tags'), t(
     'La bibliothèque de signets : trois pages gardées avec leurs étiquettes, prêtes à chercher ou à trier',
     'The bookmark library: three pages kept with their tags, ready to search or sort'

@@ -170,20 +170,20 @@ describe('the catalogue of the features to add', () => {
    * Picture-in-Picture, and the work views (decided on 13 November 2026), with the tabs.
    */
   const LISTED = [
-    'tab-tree', 'tab-search', 'tab-groups-ext', 'reload-all-button', 'tab-memory', 'work-views',
+    'tab-tree', 'tab-reminders', 'tab-search', 'tab-groups-ext', 'reload-all-button', 'tab-memory', 'work-views',
     'web-panels', 'name-windows', 'independent-windows', 'pwa', 'document-pip',
     'containers', 'private-tabs', 'guest-profile',
     'bookmarks', 'live-folders', 'notes',
-    'user-scripts', 'qr-code', 'read-aloud', 'page-watch', 'annotate-capture',
+    'user-scripts', 'qr-code', 'read-aloud', 'page-watch', 'focus-mode', 'annotate-capture',
     'download-pause', 'open-unsaved', 'pdf-with-source',
     'find-regex', 'cookie-manager', 'shortcut-help', 'applescript'
   ]
 
-  it('lists the 29 features to add, each once, theme by theme, each theme named in both languages', async () => {
+  it('lists the 31 features to add, each once, theme by theme, each theme named in both languages', async () => {
     const { en } = await import('./i18n-en')
     const { fr } = await import('./i18n-fr')
     expect([...CATALOGUE_FEATURES]).toEqual(LISTED)
-    expect(new Set(CATALOGUE_FEATURES).size).toBe(29)
+    expect(new Set(CATALOGUE_FEATURES).size).toBe(31)
     expect(FEATURE_THEMES.map((theme) => theme.id)).toEqual(['tabs', 'windows', 'separate', 'bookmarks', 'pages', 'files', 'search', 'privacy', 'keyboard', 'automation'])
     for (const theme of FEATURE_THEMES) {
       expect((fr as Record<string, string>)[theme.title], theme.title).toBeTruthy()
@@ -191,14 +191,15 @@ describe('the catalogue of the features to add', () => {
     }
   })
 
-  it('takes the 40 settings there (the 29 switches, their options and their lists), and leaves the 78 other features in their category', () => {
+  it('takes the 48 settings there (the 31 switches, their options and their lists), and leaves the 81 other features in their category', () => {
     // The rows of annexes/correspondance.csv whose new place is « Fonctions en option »: 33 lines of the catalogue and 3 lists; then the switch of document
     // Picture-in-Picture, the one of the work views and the second button of the notes.
     const moved = [
       'webPanels', 'tabTree', 'tabSearch', 'tabGroupFolders', 'showReloadAllButton', 'reloadAllWakes', 'showTabMemory', 'nameWindows', 'independentWindows', 'tabContainers',
       'containers', 'containerRules', 'findRegex', 'webAppWindows', 'urlAutomation', 'shortcutHelp', 'cookieManager', 'privateTabs', 'guestProfile', 'downloadPause',
       'openUnsaved', 'pdfWithSource', 'bookmarkManager', 'liveFolders', 'notes', 'notesListButton', 'userScripts', 'qrCode', 'readAloud', 'pageWatch', 'pageWatches',
-      'annotateCapture', 'annotateAutoClear', 'annotateAutoClearSeconds', 'annotateLetterKeys', 'ollamaConfig', 'aiSummary', 'documentPictureInPicture', 'workViewsEnabled'
+      'focusMode', 'focusSites', 'focusScheduleOn', 'focusDays', 'focusFrom', 'focusTo', 'focusMinutes',
+      'annotateCapture', 'annotateAutoClear', 'annotateAutoClearSeconds', 'annotateLetterKeys', 'ollamaConfig', 'aiSummary', 'documentPictureInPicture', 'workViewsEnabled', 'tabReminders'
     ]
     expect([...SETTINGS_KEYS.features].sort()).toEqual([...moved].sort())
     for (const key of moved) expect(categoryOfKey(key), key).toBe('features')
@@ -207,13 +208,14 @@ describe('the catalogue of the features to add', () => {
       if (listed.has(feature.id)) expect(categoryOfKey(feature.key), feature.id).toBe('features')
       else expect(categoryOfKey(feature.key), feature.id).not.toBe('features')
     }
-    expect(FEATURES.length - listed.size).toBe(78)
+    expect(FEATURES.length - listed.size).toBe(81)
   })
 
-  it('keeps the state each feature starts with: six on, the others off', () => {
+  it('keeps the state each feature starts with: seven on, the others off', () => {
     const on = CATALOGUE_FEATURES.filter((id) => featureDefault(id))
     // The work views cost nothing until one is saved: on, as decided on 13 November 2026.
-    expect(on).toEqual(['tab-search', 'work-views', 'private-tabs', 'notes', 'cookie-manager', 'shortcut-help'])
+    // The tab reminders cost nothing until one is set (one timer, armed only while a reminder waits).
+    expect(on).toEqual(['tab-reminders', 'tab-search', 'work-views', 'private-tabs', 'notes', 'cookie-manager', 'shortcut-help'])
     for (const id of CATALOGUE_FEATURES) expect(defaultSettings()[featureById(id).key], id).toBe(featureDefault(id))
   })
 })

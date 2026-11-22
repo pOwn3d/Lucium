@@ -7,6 +7,7 @@ import type { PlusAnchor } from '@shared/plus-menu'
 import { SPACE_UNDO_MS, archiveRefusal, archivedSpaces, asideSessionOf, canDeleteSpace, dropIndex, manageCounts, managedSpaces, stepIndex } from '@shared/space-manage'
 import { hostOf } from '@shared/url'
 import { api, useSnapshot } from './api'
+import { PageContentResults } from './PageContentResults'
 import { radioGroupKeys } from './radio-keys'
 import { SpaceMark } from './SpaceMark'
 import { TabMark } from './TabPicture'
@@ -218,12 +219,15 @@ function HistoryList({ profileId }: { profileId: string }) {
       onDone={() => act.closeOverlay()}
       undo={undo.panel}
     >
+      <>
       <div onKeyDown={onKeyDown}>
         {owner && <p className="tk-status">{owner}</p>}
         {/* The list is cut at its limit (always far more than one page): said, so that an old day does not pass for complete. */}
         {query === '' && entries !== null && entries.length >= HISTORY_ROWS && <p className="tk-status">{t('history-days.liste-coupee', { count: HISTORY_ROWS })}</p>}
         <HistoryView columns={columns} query={query} onPick={setChosen} onOpen={(entry) => open(entry.url)} onForget={forgetPage} />
       </div>
+      <PageContentResults enabled={snapshot?.state.settings.pageContentIndex === true} query={query} profileId={profileId} onOpen={(url) => open(url)} />
+      </>
     </ListPanel>
   )
 }

@@ -14,7 +14,6 @@ import { adsBlockingOn, adsBlockingPatch } from './blocker'
 import { interfaceMayDispatch } from './ipc-policy'
 import { defaultSettings, type Settings } from './model'
 import { getLanguage, t, type MessageKey } from './i18n'
-import { foldAccentsAndQuotes } from './fold'
 import { settingsPath } from './settings-path'
 
 /** What a feature costs while it is active. `none` stands alone: nothing runs for it except a check when its event happens. */
@@ -205,6 +204,14 @@ export const FEATURES = [
     get label() { return t('privacy-settings.envoyer-le-signal-global-privacy-control') },
     group: 'privacy',
     get description() { return t('features.ajoute-sec-gpc-1-aux-requetes-pour-dire-aux') },
+    cost: ['listeners']
+  },
+  {
+    id: 'third-party-cookies',
+    key: 'blockThirdPartyCookies',
+    get label() { return t('privacy-settings.bloquer-les-cookies-tiers') },
+    group: 'privacy',
+    get description() { return t('features.ne-laisse-ni-partir-ni-rester-les-cookies-des', { settingsPath: settingsPath('thirdPartyCookies') }) },
     cost: ['listeners']
   },
   {
@@ -635,6 +642,15 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'remember-scroll',
+    key: 'rememberScroll',
+    get label() { return t('features.retrouver-la-position-de-defilement-des-onglets') },
+    group: 'tabs',
+    get description() { return t('features.un-onglet-revient-la-ou-sa-page-etait-defilee') },
+    // A script in each page (one scroll listener, one timer armed after a scroll) and a small file written a few seconds after a change.
+    cost: ['listeners', 'timer', 'disk']
+  },
+  {
     id: 'work-views',
     key: 'workViewsEnabled',
     get label() { return t('features.vues-de-travail') },
@@ -659,12 +675,29 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'page-content-index',
+    key: 'pageContentIndex',
+    get label() { return t('features.recherche-dans-le-contenu-des-pages-visitees') },
+    group: 'privacy',
+    get description() { return t('features.garde-en-local-le-texte-des-pages-lues-pour') },
+    cost: ['disk', 'listeners']
+  },
+  {
     id: 'page-watch',
     key: 'pageWatch',
     get label() { return t('web-tools-settings.surveiller-des-pages') },
     group: 'tabs',
     get description() { return t('features.relit-des-pages-de-temps-en-temps-10-au-plus-et') },
     cost: ['timer', 'network', 'process']
+  },
+  {
+    id: 'focus-mode',
+    key: 'focusMode',
+    get label() { return t('focus.label') },
+    group: 'tabs',
+    get description() { return t('focus.description', { settingsPath: settingsPath('focusSites') }) },
+    // While it is on, the request filter hears each request: one check of the address against a short list, only for the main frame of a page.
+    cost: ['listeners']
   },
   {
     id: 'read-aloud',
@@ -941,6 +974,15 @@ export const FEATURES = [
     cost: ['none']
   },
   {
+    id: 'tab-reminders',
+    key: 'tabReminders',
+    get label() { return t('features.rappel-d-onglet') },
+    group: 'tabs',
+    get description() { return t('features.un-onglet-quitte-la-colonne-et-revient-a-l') },
+    // One timer, armed for the earliest pending reminder only: none while nothing waits (main/shell/tab-reminders.ts).
+    cost: ['timer']
+  },
+  {
     id: 'bookmarks',
     key: 'bookmarkManager',
     get label() { return t('features.bibliotheque-de-signets-avec-etiquettes') },
@@ -1005,6 +1047,7 @@ export type FeatureId = RegisteredFeature['id']
 // `blockTrackers` is named beside the boolean keys: it is typed optional (a state file of an older version may not carry it), so the keys of
 // the plain booleans do not hold it.
 export const NOT_OPTIONAL_SETTINGS: Partial<Record<BooleanSettingKey | 'blockTrackers', string>> = {
+  sitePictureInPictureInLucium: 'option de l’image dans l’image (`media-player`, `auto-pip`) : le bouton du site ouvre la fenêtre flottante de Lucium plutôt que celle du système ; un test quand le pont multimédia entend le bouton, rien ne tourne de plus ni de moins, et sans le pont (fonction `media-player` coupée) le bouton garde la fenêtre du système',
   translateSystemEngine: 'option de la traduction locale (`translate-local`) : choisit si macOS traduit d’abord les paires installées, sans rien coûter de plus ; coupée, la fonction passe par Bergamot ou un glossaire',
   translateSystemNoticeSeen: 'mémoire de l’avis de la traduction de macOS déjà donné (Apple peut compter son usage), pas une fonction : il ne paraît qu’une fois, la première fois que macOS traduit une page en un clic',
   aiSummary: 'sous-réglage du résumé de page (Réglages › IA) : l’entrée de menu et le résumé s’éteignent avec lui, sans fonction propre',
@@ -1036,6 +1079,7 @@ export const NOT_OPTIONAL_SETTINGS: Partial<Record<BooleanSettingKey | 'blockTra
   forceHighContrast: 'préférence d’accessibilité (contraste), pas une fonction : une classe posée sur la racine des documents',
   forceReduceMotion: 'préférence d’accessibilité (mouvement), pas une fonction : une classe posée sur la racine des documents',
   forceReduceTransparency: 'préférence d’accessibilité (transparence), pas une fonction : une classe posée sur la racine des documents',
+  focusScheduleOn: 'option du mode concentration (focus-mode) : la plage horaire hebdomadaire, en plus du minuteur',
   blockCosmetic: 'option de « Bloquer les publicités et les traqueurs » (block-ads), sans effet quand celui-ci est désactivé',
   blockTrackers: 'option de « Bloquer les publicités et les traqueurs » (block-ads), gardée comme alias explicite pour les traqueurs',
   sleepSkipAudible: 'option de la mise en veille (sleep)',
@@ -1137,11 +1181,6 @@ export function defaultFeaturesPatch(): Partial<Settings> {
   return patch
 }
 
-/** The features whose state is not the default one: what "Rétablir les valeurs par défaut" would change. */
-export function changedFeatures(settings: Settings): FeatureId[] {
-  return FEATURES.filter((feature) => featureWritable(feature.id) && isFeatureOn(settings, feature.id) !== featureDefault(feature.id)).map((feature) => feature.id)
-}
-
 /** The costs in the order a sentence says them: what reaches out of the Mac first, then what it keeps, then what merely runs. */
 const COST_ORDER: ReadonlyArray<Exclude<FeatureCost, 'none'>> = ['network', 'memory', 'process', 'disk', 'timer', 'listeners']
 
@@ -1216,23 +1255,3 @@ export function firstSentence(text: string): string {
   return end ? text.slice(0, end.index + 1) : text
 }
 
-const fold = foldAccentsAndQuotes
-
-export interface FeatureSection {
-  group: FeatureGroup
-  label: string
-  features: RegisteredFeature[]
-}
-
-/**
- * The features for the pane, by group in the pane's order. A query keeps the features whose label, description or id contains every word of
- * it (accents and case ignored); a group with none left is dropped.
- */
-export function groupedFeatures(query = ''): FeatureSection[] {
-  const words = fold(query).split(/\s+/).filter(Boolean)
-  const matches = (feature: Feature): boolean => {
-    const haystack = fold(`${feature.label} ${feature.description} ${feature.id}`)
-    return words.every((word) => haystack.includes(word))
-  }
-  return FEATURE_GROUPS.map(({ id, label }) => ({ group: id, label, features: FEATURES.filter((feature) => feature.group === id && matches(feature)) })).filter((section) => section.features.length > 0)
-}

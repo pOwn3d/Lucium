@@ -192,3 +192,18 @@ describe('the notes panel, asked with or without a scope', () => {
     expect(checked(container)).toBe(t('notes.toutes'))
   })
 })
+
+describe('« Découvrir Lucium » in the layer', () => {
+  const snapshot = { state: createInitialState({ now: 0, newId: () => 'x' }), runtime: { tabs: {} }, extensions: [], downloads: [], platform: 'darwin' } as unknown as UiSnapshot
+
+  it('is drawn for the request { panel: "discover" }, as a modal panel: a press on the backdrop around it closes the layer', async () => {
+    const container = host({ getSnapshot: async () => snapshot })
+    await settle(() => show({ panel: 'discover' }))
+    expect(container.querySelector('[role="dialog"] h2')?.textContent).toBe(t('discover.titre'))
+    const backdrop = container.querySelector<HTMLElement>('.backdrop')!
+    expect(backdrop).not.toBeNull()
+    expect(backdrop.contains(container.querySelector('[role="dialog"]'))).toBe(true)
+    await settle(() => void backdrop.dispatchEvent(new MouseEvent('mousedown', { bubbles: true })))
+    expect(closeOverlay).toHaveBeenCalledTimes(1)
+  })
+})

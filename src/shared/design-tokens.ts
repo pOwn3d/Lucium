@@ -359,6 +359,12 @@ export const TOKEN_PAIRS: readonly TokenPair[] = [
   text('text-on-space', 'space-b', 'sidebar text'),
   text('text-on-space-2', 'space-a', 'sidebar secondary text'),
   text('text-on-space-2', 'space-b', 'sidebar secondary text'),
+  // The Discover panel (renderer/Discover.tsx): its header is drawn on the gradient of the space, with a field and chips whose contour is `text-3`; its status line and its label are `text`, as `text-2` falls to 4.38:1 on the gradient at hue 238 in the light scheme
+  text('text', 'space-a', 'header of the Discover panel'),
+  text('text', 'space-b', 'header of the Discover panel'),
+  control('text-3', 'space-a', 'contour of the search field and of the chips of the Discover panel'),
+  control('text-3', 'space-b', 'contour of the search field and of the chips of the Discover panel'),
+  text('warn-ink', 'surface', 'badge of a switched-off card of the Discover panel'),
   // accent, as text and behind text
   { fg: 'var(--on-accent)', bg: 'var(--accent)', min: AA_TEXT, use: 'primary button' },
   { fg: 'var(--on-accent)', bg: 'var(--accent-strong)', min: AA_TEXT, use: 'primary button on hover' },

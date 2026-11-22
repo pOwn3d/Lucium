@@ -29,11 +29,13 @@ export function actionToDispatch(action: CommandAction, state: SidebarState): Ac
     case 'edit-shortcuts':
     case 'clear-site-data':
     case 'export-markdown':
+    case 'save-markdown':
     case 'save-session':
     case 'sessions':
     case 'clear-site-now':
     case 'reload-all':
     case 'recent-notices':
+    case 'discover':
     case 'web-store':
     case 'name-window':
     case 'aside-space':

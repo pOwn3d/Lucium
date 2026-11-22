@@ -202,6 +202,10 @@ export interface Settings {
   fingerprintStrict: boolean
   /** Sites (host and subdomains) where the fingerprint protection is left off, because it broke them. */
   fingerprintExceptions: string[]
+  /** Third-party cookies are neither sent nor kept (see third-party-cookies.ts). Off by default: some sign-ins and embedded services need them. */
+  blockThirdPartyCookies: boolean
+  /** Sites (host and subdomains) where third-party cookies are let through, because blocking them broke the site. */
+  thirdPartyCookieExceptions: string[]
   /** Names shown for profiles, by profile id. The id stays the storage key, so renaming never loses data. */
   profileNames: Record<string, string>
   /** Expose the space theme to web pages as `--arc-palette-*` CSS variables (a page can read it, so it is opt-in). */
@@ -216,6 +220,11 @@ export interface Settings {
   peekOnExternalLinks: boolean
   /** Leaving a tab that plays a video moves the video to a floating Picture in Picture window. */
   autoPictureInPicture: boolean
+  /**
+   * The Picture in Picture button of a site (Twitch, YouTube…) opens Lucium's floating window instead of the system's, whose design is not ours:
+   * a live stream there has its own « EN DIRECT », no progress line, no ±10 s. Off: the system's window, as the site asks. On by default.
+   */
+  sitePictureInPictureInLucium: boolean
   /**
    * The player at the foot of the sidebar for a tab that makes sound while it is not on screen (buttons, track, volume). It needs a script in
    * the main frame of every page; off, no page gets it, no player opens and the tab's volume is the page's own. On by default.
@@ -361,6 +370,8 @@ export interface Settings {
   siteDataClearOnClose: string[]
   /** …and when the application quits. */
   siteDataClearOnQuit: boolean
+  /** Sites (exact host) whose pages load without running any script: the JavaScript row of the site panel (see site-javascript.ts). Empty by default, and then nothing runs for it. */
+  siteJavascriptOff: string[]
   /** The user's own filter lists can be added and are compiled with the blocker's. Off, none is compiled (their rules stay on disk). */
   customFilterListsEnabled: boolean
   /** The user's own filter lists (a file, or pasted rules); their rules live in the filters folder (see custom-filter-lists.ts). */
@@ -435,15 +446,38 @@ export interface Settings {
   autoScroll: boolean
   /** The split view's menu offers to scroll its panes together. */
   scrollSync: boolean
+  /** A tab comes back to where its page was scrolled after a relaunch or a sleep (see scroll-memory.ts): one number per tab, kept in a small file, never the page. Off by default. */
+  rememberScroll: boolean
   /**
    * Work views (work-views.ts): their tiles after the favourites, their entries in the menus and the command bar, the actions `view/*`. Off, all of
    * that is gone and every `view/*` action changes nothing; the views saved stay in the file.
    */
   workViewsEnabled: boolean
+  /**
+   * Focus mode (focus-mode.ts): the sites of `focusSites` (host and subdomains) stay closed, in the main frame of a page, while a timer runs
+   * (`focusUntil`) or the weekly slot is on (`focusScheduleOn`, `focusDays`, `focusFrom`, `focusTo`). Off, nothing is filtered.
+   */
+  focusMode: boolean
+  focusSites: string[]
+  /** The weekly slot is on. */
+  focusScheduleOn: boolean
+  /** Days of the slot, 0 (Sunday) to 6. */
+  focusDays: number[]
+  /** The slot starts and ends at these minutes since midnight (local time); an end before the start runs over midnight. */
+  focusFrom: number
+  focusTo: number
+  /** The length of the timer « Démarrer » starts, in minutes. */
+  focusMinutes: number
+  /** When the timer ends (ms since the epoch); 0: no timer runs. Written by the Settings and by the block page only. */
+  focusUntil: number
+  /** Until when the user paused focus from the block page (ms since the epoch); 0: not paused. */
+  focusSnoozeUntil: number
   /** Hold the right button and move to go back, forward, open or reload (see gestures.ts). */
   mouseGestures: boolean
   /** Sites (host and subdomains) where the gestures are off. */
   mouseGestureExcludedHosts: string[]
+  /** Full-text search in the pages visited: the text of each page read is kept in a local index, per profile (see page-index.ts). Off by default; off, the index is erased. */
+  pageContentIndex: boolean
   /** File › Surveiller cette page: the pages are fetched again now and then, and a system notice tells of a change (see page-watch.ts). */
   pageWatch: boolean
   /** The pages being watched, at most `PAGE_WATCH_MAX`. Never written from a private window. */
@@ -607,6 +641,8 @@ export interface Settings {
   annotateLetterKeys: boolean
   /** The system may hand the application `lucium://` (or `lucium://`) `open`, `new-tab` and `search` addresses (AppleScript, Shortcuts, Terminal). Off by default: any application or script could send them. */
   urlAutomation: boolean
+  /** "Me le rappeler…": a tab leaves its column and comes back at a chosen time, with a local notification. Costs one timer while a reminder is pending. */
+  tabReminders: boolean
   // ---- The library (shared/bookmarks.ts, live-folders.ts, web-apps.ts): each is off by default and costs nothing while off ----
   /** The bookmark library: a panel with search and tags, "Ajouter aux signets", import and export of a bookmarks file. The favourites and the pinned tabs are not touched. */
   bookmarkManager: boolean

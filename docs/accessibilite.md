@@ -103,6 +103,34 @@ Ce que font la fenêtre et ses tests unitaires (`src/renderer/settings-sidebar.t
 - **Texte agrandi** : la fenêtre suit « Taille des fenêtres et des panneaux » (Apparence) ; le nom d'une page qui ne tient plus dans la barre latérale passe à la ligne, jamais coupé, et la liste des pages défile verticalement, jamais de côté. « Plus de réglages » fait au moins 48 px de haut.
 - **Mouvement réduit** : ni l'éclairage d'une rangée, ni le glissement d'une sous-page, ni la flèche de « Plus de réglages » ne s'animent.
 
+## « Découvrir Lucium » (panneau du calque)
+
+Le panneau (`src/renderer/Discover.tsx`, `discover.css`) est contrôlé par des tests unitaires qui le montent dans un document (`src/renderer/discover.test.ts`, `discover-styles.test.ts`) ; le contrôle moteur (`LUCIUM_SMOKE_ONLY=discover`, `smoke-discover.ts`) et la 31e surface du lanceur (`LUCIUM_SMOKE_ONLY=a11y`, ligne `discover`) **sont écrits et non joués** (`AGENTS.md` § 1 : ils ouvrent des fenêtres) ; les chiffres de « Surfaces contrôlées » ci-dessus ne les comptent donc pas.
+
+- **Rôles et noms** : une boîte de dialogue modale nommée par son titre (`aria-labelledby`) ; la recherche est un `role="search"` dont le champ est nommé (« Chercher une fonction ») ; les filtres sont deux groupes nommés (« Que voulez-vous faire ? », « Niveau ») de boutons à `aria-pressed` (le nombre de fonctions n'est pas lu : l'état dit le total) ; la zone qui défile est une région nommée « Fonctions », et un seul arrêt de Tab ; chaque carte est un `article` nommé par son titre (il y en a une par fonction de Lucium), chaque bouton de la carte est nommé par son action et sa fonction (`aria-label` « Essayer, Barre de commandes », « Régler, Barre de commandes » : le nom commence par le texte visible, et la liste des boutons d'un lecteur d'écran distingue les 112 « Régler ») et relié à ce titre par `aria-describedby`. Rien n'est un `div` cliquable.
+- **Annonces** : une zone `role="status"` (`aria-live="polite"`) dit le nombre de fonctions affichées après chaque frappe ou chaque filtre, et « Aucune fonction ne correspond. ». Le raccourci d'une carte est un groupe nommé une fois (« Raccourci : ⇧ ⌘ 2 »), ses capsules sont cachées au lecteur d'écran.
+- **Clavier** : le focus entre dans la recherche ; Tab reste dans le panneau (piège de focus des gabarits, rendu à la fermeture) ; Échap vide la recherche, puis ferme le panneau ; « Fermer » est un bouton nommé. Chaque bouton est un `button` natif : Entrée et Espace.
+- **Rien ne passe par la couleur seule** : le niveau (« Pour débuter », « Avancé »), la nouveauté (« Nouveau ») et l'état coupé (« Désactivée pour l’instant », avec la phrase « Activez-la avec « Régler » ») sont des mots, jamais une teinte.
+- **Anneau du champ de recherche** : au focus, le contour passe à l'accent et un anneau de la largeur du focus (`outline` en `--focus`, `.dv .tk-field:focus-visible`) s'ajoute : sans eux, `.tk-field:focus` du gabarit n'aurait laissé que son halo léger (1,3 : 1 sur l'en-tête). Le compteur d'une puce active est dessiné sans opacité : `on-accent` sur `accent` garde 4,62 : 1 au pire. La région qui défile a un anneau de focus replié à l'intérieur (rogné sinon).
+- **Fenêtre basse, texte agrandi, couleurs forcées** : sous 640 px de haut, le panneau défile d'un bloc (l'en-tête avec les cartes) au lieu de laisser un corps sans hauteur ; en `forced-colors: active`, la puce pressée prend `Highlight` / `HighlightText` pour rester distincte des autres.
+- **« Essayer » et la fermeture** : une carte qui fait un appel (onglet privé, capture de la page entière, Markdown) ferme d'abord le panneau, pour que l'effet (un onglet, une capture, une boîte d'enregistrement) ne se fasse pas derrière une boîte de dialogue modale.
+- **Contours** : le contour d'un champ, d'une puce et d'un bouton est `--text-3`, jamais `--line-strong` (1,5 : 1 en clair, refusé par `discover-styles.test.ts`). Le bord d'une carte, qui ne fait que décorer, garde `--line-strong` et passe à 2 px en `--text-3` avec « Augmenter le contraste » (les deux règles, du système et du réglage « Toujours augmenter le contraste », sont lues avec leur déclaration `border-width: 2px` par `discover-styles.test.ts`, et `stylesheets.test.ts` refuse toute feuille dont les accolades ne se ferment pas).
+- **Mouvement réduit** : le panneau n'anime rien de lui-même (ni démo, ni défilement automatique) ; sa seule transition, le fond d'une puce, est coupée par `prefers-reduced-motion`. Les démos animées viendront dans une autre carte, avec leur pause.
+- **Contrastes mesurés** (jetons de `tokens.css`, teinte 250 ; le pire des 720 teintes à demi-degré près entre parenthèses ; `src/shared/design-tokens.ts` les garde au seuil) :
+
+| Paire | Clair | Sombre | Seuil |
+|---|---|---|---|
+| Texte / surface (carte, boutons) | 17,7 | 14,5 | 4,5 |
+| Texte 2 / surface (« Où », phrase d'aide) | 8,0 | 8,6 | 4,5 |
+| Texte 3 / surface (contour du champ, des puces, des boutons) | 5,6 | 5,7 | 3 |
+| Texte / dégradé d'en-tête (deux extrémités) | 9,7 et 12,4 (9,5 et 11,6) | 14,2 et 14,6 | 4,5 |
+| Contour du champ et des puces (texte 3) / dégradé d'en-tête | 3,08 et 3,93 (3,02 et 3,68) | 5,5 et 5,7 | 3 |
+| Texte sur « Essayer » (on-accent / accent) | 9,9 | 5,4 (4,62) | 4,5 |
+| Badge « Désactivée » (warn-ink / surface) | 7,7 | 11,0 | 4,5 |
+
+  Relevé à faire : le texte 2 est sous 4,5 : 1 sur le dégradé d'en-tête vers la teinte 238 en clair (4,38 : 1) ; l'en-tête n'écrit donc son compteur et son libellé de niveau qu'en texte (le plein contraste), pas en texte 2.
+- **Non vérifié sans VoiceOver ni écran réel** : l'ordre de lecture des cartes et la prononciation de « Essayer, <nom> » ; un écran de 320 px (le panneau passe en une colonne sous 680 px de large, mesuré sur la feuille et non dessiné) ; le texte agrandi à 200 %. À ajouter à l'étape 6 du protocole ci-dessous.
+
 ## À corriger (non fait, avec la raison)
 
 | Constat | Mesure | Pourquoi pas fait |
@@ -132,7 +160,7 @@ Ce que font la fenêtre et ses tests unitaires (`src/renderer/settings-sidebar.t
 3. **Barre d'outils** : Précédent, Suivant, Actualiser, Copier l'URL, l'adresse (« Modifier l'adresse, … »), Infos du site.
 4. **Notice** : archiver un onglet (⌘W). Attendu : « Onglet archivé » annoncé sans déplacer le focus ; le bouton « Annuler » joignable.
 5. **Barre de commandes** (⌘T) : taper, flèches haut/bas. Attendu : « Adresse ou recherche, zone de texte combinée », puis le résultat choisi est lu à chaque flèche ; Début et Fin vont au premier et au dernier résultat quand le curseur est déjà au début ou à la fin du texte (sinon ils déplacent le curseur) ; Tab complète la saisie.
-6. **Panneaux** : ouvrir chacun (Historique ⌘Y, Téléchargements ⇧⌘J, Archive, Centre de contrôle ⇧⌘I, Éditeur de thème, Éditeur de Retouche). Attendu : « <nom>, boîte de dialogue », focus dedans, Échap ferme, le focus revient à la page.
+6. **Panneaux** : ouvrir chacun (Découvrir Lucium par Aide, Historique ⌘Y, Téléchargements ⇧⌘J, Archive, Centre de contrôle ⇧⌘I, Éditeur de thème, Éditeur de Retouche). Attendu : « <nom>, boîte de dialogue », focus dedans, Échap ferme, le focus revient à la page.
 7. **Réglages** (⌘,) : les pages lues dans la liste « Catégories de réglages » (11 boutons, celle affichée annoncée comme page actuelle, « 2 réglages modifiés » après le nom d'une page qui en a), puis « Réglages modifiés » ; « Plus de réglages » lu comme un bouton réduit ou développé, avec sa ligne ; une sous-page : son nom lu à l'ouverture, « Revenir à … » ; les boutons d'un préréglage lus comme des boutons radio (« 2 sur 3 ») avec la ligne de l'option ; la notice d'un préréglage annoncée ; interrupteurs lus avec leur état ; la boîte « Aperçus » garde le focus et le rend.
 8. **Contraste de la page et Fenêtre** (Réglages › Apparence) : les libellés, le menu du mode pour tous les sites, la liste des sites réglés à part (leur menu « Contraste de la page sur exemple.org » et « Retirer exemple.org »).
 9. Noter, pour chaque étape, ce que VoiceOver dit réellement ; signaler les écarts dans une issue.

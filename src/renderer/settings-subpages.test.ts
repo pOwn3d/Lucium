@@ -109,6 +109,17 @@ describe('a subpage', () => {
     expect([...window.querySelectorAll('main [data-subpage]')].map((el) => el.getAttribute('data-subpage'))).toEqual(['network'])
   })
 
+  it('holds the sites where third-party cookies are accepted on the subpage of the other exceptions, and counts them in its entry', async () => {
+    expect(SUBPAGES.find((sub) => sub.id === 'exceptions')?.keys).toContain('thirdPartyCookieExceptions')
+    const page = await open('#protection', { blockThirdPartyCookies: true, thirdPartyCookieExceptions: ['a.example'] })
+    expect(page.querySelector('main [data-subpage="exceptions"]')).toBeNull()
+    expect(page.querySelector('main [data-subpage-entry="exceptions"]')?.getAttribute('data-setting')).toContain('thirdPartyCookieExceptions')
+    expect(entryOf(page, 'exceptions')?.querySelector('.subpage-state')?.textContent).toBe('1 site')
+    mounted!.unmount()
+    const sub = await open('#protection/exceptions', { thirdPartyCookieExceptions: ['a.example'] })
+    expect(sub.querySelector('main [data-subpage="exceptions"] [data-setting~="thirdPartyCookieExceptions"]')).not.toBeNull()
+  })
+
   it('gives the focus to its name when it opens', async () => {
     const window = await open('#protection')
     await andArrive(() => click(entryOf(window, 'exceptions')!))
@@ -155,7 +166,7 @@ describe('a subpage', () => {
 
 describe('the addresses of the subpages', () => {
   it('open each subpage on its page, by its name', async () => {
-    const on: Partial<Settings> = { pageWatch: true, userScripts: true, translateLocal: true, mouseGestures: true, tabContainers: true }
+    const on: Partial<Settings> = { focusMode: true, pageWatch: true, userScripts: true, translateLocal: true, mouseGestures: true, tabContainers: true }
     for (const subpage of SUBPAGES.filter((one) => one.id !== 'lockoptions')) {
       const window = await open(`#${subpage.pane}/${subpage.id}`, on)
       expect(current(window), subpage.id).toBe(subpage.pane)

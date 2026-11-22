@@ -21,6 +21,7 @@ import { isReadableWebPage, siteReadableOf, type ReadableMode } from './readable
 import type { Candidate, CommandAction } from './command-bar-types'
 import { actionDetail } from './command-bar-shortcuts'
 import type { PlatformId } from './platform'
+import { canOpenInPrivate } from './private-window'
 import { fold, matchScore, byScore, nameScore } from './command-bar-match'
 
 export const MAX_TABS = 6
@@ -111,11 +112,14 @@ export function readableActions(state: SidebarState, inPrivateWindow: boolean): 
   ]
 }
 
-/** "Exporter la page en Markdown": offered when typed, and only with a web page on screen (the one kind the export reads). */
+/** "Enregistrer la page en Markdown" (whole page, one click) and "Exporter la page en Markdown" (the picker): offered when typed, and only with a web page on screen (the one kind the export reads). */
 export function markdownActions(state: SidebarState): Candidate[] {
   const tab = activeTab(state)
   if (!tab || !/^https?:\/\//i.test(tab.url)) return []
-  return [{ kind: 'action', id: 'action:export-markdown', label: t('cmd.exporter-la-page-en-markdown'), detail: t('cmd.action'), action: 'export-markdown' }]
+  return [
+    { kind: 'action', id: 'action:save-markdown', label: t('cmd.enregistrer-la-page-en-markdown'), detail: t('cmd.action'), action: 'save-markdown' },
+    { kind: 'action', id: 'action:export-markdown', label: t('cmd.exporter-la-page-en-markdown'), detail: t('cmd.action'), action: 'export-markdown' }
+  ]
 }
 
 /**
@@ -175,6 +179,12 @@ export function searchOnlyActions(state: Pick<SidebarState, 'settings'>, platfor
     { kind: 'action', id: 'action:reload-all', label: t('cmd.actualiser-tous-les-onglets'), detail: t('cmd.action'), action: 'reload-all' },
     { kind: 'action', id: 'action:recent-notices', label: t('cmd.notifications-recentes'), detail: t('cmd.action'), action: 'recent-notices' }
   ]
+}
+
+/** « Découvrir Lucium »: offered when typed, except in a private window, which does not open the panel (its entry of the Aide menu is greyed out for the same reason). */
+export function discoverActions(inPrivateWindow: boolean): Candidate[] {
+  if (inPrivateWindow && !canOpenInPrivate('discover')) return []
+  return [{ kind: 'action', id: 'action:discover', label: t('discover.titre'), detail: t('cmd.action'), action: 'discover' }]
 }
 
 /** "Rechercher un onglet…": offered when typed, while the function is on; choosing it puts the bar in "Onglets" mode (the shortcut is ⇧⌘A). */
@@ -304,12 +314,12 @@ export function jotCandidate(query: string, state: SidebarState, inPrivateWindow
 }
 
 /** The bookmarks the query names (every word, in the title, address, note or tags; a "#word" is a tag), the best title first. Only while the library is on, never in a private window. */
-export function bookmarkCandidates(q: string, state: SidebarState, inPrivateWindow: boolean): Candidate[] {
+export function bookmarkCandidates(q: string, state: SidebarState, inPrivateWindow: boolean, limit = MAX_BOOKMARKS): Candidate[] {
   if (inPrivateWindow || !state.settings.bookmarkManager) return []
   return filterBookmarks(state.bookmarks, q)
     .map((b) => ({ b, score: Math.max(matchScore(b.title, q), matchScore(b.url, q)) }))
     .sort(byScore)
-    .slice(0, MAX_BOOKMARKS)
+    .slice(0, limit)
     .map(({ b }): Candidate => ({ kind: 'bookmark', id: `bookmark:${b.id}`, label: b.title, detail: `${t('cmd.signet-host', { host: hostOf(b.url) })}${b.tags.length > 0 ? ` · ${b.tags.map((tag) => `#${tag}`).join(' ')}` : ''}`, bookmarkId: b.id, ...(b.faviconUrl ? { faviconUrl: b.faviconUrl } : {}) }))
 }
 

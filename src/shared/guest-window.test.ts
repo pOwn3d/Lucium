@@ -139,6 +139,15 @@ describe('GUEST_INHERITED', () => {
   })
 })
 
+describe('the third-party cookie cut of a guest window', () => {
+  it('follows the main window, and the sites the owner let through stay out', () => {
+    const on = guestInherited({ ...owner.settings, blockThirdPartyCookies: true, thirdPartyCookieExceptions: ['owner-only.example'] })
+    expect(on.blockThirdPartyCookies).toBe(true)
+    expect(on).not.toHaveProperty('thirdPartyCookieExceptions')
+    expect(guestInherited({ ...owner.settings, blockThirdPartyCookies: false }).blockThirdPartyCookies).toBe(false)
+  })
+})
+
 describe('the rules of a private window apply to a guest window', () => {
   const guest = createGuestState(owner, ctx)
 

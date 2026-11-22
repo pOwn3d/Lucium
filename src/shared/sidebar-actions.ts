@@ -1,7 +1,7 @@
 // The actions of the sidebar reducer (shared/sidebar.ts) and the context it runs in. Types only: every reader of an action imports them from
 // `@shared/sidebar`, which re-exports them.
 
-import type { ArchiveSource, ClosedHistory, Favorite, Boost, BoostInput, BlockMode, Folder, PermissionDecision, Settings, SplitArrangement, SplitGrid, SplitOrientation, SplitView, SidebarState, Space, TabItem, WorkView, WorkViewTarget } from './model'
+import type { ArchiveSource, AsideSpace, ClosedHistory, Favorite, Boost, BoostInput, BlockMode, Folder, PermissionDecision, Settings, SplitArrangement, SplitGrid, SplitOrientation, SplitView, SidebarState, Space, TabItem, WorkView, WorkViewTarget } from './model'
 import type { JoinZone } from './split-grid'
 import type { SyncPatch } from './sidebar-sync'
 import type { SharedBoost } from './boost-share'
@@ -186,6 +186,8 @@ export type Action =
   | { type: 'readable/site'; site: string; mode: ReadableMode | null; tabId?: string }
   /** A site whose data is erased when its last tab closes (`on`), or no longer is. Refused in a private window (its session is thrown away anyway). */
   | { type: 'siteclear/site'; site: string; on: boolean; tabId?: string }
+  /** JavaScript off (`off`) or on again for a site (its exact host): its pages load without running a script. Taken from the tab it is made from, as the ones above. */
+  | { type: 'javascript/site'; site: string; off: boolean; tabId?: string }
   /** A custom filter list the main process has just installed (its rules are on disk). Never dispatched by the interface. */
   | { type: 'filterlist/add'; list: CustomFilterList }
   /** A custom filter list whose rules the main process has just deleted. Never dispatched by the interface. */
@@ -226,6 +228,18 @@ export type Action =
   | { type: 'readlater/open'; id: string }
   | { type: 'readlater/remove'; id: string }
   | { type: 'readlater/clear' }
+  /**
+   * "Me le rappeler" (setting `tabReminders`; with it off every one of these changes nothing): puts the page of a tab away until `dueAt` (a time
+   * in the future) and closes the tab (a pinned tab stays). A page already waiting has its time moved; a full list, a page that is not a web
+   * page, a private tab or a time that is not ahead changes nothing and leaves the tab open.
+   */
+  | { type: 'reminder/add'; tabId: string; dueAt: number }
+  /** Forgets a reminder (the tab does not come back). */
+  | { type: 'reminder/cancel'; id: string }
+  /** Brings a reminder back now, as a tab of its space. */
+  | { type: 'reminder/open'; id: string }
+  /** Brings back every reminder whose time has come, in the background, one tab each (the main process sends it when its timer fires, after the notifications). */
+  | { type: 'reminder/fire' }
   /** Creates a folder in the read-later list (with the setting `useReadLaterFolders` on, up to `READ_LATER_FOLDERS_LIMIT`). A blank name gives "Dossier". */
   | { type: 'readlater-folder/create'; name: string }
   | { type: 'readlater-folder/rename'; id: string; name: string }
@@ -444,6 +458,11 @@ export type Action =
   | { type: 'space/aside'; id: string }
   /** Rouvrir: the space of the session `id` (a space put aside) comes back as it was and is shown; the session is spent. */
   | { type: 'space/reopen'; id: string }
+  /**
+   * Espaces › Importer un espace… : the space a transfer file holds (space-transfer.ts) is added after the others, with its folders, tabs, split views and
+   * archive, and shown. Every id the state already has is made anew. Main process only: the file is read and cleaned there.
+   */
+  | { type: 'space/import'; aside: AsideSpace }
   /**
    * A copy of the session (see session-backups.ts) replaces the spaces, tabs, folders, split views, archive and what is on screen; the
    * favourites, Tweaks, sessions and settings stay as they are. Main process only: it makes a copy of what it replaces first.

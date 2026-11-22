@@ -4,8 +4,9 @@
 import { addPlayer, prunePlayers, type MediaProbe, type MediaRequest } from '@shared/media-player'
 import { activeTab } from '@shared/sidebar'
 import { hostOf } from '@shared/url'
+import { takesSitePip } from '@shared/floating-video'
 import { nameShown, openDetailsLabel, refusedNotice, startedNotice, stopLabel } from '@shared/tab-capture'
-import type { TabCaptureEvent } from '../engine/types'
+import type { Page, TabCaptureEvent } from '../engine/types'
 import { t } from '@shared/i18n'
 import type { FloatingOwner, FloatingVideo } from './floating-video'
 import { MEDIA_SETTLE_MS } from './browser-base'
@@ -134,6 +135,43 @@ export abstract class BrowserMedia extends BrowserActions {
     console.error(`[pip] "Image dans l'image" failed (${outcome.reason}): ${outcome.detail ?? ''}`)
     this.showToast(outcome.reason === 'no-video' ? t('browser.aucune-video-a-faire-flotter') : t('browser.image-dans-l-image-n-a-pas-pu-demarrer'))
     return false
+  }
+
+  /**
+   * A tab was left while a video was being watched (the automatic picture): it floats in Lucium's window, or in the system's when Lucium's cannot
+   * take the page (a private window, a page that cannot be lent). False when nothing floated (no video being watched, or the system refused).
+   */
+  protected async floatWatchedVideo(tabId: string, page: Page): Promise<boolean> {
+    const floating = this.leader.floatingVideo
+    const owner = this.ownerOf(tabId) ?? this
+    if (floating && page.watchedVideoCanFloat && !owner.isPrivate()) {
+      if (!(await page.watchedVideoCanFloat())) return false
+      // The tab may have been chosen again while the page was asked: floating would lend away the view it shows, leaving its page empty.
+      if (this.visible.has(tabId)) return false
+      const outcome = await floating.float(owner.floatingOwner(), tabId, page)
+      if (outcome.ok) return true
+      console.warn(`[pip] the automatic picture could not use Lucium's window (${outcome.reason}${outcome.detail ? `: ${outcome.detail}` : ''}): the system's window instead`)
+    }
+    return page.setPictureInPicture(true, 'tab-switch')
+  }
+
+  /**
+   * The site's own Picture in Picture button opened the system's window (heard by the media bridge): its design is not Lucium's, so the video is taken
+   * into Lucium's floating window instead (`sitePictureInPictureInLucium`). Where that cannot be done (a private window, a page Lucium cannot lend) or
+   * fails, the system's window stays or comes back, as the site asked.
+   */
+  protected async takeSitePictureInPicture(tabId: string): Promise<void> {
+    const owner = this.ownerOf(tabId) ?? this
+    const page = owner.pages.get(tabId)
+    if (!page || !this.leader.floatingVideo || !takesSitePip({ setting: this.store.get().settings.sitePictureInPictureInLucium, privateWindow: owner.isPrivate(), floatingTab: this.leader.floatingVideo.floatingTab(), tabId })) return
+    // The system's window goes first: the video is then free to be taken into ours (and a protected one goes on playing, it is the same page).
+    await page.setPictureInPicture(false)
+    if (await this.floatTabVideo(tabId)) return
+    // Nothing floated in ours (another video was starting, the page refused): the site's request is not left unanswered.
+    if (this.leader.floatingVideo.floatingTab() !== tabId) {
+      const outcome = await page.floatMainVideo()
+      if (!outcome.ok && outcome.reason !== 'gone' && outcome.reason !== 'already') console.warn(`[pip] the site's Picture in Picture could not be given back (${outcome.reason}): ${outcome.detail ?? ''}`)
+    }
   }
 
   /** The mark of a floating tab in the sidebar (`show`: its window comes to the front) or the place of its page (`back`: the video comes back to the tab). */

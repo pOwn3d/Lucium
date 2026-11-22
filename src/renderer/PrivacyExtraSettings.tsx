@@ -7,6 +7,8 @@ import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
 import { SYSTEM_PROXY } from '@shared/proxy'
 import { useId, useState, type ReactNode } from 'react'
+import { api } from './api'
+import { FeatureSwitch } from './FeaturesSettings'
 import { fieldError } from './field-error'
 import { Check, Group, Row } from './settings-parts'
 import { ProxyEditor } from './ProxyEditor'
@@ -70,8 +72,35 @@ export function HistorySettings({ snapshot, update, leading, trailing }: { snaps
         checked={!settings.historyOff}
         onChange={(keep) => update({ historyOff: !keep })}
       />
+      <FeatureSwitch id="page-content-index" snapshot={snapshot} update={update} />
+      {settings.pageContentIndex && <ClearPageIndexRow />}
       {trailing}
     </Group>
+  )
+}
+
+/** « Effacer l’index du contenu des pages »: every index of every profile at once; the setting stays on, and the index fills again as pages are read. */
+function ClearPageIndexRow() {
+  const [done, setDone] = useState<'' | 'ok' | 'failed'>('')
+  const clear = () => {
+    setDone('')
+    api()
+      .clearPageIndex()
+      .then(
+        (erased) => setDone(erased ? 'ok' : 'failed'),
+        (error: unknown) => {
+          console.warn('[page-index] the index could not be erased:', error)
+          setDone('failed')
+        }
+      )
+  }
+  return (
+    <Row label={t('privacy-extra-settings.effacer-l-index-du-contenu-des-pages')} hint={t('privacy-extra-settings.efface-le-texte-garde-de-toutes-les-pages')}>
+      <button type="button" className="btn" onClick={clear}>
+        {t('privacy-extra-settings.effacer-l-index-du-contenu-des-pages')}
+      </button>
+      <span role="status" className="tk-status">{done === 'ok' ? t('privacy-extra-settings.index-efface') : done === 'failed' ? t('privacy-extra-settings.index-non-efface') : ''}</span>
+    </Row>
   )
 }
 

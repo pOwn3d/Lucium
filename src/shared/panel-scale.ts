@@ -284,6 +284,7 @@ export const PANEL_PLACEMENT: Record<OverlayRequest['panel'], 'centred' | 'place
   welcome: 'centred',
   whatsnew: 'centred',
   arcguide: 'centred',
+  discover: 'centred',
   problemreport: 'centred',
   notices: 'centred',
   extreview: 'centred',

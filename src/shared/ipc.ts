@@ -68,7 +68,7 @@ export const SETTINGS_ANCHORS = ['icon', 'about', 'status', 'engine', 'links', '
  */
 export const SETTINGS_SUBPAGES = [
   'contrast', 'awake', 'containers', 'sitesearches', 'linkroutes', 'exceptions', 'clearonclose', 'permissions', 'lockoptions', 'filterlists', 'network',
-  'extensionfolders', 'translatelists', 'userscripts', 'pagewatches', 'shortcuts', 'siteexclusions', 'sync'
+  'extensionfolders', 'translatelists', 'userscripts', 'pagewatches', 'focus', 'shortcuts', 'siteexclusions', 'sync'
 ] as const
 export type SettingsSubpage = (typeof SETTINGS_SUBPAGES)[number]
 
@@ -248,6 +248,8 @@ export type OverlayRequest =
   | { panel: 'whatsnew'; sheet: WhatsNewSheet }
   /** « Vous venez d’Arc ? »: where the things known from Arc are in Lucium. Main-only (the end of an import from Arc, Aide › Vous venez d’Arc ?); `imported` is what that import brought. */
   | { panel: 'arcguide'; imported?: ArcImported }
+  /** « Découvrir Lucium » (Aide, the command bar, the welcome sheets): what Lucium can do by task, with where to find it, its shortcut and a button that tries it (shared/discover.ts). The interface may ask for it. */
+  | { panel: 'discover' }
   /** « Signaler un problème » (Aide): the report in plain text, read before anything leaves the Mac. Main-only (the menu); the sheet asks `problemReport` for the text. */
   | { panel: 'problemreport' }
   /** « Notifications récentes »: the interface asks with no list; the main process fills it (browser-overlay.ts). */

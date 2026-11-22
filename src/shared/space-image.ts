@@ -110,12 +110,6 @@ export function imageRefusal(size: number, head: Uint8Array): string | null {
   return null
 }
 
-/** The square taken from the middle of a picture of this size, before it is shrunk. */
-export function squareCrop(width: number, height: number): { x: number; y: number; size: number } {
-  const size = Math.max(1, Math.min(width, height))
-  return { x: Math.floor((width - size) / 2), y: Math.floor((height - size) / 2), size }
-}
-
 /**
  * The names of the pictures the state refers to: the spaces' own and the tabs' own, and those of the spaces put aside (a session keeps the whole
  * space, its picture and its tabs' included). A picture left out here is deleted from the disk.

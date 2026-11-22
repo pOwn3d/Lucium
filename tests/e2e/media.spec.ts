@@ -1,5 +1,6 @@
 // A video that plays, without the network nor a permission: the page draws on a canvas and plays its stream in a muted <video> (a muted video
-// may play without a click). What the application does with it when the user leaves the tab is read in the page itself.
+// may play without a click). What the application does with it when the user leaves the tab is read in the page itself (the system's window)
+// and in the windows of the application (Lucium's floating video window, whose bar is its own page).
 
 import { expect, test, type Page } from '@playwright/test'
 import { launchLucium, type Running } from './launch'
@@ -43,9 +44,12 @@ test.afterEach(async () => {
 })
 
 const url = (path: string) => `${site.origin}${path}`
+/** The bar of Lucium's floating video window (floating-video.html), when that window is open. */
+const FLOATING_BAR = /\/floating-video\.html(?:[?#]|$)/
+const floatingBar = (app: Running['app']) => app.windows().find((window) => FLOATING_BAR.test(window.url()))
 const videoState = (page: Page) => page.evaluate(() => (globalThis as unknown as { videoState(): { playing: boolean; floating: boolean; played: number } }).videoState())
 
-test('auto-pip: a video that plays floats in Picture in Picture when its tab is left while on; off, it does not', async () => {
+test('auto-pip: a video that plays floats in Lucium\'s window when its tab is left while on; off, it does not', async () => {
   for (const on of [false, true]) {
     await setSettings(running.page, { autoPictureInPicture: on })
     const video = await openTab(running, url(`/video?${on}`), 'Vidéo')
@@ -57,12 +61,13 @@ test('auto-pip: a video that plays floats in Picture in Picture when its tab is 
     const other = await openTab(running, url(`/a?${on}`), 'Page A')
     await dispatch(running.page, { type: 'tab/select', id: other.id })
     if (on) {
-      await expect.poll(async () => (await videoState(video.page)).floating, { timeout: 10_000 }).toBe(true)
-      // The floating window is put away before the end of the test.
-      await video.page.evaluate(() => document.exitPictureInPicture())
+      // The automatic picture goes to Lucium's own floating window (shell/browser-media.ts, floatWatchedVideo), not to the system's: the page itself
+      // is not in Picture in Picture. The window goes away with the application at the end of the test.
+      await expect.poll(() => floatingBar(running.app) !== undefined, { message: "Lucium's floating video window opens", timeout: 10_000 }).toBe(true)
+      expect((await videoState(video.page)).floating, "the system's window is not used while Lucium's takes the video").toBe(false)
     } else {
       // Nothing tells that the application has decided not to float the video: it is watched for longer than the picture takes to come when on.
-      await expectStays(async () => (await videoState(video.page)).floating, false, 'the video does not float while the function is off', 1500)
+      await expectStays(async () => (await videoState(video.page)).floating || floatingBar(running.app) !== undefined, false, 'the video does not float, in Lucium or in the system, while the function is off', 1500)
     }
   }
 })

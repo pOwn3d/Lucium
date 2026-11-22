@@ -178,8 +178,8 @@ export function urlHostname(url: string): string {
   return URL.canParse(url) ? new URL(url).hostname : ''
 }
 
-/** True when `url` is on `host` or one of its subdomains (any port). */
+/** True when `url` is on `host` or one of its subdomains (any port). A trailing dot ("facebook.com.", "facebook.com%2e") names the same site, so it is dropped before comparing. */
 export function matchesHost(host: string, url: string): boolean {
-  const actual = hostnameOf(url)
+  const actual = hostnameOf(url).replace(/\.+$/, '')
   return actual !== '' && (actual === host || actual.endsWith(`.${host}`))
 }

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { BackupListing } from '@shared/session-backups'
 import { copyWhen, reasonLabel } from '@shared/session-backups'
-import { SESSIONS_MAX, SESSION_NAME_MAX, SESSION_TABS_MAX, autoSessionName, cleanSessionName, savableCount, sessionAge } from '@shared/sessions'
+import { SESSIONS_MAX, SESSION_NAME_MAX, SESSION_TABS_MAX, autoSessionName, cleanSessionName, savableCount, sessionAge, tabsLabel } from '@shared/sessions'
 import { sessionSourceTabs } from '@shared/sidebar'
 import { SPACE_UNDO_MS } from '@shared/space-manage'
 import { api, useSnapshot } from './api'
@@ -138,7 +138,7 @@ export function Sessions({ focus, tabIds }: { focus?: 'save'; tabIds?: string[] 
     : savable === 0
       ? t('sessions.aucun-onglet-a-enregistrer')
       : [what, ...(savable > SESSION_TABS_MAX ? [t('sessions.seuls-les-premiers-sont-gardes', { max: SESSION_TABS_MAX })] : [])].join(' ')
-  const tabs = (n: number): string => tp('sessions.onglets', n)
+  const tabs = tabsLabel
   const failureText = backupFailure === 'list' ? t('sessions.liste-des-copies-illisible') : backupFailure === 'restore' ? t('sessions.restauration-echouee') : backupFailure === 'copy' ? t('sessions.copie-echouee') : ''
   const backupSaid = failureText || backupNote
 

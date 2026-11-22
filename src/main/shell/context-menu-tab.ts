@@ -2,6 +2,7 @@
 // click landed in one.
 
 import type { BrowserWindow, MenuItemConstructorOptions } from 'electron'
+import { reminderPresetItems } from './reminder-menu'
 import type { MenuTarget } from '@shared/ipc'
 import { isPlusAnchor } from '@shared/plus-menu'
 import { effectiveAccelerator } from '@shared/keybindings'
@@ -267,6 +268,8 @@ export function tabMenuItems(target: Extract<MenuTarget, { kind: 'tab' }>, brows
         ...treeItems,
         // Read later: keeps the page in the read-later list and closes the tab (a pinned tab stays). A private window keeps no list.
         ...(browser.isPrivate() ? [] : [entry('clock', { label: t('menu.lire-plus-tard'), enabled: isReadLaterUrl(tab.url), ...key('readLater'), click: act({ type: 'readlater/add', tabId: tab.id }) })]),
+        // Remind me: the tab leaves the column and comes back at the chosen time (setting `tabReminders`); a private window keeps none.
+        ...(!browser.isPrivate() && state.settings.tabReminders ? [entry('clock', { label: t('reminder.me-le-rappeler'), enabled: isReadLaterUrl(tab.url), submenu: reminderPresetItems(browser, store, tab.id) })] : []),
         // Optional: only while the function is on (a setting), and never in a private window, which keeps no bookmark and has no application windows.
         ...(!browser.isPrivate() && state.settings.bookmarkManager ? [entry('bookmark', { label: t('menu.ajouter-aux-signets'), enabled: isBookmarkUrl(tab.url), ...key('bookmarkAdd'), click: act({ type: 'bookmark/add', tabId: tab.id }) })] : []),
         ...(!browser.isPrivate() && state.settings.webAppWindows ? [entry('app', { label: t('menu.ouvrir-comme-application'), enabled: isBookmarkUrl(tab.url), ...key('openAsApp'), click: () => browser.openAsApp(tab.id) })] : []),

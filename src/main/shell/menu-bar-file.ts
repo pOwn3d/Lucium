@@ -10,6 +10,7 @@ import { summaryAvailable, summaryGreyed } from '@shared/ollama'
 import { PAGE_TOGGLE_SHORTCUT } from '@shared/page-annotate'
 import { NEW_NOTE_REQUEST } from '@shared/notes'
 import { t } from '@shared/i18n'
+import { pendingReminderItems, reminderPresetItems } from './reminder-menu'
 import { webToolsFileItems } from './web-tools-menu'
 import { getPasswordService } from './password-service'
 import { captureActivePage, captureActivePagePortrait } from './capture'
@@ -22,6 +23,7 @@ export function fileMenu({ browser, store, actions, options, state, acc, alone, 
   const bookmarksOn = options.private !== true && state().settings.bookmarkManager
   const webAppsOn = options.private !== true && state().settings.webAppWindows
   // Optional: the quick notes. Their entry is hidden (and its key dead) while the function is off, and in a private window, which keeps none.
+  const remindersOn = options.private !== true && state().settings.tabReminders
   const notesOn = options.private !== true && state().settings.notes
   // Optional: the page summary. Its entries are hidden while the model is not ready (shared/ollama.ts `summaryAvailable`). With Ollama on this
   // Mac the page text stays here, so a private or a guest window has them too; with Ollama on another computer it has none.
@@ -96,6 +98,7 @@ export function fileMenu({ browser, store, actions, options, state, acc, alone, 
         click: () => void captureActivePagePortrait(browser).catch(report('portrait capture'))
       },
       { label: t('menu.enregistrer-la-page-sous'), accelerator: acc('savePage'), ...onTab, click: actions.savePage },
+      { label: t('menu.enregistrer-la-page-en-markdown'), accelerator: acc('saveMarkdown'), enabled: page !== null, click: () => void browser.saveMarkdownPage().catch(report('Markdown save')) },
       { label: t('menu.exporter-la-page-en-markdown'), accelerator: acc('exportMarkdown'), enabled: page !== null, click: () => void browser.exportMarkdown().catch(report('Markdown export')) },
       { label: t('menu.imprimer'), accelerator: acc('print'), ...onTab, click: () => browser.printPage() },
       // Optional: only with the setting "Enregistrer en PDF avec l’adresse" on (among the settings of the downloads).
@@ -106,6 +109,9 @@ export function fileMenu({ browser, store, actions, options, state, acc, alone, 
       // Read later: the page is kept in the list and its tab closes; a private window keeps no list.
       { label: t('menu.lire-plus-tard'), accelerator: acc('readLater'), enabled: options.private !== true && tabNow !== undefined && isReadLaterUrl(tabNow.url), click: withTab((tab) => browser.dispatch({ type: 'readlater/add', tabId: tab.id })) },
       { label: t('menu.liste-de-lecture'), accelerator: acc('readLaterList'), ...kept, click: () => browser.openOverlay({ panel: 'readlater' }) },
+      // Optional: the tab reminders (setting `tabReminders`). Visible only while the function is on and not in a private window.
+      { label: t('reminder.me-le-rappeler'), visible: remindersOn, enabled: remindersOn && tabNow !== undefined && isReadLaterUrl(tabNow.url), submenu: tabNow ? reminderPresetItems(browser, store, tabNow.id) : [] },
+      { label: t('reminder.rappels-en-attente'), visible: remindersOn, enabled: remindersOn, submenu: pendingReminderItems(browser, state()) },
       // Optional: the password manager. Both entries exist for their shortcuts, and are visible (and live) only while it is on and not in a private window.
       { label: t('menu.mots-de-passe'), accelerator: acc('passwords'), visible: passwordsOn, enabled: passwordsOn, click: () => browser.openOverlay({ panel: 'passwords' }) },
       { label: t('menu.remplir-l-identifiant-et-le-mot-de-passe'), accelerator: acc('fillPassword'), visible: passwordsOn, enabled: passwordsOn && tabNow !== undefined, click: () => void getPasswordService()?.fillActive(browser.passwordWindow()).catch(report('password fill')) },

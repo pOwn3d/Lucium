@@ -49,6 +49,7 @@ export function registerFeatureIpc(ipcMain: ScopedIpc, guard: (sender: WebConten
   // The messages of the import sheet: what they do is in importers/requests.ts (private window, request checked, profile of the history), where it is tested.
   const importEnv = (): ImportEnv => ({ service: getImportService(), isPrivate: browser.isPrivate(), historyProfile: activeProfileId(store.get()) })
   ipcMain.handle(Channel.importSources, (e) => (guard(e.sender, Channel.importSources) ? listImportSources(importEnv()) : []))
+  // `importRun` has no caller in the product (the sheet previews, then commits): it is kept for the engine suites of the import (smoke-history, smoke-import, smoke-import2), which drive the whole run in one request. The guard and the request checks are the same as the sheet's.
   ipcMain.handle(Channel.importRun, async (e, raw: unknown) => (guard(e.sender, Channel.importRun) ? importRequest(importEnv(), 'run', raw) : noReport(t('feature.demande-refusee'))))
   ipcMain.handle(Channel.importPreview, async (e, raw: unknown) => (guard(e.sender, Channel.importPreview) ? importRequest(importEnv(), 'preview', raw) : noReport(t('feature.demande-refusee'))))
   ipcMain.handle(Channel.importCommit, (e, raw: unknown) => (guard(e.sender, Channel.importCommit) ? confirmImport(importEnv(), raw) : noReport(t('feature.demande-refusee'))))
@@ -157,10 +158,12 @@ export function registerFeatureIpc(ipcMain: ScopedIpc, guard: (sender: WebConten
   })
 
   // The command bar's "Exporter la page en Markdown": the bar goes first, so that the page has the keyboard when its picker opens.
-  ipcMain.on(Channel.markdownExport, (e) => {
+  ipcMain.on(Channel.markdownExport, (e, mode: unknown) => {
     if (!guard(e.sender, Channel.markdownExport)) return
+    // Anything but the two known words is read as the picker, the original behaviour of this channel.
+    const save = mode === 'save'
     browser.closeOverlay()
-    void browser.exportMarkdown().catch((error: unknown) => console.error('[markdown] cannot export the page:', error))
+    void (save ? browser.saveMarkdownPage() : browser.exportMarkdown()).catch((error: unknown) => console.error('[markdown] cannot export the page:', error))
   })
 
   // The automatic copies of the session: the files belong to the normal windows' state, so a private window lists none and restores none.

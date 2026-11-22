@@ -132,6 +132,7 @@ export async function smokeMarkdown(ctx: SmokeContext, check: Check): Promise<vo
   const fakeUi: MarkdownUi = {
     askImages: async (_win, count) => (asked.push(`images:${count}`), answer.images),
     chooseSave: async (_win, name, extension) => (asked.push(`save:${name}:${extension}`), answer.path),
+    confirmPrivate: async () => (asked.push('confirm-private'), true),
     fail: (title, message) => asked.push(`fail:${title}:${message}`),
     reveal: () => undefined
   }
@@ -508,7 +509,7 @@ export async function smokeMarkdown(ctx: SmokeContext, check: Check): Promise<vo
     browser.openOverlay({ panel: 'commandbar', mode: 'current', initial: '' })
     await waitFor(() => browser.currentPanel() === 'commandbar', 5000)
     await sleep(500)
-    await ctx.overlayView.webContents.executeJavaScript(`window.lucium.markdownExport()`)
+    await ctx.overlayView.webContents.executeJavaScript(`window.lucium.markdownExport('pick')`)
     const pickerUp = await waitFor(() => picking(barPage), 6000)
     const barGone = browser.currentPanel() !== 'commandbar'
     // The bar is gone and the picker is up. A box that a page asked for while the bar was open (a sign-in box of a tab that an earlier suite left behind, reloaded by one

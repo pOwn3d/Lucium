@@ -93,6 +93,8 @@ export interface PageDocument {
   toggleReader(): Promise<'opened' | 'closed' | 'unavailable'>
   /** Markdown export: the text selected in the page, as the JSON text of a snapshot (shared/markdown-export.ts); null when nothing is selected. */
   markdownSelection(): Promise<string | null>
+  /** Markdown export: the main content of the page, whole, with no picker (`parsePick` reads it); null when the page does not answer. */
+  markdownPage(): Promise<string | null>
   /**
    * Markdown export: shows the picker over the page (the selection if there is one, else blocks to keep or leave out) and waits for the
    * user. Resolves with the JSON text of what they chose (`parsePick`), or null when they left. A second call ends the first.
@@ -106,7 +108,7 @@ export interface PageDocument {
    */
   downloadImages(images: ReadonlyArray<{ reference: string; url: string }>, options?: DownloadOptions): Promise<ImageDownload>
   /** PNG of the visible area (or of `region`, in page coordinates), or of the whole document (capped in height) when `full`. */
-  capture(full: boolean, region?: Bounds): Promise<Buffer>
+  capture(full: boolean, region?: Bounds, onCut?: (maxHeight: number) => void): Promise<Buffer>
   /**
    * A small JPEG of the visible area, `width` wide at most: the picture is scaled and encoded straight from the capture, without the PNG of the
    * whole screen that `capture` encodes (and that a picture made from it decodes again). Empty when the page drew nothing.
@@ -180,6 +182,11 @@ export interface PageScripts {
    * rejects for a page that is gone.
    */
   runAnnotateLayer?(code: string): Promise<unknown>
+  /**
+   * Runs the script that reads the text of the page for the full-text index (shared/page-index.ts) in its own isolated world (`PAGE_INDEX_WORLD`):
+   * the page cannot change what is read. Answers the text, or null for a page that must not be indexed; rejects for a page that is gone.
+   */
+  runPageIndex?(code: string): Promise<unknown>
 }
 
 /** The developer tools of the page, and the DevTools protocol the chrome.debugger shim drives. */

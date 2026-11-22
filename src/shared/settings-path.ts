@@ -47,6 +47,7 @@ export const SETTINGS_PLACES = {
   customFilterLists: { key: 'customFilterListsEnabled' },
   proxy: { key: 'proxyEnabled' },
   siteExceptions: { key: 'fingerprintExceptions' },
+  thirdPartyCookies: { key: 'blockThirdPartyCookies', group: 'privacy-settings.cookies-tiers' },
   clearOnClose: { key: 'siteDataClearOnClose' },
   webHardware: { key: 'webHardware', group: 'hardware-settings.api-materielles-du-web' },
   passwords: { key: 'passwordManager', group: 'passwords-panel.mots-de-passe' },
@@ -56,12 +57,23 @@ export const SETTINGS_PLACES = {
   shortcuts: { key: 'keyBindings' },
   mouseGestureSites: { key: 'mouseGestureExcludedHosts' },
   vimKeySites: { key: 'vimKeysExcludedHosts' },
+  focusSites: { key: 'focusSites' },
   trackpad: { key: 'spaceSwipe', group: 'settings.pave-tactile' },
   profiles: { page: 'profiles' },
   webPanels: { key: 'webPanels', group: 'settings.fonctions-theme-fenetres' },
   bookmarkLibrary: { key: 'bookmarkManager', group: 'settings.fonctions-theme-signets' },
   notes: { key: 'notes', group: 'settings.fonctions-theme-signets' },
-  summary: { page: 'features', group: 'ollama-settings.title' }
+  summary: { page: 'features', group: 'ollama-settings.title' },
+  // « Découvrir Lucium » (shared/discover.ts) says where to switch on the functions it presents
+  protection: { page: 'protection' },
+  pageIndex: { key: 'pageContentIndex' },
+  pictureInPicture: { key: 'autoPictureInPicture' },
+  workViews: { key: 'workViewsEnabled' },
+  glance: { key: 'peekWithShift' },
+  rememberScroll: { key: 'rememberScroll' },
+  compactMode: { key: 'compactMode' },
+  siteSearches: { key: 'siteSearches' },
+  commandBarSize: { key: 'commandBarSize' }
 } as const satisfies Record<string, SettingsPlace>
 
 export type SettingsPlaceId = keyof typeof SETTINGS_PLACES

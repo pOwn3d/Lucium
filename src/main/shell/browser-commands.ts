@@ -9,7 +9,7 @@ import type { NavCommand } from '@shared/ipc'
 import type { RuntimeState, TabItem } from '@shared/model'
 import type { NamedWindow } from '@shared/window-names'
 import { changeWindowSidebar, cleanWindowSidebar, NO_WINDOW_SIDEBAR, type WindowSidebar, type WindowSidebarChange } from '@shared/window-sidebar'
-import { pagePaletteCss, parseCssColor, resolveAppearance } from '@shared/theme'
+import { parseCssColor, sitePaletteCss } from '@shared/theme'
 import { activeProfileId, profileOfSpace } from '@shared/profiles'
 import { guestWording } from '@shared/guest-window'
 import { chosenZoomOf, stepZoom, withSiteZoom, zoomSiteOf } from '@shared/site-zoom'
@@ -25,7 +25,7 @@ import { deliverOmnibox, omniboxTarget, type OmniboxRequest } from '@shared/omni
 import type { ActionMenuEntry, Page } from '../engine/types'
 import { withPinned } from '@shared/extension-overflow'
 import { runDevTools } from './devtools-command'
-import { copySelection, exportPage, type MarkdownTarget } from './markdown-export'
+import { copySelection, exportPage, savePage, type MarkdownTarget } from './markdown-export'
 import { LIVE_START_DELAY_MS } from '@shared/live-folders'
 import type { PasswordWindow } from './password-service'
 import { t } from '@shared/i18n'
@@ -324,6 +324,14 @@ export abstract class BrowserCommands extends BrowserOverlay {
     if (tab && page) await exportPage(this.markdownTarget(tab, page))
   }
 
+  /** File › Save the page as Markdown… (and the command bar): the whole main content, a .md and its images folder, no picker (see shell/markdown-export.ts). */
+  async saveMarkdownPage(): Promise<void> {
+    this.followPaneFocus()
+    const tab = activeTab(this.store.get())
+    const page = this.activePage()
+    if (tab && page) await savePage(this.markdownTarget(tab, page))
+  }
+
   /** "Copy as Markdown" in the page menu of a tab: the text it has selected, to the clipboard. */
   async copySelectionAsMarkdown(tabId: string): Promise<void> {
     const tab = this.store.get().tabs.find((t) => t.id === tabId)
@@ -332,7 +340,7 @@ export abstract class BrowserCommands extends BrowserOverlay {
   }
 
   private markdownTarget(tab: TabItem, page: Page): MarkdownTarget {
-    return { page, win: this.win, url: tab.url, title: tab.title, toast: (message, action) => this.showToast(message, action) }
+    return { page, win: this.win, url: tab.url, title: tab.title, private: tab.private === true || this.isPrivate(), toast: (message, action) => this.showToast(message, action) }
   }
 
   /** Clicks an extension's icon in the sidebar toolbar, which opens its popup (the sidebar is shown first if it was hidden). */
@@ -554,10 +562,9 @@ export abstract class BrowserCommands extends BrowserOverlay {
   /** The palette variables a page gets when "allow websites to get your theme data" is on. */
   private themeCssFor(tabId: string): string {
     const state = this.store.get()
-    if (!state.settings.allowThemeToSites) return ''
     const tab = state.tabs.find((t) => t.id === tabId)
     const space = tab && state.spaces.find((sp) => sp.id === tab.spaceId)
-    return space ? pagePaletteCss(space.theme, resolveAppearance(space.theme, this.systemDark)) : ''
+    return sitePaletteCss(state.settings.allowThemeToSites, space?.theme, this.systemDark)
   }
 
   protected applyThemeToPage(tabId: string, force = false): void {

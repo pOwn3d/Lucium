@@ -53,7 +53,7 @@ const selected = (container: Element): string => container.querySelector('li[rol
 /** The bar narrowed to the history, with « exemple » typed: every line is a page of the history, and the first one is highlighted. */
 async function historyLines(): Promise<HTMLElement> {
   const container = await bar()
-  await click(button(container, t('cmd.filtre-historique')))
+  await click(button(container, `^${t('cmd.filtre-historique')}`))
   type(field(container), 'exemple')
   await answered()
   expect(selected(container)).toBe('Exemple alpha')
@@ -127,7 +127,7 @@ describe('« Annuler » after ⇧⌫', () => {
   /** A page of the history forgotten with ⇧⌫: the row that offers the way back is on screen. */
   async function forgotten(shown?: UiSnapshot): Promise<HTMLElement> {
     const container = await bar(shown)
-    await click(button(container, t('cmd.filtre-historique')))
+    await click(button(container, `^${t('cmd.filtre-historique')}`))
     type(field(container), 'exemple')
     await answered()
     key(field(container), 'ArrowDown')
@@ -171,7 +171,7 @@ describe('« Annuler » after ⇧⌫', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     try {
       const container = await bar()
-      await click(button(container, t('cmd.filtre-historique')))
+      await click(button(container, `^${t('cmd.filtre-historique')}`))
       type(field(container), 'exemple')
       await act(async () => void (await vi.advanceTimersByTimeAsync(200)))
       key(field(container), 'ArrowDown')
@@ -193,7 +193,7 @@ describe('« Annuler » after ⇧⌫', () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] })
     try {
       const container = await bar()
-      await click(button(container, t('cmd.filtre-historique')))
+      await click(button(container, `^${t('cmd.filtre-historique')}`))
       type(field(container), 'exemple')
       await act(async () => void (await vi.advanceTimersByTimeAsync(200)))
       key(field(container), 'ArrowDown')

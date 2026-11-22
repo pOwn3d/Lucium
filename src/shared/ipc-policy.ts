@@ -24,7 +24,7 @@ import { LOCK_SETTING_KEYS } from './lock'
  * Not in this list, on purpose: `permission/set` and `container/permission` grant or refuse a permission to a site without a question, and
  * they are the interface's to send: that is what the site panel and the permissions of the settings do when the user changes an answer.
  */
-export const MAIN_ONLY_ACTIONS: ReadonlySet<string> = new Set(['state/restore', 'import/merge', 'import/revert', 'backup/restore', 'boost/import', 'filterlist/add', 'filterlist/remove', 'space/image', 'bookmarks/import', 'livefolder/result', 'split/restore', 'tabs/untidy', 'archive/forget-pages', 'tab/image', 'favicon/fill', 'profile/revert-missing', 'sidepanel/behavior', 'view/restore', 'sync/apply'])
+export const MAIN_ONLY_ACTIONS: ReadonlySet<string> = new Set(['state/restore', 'import/merge', 'import/revert', 'backup/restore', 'space/import', 'boost/import', 'filterlist/add', 'filterlist/remove', 'space/image', 'bookmarks/import', 'livefolder/result', 'split/restore', 'tabs/untidy', 'archive/forget-pages', 'tab/image', 'favicon/fill', 'profile/revert-missing', 'sidepanel/behavior', 'view/restore', 'sync/apply'])
 
 const ACTION_TYPE_MAX = 64
 

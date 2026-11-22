@@ -25,6 +25,7 @@ import { ATTEMPTS_FILE_MAX, NO_ATTEMPTS, afterWrongPhrase, attemptsText, parseAt
 import { PASSWORD_LIMITS, checkedLogin, cleanPassword, cleanUsername, eligibleOriginOf, entriesForPage, captureKind, rowOf, sameLogin, type ImportReport, type PasswordEntry, type PasswordRow } from '@shared/passwords'
 import { PASSWORD_EXPORT_FORMAT, SEALED_FILE_MAX, VAULT_FORMAT, keyMaterialOf, newSealKeys, openSealed, parseSealed, seal, sealKeysFor, sealKeysFromMaterial, zeroKeys, type ParsedSealed, type SealKeys } from './vault-crypto'
 import { isRecord } from '@shared/record'
+import { storedTotp, type TotpConfig } from '@shared/totp'
 import { isOwnerOnlyMode, type PlatformId } from '@shared/platform'
 import { currentPlatform } from './platform'
 
@@ -51,13 +52,17 @@ export interface VaultOptions {
 /** The login of one stored entry, or null when this version does not accept it. Every field is checked again: the file may be a hand-made one that someone sealed with the right phrase. */
 function storedEntry(item: unknown): PasswordEntry | null {
   if (!isRecord(item)) return null
-  const { id, origin, username, password, createdAt, updatedAt } = item
+  const { id, origin, username, password, totp, createdAt, updatedAt } = item
   if (typeof id !== 'string' || !/^[0-9a-f]{32}$/.test(id)) return null
   if (typeof origin !== 'string' || eligibleOriginOf(origin) !== origin) return null
   if (typeof username !== 'string' || cleanUsername(username) !== username) return null
   if (cleanPassword(password) === null || typeof password !== 'string') return null
   if (typeof createdAt !== 'number' || !Number.isFinite(createdAt) || typeof updatedAt !== 'number' || !Number.isFinite(updatedAt)) return null
-  return { id, origin, username, password, createdAt, updatedAt }
+  // A key of one-time codes this version does not read leaves the whole entry out (it is kept in the `.dropped` copy): an entry without its key
+  // would open, be written back, and the second factor would be gone for good.
+  const key = totp === undefined ? undefined : storedTotp(totp)
+  if (key === null) return null
+  return { id, origin, username, password, ...(key ? { totp: key } : {}), createdAt, updatedAt }
 }
 
 /**
@@ -135,6 +140,11 @@ function keepPreviousVault(path: string): void {
     copyFileSync(path, backup)
     chmodSync(backup, 0o600)
   }
+}
+
+function withoutTotp(entry: PasswordEntry, updatedAt: number): PasswordEntry {
+  const { totp: _removed, ...rest } = entry
+  return { ...rest, updatedAt }
 }
 
 export class PasswordVault {
@@ -441,6 +451,36 @@ export class PasswordVault {
       const entries = this.open()
       if (!entries.some((entry) => entry.id === id)) return false
       this.commit(entries.filter((entry) => entry.id !== id), { keepPrevious: false, keepDropped: true })
+      return true
+    })
+  }
+
+  /** The key of the one-time codes of an entry. For the code (shell/password-service.ts) only, never for the interface. */
+  totpOf(id: string): TotpConfig | null {
+    return this.open().find((entry) => entry.id === id)?.totp ?? null
+  }
+
+  /**
+   * Adds the key of the one-time codes to an entry, or replaces its key. A key that is replaced was in the vault the write replaces: that copy
+   * (`.bak`) goes, like it does when a login is removed. False when there is no such entry.
+   */
+  setTotp(id: string, totp: TotpConfig): Promise<boolean> {
+    return this.serial(async () => {
+      const entries = this.open()
+      const known = entries.find((entry) => entry.id === id)
+      if (!known) return false
+      this.commit(entries.map((entry) => (entry === known ? { ...entry, totp, updatedAt: this.now() } : entry)), known.totp ? { keepPrevious: false, keepDropped: true } : undefined)
+      return true
+    })
+  }
+
+  /** Takes the key of the one-time codes off an entry. The vault before the change still holds it: it goes (`.bak`), as for a removed login. False when the entry has none. */
+  removeTotp(id: string): Promise<boolean> {
+    return this.serial(async () => {
+      const entries = this.open()
+      const known = entries.find((entry) => entry.id === id)
+      if (!known?.totp) return false
+      this.commit(entries.map((entry) => (entry === known ? withoutTotp(entry, this.now()) : entry)), { keepPrevious: false, keepDropped: true })
       return true
     })
   }

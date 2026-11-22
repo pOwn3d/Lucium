@@ -94,16 +94,34 @@ export function groupTitle(group: CandidateGroup, query: string): string {
   }
 }
 
-/** A genre the bar can be narrowed to, by a chip or by the first letter typed: `>` the commands, `@` the open tabs. The history has a chip only (`#` is the tag of a bookmark). */
-export type BarScope = 'commands' | 'tabs' | 'history'
+/**
+ * A genre the bar can be narrowed to, by a chip or by what is typed first: `>` the commands, `@` the open tabs, `*` the bookmarks, `^` the history.
+ * The words `@bookmarks` and `@history` name the last two as well. `#` stays the tag of a bookmark.
+ */
+export type BarScope = 'commands' | 'tabs' | 'history' | 'bookmarks'
 
-export const SCOPE_PREFIX: Readonly<Record<BarScope, string | null>> = { commands: '>', tabs: '@', history: null }
+export const SCOPE_PREFIX: Readonly<Record<BarScope, string>> = { commands: '>', tabs: '@', history: '^', bookmarks: '*' }
 
-/** The scope a first letter names, and the text after it: `> thème` is the commands that answer "thème". A text with no such letter has no scope. */
-export function splitScope(query: string): { scope: BarScope | null; text: string } {
+/** The words that name a genre after `@`; `@bookmarks` is not an open tab called "bookmarks". */
+const SCOPE_WORD: Readonly<Record<string, BarScope>> = { '@bookmarks': 'bookmarks', '@history': 'history' }
+
+/**
+ * The scope a first letter (or first word) names, and the text after it: `> thème` is the commands that answer "thème". A text with no such mark has no scope.
+ * `*` and `^` are also the start of ordinary searches (`*.example.com`, `^2`), so they name a genre only when alone or followed by a space, and never when a
+ * site search keyword of the user's starts with that character (`reserved`: the keyword comes before the genre).
+ */
+export function splitScope(query: string, reserved: readonly string[] = []): { scope: BarScope | null; text: string } {
+  const word = /^\S+/.exec(query)?.[0].toLowerCase()
+  const named = word === undefined ? undefined : SCOPE_WORD[word]
+  if (named) return { scope: named, text: query.slice(word!.length).trimStart() }
   const first = query[0]
-  const scope = (Object.keys(SCOPE_PREFIX) as BarScope[]).find((s) => SCOPE_PREFIX[s] !== null && SCOPE_PREFIX[s] === first)
-  return scope ? { scope, text: query.slice(1).trimStart() } : { scope: null, text: query }
+  const scope = (Object.keys(SCOPE_PREFIX) as BarScope[]).find((s) => SCOPE_PREFIX[s] === first)
+  if (!scope) return { scope: null, text: query }
+  if (scope === 'bookmarks' || scope === 'history') {
+    const alone = query.length === 1 || /\s/.test(query[1]!)
+    if (!alone || reserved.some((keyword) => keyword.startsWith(first!))) return { scope: null, text: query }
+  }
+  return { scope, text: query.slice(1).trimStart() }
 }
 
 const COMMAND_KINDS: ReadonlySet<Candidate['kind']> = new Set(['action', 'pane', 'extension', 'extpage', 'internal', 'webpanel', 'container', 'session', 'space', 'move', 'window', 'workview'])
@@ -112,5 +130,5 @@ const COMMAND_KINDS: ReadonlySet<Candidate['kind']> = new Set(['action', 'pane',
 export function inScope<T extends Candidate>(candidates: readonly T[], scope: BarScope | null): T[] {
   if (scope === null) return [...candidates]
   // An address typed in "Commandes" stays openable: its row is an action on the address, not a web search.
-  return candidates.filter((c) => (scope === 'commands' ? COMMAND_KINDS.has(c.kind) || (c.kind === 'open' && c.id === 'open' && !c.search) : scope === 'tabs' ? c.kind === 'tab' : c.kind === 'history'))
+  return candidates.filter((c) => (scope === 'commands' ? COMMAND_KINDS.has(c.kind) || (c.kind === 'open' && c.id === 'open' && !c.search) : scope === 'tabs' ? c.kind === 'tab' : scope === 'bookmarks' ? c.kind === 'bookmark' : c.kind === 'history'))
 }

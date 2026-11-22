@@ -13,3 +13,6 @@
 .tab-editor-picture { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); }
 .tab-editor-picture-shown { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 8px; background: var(--active); outline: 1px solid var(--line-strong); }
 .tab-editor-picture-shown .favicon { width: 20px; height: 20px; border-radius: 4px; object-fit: cover; }
+/* « Dans le contenu des pages »: the pages found by their text, under the history list; a snippet runs over two lines at most. */
+.hist-content { padding-top: var(--sp-2); }
+.hist-content .lp-sub { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; white-space: normal; overflow: hidden; }

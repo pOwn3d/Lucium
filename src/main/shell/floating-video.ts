@@ -2,8 +2,8 @@
 // the live view of the tab into a small window without a frame that stays above the others (Page.lendView: nothing loads again, nothing is
 // captured), brings the video to fill it where it is (engine/floating-video-scripts.ts), and lays a bar of controls over it (src/renderer/
 // floating-video.tsx). One video floats at a time, for the whole group of windows. « Revenir à l'onglet » and the close button give the view back
-// to its tab, which is shown, selected, in its window; so does ⌘W in the floating window. The site's own Picture in Picture button is not this:
-// it keeps the system's window. What the bar shows and asks: shared/floating-video.ts.
+// to its tab, which is shown, selected, in its window; so does ⌘W in the floating window. The site's own Picture in Picture button and the automatic picture
+// lead here too (Browser.takeSitePictureInPicture, floatWatchedVideo); the system's window is the fallback. What the bar shows and asks: shared/floating-video.ts.
 
 import { ipcMain, type BrowserWindow, type IpcMainEvent, type WebContentsView } from 'electron'
 import { Channel } from '@shared/ipc'

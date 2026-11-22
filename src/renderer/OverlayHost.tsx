@@ -14,6 +14,7 @@ import { LeaveSheet } from './LeaveSheet'
 import { WelcomeSheet } from './WelcomeSheet'
 import { WhatsNewSheet } from './WhatsNewSheet'
 import { ArcGuide } from './ArcGuide'
+import { Discover } from './Discover'
 import { ProblemReport } from './ProblemReport'
 import { NoticesPanel } from './NoticesPanel'
 import { HistoryPanel, SpacesPanel, TabEditor } from './ManagePanels'
@@ -55,7 +56,7 @@ import './popovers.css'
  * Panels that dim the window; a click outside closes them. The others are small and leave the page usable.
  * The Tweak editor and Glance are not in the set: they cover the window like modal panels, but draw (or do not draw) their own dimming.
  */
-const MODAL = new Set<OverlayRequest['panel']>(['commandbar', 'shortcuts', 'downloads', 'shortcut', 'space', 'spacecreate', 'plus', 'spacemenu', 'tidy', 'deadtabs', 'archive', 'site', 'sitedata', 'cookies', 'sessions', 'readlater', 'history', 'spaces', 'tab', 'autoreload', 'import', 'firstlaunch', 'qr', 'windowname', 'translate', 'translatepop', 'passwords', 'bookmarks', 'livefolder', 'foldericon', 'welcome', 'whatsnew', 'arcguide', 'problemreport', 'notices', 'notes', 'workview'])
+const MODAL = new Set<OverlayRequest['panel']>(['commandbar', 'shortcuts', 'downloads', 'shortcut', 'space', 'spacecreate', 'plus', 'spacemenu', 'tidy', 'deadtabs', 'archive', 'site', 'sitedata', 'cookies', 'sessions', 'readlater', 'history', 'spaces', 'tab', 'autoreload', 'import', 'firstlaunch', 'qr', 'windowname', 'translate', 'translatepop', 'passwords', 'bookmarks', 'livefolder', 'foldericon', 'welcome', 'whatsnew', 'arcguide', 'discover', 'problemreport', 'notices', 'notes', 'workview'])
 
 /** Modal panels drawn as a popover next to what opened them (or, for the command bar, over the page): no dimming, and where they sit decides the variant. */
 const POPOVER_CLASS: Partial<Record<OverlayRequest['panel'], string>> = { site: 'popover', downloads: 'popover popover-left', commandbar: 'cb-backdrop', plus: 'plus-host', spacemenu: 'plus-host' }
@@ -273,6 +274,8 @@ export function OverlayHost() {
         return <WhatsNewSheet key={version} sheet={request.sheet} />
       case 'arcguide':
         return <ArcGuide key={version} imported={request.imported} />
+      case 'discover':
+        return <Discover key={version} />
       case 'problemreport':
         return <ProblemReport key={version} />
       case 'notices':

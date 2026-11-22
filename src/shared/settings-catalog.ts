@@ -85,7 +85,7 @@ export const SETTINGS_KEYS = {
     'sleepAfterMinutes', 'sleepAwakeMax', 'sleepFreezeAfterMinutes', 'sleepMode', 'sleepSkipAudible', 'sleepSkipPinned', 'sleepNotify', 'loadAllTabsAtLaunch', 'sleepExcludedHosts', 'sleepExcludedKeepAll',
     'autoArchiveHours', 'tidyPinnedTitles', 'reopenHistory', 'backClosesOpenedTab',
     'tabStateBadges', 'tidyFoldersPosition',
-    'dragToSplit', 'scrollSync', 'autoPictureInPicture',
+    'dragToSplit', 'scrollSync', 'rememberScroll', 'autoPictureInPicture', 'sitePictureInPictureInLucium',
     'restoreWindows', 'dragWindowFromToolbar', 'warnBeforeClosingWindow', 'warnBeforeQuitting'
   ],
   // Moteur de recherche · Propositions de la barre de commandes · Apparence · Recherches rapides · Recherche dans un site · Mots-clés des extensions
@@ -100,9 +100,9 @@ export const SETTINGS_KEYS = {
   // · Listes de filtres · DNS chiffré · Proxy
   protection: [
     'blockAds', 'blockCookieBanners', 'blockMode', 'blockCosmetic', 'blockExceptions', 'popupExceptions',
-    'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks',
+    'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions',
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
-    'historyOff', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
+    'historyOff', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
     'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager',
     'disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists', 'dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'
@@ -131,11 +131,11 @@ export const SETTINGS_KEYS = {
   // The catalogue of the features to add (`FEATURE_THEMES`), theme by theme: the switch of each feature, then what goes with it (its options, its list,
   // the settings of the page annotation and of the summary by a local model, which are no feature of the registry).
   features: [
-    'tabTree', 'tabSearch', 'tabGroupFolders', 'showReloadAllButton', 'reloadAllWakes', 'showTabMemory', 'workViewsEnabled',
+    'tabTree', 'tabReminders', 'tabSearch', 'tabGroupFolders', 'showReloadAllButton', 'reloadAllWakes', 'showTabMemory', 'workViewsEnabled',
     'webPanels', 'nameWindows', 'independentWindows', 'webAppWindows', 'documentPictureInPicture',
     'tabContainers', 'privateTabs', 'guestProfile', 'containers', 'containerRules',
     'bookmarkManager', 'liveFolders', 'notes', 'notesListButton',
-    'userScripts', 'qrCode', 'readAloud', 'pageWatch', 'annotateCapture', 'annotateAutoClear', 'annotateAutoClearSeconds', 'annotateLetterKeys', 'pageWatches', 'ollamaConfig', 'aiSummary',
+    'userScripts', 'qrCode', 'readAloud', 'pageWatch', 'annotateCapture', 'annotateAutoClear', 'annotateAutoClearSeconds', 'annotateLetterKeys', 'pageWatches', 'focusMode', 'focusSites', 'focusScheduleOn', 'focusDays', 'focusFrom', 'focusTo', 'focusMinutes', 'ollamaConfig', 'aiSummary',
     'downloadPause', 'openUnsaved', 'pdfWithSource',
     'findRegex',
     'cookieManager',
@@ -183,11 +183,11 @@ export interface FeatureTheme {
 }
 
 export const FEATURE_THEMES: readonly FeatureTheme[] = [
-  { id: 'tabs', title: 'settings.fonctions-theme-onglets', features: ['tab-tree', 'tab-search', 'tab-groups-ext', 'reload-all-button', 'tab-memory', 'work-views'] },
+  { id: 'tabs', title: 'settings.fonctions-theme-onglets', features: ['tab-tree', 'tab-reminders', 'tab-search', 'tab-groups-ext', 'reload-all-button', 'tab-memory', 'work-views'] },
   { id: 'windows', title: 'settings.fonctions-theme-fenetres', features: ['web-panels', 'name-windows', 'independent-windows', 'pwa', 'document-pip'] },
   { id: 'separate', title: 'settings.fonctions-theme-separer', features: ['containers', 'private-tabs', 'guest-profile'] },
   { id: 'bookmarks', title: 'settings.fonctions-theme-signets', features: ['bookmarks', 'live-folders', 'notes'] },
-  { id: 'pages', title: 'settings.fonctions-theme-pages-web', features: ['user-scripts', 'qr-code', 'read-aloud', 'page-watch', 'annotate-capture'] },
+  { id: 'pages', title: 'settings.fonctions-theme-pages-web', features: ['user-scripts', 'qr-code', 'read-aloud', 'page-watch', 'focus-mode', 'annotate-capture'] },
   { id: 'files', title: 'settings.fonctions-theme-fichiers', features: ['download-pause', 'open-unsaved', 'pdf-with-source'] },
   { id: 'search', title: 'settings.fonctions-theme-recherche', features: ['find-regex'] },
   { id: 'privacy', title: 'settings.fonctions-theme-vie-privee', features: ['cookie-manager'] },
@@ -238,6 +238,8 @@ export const NO_CONTROL_KEYS = {
   translateSystemNoticeSeen: 'a memory: the one-time notice of macOS\'s translation (Apple may count its use) was given, the first time macOS translated a page in one click',
   lastSeenVersion: 'a memory: the version the last launch ran, to tell an update (the sheet of the news is a feature, `whatsNewSheet`)',
   searchDiscoverySeen: 'a memory: the sites already offered their search',
+  focusUntil: 'a memory: when the timer of the focus mode ends, written by its Start and Stop buttons and by the block page',
+  focusSnoozeUntil: 'a memory: until when the focus mode was paused from its block page',
   usedProfiles: 'a memory: the profiles that have had a page, to tell a missing storage',
   retiredProfileIds: 'a memory: the ids of the deleted profiles, given to no new profile until the next launch removes their folders (written by the main process only)',
   siteDataTypes: 'the choices of the panel "Effacer les données du site", kept for its next use',
@@ -249,6 +251,7 @@ export const NO_CONTROL_KEYS = {
   developerHosts: 'the Developer Mode of a site, in the site panel (⌃D): reloads without the cache, and its invalid certificate goes through unasked (« Non sécurisé »)',
   cookieKeepHosts: 'the sites to keep, in the "Cookies par site" panel',
   blockModeSites: 'the blocking mode of a site, in the site panel (its blocking row), kept per site',
+  siteJavascriptOff: 'the sites whose JavaScript is off, in the site panel (its JavaScript row), kept per site',
   unpinnedExtensions: 'the extension icons taken out of the toolbar, by its own menu',
   updateFeedUrl: 'no control by design: the address of a feed written by hand, read (by `autoUpdate` and the menu) only by a build that carries no address of its own; the address built into a build is not this setting, and installing follows that one only (main/shell/update-source.ts)',
   updateNotices: 'a memory: the last version the notice of an update offered and how many times, so that a version passed over three times is no longer offered by itself, and a downloaded update dropped at the quit, told at the next launch (shared/auto-update.ts)',
@@ -269,15 +272,20 @@ export const KEPT_ON_RESET = {
   blockModeSites: 'a list of sites',
   popupExceptions: 'a list of sites',
   fingerprintExceptions: 'a list of sites',
+  thirdPartyCookieExceptions: 'a list of sites',
   mouseGestureExcludedHosts: 'a list of sites',
   vimKeysExcludedHosts: 'a list of sites',
   translateNeverSites: 'a list of sites',
   translateAlways: 'a list of languages',
   siteDataClearOnClose: 'a list of sites',
+  siteJavascriptOff: 'a list of sites',
   siteAutoplay: 'a list of sites',
   linkRoutes: 'the routes of the links',
   siteSearches: 'the keywords of the site searches',
   pageWatches: 'the pages being watched',
+  focusSites: 'a list of sites',
+  focusUntil: 'a memory: when the timer of the focus mode ends, written by its Start button and by the block page',
+  focusSnoozeUntil: 'a memory: until when the focus mode was paused from its block page',
   extensionPaths: 'the folders of the unpacked extensions',
   customFilterLists: 'the lists the user brought',
   dohCustomUrl: 'an address typed',

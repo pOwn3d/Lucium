@@ -4,6 +4,7 @@
 import type { OllamaModelList } from './ollama'
 import type { TranslateRequest, TranslateView } from './translate-local'
 import type { HistoryEntry } from './model'
+import type { PageMatch } from './page-index'
 import type { Action } from './sidebar'
 import type { AddFilterListResult } from './custom-filter-lists'
 import type { SiteDataBatchRequest, SiteDataSiteResult } from './site-data'
@@ -72,6 +73,10 @@ export interface LuciumApi {
   putBackHistory(url: string, profileId: string): Promise<boolean>
   /** Removes from the history of `profileId` every page last visited from `from` (included) to `to` (excluded), the bounds of one day. Answers how many went. */
   forgetHistoryDay(from: number, to: number, profileId: string): Promise<number>
+  /** The pages whose text holds the words (the full-text index of the profile on screen; nothing while the setting is off or in a private window). */
+  searchPageContent(query: string, profileId?: string): Promise<PageMatch[]>
+  /** Erases the full-text index of every profile; answers whether nothing is left. */
+  clearPageIndex(): Promise<boolean>
   showMenu(target: MenuTarget): void
   /**
    * The button ☰ of the toolbar (Windows, where the window has no menu bar): opens the menu of the application, at `anchor` (the lower left corner of the button,
@@ -313,8 +318,8 @@ export interface LuciumApi {
   readClipboardText(): Promise<ClipboardTextReply>
   /** The command bar's "Copier": puts a text of 1 to 65,536 characters on the clipboard, without a notice (the button says it). False when the text was refused or could not be written. */
   writeClipboardText(text: string): Promise<boolean>
-  /** The command bar's "Exporter la page en Markdown": the bar closes, and the page shows the picker (see shell/markdown-export.ts). */
-  markdownExport(): void
+  /** The command bar's "Exporter la page en Markdown" (`'pick'`: the picker) or "Enregistrer la page en Markdown" (`'save'`: the whole page, saved): the bar closes first (see shell/markdown-export.ts). */
+  markdownExport(mode: 'pick' | 'save'): void
   /** The theme editor's code fields and the theme files: copy a code or a colour, paste one into the space, apply a theme to every space, save the theme as a file or take one from a file. */
   themeCode(request: ThemeRequest): Promise<ThemeReply>
   /** Sharing a Tweak: bring one in from a file or the clipboard, send one out as a file or a link. The shell shows the dialogs and says how it went. */

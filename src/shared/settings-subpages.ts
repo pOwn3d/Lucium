@@ -35,7 +35,7 @@ export const SUBPAGES: readonly SettingsSubpageDef[] = [
   { id: 'awake', pane: 'tabs', title: 'settings.sub-awake', intro: 'settings.sub-awake-intro', keys: ['sleepExcludedHosts', 'sleepExcludedKeepAll'], at: 'page' },
   { id: 'sitesearches', pane: 'navigation', title: 'settings.sub-sitesearches', intro: 'settings.sub-sitesearches-intro', keys: ['siteSearches'], at: 'page' },
   { id: 'linkroutes', pane: 'navigation', title: 'settings.choisissez-ou-les-liens-s-ouvrent-dans', intro: 'settings.sub-linkroutes-intro', keys: ['linkRoutes'], at: 'page' },
-  { id: 'exceptions', pane: 'protection', title: 'settings.sub-exceptions', intro: 'settings.sub-exceptions-intro', keys: ['blockExceptions', 'popupExceptions', 'fingerprintExceptions'], at: 'page' },
+  { id: 'exceptions', pane: 'protection', title: 'settings.sub-exceptions', intro: 'settings.sub-exceptions-intro', keys: ['blockExceptions', 'popupExceptions', 'fingerprintExceptions', 'thirdPartyCookieExceptions'], at: 'page' },
   { id: 'clearonclose', pane: 'protection', title: 'settings.sub-clearonclose', intro: 'settings.sub-clearonclose-intro', keys: ['siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit'], at: 'page' },
   { id: 'permissions', pane: 'protection', title: 'settings.sub-permissions', intro: 'settings.sub-permissions-intro', keys: ['siteAutoplay'], at: 'page' },
   { id: 'lockoptions', pane: 'protection', title: 'settings.sub-lockoptions', intro: 'settings.sub-lockoptions-intro', keys: ['lockApp', 'lockTouchId', 'lockedSpaces'], at: 'page' },
@@ -47,6 +47,7 @@ export const SUBPAGES: readonly SettingsSubpageDef[] = [
   { id: 'siteexclusions', pane: 'keyboard', title: 'settings.sub-siteexclusions', intro: 'settings.sub-siteexclusions-intro', keys: ['mouseGestureExcludedHosts', 'vimKeysExcludedHosts'], at: 'page' },
   { id: 'containers', pane: 'features', title: 'settings.sub-containers-title', intro: 'settings.sub-containers-intro', keys: ['containers', 'containerRules'], at: 'page' },
   { id: 'userscripts', pane: 'features', title: 'settings.sub-userscripts', intro: 'settings.sub-userscripts-intro', keys: [], at: 'page' },
+  { id: 'focus', pane: 'features', title: 'focus.subpage-title', intro: 'focus.subpage-intro', keys: ['focusSites', 'focusScheduleOn', 'focusDays', 'focusFrom', 'focusTo', 'focusMinutes'], at: 'page' },
   { id: 'pagewatches', pane: 'features', title: 'web-tools-settings.pages-surveillees', intro: 'settings.sub-pagewatches-intro', keys: ['pageWatches'], at: 'page' },
   // The synchronisation with the iPhone is kept by the main process (src/main/sync/), not in the settings: the row that opens it says its state itself (`syncSummary`).
   { id: 'sync', pane: 'files', title: 'settings.sub-sync', intro: 'settings.sub-sync-intro', keys: [], at: 'page' }
@@ -108,7 +109,7 @@ export function subpageSummary(id: SettingsSubpage, facts: SubpageFacts): string
     case 'linkroutes':
       return rules(settings.linkRoutes.length)
     case 'exceptions':
-      return sites(distinct(settings.blockExceptions, settings.popupExceptions, settings.fingerprintExceptions))
+      return sites(distinct(settings.blockExceptions, settings.popupExceptions, settings.fingerprintExceptions, settings.thirdPartyCookieExceptions))
     case 'clearonclose':
       return settings.siteDataClearOnCloseEnabled ? sites(settings.siteDataClearOnClose.length) : t('settings.sub-off')
     case 'permissions': {
@@ -133,6 +134,8 @@ export function subpageSummary(id: SettingsSubpage, facts: SubpageFacts): string
     case 'sync':
       // The synchronisation lives in the main process too: the row is drawn with its state (`syncSummary`).
       return ''
+    case 'focus':
+      return sites(settings.focusSites.length)
     case 'pagewatches':
       return settings.pageWatches.length === 0 ? t('settings.sub-no-page') : tp('settings.sub-pages', settings.pageWatches.length)
     case 'shortcuts': {

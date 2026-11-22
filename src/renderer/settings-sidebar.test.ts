@@ -178,9 +178,9 @@ describe('« Fonctions en option »', () => {
     // Each switch shows its setting: the tree of tabs switched on, the web panels off as a new profile has them.
     expect(window.querySelector<HTMLInputElement>('main .pref-feature[data-setting="tabTree"] input[role="switch"]')!.checked).toBe(true)
     expect(window.querySelector<HTMLInputElement>('main .pref-feature[data-setting="webPanels"] input[role="switch"]')!.checked).toBe(false)
-    // Six are on in a new profile (the work views among them); the tree of tabs makes seven.
-    expect(featuresOn(snapshotWith({ tabTree: true }).state.settings)).toBe(7)
-    expect(window.querySelector('main .pref-intro')?.textContent).toBe(tp('settings.fonctions-allumees', 7, { all: 29 }))
+    // Seven are on in a new profile (the work views and the tab reminders among them); the tree of tabs makes eight.
+    expect(featuresOn(snapshotWith({ tabTree: true }).state.settings)).toBe(8)
+    expect(window.querySelector('main .pref-intro')?.textContent).toBe(tp('settings.fonctions-allumees', 8, { all: 31 }))
     expect(window.querySelector('main .more-settings')?.hasAttribute('data-empty')).toBe(true)
   })
 
@@ -208,8 +208,10 @@ describe('« Fonctions en option »', () => {
   it('is reached from « Pour commencer », whose line counts the features on, and from Profils for the containers, the private tabs and the guest window', async () => {
     for (const [hash, selector] of [['#home', 'main .home-features button'], ['#profiles', 'main .profiles-features button']] as const) {
       const window = await open(hash)
-      if (hash === '#home') expect(window.querySelector('main .home-features span')?.textContent).toBe(tp('settings.home-fonctions', 6, { all: 29 }))
-      await click(window.querySelector<HTMLButtonElement>(selector)!)
+      if (hash === '#home') expect(window.querySelector('main .home-features span')?.textContent).toBe(tp('settings.home-fonctions', 7, { all: 31 }))
+      // « Voir les fonctions » (« Pour commencer » has a button that opens « Découvrir Lucium » before it).
+      const toFeatures = [...window.querySelectorAll<HTMLButtonElement>(selector)].find((b) => b.textContent === t('settings.home-voir-fonctions') || hash === '#profiles')!
+      await click(toFeatures)
       await settle(() => void globalThis.dispatchEvent(new HashChangeEvent('hashchange')))
       expect(current(window), hash).toBe('features')
       mounted!.unmount()

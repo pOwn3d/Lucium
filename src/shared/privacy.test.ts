@@ -28,7 +28,7 @@ describe('the options', () => {
     expect(settings.sendGpc).toBe(true)
     expect(settings.stripTrackingParams).toBe(true)
     expect(settings.stripCopiedLinks).toBe(true)
-    expect(privacyOptionsOf(settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: true })
+    expect(privacyOptionsOf(settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: true, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] })
     expect(anyPrivacy(NO_PRIVACY)).toBe(false)
   })
 
@@ -43,14 +43,14 @@ describe('the options', () => {
   })
 
   it('switch off in a damaged file: only a real true turns a rewrite on', () => {
-    expect(cleanPrivacySettings({ httpsUpgrade: 'yes' as unknown as boolean, sendGpc: 1 as unknown as boolean, stripTrackingParams: true, stripCopiedLinks: 'oui' as unknown as boolean })).toEqual({ httpsUpgrade: false, sendGpc: false, stripTrackingParams: true, stripCopiedLinks: false })
+    expect(cleanPrivacySettings({ httpsUpgrade: 'yes' as unknown as boolean, sendGpc: 1 as unknown as boolean, stripTrackingParams: true, stripCopiedLinks: 'oui' as unknown as boolean })).toEqual({ httpsUpgrade: false, sendGpc: false, stripTrackingParams: true, stripCopiedLinks: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] })
     expect(cleanPrivacySettings({ stripCopiedLinks: true }).stripCopiedLinks).toBe(true)
   })
 
   it('are kept by the reducer and cleaned there', () => {
     const state = createInitialState(ctx)
     const on = reduce(state, { type: 'settings/update', patch: { httpsUpgrade: true, sendGpc: true, stripTrackingParams: false } }, ctx)
-    expect(privacyOptionsOf(on.settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: false })
+    expect(privacyOptionsOf(on.settings)).toEqual({ httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] })
     const damaged = reduce(state, { type: 'settings/update', patch: { stripTrackingParams: 'x' as unknown as boolean } }, ctx)
     expect(damaged.settings.stripTrackingParams).toBe(false)
   })
@@ -147,7 +147,7 @@ describe('HTTPS first', () => {
 })
 
 describe('rewriteNavigation', () => {
-  const all: PrivacyOptions = { httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: true }
+  const all: PrivacyOptions = { ...NO_PRIVACY, httpsUpgrade: true, globalPrivacyControl: true, stripTrackingParams: true }
   const accept = (url: string) => url.replace('http:', 'https:')
   const nav = (url: string, patch: Partial<{ method: string; isMainFrame: boolean }> = {}) => ({ url, method: 'GET', isMainFrame: true, ...patch })
 

@@ -17,14 +17,14 @@ import type { PlatformId } from './platform'
 import { t } from './i18n'
 import { COMMAND_BAR_CARD } from './command-bar-surface'
 import type { Candidate } from './command-bar-types'
-import { onePerSplit, MAX_TABS, tabCandidate, actionCandidates, jotCandidate, spaceCandidates, MAX_ARCHIVED, readLaterCandidates, bookmarkCandidates, MAX_BANG_HINTS, MAX_SUGGESTIONS, MAX_HISTORY, searchOnlyActions, tabSearchActions, autoReloadActions, readLaterActions, containerActions, MAX_CONTAINER_ACTIONS, libraryActions, notesActions, webStoreActions, privacyActions, passwordActions, markdownActions, readableActions, shareActions, sessionActions, sessionCandidates, workViewCandidates, asideActions, lockActions, layoutActions, windowSidebarActions, webPanelCandidates, moveCandidates, paneCandidates, extensionCandidates, windowCandidates } from './command-bar-sources'
+import { onePerSplit, MAX_TABS, tabCandidate, actionCandidates, jotCandidate, spaceCandidates, MAX_ARCHIVED, readLaterCandidates, bookmarkCandidates, MAX_BANG_HINTS, MAX_SUGGESTIONS, MAX_HISTORY, searchOnlyActions, discoverActions, tabSearchActions, autoReloadActions, readLaterActions, containerActions, MAX_CONTAINER_ACTIONS, libraryActions, notesActions, webStoreActions, privacyActions, passwordActions, markdownActions, readableActions, shareActions, sessionActions, sessionCandidates, workViewCandidates, asideActions, lockActions, layoutActions, windowSidebarActions, webPanelCandidates, moveCandidates, paneCandidates, extensionCandidates, windowCandidates } from './command-bar-sources'
 import { matchScore, fold, foldedQuery, nameScore, scoreFolded } from './command-bar-match'
 import type { BarScope } from './command-bar-groups'
 
 // Moved to modules of their own, still importable from here.
 export { type CommandAction, type Candidate } from './command-bar-types'
 export { foldedText, foldedQuery, matchScore, scoreFolded } from './command-bar-match'
-export { windowSidebarActions, windowSidebarChangeOf, jotCandidate } from './command-bar-sources'
+export { windowSidebarActions, windowSidebarChangeOf, jotCandidate, bookmarkCandidates } from './command-bar-sources'
 export { actionToDispatch, candidateDispatches } from './command-bar-actions'
 export { candidateHint, actionShortcut, actionDetail } from './command-bar-shortcuts'
 export { type CandidateGroup, candidateGroup, groupCandidates, groupStarts, groupTitle, type BarScope, SCOPE_PREFIX, splitScope, inScope } from './command-bar-groups'
@@ -290,6 +290,7 @@ export function rankCandidates(
   )
   result.push(...actionCandidates(state, options.platform).filter((c) => matchScore(c.label, q) > 0))
   result.push(...searchOnlyActions(state, options.platform).filter((c) => nameScore(c.label, q) > 0))
+  result.push(...discoverActions(options.private === true).filter((c) => nameScore(c.label, q) > 0))
   result.push(...tabSearchActions(state).filter((c) => nameScore(c.label, q) > 0))
   result.push(...autoReloadActions(state).filter((c) => nameScore(c.label, q) > 0))
   result.push(...readLaterActions(state, options.private === true).filter((c) => nameScore(c.label, q) > 0))

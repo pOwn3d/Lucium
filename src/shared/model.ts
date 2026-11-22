@@ -256,6 +256,26 @@ export const BOOKMARK_NOTE_MAX = 1000
 export const BOOKMARK_TAGS_MAX = 12
 export const BOOKMARK_TAG_MAX = 40
 
+/**
+ * A tab put away until a chosen time (setting `tabReminders`): it left its column, and at `dueAt` it comes back as a tab of its space with a
+ * local notification. It keeps only what the tab needs to be opened again (address, title, icon).
+ */
+export interface TabReminder {
+  id: string
+  /** An http(s) address (see read-later.ts: the same kind of page is worth coming back to). */
+  url: string
+  title: string
+  faviconUrl?: string
+  /** The space the tab was in; the tab comes back there when it still exists, else in the active space. */
+  spaceId: string
+  /** When the tab comes back, in milliseconds since the epoch. */
+  dueAt: number
+  createdAt: number
+}
+
+/** Pending reminders are bounded: one past the limit is refused rather than dropping a reminder the user set. */
+export const TAB_REMINDER_LIMIT = 200
+
 /** The list keeps this many pages; the one past it is refused rather than pushing an older one out. */
 export const READ_LATER_LIMIT = 500
 export const READ_LATER_TITLE_MAX = 300
@@ -461,6 +481,8 @@ export interface SidebarState {
   readLater: ReadLaterItem[]
   /** The folders of the read-later list, in the order they are shown (empty until the setting `useReadLaterFolders` is used). */
   readLaterFolders: ReadLaterFolder[]
+  /** Tabs put away until a chosen time, soonest first (setting `tabReminders`; a private window keeps none). */
+  tabReminders: TabReminder[]
   /** The bookmark library, newest first (empty until the setting `bookmarkManager` is used; a private window keeps none). */
   bookmarks: Bookmark[]
   activeSpaceId: string

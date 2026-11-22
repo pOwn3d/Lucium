@@ -97,6 +97,9 @@ export async function smokeCapture(ctx: SmokeContext, check: Check): Promise<voi
         // The picture is made of fractions of the viewport, so that the checks do not depend on the scale of the screen or the size of the window.
         return void res.end(`<title>cap page</title><body style="margin:0;background:#1e90ff;height:2600px">
           <div style="position:absolute;left:5vw;top:10vh;width:30vw;height:30vh;background:repeating-linear-gradient(90deg,#000 0 2px,#fff 2px 4px)"></div></body>`)
+      case '/inner':
+        // The document is as tall as the window: the page scrolls in a container of its own (a web app, a mail client).
+        return void res.end(`<title>inner page</title><body style="margin:0;height:100vh;overflow:hidden"><div style="height:100vh;overflow:auto"><div style="height:5000px;background:#1e90ff"></div></div></body>`)
       case '/q':
         return void res.end(`<title>q ${url.searchParams.get('term') ?? ''}</title><body>search result</body>`)
       default:
@@ -384,6 +387,16 @@ export async function smokeCapture(ctx: SmokeContext, check: Check): Promise<voi
     check('full page: the whole page opens the sheet, taller than the window', (await shoot(() => captureActivePage(browser, true))) === null && (await waitSheet()) && ((await canvasBox())?.height ?? 0) > H * 1.5, JSON.stringify(await canvasBox()))
     await press('.annotate-actions button', 'Abandonner')
     await waitFor(() => browser.currentPanel() === null)
+
+    // The page that scrolls inside: the capture walks it and comes out as tall as its content, and the window is given back.
+    const innerId = await open('/inner', 'inner page')
+    browser.dispatch({ type: 'tab/select', id: innerId })
+    await sleep(300)
+    const viewBefore = await browser.capture(false)
+    const inner = await browser.capture(true)
+    const viewAfter = await browser.capture(false)
+    check('full page: a page that scrolls inside is captured whole', inner !== null && pngSize(inner).height >= 4900, inner ? JSON.stringify(pngSize(inner)) : 'no picture')
+    check('full page: the window is back to its size afterwards', viewBefore !== null && viewAfter !== null && pngSize(viewBefore).height === pngSize(viewAfter).height, `${viewBefore ? pngSize(viewBefore).height : '-'} then ${viewAfter ? pngSize(viewAfter).height : '-'}`)
     check('portrait: the portrait capture opens the sheet', (await shoot(() => captureActivePagePortrait(browser))) === null && (await waitSheet()), String(browser.currentPanel()))
     await press('.annotate-actions button', 'Abandonner')
     await waitFor(() => browser.currentPanel() === null)

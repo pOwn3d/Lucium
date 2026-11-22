@@ -8,6 +8,7 @@ import type { Settings } from '@shared/model'
 import { activeProfileId } from '@shared/profiles'
 import { settingsPaneLabel } from '@shared/settings-catalog'
 import type { SettingsPage } from '@shared/ipc'
+import { DISCOVER_REQUEST } from '@shared/discover'
 import { t, tp } from '@shared/i18n'
 import { api } from './api'
 import { ArchiveRow, DownloadDirRow, EngineRows } from './CurrentProfileSettings'
@@ -73,6 +74,9 @@ export function HomePage({ snapshot, update, goTo }: HomeProps) {
       </Group>
       <div className="reset-bar home-features">
         <span>{tp('settings.home-fonctions', featuresOn(snapshot.state.settings), { all: catalogueFeatures().length })}</span>
+        <button className="button" type="button" onClick={() => api().openOverlay(DISCOVER_REQUEST)}>
+          {t('discover.lien-reglages')}
+        </button>
         <button className="button" type="button" onClick={() => goTo('features')}>
           {t('settings.home-voir-fonctions')}
         </button>

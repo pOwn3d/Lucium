@@ -4,6 +4,31 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Découvrir Lucium** : Aide › Découvrir Lucium, la barre de commandes et un bouton de « Pour commencer », de la bienvenue et des nouveautés ouvrent un panneau qui montre toutes les fonctions de Lucium, par tâche, avec où les trouver, leur raccourci, « Essayer » et « Régler ». Rien n’est compté ni envoyé.
+- **Un espace vers un autre Mac** : Espaces › Exporter cet espace… enregistre un espace avec ses onglets, ses dossiers et son archive dans un fichier, chiffré par une phrase secrète si vous le voulez ; Espaces › Importer un espace… l’ajoute sur un autre Mac, sans serveur. Ni cookies, ni mots de passe.
+- **Position de défilement retrouvée après un redémarrage** : Réglages › Onglets et fenêtres › « Retrouver la position de défilement des onglets », désactivé par défaut. Un onglet revient là où sa page était défilée. Seuls un nombre par onglet et son adresse sont gardés, sur votre Mac ; jamais la page, rien pour les onglets privés.
+- **Rappel d’onglet** : clic droit sur un onglet › Me le rappeler › Ce soir, Demain matin ou Dans une semaine. L’onglet revient à l’heure dite, dans son espace, avec une notification. Fichier › Rappels d’onglets les liste. Désactivable dans Réglages › Fonctions en option.
+- **Recherche dans le contenu des pages visitées** : garde en local le texte des pages lues pour retrouver une page par une phrase, dans l’Historique (Réglages › Vie privée et sécurité › Plus de réglages). Désactivée par défaut ; rien n’est gardé quand l’historique est coupé ; jamais en navigation privée ni mots de passe ; rien n’est envoyé.
+- **Mode concentration** : Réglages › Fonctions en option › Mode concentration garde une liste de sites fermés pendant un minuteur (25 minutes par défaut) ou une plage horaire de la semaine. Un site bloqué affiche une page claire, avec « Faire une pause de 15 minutes » pour en sortir. Désactivé par défaut ; rien ne quitte votre Mac.
+- **Préfixes signets et historique dans la barre de commandes** : tapez `*` ou `^` seul ou suivi d’une espace (`* recette`), ou `@bookmarks` / `@history`, pour ne chercher que dans vos signets ou dans l’historique. Une recherche comme `*.example.com` ou `^2`, et un mot-clé de moteur perso qui commence par `*` ou `^`, restent ce qu’ils étaient. Sans texte, la barre les liste. Tout reste sur ce Mac.
+- **Bloquer les cookies tiers** : Réglages › Vie privée et sécurité › Cookies tiers. Un contenu d’un autre site que l’onglet ne reçoit plus vos cookies et ne peut plus en déposer, WebSocket compris. Désactivé par défaut, avec une liste de sites où ils restent acceptés. `document.cookie` des scripts n’est pas touché.
+- **Interrupteur JavaScript par site** : une ligne « JavaScript » du panneau du site coupe les scripts d’un site. La page se recharge sans aucun script, et un avis ou la ligne les rétablit en un clic. Coupé pour aucun site par défaut ; les pages de Lucium ne sont jamais concernées.
+- **Enregistrer la page en Markdown** : Fichier › Enregistrer la page en Markdown… et la barre de commandes enregistrent le contenu principal de la page en un clic : un fichier `.md` et un dossier `<nom>-images/` à côté. Un onglet privé demande d’abord ; un dossier existant n’est jamais réutilisé (`-2`) ; les images chargées au défilement ne sont pas récupérées.
+- **Codes à usage unique (TOTP) dans le coffre de mots de passe** : un identifiant peut garder la clé de ses codes de double authentification (clé en base32 ou adresse `otpauth://`). Le panneau montre le code avec son compte à rebours et le copie, effacé après 30 secondes. La clé reste chiffrée dans le coffre et n’est jamais journalisée. RFC 6238, rien n’est rempli dans une page.
+
+### Changements
+
+- **Image dans l’image dans la fenêtre de Lucium, aussi depuis le site** : le bouton d’un site (Twitch, YouTube…) et l’image automatique ouvrent la fenêtre flottante de Lucium, plus celle du système. Un direct affiche « EN DIRECT », sans ligne de progression ni ±10 s. Un interrupteur de Réglages › Onglets et fenêtres le coupe pour le bouton du site.
+- **Demande de permission, « Autoriser cette fois »** : « Se souvenir pour ce site » décochée, le bouton se lit « Autoriser cette fois ». Ce oui était déjà gardé pour l’onglet seul et oublié avec sa page, jamais écrit ni envoyé. Les onglets privés gardent « Autoriser ».
+
+### Corrections
+
+- **Direct à durée finie** : un direct dont le lecteur annonce une durée finie qui grandit (Twitch) est reconnu comme direct dans la fenêtre flottante de Lucium : les boutons ±10 s sont masqués.
+- **Classement de la barre de commandes d’un profil perdu** : quand les espaces d’un profil manquant reviennent au profil par défaut, le classement de la barre de commandes de ce profil disparaît avec lui, comme il le faisait déjà au lancement suivant.
+- **Capture de la page entière qui fait défiler la page** : « Page entière » parcourt désormais la page de haut en bas avant la capture : un site qui défile dans un panneau à lui est capturé en entier, les images paresseuses sont chargées et un en-tête fixe n’apparaît qu’une fois. Une page plus haute que 16 000 pixels est coupée là, et Lucium le dit.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.

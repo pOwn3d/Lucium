@@ -25,6 +25,7 @@ import { prefersReducedMotion } from './motion'
 import { describeClearFailure, sitesToClearOnClose, sitesToClearOnQuit, type ClearOnCloseJob } from '@shared/site-clear'
 import { showSystemNotice } from './system-notice'
 import { currentPlatform } from '../platform'
+import { getPageIndex } from '../page-index'
 import { t } from '@shared/i18n'
 import { FLOAT_HIDE_DELAY_MS, NO_HISTORY, WINDOW_BACKGROUND } from './browser-base'
 import { BrowserCapture } from './browser-capture'
@@ -361,11 +362,23 @@ export abstract class BrowserSite extends BrowserCapture {
     const currentPage = current ? this.pages.get(current.id) : undefined
     return {
       clear: (request) => this.engineOf(current).clearSiteData(profileId, request),
-      history: isolated || container !== '' ? NO_HISTORY.of(profileId) : this.history.of(profileId),
+      history: isolated || container !== '' ? NO_HISTORY.of(profileId) : this.historyWithIndex(profileId),
       // As for the history above: the data of a private tab or of a container is not the profile's, and neither are its pages in the Back lists.
       closedPages: { removeSite: (host, subdomains) => (isolated || container !== '' ? undefined : this.forgetClosedPages(profileId, { host, subdomains })) },
       tabs,
       active: current && currentPage ? { url: current.url, page: currentPage } : null
+    }
+  }
+
+  /** The history of a profile for « Effacer les données du site »: erasing a site's pages from it erases their text from the full-text index too. */
+  private historyWithIndex(profileId: string): SiteDataEnvironment['history'] {
+    const log = this.history.of(profileId)
+    return {
+      hosts: () => log.hosts(),
+      removeSite: (host, subdomains) => {
+        getPageIndex()?.of(profileId).removeSite(host, subdomains)
+        return log.removeSite(host, subdomains)
+      }
     }
   }
 

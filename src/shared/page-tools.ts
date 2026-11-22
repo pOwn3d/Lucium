@@ -15,11 +15,13 @@ export interface PageTools {
   scrollSync: boolean
   /** Plain keys scroll the page, show link hints and move between tabs (see vim-keys.ts). */
   vimKeys: boolean
+  /** The page reports where it stopped scrolling, and goes back to a position it is given (see scroll-memory.ts). */
+  scrollMemory: boolean
 }
 
-export const NO_PAGE_TOOLS: Readonly<PageTools> = Object.freeze({ autoScroll: false, mouseGestures: false, scrollSync: false, vimKeys: false })
+export const NO_PAGE_TOOLS: Readonly<PageTools> = Object.freeze({ autoScroll: false, mouseGestures: false, scrollSync: false, vimKeys: false, scrollMemory: false })
 
-export const TOOL_NAMES = ['autoScroll', 'mouseGestures', 'scrollSync', 'vimKeys'] as const satisfies readonly (keyof PageTools)[]
+export const TOOL_NAMES = ['autoScroll', 'mouseGestures', 'scrollSync', 'vimKeys', 'scrollMemory'] as const satisfies readonly (keyof PageTools)[]
 
 export const anyPageTool = (tools: PageTools): boolean => TOOL_NAMES.some((name) => tools[name])
 
@@ -50,6 +52,8 @@ export type ToolMessage =
   | { tool: 'gesture'; path: string }
   /** The page scrolled: the position, as a share (0 to 1) of what can be scrolled on each axis. */
   | { tool: 'scroll'; x: number; y: number }
+  /** The scrolling stopped: how far the page is scrolled, in whole pixels from its top (the scroll memory). */
+  | { tool: 'scrollpos'; y: number }
   /** The page's own voice stopped, at the end of the text or because it failed. */
   | { tool: 'speech'; state: 'end' | 'error' }
   /** A Vim-style key asked for something only the application can do (go back, change tab, open a link in a tab...). */
@@ -60,6 +64,10 @@ export type ToolMessage =
 export type ToolCommand =
   /** Scrolls the page to the same share of its length as the pane that was scrolled. */
   | { tool: 'scrollSync'; x: number; y: number }
+  /** Scrolls the page back to a position it was left at (pixels from the top). */
+  | { tool: 'scrollMemory'; y: number }
+
+import { isScrollPx } from './scroll-memory'
 
 const unit = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
 
@@ -92,6 +100,8 @@ export function parseToolMessage(text: unknown, nonce: string): ToolMessage | 'i
     }
     case 'scroll':
       return unit(message['x']) && unit(message['y']) ? { tool: 'scroll', x: message['x'], y: message['y'] } : 'invalid'
+    case 'scrollpos':
+      return isScrollPx(message['y']) ? { tool: 'scrollpos', y: message['y'] } : 'invalid'
     case 'speech':
       return message['state'] === 'end' || message['state'] === 'error' ? { tool: 'speech', state: message['state'] } : 'invalid'
     case 'vim': {

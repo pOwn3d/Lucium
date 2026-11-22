@@ -42,6 +42,7 @@ export const COMMANDS: readonly CommandDef[] = [
   { id: 'closeTab', get label() { return t('menu.archiver-l-onglet') }, get group() { return t('menu.fichier') }, accelerator: 'CmdOrCtrl+W' },
   { id: 'savePage', get label() { return t('app.enregistrer-la-page-sous') }, get group() { return t('menu.fichier') }, accelerator: 'CmdOrCtrl+Shift+S' },
   { id: 'savePdfSource', get label() { return t('menu.enregistrer-en-pdf-avec-l-adresse') }, get group() { return t('menu.fichier') }, accelerator: '' },
+  { id: 'saveMarkdown', get label() { return t('menu.enregistrer-la-page-en-markdown') }, get group() { return t('menu.fichier') }, accelerator: '' },
   { id: 'exportMarkdown', get label() { return t('menu.exporter-la-page-en-markdown') }, get group() { return t('menu.fichier') }, accelerator: '' },
   { id: 'print', get label() { return t('keybindings.imprimer') }, get group() { return t('menu.fichier') }, accelerator: 'CmdOrCtrl+P' },
   { id: 'captureRegion', get label() { return t('menu.capturer') }, get group() { return t('menu.fichier') }, accelerator: 'CmdOrCtrl+Shift+2' },

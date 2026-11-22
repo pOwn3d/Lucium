@@ -83,7 +83,7 @@ afterEach(() => {
 describe('"Copier" and "Coller" on the row of the genres', () => {
   const row = (markup: string) => /<div class="cb-chips">([\s\S]*?)<\/div><div class="cb-body">/.exec(markup)?.[1] ?? ''
 
-  it('are on the row of the genres, at the right of the three chips', () => {
+  it('are on the row of the genres, at the right of the four chips', () => {
     const markup = bar()
     const chips = row(markup)
     expect(chips).not.toBe('')
@@ -91,9 +91,9 @@ describe('"Copier" and "Coller" on the row of the genres', () => {
     const clip = chips.indexOf('class="cb-clip"')
     expect(genres).toBeGreaterThanOrEqual(0)
     expect(clip).toBeGreaterThan(genres)
-    // The three genres first, then the two buttons, in that order.
+    // The four genres first, then the two buttons, in that order.
     const words = [...chips.matchAll(/<button[^>]*>([\s\S]*?)<\/button>/g)].map((m) => m[1]!.replace(/<[^>]*>/g, ''))
-    expect(words).toEqual(['&gt;Commandes', '@Onglets', 'Historique', 'Notifications', 'Copier', 'Coller'])
+    expect(words).toEqual(['&gt;Commandes', '@Onglets', '*Signets', '^Historique', 'Notifications', 'Copier', 'Coller'])
   })
 
   it('come after « Notifications », which opens the recent notifications at a click, named in full for a screen reader', () => {
@@ -109,7 +109,7 @@ describe('"Copier" and "Coller" on the row of the genres', () => {
   it('keep the genres in a group of their own, so that the buttons are not read as genres', () => {
     const chips = row(bar())
     const group = /<div class="cb-genres" role="group" aria-label="Filtrer par type">([\s\S]*?)<\/div>/.exec(chips)?.[1] ?? ''
-    expect([...group.matchAll(/aria-pressed/g)]).toHaveLength(3)
+    expect([...group.matchAll(/aria-pressed/g)]).toHaveLength(4)
     expect(group).not.toContain('Copier')
     expect(group).not.toContain('Coller')
   })

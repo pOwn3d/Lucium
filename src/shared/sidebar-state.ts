@@ -32,6 +32,7 @@ import { cleanLockedSpaces } from './lock'
 import { cleanExtensionBarSettings } from './extension-overflow'
 import { cleanWebToolsSettings } from './web-tools'
 import { cleanKeyExtSettings } from './key-ext-settings'
+import { cleanFocusSettings } from './focus-mode'
 import { withoutGroupFolders } from './group-folders'
 import { cleanUiScale } from './ui-scale'
 import { cleanPanelSizes } from './panel-scale'
@@ -39,6 +40,7 @@ import { cleanSiteZoom } from './site-zoom'
 import { cleanAutoplayPolicy, cleanSiteAutoplay } from './autoplay'
 import { cleanSpellCheck } from './spell-check'
 import { cleanClearOnClose } from './site-clear'
+import { cleanSiteJavascriptOff } from './site-javascript'
 import { cleanCustomFilterLists } from './custom-filter-lists'
 import { cleanDeveloperHosts } from './developer-mode'
 import { cleanReadableSettings, readableFromForcedDark, type ForcedDarkSettings } from './readable-mode'
@@ -52,7 +54,7 @@ import { cleanUsedProfiles } from './profile-recovery'
 import { cleanRetiredProfiles } from './profile-retire'
 import { settleTree } from './tab-tree'
 import { normalizeFolders } from './folders'
-import { cleanArchive, cleanCommandBarUsage, cleanDelay, cleanExtensionPaths, cleanFavorites, cleanFolders, cleanLinkRoutes, cleanReadLater, cleanReadLaterFolders, cleanSearchDiscoverySeen, cleanSidePanelBehavior, cleanSiteDataRecents, cleanSiteSearches, cleanSitePermissions, cleanSpaces, cleanSplits, SITE_SEARCHES_MAX, cleanTabs, coerceSettings, isRecord, printable } from './state-clean'
+import { cleanTabReminders, cleanArchive, cleanCommandBarUsage, cleanDelay, cleanExtensionPaths, cleanFavorites, cleanFolders, cleanLinkRoutes, cleanReadLater, cleanReadLaterFolders, cleanSearchDiscoverySeen, cleanSidePanelBehavior, cleanSiteDataRecents, cleanSiteSearches, cleanSitePermissions, cleanSpaces, cleanSplits, SITE_SEARCHES_MAX, cleanTabs, coerceSettings, isRecord, printable } from './state-clean'
 import { clampOr } from './clamp'
 import { cleanBarPosition } from './annotate-bar-position'
 import { cleanAutoClearSeconds } from './annotate-auto-clear'
@@ -72,6 +74,7 @@ export function createInitialState(ctx: Ctx): SidebarState {
     archive: [],
     readLater: [],
     readLaterFolders: [],
+    tabReminders: [],
     bookmarks: [],
     activeSpaceId: space.id,
     activeTabBySpace: { [space.id]: null },
@@ -195,6 +198,7 @@ export function normalize(state: SidebarState): SidebarState {
     archive: cleanArchive(raw['archive'], spaceIds),
     readLaterFolders,
     readLater: cleanReadLater(raw['readLater'], new Set(readLaterFolders.map((f) => f.id))),
+    tabReminders: cleanTabReminders(raw['tabReminders'], spaceIds),
     bookmarks: cleanBookmarks(raw['bookmarks']),
     // Files written by an older build lack the newer fields: they get their defaults.
     // A space that is gone is no longer locked.
@@ -398,6 +402,7 @@ export function clampSettings(input: Settings): Settings {
     autoplayPerSite: settings.autoplayPerSite !== false,
     siteDataClearOnCloseEnabled: settings.siteDataClearOnCloseEnabled === true,
     siteDataClearOnClose: cleanClearOnClose(settings.siteDataClearOnClose),
+    siteJavascriptOff: cleanSiteJavascriptOff(settings.siteJavascriptOff),
     siteDataClearOnQuit: settings.siteDataClearOnQuit === true,
     customFilterListsEnabled: settings.customFilterListsEnabled !== false,
     customFilterLists: cleanCustomFilterLists(settings.customFilterLists),
@@ -411,6 +416,7 @@ export function clampSettings(input: Settings): Settings {
     ...cleanExtensionBarSettings(settings),
     ...cleanWebToolsSettings(settings),
     ...cleanKeyExtSettings(settings),
+    ...cleanFocusSettings(settings),
     openWithApps: cleanOpenWithApps(settings.openWithApps),
     annotateBar: cleanBarPosition(settings.annotateBar),
     annotateAutoClearSeconds: cleanAutoClearSeconds(settings.annotateAutoClearSeconds),

@@ -307,3 +307,12 @@ export class BarVisibility {
     this.onChange(visible)
   }
 }
+
+/**
+ * Whether the system's Picture in Picture window that the site's own button just opened is taken into Lucium's floating window (media bridge, then
+ * `Browser.takeSitePictureInPicture`). Not when the setting is off, in a private window (Lucium's window is never made for one), or for a tab whose
+ * video already floats in Lucium's window.
+ */
+export function takesSitePip(facts: { setting: boolean; privateWindow: boolean; floatingTab: string | null; tabId: string }): boolean {
+  return facts.setting && !facts.privateWindow && facts.floatingTab !== facts.tabId
+}

@@ -1,5 +1,6 @@
 import { activeTab } from '@shared/sidebar'
 import type { StateStore } from '../store'
+import type { FeatureGates } from './feature-gate'
 import type { Browser } from './browser'
 
 /** Width of a picture: a card in the sidebar is at most about 400 px wide, doubled for dense screens. */
@@ -95,4 +96,23 @@ export class Thumbnails implements ThumbnailSource {
       this.pictures.delete(id)
     }
   }
+}
+
+/**
+ * Ties the pictures to the switch 'hover-cards': they are made (two shots per page shown, kept in memory) only while the cards are on, and dropped with
+ * their state subscription when the switch goes off. `current()` is none while it is off.
+ */
+export function gateThumbnails<T extends { dispose(): void }>(gates: FeatureGates, make: () => T): { current(): T | null } {
+  let current: T | null = null
+  gates.gate('hover-cards', {
+    start: () => {
+      const made = make()
+      current = made
+      return () => {
+        made.dispose()
+        if (current === made) current = null
+      }
+    }
+  })
+  return { current: () => current }
 }

@@ -39,6 +39,7 @@ import { strictTransportHosts } from './strict-transport'
 import { strictTransportStore, type StoredSession } from './strict-transport-store'
 import type { UpgradeFailure } from './https-upgrade'
 import { PageCover } from './page-cover'
+import { focusGate } from './focus-gate'
 import type { Bounds } from './types'
 
 /** After a hung renderer is ended on purpose to reload the page, the « gone » it reports within this long is ours, not a crash to show. */
@@ -207,7 +208,11 @@ export class PageErrors {
     if (upgrade.kind === 'fell-back') return
     if (isNavigableUrl(url)) this.host.announceUrl(url)
     const nonce = randomUUID()
-    if (isCertificateError(name)) {
+    // A navigation the focus mode refused (the request filter cancels it): our page says why and offers the pause, not the ad blocker's page.
+    const focus = name === 'ERR_BLOCKED_BY_CLIENT' && isMainFrame ? (focusGate.get()?.block(url) ?? null) : null
+    if (focus !== null) {
+      this.pending = { kind: 'focus', url, nonce, canGoBack: false, until: focus.until, slotEnd: focus.slotEnd }
+    } else if (isCertificateError(name)) {
       const seen = this.lastCertificate?.host === exceptionHost(url) ? this.lastCertificate : null
       // What was refused belongs to this failure only: a later one without its own certificate must not borrow it.
       this.lastCertificate = null
@@ -225,7 +230,7 @@ export class PageErrors {
     const model = this.pending
     if (!model || this.wc.isDestroyed()) return
     this.pending = null
-    const shown: ErrorPageModel = model.kind === 'certificate' ? { ...model, canGoBack: this.wc.navigationHistory.canGoBack() } : model
+    const shown: ErrorPageModel = model.kind === 'certificate' || model.kind === 'focus' ? { ...model, canGoBack: this.wc.navigationHistory.canGoBack() } : model
     this.shown = shown
     const page = renderErrorPage(shown)
     const markup = `<head>${page.head}</head><body>${page.body}</body>`
@@ -258,9 +263,13 @@ export class PageErrors {
       this.host.reload()
     } else if (action === 'wait' && shown.kind === 'hung') {
       this.dismissCover()
+    } else if (action === 'end-focus' && shown.kind === 'focus') {
+      // The way out: focus is paused for a while, then the address that was refused is asked for again.
+      focusGate.get()?.pause()
+      this.host.reload()
     } else if (action === 'retry' && shown.kind !== 'crash') {
       this.host.reload()
-    } else if (action === 'back' && (shown.kind === 'certificate' || shown.kind === 'status')) {
+    } else if (action === 'back' && (shown.kind === 'certificate' || shown.kind === 'status' || shown.kind === 'focus')) {
       this.host.goBack()
     } else if (action === 'home' && shown.kind === 'status') {
       // The home of the site the answer came from (its origin, a web address by construction): the page that answered goes, and so does our page with it.

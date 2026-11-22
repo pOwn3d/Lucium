@@ -242,6 +242,8 @@ function rich(): SidebarState {
     reduceFingerprint: true,
     fingerprintStrict: true,
     fingerprintExceptions: ['exemple.org'],
+    blockThirdPartyCookies: true,
+    thirdPartyCookieExceptions: ['exemple.org'],
     profileNames: { work: 'Travail' },
     allowThemeToSites: true,
     keyBindings: { [COMMANDS[0]!.id]: '' },
@@ -249,6 +251,7 @@ function rich(): SidebarState {
     searchSuggestions: false,
     peekOnExternalLinks: true,
     autoPictureInPicture: false,
+    sitePictureInPictureInLucium: false,
     mediaPlayer: false,
     autoArchiveHours: 5,
     profiles: { work: { searchUrlTemplate: 'https://s.example/?q=%s', searchSuggestions: false, autoArchiveHours: 2, downloadDir: '/tmp/telechargements', disabledExtensions: ['a'.repeat(32), 'p'.repeat(32)] } },
@@ -258,6 +261,15 @@ function rich(): SidebarState {
     sleepMode: 'freeze',
     sleepExcludedHosts: ['mail.example.org'],
     sleepExcludedKeepAll: true,
+    focusMode: true,
+    focusSites: ['news.example.com'],
+    focusScheduleOn: true,
+    focusDays: [1, 3],
+    focusFrom: 600,
+    focusTo: 700,
+    focusMinutes: 45,
+    focusUntil: 1_800_000_000_000,
+    focusSnoozeUntil: 1_800_000_000_001,
     sleepSkipAudible: false,
     sleepSkipPinned: true,
     sleepNotify: true,
@@ -296,6 +308,7 @@ function rich(): SidebarState {
     webHardware: true,
     annotateCapture: true,
     urlAutomation: true,
+    tabReminders: false,
     bookmarkManager: true,
     liveFolders: true,
     webAppWindows: true,
@@ -368,8 +381,10 @@ function rich(): SidebarState {
     qrCode: true,
     autoScroll: true,
     scrollSync: true,
+    rememberScroll: true,
     mouseGestures: true,
     mouseGestureExcludedHosts: ['maps.example.org'],
+    pageContentIndex: true,
     pageWatch: true,
     pageWatches: [{ id: 'w-1', url: 'https://example.org/prix', title: 'Prix', profileId: 'work', selector: '#price', minutes: 30, hash: '0123456789abcdef', checkedAt: 5, changedAt: 4, failure: 'La page n’a pas répondu.' }],
     readAloud: true,
@@ -410,6 +425,7 @@ function rich(): SidebarState {
     archive: [archived],
     readLater: [later],
     readLaterFolders: [{ id: 'rlf-1', name: 'À classer', collapsed: true }],
+    tabReminders: [{ id: 'tr-1', url: 'https://rappel.example/page', title: 'À relire', spaceId: work.id, dueAt: 9_000_000, createdAt: 3 }],
     bookmarks: [{ id: 'bm-1', url: 'https://marque.example/page', title: 'Une page', tags: ['lecture', 'à voir'], note: 'Une note', faviconUrl: 'https://marque.example/i.png', addedAt: 4 }],
     activeSpaceId: work.id,
     activeTabBySpace: { [home.id]: 't-a', [work.id]: 't-c' },
@@ -526,6 +542,8 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   reduceFingerprint: bool,
   fingerprintStrict: bool,
   fingerprintExceptions: hostList(200),
+  blockThirdPartyCookies: bool,
+  thirdPartyCookieExceptions: hostList(200),
   profileNames: (v) => isRecord(v) && Object.entries(v).every(([id, name]) => PROFILE.test(id) && typeof name === 'string' && name === name.trim() && name !== '' && name.length <= 40),
   allowThemeToSites: bool,
   keyBindings: (v) => isRecord(v) && Object.entries(v).every(([id, key]) => COMMANDS.some((c) => c.id === id) && typeof key === 'string' && (key === '' || isValidAccelerator(key))),
@@ -533,6 +551,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   searchSuggestions: bool,
   peekOnExternalLinks: bool,
   autoPictureInPicture: bool,
+  sitePictureInPictureInLucium: bool,
   mediaPlayer: bool,
   autoArchiveHours: num(0),
   profiles: (v) =>
@@ -553,6 +572,15 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   sleepMode: (v) => v === 'discard' || v === 'freeze',
   sleepExcludedHosts: hostList(200),
   sleepExcludedKeepAll: bool,
+  focusMode: bool,
+  focusSites: hostList(200),
+  focusScheduleOn: bool,
+  focusDays: (v) => Array.isArray(v) && unique(v) && v.every((d) => Number.isInteger(d) && d >= 0 && d <= 6),
+  focusFrom: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < 1440,
+  focusTo: (v) => Number.isInteger(v) && (v as number) >= 0 && (v as number) < 1440,
+  focusMinutes: (v) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 1440,
+  focusUntil: num(0),
+  focusSnoozeUntil: num(0),
   sleepSkipAudible: bool,
   sleepSkipPinned: bool,
   sleepNotify: bool,
@@ -615,6 +643,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   autoplayPerSite: bool,
   siteDataClearOnCloseEnabled: bool,
   customFilterListsEnabled: bool,
+  siteJavascriptOff: (v) => Array.isArray(v) && v.length <= 500 && unique(v) && v.every((host) => typeof host === 'string' && parseSiteHost(host)?.host === host),
   siteDataClearOnClose: (v) => Array.isArray(v) && v.length <= 100 && unique(v) && v.every((host) => typeof host === 'string' && parseSiteHost(host)?.host === host),
   siteDataClearOnQuit: bool,
   customFilterLists: (v) =>
@@ -641,9 +670,11 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   qrCode: bool,
   autoScroll: bool,
   scrollSync: bool,
+  rememberScroll: bool,
   workViewsEnabled: bool,
   mouseGestures: bool,
   mouseGestureExcludedHosts: hostList(200),
+  pageContentIndex: bool,
   pageWatch: bool,
   pageWatches: (v) =>
     Array.isArray(v) && v.length <= 10 && unique(v.map((w) => (isRecord(w) ? w['id'] : w))) &&
@@ -726,6 +757,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
         ['column', 'row'].includes(v['layout'] as string) &&
         [v['x'], v['y']].every((n) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= 20_000))),
   urlAutomation: bool,
+  tabReminders: bool,
   bookmarkManager: bool,
   liveFolders: bool,
   webAppWindows: bool,
@@ -753,7 +785,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
 }
 
 const LOADABLE_URL = /^(https?|file|about|chrome-extension|devtools|view-source):/i
-const TOP_LEVEL = ['version', 'revision', 'spaces', 'tabs', 'folders', 'favorites', 'archive', 'readLater', 'readLaterFolders', 'bookmarks', 'activeSpaceId', 'activeTabBySpace', 'sitePermissions', 'sidePanelBehavior', 'commandBarUsage', 'splits', 'boosts', 'sessions', 'workViews', 'settings']
+const TOP_LEVEL = ['version', 'revision', 'spaces', 'tabs', 'folders', 'favorites', 'archive', 'readLater', 'readLaterFolders', 'tabReminders', 'bookmarks', 'activeSpaceId', 'activeTabBySpace', 'sitePermissions', 'sidePanelBehavior', 'commandBarUsage', 'splits', 'boosts', 'sessions', 'workViews', 'settings']
 
 /** Every way a state that went through `normalize` may still be unfit to use. Empty means well formed. */
 function problems(state: SidebarState): string[] {
@@ -925,6 +957,14 @@ function problems(state: SidebarState): string[] {
   for (const f of state.readLaterFolders) {
     check(text(f.name) && f.name.trim() === f.name && f.name !== '' && f.name.length <= 100, `read-later folder name ${show(f.name)}`)
     check(keysOf(f).every((k) => ['id', 'name', 'collapsed'].includes(k)) && (f.collapsed === undefined || f.collapsed === true), `read-later folder keys ${keysOf(f).join()}`)
+  }
+
+  // The reminders: bounded, a web page and a finite time each, soonest first, in a space that exists or none.
+  check(Array.isArray(state.tabReminders) && state.tabReminders.length <= 200 && unique(state.tabReminders.map((r) => r.id)), 'tabReminders: size or duplicate ids')
+  for (const [i, r] of state.tabReminders.entries()) {
+    check(typeof r.url === 'string' && /^https?:\/\//i.test(r.url) && r.url.length <= 4096, `reminder url ${show(r.url)}`)
+    check(Number.isFinite(r.dueAt) && Number.isFinite(r.createdAt) && (i === 0 || state.tabReminders[i - 1]!.dueAt <= r.dueAt), `reminder time ${show(r.dueAt)}`)
+    check(r.spaceId === '' || state.spaces.some((s) => s.id === r.spaceId), `reminder space ${show(r.spaceId)}`)
   }
 
   // The bookmark library: bounded, each page once, printable text, tags that are clean and each once.
@@ -1149,7 +1189,7 @@ describe('a state written by an older build', () => {
       extensionPaths: ['/Users/moi/extensions/une']
     })
     // The recent fields, one by one, so that a default that is silently missing is named.
-    for (const key of ['webStoreInstall', 'webStoreUpdates', 'sleepMode', 'sleepExcludedHosts', 'sleepSkipAudible', 'siteDataTypes', 'siteDataHttp', 'siteDataAnimation', 'siteZoom', 'blockExceptions', 'blockMode', 'blockModeSites', 'disabledFilterLists', 'developerHosts', 'usedProfiles', 'restoreWindows', 'chromeNativeHosts', 'profileNames', 'keyBindings', 'appIcon', 'updateFeedUrl', 'updateChannel', 'updateNotices', 'resolveFavicons', 'autoplayPolicy', 'spellCheck', 'siteAutoplay', 'autoplayPerSite', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'customFilterListsEnabled', 'customFilterLists', 'qrCode', 'autoScroll', 'scrollSync', 'mouseGestures', 'mouseGestureExcludedHosts', 'pageWatch', 'pageWatches', 'readAloud', 'batterySaver', 'downloadPause', 'downloadAskWhere', 'openWithMemory', 'openWithApps', 'openUnsaved', 'pdfWithSource', 'useReadLaterFolders', 'vimKeys', 'vimKeysExcludedHosts', 'tabGroupFolders', 'omniboxKeywords', 'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions'] as const) {
+    for (const key of ['webStoreInstall', 'webStoreUpdates', 'sleepMode', 'sleepExcludedHosts', 'sleepSkipAudible', 'siteDataTypes', 'siteDataHttp', 'siteDataAnimation', 'siteZoom', 'blockExceptions', 'blockMode', 'blockModeSites', 'disabledFilterLists', 'developerHosts', 'usedProfiles', 'restoreWindows', 'chromeNativeHosts', 'profileNames', 'keyBindings', 'appIcon', 'updateFeedUrl', 'updateChannel', 'updateNotices', 'resolveFavicons', 'autoplayPolicy', 'spellCheck', 'siteAutoplay', 'autoplayPerSite', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'customFilterListsEnabled', 'customFilterLists', 'qrCode', 'autoScroll', 'scrollSync', 'rememberScroll', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions', 'mouseGestures', 'mouseGestureExcludedHosts', 'pageWatch', 'pageWatches', 'readAloud', 'batterySaver', 'downloadPause', 'downloadAskWhere', 'openWithMemory', 'openWithApps', 'openUnsaved', 'pdfWithSource', 'useReadLaterFolders', 'vimKeys', 'vimKeysExcludedHosts', 'tabGroupFolders', 'omniboxKeywords', 'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions'] as const) {
       expect(settings[key], key).toEqual(defaults[key])
     }
     expect(settings.siteDataTypes).toEqual(SITE_DATA_TYPES.filter((type) => type !== 'history'))
@@ -1165,6 +1205,8 @@ describe('a state written by an older build', () => {
     expect([settings.siteAutoplay, settings.siteDataClearOnClose, settings.siteDataClearOnQuit, settings.customFilterLists]).toEqual([{}, [], false, []])
     // The extended blocking and the fingerprint protection ask for a page to be changed: a file from before them has both off.
     expect([settings.blockScriptlets, settings.reduceFingerprint, settings.fingerprintStrict, settings.fingerprintExceptions]).toEqual([false, false, false, []])
+    // Third-party cookies are cut only when asked: a file from before the option lets them through.
+    expect([settings.blockThirdPartyCookies, settings.thirdPartyCookieExceptions]).toEqual([false, []])
     // The three switches: the clearing at close is off, the per-site autoplay and the custom lists are on.
     expect([settings.siteDataClearOnCloseEnabled, settings.autoplayPerSite, settings.customFilterListsEnabled]).toEqual([false, true, true])
   })

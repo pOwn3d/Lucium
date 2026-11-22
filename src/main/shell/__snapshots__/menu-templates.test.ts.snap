@@ -174,6 +174,8 @@ exports[`the context menus of the sidebar, as built > of a space: on screen with
     - label="Volet" click
   - label="Fermer le volet web" click
 - enabled=true label="Mettre l’espace de côté…" icon=aside(template) click
+- enabled=true label="Exporter cet espace…" icon=export(template) click
+- enabled=true label="Importer un espace…" icon=import(template) click
 - label="Verrouiller l’espace…" icon=lock(template) click
 - label="Gérer les espaces…" icon=grid(template) click
 - label="Supprimer" type="header"
@@ -213,6 +215,8 @@ exports[`the context menus of the sidebar, as built > of a space: on screen with
     - label="Volet" click
   - label="Fermer le volet web" click
 - enabled=true label="Mettre l’espace de côté…" icon=aside(template) click
+- enabled=true label="Exporter cet espace…" icon=export(template) click
+- enabled=true label="Importer un espace…" icon=import(template) click
 - label="Verrouiller l’espace…" icon=lock(template) click
 - label="Gérer les espaces…" icon=grid(template) click
 - label="Supprimer" type="header"
@@ -244,6 +248,8 @@ exports[`the context menus of the sidebar, as built > of a space: on screen with
   - enabled=false label="Retirer un volet web"
   - label="Fermer le volet web" click
 - enabled=true label="Mettre l’espace de côté…" icon=aside(template) click
+- enabled=false label="Exporter cet espace…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." icon=export(template) click
+- enabled=true label="Importer un espace…" icon=import(template) click
 - enabled=false label="Retirer le verrou de l’espace" icon=lock(template) click
 - label="Gérer les espaces…" icon=grid(template) click
 - label="Supprimer" type="header"
@@ -343,6 +349,10 @@ exports[`the context menus of the sidebar, as built > of a tab in a private wind
   - type="separator"
   - label="Nouvelle fenêtre" click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - label="Veille" type="header"
 - enabled=false label="Mettre en veille" icon=sleep(template) click
 - enabled=false label="Geler (garde la page en mémoire)" icon=freeze(template) click
@@ -395,6 +405,10 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - label="Nouvelle fenêtre" click
 - label="Replier les onglets enfants" icon=branch(template) click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - enabled=true label="Ajouter aux signets" icon=bookmark(template) click
 - enabled=true label="Ouvrir comme application" icon=app(template) click
 - label="Ouvrir dans un conteneur" icon=container(template)
@@ -457,6 +471,10 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - label="Nouvelle fenêtre" click
 - label="Sortir l’onglet de son parent" icon=branch(template) click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - enabled=true label="Ajouter aux signets" icon=bookmark(template) click
 - enabled=true label="Ouvrir comme application" icon=app(template) click
 - label="Ouvrir dans un conteneur" icon=container(template)
@@ -522,6 +540,10 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - type="separator"
   - label="Nouvelle fenêtre" click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - enabled=true label="Ajouter aux signets" icon=bookmark(template) click
 - enabled=true label="Ouvrir comme application" icon=app(template) click
 - label="Ouvrir dans un conteneur" icon=container(template)
@@ -584,6 +606,10 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - type="separator"
   - label="Nouvelle fenêtre" click
 - enabled=true label="Lire plus tard" icon=clock(template) click
+- enabled=true label="Me le rappeler" icon=clock(template)
+  - label="Ce soir" click
+  - label="Demain matin" click
+  - label="Dans une semaine" click
 - enabled=true label="Ajouter aux signets" icon=bookmark(template) click
 - enabled=true label="Ouvrir comme application" icon=app(template) click
 - label="Ouvrir dans un conteneur" icon=container(template)
@@ -746,11 +772,15 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
   - accelerator="CmdOrCtrl+Alt+S" enabled=false label="Capturer la partie visible" click
   - accelerator=undefined enabled=false label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=false label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=false label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=false label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=false label="Imprimer…" click
   - type="separator"
   - accelerator=undefined enabled=false label="Lire plus tard" click
   - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - enabled=false label="Me le rappeler" visible=true
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=false label="Mots de passe…" visible=false click
   - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=false click
   - accelerator=undefined enabled=false label="Ajouter aux signets" visible=false click
@@ -899,6 +929,8 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
   - accelerator=undefined enabled=false label="Mettre l’espace de côté…" click
   - enabled=false label="Rouvrir un espace mis de côté"
     - enabled=false label="Aucun espace mis de côté"
+  - enabled=true label="Exporter cet espace…" click
+  - enabled=true label="Importer un espace…" click
 - label="Onglets"
   - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
   - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
@@ -955,6 +987,7 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
 - label="Fenêtre" role="windowMenu"
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click
@@ -1034,12 +1067,16 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - accelerator="CmdOrCtrl+Alt+S" enabled=false label="Capturer la partie visible" click(brings back)
   - accelerator=undefined enabled=false label="Capturer en mode portrait" click(brings back)
   - accelerator="CmdOrCtrl+Shift+S" enabled=false label="Enregistrer la page sous…" click(brings back)
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click(brings back)
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click(brings back)
   - accelerator="CmdOrCtrl+P" enabled=false label="Imprimer…" click(brings back)
   - accelerator=undefined enabled=false label="Enregistrer en PDF avec l’adresse…" click(brings back)
   - type="separator"
   - accelerator=undefined enabled=false label="Lire plus tard" click(brings back)
   - accelerator=undefined enabled=true label="Liste de lecture…" click(brings back)
+  - enabled=false label="Me le rappeler" visible=true
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=true label="Mots de passe…" visible=true click(brings back)
   - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=true click(brings back)
   - accelerator=undefined enabled=false label="Ajouter aux signets" visible=true click(brings back)
@@ -1201,6 +1238,8 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - accelerator=undefined enabled=true label="Mettre l’espace de côté…" click(brings back)
   - enabled=true label="Rouvrir un espace mis de côté"
     - label="📚 Lecture" click(brings back)
+  - enabled=false label="Exporter cet espace…" toolTip="Cet espace est verrouillé : déverrouillez-le d’abord." click(brings back)
+  - enabled=true label="Importer un espace…" click(brings back)
   - type="separator"
   - accelerator=undefined label="Verrouiller maintenant" click
 - label="Onglets"
@@ -1272,6 +1311,7 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - checked=false label="Fenêtre privée" type="checkbox" click
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click(brings back)
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click(brings back)
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click(brings back)
   - label="Raccourcis clavier essentiels" click
@@ -1348,12 +1388,19 @@ exports[`the menu bar, as built > in a private window 1`] = `
   - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
   - accelerator=undefined enabled=true label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
   - accelerator=undefined enabled=true label="Enregistrer en PDF avec l’adresse…" click
   - type="separator"
   - accelerator=undefined enabled=false label="Lire plus tard" click
   - accelerator=undefined enabled=false label="Liste de lecture…" click
+  - enabled=false label="Me le rappeler" visible=false
+    - label="Ce soir" click
+    - label="Demain matin" click
+    - label="Dans une semaine" click
+  - enabled=false label="Rappels d’onglets" visible=false
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=false label="Mots de passe…" visible=false click
   - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=false click
   - accelerator=undefined enabled=false label="Ajouter aux signets" visible=false click
@@ -1507,6 +1554,8 @@ exports[`the menu bar, as built > in a private window 1`] = `
   - accelerator=undefined enabled=false label="Mettre l’espace de côté…" click
   - enabled=false label="Rouvrir un espace mis de côté"
     - label="📚 Lecture" click
+  - enabled=false label="Exporter cet espace…" click
+  - enabled=false label="Importer un espace…" click
 - label="Onglets"
   - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
   - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
@@ -1576,6 +1625,7 @@ exports[`the menu bar, as built > in a private window 1`] = `
   - checked=false label="Fenêtre privée" type="checkbox" click
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=false label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click
@@ -1655,12 +1705,19 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
   - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
   - accelerator=undefined enabled=true label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
   - accelerator=undefined enabled=true label="Enregistrer en PDF avec l’adresse…" click
   - type="separator"
   - accelerator=undefined enabled=true label="Lire plus tard" click
   - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - enabled=true label="Me le rappeler" visible=true
+    - label="Ce soir" click
+    - label="Demain matin" click
+    - label="Dans une semaine" click
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=true label="Mots de passe…" visible=true click
   - accelerator=undefined enabled=true label="Remplir l’identifiant et le mot de passe" visible=true click
   - accelerator=undefined enabled=true label="Ajouter aux signets" visible=true click
@@ -1822,6 +1879,8 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
   - accelerator=undefined enabled=true label="Mettre l’espace de côté…" click
   - enabled=true label="Rouvrir un espace mis de côté"
     - label="📚 Lecture" click
+  - enabled=true label="Exporter cet espace…" click
+  - enabled=true label="Importer un espace…" click
   - type="separator"
   - accelerator=undefined label="Verrouiller maintenant" click
 - label="Onglets"
@@ -1893,6 +1952,7 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
   - checked=false label="Fenêtre privée" type="checkbox" click
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click
@@ -1972,12 +2032,19 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
   - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
   - accelerator=undefined enabled=true label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
   - accelerator=undefined enabled=true label="Enregistrer en PDF avec l’adresse…" click
   - type="separator"
   - accelerator=undefined enabled=true label="Lire plus tard" click
   - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - enabled=true label="Me le rappeler" visible=true
+    - label="Ce soir" click
+    - label="Demain matin" click
+    - label="Dans une semaine" click
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=true label="Mots de passe…" visible=true click
   - accelerator=undefined enabled=true label="Remplir l’identifiant et le mot de passe" visible=true click
   - accelerator=undefined enabled=true label="Ajouter aux signets" visible=true click
@@ -2139,6 +2206,8 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
   - accelerator=undefined enabled=true label="Mettre l’espace de côté…" click
   - enabled=true label="Rouvrir un espace mis de côté"
     - label="📚 Lecture" click
+  - enabled=true label="Exporter cet espace…" click
+  - enabled=true label="Importer un espace…" click
   - type="separator"
   - accelerator=undefined label="Verrouiller maintenant" click
 - label="Onglets"
@@ -2210,6 +2279,7 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
   - checked=false label="Fenêtre privée" type="checkbox" click
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click
@@ -2283,11 +2353,18 @@ exports[`the menu bar, as built > with every optional setting off and windows th
   - accelerator="CmdOrCtrl+Alt+S" enabled=true label="Capturer la partie visible" click
   - accelerator=undefined enabled=true label="Capturer en mode portrait" click
   - accelerator="CmdOrCtrl+Shift+S" enabled=true label="Enregistrer la page sous…" click
+  - accelerator=undefined enabled=true label="Enregistrer la page en Markdown…" click
   - accelerator=undefined enabled=true label="Exporter la page en Markdown…" click
   - accelerator="CmdOrCtrl+P" enabled=true label="Imprimer…" click
   - type="separator"
   - accelerator=undefined enabled=true label="Lire plus tard" click
   - accelerator=undefined enabled=true label="Liste de lecture…" click
+  - enabled=true label="Me le rappeler" visible=true
+    - label="Ce soir" click
+    - label="Demain matin" click
+    - label="Dans une semaine" click
+  - enabled=true label="Rappels d’onglets" visible=true
+    - enabled=false label="Aucun rappel en attente"
   - accelerator=undefined enabled=false label="Mots de passe…" visible=false click
   - accelerator=undefined enabled=false label="Remplir l’identifiant et le mot de passe" visible=false click
   - accelerator=undefined enabled=false label="Ajouter aux signets" visible=false click
@@ -2439,6 +2516,8 @@ exports[`the menu bar, as built > with every optional setting off and windows th
   - accelerator=undefined enabled=true label="Mettre l’espace de côté…" click
   - enabled=true label="Rouvrir un espace mis de côté"
     - label="📚 Lecture" click
+  - enabled=true label="Exporter cet espace…" click
+  - enabled=true label="Importer un espace…" click
 - label="Onglets"
   - accelerator="CmdOrCtrl+T" label="Nouvel onglet…" registerAccelerator=false click
   - accelerator="CmdOrCtrl+Shift+A" enabled=true label="Rechercher un onglet…" visible=true click
@@ -2495,6 +2574,7 @@ exports[`the menu bar, as built > with every optional setting off and windows th
 - label="Fenêtre" role="windowMenu"
 - label="Aide" role="help"
   - label="Premiers pas" click
+  - enabled=true label="Découvrir Lucium" click
   - accelerator="CmdOrCtrl+/" enabled=true label="Aide des raccourcis" visible=true click
   - accelerator="CmdOrCtrl+Alt+K" enabled=true label="Aide des raccourcis" visible=false click
   - label="Raccourcis clavier essentiels" click

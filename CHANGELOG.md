@@ -10,6 +10,31 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **Discover Lucium**: Help › Discover Lucium, the command bar and a button on “Start here”, the welcome sheet and the news sheet open a panel with every function of Lucium, by task: where to find it, its shortcut, “Try it” and “Adjust”. Nothing is counted or sent.
+- **One Space to another Mac**: Spaces › Export This Space… saves one Space with its tabs, folders and archive to a file, sealed with a passphrase if you wish; Spaces › Import a Space… adds it on another Mac, with no server. No cookies, no passwords.
+- **Scroll position restored after a relaunch**: Settings › Tabs and windows › “Restore the scroll position of tabs”, off by default. A tab comes back to where its page was scrolled. Only a number per tab and its address is kept, on your Mac; never the page, nothing for private tabs.
+- **Tab reminders**: right-click a tab › Remind me › This evening, Tomorrow morning or In a week. The tab comes back then, in its space, with a notification. File › Tab reminders lists them. Off in Settings › Optional features.
+- **Search the content of visited pages**: keeps the text of the pages you read on your computer, to find a page by a sentence in History (Settings › Privacy and security › More settings). Off by default; nothing is kept while History is off; never private tabs or passwords; nothing is sent.
+- **Focus mode**: Settings › Optional features › Focus mode keeps a list of sites closed during a timer (25 minutes by default) or a weekly time slot. A blocked site shows a clear page with “Take a 15-minute break” as the way out. Off by default; nothing leaves your Mac.
+- **Bookmark and history prefixes in the command bar**: type `*` or `^` alone or followed by a space (`* recipe`), or `@bookmarks` / `@history`, to search only your bookmarks or your history. A search such as `*.example.com` or `^2`, and a custom site search keyword that starts with `*` or `^`, stay what they were. With no text after it, the bar lists them. Everything stays on this Mac.
+- **Block third-party cookies**: Settings › Privacy and security › Third-party cookies. Content from another site than the tab’s neither receives your cookies nor can set its own, WebSocket included. Off by default, with a list of sites where they stay accepted. Scripts’ own `document.cookie` is not touched.
+- **JavaScript switch per site**: a “JavaScript” row in the site panel turns the scripts of a site off. The page reloads without any script, and a notice or the row turns them back on in one click. Off for no site by default; Lucium’s own pages are never affected.
+- **Save Page as Markdown**: File › Save Page as Markdown… and the command bar save the page’s main content in one click: a `.md` file and a `<name>-images/` folder beside it. A private tab asks first; a folder that exists is never reused (`-2`); images that load only on scroll are not fetched.
+- **One-time codes (TOTP) in the password vault**: a login can hold the key of its two-step codes (base32 key or `otpauth://` address). The panel shows the code with its countdown and copies it, cleared after 30 seconds. The key stays encrypted in the vault and is never logged. RFC 6238, nothing filled into a page.
+
+### Changed
+
+- **Picture in Picture in Lucium’s window, from the site too**: a site’s Picture in Picture button (Twitch, YouTube…) and the automatic picture open Lucium’s floating window, not the system’s. A live stream shows “LIVE”, with no progress line and no ±10 s. A switch in Settings › Tabs and windows turns it off for the site’s button.
+- **Permission prompt, “Allow this time”**: with “Remember for this site” unticked, the button reads “Allow this time”. That yes was already held for the tab only and forgotten with its page, never written or sent. Private tabs keep “Allow”.
+
+### Fixed
+
+- **Live stream with a finite duration**: a live stream whose player reports a finite, growing duration (Twitch) is recognised as live in Lucium’s floating window, so the ±10 s buttons are hidden.
+- **Command bar ranking of a lost profile**: when spaces of a missing profile go back to the default profile, the ranking of that profile's command bar is dropped with it, as it already was at the next launch.
+- **Full-page capture scrolls the page**: “Page entière” now walks the page from top to bottom before shooting, so a site that scrolls in a panel of its own is captured whole, lazy images are loaded, and a fixed header shows once. A page taller than 16 000 pixels is cut there, and Lucium says so.
+
 ## [1.1.5] - 2026-11-20
 
 Your iPhone can now synchronize with your Mac, directly and without a server, and its Today tabs can be shared. On Windows the window draws its own title bar, and Windows and Linux say that they update by hand.

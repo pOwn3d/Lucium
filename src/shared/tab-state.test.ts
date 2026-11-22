@@ -2,7 +2,7 @@
 // every tab (so no class is put on a row, no badge is drawn, and the hover card carries no legend).
 
 import { describe, expect, it } from 'vitest'
-import { failedAfter, tabStateClasses, tabStateLabel, tabStateLegend, tabStateNotes, tabStates, TAB_STATE_ORDER, type TabStateInput } from './tab-state'
+import { failedAfter, tabStateClasses, tabStateLabel, tabStateNotes, tabStates, TAB_STATE_ORDER, type TabStateInput } from './tab-state'
 
 const awake: TabStateInput = { loading: false, awake: true, audible: false, muted: false }
 
@@ -14,7 +14,6 @@ describe('tabStates', () => {
     // The same frozen array each time: the off path allocates nothing per row.
     expect(tabStates(false, busy)).toBe(tabStates(false, awake))
     expect(tabStateClasses(tabStates(false, busy))).toEqual([])
-    expect(tabStateLegend(false)).toEqual([])
   })
 
   it('has nothing to say of a tab the shell knows nothing of, or of one that is simply awake', () => {
@@ -48,8 +47,7 @@ describe('tabStates', () => {
 
 describe('the words of the states', () => {
   it('has five labels in the legend, one per state', () => {
-    expect(tabStateLegend(true)).toEqual(['Chargement', 'En veille', 'Gelé', 'Son', 'Erreur'])
-    expect(TAB_STATE_ORDER.map(tabStateLabel)).toEqual(tabStateLegend(true))
+    expect(TAB_STATE_ORDER.map(tabStateLabel)).toEqual(['Chargement', 'En veille', 'Gelé', 'Son', 'Erreur'])
   })
 
   it('gives the card a line for a failed load, a sleeping page (memory released) and a frozen one, and none for the rest', () => {

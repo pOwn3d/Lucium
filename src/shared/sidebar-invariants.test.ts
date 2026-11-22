@@ -18,7 +18,7 @@ import { PANEL_SCREENS_MAX } from './panel-scale'
 import { isClosedPageUrl } from './closed-history'
 import { FOLDER_MAX_DEPTH, folderDepth, type FolderSide } from './folders'
 import { LIVE_FOLDERS_MAX } from './live-folders'
-import { SESSIONS_MAX } from './sessions'
+import { SESSIONS_MAX, asideOf } from './sessions'
 import { SPLIT_MAX_PANES, SPLIT_MIN_RATIO } from './split'
 import { STATE_VERSION, type SidebarState, type SplitArrangement } from './model'
 import type { JoinZone } from './split-grid'
@@ -107,6 +107,8 @@ const FEATURES: ReadonlyArray<readonly [string, number]> = [
 
 class Gen {
   state: SidebarState
+  /** The clock of the run, as `play` moves it: the reminders are set relative to it. */
+  now = 1_700_000_000_000
   /** Earlier states, for the actions that bring a whole saved state back. */
   readonly history: SidebarState[] = []
   private serial = 0
@@ -269,6 +271,7 @@ const GENERATORS: Generators = {
   'blocking/site-mode': (g) => ({ type: 'blocking/site-mode', site: g.pick(['a.example', 'b.example']), mode: g.pick(['standard', 'strict', null]), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
   'autoplay/site': (g) => ({ type: 'autoplay/site', site: g.pick(['a.example', 'b.example']), mode: g.pick(['allow', 'block', null] as const), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
   'readable/site': (g) => ({ type: 'readable/site', site: g.pick(['a.example', 'b.example']), mode: g.pick(['original', 'dark', 'light', null] as const), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
+  'javascript/site': (g) => ({ type: 'javascript/site', site: g.pick(['a.example', 'b.example']), off: g.chance(0.5), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
   'siteclear/site': (g) => ({ type: 'siteclear/site', site: g.pick(['a.example', 'b.example']), on: g.chance(0.5), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
   'filterlist/add': (g) => {
     const id = `custom-${g.int(4).toString(16).padStart(8, '0')}`
@@ -277,7 +280,8 @@ const GENERATORS: Generators = {
   'filterlist/remove': (g) => ({ type: 'filterlist/remove', id: `custom-${g.int(4).toString(16).padStart(8, '0')}` }),
   'filterlist/enable': (g) => ({ type: 'filterlist/enable', id: `custom-${g.int(4).toString(16).padStart(8, '0')}`, enabled: g.chance(0.5) }),
   'profile/used': (g) => ({ type: 'profile/used', id: g.pick(PROFILES) }),
-  'profile/revert-missing': (g) => ({ type: 'profile/revert-missing', ids: [g.pick(PROFILES)] }),
+  // Mostly a profile some space really uses, so that the action changes something in the run (a blind pick among five names rarely meets one).
+  'profile/revert-missing': (g) => ({ type: 'profile/revert-missing', ids: [g.chance(0.7) ? g.pick(g.state.spaces.map((space) => space.profileId)) : g.pick(PROFILES)] }),
   'developer/site': (g) => ({ type: 'developer/site', site: g.pick(['a.example', 'b.example']), enabled: g.chance(0.5) }),
   'extension/set-enabled': (g) => ({ type: 'extension/set-enabled', profileId: g.pick(PROFILES), extensionId: 'a'.repeat(32), enabled: g.chance(0.5) }),
   'today/clear': (g) => ({ type: 'today/clear', ...(g.chance(0.5) ? { spaceId: g.spaceId() } : {}) }),
@@ -290,6 +294,11 @@ const GENERATORS: Generators = {
   'readlater/add': (g) => ({ type: 'readlater/add', tabId: g.tabId() }),
   'readlater/open': (g) => ({ type: 'readlater/open', id: g.idFrom(g.state.readLater.map((i) => i.id)) }),
   'readlater/remove': (g) => ({ type: 'readlater/remove', id: g.idFrom(g.state.readLater.map((i) => i.id)) }),
+  // Relative to the clock of the run, which moves forward between steps: some reminders come due, and the odd one is already past.
+  'reminder/add': (g) => ({ type: 'reminder/add', tabId: g.tabWhere((tab) => tab.private !== true && /^https?:/.test(tab.url)), dueAt: g.chance(0.15) ? g.pick([0, 1, Number.NaN]) : g.now + g.pick([10 ** 5, 10 ** 6, 10 ** 7, 3 * 10 ** 7]) }),
+  'reminder/cancel': (g) => ({ type: 'reminder/cancel', id: g.idFrom(g.state.tabReminders.map((r) => r.id)) }),
+  'reminder/open': (g) => ({ type: 'reminder/open', id: g.idFrom(g.state.tabReminders.map((r) => r.id)) }),
+  'reminder/fire': () => ({ type: 'reminder/fire' }),
   'readlater/clear': () => ({ type: 'readlater/clear' }),
   'readlater-folder/create': (g) => ({ type: 'readlater-folder/create', name: g.text() }),
   'readlater-folder/rename': (g) => ({ type: 'readlater-folder/rename', id: g.idFrom(g.state.readLaterFolders.map((f) => f.id)), name: g.text() }),
@@ -449,6 +458,8 @@ const GENERATORS: Generators = {
   'session/delete': (g) => ({ type: 'session/delete', id: g.sessionId() }),
   'space/aside': (g) => ({ type: 'space/aside', id: g.spaceId() }),
   'space/reopen': (g) => ({ type: 'space/reopen', id: g.sessionId() }),
+  // A space of the state itself, as a transfer file would hold it: its ids are taken, so the import has to make them anew.
+  'space/import': (g) => ({ type: 'space/import', aside: asideOf(g.state, g.spaceId()) ?? { space: g.state.spaces[0]!, index: 0, folders: [], tabs: [], splits: [], selected: null, archive: [] } }),
   'backup/restore': (g) => {
     const from = g.history.length > 0 && !g.chance(0.2) ? g.pick(g.history) : g.state
     const { spaces, tabs, folders, activeSpaceId, activeTabBySpace, splits, archive } = from
@@ -759,6 +770,7 @@ export function play(seed: number, steps: number, survey?: (failure: Failure) =>
   let beforeText = canonical(gen.state)
   for (let step = 0; step < steps; step++) {
     ctx.now += gen.int(3 * 3_600_000)
+    gen.now = ctx.now
     // Mostly the actions of everyday use, now and then any other.
     const type = gen.chance(0.7) ? gen.pick(EVERYDAY) : gen.pick(types)
     const action = GENERATORS[type](gen) as Action
@@ -810,12 +822,13 @@ const EVERYDAY: Array<Action['type']> = [
   'tab/open', 'tab/open', 'tab/open', 'tab/open', 'tab/open', 'tab/open', 'tab/update', 'tab/update', 'tab/move', 'tabs/move', 'folder/create', 'tab/pin', 'tab/pin', 'tab/select', 'tab/close', 'tab/pin', 'tab/unpin', 'tab/move', 'tabs/move', 'tab/archive', 'tab/duplicate', 'tab/move-to-space', 'tab/rename',
   'folder/create', 'folder/create-with', 'folder/move', 'folder/delete', 'folder/duplicate', 'folder/to-space', 'folder/toggle', 'folder/bottom', 'folder/bottom', 'tabs/tidy', 'tabs/tidy', 'tabs/tidy', 'tabs/untidy', 'tabs/untidy',
   'space/create', 'space/select', 'space/update', 'space/move',
+  'reminder/add', 'reminder/fire', 'reminder/open',
   'favorite/add', 'favorite/open', 'favorite/remove', 'favorite/place', 'favorite/move',
   'split/create', 'split/create', 'split/create', 'split/remove', 'split/move', 'split/ratios', 'split/orientation', 'split/orientation', 'split/restore', 'split/layout', 'split/layout', 'split/grid', 'split/grid',
   'archive/restore', 'archive/restore-last', 'archive/sweep', 'tab/tree-collapse', 'tab/tree-detach', 'settings/update', 'tab/back-to-origin', 'import/merge', 'import/revert',
   'container/create', 'container/update', 'container/rule', 'container/permission', 'container/delete', 'tab/set-container', 'space/panel-add', 'space/panel-remove', 'bookmark/add', 'bookmark/tag-rename', 'bookmark/tag-delete', 'bookmark/edit', 'readlater/add', 'readlater/move', 'readlater-folder/create', 'readlater-folder/collapse', 'tabs/reset-pinned', 'tab/back-to-anchor', 'tab/separate', 'tab/replace-anchor', 'livefolder/result', 'livefolder/refresh', 'livefolder/edit', 'livefolder/edit', 'livefolder/create', 'filterlist/add', 'filterlist/enable', 'filterlist/remove', 'favicon/fill', 'tab/forget-origin',
   'session/save', 'session/restore', 'space/reopen', 'livefolder/create',
-  'view/save', 'view/save', 'view/open', 'view/open', 'view/edit', 'view/capture', 'view/reset', 'view/move', 'view/remove', 'view/restore', 'view/create',
+  'view/save', 'view/save', 'view/open', 'view/open', 'view/edit', 'view/capture', 'view/capture', 'view/reset', 'view/move', 'view/remove', 'view/restore', 'view/create',
   'sync/apply', 'sync/apply', 'sync/apply'
 ]
 

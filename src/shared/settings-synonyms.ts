@@ -129,7 +129,7 @@ export const SETTINGS_SYNONYMS: Readonly<Record<string, readonly SearchTarget[]>
   // The old title of the group of the sleep.
   performances: ['sleepAfterMinutes', 'sleepMode'],
   permission: ['sitePermissions', 'allowScreenShare', 'webHardware'],
-  pip: ['autoPictureInPicture', 'documentPictureInPicture'],
+  pip: ['autoPictureInPicture', 'sitePictureInPictureInLucium', 'documentPictureInPicture'],
   plier: ['sidebarRight'],
   police: ['uiScale'],
   prive: ['privateTabs', 'guestProfile'],
