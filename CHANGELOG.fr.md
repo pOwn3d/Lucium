@@ -42,6 +42,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Ajouts
 
 - **Bloquer les cookies tiers** : Réglages › Vie privée et sécurité › Cookies tiers. Un contenu d’un autre site que l’onglet ne reçoit plus vos cookies et ne peut plus en déposer, WebSocket compris. Désactivé par défaut, avec une liste de sites où ils restent acceptés. `document.cookie` des scripts n’est pas touché.
+### Ajouts
+
+- **Interrupteur JavaScript par site** : une ligne « JavaScript » du panneau du site coupe les scripts d’un site. La page se recharge sans aucun script, et un avis ou la ligne les rétablit en un clic. Coupé pour aucun site par défaut ; les pages de Lucium ne sont jamais concernées.
 
 ## [1.1.5] - 2026-11-20
 

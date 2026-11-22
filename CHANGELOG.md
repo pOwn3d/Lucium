@@ -46,6 +46,9 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Added
 
 - **Block third-party cookies**: Settings › Privacy and security › Third-party cookies. Content from another site than the tab’s neither receives your cookies nor can set its own, WebSocket included. Off by default, with a list of sites where they stay accepted. Scripts’ own `document.cookie` is not touched.
+### Added
+
+- **JavaScript switch per site**: a “JavaScript” row in the site panel turns the scripts of a site off. The page reloads without any script, and a notice or the row turns them back on in one click. Off for no site by default; Lucium’s own pages are never affected.
 
 ## [1.1.5] - 2026-11-20
 

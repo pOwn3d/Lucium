@@ -241,6 +241,7 @@ export function defaultSettings(): Settings {
     autoplayPerSite: true,
     siteDataClearOnCloseEnabled: false,
     siteDataClearOnClose: [],
+    siteJavascriptOff: [],
     siteDataClearOnQuit: false,
     customFilterListsEnabled: true,
     customFilterLists: [],
