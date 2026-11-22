@@ -478,6 +478,18 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     isNew: true
   },
   {
+    id: 'safe-browsing',
+    task: 'protect',
+    level: 'beginner',
+    feature: 'safe-browsing',
+    summary: 'discover.sure-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('safeBrowsing') }),
+    keywords: 'navigation sure hameconnage phishing malware logiciels malveillants site dangereux avertissement liste safe browsing warning dangerous',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
     id: 'site-javascript',
     task: 'protect',
     level: 'advanced',
@@ -1065,6 +1077,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'https-first': 'protect',
   'global-privacy-control': 'protect',
   'third-party-cookies': 'protect',
+  'safe-browsing': 'protect',
   'strip-tracking': 'protect',
   'bypass-redirects': 'protect',
   'search-suggestions': 'fast',

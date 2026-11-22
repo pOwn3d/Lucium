@@ -1,0 +1,25 @@
+{
+  "builtAt": "2026-11-22",
+  "lists": {
+    "phishing": {
+      "url": "https://raw.githubusercontent.com/mitchellkrogza/Phishing.Database/master/phishing-domains-ACTIVE.txt",
+      "name": "Phishing.Database, phishing-domains-ACTIVE",
+      "licence": "MIT",
+      "hosts": 392051,
+      "skipped": 100,
+      "removedShared": 12,
+      "sourceSha256": "70c6c2e24e6b3484e7ace27b079723e55937bc1f4cbd98bea38a472ec8e37326",
+      "sha256": "0cbb7d42d2b3e6c2060e5bb13c88675d5af5d3dc611ae69c704dc95c3723a78b"
+    },
+    "malware": {
+      "url": "https://malware-filter.gitlab.io/malware-filter/urlhaus-filter-domains-online.txt",
+      "name": "urlhaus-filter, domains online (data of abuse.ch URLhaus)",
+      "licence": "CC0-1.0 and MIT",
+      "hosts": 1929,
+      "skipped": 0,
+      "removedShared": 0,
+      "sourceSha256": "bdd2e90a028354df052614cb1112121c2345dd00c5f4f6661f74db99fb71f9b0",
+      "sha256": "cc29c6fe34b3090dd515f9e197b6f55e65cc162c1440ed1ad6fa8eb0d32995f8"
+    }
+  }
+}

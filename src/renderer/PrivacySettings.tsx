@@ -4,6 +4,7 @@
 import { useId, useState } from 'react'
 import { checkBlockException } from '@shared/blocker'
 import { THIRD_PARTY_COOKIE_EXCEPTIONS_MAX, trackingParamList } from '@shared/privacy'
+import { SAFE_BROWSING_EXCEPTIONS_MAX } from '@shared/safe-browsing'
 import { fieldError } from './field-error'
 import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
@@ -12,45 +13,34 @@ import { t } from '@shared/i18n'
 
 const SHOWN_PARAMS = 8
 
-type ExceptionKey = 'thirdPartyCookieExceptions' | 'unwrapExceptions'
-
-/** One list of sites on the subpage of the exceptions: the sites in it, a remove button for each, and a field that checks what is typed. */
-function ExceptionList({ settings, update, settingKey, title, ariaLabel }: { settings: Settings; update: (patch: Partial<Settings>) => void; settingKey: ExceptionKey; title: string; ariaLabel: string }) {
-  const exceptions = settings[settingKey]
+/** A list of sites (a host and its subdomains) with a field to add one: what the exceptions of an option are. */
+function SiteList({ settingKey, sites, max, title, footnote, label, onChange }: { settingKey: 'thirdPartyCookieExceptions' | 'safeBrowsingExceptions' | 'unwrapExceptions'; sites: readonly string[]; max: number; title: string; footnote: string; label: string; onChange: (sites: string[]) => void }) {
   const [draft, setDraft] = useState('')
-  const verdict = draft.trim() === '' ? null : exceptions.length >= THIRD_PARTY_COOKIE_EXCEPTIONS_MAX ? { error: t('guard-settings.la-liste-est-pleine') } : checkBlockException(draft, exceptions)
+  const verdict = draft.trim() === '' ? null : sites.length >= max ? { error: t('guard-settings.la-liste-est-pleine') } : checkBlockException(draft, sites)
   const error = fieldError(useId(), verdict !== null && 'error' in verdict)
   const add = () => {
     if (!verdict || !('host' in verdict)) return
-    update({ [settingKey]: [...exceptions, verdict.host] })
+    onChange([...sites, verdict.host])
     setDraft('')
   }
   return (
-    <Group keys={[settingKey]} title={title} footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}>
+    <Group keys={[settingKey]} title={title} footnote={footnote}>
       <>
-        {exceptions.length === 0 && <Row label={<span className="muted">{t('settings.aucun-site')}</span>} />}
-        {exceptions.map((host) => (
+        {sites.length === 0 && <Row label={<span className="muted">{t('settings.aucun-site')}</span>} />}
+        {sites.map((host) => (
           <div key={host} className="pref-row">
             <div className="pref-label">
               <code>{host}</code>
             </div>
             <div className="pref-control">
-              <button className="link-button" onClick={() => update({ [settingKey]: exceptions.filter((h) => h !== host) })} aria-label={t('settings.retirer-name', { name: host })}>
+              <button className="link-button" onClick={() => onChange(sites.filter((h) => h !== host))} aria-label={t('settings.retirer-name', { name: host })}>
                 {t('settings.retirer')}
               </button>
             </div>
           </div>
         ))}
         <div className="pref-row pref-form">
-          <input
-            className="field"
-            placeholder={t('settings.exemple-org')}
-            aria-label={ariaLabel}
-            {...error.field}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && add()}
-          />
+          <input className="field" placeholder={t('settings.exemple-org')} aria-label={label} {...error.field} value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
           <button className="button" disabled={!verdict || 'error' in verdict} onClick={add}>
             {t('settings.ajouter')}
           </button>
@@ -120,10 +110,51 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
       />
     </Group>
 
-    {/* The sites whose links are left as they are, and those where third-party cookies are accepted: on the subpage of the other exceptions, drawn whether the option is on or not. */}
+    <Group keys={['safeBrowsing']} title={t('privacy-settings.navigation-sure')}>
+      <Check
+        settingKey="safeBrowsing"
+        label={t('privacy-settings.prevenir-avant-d-ouvrir-un-site-dangereux')}
+        hint={t('privacy-settings.compare-chaque-page-a-une-liste-livree')}
+        more={t('privacy-settings.la-liste-est-livree-avec-lucium')}
+        checked={settings.safeBrowsing}
+        onChange={(safeBrowsing) => update({ safeBrowsing })}
+      />
+      {settings.safeBrowsing && snapshot.safeLists === 'unavailable' && (
+        <div className="pref-row pref-message pref-error" role="status">
+          {t('privacy-settings.liste-indisponible')}
+        </div>
+      )}
+    </Group>
+
+    {/* The sites where third-party cookies are accepted, where the warning of safe browsing is not shown, and whose links are left as they are: on the subpage of the other exceptions, drawn whether the option is on or not. */}
     <Subpage id="exceptions">
-      <ExceptionList settings={settings} update={update} settingKey="thirdPartyCookieExceptions" title={t('privacy-settings.sites-ou-les-cookies-tiers-sont-acceptes')} ariaLabel={t('privacy-settings.site-ou-accepter-les-cookies-tiers')} />
-      <ExceptionList settings={settings} update={update} settingKey="unwrapExceptions" title={t('privacy-settings.sites-dont-les-liens-restent-tels-quels')} ariaLabel={t('privacy-settings.site-dont-les-liens-restent-tels-quels')} />
+      <SiteList
+        settingKey="thirdPartyCookieExceptions"
+        sites={settings.thirdPartyCookieExceptions}
+        max={THIRD_PARTY_COOKIE_EXCEPTIONS_MAX}
+        title={t('privacy-settings.sites-ou-les-cookies-tiers-sont-acceptes')}
+        footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}
+        label={t('privacy-settings.site-ou-accepter-les-cookies-tiers')}
+        onChange={(thirdPartyCookieExceptions) => update({ thirdPartyCookieExceptions })}
+      />
+      <SiteList
+        settingKey="safeBrowsingExceptions"
+        sites={settings.safeBrowsingExceptions}
+        max={SAFE_BROWSING_EXCEPTIONS_MAX}
+        title={t('privacy-settings.sites-ou-la-navigation-sure-ne-previent-pas')}
+        footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}
+        label={t('privacy-settings.site-ou-ne-pas-prevenir')}
+        onChange={(safeBrowsingExceptions) => update({ safeBrowsingExceptions })}
+      />
+      <SiteList
+        settingKey="unwrapExceptions"
+        sites={settings.unwrapExceptions}
+        max={THIRD_PARTY_COOKIE_EXCEPTIONS_MAX}
+        title={t('privacy-settings.sites-dont-les-liens-restent-tels-quels')}
+        footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}
+        label={t('privacy-settings.site-dont-les-liens-restent-tels-quels')}
+        onChange={(unwrapExceptions) => update({ unwrapExceptions })}
+      />
     </Subpage>
     </>
   )

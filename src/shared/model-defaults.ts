@@ -180,6 +180,8 @@ export function defaultSettings(): Settings {
     thirdPartyCookieExceptions: [],
     unwrapRedirects: false,
     unwrapExceptions: [],
+    safeBrowsing: false,
+    safeBrowsingExceptions: [],
     profileNames: {},
     externalLinksInLittleArc: true,
     peekOnExternalLinks: false,

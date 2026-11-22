@@ -463,6 +463,8 @@ export interface UiSnapshot {
   plusOpen?: boolean
   /** The filter lists of the ad and tracker blocker: installed, updated when, failed how. Absent in a private window. */
   blocking?: BlockingStatus
+  /** Safe browsing, while it is on: `unavailable` when a list is missing or damaged, so that nothing is warned about. Absent while it is off. */
+  safeLists?: 'ready' | 'unavailable'
   /** The lock, when it is on and has a phrase (absent otherwise: nothing about it reaches the interface). With `appLocked` the state above is a skeleton. */
   lock?: LockView
   /** The windows the command bar can go to by name (the named ones other than this). Only present while windows can be named (a setting). */

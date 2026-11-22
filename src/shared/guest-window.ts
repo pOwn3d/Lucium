@@ -62,7 +62,8 @@ export const GUEST_INHERITED = [
   'stripTrackingParams',
   'stripCopiedLinks',
   'blockThirdPartyCookies',
-  'unwrapRedirects'
+  'unwrapRedirects',
+  'safeBrowsing'
 ] as const satisfies readonly (keyof Settings)[]
 
 /** The settings of the main window a guest window follows. */

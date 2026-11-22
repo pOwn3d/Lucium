@@ -215,6 +215,14 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'safe-browsing',
+    key: 'safeBrowsing',
+    get label() { return t('privacy-settings.prevenir-avant-d-ouvrir-un-site-dangereux') },
+    group: 'privacy',
+    get description() { return t('features.compare-chaque-page-a-une-liste-de-sites', { settingsPath: settingsPath('safeBrowsing') }) },
+    cost: ['listeners', 'memory']
+  },
+  {
     id: 'strip-tracking',
     key: 'stripTrackingParams',
     get label() { return t('privacy-settings.retirer-les-parametres-de-suivi-des-adresses') },
