@@ -1817,6 +1817,18 @@
           "ok": true
         },
         {
+          "name": "before the sleep, the tab has gone through its three pages and is on the last",
+          "ok": true
+        },
+        {
+          "name": "the idle tab goes to sleep, its page let go",
+          "ok": true
+        },
+        {
+          "name": "woken, the tab goes back through the same three pages, on the last one",
+          "ok": true
+        },
+        {
           "name": "the menu offers \"Ne jamais mettre cet onglet en veille\", unchecked",
           "ok": true
         },
@@ -6690,7 +6702,7 @@
           "ok": true
         },
         {
-          "name": "...with four switches, all off",
+          "name": "...with five switches, all off",
           "ok": true
         },
         {
@@ -7544,6 +7556,10 @@
           "ok": true
         },
         {
+          "name": "little: the window of the first state opens in the middle of the work area",
+          "ok": true
+        },
+        {
           "name": "little: the window of the first state is not resizable and has no page yet",
           "ok": true
         },
@@ -7553,6 +7569,10 @@
         },
         {
           "name": "little: Return on an address loads the page in the same window and the window leaves its first state",
+          "ok": true
+        },
+        {
+          "name": "little: it grew around its centre: same centre, larger on every side, inside the work area, and now resizable",
           "ok": true
         },
         {
@@ -11807,6 +11827,10 @@
         {
           "name": "card: turned off again, the line is gone and nothing is measured",
           "ok": true
+        },
+        {
+          "name": "share: the handler of the engine is put back on the sessions of the tabs when the checks end (the suites after this one need it)",
+          "ok": true
         }
       ]
     },
@@ -14339,6 +14363,34 @@
           "ok": true
         },
         {
+          "name": "warn: the run starts with the warning pinned off (see below)",
+          "ok": true
+        },
+        {
+          "name": "warn: a file that can run asks first, with its name and the site it comes from",
+          "ok": true
+        },
+        {
+          "name": "warn: « Annuler » saves nothing: the download is cancelled and the downloads folder is as it was",
+          "ok": true
+        },
+        {
+          "name": "warn: ...while it was asked the file waited in the temporary folder, and nothing is left there",
+          "ok": true
+        },
+        {
+          "name": "warn: « Enregistrer » keeps the file, whole, in the downloads folder",
+          "ok": true
+        },
+        {
+          "name": "warn: a document is not asked about",
+          "ok": true
+        },
+        {
+          "name": "warn: with the setting off a file that can run is saved without the question",
+          "ok": true
+        },
+        {
           "name": "open-with: off, the menu of a finished download has no \"Ouvrir avec…\"",
           "ok": true
         },
@@ -15093,6 +15145,22 @@
           "ok": true
         },
         {
+          "name": "a11y: discover: every control, image and dialog has an accessible name",
+          "ok": true
+        },
+        {
+          "name": "a11y: discover: every switch, checkbox and tab says its state",
+          "ok": true
+        },
+        {
+          "name": "a11y: discover: nothing is focusable without a role",
+          "ok": true
+        },
+        {
+          "name": "a11y: discover: the page language is French and no tab index is above 0",
+          "ok": true
+        },
+        {
           "name": "a11y: site control centre: every control, image and dialog has an accessible name",
           "ok": true
         },
@@ -15538,6 +15606,10 @@
         },
         {
           "name": "a11y: Escape closes the panel “spaces”",
+          "ok": true
+        },
+        {
+          "name": "a11y: Escape closes the panel “discover”",
           "ok": true
         },
         {
@@ -17890,6 +17962,18 @@
           "ok": true
         },
         {
+          "name": "position: a window of a page opens in the middle of the work area of its screen",
+          "ok": true
+        },
+        {
+          "name": "position: ...and wholly inside it",
+          "ok": true
+        },
+        {
+          "name": "position: ...and stays above the other windows (the main window does not)",
+          "ok": true
+        },
+        {
           "name": "delay: it is not closed before the delay (30 minutes of 1 hour)",
           "ok": true
         },
@@ -18420,6 +18504,14 @@
           "ok": true
         },
         {
+          "name": "full page: a page that scrolls inside is captured whole",
+          "ok": true
+        },
+        {
+          "name": "full page: the window is back to its size afterwards",
+          "ok": true
+        },
+        {
           "name": "portrait: the portrait capture opens the sheet",
           "ok": true
         },
@@ -18481,6 +18573,18 @@
         },
         {
           "name": "a link of another application is still opened in a tab (the old path is unchanged)",
+          "ok": true
+        },
+        {
+          "name": "open-file: a page of the disk opens in a tab, by its file address (a space in its name kept)",
+          "ok": true
+        },
+        {
+          "name": "open-file: and the page loads",
+          "ok": true
+        },
+        {
+          "name": "open-file: a type a tab would download, and a path that is not absolute, open nothing",
           "ok": true
         },
         {
@@ -20139,6 +20243,107 @@
         }
       ]
     },
+    "work-views": {
+      "code": 0,
+      "checks": [
+        {
+          "name": "save: the menu of the split view offers « Enregistrer comme vue de travail… », enabled",
+          "ok": true
+        },
+        {
+          "name": "save: it opens the sheet of the view",
+          "ok": true
+        },
+        {
+          "name": "save: Return saves a view named as typed, with the two sites in their order and their proportions",
+          "ok": true
+        },
+        {
+          "name": "save: the sheet closes, and the split view on screen is the view’s",
+          "ok": true
+        },
+        {
+          "name": "tile: it appears in the grid of the favourites",
+          "ok": true
+        },
+        {
+          "name": "tile: a button named for a screen reader (« Matin, vue de travail, 2 sites »), current while its split view is on screen",
+          "ok": true
+        },
+        {
+          "name": "tile: it draws the two panes side by side, the first wider (60 / 40)",
+          "ok": true
+        },
+        {
+          "name": "open: (control) the two tabs archived, the split view is gone",
+          "ok": true
+        },
+        {
+          "name": "open: a real click on the tile opens the two sites in a split view of this space, marked as the view’s, at 60 / 40",
+          "ok": true
+        },
+        {
+          "name": "open: the pages load in their panes",
+          "ok": true
+        },
+        {
+          "name": "open: the tile is lit",
+          "ok": true
+        },
+        {
+          "name": "second click: the same split view comes back, and no tab is opened",
+          "ok": true
+        },
+        {
+          "name": "menu: the tile’s menu has Ouvrir, Modifier…, Enregistrer ce qui est affiché, Revenir aux adresses enregistrées and Retirer la vue de travail",
+          "ok": true
+        },
+        {
+          "name": "remove: the tile goes and the tabs stay, in an ordinary split view",
+          "ok": true
+        },
+        {
+          "name": "remove: a notice says so and offers « Annuler »",
+          "ok": true
+        },
+        {
+          "name": "remove: « Annuler » puts the view back, its tile lit again",
+          "ok": true
+        },
+        {
+          "name": "Dock: the menu lists the view under « Vues de travail », with its icon",
+          "ok": true
+        },
+        {
+          "name": "Dock: its entry shows the view again in the window, without opening anything more",
+          "ok": true
+        },
+        {
+          "name": "+: the popover has « Nouvelle vue de travail… »",
+          "ok": true
+        },
+        {
+          "name": "+: it opens the whole sheet of a new view",
+          "ok": true
+        },
+        {
+          "name": "+: the sheet has a field for each of the two sites to come",
+          "ok": true
+        },
+        {
+          "name": "off: the tile goes, the view stays in the state",
+          "ok": true
+        },
+        {
+          "name": "off: the menu of the split view no longer offers to save it",
+          "ok": true
+        },
+        {
+          "name": "on again: the tile is back",
+          "ok": true
+        }
+      ]
+    },
     "probes-web": {
       "code": 0,
       "checks": [
@@ -20524,6 +20729,26 @@
           "ok": true
         },
         {
+          "name": "activeTab: a script injected in the isolated world after the click has chrome.runtime.id, chrome.storage and chrome.runtime.onMessage",
+          "ok": true
+        },
+        {
+          "name": "activeTab: ...its chrome.runtime.sendMessage reaches the worker of the extension, which answers it and sees the tab and the extension as the sender",
+          "ok": true
+        },
+        {
+          "name": "activeTab: ...its chrome.storage.local is the storage of the extension (what it writes, the worker reads)",
+          "ok": true
+        },
+        {
+          "name": "activeTab: ...a message of the worker (chrome.tabs.sendMessage) reaches its chrome.runtime.onMessage listener, and the answer comes back",
+          "ok": true
+        },
+        {
+          "name": "activeTab: ...and none of it is given to the page itself (its main world has no chrome.storage, no bridge, no runtime and none of the names of the script)",
+          "ok": true
+        },
+        {
           "name": "activeTab: the click gives nothing on another tab",
           "ok": true
         },
@@ -20637,11 +20862,124 @@
         }
       ]
     },
+    "activetab-origin": {
+      "code": 0,
+      "checks": [
+        {
+          "name": "the probe extension \"Lucium Active Tab Origin Probe\" is loaded",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: the page of the lent origin loads",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: the worker of the probe answers the page",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: before the click, the extension is refused",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: the click lends the tab: a function runs in the isolated world and answers the text of the page",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: ...a file runs in the world of the page",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: ...a style sheet applies to the page",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: ...and the one the extension inserted can be taken away",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: a pushState on the same origin keeps the loan",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: a new document of the same origin keeps the loan: every call made while the tab changes documents is answered",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: func, isolated world, another origin of the same host: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: file, isolated world, another origin of the same host: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: file, isolated world, a redirect of the server to another site: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: file, isolated world, the page itself leaves for another site: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: func, world of the page, another origin of the same host: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: file, world of the page, another origin of the same host: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: func, world of the page, another site: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: file, world of the page, another site: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: style sheet of the author, another origin of the same host: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: style sheet of the user, another origin of the same host: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: style sheet of the user, another site: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: style sheet file, another origin of the same host: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: style sheet file, a redirect of the server to another site: nothing of the extension runs, applies or is read on the origin that was not lent",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: the copy of the probe that holds the host permission is loaded",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: ...its worker answers the page",
+          "ok": true
+        },
+        {
+          "name": "activeTab origin: an extension that holds the host permission runs its script with no click, and still in the page the tab goes to (no loan is asked of it, and none is checked)",
+          "ok": true
+        }
+      ]
+    },
     "mv2-blocking": {
       "code": 0,
       "checks": [
         {
           "name": "the probe extension \"Lucium MV2 Blocking Probe\" is loaded",
+          "ok": true
+        },
+        {
+          "name": "mv2 blocking: the Extensions page takes the probe folder (the first look of a folder accepts its Manifest V2, which names background.js) and warns of its old format",
           "ok": true
         },
         {
@@ -20678,6 +21016,200 @@
         },
         {
           "name": "mv2 blocking: a listener that answers after 1000 ms does not hold the request: it goes on after that time, and its late cancel is not applied",
+          "ok": true
+        }
+      ]
+    },
+    "tabcapture": {
+      "code": 0,
+      "checks": [
+        {
+          "name": "the probe extension \"Lucium Tab Capture Probe\" is loaded",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the page that drives the probe and the tab to capture load",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the capture is off for the extension until the person allows it: getMediaStreamId is refused with the sentence that says so",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: ...and the person is told, by an event that the window turns into a notice with « Ouvrir les détails »",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: a tab that was not handed over to the extension is refused, in the words of the extension platform",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the offscreen document is refused a microphone, a camera, a desktop and a screen with a NotSupportedError and the message that says why (Electron went on)",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: ...and no window was made by those requests (the helper page is only made for a capture)",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: a web page that asks for the address of the helper page (a frame, a script, window.open) is given no document: the script fails, nothing opens, no frame of it holds the helper",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the tab is silent for the person before the capture (the state the sound must go back to)",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: handed over, allowed, the extension gets an identifier (a random UUID)",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the offscreen document gets a stream with one track of sound and none of picture, and that track is live and not muted",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the tab carries the mark of the extension while it listens, and the shell was told it began",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: one helper page was made for the capture: a window nobody sees, on the fixed address of the helper",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the helper page reaches no Node, no bridge of the interface, no extension API (window.chrome of any page has no runtime or storage), and one function only of Lucium (luciumCapture.send), and its process is sandboxed",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: ...and its address is a secure context where it may ask for the screen and read the samples of a track (isSecureContext, origin of the helper, getDisplayMedia and MediaStreamTrackProcessor present)",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the helper page is in the session of the tab it listens to (the profile of the extension)",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the helper page cannot be made to go anywhere: it stays on its address and no window opens",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: ...and it opens no window of its own",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the tab is silent for the person while the capture runs",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the stream carries the sound of the tab (a peak above 0.05 for a tone of 0.2) although the tab is silent for the person",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: ...and the track is still one audio track, live, not muted, after the sound ran",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: getCapturedTabs lists the tab",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the same identifier is refused the second time",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: a tab that is captured cannot be captured again (one capture by tab)",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: stopped by the person, the mark goes and the sound is as it was (silent: it was silent before)",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: ...and the helper page is destroyed with the capture it was made for",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: ...and the page that listened sees its track end (it was asked to, or its document was replaced)",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the tab was taken back from the extension: it has to be handed over again",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the tab is made audible again for the next capture",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: a second capture begins after the first one ended",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the tab is silent for the person while it runs",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the second capture has a helper page of its own: one window, not two",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: the person takes the permission back: the capture ends, the mark goes and the tab is audible as before",
+          "ok": true
+        },
+        {
+          "name": "tabcapture: ...and its helper page is destroyed: no window is left",
+          "ok": true
+        }
+      ]
+    },
+    "extconsole": {
+      "code": 0,
+      "checks": [
+        {
+          "name": "the probe extension \"Lucium Console Probe\" is loaded",
+          "ok": true
+        },
+        {
+          "name": "the probe extension \"Lucium Console Probe V2\" is loaded",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the page that drives the probe loads",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the offscreen document of the probe opens and its page is heard (it says its own line)",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the options page of the probe opens in a tab and its page is heard",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the popup of the probe opens and its page is heard",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the background page of the Manifest V2 probe is heard",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the journal holds the line of each page that opened (it was listening to them: an empty journal proves nothing)",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the offscreen document and the background page of the Manifest V2 probe have no context isolation (the library says so on their console: the checks below prove something)",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the journal of the extensions holds no line of Lucium's preloads and none about the context isolation (what the Extensions page shows)",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the console of the pages themselves holds no line of Lucium's preloads (offscreen document, background page, options page, popup)",
+          "ok": true
+        },
+        {
+          "name": "extconsole: the options page, which has context isolation, still has the media bridge of Lucium (the volume of a tab)",
           "ok": true
         }
       ]
@@ -20918,10 +21450,8 @@
     }
   },
   "apiProbe": {
-    "present": 106,
-    "missing": [
-      "sessions"
-    ],
+    "present": 108,
+    "missing": [],
     "calls": {
       "storage.local set/get": "ok",
       "storage.session set/get": "ok",
