@@ -3,7 +3,7 @@
 
 import { useId, useState } from 'react'
 import { checkBlockException } from '@shared/blocker'
-import { THIRD_PARTY_COOKIE_EXCEPTIONS_MAX, trackingParamList } from '@shared/privacy'
+import { HTTPS_ONLY_EXCEPTIONS_MAX, THIRD_PARTY_COOKIE_EXCEPTIONS_MAX, trackingParamList } from '@shared/privacy'
 import { SAFE_BROWSING_EXCEPTIONS_MAX } from '@shared/safe-browsing'
 import { fieldError } from './field-error'
 import type { UiSnapshot } from '@shared/ipc'
@@ -14,7 +14,7 @@ import { t } from '@shared/i18n'
 const SHOWN_PARAMS = 8
 
 /** A list of sites (a host and its subdomains) with a field to add one: what the exceptions of an option are. */
-function SiteList({ settingKey, sites, max, title, footnote, label, onChange }: { settingKey: 'thirdPartyCookieExceptions' | 'safeBrowsingExceptions' | 'unwrapExceptions'; sites: readonly string[]; max: number; title: string; footnote: string; label: string; onChange: (sites: string[]) => void }) {
+function SiteList({ settingKey, sites, max, title, footnote, label, onChange }: { settingKey: 'thirdPartyCookieExceptions' | 'safeBrowsingExceptions' | 'unwrapExceptions' | 'httpsOnlyExceptions'; sites: readonly string[]; max: number; title: string; footnote: string; label: string; onChange: (sites: string[]) => void }) {
   const [draft, setDraft] = useState('')
   const verdict = draft.trim() === '' ? null : sites.length >= max ? { error: t('guard-settings.la-liste-est-pleine') } : checkBlockException(draft, sites)
   const error = fieldError(useId(), verdict !== null && 'error' in verdict)
@@ -126,6 +126,33 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
       )}
     </Group>
 
+    <Group keys={['blockPings', 'trimReferer', 'httpsOnly']} title={t('privacy-settings.protection-du-reseau')}>
+      <Check
+        settingKey="blockPings"
+        label={t('privacy-settings.bloquer-les-pings-de-suivi')}
+        hint={t('privacy-settings.pings-hint')}
+        more={t('privacy-settings.pings-more')}
+        checked={settings.blockPings}
+        onChange={(blockPings) => update({ blockPings })}
+      />
+      <Check
+        settingKey="trimReferer"
+        label={t('privacy-settings.rogner-le-referer')}
+        hint={t('privacy-settings.referer-hint')}
+        more={t('privacy-settings.referer-more')}
+        checked={settings.trimReferer}
+        onChange={(trimReferer) => update({ trimReferer })}
+      />
+      <Check
+        settingKey="httpsOnly"
+        label={t('privacy-settings.https-seul')}
+        hint={t('privacy-settings.https-seul-hint')}
+        more={t('privacy-settings.https-seul-more')}
+        checked={settings.httpsOnly}
+        onChange={(httpsOnly) => update({ httpsOnly })}
+      />
+    </Group>
+
     {/* The sites where third-party cookies are accepted, where the warning of safe browsing is not shown, and whose links are left as they are: on the subpage of the other exceptions, drawn whether the option is on or not. */}
     <Subpage id="exceptions">
       <SiteList
@@ -154,6 +181,15 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
         footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}
         label={t('privacy-settings.site-dont-les-liens-restent-tels-quels')}
         onChange={(unwrapExceptions) => update({ unwrapExceptions })}
+      />
+      <SiteList
+        settingKey="httpsOnlyExceptions"
+        sites={settings.httpsOnlyExceptions}
+        max={HTTPS_ONLY_EXCEPTIONS_MAX}
+        title={t('privacy-settings.sites-autorises-en-http')}
+        footnote={t('privacy-settings.https-seul-liste-note')}
+        label={t('privacy-settings.site-a-ouvrir-en-http')}
+        onChange={(httpsOnlyExceptions) => update({ httpsOnlyExceptions })}
       />
     </Subpage>
     </>

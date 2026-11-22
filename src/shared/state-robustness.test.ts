@@ -248,6 +248,10 @@ function rich(): SidebarState {
     unwrapExceptions: ['exemple.org'],
     safeBrowsing: true,
     safeBrowsingExceptions: ['exemple.org'],
+    blockPings: true,
+    trimReferer: true,
+    httpsOnly: true,
+    httpsOnlyExceptions: ['exemple.org'],
     profileNames: { work: 'Travail' },
     allowThemeToSites: true,
     keyBindings: { [COMMANDS[0]!.id]: '' },
@@ -557,6 +561,10 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   unwrapExceptions: hostList(200),
   safeBrowsing: bool,
   safeBrowsingExceptions: hostList(200),
+  blockPings: bool,
+  trimReferer: bool,
+  httpsOnly: bool,
+  httpsOnlyExceptions: hostList(200),
   profileNames: (v) => isRecord(v) && Object.entries(v).every(([id, name]) => PROFILE.test(id) && typeof name === 'string' && name === name.trim() && name !== '' && name.length <= 40),
   allowThemeToSites: bool,
   keyBindings: (v) => isRecord(v) && Object.entries(v).every(([id, key]) => COMMANDS.some((c) => c.id === id) && typeof key === 'string' && (key === '' || isValidAccelerator(key))),
@@ -1207,7 +1215,7 @@ describe('a state written by an older build', () => {
       extensionPaths: ['/Users/moi/extensions/une']
     })
     // The recent fields, one by one, so that a default that is silently missing is named.
-    for (const key of ['webStoreInstall', 'webStoreUpdates', 'sleepMode', 'sleepExcludedHosts', 'sleepSkipAudible', 'siteDataTypes', 'siteDataHttp', 'siteDataAnimation', 'siteZoom', 'blockExceptions', 'blockMode', 'blockModeSites', 'disabledFilterLists', 'developerHosts', 'usedProfiles', 'restoreWindows', 'chromeNativeHosts', 'profileNames', 'keyBindings', 'appIcon', 'updateFeedUrl', 'updateChannel', 'updateNotices', 'resolveFavicons', 'autoplayPolicy', 'spellCheck', 'siteAutoplay', 'autoplayPerSite', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'customFilterListsEnabled', 'customFilterLists', 'qrCode', 'autoScroll', 'scrollSync', 'rememberScroll', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions', 'unwrapRedirects', 'unwrapExceptions', 'safeBrowsing', 'safeBrowsingExceptions', 'mouseGestures', 'mouseGestureExcludedHosts', 'pageWatch', 'pageWatches', 'readAloud', 'batterySaver', 'downloadPause', 'downloadAskWhere', 'openWithMemory', 'openWithApps', 'openUnsaved', 'pdfWithSource', 'useReadLaterFolders', 'vimKeys', 'vimKeysExcludedHosts', 'tabGroupFolders', 'omniboxKeywords', 'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions'] as const) {
+    for (const key of ['webStoreInstall', 'webStoreUpdates', 'sleepMode', 'sleepExcludedHosts', 'sleepSkipAudible', 'siteDataTypes', 'siteDataHttp', 'siteDataAnimation', 'siteZoom', 'blockExceptions', 'blockMode', 'blockModeSites', 'disabledFilterLists', 'developerHosts', 'usedProfiles', 'restoreWindows', 'chromeNativeHosts', 'profileNames', 'keyBindings', 'appIcon', 'updateFeedUrl', 'updateChannel', 'updateNotices', 'resolveFavicons', 'autoplayPolicy', 'spellCheck', 'siteAutoplay', 'autoplayPerSite', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'customFilterListsEnabled', 'customFilterLists', 'qrCode', 'autoScroll', 'scrollSync', 'rememberScroll', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions', 'unwrapRedirects', 'unwrapExceptions', 'safeBrowsing', 'safeBrowsingExceptions', 'blockPings', 'trimReferer', 'httpsOnly', 'httpsOnlyExceptions', 'mouseGestures', 'mouseGestureExcludedHosts', 'pageWatch', 'pageWatches', 'readAloud', 'batterySaver', 'downloadPause', 'downloadAskWhere', 'openWithMemory', 'openWithApps', 'openUnsaved', 'pdfWithSource', 'useReadLaterFolders', 'vimKeys', 'vimKeysExcludedHosts', 'tabGroupFolders', 'omniboxKeywords', 'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions'] as const) {
       expect(settings[key], key).toEqual(defaults[key])
     }
     expect(settings.siteDataTypes).toEqual(SITE_DATA_TYPES.filter((type) => type !== 'history'))
@@ -1229,6 +1237,8 @@ describe('a state written by an older build', () => {
     expect([settings.unwrapRedirects, settings.unwrapExceptions]).toEqual([false, []])
     // Safe browsing closes a page only when asked: a file from before it has it off.
     expect([settings.safeBrowsing, settings.safeBrowsingExceptions]).toEqual([false, []])
+    // The pings, the Referer and the HTTPS-only mode change what a site receives or how a page opens: a file from before them has them off.
+    expect([settings.blockPings, settings.trimReferer, settings.httpsOnly, settings.httpsOnlyExceptions]).toEqual([false, false, false, []])
     // The three switches: the clearing at close is off, the per-site autoplay and the custom lists are on.
     expect([settings.siteDataClearOnCloseEnabled, settings.autoplayPerSite, settings.customFilterListsEnabled]).toEqual([false, true, true])
   })

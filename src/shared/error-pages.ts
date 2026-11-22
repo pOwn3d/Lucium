@@ -394,6 +394,8 @@ export type ErrorPageModel =
   | { kind: 'focus'; url: string; nonce: string; canGoBack: boolean; until: number | null; slotEnd: number | null }
   /** Safe browsing (safe-browsing.ts) refused this address before it opened: the page warns, « Continuer quand même » opens it for this session. */
   | { kind: 'unsafe'; url: string; nonce: string; canGoBack: boolean; category: SafeCategory }
+  /** « HTTPS seul » (https-upgrade.ts): the site has no HTTPS, or does not answer on it. `http` is the address the page may go to, on a click only (« Continuer en HTTP »). */
+  | { kind: 'https-only'; url: string; http: string; nonce: string; canGoBack: boolean }
   | { kind: 'status'; url: string; status: number; nonce: string; canGoBack: boolean; /** When the page was shown (ms since the epoch): the technical details give the time. */ at: number }
 
 export interface ErrorPage {
@@ -504,6 +506,18 @@ export function renderErrorPage(model: ErrorPageModel): ErrorPage {
         title: model.category === 'phishing' ? t('errpage.unsafe-phishing-title') : t('errpage.unsafe-malware-title'),
         content: `<p class="addr">${escapeHtml(model.url)}</p><p>${text}</p><p>${escapeHtml(t('errpage.unsafe-local'))}</p>`,
         actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : ''}${button('unsafe-continue', model.nonce, t('errpage.unsafe-continue'), 'proceed')}${button('unsafe-except', model.nonce, t('errpage.unsafe-except'), 'quiet')}`
+      })
+    )
+  }
+  if (model.kind === 'https-only') {
+    return document_(
+      site,
+      errorFrame({
+        tone: 'warn',
+        icon: ICON_LOCK,
+        title: t('errpage.https-only-title'),
+        content: `<p class="addr">${escapeHtml(model.http)}</p><p>${t('errpage.https-only-text', { site: host })}</p><p>${escapeHtml(t('errpage.https-only-risk'))}</p>`,
+        actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : button('retry', model.nonce, t('errpage.reessayer'))}${button('http', model.nonce, t('errpage.https-only-continue'), 'quiet')}`
       })
     )
   }

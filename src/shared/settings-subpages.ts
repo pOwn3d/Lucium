@@ -35,7 +35,7 @@ export const SUBPAGES: readonly SettingsSubpageDef[] = [
   { id: 'awake', pane: 'tabs', title: 'settings.sub-awake', intro: 'settings.sub-awake-intro', keys: ['sleepExcludedHosts', 'sleepExcludedKeepAll'], at: 'page' },
   { id: 'sitesearches', pane: 'navigation', title: 'settings.sub-sitesearches', intro: 'settings.sub-sitesearches-intro', keys: ['siteSearches'], at: 'page' },
   { id: 'linkroutes', pane: 'navigation', title: 'settings.choisissez-ou-les-liens-s-ouvrent-dans', intro: 'settings.sub-linkroutes-intro', keys: ['linkRoutes'], at: 'page' },
-  { id: 'exceptions', pane: 'protection', title: 'settings.sub-exceptions', intro: 'settings.sub-exceptions-intro', keys: ['blockExceptions', 'popupExceptions', 'fingerprintExceptions', 'thirdPartyCookieExceptions', 'unwrapExceptions', 'safeBrowsingExceptions'], at: 'page' },
+  { id: 'exceptions', pane: 'protection', title: 'settings.sub-exceptions', intro: 'settings.sub-exceptions-intro', keys: ['blockExceptions', 'popupExceptions', 'fingerprintExceptions', 'thirdPartyCookieExceptions', 'unwrapExceptions', 'safeBrowsingExceptions', 'httpsOnlyExceptions'], at: 'page' },
   { id: 'clearonclose', pane: 'protection', title: 'settings.sub-clearonclose', intro: 'settings.sub-clearonclose-intro', keys: ['siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit'], at: 'page' },
   { id: 'permissions', pane: 'protection', title: 'settings.sub-permissions', intro: 'settings.sub-permissions-intro', keys: ['siteAutoplay'], at: 'page' },
   { id: 'lockoptions', pane: 'protection', title: 'settings.sub-lockoptions', intro: 'settings.sub-lockoptions-intro', keys: ['lockApp', 'lockTouchId', 'lockedSpaces'], at: 'page' },
@@ -109,7 +109,7 @@ export function subpageSummary(id: SettingsSubpage, facts: SubpageFacts): string
     case 'linkroutes':
       return rules(settings.linkRoutes.length)
     case 'exceptions':
-      return sites(distinct(settings.blockExceptions, settings.popupExceptions, settings.fingerprintExceptions, settings.thirdPartyCookieExceptions, settings.unwrapExceptions, settings.safeBrowsingExceptions))
+      return sites(distinct(settings.blockExceptions, settings.popupExceptions, settings.fingerprintExceptions, settings.thirdPartyCookieExceptions, settings.unwrapExceptions, settings.safeBrowsingExceptions, settings.httpsOnlyExceptions))
     case 'clearonclose':
       return settings.siteDataClearOnCloseEnabled ? sites(settings.siteDataClearOnClose.length) : t('settings.sub-off')
     case 'permissions': {

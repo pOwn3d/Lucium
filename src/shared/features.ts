@@ -224,6 +224,30 @@ export const FEATURES = [
     cost: ['listeners', 'memory']
   },
   {
+    id: 'block-pings',
+    key: 'blockPings',
+    get label() { return t('privacy-settings.bloquer-les-pings-de-suivi') },
+    group: 'privacy',
+    get description() { return t('features.coupe-les-pings-de-suivi') },
+    cost: ['listeners']
+  },
+  {
+    id: 'trim-referer',
+    key: 'trimReferer',
+    get label() { return t('privacy-settings.rogner-le-referer') },
+    group: 'privacy',
+    get description() { return t('features.ne-donne-que-l-origine-de-la-page', { settingsPath: settingsPath('trimReferer') }) },
+    cost: ['listeners']
+  },
+  {
+    id: 'https-only',
+    key: 'httpsOnly',
+    get label() { return t('privacy-settings.https-seul') },
+    group: 'privacy',
+    get description() { return t('features.n-ouvre-que-du-https', { settingsPath: settingsPath('httpsOnly') }) },
+    cost: ['listeners']
+  },
+  {
     id: 'strip-tracking',
     key: 'stripTrackingParams',
     get label() { return t('privacy-settings.retirer-les-parametres-de-suivi-des-adresses') },

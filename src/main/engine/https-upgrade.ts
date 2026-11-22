@@ -2,7 +2,8 @@
 // The rules for the address itself are in shared/privacy.ts; this file holds the state per page (a page is a web contents id) and
 // knows nothing of Electron, so it is tested on its own (https-upgrade.test.ts).
 
-import { HTTPS_UPGRADE_TIMEOUT_MS, httpsUpgradeOf } from '@shared/privacy'
+import { isBlockingExempt } from '@shared/blocker'
+import { HTTPS_UPGRADE_TIMEOUT_MS, httpsUpgradeOf, isUpgradableHost } from '@shared/privacy'
 import { urlHostname } from '@shared/url'
 
 /** What the upgrade needs from a page, to fall back to the address it came from. */
@@ -19,7 +20,10 @@ export interface UpgradeTarget {
 interface Pending {
   http: string
   https: string
-  timer: ReturnType<typeof setTimeout>
+  /** Absent in « HTTPS seul »: there is no fall back to wait for. */
+  timer?: ReturnType<typeof setTimeout>
+  /** An upgrade of « HTTPS seul »: its failure never goes back to http by itself. */
+  only?: true
 }
 
 /** ERR_ABORTED: a navigation that was replaced, cancelled or became a download. It says nothing about the site. */
@@ -29,9 +33,13 @@ const ERR_ABORTED = -3
  * What became of a failed main-frame load. `none`: it was not an upgrade's failure, the error page shows as usual. `fell-back`: the site did not
  * answer over https, the page went back to http by itself (no error page; a notice says so). `refused`: the site answered over https with a
  * certificate that is not valid, which is never a reason to go to http by itself (someone on the way can present any certificate): the error page
- * shows, and offers the http address, on the user's click only.
+ * shows, and offers the http address, on the user's click only. In « HTTPS seul » (`only`) every failure is a `refused`, whatever its cause: the site did not
+ * answer over https, the address could not be upgraded and was refused: the page of the warning shows, and offers the http address, on the user's click only.
  */
-export type UpgradeFailure = { kind: 'none' } | { kind: 'fell-back' } | { kind: 'refused'; http: string }
+export type UpgradeFailure = { kind: 'none' } | { kind: 'fell-back' } | { kind: 'refused'; http: string; only?: true }
+
+/** What « HTTPS seul » decides for an http address: where it goes instead, or `refuse` (it is not opened), or null (it is not its business: local, excepted, not http). */
+export type OnlyVerdict = { redirect: string } | 'refuse' | null
 
 export class HttpsUpgrades {
   private readonly targets = new Map<number, UpgradeTarget>()
@@ -40,6 +48,8 @@ export class HttpsUpgrades {
   private readonly tried = new Map<number, Set<string>>()
   /** The http addresses a page was sent back to after a failure: they go through once without being upgraded. */
   private readonly letThrough = new Map<number, Set<string>>()
+  /** The http address « HTTPS seul » refused for a page, until its load has failed and the page of the warning was asked for. */
+  private readonly refused = new Map<number, string>()
 
   constructor(private readonly timeoutMs: number = HTTPS_UPGRADE_TIMEOUT_MS) {}
 
@@ -68,6 +78,30 @@ export class HttpsUpgrades {
     return https
   }
 
+  /**
+   * « HTTPS seul »: the request hook asks what to do with this http address loaded by page `id`. A public site that is not on the list of exceptions goes to
+   * https, with no timer and no fall back; an address that cannot be upgraded (a port other than 80, a login in it), and one a site sent its https visitors back
+   * to, are refused; the local network, this machine, the sites of the list and what is not http are not its business. A click on « Continuer en HTTP » lets the
+   * address through once. The load of a refused address fails (the hook cancels it) and `failed` then asks for the page of the warning.
+   */
+  onlyVerdict(id: number, httpUrl: string, exceptions: readonly string[]): OnlyVerdict {
+    if (!this.targets.has(id) || !URL.canParse(httpUrl)) return null
+    const parsed = new URL(httpUrl)
+    if (parsed.protocol !== 'http:' || !isUpgradableHost(parsed.hostname) || isBlockingExempt(httpUrl, exceptions)) return null
+    if (this.letThrough.get(id)?.delete(httpUrl)) return null
+    const tried = this.tried.get(id) ?? new Set<string>()
+    const https = httpsUpgradeOf(httpUrl)
+    if (https === null || tried.has(httpUrl)) {
+      this.refused.set(id, httpUrl)
+      return 'refuse'
+    }
+    tried.add(httpUrl)
+    this.tried.set(id, tried)
+    this.clearPending(id)
+    this.pending.set(id, { http: httpUrl, https, only: true })
+    return { redirect: https }
+  }
+
   /** A main-frame navigation starts: a new one forgets the loop guard, and an upgrade that was under way is dropped if it is another address. */
   navigationStarted(id: number, url: string): void {
     this.tried.delete(id)
@@ -87,6 +121,11 @@ export class HttpsUpgrades {
    */
   failed(id: number, failedUrl: string, code: number, certificate = false): UpgradeFailure {
     if (code === ERR_ABORTED) return { kind: 'none' }
+    const refusedHttp = this.refused.get(id)
+    if (refusedHttp !== undefined && refusedHttp === failedUrl) {
+      this.refused.delete(id)
+      return { kind: 'refused', http: refusedHttp, only: true }
+    }
     const pending = this.pending.get(id)
     if (!pending || urlHostname(pending.https) !== urlHostname(failedUrl)) {
       this.forget(id)
@@ -94,6 +133,7 @@ export class HttpsUpgrades {
     }
     this.clearPending(id)
     this.tried.delete(id)
+    if (pending.only === true) return { kind: 'refused', http: pending.http, only: true }
     if (certificate) return { kind: 'refused', http: pending.http }
     this.fallBack(id, pending)
     return { kind: 'fell-back' }
@@ -138,7 +178,7 @@ export class HttpsUpgrades {
 
   private clearPending(id: number): void {
     const pending = this.pending.get(id)
-    if (pending) clearTimeout(pending.timer)
+    if (pending?.timer !== undefined) clearTimeout(pending.timer)
     this.pending.delete(id)
   }
 
@@ -146,5 +186,6 @@ export class HttpsUpgrades {
     this.clearPending(id)
     this.tried.delete(id)
     this.letThrough.delete(id)
+    this.refused.delete(id)
   }
 }

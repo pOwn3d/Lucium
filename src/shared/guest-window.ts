@@ -63,7 +63,10 @@ export const GUEST_INHERITED = [
   'stripCopiedLinks',
   'blockThirdPartyCookies',
   'unwrapRedirects',
-  'safeBrowsing'
+  'safeBrowsing',
+  'blockPings',
+  'trimReferer',
+  'httpsOnly'
 ] as const satisfies readonly (keyof Settings)[]
 
 /** The settings of the main window a guest window follows. */
