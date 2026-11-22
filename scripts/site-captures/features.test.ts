@@ -92,9 +92,9 @@ describe('the table of the features page', () => {
   // capture of the sound of a tab by an extension (`fn-extension-tab-capture`): the features page of the site has yet to show them. 134 since the two
   // cards that had no scenario (`fn-extensions-page`, `fn-background-framing`), then 139 since the tab reminders, the full-text search of the pages, the focus mode,
   // the scroll position and the third-party cookies (the cards of the five features added on 21 November 2026).
-  it('has one scenario per card, 139 of them, with one name per image, made from the id of the card', () => {
+  it('has one scenario per card, 140 of them, with one name per image, made from the id of the card', () => {
     const cards = FEATURE_SCENARIOS.map((s) => s.card)
-    expect(cards).toHaveLength(139)
+    expect(cards).toHaveLength(140)
     expect(new Set(cards).size).toBe(cards.length)
     const names = FEATURE_SCENARIOS.flatMap((s) => (['fr', 'en'] as const).map((lang) => outputName(s.card, lang)))
     expect(new Set(names).size).toBe(names.length)
