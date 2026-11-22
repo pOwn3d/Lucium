@@ -167,6 +167,52 @@ describe('reminder/cancel, reminder/open and reminder/fire', () => {
   })
 })
 
+describe('the container of a reminder', () => {
+  const ctx = makeCtx()
+  /** A state with the function on, a container "Travail", and one tab of that container. */
+  function inContainer(): { state: SidebarState; container: string; tabId: string } {
+    const base = reduce(createInitialState(ctx), { type: 'settings/update', patch: { tabContainers: true } }, ctx)
+    const withContainer = reduce(base, { type: 'container/create', name: 'Travail', color: 'orange' }, ctx)
+    const container = withContainer.settings.containers[0]!.id
+    const state = reduce(withContainer, { type: 'tab/open', url: 'https://a.example/', container }, ctx)
+    return { state, container, tabId: state.tabs[0]!.id }
+  }
+
+  it('keeps the container of the tab it put away', () => {
+    const { state, container, tabId } = inContainer()
+    const next = reduce(state, { type: 'reminder/add', tabId, dueAt: DAY }, ctx)
+    expect(next.tabReminders[0]!.container).toBe(container)
+  })
+
+  it('reopens the tab in that container, by the timer and by hand', () => {
+    const { state, container, tabId } = inContainer()
+    const waiting = reduce(state, { type: 'reminder/add', tabId, dueAt: DAY }, ctx)
+    const id = waiting.tabReminders[0]!.id
+    const fired = reduce(waiting, { type: 'reminder/fire' }, makeCtx(DAY))
+    expect(fired.tabs.map((t) => [t.url, t.container])).toEqual([['https://a.example/', container]])
+    const opened = reduce(waiting, { type: 'reminder/open', id }, ctx)
+    expect(opened.tabs.map((t) => t.container)).toEqual([container])
+  })
+
+  it('falls back to no container when that container no longer exists', () => {
+    const { state, container, tabId } = inContainer()
+    const waiting = reduce(state, { type: 'reminder/add', tabId, dueAt: DAY }, ctx)
+    const gone = { ...waiting, settings: { ...waiting.settings, containers: waiting.settings.containers.filter((c) => c.id !== container) } }
+    const fired = reduce(gone, { type: 'reminder/fire' }, makeCtx(DAY))
+    expect(fired.tabs).toHaveLength(1)
+    expect(fired.tabs[0]!.container).toBeUndefined()
+  })
+
+  it('has no container for a tab that had none, and reads back from a file', () => {
+    const plain = stateWithTabs(['https://b.example/'], ctx)
+    const next = reduce(plain, { type: 'reminder/add', tabId: plain.tabs[0]!.id, dueAt: DAY }, ctx)
+    expect(next.tabReminders[0]).not.toHaveProperty('container')
+    const kept = { ...next, tabReminders: [{ ...next.tabReminders[0]!, container: 'c-abc' }] }
+    expect(cleanTabReminders(JSON.parse(JSON.stringify(kept.tabReminders)), new Set([plain.tabs[0]!.spaceId]))[0]!.container).toBe('c-abc')
+    expect(cleanTabReminders([{ id: 'x', url: 'https://x.example/', dueAt: 1, container: '../evil' }], new Set())[0]).not.toHaveProperty('container')
+  })
+})
+
 describe('the reminders of a file', () => {
   const spaces = new Set(['s1'])
   it('keeps good entries soonest first, repairs the space and the title, drops what cannot be opened or timed', () => {

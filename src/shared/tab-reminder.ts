@@ -19,7 +19,7 @@ export function tabReminderOutcome(list: readonly TabReminder[], tab: Pick<TabIt
 
 /** The entry for a tab, null for a tab that cannot be put away. It is repaired as a file's entry is (a tab with no title gets its host), so that a saved state reads back unchanged. */
 export function tabReminderOf(tab: TabItem, dueAt: number, ctx: Ctx): TabReminder | null {
-  return cleanTabReminders([{ id: ctx.newId(), url: tab.url, title: tabName(tab), faviconUrl: tab.faviconUrl, spaceId: tab.spaceId, dueAt, createdAt: ctx.now }], new Set([tab.spaceId]))[0] ?? null
+  return cleanTabReminders([{ id: ctx.newId(), url: tab.url, title: tabName(tab), faviconUrl: tab.faviconUrl, spaceId: tab.spaceId, ...(tab.container !== undefined ? { container: tab.container } : {}), dueAt, createdAt: ctx.now }], new Set([tab.spaceId]))[0] ?? null
 }
 
 /** The list with the entry added (or, for an address already there, moved to the new time), soonest first. */
