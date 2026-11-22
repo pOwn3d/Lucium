@@ -7,7 +7,7 @@
 // `LUCIUM_SMOKE_ONLY=discover pnpm test:engine` runs only this file. Written with the panel and never run by its author (AGENTS.md §1: a run opens windows).
 
 import { Menu, nativeTheme, type MenuItem, type WebContents } from 'electron'
-import { DISCOVER_ENTRIES } from '@shared/discover'
+import { ALL_DISCOVER_ENTRIES } from '@shared/discover'
 import { t } from '@shared/i18n'
 import type { SmokeContext } from './smoke'
 import { noteCheck, waiterOf } from './smoke-kit'
@@ -64,26 +64,27 @@ export async function smokeDiscover(ctx: SmokeContext, check: Check): Promise<vo
     check('menu: it comes right after « Premiers pas »', help?.submenu?.items.findIndex((item) => item.label === t('discover.titre')) === 1)
     entry?.click()
     check('menu: it opens the panel', await waitFor(() => browser.currentPanel() === 'discover'), JSON.stringify(browser.currentOverlay()))
+    check('open: the search field has a visible ring when it has the focus (an outline, not only the halo of the template)', await evaluate<boolean>(ui, `(() => { const s = getComputedStyle(document.querySelector('input[type="search"]')); return s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0 })()`))
     check('open: the focus is in the search field', await waitFor(async () => (await evaluate<string | undefined>(ui, `document.activeElement?.getAttribute('type')`)) === 'search', 3000))
 
     // ---- 2. the cards ----
-    check('cards: every chosen function has its card', (await waitFor(async () => (await cardCount()) === DISCOVER_ENTRIES.length)) && (await cardCount()) === DISCOVER_ENTRIES.length, String(await cardCount()))
+    check('cards: every function of Lucium has its card', (await waitFor(async () => (await cardCount()) === ALL_DISCOVER_ENTRIES.length)) && (await cardCount()) === ALL_DISCOVER_ENTRIES.length, String(await cardCount()))
     check(
       'cards: each one is named by its heading, and each of its buttons says which card it is for',
-      await evaluate<boolean>(ui, `[...document.querySelectorAll('article.dv-card')].every((c) => c.getAttribute('aria-labelledby') === c.querySelector('h4')?.id && [...c.querySelectorAll('button')].every((b) => b.getAttribute('aria-describedby') === c.querySelector('h4')?.id))`)
+      await evaluate<boolean>(ui, `[...document.querySelectorAll('article.dv-card')].every((c) => c.getAttribute('aria-labelledby') === c.querySelector('h4')?.id && [...c.querySelectorAll('button')].every((b) => b.getAttribute('aria-describedby') === c.querySelector('h4')?.id && (b.getAttribute('aria-label') ?? '').endsWith(', ' + c.querySelector('h4')?.textContent)))`)
     )
     check('cards: every shortcut shown is a group named once, its capsules hidden from the screen reader', await evaluate<boolean>(ui, `[...document.querySelectorAll('.dv-keys')].every((g) => g.getAttribute('role') === 'group' && g.getAttribute('aria-label') && [...g.querySelectorAll('kbd')].every((k) => k.getAttribute('aria-hidden') === 'true'))`))
     check('cards: nothing is wider than the panel (no sideways scroll)', await evaluate<boolean>(ui, `(() => { const b = document.querySelector('.dv-body'); return b ? b.scrollWidth <= b.clientWidth + 1 : false })()`))
 
     // ---- 3. a typed search narrows them ----
     typeText('capture')
-    const narrows = await waitFor(async () => (await fieldValue()) === 'capture' && (await cardCount()) < DISCOVER_ENTRIES.length)
+    const narrows = await waitFor(async () => (await fieldValue()) === 'capture' && (await cardCount()) < ALL_DISCOVER_ENTRIES.length)
     const narrowed = await cardCount()
     check('search: « capture » narrows the cards, and the status says how many are left', narrows && narrowed > 0 && (await evaluate<string>(ui, `document.querySelector('[role="status"]')?.textContent ?? ''`)).length > 0, String(narrowed))
 
     // ---- 4. the keyboard: Escape empties the search, Tab leaves it for the first chip ----
     key('Escape')
-    check('Escape: the first press empties the search and keeps the panel', (await waitFor(async () => (await fieldValue()) === '' && (await cardCount()) === DISCOVER_ENTRIES.length)) && browser.currentPanel() === 'discover')
+    check('Escape: the first press empties the search and keeps the panel', (await waitFor(async () => (await fieldValue()) === '' && (await cardCount()) === ALL_DISCOVER_ENTRIES.length)) && browser.currentPanel() === 'discover')
     key('Tab')
     check('Tab: the focus goes from the search to a chip', await waitFor(() => evaluate<boolean>(ui, `document.activeElement?.classList.contains('tk-chip') === true`)), await evaluate<string>(ui, `document.activeElement?.outerHTML.slice(0, 120) ?? ''`))
     check('Tab: the chip that has the focus has a visible ring (outline or shadow)', await evaluate<boolean>(ui, `(() => { const s = getComputedStyle(document.activeElement); return (s.outlineStyle !== 'none' && parseFloat(s.outlineWidth) > 0) || s.boxShadow !== 'none' })()`))
@@ -100,7 +101,7 @@ export async function smokeDiscover(ctx: SmokeContext, check: Check): Promise<vo
     // ---- 6. « Régler » of a card opens the Settings ----
     entry?.click()
     await waitFor(() => browser.currentPanel() === 'discover')
-    await waitFor(async () => (await cardCount()) === DISCOVER_ENTRIES.length)
+    await waitFor(async () => (await cardCount()) === ALL_DISCOVER_ENTRIES.length)
     const adjust = await buttonOf(t('discover.protection-nom'), t('discover.regler'))
     if (adjust) await click(adjust)
     check('Régler: the card of the protection opens the Settings', adjust !== null && (await waitFor(() => browser.currentPanel() === 'settings')), JSON.stringify(browser.currentOverlay()))
@@ -119,7 +120,7 @@ export async function smokeDiscover(ctx: SmokeContext, check: Check): Promise<vo
       nativeTheme.themeSource = scheme
       entry?.click()
       await waitFor(() => browser.currentPanel() === 'discover')
-      await waitFor(async () => (await cardCount()) === DISCOVER_ENTRIES.length)
+      await waitFor(async () => (await cardCount()) === ALL_DISCOVER_ENTRIES.length)
       // The scheme reaches the page as the media query it answers.
       await waitFor(() => evaluate<boolean>(ui, `matchMedia('(prefers-color-scheme: dark)').matches === ${scheme === 'dark'}`))
       const ratios = await evaluate<{ field: number; chip: number }>(

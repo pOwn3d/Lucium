@@ -3,8 +3,8 @@
 // says it needs switched on, and no other: a card that forgot its `needs` would offer a button that does nothing.
 
 import { describe, expect, it, vi } from 'vitest'
-import { DISCOVER_ENTRIES, DISCOVER_REQUEST, discoverSettingsRequest, otherFeatures } from '@shared/discover'
-import { t } from '@shared/i18n'
+import { ALL_DISCOVER_ENTRIES, DISCOVER_REQUEST, discoverSettingsRequest, discoverWhere, menuPath } from '@shared/discover'
+import { setLanguage, t } from '@shared/i18n'
 import type { OverlayRequest } from '@shared/ipc'
 import { defaultSettings, type Settings } from '@shared/model'
 import { canOpenInPrivate } from '@shared/private-window'
@@ -42,10 +42,10 @@ describe('the panel and the interface', () => {
 })
 
 describe('every button of every card', () => {
-  const requests = DISCOVER_ENTRIES.flatMap((entry) => (entry.try.kind === 'open' ? [{ entry, request: entry.try.request }] : []))
+  const requests = ALL_DISCOVER_ENTRIES.flatMap((entry) => (entry.try.kind === 'open' ? [{ entry, request: entry.try.request }] : []))
 
   it('opens a request the main process accepts once the setting the card needs is on', () => {
-    expect(requests.length).toBeGreaterThan(15)
+    expect(requests.length).toBeGreaterThan(25)
     for (const { entry, request } of requests) {
       const settings: Partial<Settings> = entry.needs === undefined ? {} : { [entry.needs]: true }
       expect(validOverlay(request, storeWith(settings)), entry.id).toBe(true)
@@ -58,11 +58,9 @@ describe('every button of every card', () => {
     }
   })
 
-  it('leads « Régler » to a page of the Settings the main process accepts, for the cards and for the other functions', () => {
-    for (const entry of DISCOVER_ENTRIES) expect(validOverlay(discoverSettingsRequest(entry), storeWith()), entry.id).toBe(true)
-    const others = otherFeatures({ query: '', task: 'all', level: 'all' })
-    expect(others.length).toBeGreaterThan(50)
-    for (const row of others) expect(validOverlay(row.request, storeWith()), row.feature.id).toBe(true)
+  it('leads « Régler » to a page of the Settings the main process accepts, for every card', () => {
+    expect(ALL_DISCOVER_ENTRIES.length).toBeGreaterThan(140)
+    for (const entry of ALL_DISCOVER_ENTRIES) expect(validOverlay(discoverSettingsRequest(entry), storeWith()), entry.id).toBe(true)
   })
 
   it('refuses what is not a panel it knows: a damaged request does not open anything', () => {
@@ -105,5 +103,67 @@ describe('Aide › Découvrir Lucium', () => {
   it('is greyed out in a private window, which does not open it', () => {
     expect(help(false).item?.enabled).not.toBe(false)
     expect(help(true).item?.enabled).toBe(false)
+  })
+})
+
+describe('the menu paths the cards announce', () => {
+  interface Entry {
+    label?: string
+    submenu?: Entry[]
+  }
+
+  /** The menu bar as it is built with every setting on, the menu of the window as it is when a page is open and every optional action given. */
+  function menuTree(): Entry[] {
+    const browser = new Proxy(
+      { isPrivate: () => false, menuFacts: () => ({ canGoBack: false, canGoForward: false, loading: false, finding: false, scrollSynced: false, saverAsked: false }), windowSidebar: () => ({ side: 'left', docked: false }) } as Record<string, unknown>,
+      { get: (target, prop: string) => (prop in target ? target[prop] : () => false) }
+    )
+    const actions = new Proxy({ windows: () => [], extensions: () => [], sessionStart: 0, window: () => ({}) } as Record<string, unknown>, { get: (target, prop: string) => (prop in target ? target[prop] : () => {}) })
+    const base = defaultSettings()
+    const on: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(base)) if (typeof value === 'boolean') on[key] = true
+    const state = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: { ...base, ...(on as Partial<Settings>), aiSummary: true } }
+    return buildMenu(browser as never, { get: () => state, root: () => ({ get: () => state }) } as never, actions as never) as unknown as Entry[]
+  }
+
+  const plain = (label: string | undefined): string => (label ?? '').replace(/…$/, '')
+  /** Whether the path leads, step by step, to an entry of the menu bar (a trailing ellipsis of a label is not part of its name). */
+  function leadsTo(tree: readonly Entry[], path: readonly string[]): boolean {
+    let level: readonly Entry[] = tree
+    for (const [index, step] of path.entries()) {
+      const entry = level.find((candidate) => plain(candidate.label) === step)
+      if (entry === undefined) return false
+      if (index < path.length - 1 && entry.submenu === undefined) return false
+      level = entry.submenu ?? []
+    }
+    return true
+  }
+
+  it('lead, step by step, to an entry of the menu bar as it is built, in French and in English', () => {
+    const announced = ALL_DISCOVER_ENTRIES.flatMap((entry) => Object.entries(entry.menus ?? {}).map(([name, keys]) => ({ id: `${entry.id}.${name}`, keys })))
+    expect(announced.length).toBeGreaterThan(35)
+    for (const language of ['fr', 'en'] as const) {
+      setLanguage(language)
+      const tree = menuTree()
+      for (const { id, keys } of announced) {
+        const path = menuPath(keys).split(' › ')
+        expect(leadsTo(tree, path), `${id} (${language}): « ${path.join(' › ')} » is not a path of the menus`).toBe(true)
+      }
+    }
+    setLanguage('fr')
+  })
+
+  it('refuse a path the menus do not have: the checker is not satisfied by a label that is a command and no entry', () => {
+    setLanguage('fr')
+    const tree = menuTree()
+    expect(leadsTo(tree, ['Édition', 'Rechercher', 'Rechercher'])).toBe(true)
+    expect(leadsTo(tree, ['Édition', t('cmd.rechercher-dans-la-page')])).toBe(false)
+    expect(leadsTo(tree, ['Fichier', 'Inconnu'])).toBe(false)
+  })
+
+  it('say the path of the search in the page as the menu has it', () => {
+    setLanguage('fr')
+    const card = ALL_DISCOVER_ENTRIES.find((entry) => entry.id === 'find')!
+    expect(discoverWhere(card)).toBe('Menu Édition › Rechercher › Rechercher.')
   })
 })

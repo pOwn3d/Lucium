@@ -3,7 +3,9 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  ALL_DISCOVER_ENTRIES,
   DISCOVER_ENTRIES,
+  DISCOVER_EXTRAS,
   DISCOVER_LEVELS,
   DISCOVER_REQUEST,
   DISCOVER_TASKS,
@@ -16,7 +18,7 @@ import {
   discoverSummary,
   discoverWhere,
   filterDiscover,
-  otherFeatures,
+  REGISTRY_ENTRIES,
   taskCounts,
   type DiscoverEntry
 } from './discover'
@@ -114,7 +116,7 @@ describe('the chosen cards', () => {
     expect(settingsPageOf('thisSettingDoesNotExist')).toBe('features')
     expect(settingsPageOf('blockThirdPartyCookies')).toBe(categoryOfKey('blockThirdPartyCookies'))
     expect(settingsPageOf('blockThirdPartyCookies')).not.toBe('features')
-    for (const row of otherFeatures(none)) expect(row.request.pane, row.feature.id).toBe(settingsPageOf(row.feature.key))
+    for (const entry of REGISTRY_ENTRIES) expect(discoverSettingsRequest(entry).pane, entry.id).toBe(settingsPageOf(featureById(entry.feature!).key))
   })
 
   it('open only what the interface has: a panel, an API call it already makes, a page of the Settings, or nothing and say how', () => {
@@ -165,9 +167,9 @@ describe('a card whose function is switched off', () => {
 
 describe('the search', () => {
   it('shows every card for no words, and every card of a task and a level for the filters', () => {
-    expect(ids(filterDiscover(none))).toEqual(ids(DISCOVER_ENTRIES))
-    expect(ids(filterDiscover({ ...none, task: 'keep' }))).toEqual(ids(DISCOVER_ENTRIES.filter((entry) => entry.task === 'keep')))
-    expect(ids(filterDiscover({ ...none, level: 'beginner' }))).toEqual(ids(DISCOVER_ENTRIES.filter((entry) => entry.level === 'beginner')))
+    expect(ids(filterDiscover(none))).toEqual(ids(ALL_DISCOVER_ENTRIES))
+    expect(ids(filterDiscover({ ...none, task: 'keep' }))).toEqual(ids(ALL_DISCOVER_ENTRIES.filter((entry) => entry.task === 'keep')))
+    expect(ids(filterDiscover({ ...none, level: 'beginner' }))).toEqual(ids(ALL_DISCOVER_ENTRIES.filter((entry) => entry.level === 'beginner')))
     const both = filterDiscover({ ...none, task: 'keep', level: 'advanced' })
     expect(both.length).toBeGreaterThan(0)
     expect(both.every((entry) => entry.task === 'keep' && entry.level === 'advanced')).toBe(true)
@@ -204,31 +206,110 @@ describe('the search', () => {
   })
 
   it('counts the cards of each task, for the chips', () => {
-    const counts = taskCounts(DISCOVER_ENTRIES)
-    expect(counts.all).toBe(DISCOVER_ENTRIES.length)
-    for (const task of DISCOVER_TASKS) expect(counts[task]).toBe(DISCOVER_ENTRIES.filter((entry) => entry.task === task).length)
-    expect(taskCounts(filterDiscover({ ...none, level: 'beginner' })).all).toBe(DISCOVER_ENTRIES.filter((entry) => entry.level === 'beginner').length)
+    const counts = taskCounts(ALL_DISCOVER_ENTRIES)
+    expect(counts.all).toBe(ALL_DISCOVER_ENTRIES.length)
+    for (const task of DISCOVER_TASKS) expect(counts[task]).toBe(ALL_DISCOVER_ENTRIES.filter((entry) => entry.task === task).length)
+    expect(taskCounts(filterDiscover({ ...none, level: 'beginner' })).all).toBe(ALL_DISCOVER_ENTRIES.filter((entry) => entry.level === 'beginner').length)
   })
 })
 
-describe('the other functions', () => {
-  it('list every function of the registry that has no card of its own, by name, whatever its task', () => {
-    const carded = new Set(DISCOVER_ENTRIES.flatMap((entry) => (entry.feature ? [entry.feature] : [])))
-    const others = otherFeatures(none)
-    expect(others.map((row) => row.feature.id).sort()).toEqual(FEATURES.map((feature) => feature.id).filter((id) => !carded.has(id)).sort())
-    for (const row of others) {
-      expect(row.name).toBe(row.feature.label)
-      expect(row.line.length).toBeGreaterThan(3)
-      expect(row.request.panel).toBe('settings')
+describe('a card for every function', () => {
+  it('has one card for each function of the registry: a function added to the registry without one fails here', () => {
+    for (const feature of FEATURES) {
+      const cards = ALL_DISCOVER_ENTRIES.filter((entry) => entry.feature === feature.id)
+      expect(cards.length, `${feature.id} has no card`).toBe(1)
     }
   })
 
-  it('follow the task and the words, and leave the beginners alone (they are all for those who go further)', () => {
-    const tasks = new Set(otherFeatures({ ...none, task: 'protect' }).map((row) => row.task))
-    expect([...tasks]).toEqual(['protect'])
-    expect(otherFeatures({ ...none, level: 'beginner' })).toEqual([])
-    expect(otherFeatures({ ...none, query: 'xyzzy' })).toEqual([])
-    expect(otherFeatures({ ...none, query: 'publicités' }).map((row) => row.feature.id)).toContain('block-ads')
+  it('has no card that names a function the registry does not know, and no id twice', () => {
+    const registry = new Set<string>(FEATURES.map((feature) => feature.id))
+    for (const entry of ALL_DISCOVER_ENTRIES) if (entry.feature !== undefined) expect(registry.has(entry.feature), entry.id).toBe(true)
+    expect(new Set(ids(ALL_DISCOVER_ENTRIES)).size).toBe(ALL_DISCOVER_ENTRIES.length)
+  })
+
+  it('keeps the chosen cards first under their task, then the functions without a switch, then the rest of the registry', () => {
+    expect(ids(ALL_DISCOVER_ENTRIES)).toEqual([...ids(DISCOVER_ENTRIES), ...ids(DISCOVER_EXTRAS), ...ids(REGISTRY_ENTRIES)])
+    for (const task of DISCOVER_TASKS) {
+      const kinds = ALL_DISCOVER_ENTRIES.filter((entry) => entry.task === task).map((entry) => (DISCOVER_ENTRIES.includes(entry) ? 0 : DISCOVER_EXTRAS.includes(entry) ? 1 : 2))
+      expect(kinds, task).toEqual([...kinds].sort())
+    }
+  })
+
+  it('says its name, its line and where to find it, in both languages, for the cards the registry lends its words to', () => {
+    for (const language of ['fr', 'en'] as const) {
+      setLanguage(language)
+      for (const entry of REGISTRY_ENTRIES) {
+        expect(discoverName(entry), `${entry.id} ${language}`).toBe(featureById(entry.feature!).label)
+        expect(discoverSummary(entry).length, `${entry.id} ${language}`).toBeGreaterThan(3)
+        expect(discoverWhere(entry), `${entry.id} ${language}`).toMatch(/Réglages|Settings/)
+        expect(discoverWhere(entry), `${entry.id} ${language}`).not.toMatch(/[{}]|undefined/)
+      }
+    }
+  })
+
+  it('leads « Régler » of each of them to the page that draws its setting, and files each under the task of the registry', () => {
+    expect(REGISTRY_ENTRIES.length).toBeGreaterThan(50)
+    for (const entry of REGISTRY_ENTRIES) {
+      expect(entry.task, entry.id).toBe(FEATURE_TASKS[entry.feature!])
+      expect(discoverSettingsRequest(entry).pane, entry.id).toBe(settingsPageOf(featureById(entry.feature!).key))
+      expect(entry.try, entry.id).toEqual({ kind: 'setting' })
+    }
+  })
+
+  it('says it is switched off from the switch of the function, when the card has no setting of its own to name', () => {
+    const settings = defaultSettings()
+    const card = REGISTRY_ENTRIES.find((entry) => entry.feature === 'warn-quit')!
+    expect(discoverOff(card, { ...settings, warnBeforeQuitting: false })).toBe(true)
+    expect(discoverOff(card, { ...settings, warnBeforeQuitting: true })).toBe(false)
+  })
+
+  it('finds a function of the registry by its name, and by the page of the Settings that holds it', () => {
+    expect(ids(filterDiscover({ ...none, query: 'publicités' }))).toContain('registry-block-ads')
+    expect(ids(filterDiscover({ ...none, query: 'xyzzy' }))).toEqual([])
+    expect(ids(filterDiscover({ ...none, task: 'protect' })).filter((id) => id.startsWith('registry-')).length).toBe(REGISTRY_ENTRIES.filter((entry) => entry.task === 'protect').length)
+    expect(ids(filterDiscover({ ...none, level: 'beginner' })).filter((id) => id.startsWith('registry-'))).toEqual([])
+  })
+
+  it('counts every card in the chips: the total is the number of functions the panel says', () => {
+    const counts = taskCounts(ALL_DISCOVER_ENTRIES)
+    expect(counts.all).toBe(ALL_DISCOVER_ENTRIES.length)
+    expect(counts.all).toBeGreaterThanOrEqual(FEATURES.length)
+    expect(DISCOVER_TASKS.reduce((sum, task) => sum + counts[task], 0)).toBe(counts.all)
+  })
+})
+
+describe('the functions without a switch', () => {
+  it('number a score and more, each with words in both languages, a name, a line and a place', () => {
+    expect(DISCOVER_EXTRAS.length).toBeGreaterThanOrEqual(25)
+    for (const language of ['fr', 'en'] as const) {
+      setLanguage(language)
+      for (const entry of DISCOVER_EXTRAS) {
+        for (const text of [discoverName(entry), discoverSummary(entry), discoverWhere(entry)]) {
+          expect(text.length, `${entry.id} ${language}`).toBeGreaterThan(3)
+          expect(text, `${entry.id} ${language}`).not.toMatch(/[{}]|undefined/)
+        }
+      }
+    }
+    for (const entry of DISCOVER_EXTRAS) expect(entry.keywords.trim().split(/\s+/).length, entry.id).toBeGreaterThanOrEqual(4)
+  })
+
+  it('name what docs/fonctions.md lists as without a switch, and what the menus hold', () => {
+    const wanted = ['reader-mode', 'auto-reload', 'task-manager', 'import-browser', 'clear-site-data', 'extensions-page', 'private-window', 'window-sidebar', 'move-to-window', 'move-tab', 'guided-setup', 'annotate-page', 'panel-size', 'glass-effect', 'drop-links', 'app-icon', 'presets', 'certificate-warning', 'developer-tools', 'page-summary']
+    for (const id of wanted) expect(ids(DISCOVER_EXTRAS), id).toContain(id)
+  })
+
+  it('show the keys of a shortcut that no command carries as they are, and of the others as they are set', () => {
+    const annotate = DISCOVER_EXTRAS.find((entry) => entry.id === 'annotate-page')!
+    expect(discoverKeys(annotate, {}, 'darwin')?.text).toBe('⌥⌘M')
+    expect(discoverKeys(DISCOVER_EXTRAS.find((entry) => entry.id === 'history')!, { history: 'CmdOrCtrl+Alt+9' }, 'darwin')?.text).toBe('⌥⌘9')
+  })
+
+  it('lead to a setting that exists, and name a command that exists for the shortcut', () => {
+    const known = new Set(COMMANDS.map((command) => command.id))
+    for (const entry of DISCOVER_EXTRAS) {
+      expect(resolveSettingsTarget(discoverSettingsRequest(entry).pane, discoverSettingsRequest(entry).anchor), entry.id).not.toBeNull()
+      if (entry.shortcut !== undefined) expect(known.has(entry.shortcut), entry.id).toBe(true)
+    }
   })
 })
 

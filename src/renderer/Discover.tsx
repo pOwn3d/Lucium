@@ -10,12 +10,10 @@ import {
   discoverSummary,
   discoverWhere,
   filterDiscover,
-  otherFeatures,
   taskCounts,
   type DiscoverCall,
   type DiscoverEntry,
-  type DiscoverFilter,
-  type OtherFeature
+  type DiscoverFilter
 } from '@shared/discover'
 import { t, tp } from '@shared/i18n'
 import type { OverlayRequest } from '@shared/ipc'
@@ -25,7 +23,7 @@ import { api, useSnapshot } from './api'
 import { SearchGlyph, activeSpaceHue, hueProps, useFocusScope } from './templates'
 import './discover.css'
 
-/** What each call a card may make does, through the API the interface already has (a missing one does not compile). */
+/** What each call a card may make does, through the API the interface already has (a missing one does not compile). The panel is closed first (`tryIt`): a tab, a save box or a capture opened behind a modal dialog would show nothing. */
 const CALLS: Record<DiscoverCall, (act: ReturnType<typeof api>) => void> = {
   captureFullPage: (act) => act.captureFullPage(),
   saveMarkdown: (act) => act.markdownExport('save'),
@@ -36,8 +34,8 @@ const LEVEL_LABELS = { beginner: 'discover.niveau-debut', advanced: 'discover.ni
 
 /**
  * « Découvrir Lucium »: what Lucium can do by what a person wants to do (shared/discover.ts holds the catalogue and the search). A search, chips for the
- * task and for the level, then cards: name, one line, where to find the function, its shortcut as it is set now, « Essayer » (the real action) and « Régler »
- * (the real setting). The functions that have no card follow in a list, with their setting. Escape empties the search, then closes the panel.
+ * task and for the level, then one card for every function of Lucium: name, one line, where to find the function, its shortcut as it is set now, « Essayer »
+ * (the real action) and « Régler » (the real setting). The count of the status is the count of the cards. Escape empties the search, then closes the panel.
  * Nothing moves by itself, so there is no motion to reduce; nothing is counted or sent.
  */
 export function Discover() {
@@ -51,19 +49,23 @@ export function Discover() {
   const platform = platformOf(snapshot?.platform)
 
   const cards = useMemo(() => filterDiscover(filter), [filter])
-  const others = useMemo(() => otherFeatures(filter), [filter])
   // The chips count what the words and the level would show, whatever task is chosen.
   const counts = useMemo(() => taskCounts(filterDiscover({ ...filter, task: 'all' })), [filter])
   if (!snapshot || !settings) return null
   const { className: hueClass, style } = hueProps(activeSpaceHue(snapshot.state.spaces, snapshot.state.activeSpaceId))
 
-  const shown = cards.length + others.length
+  const shown = cards.length
   const leave = (): void => act.closeOverlay()
   const onKeyDown = (e: KeyboardEvent): void => {
     if (!isLeaveKey(e.nativeEvent)) return
     e.stopPropagation()
     if (filter.query) setFilter({ ...filter, query: '' })
     else leave()
+  }
+  /** « Essayer » on a card that makes a call: leaves the panel, so that the effect (a new tab, a capture, a save box) is seen. */
+  const tryCall = (call: DiscoverCall): void => {
+    act.closeOverlay()
+    CALLS[call](act)
   }
   /** Leaves the panel for the place: a panel replaces it, the Settings window opens beside the window. */
   const go = (request: OverlayRequest): void => {
@@ -115,33 +117,19 @@ export function Discover() {
                 <button
                   type="button"
                   className="tk-btn primary"
+                  aria-label={t('discover.essayer-nom', { name })}
                   aria-describedby={id}
-                  onClick={() => (entry.try.kind === 'open' ? go(entry.try.request) : entry.try.kind === 'call' ? CALLS[entry.try.call](act) : undefined)}
+                  onClick={() => (entry.try.kind === 'open' ? go(entry.try.request) : entry.try.kind === 'call' ? tryCall(entry.try.call) : undefined)}
                 >
                   {t('discover.essayer')}
                 </button>
               )}
-              <button type="button" className={`tk-btn${kind === 'setting' || off ? ' primary' : ''}`} aria-describedby={id} onClick={() => go(adjust)}>
+              <button type="button" className={`tk-btn${kind === 'setting' || off ? ' primary' : ''}`} aria-label={t('discover.regler-nom', { name })} aria-describedby={id} onClick={() => go(adjust)}>
                 {t('discover.regler')}
               </button>
             </span>
           </div>
         </article>
-      </li>
-    )
-  }
-
-  const other = (row: OtherFeature) => {
-    const id = `${titleId}-o-${row.feature.id}`
-    return (
-      <li key={row.feature.id} className="dv-other">
-        <div>
-          <b id={id}>{row.name}</b>
-          <span>{row.line}</span>
-        </div>
-        <button type="button" className="tk-btn" aria-describedby={id} onClick={() => go(row.request)}>
-          {t('discover.regler')}
-        </button>
       </li>
     )
   }
@@ -198,7 +186,7 @@ export function Discover() {
       </header>
 
       {/* One stop of Tab for the whole list, which the arrows then scroll; the cards and their buttons are stops of their own. */}
-      <div className="dv-body" tabIndex={0} role="region" aria-labelledby={titleId}>
+      <div className="dv-body" tabIndex={0} role="region" aria-label={t('discover.liste-label')}>
         {DISCOVER_TASKS.map((task) => {
           const group = cards.filter((entry) => entry.task === task)
           if (group.length === 0) return null
@@ -209,13 +197,6 @@ export function Discover() {
             </section>
           )
         })}
-        {others.length > 0 && (
-          <section className="dv-group" aria-labelledby={`${titleId}-others`}>
-            <h3 id={`${titleId}-others`}>{t('discover.autres-titre')}</h3>
-            <p className="dv-lead">{t('discover.autres-intro')}</p>
-            <ul className="dv-others">{others.map(other)}</ul>
-          </section>
-        )}
         {shown === 0 && (
           <div className="tk-empty dv-empty">
             <b>{t('discover.vide-titre')}</b>

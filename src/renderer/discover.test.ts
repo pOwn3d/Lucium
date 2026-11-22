@@ -6,7 +6,8 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DISCOVER_ENTRIES, discoverSettingsRequest, filterDiscover, otherFeatures } from '@shared/discover'
+import { ALL_DISCOVER_ENTRIES, DISCOVER_ENTRIES, REGISTRY_ENTRIES, discoverSettingsRequest, filterDiscover } from '@shared/discover'
+import { FEATURES, featureById } from '@shared/features'
 import { frenchSpaces } from '@shared/french-typography'
 import { setLanguage } from '@shared/i18n'
 import { defaultSettings, type Settings, type SidebarState } from '@shared/model'
@@ -57,6 +58,7 @@ const type = (value: string): void => {
     field.dispatchEvent(new Event('input', { bubbles: true }))
   })
 }
+const discoverNameOf = (entry: (typeof REGISTRY_ENTRIES)[number]): string => featureById(entry.feature!).label
 const status = (): string => host.querySelector('[role="status"]')!.textContent ?? ''
 const calls = (name: string): unknown[][] => holder.asked.filter(([called]) => called === name).map(([, args]) => args)
 
@@ -80,15 +82,37 @@ describe('the panel', () => {
     expect(status()).toContain('fonctions affichées')
   })
 
-  it('shows one card for each chosen function, under the heading of its task, each card named by its heading', () => {
+  it('shows one card for each function of Lucium, under the heading of its task, each card named by its heading, and says the exact count', () => {
     show()
-    expect(cards()).toHaveLength(DISCOVER_ENTRIES.length)
+    expect(cards()).toHaveLength(ALL_DISCOVER_ENTRIES.length)
+    expect(ALL_DISCOVER_ENTRIES.length).toBeGreaterThanOrEqual(FEATURES.length)
+    expect(status()).toBe(`${ALL_DISCOVER_ENTRIES.length} fonctions affichées.`)
+    expect(host.querySelector('.dv-other')).toBeNull()
     expect([...host.querySelectorAll('section.dv-group > h3')].map((h) => h.textContent).slice(0, 6)).toEqual(['Aller plus vite', 'Organiser mes onglets', 'Lire et travailler', 'Garder et capturer', 'Me concentrer', 'Protéger ma vie privée'])
     for (const card of cards()) {
       const heading = card.querySelector('h4')!
       expect(card.getAttribute('aria-labelledby')).toBe(heading.id)
       for (const b of card.querySelectorAll('button')) expect(b.getAttribute('aria-describedby'), heading.textContent ?? '').toBe(heading.id)
     }
+  })
+
+  it('names each button by its action and its function, so that a list of buttons tells them apart (« Essayer, Captures »)', () => {
+    show()
+    const capture = cardNamed('Captures')
+    expect(button(capture, 'Essayer')?.getAttribute('aria-label')).toBe('Essayer, Captures')
+    expect(button(capture, 'Régler')?.getAttribute('aria-label')).toBe('Régler, Captures')
+    const names = [...host.querySelectorAll('article button')].map((b) => b.getAttribute('aria-label'))
+    expect(names.every((name) => name !== null && /^(Essayer|Régler), ./.test(name))).toBe(true)
+    // The name begins with the visible text (WCAG 2.5.3, label in name), and no two buttons of a card share a name.
+    for (const b of host.querySelectorAll('article button')) expect(b.getAttribute('aria-label')!.startsWith(b.textContent!)).toBe(true)
+    for (const card of cards()) {
+      const labels = [...card.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))
+      expect(new Set(labels).size).toBe(labels.length)
+    }
+    setLanguage('en')
+    show()
+    expect(button(cardNamed('Screenshots'), 'Try it')?.getAttribute('aria-label')).toBe('Try it, Screenshots')
+    expect(button(cardNamed('Screenshots'), 'Adjust')?.getAttribute('aria-label')).toBe('Adjust, Screenshots')
   })
 
   it('says where to find the function, and what level and novelty it is, in words (never by colour alone)', () => {
@@ -129,19 +153,21 @@ describe('« Essayer »', () => {
   it('makes the call the interface already makes for a capture of the whole page, a save as Markdown, a private tab', () => {
     show({ privateTabs: true })
     click(button(cardNamed('Capture de la page entière'), 'Essayer'))
-    expect(calls('captureFullPage')).toEqual([[]])
+    expect(holder.asked).toEqual([['closeOverlay', []], ['captureFullPage', []]])
     click(button(cardNamed('Enregistrer la page en Markdown'), 'Essayer'))
     expect(calls('markdownExport')).toEqual([['save']])
     click(button(cardNamed('Onglet privé'), 'Essayer'))
     expect(calls('newPrivateTab')).toEqual([[]])
     expect(calls('openOverlay')).toEqual([])
+    // The panel is closed before each of the three calls: a tab, a capture or a save box opened behind a modal dialog would show nothing.
+    expect(holder.asked.map(([name]) => name)).toEqual(['closeOverlay', 'captureFullPage', 'closeOverlay', 'markdownExport', 'closeOverlay', 'newPrivateTab'])
   })
 
   it('is offered on no card that only gives a way to start (a click on a tab, a page) or is a setting', () => {
     show({ tabReminders: true })
     const reminder = cardNamed('Rappel d’onglet')
     expect(button(reminder, 'Essayer')).toBeUndefined()
-    expect(reminder.querySelector('.dv-note')?.textContent).toContain('agit sur une page ou sur un onglet')
+    expect(reminder.querySelector('.dv-note')?.textContent).toContain('se lance depuis un menu, un geste ou une page')
     const focus = cardNamed('Mode concentration')
     expect(button(focus, 'Essayer')).toBeUndefined()
     expect(button(focus, 'Régler')?.className).toContain('primary')
@@ -156,13 +182,14 @@ describe('« Régler »', () => {
     expect(holder.asked).toEqual([['closeOverlay', []], ['openOverlay', [discoverSettingsRequest(entry)]]])
   })
 
-  it('is on every card, and on every other function, with the page that holds it', () => {
+  it('is on every card, the cards of the registry alone included, with the page that holds the setting', () => {
     show()
     for (const card of cards()) expect(button(card, 'Régler'), card.querySelector('h4')?.textContent ?? '').toBeDefined()
-    const rows = [...host.querySelectorAll('li.dv-other')]
-    expect(rows.length).toBe(otherFeatures({ query: '', task: 'all', level: 'all' }).length)
-    click(button(rows[0]!, 'Régler'))
-    expect(calls('openOverlay')[0]![0]).toMatchObject({ panel: 'settings' })
+    const entry = REGISTRY_ENTRIES[0]!
+    const first = cards().find((card) => card.querySelector('h4')?.textContent === discoverNameOf(entry))!
+    click(button(first, 'Régler'))
+    expect(holder.asked).toEqual([['closeOverlay', []], ['openOverlay', [discoverSettingsRequest(entry)]]])
+    expect(first.querySelector('.dv-where')?.textContent).toContain('Réglages')
   })
 })
 
@@ -186,16 +213,15 @@ describe('the search and the chips', () => {
     show()
     type('marque-pages')
     expect(cards().map((card) => card.querySelector('h4')?.textContent)).toEqual(['Signets et historique par préfixe', 'Bibliothèque de signets avec étiquettes'])
-    expect(host.querySelectorAll('li.dv-other').length).toBeLessThan(otherFeatures({ query: '', task: 'all', level: 'all' }).length)
     expect(status()).toMatch(/fonction/)
     type('')
-    expect(cards()).toHaveLength(DISCOVER_ENTRIES.length)
+    expect(cards()).toHaveLength(ALL_DISCOVER_ENTRIES.length)
   })
 
   it('counts, on each chip, the cards the words and the level would show, whatever task is chosen', () => {
     show()
     const count = (label: string): string => ([...host.querySelectorAll('.tk-chip')].find((c) => c.textContent?.startsWith(label))?.querySelector('.dv-n')?.textContent ?? '')
-    expect(count('Tout')).toBe(String(DISCOVER_ENTRIES.length))
+    expect(count('Tout')).toBe(String(ALL_DISCOVER_ENTRIES.length))
     type('capture')
     const wanted = filterDiscover({ query: 'capture', task: 'all', level: 'all' })
     expect(count('Tout')).toBe(String(wanted.length))
@@ -212,7 +238,7 @@ describe('the search and the chips', () => {
     expect(host.querySelector('.dv-empty')?.textContent).toContain('Rien ne correspond')
     click(button(host, 'Effacer la recherche'))
     expect(host.querySelector('.dv-empty')).toBeNull()
-    expect(cards()).toHaveLength(DISCOVER_ENTRIES.length)
+    expect(cards()).toHaveLength(ALL_DISCOVER_ENTRIES.length)
     expect(host.querySelector<HTMLInputElement>('input[type="search"]')!.value).toBe('')
   })
 
@@ -222,11 +248,11 @@ describe('the search and the chips', () => {
     click(chip('Garder et capturer'))
     expect(chip('Garder et capturer').getAttribute('aria-pressed')).toBe('true')
     expect(chip('Tout').getAttribute('aria-pressed')).toBe('false')
-    expect([...host.querySelectorAll('section.dv-group > h3')].map((h) => h.textContent)).toEqual(['Garder et capturer', 'Toutes les autres fonctions'])
-    expect(cards().length).toBe(DISCOVER_ENTRIES.filter((e) => e.task === 'keep').length)
+    expect([...host.querySelectorAll('section.dv-group > h3')].map((h) => h.textContent)).toEqual(['Garder et capturer'])
+    expect(cards().length).toBe(ALL_DISCOVER_ENTRIES.filter((e) => e.task === 'keep').length)
     click(chip('Pour débuter'))
     expect(cards().every((card) => card.querySelector('.dv-badge.level')?.textContent === 'Pour débuter')).toBe(true)
-    expect(host.querySelector('li.dv-other')).toBeNull()
+    expect([...host.querySelectorAll('article')].some((card) => card.textContent?.includes('Avancé'))).toBe(false)
   })
 })
 
@@ -262,7 +288,7 @@ describe('in English', () => {
     setLanguage('en')
     show()
     expect(host.querySelector('h2')?.textContent).toBe('Discover Lucium')
-    expect([...host.querySelectorAll('section.dv-group > h3')].map((h) => h.textContent).slice(0, 2)).toEqual(['Go faster', 'Organise my tabs'])
+    expect([...host.querySelectorAll('section.dv-group > h3')].map((h) => h.textContent).slice(0, 2)).toEqual(['Go faster', 'Organize my tabs'])
     expect(button(cardNamed('Screenshots'), 'Try it')).toBeDefined()
     expect(button(cardNamed('Screenshots'), 'Adjust')).toBeDefined()
     expect(cardNamed('Screenshots').querySelector('.dv-where')?.textContent).toContain('Menu File › Capture')

@@ -65,6 +65,7 @@ export const KEPT_DECLARATIONS: ReadonlyArray<readonly [file: string, declaratio
   ['src/shared/translate-local.ts', 'STOP_WORDS', 'the common words a language is recognised by, in that language'],
   ['src/shared/settings-search.ts', 'STOP_WORDS', 'the common words of French and English that the search of the Settings leaves out of a query: compared with what is typed, never shown'],
   ['src/shared/discover.ts', 'DISCOVER_ENTRIES', 'the words a card of « Découvrir Lucium » is found by, in French and in English on purpose (folded, no accent): compared with what is typed, never shown; the name, the line and the place of a card are keys of the catalogue, by their type'],
+  ['src/shared/discover.ts', 'DISCOVER_EXTRAS', 'the same words for the cards of the functions that have no switch: compared with what is typed, never shown'],
   ['src/shared/settings-answers.ts', 'SETTINGS_ANSWERS', 'the words that name an answer of the search of the Settings, folded, in French and in English: compared with what is typed, never shown (each sentence is a key of the catalogues)'],
   ['src/shared/shortcut-view.ts', 'SEARCH_EXAMPLES', 'the example of the shortcut search, written once per language (each names a shortcut that exists in that language)'],
   ['src/main/drm-fuse-trial.ts', 'fuseTrial', 'the product and data names of a trial build the maintainer makes to test one fuse of the DRM variant'],

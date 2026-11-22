@@ -1,23 +1,26 @@
 // « Découvrir Lucium »: what Lucium can do, by what a person wants to do, with where to find it, its shortcut and a button that tries it. The panel
 // (renderer/Discover.tsx) draws this catalogue; nothing here reads the window.
 //
-// Two layers (docs/fonctions.md, « Découvrir Lucium »):
-//  - the cards: some thirty functions chosen to be shown, each with a task, a level, the words a person may search it by (French and English), what its
-//    button does, the command whose shortcut it shows (read from the shortcuts in force, never written in a text) and one sentence that says where to
-//    find it. A function of the registry (features.ts) lends its name and its line, unless the card says them better.
-//  - the others: every function of the registry that has no card, listed by name with the setting that governs it. `FEATURE_TASKS` gives each of them
-//    a task, and a function added to the registry without one does not compile.
+// Every function of Lucium has a card, in three layers (docs/fonctions.md, « Découvrir Lucium »), shown in this order under the task of each:
+//  - the chosen cards (`DISCOVER_ENTRIES`): some thirty functions with the words a person may search them by (French and English), what the button does,
+//    the command whose shortcut the card shows (read from the shortcuts in force, never written in a text) and one sentence that says where to find it.
+//  - the functions without a switch (`DISCOVER_EXTRAS`): what docs/fonctions.md lists under « Fonctions sans interrupteur » and the menus, the panels and the
+//    gestures that have no entry in the registry (reader mode, the task manager, the move of a tab…), written like the chosen cards.
+//  - the rest of the registry (`REGISTRY_ENTRIES`): one card for each function of features.ts that has none yet, with the name and the line of the registry,
+//    the page of the Settings that holds it and « Régler ». `FEATURE_TASKS` gives each of them a task, and a function added to the registry without one does
+//    not compile; discover.test.ts fails for a function of the registry that has no card.
 // What a button does is one of four things, and never something new: it opens a panel the interface may open (the main process checks it:
 // main/shell/discover-wiring.test.ts), it makes a call the interface already makes, it opens the Settings, or, when the function needs a page or a click
 // on a tab, it does nothing and the sentence says how to start it.
 
-import { featureById, featureLine, FEATURES, type BooleanSettingKey, type FeatureId } from './features'
+import { featureById, featureLine, FEATURES, isFeatureShownOn, type BooleanSettingKey, type Feature, type FeatureId } from './features'
 import { SCOPE_PREFIX } from './command-bar-groups'
 import { acceleratorKeys, effectiveAccelerator, formatAccelerator, type KeyBindings } from './keybindings'
 import { matchesWords, queryWords } from './settings-search'
-import { categoryOfKey } from './settings-catalog'
-import { settingsPath } from './settings-path'
+import { categoryOfKey, settingsPaneLabel } from './settings-catalog'
+import { settingsPath, settingsPathSteps } from './settings-path'
 import { t, type MessageKey, type Vars } from './i18n'
+import { PAGE_TOGGLE_SHORTCUT } from './page-annotate'
 import type { OverlayRequest, SettingsPage } from './ipc'
 import type { Settings } from './model'
 import type { PlatformId } from './platform'
@@ -69,21 +72,30 @@ export interface DiscoverEntry {
   /** The sentence that says where to find it, and the words it needs (read when the sentence is: the names of the menus follow the language). */
   where: MessageKey
   whereVars?: () => Vars
+  /**
+   * The menu paths the sentence names, as the keys of the labels of the menus (`{menu}` of « Menu {menu}. » is `menus.menu`): written as data so that
+   * discover-wiring.test.ts can compare each one with the menus as they are built. A path that is not a menu of the bar is not written here.
+   */
+  menus?: Readonly<Record<string, readonly MessageKey[]>>
   /** Words a person may search it by, French and English, without accents: the search also reads the name, the line and the place. */
   keywords: string
   /** The command whose shortcut the card shows (shared/keybindings.ts `COMMANDS`): the keys in force, so a key the person changed shows. */
   shortcut?: string
+  /** The keys of a function whose shortcut is not a command of the list and cannot be changed there (the annotation of the page): shown as they are. */
+  fixedKey?: string
   try: DiscoverTry
   /** The setting that must be on for the function to work: the card says it is switched off, and the button that needs it is not offered. */
   needs?: BooleanSettingKey
   /** Where « Régler » leads, when it is not the page of the setting of `feature`. */
   setting?: SettingsRequest
+  /** A card made from the registry alone (name, line and place of the setting come from `features.ts`): the third layer. */
+  fromRegistry?: true
   /** « Nouveau »: a function of the version in preparation. The mark is taken off by the next version (docs/fonctions.md). */
   isNew?: true
 }
 
 /** « Fichier › Capturer »: the path of a menu entry, in the language of the moment; a trailing ellipsis is dropped, it would end a sentence badly. */
-const menuPath = (...keys: MessageKey[]): string => keys.map((key) => t(key).replace(/…$/, '')).join(' › ')
+export const menuPath = (keys: readonly MessageKey[]): string => keys.map((key) => t(key).replace(/…$/, '')).join(' › ')
 
 const open = (request: OverlayRequest): DiscoverTry => ({ kind: 'open', request })
 const bar = (mode: 'new' | 'tabs' | 'little' | 'split', initial = ''): DiscoverTry => open({ panel: 'commandbar', mode, initial })
@@ -97,7 +109,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'discover.barre-nom',
     summary: 'discover.barre-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.ouvrir-la-barre-de-commandes') }),
+    menus: { menu: ['menu.fichier', 'menu.ouvrir-la-barre-de-commandes'] },
     keywords: 'adresse recherche url omnibox aller site chercher commande address search go',
     shortcut: 'openLocation',
     try: bar('new')
@@ -120,7 +132,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     level: 'beginner',
     feature: 'tab-search',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.onglets', 'menu.rechercher-un-onglet') }),
+    menus: { menu: ['menu.onglets', 'menu.rechercher-un-onglet'] },
     keywords: 'trouver onglet ouvert doublons fermer retrouver find tab open switch',
     shortcut: 'tabSearch',
     try: bar('tabs'),
@@ -133,7 +145,8 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     feature: 'page-content-index',
     name: 'discover.contenu-nom',
     where: 'discover.contenu-ou',
-    whereVars: () => ({ path: settingsPath('pageIndex'), menu: menuPath('menu.archive', 'menu.afficher-l-historique') }),
+    whereVars: () => ({ path: settingsPath('pageIndex') }),
+    menus: { menu: ['menu.archive', 'menu.afficher-l-historique'] },
     keywords: 'texte contenu phrase retrouver page lue historique plein texte full text content sentence history',
     shortcut: 'history',
     try: open({ panel: 'history' }),
@@ -146,7 +159,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     level: 'beginner',
     feature: 'shortcut-help',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.aide', 'menu.aide-des-raccourcis') }),
+    menus: { menu: ['menu.aide', 'menu.aide-des-raccourcis'] },
     keywords: 'raccourcis clavier touches aide liste shortcuts keyboard keys help cheat sheet',
     shortcut: 'shortcutHelp',
     try: open({ panel: 'shortcuts' }),
@@ -161,7 +174,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'menu.espaces',
     summary: 'discover.espaces-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.espaces', 'manage-panels.gerer-les-espaces') }),
+    menus: { menu: ['menu.espaces', 'manage-panels.gerer-les-espaces'] },
     keywords: 'profils groupes couleur travail perso projets separer spaces profiles work personal colour',
     shortcut: 'manageSpaces',
     try: open({ panel: 'spaces' })
@@ -184,7 +197,8 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     level: 'beginner',
     feature: 'tab-reminders',
     where: 'discover.rappel-ou',
-    whereVars: () => ({ remind: t('reminder.me-le-rappeler'), menu: menuPath('menu.fichier', 'reminder.rappels-en-attente') }),
+    whereVars: () => ({ remind: t('reminder.me-le-rappeler') }),
+    menus: { menu: ['menu.fichier', 'reminder.rappels-en-attente'] },
     keywords: 'plus tard programmer notification alarme heure revenir later remind alarm snooze',
     try: { kind: 'hint' },
     needs: 'tabReminders',
@@ -208,7 +222,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'discover.transfert-nom',
     summary: 'discover.transfert-resume',
     where: 'discover.transfert-ou',
-    whereVars: () => ({ export: menuPath('menu.espaces', 'space-transfer.exporter-cet-espace'), import: menuPath('menu.espaces', 'space-transfer.importer-un-espace') }),
+    menus: { export: ['menu.espaces', 'space-transfer.exporter-cet-espace'], import: ['menu.espaces', 'space-transfer.importer-un-espace'] },
     keywords: 'exporter importer espace autre mac fichier sauvegarde export import space another mac file backup move',
     try: { kind: 'hint' },
     setting: { panel: 'settings', pane: 'tabs' },
@@ -221,7 +235,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'menu.archive',
     summary: 'discover.archive-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.archive', 'keybindings.afficher-l-archive') }),
+    menus: { menu: ['menu.archive', 'keybindings.afficher-l-archive'] },
     keywords: 'onglets fermes retrouver rouvrir ranges historique closed tabs restore reopen history',
     shortcut: 'archive',
     try: open({ panel: 'archive' }),
@@ -236,7 +250,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'little-arc-settings.mini-fenetre',
     summary: 'discover.mini-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.nouvelle-mini-fenetre') }),
+    menus: { menu: ['menu.fichier', 'menu.nouvelle-mini-fenetre'] },
     keywords: 'apercu previsualiser lien petite fenetre flottante popup preview little window floating',
     shortcut: 'newLittleArc',
     try: bar('little'),
@@ -263,7 +277,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'cmd.rechercher-dans-la-page',
     summary: 'discover.chercher-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.edition', 'cmd.rechercher-dans-la-page') }),
+    menus: { menu: ['menu.edition', 'menu.rechercher', 'menu.rechercher-2'] },
     keywords: 'chercher mot texte page occurrence trouver remplacer find word text occurrence replace',
     shortcut: 'find',
     try: open({ panel: 'find' }),
@@ -275,7 +289,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     level: 'beginner',
     feature: 'notes',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.notes') }),
+    menus: { menu: ['menu.fichier', 'menu.notes'] },
     keywords: 'memo ecrire bloc-notes prendre note noter jotter memo write notepad',
     shortcut: 'notes',
     try: open({ panel: 'notes' }),
@@ -314,7 +328,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'discover.capture-nom',
     summary: 'discover.capture-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.capturer') }),
+    menus: { menu: ['menu.fichier', 'menu.capturer'] },
     keywords: 'capture ecran image zone annoter dessiner screenshot screen picture annotate draw',
     shortcut: 'captureRegion',
     try: open({ panel: 'capture' }),
@@ -327,7 +341,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'discover.entiere-nom',
     summary: 'discover.entiere-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.capturer-la-page-entiere') }),
+    menus: { menu: ['menu.fichier', 'menu.capturer-la-page-entiere'] },
     keywords: 'capture page entiere longue defiler haut en bas full page long scroll whole screenshot',
     shortcut: 'captureFull',
     try: { kind: 'call', call: 'captureFullPage' },
@@ -341,7 +355,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'discover.markdown-nom',
     summary: 'discover.markdown-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.enregistrer-la-page-en-markdown') }),
+    menus: { menu: ['menu.fichier', 'menu.enregistrer-la-page-en-markdown'] },
     keywords: 'exporter md texte article sauvegarder obsidian save export markdown article text notes',
     shortcut: 'saveMarkdown',
     try: { kind: 'call', call: 'saveMarkdown' },
@@ -354,7 +368,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     level: 'beginner',
     feature: 'bookmarks',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.signets') }),
+    menus: { menu: ['menu.fichier', 'menu.signets'] },
     keywords: 'signets marque-pages favoris etiquettes tags bookmarks favourites favorites save pages',
     shortcut: 'bookmarkList',
     try: open({ panel: 'bookmarks' }),
@@ -367,7 +381,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'discover.plus-tard-nom',
     summary: 'discover.plus-tard-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.liste-de-lecture') }),
+    menus: { menu: ['menu.fichier', 'menu.liste-de-lecture'] },
     keywords: 'lire plus tard mettre de cote liste de lecture read later reading list save for later',
     shortcut: 'readLaterList',
     try: open({ panel: 'readlater' }),
@@ -380,7 +394,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'menu.sessions',
     summary: 'discover.sessions-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.sessions') }),
+    menus: { menu: ['menu.fichier', 'menu.sessions'] },
     keywords: 'sessions enregistrer onglets ouverts rouvrir ensemble save open tabs restore group',
     shortcut: 'sessions',
     try: open({ panel: 'sessions' }),
@@ -472,7 +486,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     name: 'discover.totp-nom',
     summary: 'discover.totp-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.mots-de-passe') }),
+    menus: { menu: ['menu.fichier', 'menu.mots-de-passe'] },
     keywords: 'totp 2fa double authentification code usage unique mot de passe coffre authenticator two factor one time password vault',
     shortcut: 'passwords',
     try: open({ panel: 'passwords' }),
@@ -486,7 +500,7 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     feature: 'private-tabs',
     name: 'discover.prive-nom',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.fichier', 'menu.nouvel-onglet-prive') }),
+    menus: { menu: ['menu.fichier', 'menu.nouvel-onglet-prive'] },
     keywords: 'onglet prive incognito navigation privee sans trace private tab incognito no trace',
     shortcut: 'newPrivateTab',
     try: { kind: 'call', call: 'newPrivateTab' },
@@ -499,13 +513,389 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     feature: 'cookie-manager',
     summary: 'discover.cookies-resume',
     where: 'discover.menu-ou',
-    whereVars: () => ({ menu: menuPath('menu.affichage', 'menu.cookies-par-site') }),
+    menus: { menu: ['menu.affichage', 'menu.cookies-par-site'] },
     keywords: 'cookies par site effacer nettoyer garder sites clear clean keep per site',
     shortcut: 'cookieManager',
     try: open({ panel: 'cookies' }),
     needs: 'cookieManager'
   }
 ]
+
+// ---------- the functions that have no switch ----------
+
+/**
+ * What the registry does not hold: the functions of docs/fonctions.md « Fonctions sans interrupteur » (nothing to switch off, so no entry in features.ts), and
+ * the menus, panels and gestures of everyday use. Written like the chosen cards; every menu path they name is compared with the menus as they are built
+ * (main/shell/discover-wiring.test.ts).
+ */
+export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
+  // ---- Aller plus vite ----
+  {
+    id: 'guided-setup',
+    task: 'fast',
+    level: 'beginner',
+    name: 'discover.guide-nom',
+    summary: 'discover.guide-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.aide', 'menu.configuration-rapide'] },
+    keywords: 'regler questions configuration rapide guide assistant demarrer premier lancement setup questions guided quick configure',
+    try: open({ panel: 'settings', pane: 'general', anchor: 'guide' }),
+    setting: { panel: 'settings', pane: 'general', anchor: 'guide' }
+  },
+  {
+    id: 'settings-search',
+    task: 'fast',
+    level: 'beginner',
+    name: 'discover.reglages-nom',
+    summary: 'discover.reglages-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.lucium', 'menu.reglages'] },
+    keywords: 'reglages preferences options chercher reglage parametres settings preferences options search setting',
+    shortcut: 'settings',
+    try: open({ panel: 'settings', pane: 'home' }),
+    setting: { panel: 'settings', pane: 'home' }
+  },
+  {
+    id: 'presets',
+    task: 'fast',
+    level: 'beginner',
+    name: 'discover.prereglages-nom',
+    summary: 'discover.prereglages-resume',
+    where: 'discover.prereglages-ou',
+    keywords: 'prereglage preset niveau protection veille lancement liens plusieurs reglages d un coup standard renforcee stricte level sleep launch links at once',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'home' }
+  },
+  {
+    id: 'shortcuts-custom',
+    task: 'fast',
+    level: 'advanced',
+    name: 'discover.raccourcis-nom',
+    summary: 'discover.raccourcis-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('shortcuts') }),
+    keywords: 'raccourcis clavier touches personnaliser changer modifier combinaison shortcuts keyboard keys customise customize change rebind',
+    shortcut: 'shortcutHelp',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'keyboard', anchor: 'shortcuts' }
+  },
+  {
+    id: 'copy-markdown',
+    task: 'fast',
+    level: 'advanced',
+    name: 'menu.copier-l-adresse-en-markdown',
+    summary: 'discover.copier-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.edition', 'menu.copier-l-adresse-en-markdown'] },
+    keywords: 'copier adresse lien markdown citation coller url copy address link quote paste',
+    shortcut: 'copyUrlMarkdown',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'drop-links',
+    task: 'fast',
+    level: 'advanced',
+    name: 'discover.depot-nom',
+    summary: 'discover.depot-resume',
+    where: 'discover.depot-ou',
+    keywords: 'deposer glisser fichier lien disque pdf image ouvrir drop drag file link disk open',
+    try: { kind: 'hint' }
+  },
+
+  // ---- Organiser mes onglets ----
+  {
+    id: 'space-themes',
+    task: 'organise',
+    level: 'beginner',
+    name: 'discover.themes-nom',
+    summary: 'discover.themes-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.espaces', 'menu.modifier-le-theme'] },
+    keywords: 'theme couleur fond image gif video arriere plan personnaliser espace background colour color wallpaper customise customize',
+    shortcut: 'editTheme',
+    try: { kind: 'hint' },
+    setting: { panel: 'settings', pane: 'appearance' }
+  },
+  {
+    id: 'window-sidebar',
+    task: 'organise',
+    level: 'advanced',
+    name: 'ctx.bloc-barre-de-cette-fenetre',
+    summary: 'discover.barre-fenetre-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.affichage', 'menu.replier-la-barre-dans-cette-fenetre'] },
+    keywords: 'barre laterale replier colonne icones cote droite gauche fenetre sidebar collapse icons side right left window',
+    shortcut: 'dockSidebar',
+    try: { kind: 'hint' },
+    setting: { panel: 'settings', pane: 'appearance' }
+  },
+  {
+    id: 'move-tab',
+    task: 'organise',
+    level: 'advanced',
+    name: 'discover.deplacer-onglet-nom',
+    summary: 'discover.deplacer-onglet-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.onglets', 'menu.deplacer-l-onglet-vers-le-haut'] },
+    keywords: 'deplacer onglet haut bas ordre monter descendre clavier move tab up down order reorder keyboard',
+    shortcut: 'moveTabUp',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'move-to-window',
+    task: 'organise',
+    level: 'advanced',
+    name: 'ctx.deplacer-vers-la-fenetre',
+    summary: 'discover.fenetre-resume',
+    where: 'discover.fenetre-ou',
+    whereVars: () => ({ item: t('ctx.deplacer-vers-la-fenetre') }),
+    keywords: 'deplacer onglet autre fenetre envoyer nouvelle fenetre move tab other window send new window',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'auto-reload',
+    task: 'organise',
+    level: 'advanced',
+    name: 'menu.recharger-automatiquement',
+    summary: 'discover.recharger-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.affichage', 'menu.recharger-automatiquement'] },
+    keywords: 'recharger actualiser intervalle automatique page surveiller toutes les secondes reload refresh interval automatic every seconds',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'task-manager',
+    task: 'organise',
+    level: 'advanced',
+    name: 'discover.taches-nom',
+    summary: 'discover.taches-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.aide', 'menu.depannage', 'menu.ouvrir-le-gestionnaire-de-taches'] },
+    keywords: 'gestionnaire taches memoire processeur onglet lourd fermer ralentit task manager memory cpu heavy tab slow',
+    shortcut: 'taskManager',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'app-icon',
+    task: 'organise',
+    level: 'advanced',
+    name: 'discover.icone-nom',
+    summary: 'discover.icone-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('appIcon') }),
+    keywords: 'icone application dock couleur logo version app icon dock colour color logo',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'about', anchor: 'icon' }
+  },
+  {
+    id: 'panel-size',
+    task: 'organise',
+    level: 'advanced',
+    name: 'discover.taille-nom',
+    summary: 'discover.taille-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: pagePath('appearance') }),
+    keywords: 'taille fenetres panneaux ecran grand petit ultra large zoom interface size windows panels screen large small ultrawide',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'appearance', anchor: 'panelsize' }
+  },
+  {
+    id: 'glass-effect',
+    task: 'organise',
+    level: 'advanced',
+    name: 'discover.verre-nom',
+    summary: 'discover.verre-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: pagePath('appearance') }),
+    keywords: 'verre transparence vibrancy opacite barre laterale fenetre translucide glass transparency opacity sidebar window translucent',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'appearance' }
+  },
+
+  // ---- Lire et travailler ----
+  {
+    id: 'reader-mode',
+    task: 'read',
+    level: 'beginner',
+    name: 'menu.mode-lecture',
+    summary: 'discover.lecture-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.affichage', 'menu.mode-lecture'] },
+    keywords: 'lecture article epure lisible texte sans pub readability reader article clean readable text distraction',
+    shortcut: 'readerMode',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'find-replace',
+    task: 'read',
+    level: 'advanced',
+    name: 'menu.trouver-et-remplacer',
+    summary: 'discover.remplacer-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.edition', 'menu.rechercher', 'menu.trouver-et-remplacer'] },
+    keywords: 'remplacer chercher mot champ texte formulaire changer replace find word field text form change',
+    shortcut: 'findReplace',
+    try: open({ panel: 'findreplace' }),
+    setting: { panel: 'settings', pane: 'navigation' }
+  },
+  {
+    id: 'extensions-page',
+    task: 'read',
+    level: 'beginner',
+    name: 'menu.extensions',
+    summary: 'discover.extensions-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.extensions', 'menu.gerer-les-extensions'] },
+    keywords: 'extensions modules complements chrome web store ajouter installer gerer add ons plugins install manage',
+    shortcut: 'manageExtensions',
+    try: open({ panel: 'extensions' }),
+    setting: { panel: 'settings', pane: 'tools' }
+  },
+  {
+    id: 'developer-tools',
+    task: 'read',
+    level: 'advanced',
+    name: 'menu.outils-de-developpement',
+    summary: 'discover.dev-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.affichage', 'menu.developpeur', 'menu.outils-de-developpement'] },
+    keywords: 'developpeur outils inspecter console reseau source code page devtools developer inspect console network source',
+    shortcut: 'devTools',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'page-summary',
+    task: 'read',
+    level: 'advanced',
+    name: 'discover.resume-page-nom',
+    summary: 'discover.resume-page-resume',
+    where: 'discover.resume-page-ou',
+    whereVars: () => ({ path: settingsPath('summary') }),
+    menus: { menu: ['menu.fichier', 'menu.resumer-la-page'] },
+    keywords: 'resume resumer page article modele local ollama texte court summary summarize page article local model text short',
+    try: { kind: 'hint' },
+    needs: 'aiSummary',
+    setting: { panel: 'settings', pane: 'features' }
+  },
+
+  // ---- Garder et capturer ----
+  {
+    id: 'history',
+    task: 'keep',
+    level: 'beginner',
+    name: 'discover.historique-nom',
+    summary: 'discover.historique-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.archive', 'menu.afficher-l-historique'] },
+    keywords: 'historique pages visitees retrouver site hier effacer history visited pages find site yesterday clear',
+    shortcut: 'history',
+    try: open({ panel: 'history' }),
+    setting: { panel: 'settings', pane: 'protection' }
+  },
+  {
+    id: 'downloads',
+    task: 'keep',
+    level: 'beginner',
+    name: 'discover.telechargements-nom',
+    summary: 'discover.telechargements-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.archive', 'menu.afficher-les-telechargements'] },
+    keywords: 'telechargements fichiers telecharges dossier ouvrir downloads files downloaded folder open',
+    shortcut: 'downloads',
+    try: open({ panel: 'downloads' }),
+    setting: { panel: 'settings', pane: 'files' }
+  },
+  {
+    id: 'import-browser',
+    task: 'keep',
+    level: 'beginner',
+    name: 'discover.import-nom',
+    summary: 'discover.import-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.lucium', 'menu.importer-depuis-un-autre-navigateur'] },
+    keywords: 'importer signets mots de passe historique chrome safari firefox arc autre navigateur import bookmarks passwords history other browser',
+    shortcut: 'importData',
+    try: open({ panel: 'import' })
+  },
+  {
+    id: 'export-bookmarks',
+    task: 'keep',
+    level: 'advanced',
+    name: 'discover.export-signets-nom',
+    summary: 'discover.export-signets-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.lucium', 'menu.exporter-les-signets-html'] },
+    keywords: 'exporter signets favoris fichier html sauvegarder autre navigateur export bookmarks favourites favorites file html backup',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'annotate-page',
+    task: 'keep',
+    level: 'advanced',
+    name: 'menu.annoter-cette-page',
+    summary: 'discover.annoter-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.annoter-cette-page'] },
+    keywords: 'annoter dessiner surligner flecher page ecran partager presenter annotate draw highlight arrow page screen share present',
+    fixedKey: PAGE_TOGGLE_SHORTCUT,
+    try: { kind: 'hint' }
+  },
+
+  // ---- Protéger ma vie privée ----
+  {
+    id: 'private-window',
+    task: 'protect',
+    level: 'beginner',
+    name: 'menu.nouvelle-fenetre-privee',
+    summary: 'discover.fenetre-privee-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.nouvelle-fenetre-privee'] },
+    keywords: 'fenetre privee incognito sans trace navigation privee private window incognito no trace private browsing',
+    shortcut: 'privateWindow',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'clear-site-data',
+    task: 'protect',
+    level: 'advanced',
+    name: 'discover.efface-site-nom',
+    summary: 'discover.efface-site-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.archive', 'menu.effacer-les-donnees-du-site'] },
+    keywords: 'effacer donnees site cookies stockage cache oublier nettoyer clear site data cookies storage cache forget clean',
+    shortcut: 'clearSiteData',
+    try: open({ panel: 'sitedata' }),
+    setting: { panel: 'settings', pane: 'protection', anchor: 'sitedata' }
+  },
+  {
+    id: 'profiles',
+    task: 'protect',
+    level: 'advanced',
+    name: 'discover.profils-nom',
+    summary: 'discover.profils-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.nouveau-profil'] },
+    keywords: 'profils separer travail perso cookies historique reglages propres profiles separate work personal cookies history own settings',
+    shortcut: 'newProfile',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'profiles' }
+  },
+  {
+    id: 'certificate-warning',
+    task: 'protect',
+    level: 'beginner',
+    name: 'discover.certificat-nom',
+    summary: 'discover.certificat-resume',
+    where: 'discover.certificat-ou',
+    keywords: 'certificat securite connexion pas privee https site dangereux avertissement certificate security connection not private https unsafe warning',
+    try: { kind: 'hint' }
+  }
+]
+
+/** « Réglages › Apparence »: the way to a page of the Settings, in the language of the moment. */
+function pagePath(page: SettingsPage): string {
+  return t('cmd.settings-pane', { pane: settingsPaneLabel(page) })
+}
 
 // ---------- the registry, by task ----------
 
@@ -625,8 +1015,30 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'document-pip': 'read'
 }
 
-/** The card of a function of the registry, when it has one (the first, a function is on one card at most). */
-const cardOf = (id: FeatureId): DiscoverEntry | undefined => DISCOVER_ENTRIES.find((entry) => entry.feature === id)
+/** The functions of the registry that a chosen card or a function without a switch already speaks of: they get no card from the registry alone. */
+const carded = (): ReadonlySet<string> => new Set([...DISCOVER_ENTRIES, ...DISCOVER_EXTRAS].flatMap((entry) => (entry.feature !== undefined ? [entry.feature] : [])))
+
+/** « Réglages › Vie privée et sécurité › Protection »: where the setting of a function of the registry is drawn (the page « Fonctions en option » for a setting no page draws). */
+function registryPath(feature: Feature): string {
+  const steps = categoryOfKey(feature.key) !== null ? settingsPathSteps({ key: feature.key }) : [settingsPaneLabel('features')]
+  return t('cmd.settings-pane', { pane: steps.join(' › ') })
+}
+
+/**
+ * The third layer: one card for every function of the registry that has none yet. It lends its name and its line, says where its setting is, and offers
+ * « Régler ». They are for those who go further, so the level « Pour débuter » leaves them out.
+ */
+export const REGISTRY_ENTRIES: readonly DiscoverEntry[] = (() => {
+  const done = carded()
+  return FEATURES.flatMap((feature): DiscoverEntry[] => {
+    const id = feature.id as FeatureId
+    if (done.has(id)) return []
+    return [{ id: `registry-${id}`, task: FEATURE_TASKS[id], level: 'advanced', feature: id, where: 'discover.reglage-ou', whereVars: () => ({ path: registryPath(feature) }), keywords: '', try: { kind: 'setting' }, fromRegistry: true }]
+  })
+})()
+
+/** Every card of the panel, in the order it shows them under each task: the chosen ones first, then the functions without a switch, then the rest of the registry. */
+export const ALL_DISCOVER_ENTRIES: readonly DiscoverEntry[] = [...DISCOVER_ENTRIES, ...DISCOVER_EXTRAS, ...REGISTRY_ENTRIES]
 
 // ---------- what a card says ----------
 
@@ -644,21 +1056,26 @@ export function discoverSummary(entry: DiscoverEntry): string {
 
 /** The sentence that says where to find the function. */
 export function discoverWhere(entry: DiscoverEntry): string {
-  return t(entry.where, entry.whereVars?.())
+  const vars: Record<string, string | number> = { ...entry.whereVars?.() }
+  for (const [name, keys] of Object.entries(entry.menus ?? {})) vars[name] = menuPath(keys)
+  return t(entry.where, vars)
 }
 
 /** The keys of the shortcut in force for the card, as capsules (`keys`) and as a text (`text`: « ⇧⌘2 », « Ctrl+Maj+2 »); null when the card has no command or the command has no key. */
 export function discoverKeys(entry: DiscoverEntry, bindings: KeyBindings | undefined, platform: PlatformId): { keys: string[]; text: string } | null {
-  if (entry.shortcut === undefined) return null
-  const accelerator = effectiveAccelerator(entry.shortcut, bindings, platform)
+  if (entry.shortcut === undefined && entry.fixedKey === undefined) return null
+  const accelerator = entry.shortcut !== undefined ? effectiveAccelerator(entry.shortcut, bindings, platform) : entry.fixedKey
   if (accelerator === undefined) return null
   const text = formatAccelerator(accelerator, platform)
   const keys = acceleratorKeys(accelerator, platform)
   return { keys: keys.length > 0 ? keys : [text], text }
 }
 
-/** Whether the function of a card is switched off, so that its button could do nothing. */
-export const discoverOff = (entry: DiscoverEntry, settings: Pick<Settings, BooleanSettingKey>): boolean => entry.needs !== undefined && !settings[entry.needs]
+/** Whether the function of a card is switched off, so that its button could do nothing; a card of the registry alone says it from the switch of its function. */
+export function discoverOff(entry: DiscoverEntry, settings: Settings): boolean {
+  if (entry.needs !== undefined) return !settings[entry.needs]
+  return entry.fromRegistry === true && entry.feature !== undefined && !isFeatureShownOn(settings, entry.feature)
+}
 
 /** The page of the Settings that draws the row of a setting; « Fonctions en option » for a setting no page draws (a feature added before its row). */
 export const settingsPageOf = (key: string): SettingsPage => categoryOfKey(key) ?? 'features'
@@ -681,7 +1098,7 @@ export interface DiscoverFilter {
  * The cards that answer the words and the filters, in the order of the catalogue. The search is the one of the Settings (shared/settings-search.ts): every
  * word must begin a word of the name, the line, the place or the keywords, accents, case, plural and the common words aside, in French and in English.
  */
-export function filterDiscover(filter: DiscoverFilter, entries: readonly DiscoverEntry[] = DISCOVER_ENTRIES): DiscoverEntry[] {
+export function filterDiscover(filter: DiscoverFilter, entries: readonly DiscoverEntry[] = ALL_DISCOVER_ENTRIES): DiscoverEntry[] {
   const words = queryWords(filter.query)
   return entries.filter((entry) => {
     if (filter.task !== 'all' && entry.task !== filter.task) return false
@@ -695,34 +1112,4 @@ export function taskCounts(entries: readonly DiscoverEntry[]): Record<DiscoverTa
   const counts = { all: entries.length, fast: 0, organise: 0, read: 0, keep: 0, focus: 0, protect: 0 }
   for (const entry of entries) counts[entry.task]++
   return counts
-}
-
-/** A function of the registry that has no card: its name, its line, its task and the page of the Settings that holds it. */
-export interface OtherFeature {
-  feature: ReturnType<typeof featureById>
-  task: DiscoverTask
-  name: string
-  line: string
-  request: SettingsRequest
-}
-
-/**
- * « Toutes les autres fonctions »: the registry without the functions that have a card, by the words and the task. They all are for those who go further:
- * the level « Pour débuter » leaves them out.
- */
-export function otherFeatures(filter: DiscoverFilter): OtherFeature[] {
-  if (filter.level === 'beginner') return []
-  const words = queryWords(filter.query)
-  const rows: OtherFeature[] = []
-  for (const feature of FEATURES) {
-    const id = feature.id as FeatureId
-    if (cardOf(id) !== undefined) continue
-    const task = FEATURE_TASKS[id]
-    if (filter.task !== 'all' && task !== filter.task) continue
-    const name = feature.label
-    const line = featureLine(feature)
-    if (words.length > 0 && !matchesWords(`${name} ${line}`, words)) continue
-    rows.push({ feature, task, name, line, request: { panel: 'settings', pane: settingsPageOf(feature.key) } })
-  }
-  return rows
 }
