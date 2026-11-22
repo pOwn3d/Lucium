@@ -393,6 +393,14 @@ describe('permissions and settings', () => {
     expect(fixed.settings.sidebarWidth).toBe(323)
     expect(fixed.settings.siteSearches.length).toBeGreaterThan(0)
     expect(fixed.settings.searchUrlTemplate).toBe('https://x/?q=%s')
+    expect(fixed.settings.privateSearchUrlTemplate).toBe('')
+  })
+
+  it('keeps the engine of private windows when it is a search address, and drops anything else', () => {
+    const base = createInitialState(makeCtx())
+    const settingsWith = (privateSearchUrlTemplate: unknown) => normalize({ ...base, settings: { ...base.settings, privateSearchUrlTemplate } } as unknown as SidebarState).settings
+    expect(settingsWith('https://private.example/?q=%s').privateSearchUrlTemplate).toBe('https://private.example/?q=%s')
+    for (const bad of ['javascript:alert(%s)', 'https://no-placeholder.example/', 42, null]) expect(settingsWith(bad).privateSearchUrlTemplate, String(bad)).toBe('')
   })
 })
 

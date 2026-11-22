@@ -53,6 +53,9 @@ export const PEEK_HEADER_HEIGHT = 40
  */
 export const FIND_PANEL = { width: 300, height: 32, top: 17, right: 10, shadow: 10 } as const
 
+/** The find panel when the setting `findRegex` adds its buttons (".*", case, whole words, accents): the same, wider. */
+export const FIND_PANEL_WIDE = { ...FIND_PANEL, width: 404 } as const
+
 /** Find and Replace: the find panel's width, two fields tall (built from the find panel's cotes). */
 export const FIND_REPLACE_PANEL = { width: 300, height: 70, top: 17, right: 10, shadow: 10 } as const
 

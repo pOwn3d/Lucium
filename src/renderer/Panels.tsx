@@ -1,9 +1,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { archiveBuckets } from '@shared/archive'
-import { FIND_PANEL, PEEK_HEADER_HEIGHT } from '@shared/ipc'
+import { PEEK_HEADER_HEIGHT, type FindOptions } from '@shared/ipc'
 import { commandPress, platformOf } from '@shared/platform'
 import { isPeekOpenKey, peekAccent, peekAddress, peekAddressParts, peekOnAccent } from '@shared/peek'
-import { REGEX_ERROR_DETAILS, findCounterText } from '@shared/regex-find'
+import { NO_FIND_TOGGLES, REGEX_ERROR_DETAILS, findCounterText, findPanelFor, findRequest, type FindToggle, type FindToggles } from '@shared/regex-find'
 import { pageColorBehind, popoverSurface } from '@shared/command-bar'
 import { activeTab } from '@shared/sidebar'
 import { spaceGlyph } from '@shared/space-icon'
@@ -37,6 +37,9 @@ const spaceGlyphOf = (space: Space | undefined): string => (space ? spaceGlyph(s
 
 const GLYPH = { fill: 'none', stroke: 'currentColor', strokeWidth: 1.6, strokeLinecap: 'round', strokeLinejoin: 'round', 'aria-hidden': true } as const
 
+/** What the whole-words button shows: two letters, underlined, whatever the language. */
+const WORD_FACE = 'ab'
+
 /** The find-in-page panel (300 x 32): magnifier, field, "n/m" counter, previous and next, close. */
 export function FindBar() {
   const snapshot = useSnapshot()
@@ -57,11 +60,22 @@ export function FindBar() {
   const find = snapshot?.find
   const searching = text !== ''
   const matches = find?.matches ?? 0
-  // The ".*" button exists only when Settings ask for it; the panel otherwise keeps its default layout.
-  const regexAvailable = snapshot?.state.settings.findRegex === true
-  const [regex, setRegex] = useState(false)
-  const regexOn = regexAvailable && regex
-  const optionsFor = (more: { next?: boolean; forward?: boolean }) => (regexOn ? { ...more, regex: true } : more)
+  // The buttons (case, whole words, accents, ".*") exist only when Settings ask for them; the panel otherwise keeps its default layout.
+  const available = snapshot?.state.settings.findRegex === true
+  const panel = findPanelFor({ findRegex: available })
+  const [toggles, setToggles] = useState<FindToggles>(NO_FIND_TOGGLES)
+  const optionsFor = (more: FindOptions) => findRequest(toggles, available, more)
+  const toggle = (key: FindToggle) => {
+    const next = { ...toggles, [key]: !toggles[key] }
+    setToggles(next)
+    if (searching) api().find(text, findRequest(next, available))
+  }
+  const FIND_BUTTONS: Array<{ key: FindToggle; label: string; face: React.ReactNode }> = [
+    { key: 'matchCase', label: t('panels.respecter-la-casse'), face: 'Aa' },
+    { key: 'wholeWord', label: t('panels.mots-entiers'), face: <u>{WORD_FACE}</u> },
+    { key: 'accents', label: t('panels.distinguer-les-accents'), face: 'é' },
+    { key: 'regex', label: t('panels.expression-reguliere'), face: '.*' }
+  ]
   const step = (forward: boolean) => api().find(text, optionsFor({ next: true, forward }))
   // The arrows must not take the focus from the field: Return keeps stepping after a click on them.
   const keepFocus = (e: React.MouseEvent) => e.preventDefault()
@@ -72,7 +86,7 @@ export function FindBar() {
         className="fb"
         role="search"
         aria-label={t('cmd.rechercher-dans-la-page')}
-        style={{ '--fb-shadow': `${FIND_PANEL.shadow}px`, width: FIND_PANEL.width, height: FIND_PANEL.height } as React.CSSProperties}
+        style={{ '--fb-shadow': `${panel.shadow}px`, width: panel.width, height: panel.height } as React.CSSProperties}
         onKeyDown={(e) => {
           if (e.key === 'Escape') {
             e.preventDefault()
@@ -104,21 +118,12 @@ export function FindBar() {
             if (searching) step(!e.shiftKey)
           }}
         />
-        {regexAvailable && (
-          <button
-            className="fb-toggle"
-            title={t('panels.expression-reguliere')}
-            aria-label={t('panels.expression-reguliere')}
-            aria-pressed={regexOn}
-            onMouseDown={keepFocus}
-            onClick={() => {
-              setRegex(!regex)
-              if (searching) api().find(text, !regex ? { regex: true } : {})
-            }}
-          >
-            .*
-          </button>
-        )}
+        {available &&
+          FIND_BUTTONS.map(({ key, label, face }) => (
+            <button key={key} className="fb-toggle" data-find-toggle={key} title={label} aria-label={label} aria-pressed={toggles[key]} onMouseDown={keepFocus} onClick={() => toggle(key)}>
+              {face}
+            </button>
+          ))}
         {searching && (
           <>
             <span className={find?.error ? 'fb-count fb-error' : 'fb-count'} aria-live="polite" title={find?.error ? REGEX_ERROR_DETAILS[find.error] : undefined}>

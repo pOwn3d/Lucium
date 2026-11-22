@@ -121,6 +121,7 @@
   "workViews": [],
   "settings": {
     "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+    "privateSearchUrlTemplate": "",
     "siteSearches": [
       {
         "keyword": "g",

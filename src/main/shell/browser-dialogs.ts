@@ -14,7 +14,7 @@ import { STORE_URL } from '@shared/web-store'
 import { buildReplaceScript, replaceMessage, type ReplaceOutcome, type ReplaceRequest } from '@shared/find-replace'
 import { PERMISSION_ARM_MS, appLinkSchemeOf, hasQuestionPanel, mayRemember } from '@shared/permissions'
 import { hostOf } from '@shared/url'
-import { regexSearchAllowed } from '@shared/regex-find'
+import { allowedFindOptions } from '@shared/regex-find'
 import { discoveryApplies } from '@shared/opensearch'
 import { SearchDiscovery, fetchDescription } from './search-discovery'
 import type { Engine, ExtensionReviewAsk } from '../engine/types'
@@ -48,10 +48,10 @@ export abstract class BrowserDialogs extends BrowserBase {
   findInPage(text: string, options: FindOptions): void {
     const page = this.activePage()
     if (!page) return
-    // The regular-expression search is a setting: with it off the option is not honoured, whatever the interface sent.
-    const regex = regexSearchAllowed(options, this.store.get().settings)
-    this.find = text ? { text, matches: 0, ordinal: 0, ...(regex ? { regex: true } : {}) } : null
-    page.find(text, { ...options, regex })
+    // The regular expression, the whole words and the accents are a setting: with it off the options are not honoured, whatever the interface sent.
+    const allowed = allowedFindOptions(options, this.store.get().settings)
+    this.find = text ? { text, matches: 0, ordinal: 0, ...(allowed.regex ? { regex: true } : {}) } : null
+    page.find(text, allowed)
     this.publish()
   }
 

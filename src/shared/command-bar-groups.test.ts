@@ -178,6 +178,26 @@ describe('the genre chips and the letters that name them', () => {
     expect(bookmarkCandidates('', { ...state, settings: { ...state.settings, bookmarkManager: false } }, false, 12)).toEqual([])
   })
 
+  it('filters the bookmarks by tag with "#tag": the beginning of the tag is enough, case and accents do not count, tags add up, and a tag is not a word of the title', () => {
+    const marks = [
+      { id: 'b1', url: 'https://tarte.test/', title: 'Tarte', tags: ['Été', 'cuisine'], addedAt: 1 },
+      { id: 'b2', url: 'https://doc.test/', title: 'Doc', tags: ['dev'], addedAt: 2 },
+      { id: 'b3', url: 'https://sans.test/', title: 'Sans étiquette', tags: [], addedAt: 3 }
+    ]
+    const state = { ...world({ bookmarkManager: true }), bookmarks: marks }
+    const ids = (query: string) => bookmarkCandidates(query, state, false, 12).map((c) => c.id).sort()
+    expect(ids('#ete')).toEqual(['bookmark:b1'])
+    expect(ids('#ÉT')).toEqual(['bookmark:b1'])
+    expect(ids('#cui #ete')).toEqual(['bookmark:b1'])
+    expect(ids('#cuisine #dev')).toEqual([])
+    expect(ids('#dev')).toEqual(['bookmark:b2'])
+    expect(ids('#tarte')).toEqual([])
+    expect(ids('#etiquette')).toEqual([])
+    expect(ids('tarte #cuisine')).toEqual(['bookmark:b1'])
+    // The tags a bookmark carries are named in its line, with their "#".
+    expect(bookmarkCandidates('#dev', state, false, 12)[0]!.detail).toContain('#dev')
+  })
+
   it('leaves `#` to the tag of a bookmark, and any other text without a genre', () => {
     expect(splitScope('#dev')).toEqual({ scope: null, text: '#dev' })
     expect(splitScope('agenda > x')).toEqual({ scope: null, text: 'agenda > x' })

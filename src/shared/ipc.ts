@@ -22,7 +22,7 @@ import type { MemoryGauge } from './resources'
 
 // Moved to modules of their own, still importable from here.
 export { Channel, InternalChannel } from './ipc-channels'
-export { LITTLE_HEADER_HEIGHT, LITTLE_STRIP_HEIGHT, WEB_APP_HEADER_HEIGHT, PAGE_MARGIN, FLOAT_LEAVE_MS, TRAFFIC_LIGHTS, FLOATING_INSET, TOOLBAR_BAR_HEIGHT, TOOLBAR_HEIGHT, SIDE_PANEL_HEADER_HEIGHT, PEEK_HEADER_HEIGHT, FIND_PANEL, FIND_REPLACE_PANEL, FIND_HIGHLIGHT_CSS, REGEX_HIGHLIGHT_CSS, TOOLTIP } from './ipc-layout'
+export { LITTLE_HEADER_HEIGHT, LITTLE_STRIP_HEIGHT, WEB_APP_HEADER_HEIGHT, PAGE_MARGIN, FLOAT_LEAVE_MS, TRAFFIC_LIGHTS, FLOATING_INSET, TOOLBAR_BAR_HEIGHT, TOOLBAR_HEIGHT, SIDE_PANEL_HEADER_HEIGHT, PEEK_HEADER_HEIGHT, FIND_PANEL, FIND_PANEL_WIDE, FIND_REPLACE_PANEL, FIND_HIGHLIGHT_CSS, REGEX_HIGHLIGHT_CSS, TOOLTIP } from './ipc-layout'
 export { type InternalPageApi, type LuciumApi, type PageSummaryReply } from './ipc-api'
 
 /** Query parameter that marks the UI surfaces of a private window: the preload and the renderer read it. */
@@ -345,6 +345,10 @@ export interface FindOptions {
   matchCase?: boolean
   /** Read the text as a regular expression (only honoured when the `findRegex` setting is on; see shared/regex-find.ts). */
   regex?: boolean
+  /** Only the matches that are not inside a longer word (letters, digits and "_" make a word). Needs the `findRegex` setting, like `regex`. */
+  wholeWord?: boolean
+  /** Tell "e" from "é": the search is done by Lucium's own engine, which compares the letters as they are. Needs the `findRegex` setting. */
+  accents?: boolean
 }
 
 export interface EngineInfo {

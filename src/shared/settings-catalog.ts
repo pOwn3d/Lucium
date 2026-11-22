@@ -91,7 +91,7 @@ export const SETTINGS_KEYS = {
   // Moteur de recherche · Propositions de la barre de commandes · Apparence · Recherches rapides · Recherche dans un site · Mots-clés des extensions
   // · Mini-fenêtre et Coup d’œil · Ouverture des liens
   navigation: [
-    'searchUrlTemplate', 'searchSuggestions', 'suggestHistory', 'suggestTabs', 'goToOpenTab', 'suggestArchive', 'suggestReadLater',
+    'searchUrlTemplate', 'privateSearchUrlTemplate', 'searchSuggestions', 'suggestHistory', 'suggestTabs', 'goToOpenTab', 'suggestArchive', 'suggestReadLater',
     'commandBarSize', 'commandBarShape', 'searchBangs', 'commandBarCalc', 'searchDiscovery', 'siteSearches', 'omniboxKeywords',
     'externalLinksInLittleArc', 'littleArcArchiveHours', 'littleArcNewTabLinks', 'littleArcModifier', 'littleDownloadBubble',
     'peekWithShift', 'peekOnExternalLinks', 'modifiedClickBackground', 'blankLinkBackground', 'linkRoutes'
