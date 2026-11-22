@@ -278,6 +278,26 @@ describe('the door of a window while the application is locked', () => {
     lock.locked = false
   })
 
+  it('forgets a span of the history only by one of its five words, in a profile that is named, from the interface only', async () => {
+    lock.locked = false
+    await message(UI, Channel.forgetHistoryRange, 'week', 'work')
+    expect(browser.calls.find((call) => call.name === 'forgetHistoryRange')?.args).toEqual(['week', 'work'])
+    browser.calls.length = 0
+    // Two moments, a word that is no span, no profile: refused, said in the journal (a message cannot name a span of its own).
+    for (const args of [[{ from: 0, to: 9e15 }, 'work'], ['year', 'work'], ['ALL', 'work'], [0, 'work'], ['all'], ['all', { id: 'work' }]]) {
+      vi.mocked(console.warn).mockClear()
+      expect(await message(UI, Channel.forgetHistoryRange, ...args), JSON.stringify(args)).toBe(0)
+      expect(browser.names(), JSON.stringify(args)).not.toContain('forgetHistoryRange')
+      expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('a request to forget a span of the history was refused'))
+    }
+    // A page that is no surface of ours reaches nothing, nor does the interface while the application is locked.
+    expect(await message(STRANGER, Channel.forgetHistoryRange, 'all', 'work')).not.toBe(1)
+    lock.locked = true
+    expect(await message(UI, Channel.forgetHistoryRange, 'all', 'work')).toBe(0)
+    expect(browser.names()).not.toContain('forgetHistoryRange')
+    lock.locked = false
+  })
+
   it('forgets a day of the history only between the bounds of one day, in a profile that is named', async () => {
     lock.locked = false
     const DAY = 86_400_000

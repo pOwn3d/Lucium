@@ -22,6 +22,7 @@ import { rememberedDecision } from '@shared/permissions'
 import type { ExtensionTabHooks } from '../engine/types'
 import { ExtensionShims } from './extension-shims'
 import { gateAutoArchive } from './auto-archive'
+import { gateHistoryPurge } from './history-purge'
 import { gateTabReminders } from './tab-reminders'
 import { AutoReloader } from './auto-reload'
 import { showSystemNotice } from './system-notice'
@@ -297,6 +298,8 @@ export class Browser extends BrowserLayout {
     if (!this.isPrivate() && !this.isSecondary()) this.gates.gate('resource-gauge', { start: () => this.startResourceWatch() })
     // A private window has no archive to sweep into; the main window sweeps the shared one. No timer and no pass while archiving is off everywhere.
     if (!this.isPrivate() && !this.isSecondary()) gateAutoArchive(this.gates, () => this.dispatch({ type: 'archive/sweep' }))
+    // The purge of the old pages of the history (« Garder l'historique : N jours »): the main window only, every profile at once; nothing runs while the delay is 0.
+    if (!this.isPrivate() && !this.isSecondary()) gateHistoryPurge(this.gates, () => void this.purgeHistory(Date.now()))
     // "Rappel d'onglet": one timer for the earliest reminder, in the main window only (a private window keeps none). The notification is local and names the page.
     if (!this.isPrivate() && !this.isSecondary()) {
       gateTabReminders(this.gates, {

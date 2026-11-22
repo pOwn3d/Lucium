@@ -256,6 +256,7 @@ function rich(): SidebarState {
     sitePictureInPictureInLucium: false,
     mediaPlayer: false,
     autoArchiveHours: 5,
+    historyKeepDays: 90,
     profiles: { work: { searchUrlTemplate: 'https://s.example/?q=%s', searchSuggestions: false, autoArchiveHours: 2, downloadDir: '/tmp/telechargements', disabledExtensions: ['a'.repeat(32), 'p'.repeat(32)] } },
     sleepAfterMinutes: 15,
     sleepAwakeMax: 20,
@@ -558,6 +559,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   sitePictureInPictureInLucium: bool,
   mediaPlayer: bool,
   autoArchiveHours: num(0),
+  historyKeepDays: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3650,
   profiles: (v) =>
     isRecord(v) &&
     Object.getPrototypeOf(v) === Object.prototype &&

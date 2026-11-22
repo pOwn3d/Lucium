@@ -32,6 +32,7 @@ export const Channel = {
   searchHistory: 'lucium:search-history',
   forgetHistory: 'lucium:forget-history',
   forgetHistoryDay: 'lucium:forget-history-day',
+  forgetHistoryRange: 'lucium:forget-history-range',
   searchPageContent: 'lucium:search-page-content',
   clearPageIndex: 'lucium:clear-page-index',
   putBackHistory: 'lucium:put-back-history',

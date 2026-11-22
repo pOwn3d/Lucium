@@ -325,6 +325,43 @@ describe('the history panel names the profile it lists', () => {
     expect(logs.work.removeBetween).not.toHaveBeenCalled()
   })
 
+  describe('a span and the purge', () => {
+    const withState = (keepDays: number) => {
+      const { logs } = window()
+      const withDelay = (): SidebarState => ({ ...state(), settings: { ...state().settings, historyKeepDays: keepDays } })
+      const self = shell({ store: { get: withDelay }, history: { of: (id: 'default' | 'work') => logs[id] }, dispatch: vi.fn() })
+      return { logs, self, now: 1_000_000_000_000 }
+    }
+    it('forgets a span by its word, in the profile named, with bounds worked out here', () => {
+      const { logs, self } = window()
+      vi.useFakeTimers({ now: 5_000_000 })
+      expect(method('forgetHistoryRange').call(self, 'hour', 'default')).toBe(3)
+      vi.useRealTimers()
+      expect(logs.default.removeBetween).toHaveBeenCalledWith(5_000_000 - 3_600_000, 5_000_001)
+      expect(logs.work.removeBetween).not.toHaveBeenCalled()
+    })
+
+    it('forgets no span, and says so, for a profile that does not exist', () => {
+      const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+      const { logs, self } = window()
+      expect(method('forgetHistoryRange').call(self, 'all', 'gone')).toBe(0)
+      expect(logs.default.removeBetween).not.toHaveBeenCalled()
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('which does not exist: nothing is forgotten'))
+      warn.mockRestore()
+    })
+
+    it('purges nothing while the delay is 0, and the pages older than the delay, in every profile, otherwise', () => {
+      const off = withState(0)
+      expect(method('purgeHistory').call(off.self, off.now)).toBe(0)
+      expect(off.logs.default.removeBetween).not.toHaveBeenCalled()
+      const on = withState(30)
+      expect(method('purgeHistory').call(on.self, on.now)).toBe(8)
+      expect(on.logs.default.removeBetween).toHaveBeenCalledWith(0, on.now - 30 * 86_400_000)
+      // Every profile, not only the one on screen: the delay is the person's, for the whole browser.
+      expect(on.logs.work.removeBetween).toHaveBeenCalledWith(0, on.now - 30 * 86_400_000)
+    })
+  })
+
   it('forgets no day, and says so, for a profile that does not exist', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const { logs, self } = window()

@@ -542,6 +542,35 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
  * (main/shell/discover-wiring.test.ts).
  */
 export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
+  // ---- Protéger ma vie privée ----
+  {
+    id: 'history-range',
+    task: 'protect',
+    level: 'advanced',
+    name: 'discover.historique-periode-nom',
+    summary: 'discover.historique-periode-resume',
+    where: 'discover.historique-periode-ou',
+    whereVars: () => ({ path: settingsPath('historyKeep'), menu: menuPath(['menu.archive', 'menu.afficher-l-historique']) }),
+    menus: { menu: ['menu.archive', 'menu.afficher-l-historique'] },
+    keywords: 'effacer historique heure aujourd hui semaine tout periode plage vider supprimer clear history hour today week range delete forget',
+    shortcut: 'history',
+    try: open({ panel: 'history' }),
+    isNew: true
+  },
+  {
+    id: 'history-keep',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'history-purge',
+    name: 'discover.historique-garder-nom',
+    summary: 'discover.historique-garder-resume',
+    where: 'discover.historique-garder-ou',
+    whereVars: () => ({ path: settingsPath('historyKeep') }),
+    keywords: 'historique garder conserver jours purge automatique oublier ancien 30 90 history keep days auto delete purge expire old',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'protection' },
+    isNew: true
+  },
   // ---- Aller plus vite ----
   {
     id: 'guided-setup',
@@ -1080,6 +1109,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'mouse-gestures': 'fast',
   'space-swipe': 'fast',
   'page-content-index': 'fast',
+  'history-purge': 'protect',
   'page-watch': 'read',
   'focus-mode': 'focus',
   'read-aloud': 'read',

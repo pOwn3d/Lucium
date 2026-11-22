@@ -68,6 +68,7 @@ export const SETTINGS_PLACES = {
   // « Découvrir Lucium » (shared/discover.ts) says where to switch on the functions it presents
   protection: { page: 'protection' },
   pageIndex: { key: 'pageContentIndex' },
+  historyKeep: { key: 'historyKeepDays' },
   pictureInPicture: { key: 'autoPictureInPicture' },
   workViews: { key: 'workViewsEnabled' },
   glance: { key: 'peekWithShift' },

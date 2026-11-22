@@ -54,6 +54,7 @@ import { cleanUsedProfiles } from './profile-recovery'
 import { cleanRetiredProfiles } from './profile-retire'
 import { settleTree } from './tab-tree'
 import { normalizeFolders } from './folders'
+import { cleanKeepDays } from './history-range'
 import { cleanTabReminders, cleanArchive, cleanCommandBarUsage, cleanDelay, cleanExtensionPaths, cleanFavorites, cleanFolders, cleanLinkRoutes, cleanReadLater, cleanReadLaterFolders, cleanSearchDiscoverySeen, cleanSidePanelBehavior, cleanSiteDataRecents, cleanSiteSearches, cleanSitePermissions, cleanSpaces, cleanSplits, SITE_SEARCHES_MAX, cleanTabs, coerceSettings, isRecord, printable } from './state-clean'
 import { clampOr } from './clamp'
 import { cleanBarPosition } from './annotate-bar-position'
@@ -440,6 +441,7 @@ export function clampSettings(input: Settings): Settings {
     updateChannel: settings.updateChannel === 'test' ? 'test' : 'stable',
     updateNotices: cleanUpdateNotices(settings.updateNotices),
     autoArchiveHours: cleanDelay(settings.autoArchiveHours, defaults.autoArchiveHours),
+    historyKeepDays: cleanKeepDays(settings.historyKeepDays),
     littleArcArchiveHours: cleanDelay(settings.littleArcArchiveHours, defaults.littleArcArchiveHours),
     interfaceAppearance: settings.interfaceAppearance === 'light' || settings.interfaceAppearance === 'dark' ? settings.interfaceAppearance : 'auto',
     websiteAppearance: settings.websiteAppearance === 'light' || settings.websiteAppearance === 'dark' ? settings.websiteAppearance : 'auto',

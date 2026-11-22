@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { historyOwnerLine } from '@shared/history-scope'
-import { ALL_DAYS, DAY_UNDO, dayBounds, historyColumns, visitTime, type HistoryColumns } from '@shared/history-days'
+import { HISTORY_RANGES, HISTORY_RANGE_TEXTS, isHistoryRange } from '@shared/history-range'
+import { ALL_DAYS, DAY_UNDO, RANGE_UNDO, dayBounds, historyColumns, visitTime, type HistoryColumns } from '@shared/history-days'
 import type { HistoryEntry } from '@shared/model'
 import { activeProfileId } from '@shared/profiles'
 import type { PlusAnchor } from '@shared/plus-menu'
@@ -109,6 +110,7 @@ function HistoryList({ profileId }: { profileId: string }) {
   const [query, setQuery] = useState('')
   const [entries, setEntries] = useState<HistoryEntry[] | null>(null)
   const [chosen, setChosen] = useState<string | null>(null)
+  const [rangeFailed, setRangeFailed] = useState(false)
   const refocus = useRef<number | null>(null)
   const act = api()
   const [latest] = useState(() => latestHistorySearch((text) => api().searchHistory(text, HISTORY_ROWS, profileId)))
@@ -166,6 +168,20 @@ function HistoryList({ profileId }: { profileId: string }) {
     })
   }
 
+  // « Effacer une période… »: every page of the span goes at once (the main process works the span out and forgets it over the whole history of the
+  // profile, searched or not), and comes back together within the six seconds. A failure says so and the list is read again.
+  const forgetRange = (range: string) => {
+    if (!isHistoryRange(range)) return
+    setRangeFailed(false)
+    undo.remove(RANGE_UNDO + range, t(HISTORY_RANGE_TEXTS[range].done), () => {
+      void act.forgetHistoryRange(range, profileId).then(reload, (error: unknown) => {
+        console.warn('[history] the period could not be forgotten:', error)
+        setRangeFailed(true)
+        reload()
+      })
+    })
+  }
+
   // The keys of a page: ⌘↩ opens it behind, ⌫ forgets it. The days column goes through the days with ↑↓ (the panel's own arrows would leave it for the pages).
   const onKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     const target = event.target as HTMLElement
@@ -212,9 +228,19 @@ function HistoryList({ profileId }: { profileId: string }) {
       }}
       state={entries === null ? 'loading' : 'ready'}
       footStart={
-        <button type="button" className="tk-btn quiet danger" disabled={day === ALL_DAYS || rows.length === 0} onClick={forgetDay}>
-          {t('history-days.oublier-ce-jour')}
-        </button>
+        <>
+          <button type="button" className="tk-btn quiet danger" disabled={day === ALL_DAYS || rows.length === 0} onClick={forgetDay}>
+            {t('history-days.oublier-ce-jour')}
+          </button>
+          <select className="tk-btn quiet danger" aria-label={t('history-days.effacer-une-periode')} value="" onChange={(event) => forgetRange(event.target.value)}>
+            <option value="">{t('history-days.effacer-une-periode')}</option>
+            {HISTORY_RANGES.map((range) => (
+              <option key={range} value={range}>
+                {t(HISTORY_RANGE_TEXTS[range].label)}
+              </option>
+            ))}
+          </select>
+        </>
       }
       onDone={() => act.closeOverlay()}
       undo={undo.panel}
@@ -222,6 +248,7 @@ function HistoryList({ profileId }: { profileId: string }) {
       <>
       <div onKeyDown={onKeyDown}>
         {owner && <p className="tk-status">{owner}</p>}
+        {rangeFailed && <p className="tk-status" role="alert">{t('history-days.periode-echec')}</p>}
         {/* The list is cut at its limit (always far more than one page): said, so that an old day does not pass for complete. */}
         {query === '' && entries !== null && entries.length >= HISTORY_ROWS && <p className="tk-status">{t('history-days.liste-coupee', { count: HISTORY_ROWS })}</p>}
         <HistoryView columns={columns} query={query} onPick={setChosen} onOpen={(entry) => open(entry.url)} onForget={forgetPage} />
