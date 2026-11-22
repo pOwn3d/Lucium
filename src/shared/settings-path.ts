@@ -49,6 +49,7 @@ export const SETTINGS_PLACES = {
   siteExceptions: { key: 'fingerprintExceptions' },
   thirdPartyCookies: { key: 'blockThirdPartyCookies', group: 'privacy-settings.cookies-tiers' },
   clearOnClose: { key: 'siteDataClearOnClose' },
+  forgetUnusedPermissions: { key: 'forgetUnusedPermissionsDays', group: 'settings.autorisations-memorisees' },
   webHardware: { key: 'webHardware', group: 'hardware-settings.api-materielles-du-web' },
   passwords: { key: 'passwordManager', group: 'passwords-panel.mots-de-passe' },
   lock: { key: 'lockEnabled', group: 'lock-settings.verrouillage' },

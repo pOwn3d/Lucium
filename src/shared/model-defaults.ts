@@ -152,6 +152,7 @@ export function defaultSettings(): Settings {
     forceReduceTransparency: false,
     peekWithShift: true,
     littleArcArchiveHours: 12,
+    forgetUnusedPermissionsDays: 0,
     fullUrlInToolbar: false,
     showReloadAllButton: false,
     reloadAllWakes: false,

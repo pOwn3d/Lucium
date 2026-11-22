@@ -46,7 +46,7 @@ import { SpacesSettings } from './SpacesSettings'
 import { SleepSettings, TabsSettings } from './TabsSettings'
 import { TranslateSettings } from './TranslateSettings'
 import { MouseGesturesSettings, WebToolsSettings } from './WebToolsSettings'
-import { Check, Group, Place, ROW_ICONS, Row, RowIcon, Subpage, SubpageEntry } from './settings-parts'
+import { Check, Choice, Group, Place, ROW_ICONS, Row, RowIcon, Subpage, SubpageEntry } from './settings-parts'
 import { t } from '@shared/i18n'
 import { actionName } from './action-name'
 import { settingsPath } from '@shared/settings-path'
@@ -58,6 +58,9 @@ export interface CategoryProps {
   /** Leads to another place of the Settings: a category, and a group of it ("privacy/permissions"). */
   goTo: (target: string) => void
 }
+
+/** The delays « Oublier les autorisations des sites non visités » offers: never, then the delays of unused-permissions.ts. */
+const unusedPermissionChoices = (): Array<[number, string]> => [[0, t('settings.jamais')], [30, t('settings.apres-30-jours')], [60, t('settings.apres-60-jours')], [90, t('settings.apres-90-jours')], [180, t('settings.apres-180-jours')], [365, t('settings.apres-365-jours')]]
 
 type PaneProps = Pick<CategoryProps, 'snapshot' | 'update'>
 
@@ -235,6 +238,11 @@ function SitesCategory({ snapshot, update }: PaneProps) {
         <SubpageEntry id="permissions" snapshot={snapshot} />
       </Group>
       <HardwareSettings snapshot={snapshot} update={update} />
+      <Group title={t('settings.autorisations-memorisees')}>
+        <Row settingKey="forgetUnusedPermissionsDays" label={t('settings.oublier-les-autorisations-apres')} hint={t('settings.oublier-les-autorisations-apres-hint')} className="popup-row">
+          <Choice className="pop" label={t('settings.oublier-les-autorisations-apres')} value={settings.forgetUnusedPermissionsDays} choices={unusedPermissionChoices()} onChange={(forgetUnusedPermissionsDays) => update({ forgetUnusedPermissionsDays })} />
+        </Row>
+      </Group>
       <Subpage id="permissions">
       <Group id="permissions" title={t('settings.sub-permissions')} searchKey="sitePermissions">
         {remembered.length === 0 && <Row label={<span className="muted">{t('settings.aucune')}</span>} />}

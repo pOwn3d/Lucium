@@ -645,6 +645,8 @@ export interface Settings {
   annotateLetterKeys: boolean
   /** The system may hand the application `lucium://` (or `lucium://`) `open`, `new-tab` and `search` addresses (AppleScript, Shortcuts, Terminal). Off by default: any application or script could send them. */
   urlAutomation: boolean
+  /** Sites not visited for this many days lose the answers remembered for them (camera, position, notifications…); 0, the default, forgets nothing (unused-permissions.ts). */
+  forgetUnusedPermissionsDays: number
   /** "Me le rappeler…": a tab leaves its column and comes back at a chosen time, with a local notification. Costs one timer while a reminder is pending. */
   tabReminders: boolean
   // ---- The library (shared/bookmarks.ts, live-folders.ts, web-apps.ts): each is off by default and costs nothing while off ----

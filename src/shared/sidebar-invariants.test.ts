@@ -418,6 +418,8 @@ const GENERATORS: Generators = {
   },
   'commandbar/put-back': (g) => ({ type: 'commandbar/put-back', profileId: g.pick(['default', 'work', 'gone', '__proto__']), url: `${g.pick(URLS)}${g.int(400)}`, count: g.pick([1, 3, 0, -2, 1.5, Number.NaN, 1e12]) }),
   'sidepanel/behavior': (g) => ({ type: 'sidepanel/behavior', extensionId: g.pick(['ext1', 'ext2']), openOnActionClick: g.chance(0.5) }),
+  'permission/visit': (g) => ({ type: 'permission/visit', origin: `https://o${g.int(30)}.example`, day: g.int(30_000) }),
+  'permission/sweep': (g) => ({ type: 'permission/sweep', day: g.int(30_000) }),
   'permission/set': (g) => ({ type: 'permission/set', origin: `https://o${g.int(30)}.example`, permission: g.pick(['camera', 'geolocation', 'notifications']), decision: g.pick(['allow', 'deny', null] as const) }),
   'favorite/add': (g) => ({ type: 'favorite/add', url: g.goodUrl(), title: g.text(), ...(g.chance(0.3) ? { faviconUrl: 'https://a.example/i.png' } : {}), ...(g.chance(0.5) ? { toIndex: g.maybeIndex() } : {}), ...(g.chance(0.5) ? { spaceId: g.spaceId() } : {}) }),
   'favorite/place': (g) => ({ type: 'favorite/place', id: g.favoriteId(), toIndex: g.maybeIndex() }),
@@ -722,6 +724,8 @@ export function violations(state: SidebarState): string[] {
   if (state.sessions.length > SESSIONS_MAX) bad(`${state.sessions.length} sessions`)
   if (Object.values(state.commandBarUsage).some((usage) => Object.keys(usage).length > 300)) bad('command bar usage grew past its bound')
   if (Object.keys(state.sitePermissions).length > 2000) bad('site permissions grew past their bound')
+  if (Object.keys(state.siteVisits).length > 2000) bad('site visits grew past their bound')
+  if (Object.keys(state.siteVisits).some((origin) => !Object.hasOwn(state.sitePermissions, origin))) bad('a visit is written for a site that holds no answer')
   if (state.readLater.length > 500) bad('read-later list grew past its bound')
   if (state.bookmarks.length > 5000) bad('bookmarks grew past their bound')
   if (Object.keys(state.settings.panelSizes).length > PANEL_SCREENS_MAX) bad('the remembered screens grew past their bound')

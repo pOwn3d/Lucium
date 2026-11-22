@@ -113,6 +113,7 @@
     "id-2": "id-8"
   },
   "sitePermissions": {},
+  "siteVisits": {},
   "commandBarUsage": {},
   "sidePanelBehavior": {},
   "splits": [],
@@ -395,6 +396,7 @@
     "forceReduceTransparency": false,
     "peekWithShift": true,
     "littleArcArchiveHours": 12,
+    "forgetUnusedPermissionsDays": 0,
     "fullUrlInToolbar": false,
     "showReloadAllButton": false,
     "reloadAllWakes": false,

@@ -192,6 +192,9 @@ describe('privateAction', () => {
       { type: 'archive/restore-last' },
       { type: 'archive/add', url: 'https://a.fr/', title: 'A', source: 'manual' },
       { type: 'archive/sweep' },
+      // A private window keeps no visit and forgets no answer: the days are the main window's.
+      { type: 'permission/visit', origin: 'https://a.fr', day: 20_000 },
+      { type: 'permission/sweep', day: 20_000 },
       { type: 'import/merge', spaces: [], tabs: [], folders: [], favorites: [] },
       { type: 'import/revert', spaces: [], tabs: [], folders: [], favorites: [], splits: [], boosts: [] }
     ] satisfies Action[]) {
