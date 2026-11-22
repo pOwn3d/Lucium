@@ -192,9 +192,6 @@ export function withColorAt(theme: SpaceTheme, index: number, hex: string): Pick
   return { baseColors: theme.harmony === 'custom' ? colors : harmonize(hex.toLowerCase(), theme.harmony, colors.length) }
 }
 
-/** The next texture when the user cycles through them. */
-export const nextOverlay = (overlay: Overlay): Overlay => OVERLAYS[(OVERLAYS.indexOf(overlay) + 1) % OVERLAYS.length]!
-
 /** Lightness at the top and bottom of the colour pad: the pad runs from light (top) to dark (bottom). */
 const PAD_TOP_L = 0.86
 const PAD_BOTTOM_L = 0.14
@@ -393,6 +390,14 @@ export function pagePaletteVars(theme: SpaceTheme, appearance: ResolvedAppearanc
 export function pagePaletteCss(theme: SpaceTheme, appearance: ResolvedAppearance): string {
   const body = Object.entries(pagePaletteVars(theme, appearance)).map(([k, v]) => `  ${k}: ${v};`).join('\n')
   return `:root {\n${body}\n}`
+}
+
+/**
+ * What a page gets of the theme of its space: the palette while "allow websites to get your theme data" (`allowThemeToSites`) is on, nothing at all
+ * while it is off, and nothing for a tab with no space. The one place the switch is read for this.
+ */
+export function sitePaletteCss(allowed: boolean, theme: SpaceTheme | undefined, systemDark: boolean): string {
+  return allowed && theme ? pagePaletteCss(theme, resolveAppearance(theme, systemDark)) : ''
 }
 
 /** The WCAG contrast of two opaque colours. */

@@ -51,9 +51,6 @@ export function tabStateLabel(state: TabStateId): string {
   }
 }
 
-/** The legend line of the hover card: the five states, in order. Empty with the switch off. */
-export const tabStateLegend = (enabled: boolean): string[] => (enabled ? TAB_STATE_ORDER.map(tabStateLabel) : [])
-
 /**
  * The extra lines of the card of a tab in one of these states (its status line already says "En veille" or "Gelé"). Failed: the load did not come to a
  * page. Asleep: the memory is released (the card used to say "Mémoire —"), unless the card has a line of resources, which says it. Frozen: the page is

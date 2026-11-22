@@ -335,11 +335,6 @@ export function rememberSiteHosts(recents: readonly string[], used: readonly str
   return [...new Set(hosts)].slice(0, SITE_DATA_RECENTS_MAX)
 }
 
-/** How many operations of a site went through, out of how many. */
-export function siteScore(results: readonly SiteDataResult[]): { ok: number; total: number } {
-  return { ok: results.filter((r) => r.ok).length, total: results.length }
-}
-
 /** Whether every operation of every site went through (an empty run did not succeed at anything). */
 export const allSitesCleared = (sites: readonly SiteDataSiteResult[]): boolean => sites.length > 0 && sites.every((site) => site.results.length > 0 && site.results.every((r) => r.ok))
 

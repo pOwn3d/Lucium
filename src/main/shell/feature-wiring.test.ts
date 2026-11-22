@@ -17,6 +17,7 @@ const { FeatureGates } = await import('./feature-gate')
 const { gateAutoArchive, ARCHIVE_SWEEP_MS } = await import('./auto-archive')
 const { AutoReloader } = await import('./auto-reload')
 const { LittleShortcut, gateLittleShortcut } = await import('./little-shortcut')
+const { gateThumbnails } = await import('./thumbnails')
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
@@ -398,5 +399,41 @@ describe('the system-wide mini window shortcut, through its gate', () => {
     t.gates.disposeAll()
     expect(t.held.size).toBe(0)
     expect(t.store.listeners()).toBe(0)
+  })
+})
+
+describe('the pictures of the hover cards, through their gate (hover-cards)', () => {
+  function setup(settings: Partial<Settings>) {
+    const store = liveStore(settings)
+    const made: Array<{ dispose: ReturnType<typeof vi.fn> }> = []
+    const gates = new FeatureGates(store)
+    const pictures = gateThumbnails(gates, () => {
+      const one = { dispose: vi.fn() }
+      made.push(one)
+      return one
+    })
+    return { store, made, pictures, gates }
+  }
+
+  it('makes nothing while the cards are off', () => {
+    const t = setup({ hoverCards: false })
+    expect(t.made).toHaveLength(0)
+    expect(t.pictures.current()).toBeNull()
+    t.gates.disposeAll()
+  })
+
+  it('makes the pictures when the cards come on, and drops them when they go off', () => {
+    const t = setup({ hoverCards: false })
+    t.store.set({ hoverCards: true })
+    expect(t.made).toHaveLength(1)
+    expect(t.pictures.current()).toBe(t.made[0])
+    t.store.set({ hoverCards: false })
+    expect(t.made[0]!.dispose).toHaveBeenCalledTimes(1)
+    expect(t.pictures.current()).toBeNull()
+    t.store.set({ hoverCards: true })
+    expect(t.made).toHaveLength(2)
+    expect(t.pictures.current()).toBe(t.made[1])
+    t.gates.disposeAll()
+    expect(t.made[1]!.dispose).toHaveBeenCalledTimes(1)
   })
 })

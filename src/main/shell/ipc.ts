@@ -72,7 +72,7 @@ import { toggleReadableSite } from './page-commands'
 import { notifyAnnotateRequest } from './page-annotate'
 import { FeatureGates } from './feature-gate'
 import { noteFailure } from './failure-notice'
-import { Thumbnails } from './thumbnails'
+import { Thumbnails, gateThumbnails } from './thumbnails'
 import { rendererHosts } from './renderer-hosts'
 import { t, tp } from '@shared/i18n'
 import { LOCAL_FILES_MAX, localFileUrls } from '@shared/local-documents'
@@ -441,21 +441,11 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
 
   // The pictures of the hover cards are taken (two shots per page shown, kept in memory) only while the cards are on.
   const gates = new FeatureGates(store)
-  let thumbnails: Thumbnails | null = null
-  gates.gate('hover-cards', {
-    start: () => {
-      const made = new Thumbnails(browser, store)
-      thumbnails = made
-      return () => {
-        made.dispose()
-        if (thumbnails === made) thumbnails = null
-      }
-    }
-  })
+  const thumbnails = gateThumbnails(gates, () => new Thumbnails(browser, store))
   // The panel of ⌃Tab shows the same pictures as the hover card (none while the cards are switched off). A picture of a page of a locked space is a
   // picture of what the lock hides: `Thumbnails.get` gives none, for the card as for the panel.
-  browser.setThumbnailSource({ get: (tabId) => thumbnails?.get(tabId) ?? null, forgetLocked: () => thumbnails?.forgetLocked() })
-  ipcMain.handle(Channel.tabThumbnail, (e, tabId: unknown) => (guard(e.sender, Channel.tabThumbnail) && typeof tabId === 'string' ? (thumbnails?.get(tabId) ?? null) : null))
+  browser.setThumbnailSource({ get: (tabId) => thumbnails.current()?.get(tabId) ?? null, forgetLocked: () => thumbnails.current()?.forgetLocked() })
+  ipcMain.handle(Channel.tabThumbnail, (e, tabId: unknown) => (guard(e.sender, Channel.tabThumbnail) && typeof tabId === 'string' ? (thumbnails.current()?.get(tabId) ?? null) : null))
 
   ipcMain.handle(Channel.blockedCount, (e, tabId: unknown) => (guard(e.sender, Channel.blockedCount) && typeof tabId === 'string' ? browser.blockedCount(tabId) : 0))
   ipcMain.handle(Channel.sessionBlockedCount, (e) => (guard(e.sender, Channel.sessionBlockedCount) ? browser.sessionBlockedCount() : 0))
