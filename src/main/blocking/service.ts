@@ -5,6 +5,7 @@
 // Opt-in: nothing is read, compiled or downloaded until a blocking option is switched on, and nothing is kept in memory
 // once both are off. The only network traffic is a GET of each active list from its own host.
 
+import { BLOCKED_HOSTS_PER_PAGE_MAX, type BlockedHost } from '@shared/blocked-hosts'
 import { adsBlockingOn, blockModeFor, blockedByHosts, consentWallCss, cookieBannerCss, isBlockingExempt, shouldBlock, toRequestKind, type RequestVerdict } from '@shared/blocker'
 import { cleanReviewSummary, isCustomListId, reviewCustomList, type CustomListVerdict, type CustomFilterList, type ReviewSummary } from '@shared/custom-filter-lists'
 import { activeLists, FILTER_LISTS, type BlockingConfig, type BlockingStatus, type FilterListCategory, type FilterListSpec } from '@shared/filter-lists'
@@ -84,6 +85,8 @@ export class BlockingService {
   private readonly engines = new Map<FilterListCategory, Compiled>()
   private backend: FilterEngineBackend | null = null
   private readonly counts = new Map<string, number>()
+  /** The hosts behind those counts, page by page: in memory only, emptied when the page navigates, never written anywhere. */
+  private readonly hosts = new Map<string, Map<string, number>>()
   private sessionTotal = 0
   /** The session's blocks by what list stopped them: the ad lists (and the built-in ad list), the cookie-banner lists. */
   private sessionByKind = { ads: 0, banners: 0 }
@@ -357,7 +360,10 @@ export class BlockingService {
     const ads = adsBlockingOn(settings)
     const banners = settings.blockCookieBanners
     if (request.resourceType === 'mainFrame') {
-      if (request.pageId) this.counts.delete(request.pageId)
+      if (request.pageId) {
+        this.counts.delete(request.pageId)
+        this.hosts.delete(request.pageId)
+      }
       // The page the user opened is never blocked; with the extended rules on, its address may lose the parameters a rule names.
       return extended && (ads || banners) ? this.cleanedNavigation(request, settings) : false
     }
@@ -423,6 +429,7 @@ export class BlockingService {
     }
     if (request.pageId) {
       this.count(request.pageId)
+      this.noteHost(request.pageId, request.url)
       this.sessionTotal++
       if (kind !== null && answer.action === 'block') this.sessionByKind[kind]++
     }
@@ -525,6 +532,25 @@ export class BlockingService {
   /** A page navigated: its counter starts again. The request filter of the lists does it itself while they are on; the shell does it when only its own protections are. */
   resetPageCount(pageId: string): void {
     this.counts.delete(pageId)
+  }
+
+  /** The host of a cancelled request goes in the page's list, unless the list is full (the request is counted all the same). */
+  private noteHost(pageId: string, url: string): void {
+    if (!URL.canParse(url)) return
+    const { hostname } = new URL(url)
+    if (hostname === '') return
+    const listed = this.hosts.get(pageId) ?? new Map<string, number>()
+    if (!listed.has(hostname) && listed.size >= BLOCKED_HOSTS_PER_PAGE_MAX) return
+    listed.set(hostname, (listed.get(hostname) ?? 0) + 1)
+    this.hosts.delete(pageId)
+    this.hosts.set(pageId, listed)
+    // Closed pages are never told to us: forget the oldest rather than grow without bound.
+    if (this.hosts.size > COUNTERS_MAX) this.hosts.delete(this.hosts.keys().next().value!)
+  }
+
+  /** The hosts blocked on a page since it last navigated, the most blocked first (a copy: the caller may keep it or cut it). */
+  blockedHosts(pageId: string): BlockedHost[] {
+    return [...(this.hosts.get(pageId) ?? [])].map(([host, count]) => ({ host, count })).sort((a, b) => b.count - a.count || a.host.localeCompare(b.host))
   }
 
   /** Requests blocked on a page since it last navigated. */

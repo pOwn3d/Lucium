@@ -6,6 +6,7 @@ import type { CustomFilterList } from '@shared/custom-filter-lists'
 import type { BlockingConfig, FilterListSpec } from '@shared/filter-lists'
 import { loadGhosteryBackend } from './ghostery-engine'
 import type { FetchLike } from './list-updater'
+import { BLOCKED_HOSTS_PER_PAGE_MAX } from '@shared/blocked-hosts'
 import { BlockingService, type BlockedRequest, type BlockingSettings } from './service'
 import { expectMode } from '../windows.test-support'
 import { listText, startTestServer, type TestServer } from './test-server'
@@ -435,6 +436,55 @@ describe('what the shell stops for a protection of its own (the pings)', () => {
     const service = make()
     service.noteStopped(null)
     expect(service.sessionBlockedCount()).toBe(0)
+  })
+})
+
+describe('the hosts blocked on a page', () => {
+  it('lists each blocked host with its count, the most blocked first, and starts again when the page navigates', async () => {
+    const service = make()
+    await start(service)
+    service.filter(request('https://ads1.example/a.js'), settings())
+    service.filter(request('https://ads2.example/b.js'), settings())
+    service.filter(request('https://ads2.example/c.js'), settings())
+    service.filter(request('https://cdn.test/ok.js'), settings())
+    service.filter(request('https://ads1.example/c.js', { pageId: 'tab-2' }), settings())
+    expect(service.blockedHosts('tab-1')).toEqual([{ host: 'ads2.example', count: 2 }, { host: 'ads1.example', count: 1 }])
+    expect(service.blockedHosts('tab-2')).toEqual([{ host: 'ads1.example', count: 1 }])
+    service.filter(request('https://news.test/autre', { resourceType: 'mainFrame' }), settings())
+    expect(service.blockedHosts('tab-1')).toEqual([])
+    expect(service.blockedHosts('tab-2')).toHaveLength(1)
+  })
+
+  it('lists nothing for a request that belongs to no page, for a site with an exception, or for a page nobody blocked on', async () => {
+    const service = make()
+    await start(service)
+    service.filter(request('https://ads1.example/a.js', { pageId: null }), settings())
+    service.filter(request('https://ads1.example/a.js'), settings({ blockExceptions: ['news.test'] }))
+    expect(service.blockedHosts('tab-1')).toEqual([])
+    expect(service.blockedHosts('no-such-tab')).toEqual([])
+  })
+
+  it('is bounded: the hosts of a page, and the pages that are listed', async () => {
+    const service = make()
+    await start(service)
+    const many = Array.from({ length: BLOCKED_HOSTS_PER_PAGE_MAX + 40 }, (_, i) => `ads${i}.example`)
+    for (const host of many) service.filter(request(`https://${host}/a.js`), settings(), many)
+    // The host that did not fit is still counted as a blocked request, but never listed.
+    expect(service.blockedHosts('tab-1')).toHaveLength(BLOCKED_HOSTS_PER_PAGE_MAX)
+    expect(service.blockedCount('tab-1')).toBe(BLOCKED_HOSTS_PER_PAGE_MAX + 40)
+    const other = make()
+    await start(other)
+    for (let i = 0; i < 700; i++) other.filter(request('https://ads1.example/a.js', { pageId: `tab-${i}` }), settings())
+    expect(other.blockedHosts('tab-0')).toEqual([])
+    expect(other.blockedHosts('tab-699')).toHaveLength(1)
+  })
+
+  it('gives a page its own copy: changing the answer changes nothing in the service', async () => {
+    const service = make()
+    await start(service)
+    service.filter(request('https://ads1.example/a.js'), settings())
+    service.blockedHosts('tab-1').pop()
+    expect(service.blockedHosts('tab-1')).toHaveLength(1)
   })
 })
 

@@ -3,6 +3,7 @@
 
 import { blockingService } from '../blocking'
 import { tidyFilename } from '@shared/tidy'
+import type { BlockedHost } from '@shared/blocked-hosts'
 import { adsBlockingOn, blockerIsOn } from '@shared/blocker'
 import { pingBlockedFor } from '@shared/ping-block'
 import { focusBlock, focusIsConfigured, pauseFocusPatch } from '@shared/focus-mode'
@@ -253,6 +254,16 @@ export abstract class BrowserNetwork extends BrowserPublish {
   /** Requests blocked on a tab of this window since it last navigated. */
   blockedCount(tabId: string): number {
     return this.store.get().tabs.some((t) => t.id === tabId) ? blockingService().blockedCount(tabId) : 0
+  }
+
+  /**
+   * The hosts blocked on a tab of this window since it last navigated. None for a private tab, nor in a private window: what a private page talked to
+   * is not listed, as nothing else of it is kept; and none for a tab this window does not hold.
+   */
+  blockedHosts(tabId: string): BlockedHost[] {
+    if (this.isPrivate()) return []
+    const tab = this.store.get().tabs.find((t) => t.id === tabId)
+    return tab !== undefined && tab.private !== true ? blockingService().blockedHosts(tabId) : []
   }
 
   sessionBlockedByKind(): { ads: number; banners: number } {

@@ -6965,4 +6965,12 @@ export const fr = {
   'unused-permissions.notice': 'Lucium a oublié les autorisations de {sites}, non visités depuis {days} jours.',
   'unused-permissions.notice-others.one': 'Lucium a oublié les autorisations de {sites} et {count} autre site, non visités depuis {days} jours.',
   'unused-permissions.notice-others.other': 'Lucium a oublié les autorisations de {sites} et de {count} autres sites, non visités depuis {days} jours.',
+  'shields.detail-des-traqueurs': 'Voir quels sites ont été bloqués',
+  'shields.masquer-le-detail': 'Masquer le détail',
+  'shields.aucun-detail-pour-cette-page': 'Aucun détail pour cette page.',
+  'shields.host-requetes.one': '{count} requête',
+  'shields.host-requetes.other': '{count} requêtes',
+  'discover.traqueurs-nom': 'Détail des traqueurs par site',
+  'discover.traqueurs-resume': 'Le panneau du site liste les sites que le bloqueur a empêché de répondre à la page : le nom de chaque site et le nombre de requêtes. Compté en mémoire, vidé à chaque nouvelle page, jamais dans un onglet privé.',
+  'discover.traqueurs-ou': 'Dans le panneau du site (bouton « {button} »), sous le blocage : « Voir quels sites ont été bloqués ».',
 } as const

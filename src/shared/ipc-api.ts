@@ -1,6 +1,7 @@
 // `window.lucium`: everything the interface can ask of the main process, as the preload exposes it. Moved out of ipc.ts as it was;
 // ipc.ts still exports it.
 
+import type { BlockedHost } from './blocked-hosts'
 import type { OllamaModelList } from './ollama'
 import type { TranslateRequest, TranslateView } from './translate-local'
 import type { HistoryEntry } from './model'
@@ -252,6 +253,8 @@ export interface LuciumApi {
   setTabAddress(tabId: string, input: string): void
   /** How many requests the blocker cancelled on a tab since it last navigated. */
   blockedCount(tabId: string): Promise<number>
+  /** The hosts the blocker cancelled requests for on a tab since it last navigated, the most blocked first; none for a private tab (the detail of the site panel). */
+  blockedHosts(tabId: string): Promise<BlockedHost[]>
   /** How many requests the blocker cancelled on every page since the application started (or since the last reset). */
   sessionBlockedCount(): Promise<number>
   /** Tests the connection to Ollama at `url`, an address of this Mac (any other is refused); the request is made by the main process. */
