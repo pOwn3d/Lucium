@@ -204,6 +204,9 @@ function rich(): SidebarState {
     firstLaunchDone: false,
     arcGuideSeen: true,
     annotateBarHintSeen: true,
+    discoverTip: false,
+    discoverTipDay: '2026-11-22',
+    discoverPath: ['command-bar', 'capture'],
     whatsNewSheet: false,
     lastSeenVersion: '0.0.9',
     forceHighContrast: true,
@@ -516,6 +519,9 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   firstLaunchDone: bool,
   arcGuideSeen: bool,
   annotateBarHintSeen: bool,
+  discoverTip: bool,
+  discoverTipDay: (v) => v === '' || (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && new Date(`${v}T00:00:00Z`).toISOString().startsWith(v)),
+  discoverPath: (v) => Array.isArray(v) && v.length <= 5 && unique(v) && v.every((step) => typeof step === 'string' && ['command-bar', 'spaces', 'capture', 'protection'].includes(step)),
   whatsNewSheet: bool,
   lastSeenVersion: (v) => v === '' || (text(v) && v.length <= 64 && /^[0-9A-Za-z]/.test(v)),
   forceHighContrast: bool,
@@ -1546,6 +1552,17 @@ describe('every setting, given a value that does not fit', () => {
     // Each setting is read for itself: one at true does not drag the other along.
     const only = norm({ ...clone(base), settings: { ...defaults, annotateCapture: true, urlAutomation: false } }).settings
     expect([only.annotateCapture, only.urlAutomation]).toEqual([true, false])
+  })
+
+  it('reads the tip and the path of « Découvrir Lucium » safely: a wrong kind falls back, a step that does not exist is dropped, a day that is not a day is forgotten', () => {
+    const read = (patch: Record<string, unknown>) => norm({ ...clone(base), settings: { ...defaults, ...patch } }).settings
+    expect(read({ discoverTip: 'oui' }).discoverTip).toBe(true)
+    expect(read({ discoverTip: false }).discoverTip).toBe(false)
+    expect(read({ discoverTipDay: '2026-02-30' }).discoverTipDay).toBe('')
+    expect(read({ discoverTipDay: 42 }).discoverTipDay).toBe('')
+    expect(read({ discoverTipDay: '2026-11-22' }).discoverTipDay).toBe('2026-11-22')
+    expect(read({ discoverPath: ['capture', 'nope', 'capture', 9, '__proto__', 'command-bar'] }).discoverPath).toEqual(['command-bar', 'capture'])
+    for (const bad of ['texte', 7, null, {}]) expect(read({ discoverPath: bad }).discoverPath).toEqual([])
   })
 
   it('cleans the sites already offered their search one by one: valid host names only, each once, the newest kept when the list is too long', () => {

@@ -20,9 +20,9 @@ describe('the contours of the controls', () => {
     }
   })
 
-  it('leave line-strong to what only decorates: the card and the capsule of a key, never a control that carries a function', () => {
+  it('leave line-strong to what only decorates: the cards (the list and the two guides) and the capsule of a key, never a control that carries a function', () => {
     const using = rules.filter((r) => r.body.includes('--line-strong')).map((r) => r.selector)
-    expect(using).toEqual(['.dv-card'])
+    expect(using).toEqual(['.dv-card', '.dv-guide'])
   })
 
   it('beat the template, which still draws its fields and buttons with line-strong: the panel overrides it for its own controls', () => {

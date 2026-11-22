@@ -21,6 +21,7 @@ import { isSearchTemplate } from './url'
 import { normalizeSiteDataPrefs } from './site-data'
 import { cleanSiteDataAnimation } from './site-data-overlay'
 import { cleanSleepHosts, cleanSleepSettings } from './sleep'
+import { cleanDiscoverDay, cleanDiscoverPath } from './discover-tips'
 import { cleanBlockingSettings } from './blocker'
 import { cleanFingerprintSettings } from './fingerprint'
 import { cleanPrivacySettings } from './privacy'
@@ -390,6 +391,8 @@ export function clampSettings(input: Settings): Settings {
     siteDataAnimation: cleanSiteDataAnimation(settings.siteDataAnimation),
     siteDataRecents: cleanSiteDataRecents(settings.siteDataRecents),
     searchDiscoverySeen: cleanSearchDiscoverySeen(settings.searchDiscoverySeen),
+    discoverTipDay: cleanDiscoverDay(settings.discoverTipDay),
+    discoverPath: cleanDiscoverPath(settings.discoverPath),
     ...cleanSleepSettings(settings),
     ...cleanBlockingSettings(settings),
     ...cleanFingerprintSettings(settings),
