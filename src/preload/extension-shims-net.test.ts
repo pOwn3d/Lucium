@@ -83,6 +83,13 @@ describe('the request rules of an extension', () => {
     expect(calls('declarativeNetRequest', 'mirror')).toEqual([[{ session: [], dynamic: [{ id: 9 }] }]])
   })
 
+  it('getMatchedRules is asked of the main process', async () => {
+    const { chrome, bridge } = await worker(['declarativeNetRequest', 'declarativeNetRequestFeedback'])
+    bridge.call.mockResolvedValueOnce({ rulesMatchedInfo: [] })
+    expect(await chrome.declarativeNetRequest.getMatchedRules({ tabId: 3 })).toEqual({ rulesMatchedInfo: [] })
+    expect(bridge.call).toHaveBeenCalledWith(expect.any(String), 'declarativeNetRequest', 'getMatchedRules', [{ tabId: 3 }])
+  })
+
   it('a change of the rules is registered with the browser first, then copied to the main process as the browser holds it', async () => {
     const { chrome, nativeRules, calls } = await worker(['declarativeNetRequestWithHostAccess'])
     await settle()
@@ -158,6 +165,18 @@ describe('the listeners of chrome.webRequest', () => {
     expect(everything).toHaveBeenCalledTimes(4)
     expect(everything.mock.calls[0]?.[0]).toHaveProperty('responseHeaders')
     expect(oneTab.mock.calls.map(([details]) => details.url)).toEqual(['https://x.example/other/a.js'])
+  })
+
+  it('a listener gets the body of an upload only if it asked for requestBody', async () => {
+    const { chrome, tell } = await worker(['webRequest'])
+    const asked = vi.fn()
+    const not = vi.fn()
+    chrome.webRequest.onBeforeRequest.addListener(asked, { urls: ['<all_urls>'] }, ['requestBody'])
+    chrome.webRequest.onBeforeRequest.addListener(not, { urls: ['<all_urls>'] })
+    await settle()
+    tell('onBeforeRequest', { url: 'https://x.example/a', type: 'xmlhttprequest', tabId: 4, requestBody: { raw: [{ bytes: new ArrayBuffer(2) }] } })
+    expect(asked.mock.calls[0]?.[0]).toHaveProperty('requestBody')
+    expect(not.mock.calls[0]?.[0]).not.toHaveProperty('requestBody')
   })
 
   it('a worker started for a request hears it once its script has put its listeners back', async () => {

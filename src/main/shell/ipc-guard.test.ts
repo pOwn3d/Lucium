@@ -47,11 +47,13 @@ const state = {
 const store = { get: () => state, subscribe: () => () => {}, root: () => store, dispatch: () => {} } as never
 
 /** The lock of the application: on or off as the test says, and how many times a handler asked it. */
-const lock = { locked: false, asked: 0 }
+const lock = { locked: false, asked: 0, windowLocked: false }
 const browser = fakeBrowser({
   snapshot: () => ({ state: { ...state, tabs: [] }, runtime: { tabs: {} }, extensions: [] }),
   navigationHistory: () => [],
-  isPrivate: () => false
+  isPrivate: () => false,
+  // A private window left alone holds a lock of its own (shared/private-lock.ts): the door treats it as it treats the application's.
+  isWindowLocked: () => lock.windowLocked
 })
 const lockService = fakeBrowser({
   isAppLocked: () => (lock.asked++, lock.locked),
@@ -79,6 +81,7 @@ const pageChannels = (): string[] => [...new Set([...ipcHost.on.keys(), ...ipcHo
 
 beforeEach(() => {
   lock.locked = false
+  lock.windowLocked = false
   lock.asked = 0
   browser.calls.length = 0
   lockService.calls.length = 0
@@ -312,6 +315,44 @@ describe('the door of a window while the application is locked', () => {
       expect(browser.names(), JSON.stringify(args)).not.toContain('forgetHistoryDay')
       expect(console.warn).toHaveBeenCalledWith(expect.stringContaining('a request to forget a day of the history was refused'))
     }
+  })
+})
+
+describe('the door of a window that holds a lock of its own (a private window left alone)', () => {
+  const ARGS = [{ type: 'tab/select', id: 'tab-1', panel: 'commandbar', kind: 'tab' }, 'tab-1', true]
+  const OWN_ARGS: Readonly<Record<string, unknown[]>> = { [Channel.resourcePanel]: [true] }
+
+  // The unlocking itself is run in lock-ipc.test.ts, where the lock service is a stand-in that checks phrases.
+  it('answers the snapshot and the closing of a panel, the channels left open, as the application lock does', async () => {
+    lock.windowLocked = true
+    await invokeFrom(UI, Channel.getSnapshot)
+    sendFrom(UI, Channel.closeOverlay)
+    expect(browser.names()).toEqual(['closeOverlay'])
+  })
+
+  it('refuses every other channel, does nothing, and answers nothing of the state', async () => {
+    lock.windowLocked = true
+    const closed = channels().filter((channel) => !OPEN_WHILE_LOCKED.has(channel))
+    const acted: Record<string, string[]> = {}
+    const leaked: string[] = []
+    for (const channel of closed) {
+      browser.calls.length = 0
+      electronCalls.length = 0
+      const answer = await message(UI, channel, ...(OWN_ARGS[channel] ?? ARGS)).catch((error: unknown) => String(error))
+      if (effects().length > 0) acted[channel] = effects()
+      if (JSON.stringify(answer ?? null).includes(SECRET)) leaked.push(channel)
+    }
+    expect(acted, 'channels that did something while the window was locked').toEqual({})
+    expect(leaked, 'channels that answered something of the state').toEqual([])
+  })
+
+  it('opens again for the same messages once the window is unlocked (the check above is not empty)', async () => {
+    lock.windowLocked = true
+    await message(UI, Channel.dispatch, { type: 'tab/select', id: 'tab-1' })
+    expect(effects()).toEqual([])
+    lock.windowLocked = false
+    await message(UI, Channel.dispatch, { type: 'tab/select', id: 'tab-1' })
+    expect(effects()).toEqual(['dispatchFromInterface'])
   })
 })
 

@@ -365,7 +365,7 @@ export function startDownload(context: InstallContext, offer: UpdateOffer, curre
 export function showUpdateNotice(context: InstallContext & { browser: ToastHost }, notice: UpdateNotice | DroppedNotice, installer: UpdateInstaller | null): void {
   // A dropped update with nothing else to install: the sentence alone, with nothing to choose.
   if (notice.kind === 'dropped') return context.browser.showToast(droppedUpdateText(notice.dropped), undefined, UPDATE_NOTICE_MS)
-  const text = updateNoticeText(notice.kind, notice.version, notice.kind === 'restart' ? undefined : notice.offer.size, notice.withdrawn === true, notice.dropped)
+  const text = updateNoticeText(notice.kind, notice.version, notice.kind === 'restart' ? undefined : notice.offer.size, notice.withdrawn === true, notice.dropped, notice.urgent === true)
   const act = (): void => {
     notice.accepted()
     if (notice.kind === 'page' || !installer) {

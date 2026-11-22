@@ -34,6 +34,7 @@ function window(settings: Partial<Settings> = {}) {
     clear: async (r) => r.types.map((type) => ({ type, ok: true })),
     history: { removeSite: () => 0, hosts: () => [] },
     closedPages: { removeSite: () => undefined },
+    visits: { forgetSite: () => undefined },
     tabs: [],
     active: null
   }

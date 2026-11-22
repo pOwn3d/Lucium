@@ -418,3 +418,70 @@ describe('what the lock screen says follows the language of the interface', () =
     expect(notify).toHaveBeenCalledWith('The lock passphrase file is missing or unreadable: the lock has been turned off.')
   })
 })
+
+// The lock of a private window left alone (shared/private-lock.ts): the delay is a setting only the lock's handler changes, and the phrase of a window that holds a lock of
+// its own is checked by `confirm`, which opens nothing of the application.
+describe('the delay of the lock of a private window', () => {
+  it('is set with the lock on, and « never » is always allowed', async () => {
+    const { service, settings, update } = setup({ lockEnabled: true })
+    service.start()
+    expect(await service.configure({ op: 'private-idle', minutes: 15 })).toEqual({ ok: true })
+    expect(update).toHaveBeenCalledWith({ lockPrivateIdle: 15 })
+    expect(settings.lockPrivateIdle).toBe(15)
+    expect(await service.configure({ op: 'private-idle', minutes: 0 })).toEqual({ ok: true })
+    expect(settings.lockPrivateIdle).toBe(0)
+  })
+
+  it('needs a phrase: nothing could open the window again without one', async () => {
+    const { service, settings, update } = setup({ lockEnabled: false }, false)
+    const reply = await service.configure({ op: 'private-idle', minutes: 5 })
+    expect(reply.ok).toBe(false)
+    expect(update).not.toHaveBeenCalled()
+    expect(settings.lockPrivateIdle).toBe(0)
+    expect(await service.configure({ op: 'private-idle', minutes: 0 })).toEqual({ ok: true })
+  })
+
+  it('is refused while the application is locked, like every other change of the lock', async () => {
+    const { service, settings } = setup({ lockEnabled: true, lockApp: true })
+    service.start()
+    expect((await service.configure({ op: 'private-idle', minutes: 5 })).ok).toBe(false)
+    expect(settings.lockPrivateIdle).toBe(0)
+  })
+
+  it('tells the windows that follow the lock', async () => {
+    const { service } = setup({ lockEnabled: true })
+    service.start()
+    const heard = vi.fn()
+    service.subscribe(heard)
+    await service.configure({ op: 'private-idle', minutes: 1 })
+    expect(heard).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('checking a phrase for a window that holds a lock of its own (confirm)', () => {
+  it('says yes to the phrase and opens nothing of the application', async () => {
+    const { service } = setup({ lockEnabled: true, lockApp: true })
+    service.start()
+    expect(service.isAppLocked()).toBe(true)
+    expect(await service.confirm({ target: { scope: 'app' }, phrase: PHRASE })).toEqual({ ok: true })
+    expect(service.isAppLocked()).toBe(true)
+  })
+
+  it('counts wrong phrases like the application\'s lock does: the same free tries, then the same wait', async () => {
+    const { service } = setup({ lockEnabled: true })
+    service.start()
+    for (let i = 0; i < FREE_TRIES; i += 1) expect((await service.confirm({ target: { scope: 'app' }, phrase: 'wrong' })).ok).toBe(false)
+    const slowed = await service.confirm({ target: { scope: 'app' }, phrase: PHRASE })
+    expect(slowed.ok).toBe(false)
+    expect(slowed).toMatchObject({ retryInMs: expect.any(Number) })
+  })
+
+  it('opens with Touch ID when the request carries no phrase, and refuses while there is no lock at all', async () => {
+    const on = setup({ lockEnabled: true })
+    on.service.start()
+    expect(await on.service.confirm({ target: { scope: 'app' } })).toEqual({ ok: true })
+    expect(on.touchId.prompt).toHaveBeenCalledTimes(1)
+    const off = setup({ lockEnabled: false }, false)
+    expect((await off.service.confirm({ target: { scope: 'app' }, phrase: PHRASE })).ok).toBe(false)
+  })
+})

@@ -204,6 +204,12 @@ describe('requests from the interface are hostile', () => {
     expect(parseUnlockRequest({ target: { scope: 'app' }, phrase: longest })).toEqual({ target: { scope: 'app' }, phrase: longest })
   })
 
+  it('reads the delay of the lock of a private window: one of the choices, in minutes', () => {
+    for (const minutes of [0, 1, 5, 15, 30]) expect(parseLockConfig({ op: 'private-idle', minutes })).toEqual({ op: 'private-idle', minutes })
+    for (const minutes of [-1, 2, 60, '5', null, undefined, Number.NaN, {}]) expect(parseLockConfig({ op: 'private-idle', minutes }), String(minutes)).toBeNull()
+    expect(parseLockConfig({ op: 'private-idle' })).toBeNull()
+  })
+
   it('parses each change of the lock, and refuses anything else', () => {
     expect(parseLockConfig({ op: 'set-phrase', phrase: 'abcdefgh' })).toEqual({ op: 'set-phrase', phrase: 'abcdefgh' })
     expect(parseLockConfig({ op: 'set-phrase', phrase: 'abcdefgh', current: 'old' })).toEqual({ op: 'set-phrase', phrase: 'abcdefgh', current: 'old' })

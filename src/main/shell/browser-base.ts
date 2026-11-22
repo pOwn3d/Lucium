@@ -732,6 +732,8 @@ export abstract class BrowserBase {
   abstract evaluateInPage(js: string): Promise<unknown>
   protected abstract fromCss(b: Bounds): Bounds
   abstract isTabLocked(tab: Pick<TabItem, 'spaceId'>): boolean
+  /** Whether this window is covered by its own lock (a private window left alone, shell/private-lock.ts). */
+  abstract isWindowLocked(): boolean
   protected abstract k(): number
   protected abstract layout(): void
   /** Loads a folder of extension in every profile (browser-downloads.ts); the sentence of the first failure, or null when it loaded. */

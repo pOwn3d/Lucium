@@ -16,6 +16,7 @@ import { parseDropTarget } from '@shared/dnd'
 import { DRAG_TTL_MS, tabsToDrag } from '@shared/tab-drag'
 import { MAIN_WINDOW_KEY, tabsOfEverySpace } from '@shared/window-tabs'
 import { redactForLock, redactSnapshotForLock, runtimeOfTabs } from '@shared/lock'
+import { lockedWindowView } from '@shared/private-lock'
 import { isBlockingExempt } from '@shared/blocker'
 import { extensionTabPage } from '@shared/chrome-pages'
 import { rememberedDecision } from '@shared/permissions'
@@ -24,6 +25,7 @@ import { ExtensionShims } from './extension-shims'
 import { gateAutoArchive } from './auto-archive'
 import { gateHistoryPurge } from './history-purge'
 import { gateTabReminders } from './tab-reminders'
+import { forgottenNotice, gateUnusedPermissions } from './unused-permissions'
 import { AutoReloader } from './auto-reload'
 import { showSystemNotice } from './system-notice'
 import { batterySaver } from './battery-saver'
@@ -316,6 +318,19 @@ export class Browser extends BrowserLayout {
         fire: () => this.dispatch({ type: 'reminder/fire' })
       })
     }
+    // "Oublier les autorisations des sites non visités": a pass at launch and one a day, in the main window only (a private window keeps no answer on the disk).
+    if (!this.isPrivate() && !this.isSecondary()) {
+      gateUnusedPermissions(this.gates, {
+        store: this.store,
+        now: () => Date.now(),
+        setTimer: (run, ms) => setTimeout(run, ms),
+        clearTimer: (timer) => clearTimeout(timer as NodeJS.Timeout),
+        dispatch: (action) => this.dispatch(action),
+        notify: (forgotten) => {
+          this.showToast(forgottenNotice(forgotten, this.store.get().settings.forgetUnusedPermissionsDays), undefined, 12_000)
+        }
+      })
+    }
     // The launch loads what the windows show (this sync, and the sync of each window restored) and the tabs the user keeps alive, not every tab
     // at once: index.ts calls `wakeAtLaunch` of the main window once the windows are restored, so that what they show is known.
     this.sync()
@@ -451,7 +466,8 @@ export class Browser extends BrowserLayout {
   }
 
   snapshot(): UiSnapshot {
-    const lock = getLockService()?.view()
+    // A private window that holds its own lock is shown the lock screen of the application (shared/private-lock.ts): its state is redacted like the application's.
+    const lock = this.isWindowLocked() ? lockedWindowView(getLockService()?.view()) : getLockService()?.view()
     const raw = this.store.get()
     // What the lock hides is not in the state the interface is given (see redactForLock); the state itself is untouched.
     const state = lock ? redactForLock(raw, lock) : raw

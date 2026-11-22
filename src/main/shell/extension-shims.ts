@@ -4,6 +4,8 @@ import { DebuggerGuard, debuggerTargetAllowed } from '@shared/debugger-policy'
 import type { DownloadInfo } from '@shared/model'
 import { chromeAddressOf, isInternalScheme } from '@shared/internal-page'
 import { PRIVATE_PANEL_REFUSAL, type PanelOptions } from '@shared/sidepanel'
+import { managementGetAll } from '@shared/extension-management'
+import { closedSessions, parseMaxResults, sessionToRestore } from '@shared/extension-sessions'
 import { nativeHostDirs } from '@shared/native-messaging'
 import { emptyGroups, forgetTab, getGroup, groupOf, groupTabs, membersOf, queryGroups, ungroupTabs, updateGroup, type GroupQuery, type GroupResult, type GroupState, type TabGroup } from '@shared/tab-groups'
 import { GroupFolders, clearGroupMirror, setGroupMirror } from '@shared/group-folders'
@@ -117,8 +119,51 @@ export class ExtensionShims {
         return this.runtime(call)
       case 'events':
         return this.events(call)
+      case 'management':
+        return this.management(call)
+      case 'sessions':
+        return this.sessions(call)
       default:
         throw new Error(`Unknown shimmed API: ${call.api}`)
+    }
+  }
+
+  /** chrome.management: the list of the extensions of the caller's own profile, in a sober shape (shared/extension-management.ts). */
+  private management({ profileId, method }: ShimCall): unknown {
+    if (method === 'getAll') return managementGetAll(this.engine.listAllExtensions(), profileId)
+    throw new Error(`chrome.management.${method} is not provided.`)
+  }
+
+  /**
+   * chrome.sessions: the tabs the person closed (the archive) in the caller's own profile, and their reopening. Read from the state the interface is given, so that a locked
+   * space is out; a private tab is never in the archive. Another device is none here.
+   */
+  private sessions({ profileId, method, args }: ShimCall): unknown {
+    const shown = () => shownState(this.store.get(), getLockService()?.view())
+    switch (method) {
+      case 'getRecentlyClosed': {
+        const max = parseMaxResults(args[0])
+        if (max === null) throw new Error("Invalid value for argument 1. Property 'maxResults': Value must be a whole number from 1 to 25.")
+        const state = shown()
+        return closedSessions(state.archive, state.spaces, profileId, max)
+      }
+      case 'restore': {
+        const state = shown()
+        const entry = sessionToRestore(state.archive, state.spaces, profileId, typeof args[0] === 'string' ? args[0] : undefined)
+        if (!entry) throw new Error(typeof args[0] === 'string' ? 'Invalid session id.' : 'There are no recently closed sessions to restore.')
+        const before = new Set(this.store.get().tabs.map((tab) => tab.id))
+        this.browser.dispatch({ type: 'archive/restore', id: entry.id })
+        const opened = this.store.get().tabs.find((tab) => !before.has(tab.id))
+        if (!opened) throw new Error('The session could not be restored.')
+        const [session] = closedSessions([entry], state.spaces, profileId, 1)
+        const id = this.engine.tabNumberOf(opened.id)
+        // The tab's number exists once its page does: a tab that opens in the background has none yet, and the answer says no more than it knows.
+        return { lastModified: Math.floor(Date.now() / 1000), tab: { ...session!.tab, ...(id !== undefined ? { id } : {}) } }
+      }
+      case 'getDevices':
+        return []
+      default:
+        throw new Error(`chrome.sessions.${method} is not provided.`)
     }
   }
 

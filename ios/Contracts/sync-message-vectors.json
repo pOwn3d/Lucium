@@ -3158,6 +3158,7 @@
     "lockApp",
     "lockedSpaces",
     "lockTouchId",
+    "lockPrivateIdle",
     "updateFeedUrl",
     "updateChannel",
     "autoUpdate",

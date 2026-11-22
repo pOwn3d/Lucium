@@ -6,13 +6,13 @@
 import { useState } from 'react'
 import { BUILTIN_BANGS } from '@shared/bangs'
 import type { UiSnapshot } from '@shared/ipc'
-import { COMMAND_BAR_SHAPES, COMMAND_BAR_SIZES, type CommandBarShape, type CommandBarSize, type Settings, type SiteSearch } from '@shared/model'
+import { COMMAND_BAR_SHAPES, COMMAND_BAR_SIZES, SEARCH_ENGINES, type CommandBarShape, type CommandBarSize, type Settings, type SiteSearch } from '@shared/model'
 import { activeProfileId } from '@shared/profiles'
 import { restoreDefaultSiteSearches, sameSiteSearches, siteSearchProblem, siteSearchProblemText } from '@shared/site-search'
 import { ArcDialog } from './ArcDialog'
 import { EngineRows } from './CurrentProfileSettings'
 import { OmniboxKeywordSettings } from './KeyExtSettings'
-import { Check, Group, Row, Subpage, SubpageEntry } from './settings-parts'
+import { Check, Group, Row, Subpage, SubpageEntry, type DrawsRows } from './settings-parts'
 import { t, tp } from '@shared/i18n'
 
 interface PaneProps {
@@ -92,12 +92,44 @@ const BAR_SHAPE_NAME: Record<CommandBarShape, () => string> = {
   tall: () => t('search-settings.haute')
 }
 
+const SAME_ENGINE = ''
+const OTHER_ENGINE = '__other__'
+
+/** The engine of private and guest windows: the one of the other windows (the default) or one of the list; an address typed in the settings file is kept and shown as « Personnalisé ». */
+function PrivateEngineRow({ settings, update }: { settings: Settings; update: (patch: Partial<Settings>) => void }) {
+  const own = settings.privateSearchUrlTemplate
+  const value = own === SAME_ENGINE ? SAME_ENGINE : (SEARCH_ENGINES.find((e) => e.url === own)?.name ?? OTHER_ENGINE)
+  return (
+    <Row settingKey="privateSearchUrlTemplate" label={t('settings-profiles.moteur-des-fenetres-privees')} hint={t('settings-profiles.ce-moteur-ne-sert-que-dans-les-fenetres-privees-et-invite')}>
+      <select
+        className="field pop"
+        aria-label={t('settings-profiles.moteur-des-fenetres-privees')}
+        value={value}
+        onChange={(e) => {
+          if (e.target.value === OTHER_ENGINE) return
+          update({ privateSearchUrlTemplate: e.target.value === SAME_ENGINE ? '' : SEARCH_ENGINES.find((x) => x.name === e.target.value)!.url })
+        }}
+      >
+        <option value={SAME_ENGINE}>{t('settings-profiles.comme-les-autres-fenetres')}</option>
+        {SEARCH_ENGINES.map((e) => (
+          <option key={e.name}>{e.name}</option>
+        ))}
+        {value === OTHER_ENGINE && <option value={OTHER_ENGINE}>{t('menu.personnalise')}</option>}
+      </select>
+    </Row>
+  )
+}
+
+// What the group around it counts (settings-parts.tsx, `DrawsRows`).
+;(PrivateEngineRow as DrawsRows).rows = ['privateSearchUrlTemplate']
+
 export function SearchSettings({ snapshot, update }: PaneProps) {
   const { settings } = snapshot.state
   return (
     <>
       <Group id="engine" title={t('settings-profiles.moteur-de-recherche')}>
         <EngineRows snapshot={snapshot} update={update} profileId={activeProfileId(snapshot.state)} place="category" />
+        <PrivateEngineRow settings={settings} update={update} />
       </Group>
 
       {/* What the command bar and the find bar do with what is typed. Each line is a switch; the defaults keep the usual behaviour of the bar, except where a line says otherwise. */}

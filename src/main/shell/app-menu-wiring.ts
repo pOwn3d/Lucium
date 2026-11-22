@@ -30,6 +30,7 @@ import type { Browser } from './browser'
 import type { WindowShare } from './window-share'
 import type { PageAnnotate } from './page-annotate'
 import type { TaskManager } from './task-manager'
+import { isKeptOnTop, toggleKeptOnTop } from './always-on-top'
 
 export interface AppMenuDeps {
   engine: ElectronEngine
@@ -128,6 +129,10 @@ export function installAppMenus(deps: AppMenuDeps): { refreshMenu: () => void } 
         focusWindow: (id) => void windowManager.focusWindow(id),
         setWindowName: (id, name) => void windowManager.setName(id, name),
         window: () => target.win,
+        isKeptOnTop: () => isKeptOnTop(target.win),
+        keepOnTop: () => void toggleKeptOnTop(target.win),
+        canReopenWindow: () => windowManager.canReopenClosed(),
+        reopenWindow: () => void windowManager.reopenClosed(),
         sessionStart,
         loadExtension: () => void loadExtensionFromDialog(browser, store, target.win),
         extensions: () => (target.kind === 'private' ? [] : extensionsOfProfile(target.store.get())),
@@ -197,7 +202,7 @@ export function installAppMenus(deps: AppMenuDeps): { refreshMenu: () => void } 
     const target = windowManager.focused()
     // The work views of the Dock are those of the window it opens them in, which may not be the one in front (a private window lists none).
     const dockViews = JSON.stringify(dockWorkViews(dockWindow().store.get()))
-    return `${target.id}|${windowManager.isMainAway()}|${menuKey(shownState(target.store.get(), lock.view()), target.kind === 'private' ? [] : extensionsOfProfile(target.store.get()).map((e) => e.id), target.browser.menuFacts(), sessionStart, `${menuDialogs.isRecordingTrace()}|lock:${lock.isAppLocked()}:${lock.isActive()}:${lock.lockedSpaces().join(',')}|${windowManager.namesKey()}|dock:${dockViews}`)}`
+    return `${target.id}|${windowManager.isMainAway()}|${menuKey(shownState(target.store.get(), lock.view()), target.kind === 'private' ? [] : extensionsOfProfile(target.store.get()).map((e) => e.id), target.browser.menuFacts(), sessionStart, `${menuDialogs.isRecordingTrace()}|lock:${lock.isAppLocked()}:${lock.isActive()}:${lock.lockedSpaces().join(',')}|${windowManager.namesKey()}|dock:${dockViews}|closed:${windowManager.closedCount()}`)}`
   }
   let shownMenu = menuKeyOfFocused()
   // A rebuild can be asked again while one is running: a native event raised inside `Menu.setApplicationMenu` (Windows resizes the window for the menu bar),

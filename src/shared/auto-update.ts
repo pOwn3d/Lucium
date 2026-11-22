@@ -127,6 +127,11 @@ export interface UpdateNotice {
   withdrawn?: boolean
   /** The update downloaded in this run was withdrawn and dropped (or could not be): the notice says so first, and names the offer as the version to install. */
   dropped?: DroppedUpdate
+  /**
+   * The version fixes a flaw that is being exploited (the feed's `security` key, update-check.ts): the notice says so, and the cap of
+   * UPDATE_NOTICE_MAX_TIMES showings does not hold it back. Its showings are not counted.
+   */
+  urgent?: true
   /** Called on « Installer », « Installer et relancer » or the download page: that showing is not counted as a refusal. */
   accepted: () => void
 }
@@ -156,8 +161,13 @@ export interface UpdateNoticeText {
  * « Lucium 0.2.2 est disponible (122,2 Mo). » with « Installer », or « Lucium 0.2.2 est prêt à être installé. » with « Installer et relancer »;
  * for a withdrawn running version, « Cette version a été retirée. Installez Lucium 0.2.2. ».
  */
-export function updateNoticeText(kind: UpdateNoticeKind, version: string, size?: number, withdrawn = false, dropped?: DroppedUpdate): UpdateNoticeText {
+export function updateNoticeText(kind: UpdateNoticeKind, version: string, size?: number, withdrawn = false, dropped?: DroppedUpdate, urgent = false): UpdateNoticeText {
   const later = t('menu-actions.plus-tard')
+  // An urgent update says what is at stake before anything else; a dropped or withdrawn one has its own, graver words.
+  if (urgent && !dropped && !withdrawn) {
+    if (kind === 'restart') return { message: t('auto-update.lucium-version-corrige-une-faille-et-attend', { version }), action: t('app-update.installer-et-relancer'), later }
+    return { message: t('auto-update.lucium-version-corrige-une-faille', { version }), action: kind === 'install' ? t('auto-update.installer') : t('auto-update.page-de-telechargement'), later }
+  }
   // A dropped update is said first, with the version that takes its place (nothing waits any more, so the notice never offers the restart).
   if (dropped && kind !== 'restart') return { message: droppedUpdateText(dropped, version), action: kind === 'install' ? t('auto-update.installer') : t('auto-update.page-de-telechargement'), later }
   // An update that waits is what replaces the withdrawn version: its own words say what to do.

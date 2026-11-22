@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { setLanguage } from './i18n'
-import { DOWNLOAD_PAGES, FEED_MAX_BYTES, downloadPageUrl, downloadedVersion, feedAnswer, feedFetchInit, parseFeed, updateOutcome, withdrawnVersions } from './update-check'
+import { DOWNLOAD_PAGES, FEED_MAX_BYTES, downloadPageUrl, downloadedVersion, feedAnswer, feedFetchInit, parseFeed, securityFixVersion, updateOutcome, urgentSecurityFix, withdrawnVersions } from './update-check'
 
 // The order of the versions is tested in versions.test.ts.
 
@@ -273,5 +273,28 @@ describe('the download page of the site, where a version is fetched by hand', ()
     expect(downloadPageUrl('fr')).toBe('https://lucium.app/telecharger/')
     expect(downloadPageUrl('en')).toBe('https://lucium.app/en/download/')
     for (const url of Object.values(DOWNLOAD_PAGES)) expect(url).toMatch(/^https:\/\/lucium\.app\//)
+  })
+})
+
+describe('the security key of the feed', () => {
+  it('is the first version that carries the fix, when the key is a plain version', () => {
+    expect(securityFixVersion({ security: '1.1.6' })).toBe('1.1.6')
+    expect(securityFixVersion({ security: '1.1' })).toBe('1.1')
+  })
+
+  it('is nothing when the key is absent, or anything but a plain version (a feed that was not written by the publication is not believed)', () => {
+    for (const raw of [{}, { security: true }, { security: 116 }, { security: '1.1.6-beta' }, { security: 'latest' }, { security: ['1.1.6'] }, { security: '' }, null, 'text', [], undefined]) {
+      expect(securityFixVersion(raw), JSON.stringify(raw)).toBeNull()
+    }
+  })
+
+  it('makes an update urgent when the running version is below the fix and the version offered carries it', () => {
+    const feed = { security: '1.1.6' }
+    expect(urgentSecurityFix(feed, '1.1.5', '1.1.6')).toBe(true)
+    expect(urgentSecurityFix(feed, '1.1.5', '1.2.0')).toBe(true)
+    // The running version already has the fix, or the offer does not carry it: nothing to hurry for.
+    expect(urgentSecurityFix(feed, '1.1.6', '1.2.0')).toBe(false)
+    expect(urgentSecurityFix(feed, '1.1.5', '1.1.5')).toBe(false)
+    expect(urgentSecurityFix({}, '1.1.5', '1.1.6')).toBe(false)
   })
 })

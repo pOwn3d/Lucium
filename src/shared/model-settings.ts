@@ -57,6 +57,8 @@ export type ProtectionBaseline = 'standard' | 'renforcee'
 export interface Settings {
   /** `%s` is replaced by the URL-encoded query. */
   searchUrlTemplate: string
+  /** The search engine of private and guest windows: an address with `%s`, or '' to use `searchUrlTemplate` like the other windows (shared/profiles.ts, `profileSearch`). */
+  privateSearchUrlTemplate: string
   siteSearches: SiteSearch[]
   linkRoutes: LinkRoute[]
   sidebarVisible: boolean
@@ -222,6 +224,10 @@ export interface Settings {
   httpsOnly: boolean
   /** Sites (host and subdomains) that may be opened over `http://` with no warning, because they have no HTTPS. */
   httpsOnlyExceptions: string[]
+  /** A typed address one keystroke from a site of the person's history, bookmarks, favourites or pinned tabs stops on a warning page with « Continuer » (see typo-guard.ts). Local only. On by default. */
+  typoGuard: boolean
+  /** A form with a password about to go to a public `http:` address asks first, and is not sent unless the user says so (see insecure-form.ts). Local only. On by default. */
+  warnInsecureForm: boolean
   /** Names shown for profiles, by profile id. The id stays the storage key, so renaming never loses data. */
   profileNames: Record<string, string>
   /** Expose the space theme to web pages as `--arc-palette-*` CSS variables (a page can read it, so it is opt-in). */
@@ -412,6 +418,8 @@ export interface Settings {
   lockedSpaces: string[]
   /** Touch ID is offered to unlock, where this Mac has it; the phrase stays the way in when it fails. */
   lockTouchId: boolean
+  /** A private window left alone for this many minutes (1, 5, 15 or 30; 0 = never) covers itself with the lock screen and asks for the phrase or Touch ID (see private-lock.ts). Needs the lock. */
+  lockPrivateIdle: number
   /** A tab that is archived keeps its last pages (up to 20 web addresses) so that reopening it brings its Back list back (see closed-history.ts). Costs memory in the archive: off. */
   reopenHistory: boolean
   // ---- Interface language (see i18n.ts). Off: the interface is French, whatever the system says. ----
@@ -521,6 +529,8 @@ export interface Settings {
   downloadResume: boolean
   /** Ask where each file is saved (the system's save box), instead of putting it in the downloads folder at once. */
   downloadAskWhere: boolean
+  /** Ask before a file that can run (a program, a script, a disk image…) is saved, and save nothing when the user says no (see download-warning.ts). On by default. */
+  warnExecutableDownload: boolean
   /** "Ouvrir avec…" on a downloaded file: the application chosen is remembered for that type of file and used by "Ouvrir" (see open-with.ts). */
   openWithMemory: boolean
   /** The applications remembered by type of file (extension → path of an `.app`). Only the main process adds to it; the interface can take from it. */
@@ -683,6 +693,8 @@ export interface Settings {
   annotateLetterKeys: boolean
   /** The system may hand the application `lucium://` (or `lucium://`) `open`, `new-tab` and `search` addresses (AppleScript, Shortcuts, Terminal). Off by default: any application or script could send them. */
   urlAutomation: boolean
+  /** Sites not visited for this many days lose the answers remembered for them (camera, position, notifications…); 0, the default, forgets nothing (unused-permissions.ts). */
+  forgetUnusedPermissionsDays: number
   /** "Me le rappeler…": a tab leaves its column and comes back at a chosen time, with a local notification. Costs one timer while a reminder is pending. */
   tabReminders: boolean
   // ---- The library (shared/bookmarks.ts, live-folders.ts, web-apps.ts): each is off by default and costs nothing while off ----

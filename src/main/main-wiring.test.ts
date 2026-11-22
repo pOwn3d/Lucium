@@ -162,6 +162,35 @@ describe('a second launch of the program (shell/single-instance.ts)', () => {
   })
 })
 
+describe('--new-window and --private-window (shell/single-instance.ts, shared/launch-flags.ts)', { timeout: 30_000 }, () => {
+  // The private window itself is not made here (the stand-in engine refuses a private session): that the switch reaches the manager is read from what it does with --new-window,
+  // and what it asks for a private one is in shell/single-instance.test.ts.
+  it('are obeyed in a second launch once the setting of the commands by address is on, and ignored with a line while it is off', async () => {
+    const main = await run()
+    const { windows, engine } = await worlds()
+    const sender = { id: windows.made[0]!.webContents.id, mainFrame: {}, getURL: () => 'file:///app/index.html' }
+    const ignored = (from: number): boolean => main.world.logged.slice(from).some((line) => line.includes('--new-window and --private-window ignored') && line.includes('urlAutomation'))
+    const logBefore = main.world.logged.length
+    main.listeners('second-instance')[0]!({}, ['lucium', '--new-window'])
+    // Off: the launch has no address, so it asks for a window of its own as it always did (a new window is two views, the layer of the panels included), and says it ignored the switch.
+    await vi.waitFor(() => expect(windows.made.length).toBe(4))
+    expect(ignored(logBefore)).toBe(true)
+    await engine.ipcHandle.get(Channel.dispatch)!({ sender, senderFrame: sender.mainFrame }, { type: 'settings/update', patch: { urlAutomation: true } })
+    const logOn = main.world.logged.length
+    main.listeners('second-instance')[0]!({}, ['lucium', '--new-window'])
+    await vi.waitFor(() => expect(windows.made.length).toBe(6))
+    expect(ignored(logOn)).toBe(false)
+  })
+
+  it('are ignored, with a line, by the first launch while the setting is off', async () => {
+    const main = await run({ argv: ['--private-window'] })
+    const { windows } = await worlds()
+    expect(main.world.logged.some((line) => line.includes('--private-window ignored'))).toBe(true)
+    // Only the main window and its layer of panels.
+    expect(windows.made.length).toBe(2)
+  })
+})
+
 describe('the sheet of the launch (shell/launch-sheets.ts)', () => {
   afterEach(() => vi.useRealTimers())
 
@@ -225,6 +254,62 @@ describe('the sheet of the launch (shell/launch-sheets.ts)', () => {
       const two = await shown()
       two.elapse()
       expect(sheets(two.windows)).toEqual([])
+    } finally {
+      rmSync(folder, { recursive: true, force: true })
+    }
+  })
+})
+
+describe('the sign of a clean exit and « Reprendre où vous en étiez ? » (shell/clean-exit.ts, shell/launch-sheets.ts)', { timeout: 30_000 }, () => {
+  afterEach(() => vi.useRealTimers())
+
+  /** A data folder whose profile was used (two tabs open, the state written) and left: the way it left is the test's. */
+  async function usedProfile(folder: string, leave: (first: MainRun) => void) {
+    const first = await run({ dataFolder: folder })
+    const { windows, engine } = await worlds()
+    const from = { id: windows.made[0]!.webContents.id, mainFrame: {}, getURL: () => 'file:///app/index.html' }
+    for (const url of ['https://one.example/', 'https://two.example/']) await engine.ipcHandle.get(Channel.dispatch)!({ sender: from, senderFrame: from.mainFrame }, { type: 'tab/open', url, background: true })
+    // The state is written on the quit, as in « knows whether the profile is new »: a profile that was used.
+    first.quit()
+    leave(first)
+    first.dispose()
+  }
+  const marker = (folder: string): string => join(folder, 'userData', 'running.marker')
+  /** The next launch: the window is shown, the sheet's clock runs out; the panels asked for are returned. */
+  async function nextLaunch(folder: string): Promise<Array<string | undefined>> {
+    await run({ dataFolder: folder })
+    const { windows } = await worlds()
+    const [window, layer] = windows.made as [(typeof windows.made)[number], (typeof windows.made)[number]]
+    ;(layer.webContents as unknown as { isLoading: () => boolean }).isLoading = () => false
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    window.emit('ready-to-show')
+    vi.advanceTimersByTime(LAUNCH_SHEET_DELAY_MS)
+    vi.useRealTimers()
+    return panelsAsked(windows).map((request) => request?.panel)
+  }
+
+  it('makes the marker at the start, and removes it when the run ends by will-quit: the next launch offers nothing', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'lucium-exit-'))
+    try {
+      await usedProfile(folder, (first) => {
+        expect(existsSync(marker(folder))).toBe(true)
+        for (const listener of first.listeners('will-quit')) listener({})
+        expect(existsSync(marker(folder))).toBe(false)
+      })
+      expect(await nextLaunch(folder)).not.toContain('restore')
+    } finally {
+      rmSync(folder, { recursive: true, force: true })
+    }
+  })
+
+  it('offers « Reprendre où vous en étiez ? » at the launch after a run that left the marker (a crash), once the window is shown', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'lucium-exit-'))
+    try {
+      await usedProfile(folder, () => {
+        // The run ended without its will-quit: the marker is still there.
+        expect(existsSync(marker(folder))).toBe(true)
+      })
+      expect(await nextLaunch(folder)).toContain('restore')
     } finally {
       rmSync(folder, { recursive: true, force: true })
     }

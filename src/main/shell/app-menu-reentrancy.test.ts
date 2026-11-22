@@ -48,8 +48,8 @@ function application() {
   const view = new WindowView(shared, selectionOf(shared.get()), new Set(), true)
   const facts = { canGoBack: false, canGoForward: false, loading: false, finding: false, sound: 'silent' as const }
   const browser = new Proxy({ menuFacts: () => ({ ...facts }) } as Record<string, unknown>, { get: (target, prop: string) => (prop in target ? target[prop] : () => false) })
-  const target = { id: 'main', kind: 'main', win: {}, store: view, browser }
-  const windowManager = { focused: () => target, isMainAway: () => false, namesKey: () => '', entries: () => [], onChange: () => () => {} }
+  const target = { id: 'main', kind: 'main', win: { isDestroyed: () => false, isAlwaysOnTop: () => false }, store: view, browser }
+  const windowManager = { focused: () => target, isMainAway: () => false, namesKey: () => '', closedCount: () => 0, canReopenClosed: () => false, reopenClosed: () => null, entries: () => [], onChange: () => () => {} }
   const lock = { isAppLocked: () => false, isActive: () => false, lockedSpaces: () => [] as string[], view: () => ({ active: false, appLocked: false, lockedSpaces: [], guardedSpaces: [], touchId: false, retryInMs: 0 }), lockNow: () => {} }
   const little = { count: () => 0, onCountChange: () => {}, showAll: () => {}, closeAll: () => {} }
   const engine = { listExtensions: () => [], onExtensionsChanged: () => {}, info: () => ({ name: 'Electron', version: '45', chromium: '150' }) }

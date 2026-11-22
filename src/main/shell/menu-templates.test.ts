@@ -234,6 +234,10 @@ function menuActions(rich: boolean): MenuActions {
     focusWindow: () => {},
     setWindowName: () => {},
     window: () => ({}) as BrowserWindow,
+    isKeptOnTop: () => false,
+    keepOnTop: () => {},
+    canReopenWindow: () => false,
+    reopenWindow: () => {},
     sessionStart: 0
   }
 }

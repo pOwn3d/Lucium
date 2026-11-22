@@ -16,6 +16,7 @@ import { defaultSettings, type Settings } from './model'
 import { getLanguage, t, type MessageKey } from './i18n'
 import { settingsPath } from './settings-path'
 import { MIN_FONT_SIZE_ON } from './min-font-size'
+import { UNUSED_PERMISSION_DAYS_DEFAULT } from './unused-permissions'
 
 /** What a feature costs while it is active. `none` stands alone: nothing runs for it except a check when its event happens. */
 export type FeatureCost = 'none' | 'timer' | 'listeners' | 'network' | 'memory' | 'process' | 'disk'
@@ -245,6 +246,22 @@ export const FEATURES = [
     get label() { return t('privacy-settings.https-seul') },
     group: 'privacy',
     get description() { return t('features.n-ouvre-que-du-https', { settingsPath: settingsPath('httpsOnly') }) },
+    cost: ['listeners']
+  },
+  {
+    id: 'typo-guard',
+    key: 'typoGuard',
+    get label() { return t('privacy-settings.faute-de-frappe-d-adresse') },
+    group: 'privacy',
+    get description() { return t('features.prevenir-d-une-adresse-qui-ressemble-a-un-site') },
+    cost: ['listeners']
+  },
+  {
+    id: 'warn-insecure-form',
+    key: 'warnInsecureForm',
+    get label() { return t('privacy-settings.mot-de-passe-http') },
+    group: 'privacy',
+    get description() { return t('features.demande-avant-d-envoyer-un-mot-de-passe-sans-chiffrement') },
     cost: ['listeners']
   },
   {
@@ -795,6 +812,14 @@ export const FEATURES = [
     cost: ['disk']
   },
   {
+    id: 'warn-executable-download',
+    key: 'warnExecutableDownload',
+    get label() { return t('download-settings.prevenir-avant-un-fichier-executable') },
+    group: 'data',
+    get description() { return t('features.demande-avant-d-enregistrer-un-fichier-qui-peut') },
+    cost: ['none']
+  },
+  {
     id: 'open-with',
     key: 'openWithMemory',
     get label() { return t('features.memoriser-l-application-d-ouverture-par-type') },
@@ -1012,6 +1037,17 @@ export const FEATURES = [
     group: 'privacy',
     get description() { return t('features.un-site-securise-peut-apres-un-clic-demander-a', { settingsPath: settingsPath('webHardware') }) },
     cost: ['listeners']
+  },
+  {
+    id: 'forget-unused-permissions',
+    kind: 'threshold',
+    key: 'forgetUnusedPermissionsDays',
+    onValue: UNUSED_PERMISSION_DAYS_DEFAULT,
+    get label() { return t('features.oublier-les-autorisations-des-sites-non-visites') },
+    group: 'privacy',
+    get description() { return t('features.un-site-que-vous-n-avez-pas-visite-depuis-le-delai-choisi-perd', { settingsPath: settingsPath('forgetUnusedPermissions') }) },
+    // One pass at launch and one a day, in the main window only; the table of visits is written once a day per site at most.
+    cost: ['timer']
   },
   {
     id: 'annotate-capture',

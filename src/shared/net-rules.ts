@@ -536,9 +536,11 @@ export class RuleIndex {
   readonly responseHeaders: boolean
   /** The allowAllRequests rules: they are also asked about the documents a request sits in. */
   readonly frameRules: readonly NetRule[]
+  private readonly all: ReadonlySet<NetRule>
 
   constructor(rules: readonly NetRule[]) {
     this.size = rules.length
+    this.all = new Set(rules)
     this.frameRules = rules.filter((rule) => rule.kind === 'allowAllRequests')
     this.requestHeaders = rules.some((rule) => rule.requestHeaders !== undefined)
     this.responseHeaders = rules.some((rule) => rule.responseHeaders !== undefined)
@@ -556,6 +558,11 @@ export class RuleIndex {
       if (token !== null) file(this.byToken, token, rule)
       else this.rest.push(rule)
     }
+  }
+
+  /** Whether this very rule (the object) is one of the index's. */
+  has(rule: NetRule): boolean {
+    return this.all.has(rule)
   }
 
   /** Every rule that covers the request. `givenUp` hears of the rules their budget kept from it (`ruleCovers`). */
@@ -614,6 +621,8 @@ export interface Judgement {
   outcome: Outcome
   /** The highest priority of an allow or allowAllRequests rule that covers the request (0 for none). */
   allowPriority: number
+  /** The rule that decided it (what `chrome.declarativeNetRequest.getMatchedRules` lists); absent when none did. */
+  rule?: NetRule
 }
 
 /** The address a redirect rule sends a request to, or null when it gives none that may be followed. */
@@ -671,10 +680,10 @@ export function judge(owner: RuleOwner, covering: readonly NetRule[], request: P
   }
   // An allowAllRequests rule on a frame above stands as an allow rule of its priority; at the same priority it comes before a block.
   if (best === null || frameAllowPriority > best.priority || (frameAllowPriority === best.priority && frameAllowPriority > 0 && best.kind !== 'allow')) return { outcome: frameAllowPriority > 0 ? { action: 'allow' } : { action: 'none' }, allowPriority }
-  if (best.kind === 'allow' || best.kind === 'allowAllRequests') return { outcome: { action: 'allow' }, allowPriority }
-  if (best.kind === 'block') return { outcome: { action: 'block' }, allowPriority }
+  if (best.kind === 'allow' || best.kind === 'allowAllRequests') return { outcome: { action: 'allow' }, allowPriority, rule: best }
+  if (best.kind === 'block') return { outcome: { action: 'block' }, allowPriority, rule: best }
   const url = redirectTarget(best, request, owner.id)
-  return { outcome: url === null ? { action: 'none' } : { action: 'redirect', url }, allowPriority }
+  return url === null ? { outcome: { action: 'none' }, allowPriority } : { outcome: { action: 'redirect', url }, allowPriority, rule: best }
 }
 
 /** The header rules of one extension that speak for a request, the strongest first. */

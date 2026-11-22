@@ -3,6 +3,7 @@
 
 import { blockingService } from '../blocking'
 import { tidyFilename } from '@shared/tidy'
+import type { BlockedHost } from '@shared/blocked-hosts'
 import { adsBlockingOn, blockerIsOn } from '@shared/blocker'
 import { pingBlockedFor } from '@shared/ping-block'
 import { focusBlock, focusIsConfigured, pauseFocusPatch } from '@shared/focus-mode'
@@ -10,6 +11,8 @@ import { focusGate } from '../engine/focus-gate'
 import { safeGate } from '../engine/safe-gate'
 import { cleanSafeBrowsingExceptions, hostToCheck, safeVerdict, type SafeVerdict } from '@shared/safe-browsing'
 import { allowSafeHost, releaseSafeLists, safeAllowedHosts, safeLists } from '../safe-lists'
+import { typoGate } from '../engine/typo-gate'
+import { askInsecureForm } from './insecure-form-box'
 import { anyPrivacy, privacyOptionsOf } from '@shared/privacy'
 import { planHostResolver } from '@shared/dns'
 import { planProxies } from '@shared/proxy'
@@ -58,13 +61,14 @@ export abstract class BrowserNetwork extends BrowserPublish {
     this.engine.setDownloadNamer(tidyDownloads ? (name) => tidyFilename(name) : null)
     this.configureFocus()
     this.configureSafeBrowsing()
+    this.configureFormGuard()
     this.configureDownloads()
     this.configurePrivacy()
     this.guard.configure()
     this.configureNetwork()
     if (this.privateScope) this.configurePrivateContext(this.privateScope)
     for (const scope of this.containerScopes.values()) this.configurePrivateContext(scope)
-    const key = [adsOn, blockCookieBanners, blockCosmetic, disabledFilterLists.join(','), filterUpdateDays, blockExceptions.join(','), this.extraBlockedHosts.join(','), customFilterLists.map((l) => `${l.id}:${l.enabled}`).join(','), focusIsConfigured(this.store.get().settings), this.store.get().settings.safeBrowsing, this.store.get().settings.blockPings].join('|')
+    const key = [adsOn, blockCookieBanners, blockCosmetic, disabledFilterLists.join(','), filterUpdateDays, blockExceptions.join(','), this.extraBlockedHosts.join(','), customFilterLists.map((l) => `${l.id}:${l.enabled}`).join(','), focusIsConfigured(this.store.get().settings), this.store.get().settings.safeBrowsing, this.store.get().settings.blockPings, this.store.get().settings.typoGuard].join('|')
     if (key === this.blockerKey) return
     this.blockerKey = key
     // The lists belong to the application, not to a window: the main window drives them, a private window only gets its own request filter.
@@ -98,17 +102,20 @@ export abstract class BrowserNetwork extends BrowserPublish {
   /**
    * The request filter: the focus mode first (it closes the main frame of a listed site while it is active, shared/focus-mode.ts), then the tracking
    * pings (shared/ping-block.ts: cancelled and counted with the blocker's counter of the page), then the blocker settings. Null while neither the focus
-   * mode (switched on, with a site) nor the pings nor ad and tracker blocking nor banner blocking is on: a request is then not even heard.
+   * mode (switched on, with a site) nor the pings nor the lookalike guard nor ad and tracker blocking nor banner blocking is on: a request is then not even heard.
    */
   protected requestFilter(): RequestBlocker | null {
     const filtering = blockerIsOn(this.store.get().settings)
     const focusing = focusIsConfigured(this.store.get().settings)
     const safe = this.store.get().settings.safeBrowsing
     const pinging = this.store.get().settings.blockPings === true
-    if (!filtering && !focusing && !safe && !pinging) return null
+    const typing = this.store.get().settings.typoGuard === true
+    if (!filtering && !focusing && !safe && !pinging && !typing) return null
     return (request) => {
       if (focusing && request.resourceType === 'mainFrame' && focusBlock(this.store.get().settings, request.url, Date.now()) !== null) return true
       if (safe && request.resourceType === 'mainFrame' && safeVerdictOf(this.store.get().settings, request.url) !== null) return true
+      // A typed address that looks like a site of the person: its first load stops (the engine then shows the warning page, which has the way on).
+      if (typing && request.resourceType === 'mainFrame' && typoGate.holds(request.url)) return true
       if (pinging) {
         // The lists reset the counter of a page at its navigation; with them off nobody else would.
         if (!filtering && request.resourceType === 'mainFrame' && request.pageId) blockingService().resetPageCount(request.pageId)
@@ -145,6 +152,18 @@ export abstract class BrowserNetwork extends BrowserPublish {
         if (!exceptions.includes(host)) this.dispatch({ type: 'settings/update', patch: { safeBrowsingExceptions: cleanSafeBrowsingExceptions([...exceptions, host]) } })
       }
     })
+  }
+
+  /**
+   * The form guard (a form with a password sent to an `http:` address): the engine loads its preload into every session and asks this window's box before
+   * the form goes, while the setting is on; off, the engine registers nothing and hears nothing. The box is put over the window that holds the page.
+   */
+  private configureFormGuard(): void {
+    this.engine.setInsecureFormGuard(
+      this.store.get().settings.warnInsecureForm
+        ? ({ host, pageId }) => askInsecureForm((pageId === undefined ? undefined : this.ownerOf(pageId)?.win) ?? this.win, host)
+        : null
+    )
   }
 
   /** What the block page of the engine asks of the focus mode: whether an address is closed now, and the pause. Present while the feature is on. */
@@ -235,6 +254,16 @@ export abstract class BrowserNetwork extends BrowserPublish {
   /** Requests blocked on a tab of this window since it last navigated. */
   blockedCount(tabId: string): number {
     return this.store.get().tabs.some((t) => t.id === tabId) ? blockingService().blockedCount(tabId) : 0
+  }
+
+  /**
+   * The hosts blocked on a tab of this window since it last navigated. None for a private tab, nor in a private window: what a private page talked to
+   * is not listed, as nothing else of it is kept; and none for a tab this window does not hold.
+   */
+  blockedHosts(tabId: string): BlockedHost[] {
+    if (this.isPrivate()) return []
+    const tab = this.store.get().tabs.find((t) => t.id === tabId)
+    return tab !== undefined && tab.private !== true ? blockingService().blockedHosts(tabId) : []
   }
 
   sessionBlockedByKind(): { ads: number; banners: number } {

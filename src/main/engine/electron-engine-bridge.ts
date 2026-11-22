@@ -550,6 +550,8 @@ export abstract class ElectronEngineBridge extends ElectronEngineBase {
         return net.disabledRuleIds(extensionId, args[0])
       case 'declarativeNetRequest.getAvailableStaticRuleCount':
         return net.availableStaticRuleCount(extensionId)
+      case 'declarativeNetRequest.getMatchedRules':
+        return net.matchedRules(extensionId, args[0])
       case 'webRequest.listen':
         return net.listen(extensionId, context, args[0], args[1], args[2], args[3] === true)
       case 'webRequest.answer':

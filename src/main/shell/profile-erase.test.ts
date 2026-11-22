@@ -36,7 +36,7 @@ describe('the translations of the session', () => {
   })
 
   it('go when the browsing history is erased, even when the erasure throws', () => {
-    const history = (eraseHistory: () => boolean): BrowsingHistoryDeps => ({ eraseHistory, recentSites: () => [], forgetRecentSites: () => undefined, offeredSearchSites: () => [], forgetOfferedSearchSites: () => undefined })
+    const history = (eraseHistory: () => boolean): BrowsingHistoryDeps => ({ eraseHistory, recentSites: () => [], forgetRecentSites: () => undefined, offeredSearchSites: () => [], forgetOfferedSearchSites: () => undefined, forgetSiteVisits: () => undefined })
     kept()
     eraseBrowsingHistory(history(() => true), 'travail')
     expect(sessionTranslations.size).toBe(0)
@@ -105,7 +105,7 @@ describe('Browser.clearEverything (« Tout effacer »)', () => {
   const make = (over: Record<string, unknown> = {}) => {
     const cleared: Array<{ id: string; keep: unknown }> = []
     const dispatched: Array<Record<string, unknown>> = []
-    const fake = fakeBrowser({ store: { get: () => state }, group: new Set(), isPrivate: () => false, engine: { clearProfileData: async (id: string, keep: unknown) => void cleared.push({ id, keep }) }, eraseProfileHistory: () => true, eraseHistory: shell['eraseHistory'], dispatch: (action: { patch: Record<string, unknown> }) => void dispatched.push(action.patch), clearProfile: shell['clearProfile'], ...over })
+    const fake = fakeBrowser({ store: { get: () => state }, group: new Set(), isPrivate: () => false, engine: { clearProfileData: async (id: string, keep: unknown) => void cleared.push({ id, keep }) }, eraseProfileHistory: () => true, eraseHistory: shell['eraseHistory'], dispatch: (action: Record<string, unknown>) => void dispatched.push(action), clearProfile: shell['clearProfile'], ...over })
     return { fake, cleared, dispatched }
   }
 
@@ -120,7 +120,7 @@ describe('Browser.clearEverything (« Tout effacer »)', () => {
     const { fake, dispatched } = make()
     await shell['clearEverything']!.call(fake.self, 'profile')
     // Mutation: erasing the history without `eraseHistory` (the bare profile history) leaves both lists and fails this.
-    expect(dispatched).toEqual([{ siteDataRecents: [] }, { searchDiscoverySeen: [] }])
+    expect(dispatched).toEqual([{ type: 'settings/update', patch: { siteDataRecents: [] } }, { type: 'settings/update', patch: { searchDiscoverySeen: [] } }, { type: 'permission/forget-visits' }])
   })
 
   it('erases every profile a space uses when the confirmation chose them all', async () => {
@@ -157,7 +157,7 @@ describe('Browser.newIdentity (« Nouvelle identité »)', () => {
   it('erases, then closes the tabs of the profile in front and empties its archive', async () => {
     const { fake, dispatched } = make(async () => undefined)
     await shell['newIdentity']!.call(fake.self, 'profile')
-    expect(dispatched.filter((a) => (a as { type: string }).type !== 'settings/update')).toEqual([{ type: 'tab/close', id: 'a' }, { type: 'archive/clear', keepSpaces: ['home-space'] }])
+    expect(dispatched.filter((a) => !['settings/update', 'permission/forget-visits'].includes((a as { type: string }).type))).toEqual([{ type: 'tab/close', id: 'a' }, { type: 'archive/clear', keepSpaces: ['home-space'] }])
   })
 
   it('forgets the “Récents” hosts too', async () => {
@@ -170,7 +170,7 @@ describe('Browser.newIdentity (« Nouvelle identité »)', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const { fake, dispatched } = make(() => Promise.reject(new Error('busy')))
     await expect(shell['newIdentity']!.call(fake.self, 'profile')).rejects.toThrow('travail')
-    expect(dispatched.filter((a) => (a as { type: string }).type !== 'settings/update')).toEqual([])
+    expect(dispatched.filter((a) => !['settings/update', 'permission/forget-visits'].includes((a as { type: string }).type))).toEqual([])
   })
 })
 
@@ -210,6 +210,7 @@ describe('erasing the browsing history (Archive › Effacer l’historique de na
       forgetRecentSites: () => void (calls.push('forget-recents'), (recents.length = 0)),
       offeredSearchSites: () => offered,
       forgetOfferedSearchSites: () => void (calls.push('forget-offered'), (offered.length = 0)),
+      forgetSiteVisits: () => void calls.push('forget-visits'),
       ...over
     }
   }
@@ -217,31 +218,37 @@ describe('erasing the browsing history (Archive › Effacer l’historique de na
   it('forgets the sites already offered their search too: they are hosts of visited pages, and nothing else empties them', () => {
     const d = history({ recents: [], offered: ['bank.example', 'clinic.example'] })
     expect(eraseBrowsingHistory(d, 'travail')).toBe(true)
-    expect(d.calls).toEqual(['history:travail', 'forget-offered'])
+    expect(d.calls).toEqual(['history:travail', 'forget-offered', 'forget-visits'])
     expect(d.offered).toEqual([])
     // Even when the history could not be erased, as for the “Récents” list.
     const failed = history({ offered: ['bank.example'], eraseHistory: () => false })
     expect(eraseBrowsingHistory(failed, 'travail')).toBe(false)
-    expect(failed.calls).toEqual(['forget-recents', 'forget-offered'])
+    expect(failed.calls).toEqual(['forget-recents', 'forget-offered', 'forget-visits'])
   })
 
   it('erases the history of the profile, then forgets the sites of the “Récents” list of the site-data panel', () => {
     const d = history()
     expect(eraseBrowsingHistory(d, 'travail')).toBe(true)
-    expect(d.calls).toEqual(['history:travail', 'forget-recents'])
+    expect(d.calls).toEqual(['history:travail', 'forget-recents', 'forget-visits'])
     expect(d.recents).toEqual([])
+  })
+
+  it('forgets the days of last visit with the history, even when the history could not be erased (this fails if the call is dropped)', () => {
+    const d = history({ recents: [], eraseHistory: () => false })
+    eraseBrowsingHistory(d, 'travail')
+    expect(d.calls).toEqual(['forget-visits'])
   })
 
   it('touches no setting when the list is already empty', () => {
     const d = history({ recents: [] })
     eraseBrowsingHistory(d, 'default')
-    expect(d.calls).toEqual(['history:default'])
+    expect(d.calls).toEqual(['history:default', 'forget-visits'])
   })
 
   it('forgets the sites even when part of the history could not be erased, and still answers that it could not', () => {
     const d = history({ eraseHistory: () => false })
     expect(eraseBrowsingHistory(d, 'travail')).toBe(false)
-    expect(d.calls).toEqual(['forget-recents'])
+    expect(d.calls).toEqual(['forget-recents', 'forget-visits'])
   })
 
   it('forgets the sites even when the erasure throws, and lets the error through', () => {
@@ -251,7 +258,7 @@ describe('erasing the browsing history (Archive › Effacer l’historique de na
       }
     })
     expect(() => eraseBrowsingHistory(d, '../x')).toThrow('Invalid profile id')
-    expect(d.calls).toEqual(['forget-recents'])
+    expect(d.calls).toEqual(['forget-recents', 'forget-visits'])
   })
 
   it('is what Browser.eraseHistory runs, the one the menu entry calls: the history of the profile, then the “Récents” list', () => {
@@ -264,6 +271,7 @@ describe('erasing the browsing history (Archive › Effacer l’historique de na
     expect(erase).toHaveBeenCalledWith('travail')
     expect(dispatch).toHaveBeenCalledWith({ type: 'settings/update', patch: { siteDataRecents: [] } })
     expect(dispatch).toHaveBeenCalledWith({ type: 'settings/update', patch: { searchDiscoverySeen: [] } })
+    expect(dispatch).toHaveBeenCalledWith({ type: 'permission/forget-visits' })
     expect(fake.calls.filter((call) => call.name === 'forgetClosedPages').map((call) => call.args)).toEqual([['travail']])
   })
 })

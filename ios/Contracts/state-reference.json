@@ -113,6 +113,7 @@
     "id-2": "id-8"
   },
   "sitePermissions": {},
+  "siteVisits": {},
   "commandBarUsage": {},
   "sidePanelBehavior": {},
   "splits": [],
@@ -121,6 +122,7 @@
   "workViews": [],
   "settings": {
     "searchUrlTemplate": "https://duckduckgo.com/?q=%s",
+    "privateSearchUrlTemplate": "",
     "siteSearches": [
       {
         "keyword": "g",
@@ -395,6 +397,7 @@
     "forceReduceTransparency": false,
     "peekWithShift": true,
     "littleArcArchiveHours": 12,
+    "forgetUnusedPermissionsDays": 0,
     "fullUrlInToolbar": false,
     "showReloadAllButton": false,
     "reloadAllWakes": false,
@@ -429,6 +432,8 @@
     "trimReferer": false,
     "httpsOnly": false,
     "httpsOnlyExceptions": [],
+    "typoGuard": true,
+    "warnInsecureForm": true,
     "profileNames": {},
     "externalLinksInLittleArc": true,
     "peekOnExternalLinks": false,
@@ -521,6 +526,7 @@
     "lockApp": false,
     "lockedSpaces": [],
     "lockTouchId": true,
+    "lockPrivateIdle": 0,
     "reopenHistory": false,
     "interfaceTranslated": true,
     "language": "auto",
@@ -573,6 +579,7 @@
     "downloadPause": false,
     "downloadResume": false,
     "downloadAskWhere": false,
+    "warnExecutableDownload": true,
     "openWithMemory": false,
     "openWithApps": {},
     "openUnsaved": false,

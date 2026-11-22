@@ -356,3 +356,62 @@ describe('an update already downloaded, then withdrawn from the feed', () => {
     expect(p.settings().updateNotices).toEqual({ version: '0.2.3', shown: 1 })
   })
 })
+
+describe('an update that fixes a flaw the feed says is urgent', () => {
+  const urgentFile = (version: string, security: unknown = version): FeedAnswer => {
+    const file = releaseFile(version)
+    return { ok: true, json: { ...(file as { json: object }).json, security } }
+  }
+
+  it('is shown whatever the count: the cap of three showings does not hold it back', async () => {
+    const p = profile()
+    for (let n = 1; n <= 5; n++) {
+      const run = launch(p, { answer: () => urgentFile('0.2.2') })
+      await run.updater.check()
+      expect(run.shown, `launch ${n}`).toHaveLength(1)
+      expect(run.shown[0]!.urgent, `launch ${n}`).toBe(true)
+      run.updater.stop()
+    }
+    // The showings of an urgent notice are not counted: the ordinary rule starts from where it was when the flaw is no longer news.
+    expect(p.settings().updateNotices.shown).toBe(0)
+  })
+
+  it('is shown even when the version was already passed over three times', async () => {
+    const p = profile({ updateNotices: { version: '0.2.2', shown: 3 } })
+    const run = launch(p, { answer: () => urgentFile('0.2.2') })
+    await run.updater.check()
+    expect(run.shown).toHaveLength(1)
+    // ... and the count the ordinary notice had is left as it was.
+    expect(p.settings().updateNotices).toEqual({ version: '0.2.2', shown: 3 })
+  })
+
+  it('reaches the words of the notice: the sidebar toast says the flaw, not the ordinary sentence', async () => {
+    const { readFileSync } = await import('node:fs')
+    expect(readFileSync(new URL('./app-update.ts', import.meta.url), 'utf8')).toContain('notice.withdrawn === true, notice.dropped, notice.urgent === true)')
+  })
+
+  it('is not shown again in the same run before 24 h: urgent is not a nag', async () => {
+    const p = profile()
+    const run = launch(p, { answer: () => urgentFile('0.2.2') })
+    await run.updater.check()
+    await run.updater.check()
+    run.focus()
+    expect(run.shown).toHaveLength(1)
+  })
+
+  it('is the ordinary notice, held by the cap, when the feed does not say so, or says it for a version the offer does not reach', async () => {
+    for (const answer of [releaseFile('0.2.2'), urgentFile('0.2.2', 'soon'), urgentFile('0.2.2', '0.2.3')]) {
+      const p = profile({ updateNotices: { version: '0.2.2', shown: 3 } })
+      const run = launch(p, { answer: () => answer })
+      await run.updater.check()
+      expect(run.shown, JSON.stringify((answer as { json: unknown }).json)).toEqual([])
+    }
+  })
+
+  it('does not mark the notice urgent when the running version already has the fix', async () => {
+    const run = launch(profile(), { answer: () => urgentFile('0.2.2', '0.2.1') })
+    await run.updater.check()
+    expect(run.shown).toHaveLength(1)
+    expect(run.shown[0]!.urgent).toBeUndefined()
+  })
+})

@@ -117,7 +117,8 @@ export const SUBPAGE_LABELS: Readonly<Record<SettingsSubpageKey, Localized<strin
   focus: { fr: 'Mode concentration', en: 'Focus mode' },
   shortcuts: { fr: 'Raccourcis clavier', en: 'Keyboard shortcuts' },
   siteexclusions: { fr: 'Sites sans gestes ni touches Vim', en: 'Sites without gestures or Vim keys' },
-  sync: { fr: 'Synchronisation', en: 'Synchronization' }
+  sync: { fr: 'Synchronisation', en: 'Synchronization' },
+  securitycheck: { fr: 'Vérification de sécurité', en: 'Security check' }
 }
 
 /**
@@ -389,6 +390,8 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-block-pings', 'block-pings', t('Bloquer les pings de suivi', 'Block tracking pings'), 'protection', 'blockPings', { fold: true, patch: { blockPings: true }, on: true, why: network }),
   setting('fn-trim-referer', 'trim-referer', t('Ne pas envoyer le chemin de la page aux autres sites', 'Do not send the page path to other sites'), 'protection', 'trimReferer', { fold: true, patch: { trimReferer: true }, on: true, why: network }),
   setting('fn-https-only', 'https-only', t('Ouvrir uniquement des sites en HTTPS', 'Open HTTPS sites only'), 'protection', 'httpsOnly', { fold: true, patch: { httpsOnly: true }, on: true, why: network }),
+  setting('fn-typo-guard', 'typo-guard', t('Prévenir d’une faute de frappe dans une adresse', 'Warn about a typo in an address'), 'protection', 'typoGuard', { fold: true, on: true, why: network }),
+  setting('fn-warn-insecure-form', 'warn-insecure-form', t('Prévenir avant d’envoyer un mot de passe sans chiffrement', 'Warn before sending a password without encryption'), 'protection', 'warnInsecureForm', { fold: true, on: true, why: network }),
   setting('fn-strip-tracking', 'strip-tracking', t('Retirer les paramètres de suivi des adresses', 'Remove tracking parameters from addresses'), 'protection', 'stripTrackingParams', { on: true, why: network }),
   // The demonstration asks no search engine anything (demo.ts): the row shows the default of the application; nothing is typed while it is on.
   setting('fn-search-suggestions', 'search-suggestions', t('Suggestions du moteur de recherche', 'Search engine suggestions'), 'navigation', 'searchSuggestions', { label: t('Inclure les suggestions de recherche', 'Include search suggestions'), patch: { searchSuggestions: true }, why: network }),
@@ -416,6 +419,8 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
     'The password vault, unlocked over the notebook, with five logins'
   )),
   setting('fn-web-hardware', 'web-hardware', t('API matérielles du web (WebHID, WebUSB, Web Serial)', 'Web hardware APIs (WebHID, WebUSB, Web Serial)'), 'protection', 'webHardware', { fold: true, label: t('Autoriser les sites à demander l’accès à un appareil (WebHID, WebUSB, Web Serial)', 'Allow sites to request access to a device (WebHID, WebUSB, Web Serial)'), why: needsHardware }),
+
+  setting('fn-forget-unused-permissions', 'forget-unused-permissions', t('Oublier les autorisations des sites non visités', 'Forget the permissions of sites you have not visited'), 'protection', 'forgetUnusedPermissionsDays', { fold: true, why: background }),
 
   // ---- Liens et fenêtres ----
   shot('fn-vue-scindee', undefined, t('Vue scindée', 'Split View'), 'split-view-4', t(
@@ -495,6 +500,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-download-pause', 'download-pause', t('Pause et reprise des téléchargements', 'Pause and resume downloads'), 'features', 'downloadPause', { patch: { downloadPause: true }, on: true, why: needsDownload }),
   setting('fn-download-resume', 'download-resume', t('Reprendre les téléchargements après un redémarrage', 'Resume downloads after a restart'), 'files', 'downloadResume', { fold: true, why: needsDownload }),
   setting('fn-download-ask-where', 'download-ask-where', t('Demander où enregistrer chaque fichier', 'Ask where to save each file'), 'files', 'downloadAskWhere', { patch: { downloadAskWhere: true }, on: true, why: needsDownload }),
+  setting('fn-warn-executable-download', 'warn-executable-download', t('Prévenir avant d’enregistrer un fichier exécutable', 'Warn before saving a file that can run'), 'files', 'warnExecutableDownload', { fold: true, on: true, why: needsDownload }),
   setting('fn-open-with', 'open-with', t('Mémoriser l’application d’ouverture par type', 'Remember the opening app by type'), 'files', 'openWithMemory', { fold: true, label: t('Mémoriser l’application d’ouverture par type de fichier', 'Remember the opening app for each file type'), patch: { openWithMemory: true }, on: true, why: needsDownload }),
   setting('fn-open-unsaved', 'open-unsaved', t('Ouvrir sans l’enregistrer', 'Open Without Saving'), 'features', 'openUnsaved', { patch: { openUnsaved: true }, on: true, why: needsDownload }),
   setting('fn-pdf-with-source', 'pdf-with-source', t('Enregistrer en PDF avec l’adresse', 'Save as PDF with the address'), 'features', 'pdfWithSource', { patch: { pdfWithSource: true }, on: true, why: 'agit sur le fichier PDF enregistré' }),

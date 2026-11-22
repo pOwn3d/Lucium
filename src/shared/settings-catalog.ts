@@ -91,7 +91,7 @@ export const SETTINGS_KEYS = {
   // Moteur de recherche · Propositions de la barre de commandes · Apparence · Recherches rapides · Recherche dans un site · Mots-clés des extensions
   // · Mini-fenêtre et Coup d’œil · Ouverture des liens
   navigation: [
-    'searchUrlTemplate', 'searchSuggestions', 'suggestHistory', 'suggestTabs', 'goToOpenTab', 'suggestArchive', 'suggestReadLater',
+    'searchUrlTemplate', 'privateSearchUrlTemplate', 'searchSuggestions', 'suggestHistory', 'suggestTabs', 'goToOpenTab', 'suggestArchive', 'suggestReadLater',
     'commandBarSize', 'commandBarShape', 'searchBangs', 'commandBarCalc', 'searchDiscovery', 'siteSearches', 'omniboxKeywords',
     'externalLinksInLittleArc', 'littleArcArchiveHours', 'littleArcNewTabLinks', 'littleArcModifier', 'littleDownloadBubble',
     'peekWithShift', 'peekOnExternalLinks', 'modifiedClickBackground', 'blankLinkBackground', 'linkRoutes'
@@ -101,16 +101,16 @@ export const SETTINGS_KEYS = {
   protection: [
     'blockAds', 'blockCookieBanners', 'blockMode', 'blockCosmetic', 'blockExceptions', 'popupExceptions',
     'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions', 'unwrapRedirects', 'unwrapExceptions', 'safeBrowsing', 'safeBrowsingExceptions',
-    'blockPings', 'trimReferer', 'httpsOnly', 'httpsOnlyExceptions',
+    'blockPings', 'trimReferer', 'httpsOnly', 'httpsOnlyExceptions', 'typoGuard', 'warnInsecureForm',
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
     'historyOff', 'historyKeepDays', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'siteDataClearOnQuitAll', 'clearAllKeepHosts',
-    'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
-    'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager', 'passwordTouchIdOnFill', 'passwordNeverSaveHosts',
+    'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware', 'forgetUnusedPermissionsDays',
+    'lockEnabled', 'lockApp', 'lockTouchId', 'lockPrivateIdle', 'lockedSpaces', 'passwordManager', 'passwordTouchIdOnFill', 'passwordNeverSaveHosts',
     'disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists', 'dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'
   ],
   // Téléchargements et lecture · Ouverture des fichiers · Signets (the export) · Icônes des sites · Copies automatiques · Export
   files: [
-    'tidyDownloads', 'downloadStatusChip', 'downloadResume', 'downloadAskWhere', 'useReadLaterFolders',
+    'tidyDownloads', 'downloadStatusChip', 'downloadResume', 'downloadAskWhere', 'warnExecutableDownload', 'useReadLaterFolders',
     'openWithMemory', 'openWithApps',
     'resolveFavicons',
     'autoBackup', 'autoBackupMinutes', 'autoBackupKeep'
@@ -312,7 +312,8 @@ export const KEPT_ON_RESET = {
   lockEnabled: 'the lock changes through its own handler, after the passphrase',
   lockApp: 'the lock changes through its own handler, after the passphrase',
   lockedSpaces: 'the lock changes through its own handler, after the passphrase',
-  lockTouchId: 'the lock changes through its own handler, after the passphrase'
+  lockTouchId: 'the lock changes through its own handler, after the passphrase',
+  lockPrivateIdle: 'the lock changes through its own handler, after the passphrase'
 } as const satisfies Partial<Record<SettingKey, string>>
 
 const KEPT: ReadonlySet<string> = new Set(Object.keys(KEPT_ON_RESET))

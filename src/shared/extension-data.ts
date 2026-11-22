@@ -10,7 +10,7 @@ import { t } from './i18n'
 import { isRecord } from './record'
 
 /** The `chrome.*` APIs of this file, which one setting (`extensionDataApis`) gives or takes away from every extension. */
-export const DATA_APIS: readonly string[] = ['history', 'bookmarks', 'browsingData']
+export const DATA_APIS: readonly string[] = ['history', 'bookmarks', 'browsingData', 'sessions']
 
 // The tables of the methods and events are in a file of their own, which imports nothing: the preload of the extension contexts reads them, and
 // whatever it imports is built into it (this file reaches the catalogues of the interface's texts).

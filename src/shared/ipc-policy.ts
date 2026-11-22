@@ -20,11 +20,12 @@ import { LOCK_SETTING_KEYS } from './lock'
  * `sidepanel/behavior` is what an extension asked through `chrome.sidePanel`, relayed by the main process.
  * `view/restore` is the "Annuler" of the notice of a work view removed: the main process kept the view as it was, with the split views it had open.
  * `sync/apply` is what a synchronisation session writes into the state (sidebar-sync.ts): the interface never sends a patch.
+ * `permission/visit`, `permission/forget-visits` and `permission/sweep` are the visits the pages report and the daily pass of « Oublier les autorisations des sites non visités »: only the main process knows the day and what was visited.
  *
  * Not in this list, on purpose: `permission/set` and `container/permission` grant or refuse a permission to a site without a question, and
  * they are the interface's to send: that is what the site panel and the permissions of the settings do when the user changes an answer.
  */
-export const MAIN_ONLY_ACTIONS: ReadonlySet<string> = new Set(['state/restore', 'import/merge', 'import/revert', 'backup/restore', 'space/import', 'boost/import', 'filterlist/add', 'filterlist/remove', 'space/image', 'bookmarks/import', 'livefolder/result', 'split/restore', 'tabs/untidy', 'archive/forget-pages', 'tab/image', 'favicon/fill', 'profile/revert-missing', 'sidepanel/behavior', 'view/restore', 'sync/apply'])
+export const MAIN_ONLY_ACTIONS: ReadonlySet<string> = new Set(['permission/visit', 'permission/sweep', 'permission/forget-visits', 'state/restore', 'import/merge', 'import/revert', 'backup/restore', 'space/import', 'boost/import', 'filterlist/add', 'filterlist/remove', 'space/image', 'bookmarks/import', 'livefolder/result', 'split/restore', 'tabs/untidy', 'archive/forget-pages', 'tab/image', 'favicon/fill', 'profile/revert-missing', 'sidepanel/behavior', 'view/restore', 'sync/apply'])
 
 const ACTION_TYPE_MAX = 64
 

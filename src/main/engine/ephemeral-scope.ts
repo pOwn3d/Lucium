@@ -122,6 +122,9 @@ export class EphemeralScope implements EphemeralEngine {
   /** A private context has no password manager: its sessions never load the bridge. */
   setPasswordBridge(): void {}
 
+  /** The form guard follows the main window's setting for every session, private contexts included (see ElectronEngine.setInsecureFormGuard). */
+  setInsecureFormGuard(): void {}
+
   /**
    * The sidebar UI loads favicons itself, in the application's own session: its HTTP cache is on disk and would remember
    * which sites a private window visited. The favicon is fetched here, through the private session, and handed over as data.

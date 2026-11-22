@@ -51,11 +51,14 @@ function application(startsLocked = false) {
   const stateListeners: Array<() => void> = []
   const store = { get: () => state, subscribe: (listener: () => void) => (stateListeners.push(listener), () => {}) }
   const browser = new Proxy({ menuFacts: () => ({ canGoBack: false, canGoForward: false, loading: false, finding: false, scrollSynced: false, saverAsked: false }) } as Record<string, unknown>, { get: (target, prop: string) => (prop in target ? target[prop] : () => false) })
-  const target = { id: 'main', kind: 'main', win: {}, store, browser }
+  const target = { id: 'main', kind: 'main', win: { isDestroyed: () => false, isAlwaysOnTop: () => false }, store, browser }
   const windowManager = {
     focused: () => target,
     isMainAway: () => false,
     namesKey: () => '',
+    closedCount: () => 0,
+    canReopenClosed: () => false,
+    reopenClosed: () => null,
     entries: () => [],
     onChange: () => () => {},
     newWindow: () => void opened.push('window'),

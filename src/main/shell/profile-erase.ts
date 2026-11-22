@@ -69,6 +69,8 @@ export interface BrowsingHistoryDeps {
   offeredSearchSites(): readonly string[]
   /** Empties that list in the settings: a site visited again is offered its search once more. */
   forgetOfferedSearchSites(): void
+  /** Forgets the days of last visit kept for « Oublier les autorisations des sites non visités »: a trace of the sites visited, like the history. */
+  forgetSiteVisits(): void
 }
 
 /**
@@ -85,6 +87,7 @@ export function eraseBrowsingHistory(deps: BrowsingHistoryDeps, profileId: strin
   } finally {
     if (deps.recentSites().length > 0) deps.forgetRecentSites()
     if (deps.offeredSearchSites().length > 0) deps.forgetOfferedSearchSites()
+    deps.forgetSiteVisits()
     // The texts of the pages translated in this session say what was read as the history does (translation-traces.ts).
     forgetTranslations()
   }

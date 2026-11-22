@@ -125,6 +125,11 @@ export class FakePageContents extends EventEmitter {
   windowOpenHandler: ((details: Record<string, unknown>) => { action: string }) | null = null
   readonly executeJavaScript = vi.fn(async (_code: string): Promise<unknown> => undefined)
   readonly executeJavaScriptInIsolatedWorld = vi.fn(async (): Promise<unknown> => undefined)
+  /** Chromium's own search in the page (ElectronPage.find), and the end of it. */
+  readonly findInPage = vi.fn()
+  readonly stopFindInPage = vi.fn()
+  readonly insertCSS = vi.fn(async (_css: string, _options?: unknown): Promise<string> => 'css-key')
+  readonly removeInsertedCSS = vi.fn(async (_key: string): Promise<void> => undefined)
   /** The whole page drawn again, asked as a page that loaded out of sight comes on screen (ElectronPage.show). */
   readonly invalidate = vi.fn()
   readonly loadURL = vi.fn(async (_url: string) => undefined)
@@ -305,6 +310,7 @@ export async function engineForPages(profile?: { ready: Promise<void> | null; cu
     mediaBridge: { ensure: vi.fn() },
     installDialogBridge: vi.fn(),
     installChromeApp: vi.fn(),
+    syncFormGuard: vi.fn(),
     syncPasswordBridge: vi.fn(),
     // The protection of the frames and workers of a page has its own tests (inner-guard-wiring.test.ts).
     primeInnerGuard: vi.fn(),

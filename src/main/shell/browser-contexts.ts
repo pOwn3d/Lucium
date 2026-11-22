@@ -184,10 +184,14 @@ export abstract class BrowserContexts extends BrowserDialogs {
     return going.filter((id) => !failed.includes(id))
   }
 
-  /** What the settings ask of downloads beyond the default: asking where a file goes, links that open without keeping. The same for every context. */
+  /** What the settings ask of downloads beyond the default: asking where a file goes, warning before a file that can run, links that open without keeping. The same for every context. */
   protected downloadPolicyOfSettings(): DownloadPolicy {
-    const { downloadAskWhere, openUnsaved } = this.store.get().settings
-    return { ask: downloadAskWhere ? (request) => downloadUi().chooseSave(this.win, request) : null, openUnsaved }
+    const { downloadAskWhere, openUnsaved, warnExecutableDownload } = this.store.get().settings
+    return {
+      ask: downloadAskWhere ? (request) => downloadUi().chooseSave(this.win, request) : null,
+      openUnsaved,
+      confirmExecutable: warnExecutableDownload ? (request) => downloadUi().confirmExecutable(this.win, request) : null
+    }
   }
 
   /** The downloads folder of the profile whose space holds this tab, in whichever window of the group it is; undefined (the system folder) for a page that is no tab. */

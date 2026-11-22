@@ -55,7 +55,7 @@ describe('the tasks of the registry', () => {
 describe('the chosen cards', () => {
   it('number about thirty, with one id each, a dozen of them for a beginner and the functions of the 21-22 November among them', () => {
     expect(DISCOVER_ENTRIES.length).toBeGreaterThanOrEqual(28)
-    expect(DISCOVER_ENTRIES.length).toBeLessThanOrEqual(40)
+    expect(DISCOVER_ENTRIES.length).toBeLessThanOrEqual(45)
     expect(new Set(ids(DISCOVER_ENTRIES)).size).toBe(DISCOVER_ENTRIES.length)
     expect(DISCOVER_ENTRIES.filter((entry) => entry.level === 'beginner').length).toBeGreaterThanOrEqual(10)
     for (const entry of DISCOVER_ENTRIES) expect(DISCOVER_LEVELS, entry.id).toContain(entry.level)
@@ -284,8 +284,8 @@ describe('a card for every function', () => {
 
 describe('the functions without a switch', () => {
   it('number a score and more, each with words in both languages, a name, a line and a place', () => {
-    expect(DISCOVER_EXTRAS.length).toBe(52)
-    expect(ALL_DISCOVER_ENTRIES.length).toBe(184)
+    expect(DISCOVER_EXTRAS.length).toBe(56)
+    expect(ALL_DISCOVER_ENTRIES.length).toBe(194)
     for (const language of ['fr', 'en'] as const) {
       setLanguage(language)
       for (const entry of DISCOVER_EXTRAS) {

@@ -60,6 +60,8 @@ export function spaceOfProfile(state: SidebarState, profileId: string): string |
 
 export function profileSearch(settings: Settings, profileId: string): { url: string; suggestions: boolean } {
   const own = settings.profiles[profileId]
+  // The private and guest windows have an engine of their own when the user picked one; otherwise they follow the default like everything else.
+  if (profileId === PRIVATE_PROFILE_ID && settings.privateSearchUrlTemplate !== '') return { url: settings.privateSearchUrlTemplate, suggestions: settings.searchSuggestions }
   return { url: own?.searchUrlTemplate ?? settings.searchUrlTemplate, suggestions: own?.searchSuggestions ?? settings.searchSuggestions }
 }
 

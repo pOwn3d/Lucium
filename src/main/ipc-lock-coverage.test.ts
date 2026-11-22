@@ -35,6 +35,7 @@ const PAGE_CHANNELS: Readonly<Record<string, string>> = {
   'Channel.lentTabCall': 'the one call of the script an extension injected into a tab the user lent it, over the bridge of the main frame of the tab (preload/lent-tab.ts); the extension is the one whose world it is and the tab must still be lent to it (engine/lent-tabs.ts), and a lock destroys the pages of the tabs',
   'Channel.capturePcm': 'the one call of the helper page of a capture: a chunk of the sound of the tab (preload/capture-helper.ts); only the main frame of a helper page the engine made is taken, and a lock ends every capture, so there is nothing to hold back',
   'PAGE_GUARD.plan': 'the plan of the page guard, asked before the first script of a page (preload/page-guard.ts)',
+  'FORM_GUARD.ask': 'a form with a password about to go to a public http address, asked by the form guard from the main frame of a page (preload/form-guard.ts); only the main frame is heard, the address is judged again against the frame, and the answer is the user\'s (a box of the browser), never the page\'s',
   'PASSWORD_BRIDGE.submitted': 'a form with a password submitted in the main frame of a tab (preload/password-bridge.ts)',
   'MEDIA_BRIDGE.hello': 'the volume of a tab, asked by its media bridge (preload/media-bridge.ts)',
   'MEDIA_BRIDGE.actions': 'the track actions a page registers (preload/media-bridge.ts)',

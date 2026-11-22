@@ -13,3 +13,9 @@
 }
 /* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
 :root[data-contrast='more'] .settings-window .insight-chip { outline: 1px solid currentColor; outline-offset: -1px; }
+
+/* The status of a line of the security check (shared/security-check.ts). */
+.check-status { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.check-status.good { color: var(--ok-ink); }
+.check-status.check { color: var(--warn-ink); }
+.check-status.info { color: var(--text-2); }

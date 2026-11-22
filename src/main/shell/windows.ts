@@ -7,7 +7,8 @@ import { createGuestState, guestLabel } from '@shared/guest-window'
 import { cascadePosition, type Rect } from '@shared/window-layout'
 import { activeTab } from '@shared/sidebar'
 import { blankSelection, release, selectionOf, visibleTabIds, type Selection } from '@shared/window-selection'
-import { sessionOf, type SavedSession } from '@shared/window-session'
+import { fitToDisplays, sessionOf, type SavedSession } from '@shared/window-session'
+import { canReopen, mayRemember, remember, takeLast, type ClosedWindow, type LockFacts } from '@shared/closed-windows'
 import { cleanWindowName, namedWindows, tabWindowTitle, windowNamesKey, type NamedWindow, type WindowEntry } from '@shared/window-names'
 import { windowChoices } from '@shared/window-move'
 import type { WindowSidebar } from '@shared/window-sidebar'
@@ -20,6 +21,8 @@ import { setWindowManager } from './window-manager-holder'
 import { releaseIpcScope } from './ipc-scope'
 import { t } from '@shared/i18n'
 import { getLockService } from '../lock-service'
+import { cleanPrivateIdle } from '@shared/private-lock'
+import { PrivateWindowLock } from './private-lock'
 import { shownState } from './lock-state'
 import { mainCloseStep } from '../window-lifecycle'
 
@@ -63,6 +66,8 @@ export interface WindowManagerDeps {
   openSettings: (pane?: SettingsPane, anchor?: SettingsAnchor) => void
   openLittle: (url: string, origin?: LittleOrigin) => void
   systemDark: () => boolean
+  /** When the last real click or key was, anywhere in the application: a private window left alone locks itself by it (shell/private-lock.ts). Absent: never seen. */
+  lastUserInputAt?: () => number
   /** The system the application runs on (`process.platform`): on macOS the main window is put away instead of closed (window-lifecycle.ts). */
   platform?: string
 }
@@ -98,6 +103,8 @@ export class WindowManager {
   private readonly titled = new Set<WindowRecord>()
   /** macOS: the main window was closed while the application goes on. It is hidden and holds no page until something brings it back (`revealMain`). */
   private mainAway = false
+  /** The windows closed in this session, in memory only (shared/closed-windows.ts): File › Rouvrir la dernière fenêtre fermée. */
+  private closedWindows: ClosedWindow[] = []
   /** The question before closing a window of several tabs (Settings › Général); its listeners exist only while that setting is on. */
   readonly closeGuard: CloseGuard
 
@@ -208,6 +215,35 @@ export class WindowManager {
     return main
   }
 
+  /** What the lock says now: the application locked, and the spaces that are (shared/closed-windows.ts keeps nothing it must not show). */
+  private lockFacts(): LockFacts {
+    const lock = getLockService()
+    return { appLocked: lock?.isAppLocked() === true, lockedSpaces: lock?.lockedSpaces() ?? [] }
+  }
+
+  /** Whether File › Rouvrir la dernière fenêtre fermée has a window to bring back. */
+  canReopenClosed(): boolean {
+    return canReopen(this.closedWindows, this.lockFacts())
+  }
+
+  /** How many closed windows are kept (the menu is rebuilt when it changes). */
+  closedCount(): number {
+    return this.closedWindows.length
+  }
+
+  /**
+   * File › Rouvrir la dernière fenêtre fermée: the latest closed window comes back where it was (on the screens there are now), with its name, its sidebar and the tab it
+   * showed in each space; a tab another window shows meanwhile stays where it is. Null when there is none to reopen (none closed, the application or the space locked).
+   */
+  reopenClosed(): WindowRecord | null {
+    const { entry, rest } = takeLast(this.closedWindows, this.lockFacts())
+    this.closedWindows = rest
+    this.notify()
+    if (entry === null) return null
+    const bounds = fitToDisplays(entry.bounds, screen.getAllDisplays().map((display) => display.workArea)) ?? entry.bounds
+    return this.openWindow({ commandBar: false, restore: { bounds, selection: entry.selection, ...(entry.name !== undefined ? { name: entry.name } : {}), ...(entry.sidebar ? { sidebar: entry.sidebar } : {}) } })
+  }
+
   list(): WindowRecord[] {
     return [...this.records.values()]
   }
@@ -303,8 +339,30 @@ export class WindowManager {
       browser.inheritSettings(state.settings)
     })
 
+    // A private window left alone for the delay of the setting covers itself with the lock screen (shared/private-lock.ts). Not a guest window: it is a stranger's, and is not
+    // the owner's to guard with the owner's phrase.
+    const privateLock = guest
+      ? null
+      : new PrivateWindowLock({
+          minutes: () => cleanPrivateIdle(deps.mainStore.get().settings.lockPrivateIdle),
+          lockActive: () => getLockService()?.isActive() === true,
+          focused: () => !win.isDestroyed() && win.isFocused(),
+          lastInputAt: () => deps.lastUserInputAt?.() ?? 0,
+          now: () => Date.now(),
+          setTimer: (run, ms) => setTimeout(run, ms),
+          clearTimer: (timer) => clearTimeout(timer as NodeJS.Timeout),
+          changed: () => browser.windowLockChanged(),
+          log: (line) => console.info(line)
+        })
+    browser.setPrivateLock(privateLock)
+    if (privateLock) {
+      win.on('focus', () => privateLock.focused())
+      privateLock.follow()
+    }
+
     this.track({ id, kind: 'private', ...(guest ? { guest: true as const } : {}), win, browser, store }, chrome, () => {
       unfollow()
+      privateLock?.dispose()
       // The session is not erased with the window: that is explicit.
       const erasing = scope.dispose().catch((error: unknown) => console.error(`[windows] cannot erase ${id}:`, error))
       this.pending.add(erasing)
@@ -384,7 +442,17 @@ export class WindowManager {
     win.on('move', () => this.notify())
     win.on('resize', () => this.notify())
     win.once('ready-to-show', () => win.show())
+    // What the window looked like when it was asked to close: its bounds and its view are gone once it is closed. A close the guard holds back leaves a snapshot that
+    // the next close replaces.
+    let lastLook: ClosedWindow | null = null
+    win.on('close', () => {
+      if (win.isDestroyed()) return
+      lastLook = { bounds: win.getBounds(), selection: selectionOf(store.get()), ...(record.name !== undefined ? { name: record.name } : {}), sidebar: browser.windowSidebar() }
+    })
     win.on('closed', () => {
+      if (lastLook !== null && mayRemember({ kind: record.kind, ...(record.guest ? { guest: true } : {}), quitting: this.quitting, selection: lastLook.selection }, this.lockFacts())) {
+        this.closedWindows = remember(this.closedWindows, lastLook)
+      }
       this.closeGuard.unwatch(record)
       this.titled.delete(record)
       unsubscribe()

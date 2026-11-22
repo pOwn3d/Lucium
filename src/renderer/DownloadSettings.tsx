@@ -57,6 +57,13 @@ export function DownloadSettings({ snapshot, update, leading, children }: { snap
         />
         <DownloadAskWhereRow snapshot={snapshot} update={update} />
         <Check
+          settingKey="warnExecutableDownload"
+          label={t('download-settings.prevenir-avant-un-fichier-executable')}
+          hint={t('download-settings.un-programme-un-script-ou-une-image')}
+          checked={settings.warnExecutableDownload}
+          onChange={(warnExecutableDownload) => update({ warnExecutableDownload })}
+        />
+        <Check
           settingKey="useReadLaterFolders"
           label={t('download-settings.classer-lire-plus-tard-dans-des-dossiers')}
           hint={t('download-settings.rangez-la-liste-lire-plus-tard-en-dossiers')} more={t('download-settings.la-liste-lire-plus-tard-se-range-en-dossiers')}

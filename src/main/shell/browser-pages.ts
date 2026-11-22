@@ -34,6 +34,7 @@ import { getLanguage, t } from '@shared/i18n'
 import { targetLanguage } from '@shared/translate-local'
 import { FULLSCREEN_LEAVE_TIMEOUT_MS, MEMORY_MAX, pageRelays, type ProfileHistoryLog } from './browser-base'
 import { BrowserTools } from './browser-tools'
+import { dayOf, visitOrigin } from '@shared/unused-permissions'
 import { getPageIndex } from '../page-index'
 import { PAGE_INDEX_SCRIPT, PAGE_INDEX_SETTLE_MS, indexableUrl } from '@shared/page-index'
 
@@ -455,6 +456,12 @@ export abstract class BrowserPages extends BrowserTools {
     }
   }
 
+  /** The site of a page the tab committed was visited today: the reducer keeps the day for a site that holds an answer, and only if it is a new day. */
+  private noteSiteVisit(url: string): void {
+    const origin = visitOrigin(url)
+    if (origin !== null) this.store.dispatch({ type: 'permission/visit', origin, day: dayOf(Date.now()) })
+  }
+
   private handlePageUpdate(id: string, patch: PageUpdate): void {
     const { title, faviconUrl, loading, audible, canGoBack, canGoForward, trackActions } = patch
     // What the interface is shown of this tab before the event: an event that changes none of it publishes nothing (see the end).
@@ -482,6 +489,8 @@ export abstract class BrowserPages extends BrowserTools {
       if (tab && patch.visit !== false && this.pages.get(id)?.showsError() !== true) {
         const log = this.historyOf(tab)
         log?.record(tab.url, tab.title)
+        // A site that holds an answer was visited today (the reducer writes it once a day at most, and only while the feature is on).
+        if (log !== null && this.store.get().settings.forgetUnusedPermissionsDays > 0) this.noteSiteVisit(tab.url)
         if (log !== null && this.indexingOn(tab.spaceId)) this.scheduleIndexing(id, tab)
       }
       // The colour is read by a script in the page, which only the bar above a page on screen shows: a page that loaded off screen has it

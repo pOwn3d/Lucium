@@ -207,7 +207,8 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
   const guard = (sender: WebContents, channel: string): boolean => {
     if (trustedIds.has(sender.id)) {
       // The application is locked: the interface may read the (skeleton) snapshot and unlock, and nothing else.
-      return !getLockService()?.isAppLocked() || OPEN_WHILE_LOCKED.has(channel)
+      // A private window left alone is covered by its own lock (shared/private-lock.ts), and is answered the same way.
+      return (!getLockService()?.isAppLocked() && !browser.isWindowLocked()) || OPEN_WHILE_LOCKED.has(channel)
     }
     console.warn(`[ipc] ignored ${channel} from untrusted sender ${sender.getURL().split('?')[0]}`)
     return false
@@ -465,6 +466,7 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
   ipcMain.handle(Channel.tabThumbnail, (e, tabId: unknown) => (guard(e.sender, Channel.tabThumbnail) && typeof tabId === 'string' ? (thumbnails.current()?.get(tabId) ?? null) : null))
 
   ipcMain.handle(Channel.blockedCount, (e, tabId: unknown) => (guard(e.sender, Channel.blockedCount) && typeof tabId === 'string' ? browser.blockedCount(tabId) : 0))
+  ipcMain.handle(Channel.blockedHosts, (e, tabId: unknown) => (guard(e.sender, Channel.blockedHosts) && typeof tabId === 'string' ? browser.blockedHosts(tabId) : []))
   ipcMain.handle(Channel.sessionBlockedCount, (e) => (guard(e.sender, Channel.sessionBlockedCount) ? browser.sessionBlockedCount() : 0))
   // The address is checked first: the request is made here, by the main process, and only to an address of this Mac or to a private one of the
   // local network (the rule of the summary, isOllamaAddress). Any other host is asked nothing, not even its list of models.

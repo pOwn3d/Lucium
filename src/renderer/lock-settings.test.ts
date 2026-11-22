@@ -204,4 +204,25 @@ describe('a lock that is on', () => {
     await click(touch!)
     expect(lockConfigure).toHaveBeenLastCalledWith({ op: 'touch-id', value: true })
   })
+
+  it('offers the delay of the lock of a private window, « Jamais » at first, and sends the choice with the other changes of the lock', async () => {
+    const { container } = panel({ on: true })
+    const select = container.querySelector<HTMLSelectElement>(`select[aria-label="${t('lock-settings.verrouiller-les-fenetres-privees-apres')}"]`)!
+    expect([...select.options].map((option) => option.textContent)).toEqual([t('lock-settings.jamais'), '1 minute', '5 minutes', '15 minutes', '30 minutes'])
+    expect(select.value).toBe('0')
+    await settle(() => {
+      const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value')!.set!
+      set.call(select, '15')
+      select.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    expect(lockConfigure).toHaveBeenLastCalledWith({ op: 'private-idle', minutes: 15 })
+  })
+
+  it('shows no such row while the lock is off (a phrase comes first)', () => {
+    const off = panel()
+    expect(off.container.querySelector('select')).toBeNull()
+    off.unmount()
+    mounted = null
+  })
 })
+

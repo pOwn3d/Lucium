@@ -54,6 +54,7 @@ import { NAME_MAX, TITLE_MAX, cleanHistory } from './state-clean'
 import { PROTECTION_BASELINE_OF_EARLIER_PROFILES, PROTECTION_OF_EARLIER_PROFILES } from './model-defaults'
 import { cleanTheme, defaultTheme, themeFromHue } from './theme'
 import { zoomHostOf } from './site-zoom'
+import { PRIVATE_IDLE_CHOICES } from './private-lock'
 import { PANEL_PERCENT_MAX, PANEL_PERCENT_MIN, PANEL_SCREENS_MAX, screenKey } from './panel-scale'
 import { isSpaceImageName } from './space-image'
 import { cleanIconColor, cleanIconLetter, isSpaceIconKind } from './space-icon'
@@ -191,6 +192,7 @@ function rich(): SidebarState {
     websiteAppearance: 'dark',
     peekWithShift: false,
     littleArcArchiveHours: 3,
+    forgetUnusedPermissionsDays: 90,
     littleArcModifier: true,
     littleArcNewTabLinks: false,
     littleDownloadBubble: true,
@@ -255,6 +257,8 @@ function rich(): SidebarState {
     trimReferer: true,
     httpsOnly: true,
     httpsOnlyExceptions: ['exemple.org'],
+    typoGuard: false,
+    warnInsecureForm: false,
     profileNames: { work: 'Travail' },
     allowThemeToSites: true,
     keyBindings: { [COMMANDS[0]!.id]: '' },
@@ -373,6 +377,7 @@ function rich(): SidebarState {
     lockApp: true,
     lockedSpaces: ['sp-work'],
     lockTouchId: false,
+    lockPrivateIdle: 15,
     reopenHistory: true,
     interfaceTranslated: true,
     language: 'en',
@@ -409,6 +414,7 @@ function rich(): SidebarState {
     downloadPause: true,
     downloadResume: true,
     downloadAskWhere: true,
+    warnExecutableDownload: false,
     openWithMemory: true,
     openWithApps: { pdf: '/Applications/Preview.app' },
     openUnsaved: true,
@@ -485,6 +491,7 @@ const show = (v: unknown): string => {
 /** What each setting must be after loading. Typed on `Settings` so a new setting cannot be added without saying what it may hold. */
 const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   searchUrlTemplate: template,
+  privateSearchUrlTemplate: (v) => v === '' || template(v),
   siteSearches: (v) =>
     Array.isArray(v) && v.length <= 50 && unique(v.map((s) => (isRecord(s) ? s['keyword'] : s))) &&
     v.every((s) => isRecord(s) && keysOf(s).sort().join() === 'keyword,name,url' && typeof s['keyword'] === 'string' && /^[^\s\p{Cc}]{1,30}$/u.test(s['keyword']) && text(s['name']) && s['name'].trim() !== '' && s['name'].length <= 60 && template(s['url'])),
@@ -496,6 +503,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   websiteAppearance: (v) => v === 'auto' || v === 'light' || v === 'dark',
   peekWithShift: bool,
   littleArcArchiveHours: num(0),
+  forgetUnusedPermissionsDays: (v) => v === 0 || v === 30 || v === 60 || v === 90 || v === 180 || v === 365,
   littleArcModifier: bool,
   littleArcNewTabLinks: bool,
   littleDownloadBubble: bool,
@@ -573,6 +581,8 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   trimReferer: bool,
   httpsOnly: bool,
   httpsOnlyExceptions: hostList(200),
+  typoGuard: bool,
+  warnInsecureForm: bool,
   profileNames: (v) => isRecord(v) && Object.entries(v).every(([id, name]) => PROFILE.test(id) && typeof name === 'string' && name === name.trim() && name !== '' && name.length <= 40),
   allowThemeToSites: bool,
   keyBindings: (v) => isRecord(v) && Object.entries(v).every(([id, key]) => COMMANDS.some((c) => c.id === id) && typeof key === 'string' && (key === '' || isValidAccelerator(key))),
@@ -688,6 +698,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   lockApp: bool,
   lockedSpaces: (v) => Array.isArray(v) && v.length <= 200 && unique(v) && v.every((id) => typeof id === 'string' && id !== '' && id !== '__proto__'),
   lockTouchId: bool,
+  lockPrivateIdle: (v) => (PRIVATE_IDLE_CHOICES as readonly unknown[]).includes(v),
   reopenHistory: bool,
   extensionOverflow: bool,
   unpinnedExtensions: (v) => Array.isArray(v) && v.length <= 200 && unique(v) && v.every((id) => typeof id === 'string' && /^[a-p]{32}$/.test(id)),
@@ -722,6 +733,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   downloadPause: bool,
   downloadResume: bool,
   downloadAskWhere: bool,
+  warnExecutableDownload: bool,
   openWithMemory: bool,
   openWithApps: (v) => isRecord(v) && Object.getPrototypeOf(v) === Object.prototype && Object.keys(v).length <= OPEN_WITH_MAX && Object.entries(v).every(([type, app]) => isRememberableType(type) && isApplicationPath(app)),
   openUnsaved: bool,
@@ -821,7 +833,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
 }
 
 const LOADABLE_URL = /^(https?|file|about|chrome-extension|devtools|view-source):/i
-const TOP_LEVEL = ['version', 'revision', 'spaces', 'tabs', 'folders', 'favorites', 'archive', 'readLater', 'readLaterFolders', 'tabReminders', 'bookmarks', 'activeSpaceId', 'activeTabBySpace', 'sitePermissions', 'sidePanelBehavior', 'commandBarUsage', 'splits', 'boosts', 'sessions', 'workViews', 'settings']
+const TOP_LEVEL = ['version', 'revision', 'spaces', 'tabs', 'folders', 'favorites', 'archive', 'readLater', 'readLaterFolders', 'tabReminders', 'bookmarks', 'activeSpaceId', 'activeTabBySpace', 'sitePermissions', 'siteVisits', 'sidePanelBehavior', 'commandBarUsage', 'splits', 'boosts', 'sessions', 'workViews', 'settings']
 
 /** Every way a state that went through `normalize` may still be unfit to use. Empty means well formed. */
 function problems(state: SidebarState): string[] {
@@ -1831,7 +1843,7 @@ describe('structures that contradict each other', () => {
       const state = norm({ ...clone(rich()), spaces })
       expect(problems(state), show(spaces)).toEqual([])
     }
-    for (const part of ['tabs', 'folders', 'favorites', 'archive', 'splits', 'boosts', 'activeTabBySpace', 'sitePermissions', 'sidePanelBehavior', 'commandBarUsage']) {
+    for (const part of ['tabs', 'folders', 'favorites', 'archive', 'splits', 'boosts', 'activeTabBySpace', 'sitePermissions', 'siteVisits', 'sidePanelBehavior', 'commandBarUsage']) {
       for (const bad of [undefined, null, 'text', 7, true, [], {}]) {
         expect(problems(norm({ ...clone(rich()), [part]: bad })), `${part} = ${JSON.stringify(bad)}`).toEqual([])
       }

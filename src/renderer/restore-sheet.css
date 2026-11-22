@@ -1,0 +1,19 @@
+/*
+ * « Reprendre où vous en étiez ? »: the small editor (templates/Sheet) with a row for each tab of the day, ticked at first. Tokens only; the sheet gives the width,
+ * the header, the foot and the scrolling of the body, this draws the rows.
+ */
+.sh.restore { width: 500px; }
+.restore .rs-rows { list-style: none; display: grid; gap: var(--sp-1); margin: 0; padding: 0; }
+.restore .rs-row { display: flex; align-items: center; gap: var(--sp-2); min-height: 44px; padding: var(--sp-1) var(--sp-2); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); }
+.restore .rs-row.off .rs-text, .restore .rs-row.off .rs-icon { opacity: 0.55; }
+.restore input[type='checkbox'] { flex: none; width: 16px; height: 16px; margin: 0; accent-color: var(--accent); }
+.restore .rs-icon { display: grid; place-items: center; flex: none; width: 18px; height: 18px; }
+.restore .favicon { width: 16px; height: 16px; border-radius: 4px; }
+.restore .favicon.monogram { display: grid; place-items: center; color: var(--tone-on-dark); font-size: 10px; font-weight: var(--w-semibold); }
+.restore .favicon.emoji-icon { display: grid; place-items: center; font-size: 14px; border-radius: 0; }
+.restore .rs-text { display: grid; flex: 1; min-width: 0; }
+.restore .rs-name, .restore .rs-address { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.restore .rs-name { font-size: var(--t-m); font-weight: var(--w-semibold); }
+.restore .rs-address { font-size: var(--t-s); color: var(--text-3); }
+.restore .rs-space { font-size: var(--t-s); color: var(--text-2); }
+.restore .rs-summary { margin: 0; }

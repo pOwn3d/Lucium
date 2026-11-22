@@ -13,6 +13,7 @@ import { setClearedOnClose } from './site-clear'
 import { CUSTOM_LISTS_MAX, cleanCustomFilterLists, withCustomListEnabled } from './custom-filter-lists'
 import { setDeveloperHost } from './developer-mode'
 import { boundSitePermissions, isRecordKey } from './state-clean'
+import { cleanUnusedPermissionDays, forgetVisits, sweepUnused, withVisit } from './unused-permissions'
 import { readScreen, withNoticed, withPanelSize } from './panel-scale'
 import type { Ctx, Action } from './sidebar-actions'
 import { BOOST_ID, uniqueBoostName, cleanBoost, clampSettings } from './sidebar-state'
@@ -203,7 +204,21 @@ export function reduceSettings(state: SidebarState, action: Action, ctx: Ctx): S
       delete forOrigin[action.permission]
       if (action.decision !== null) forOrigin[action.permission] = action.decision
       // An origin that is left with no answer is no entry (a file would not hold it either): `null` forgets, it does not leave an empty record behind.
-      return { ...state, sitePermissions: boundSitePermissions(Object.keys(forOrigin).length > 0 ? { ...others, [action.origin]: forOrigin } : others) }
+      // A site left with no answer has no day of visit to keep either.
+      const { [action.origin]: _visit, ...visits } = state.siteVisits
+      return { ...state, siteVisits: Object.keys(forOrigin).length > 0 ? state.siteVisits : visits, sitePermissions: boundSitePermissions(Object.keys(forOrigin).length > 0 ? { ...others, [action.origin]: forOrigin } : others) }
+    }
+    case 'permission/visit': {
+      const visits = withVisit(state.siteVisits, state.sitePermissions, action.origin, action.day)
+      return visits === state.siteVisits ? state : { ...state, siteVisits: visits }
+    }
+    case 'permission/forget-visits': {
+      const visits = forgetVisits(state.siteVisits, action.host, action.subdomains === true)
+      return visits === state.siteVisits ? state : { ...state, siteVisits: visits }
+    }
+    case 'permission/sweep': {
+      const swept = sweepUnused(state.sitePermissions, state.siteVisits, action.day, cleanUnusedPermissionDays(state.settings.forgetUnusedPermissionsDays))
+      return swept.sitePermissions === state.sitePermissions && swept.siteVisits === state.siteVisits ? state : { ...state, sitePermissions: swept.sitePermissions, siteVisits: swept.siteVisits }
     }
     default:
       return undefined

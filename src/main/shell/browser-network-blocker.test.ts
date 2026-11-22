@@ -15,7 +15,7 @@ const { Browser } = await import('./browser')
 const shell = methodsOf(Browser.prototype)
 
 function windowWith(patch: Partial<Settings>) {
-  const state = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: { ...defaultSettings(), ...patch } }
+  const state = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: { ...defaultSettings(), typoGuard: false, ...patch } }
   const own: Record<string, unknown> = { store: { get: () => state }, extraBlockedHosts: ['ads.local'], containerScopes: new Map(), privateScope: null }
   const fake = fakeBrowser(own)
   // configureBlocker hands the engine what requestFilter answers: the real method runs on the same stand-in.

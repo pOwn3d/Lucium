@@ -382,6 +382,7 @@ export abstract class BrowserSite extends BrowserCapture {
       history: isolated || container !== '' ? NO_HISTORY.of(profileId) : this.historyWithIndex(profileId),
       // As for the history above: the data of a private tab or of a container is not the profile's, and neither are its pages in the Back lists.
       closedPages: { removeSite: (host, subdomains) => (isolated || container !== '' ? undefined : this.forgetClosedPages(profileId, { host, subdomains })) },
+      visits: { forgetSite: (host, subdomains) => (isolated || container !== '' ? undefined : this.dispatch({ type: 'permission/forget-visits', host, subdomains })) },
       tabs,
       active: current && currentPage ? { url: current.url, page: currentPage } : null
     }

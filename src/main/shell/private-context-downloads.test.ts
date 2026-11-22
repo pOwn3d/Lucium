@@ -37,11 +37,12 @@ function contextOf(settings: Partial<Settings>) {
 
 describe('what a private context or a container is told of downloads', () => {
   it('« Ouvrir sans conserver » and the question of the place follow the settings, as they do for a profile', () => {
-    const on = contextOf({ openUnsaved: true, downloadAskWhere: true })
+    const on = contextOf({ openUnsaved: true, downloadAskWhere: true, warnExecutableDownload: true })
     expect(on.policy.openUnsaved).toBe(true)
     expect(on.policy.ask).toBeTypeOf('function')
-    const off = contextOf({ openUnsaved: false, downloadAskWhere: false })
-    expect(off.policy).toEqual({ ask: null, openUnsaved: false })
+    expect(on.policy.confirmExecutable).toBeTypeOf('function')
+    const off = contextOf({ openUnsaved: false, downloadAskWhere: false, warnExecutableDownload: false })
+    expect(off.policy).toEqual({ ask: null, openUnsaved: false, confirmExecutable: null })
   })
 
   it('a download goes to the folder of the profile whose space holds the tab it started from', () => {

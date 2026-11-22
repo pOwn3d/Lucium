@@ -33,6 +33,9 @@ export interface PermissionPolicy {
 }
 
 /** The pages the engine makes, and what they may do. */
+/** What the form guard asks of the shell before a password goes to an `http:` address: the host it goes to and the page that holds the form (absent for a popup). True lets it go. */
+export type InsecureFormAsk = (request: { host: string; pageId?: string }) => Promise<boolean>
+
 export interface EnginePages {
   info(): EngineInfo
   /**
@@ -46,6 +49,12 @@ export interface EnginePages {
    * never has it.
    */
   setPasswordBridge(on: boolean): void
+  /**
+   * The form guard (src/preload/form-guard.ts): loads the script that stops a form with a password going to an `http:` address into the main frame of the
+   * pages of every session, private contexts included, and answers its questions with `ask` (true: send it). `null` takes it away: nothing is registered
+   * and no message is heard. A page keeps what it has until it is loaded again.
+   */
+  setInsecureFormGuard(ask: InsecureFormAsk | null): void
   /** The autoplay mode of what the engine makes without being asked page by page (popups); Chromium's own until the shell says otherwise. */
   setDefaultAutoplay(mode: AutoplayMode): void
   /** The smallest text size, in pixels, the pages made from now on are drawn at (0: off). A page keeps the value it was made with. */

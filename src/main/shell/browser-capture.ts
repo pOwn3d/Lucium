@@ -246,7 +246,8 @@ export abstract class BrowserCapture extends BrowserReload {
         recentSites: () => this.store.get().settings.siteDataRecents,
         forgetRecentSites: () => this.dispatch({ type: 'settings/update', patch: { siteDataRecents: [] } }),
         offeredSearchSites: () => this.store.get().settings.searchDiscoverySeen,
-        forgetOfferedSearchSites: () => this.dispatch({ type: 'settings/update', patch: { searchDiscoverySeen: [] } })
+        forgetOfferedSearchSites: () => this.dispatch({ type: 'settings/update', patch: { searchDiscoverySeen: [] } }),
+        forgetSiteVisits: () => this.dispatch({ type: 'permission/forget-visits' })
       },
       profileId
     )

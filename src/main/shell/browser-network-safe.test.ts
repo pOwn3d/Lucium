@@ -38,8 +38,8 @@ beforeEach(() => {
 })
 
 describe('the request filter with safe browsing', () => {
-  it('does not exist while the feature is off, and reads no list', () => {
-    expect(shell['requestFilter']!.call(windowWith({ safeBrowsing: false }).self)).toBeNull()
+  it('does not exist while the feature is off (and the lookalike guard too), and reads no list', () => {
+    expect(shell['requestFilter']!.call(windowWith({ safeBrowsing: false, typoGuard: false }).self)).toBeNull()
     expect(safeListsLoaded()).toBe(false)
   })
 
