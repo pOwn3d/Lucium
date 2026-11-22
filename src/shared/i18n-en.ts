@@ -6696,4 +6696,12 @@ export const en: Record<MessageKey, string> = {
   'unused-permissions.notice': 'Lucium forgot the permissions of {sites}, not visited for {days} days.',
   'unused-permissions.notice-others.one': 'Lucium forgot the permissions of {sites} and {count} other site, not visited for {days} days.',
   'unused-permissions.notice-others.other': 'Lucium forgot the permissions of {sites} and {count} other sites, not visited for {days} days.',
+  'shields.detail-des-traqueurs': 'See which hosts were blocked',
+  'shields.masquer-le-detail': 'Hide the detail',
+  'shields.aucun-detail-pour-cette-page': 'No detail for this page.',
+  'shields.host-requetes.one': '{count} request',
+  'shields.host-requetes.other': '{count} requests',
+  'discover.traqueurs-nom': 'Blocked hosts, page by page',
+  'discover.traqueurs-resume': 'The site panel lists the hosts the blocker stopped from answering the page: the name of each host and its number of requests. Counted in memory, emptied at each new page, never in a private tab.',
+  'discover.traqueurs-ou': 'In the site panel (the “{button}” button), under the blocking: “See which hosts were blocked”.',
 } as const

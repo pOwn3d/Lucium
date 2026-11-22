@@ -102,6 +102,7 @@ export const Channel = {
   resourceAction: 'lucium:resource-action',
   suggest: 'lucium:suggest',
   blockedCount: 'lucium:blocked-count',
+  blockedHosts: 'lucium:blocked-hosts',
   sessionBlockedCount: 'lucium:session-blocked-count',
   sessionBlockedByKind: 'lucium:session-blocked-by-kind',
   /** Tests the connection to the local Ollama: the request is made by the main process (the settings page cannot reach it under its policy). */

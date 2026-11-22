@@ -467,6 +467,20 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     isNew: true
   },
   {
+    id: 'blocked-hosts',
+    task: 'protect',
+    level: 'advanced',
+    name: 'discover.traqueurs-nom',
+    summary: 'discover.traqueurs-resume',
+    where: 'discover.traqueurs-ou',
+    whereVars: () => ({ button: t('toolbar.infos-et-reglages-du-site') }),
+    keywords: 'traqueurs bloques hotes domaines detail liste publicites site blocked trackers hosts domains detail list ads',
+    shortcut: 'siteInfo',
+    try: open({ panel: 'site' }),
+    needs: 'blockAds',
+    isNew: true
+  },
+  {
     id: 'permission-once',
     task: 'protect',
     level: 'advanced',

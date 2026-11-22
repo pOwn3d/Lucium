@@ -450,6 +450,7 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
   ipcMain.handle(Channel.tabThumbnail, (e, tabId: unknown) => (guard(e.sender, Channel.tabThumbnail) && typeof tabId === 'string' ? (thumbnails.current()?.get(tabId) ?? null) : null))
 
   ipcMain.handle(Channel.blockedCount, (e, tabId: unknown) => (guard(e.sender, Channel.blockedCount) && typeof tabId === 'string' ? browser.blockedCount(tabId) : 0))
+  ipcMain.handle(Channel.blockedHosts, (e, tabId: unknown) => (guard(e.sender, Channel.blockedHosts) && typeof tabId === 'string' ? browser.blockedHosts(tabId) : []))
   ipcMain.handle(Channel.sessionBlockedCount, (e) => (guard(e.sender, Channel.sessionBlockedCount) ? browser.sessionBlockedCount() : 0))
   // The address is checked first: the request is made here, by the main process, and only to an address of this Mac or to a private one of the
   // local network (the rule of the summary, isOllamaAddress). Any other host is asked nothing, not even its list of models.

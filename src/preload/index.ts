@@ -147,6 +147,7 @@ const api: LuciumApi = {
   thawTab: (tabId) => ipcRenderer.send(Channel.thawTab, tabId),
   setTabAddress: (tabId, input) => ipcRenderer.send(Channel.tabAddress, tabId, input),
   blockedCount: (tabId) => ipcRenderer.invoke(Channel.blockedCount, tabId),
+  blockedHosts: (tabId) => ipcRenderer.invoke(Channel.blockedHosts, tabId),
   sessionBlockedCount: () => ipcRenderer.invoke(Channel.sessionBlockedCount),
   ollamaTest: (url) => ipcRenderer.invoke(Channel.ollamaTest, url),
   ollamaModels: (url) => ipcRenderer.invoke(Channel.ollamaModels, url),

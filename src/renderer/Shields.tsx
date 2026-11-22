@@ -2,6 +2,7 @@
 // tab, and the reload that makes a change reach the page. Kept out of Panels.tsx; the toolbar carries nothing of it.
 
 import { useEffect, useState } from 'react'
+import type { BlockedHost } from '@shared/blocked-hosts'
 import { blockerIsOn, isBlockingExempt, normalizeBlockHost, siteBlockModeOf } from '@shared/blocker'
 import { blockedLabel } from '@shared/filter-lists'
 import type { BlockMode } from '@shared/model'
@@ -13,6 +14,9 @@ const COUNT_REFRESH_MS = 1000
 export function Shields({ url, tabId }: { url: string; tabId: string }) {
   const snapshot = useSnapshot()
   const [count, setCount] = useState(0)
+  // The detail (which hosts were blocked) is asked only while the list is open: nothing is read for it otherwise.
+  const [detailOpen, setDetailOpen] = useState(false)
+  const [hosts, setHosts] = useState<BlockedHost[]>([])
   // The page only follows after a reload: remember that the switch was used while this panel was open.
   const [changed, setChanged] = useState(false)
   const act = api()
@@ -24,14 +28,17 @@ export function Shields({ url, tabId }: { url: string; tabId: string }) {
   useEffect(() => {
     if (!on) return
     let live = true
-    const refresh = () => void act.blockedCount(tabId).then((n) => live && setCount(n))
+    const refresh = () => {
+      void act.blockedCount(tabId).then((n) => live && setCount(n))
+      if (detailOpen) void act.blockedHosts(tabId).then((list) => live && setHosts(list))
+    }
     refresh()
     const timer = setInterval(refresh, COUNT_REFRESH_MS)
     return () => {
       live = false
       clearInterval(timer)
     }
-  }, [on, tabId, act])
+  }, [on, tabId, act, detailOpen])
 
   const host = /^https?:/.test(url) ? normalizeBlockHost(url) : null
   if (!settings || !host) return null
@@ -75,6 +82,15 @@ export function Shields({ url, tabId }: { url: string; tabId: string }) {
           </span>
         </button>
       )}
+      {/* Which hosts were blocked on this page, from its last load: in memory in the main process, never in a private tab. */}
+      {blocking && active && count > 0 && (
+        <div className="shields-detail">
+          <button className="link-button" aria-expanded={detailOpen} onClick={() => setDetailOpen(!detailOpen)}>
+            {detailOpen ? t('shields.masquer-le-detail') : t('shields.detail-des-traqueurs')}
+          </button>
+          {detailOpen && <BlockedHostsList hosts={hosts} />}
+        </div>
+      )}
       {/* The mode only judges the requests of a site that is blocked: it is offered only then. */}
       {blocking && active && (
         <label className="shields-mode">
@@ -104,6 +120,21 @@ export function Shields({ url, tabId }: { url: string; tabId: string }) {
   )
 }
 
+/** The hosts blocked on the page, one line each with the number of requests (the host as text: it is a page's own word, never markup). */
+export function BlockedHostsList({ hosts }: { hosts: readonly BlockedHost[] }) {
+  return (
+    <ul>
+      {hosts.length === 0 && <li className="muted">{t('shields.aucun-detail-pour-cette-page')}</li>}
+      {hosts.map((entry) => (
+        <li key={entry.host}>
+          <span className="shields-host">{entry.host}</span>
+          <span className="muted">{tp('shields.host-requetes', entry.count)}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 function ShieldIcon() {
   return (
     <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -112,4 +143,4 @@ function ShieldIcon() {
   )
 }
 
-import { t } from '@shared/i18n'
+import { t, tp } from '@shared/i18n'
