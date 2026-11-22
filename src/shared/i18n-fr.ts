@@ -5386,6 +5386,8 @@ export const fr = {
   'markdown-export.telechargement-de-l-image': 'Téléchargement de l’image…',
   'markdown-export.telechargement-des-images': 'Téléchargement de {count} images…',
   'markdown-export.enregistre-name-image': 'Enregistré : {name} · {kept}/{total} image',
+  'markdown-export.images-non-recuperees.one': '{count} image sans adresse n’a pas pu être récupérée',
+  'markdown-export.images-non-recuperees.other': '{count} images sans adresse n’ont pas pu être récupérées',
   'markdown-export.enregistre-name-images': 'Enregistré : {name} · {kept}/{total} images',
   'markdown-export.rien-a-exporter': 'Rien à exporter : ce que vous avez choisi ne contient aucun texte',
   'cmd.enregistrer-la-page-en-markdown': 'Enregistrer la page en Markdown',

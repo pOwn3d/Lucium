@@ -250,6 +250,8 @@ interface Context {
   images: MdImage[]
   imageByUrl: Map<string, MdImage>
   warnings: Set<string>
+  /** The images left out for want of a web address: counted, since the warning about them is said once. */
+  missingImages: number
   /** The page without its fragment: a link to somewhere in the page itself is not worth a link in the file. */
   pageUrl: string | null
   strong: boolean
@@ -383,6 +385,7 @@ function inlineCode(element: MdElement): string {
 function image(element: MdElement, context: Context): string {
   const url = element.a?.['src']
   if (!url) {
+    context.missingImages++
     context.warnings.add(t('markdown-export.une-image-sans-adresse-web-ne-peut-pas-etre'))
     return ''
   }
@@ -668,6 +671,8 @@ export interface MdResult {
   images: MdImage[]
   /** What was left out or approximated, for the user to read. */
   warnings: string[]
+  /** How many images had no web address to fetch (one that loads only on scroll, an inline one): they are not in the file. */
+  missingImages: number
   /** Everything but the address list of the images, so that the list can be rewritten (see `markdownWithImages`). */
   text: string
 }
@@ -687,6 +692,7 @@ export function exportMarkdown(raw: unknown, options: MdOptions): MdResult | nul
     images: [],
     imageByUrl: new Map(),
     warnings: new Set(),
+    missingImages: 0,
     pageUrl: pageUrl === null ? null : pageUrl.replace(/#.*$/, ''),
     strong: false,
     emphasis: false,
@@ -695,13 +701,13 @@ export function exportMarkdown(raw: unknown, options: MdOptions): MdResult | nul
   }
   const body = blocks(snapshot.nodes, context)
   const warnings = warningsOf(snapshot, context)
-  if (body.length === 0) return { markdown: '', images: [], warnings, text: '' }
+  if (body.length === 0) return { markdown: '', images: [], warnings, missingImages: context.missingImages, text: '' }
   const title = cleanText(options.title).replace(/\s+/g, ' ').trim()
   if (options.withTitle && title && !body.some((b) => b.startsWith('# '))) body.unshift(`# ${escapeInline(title)}`)
   let text = body.join('\n\n')
   if (options.withSource && pageUrl) text += `\n\n${t('markdown-export.source-url', { url: `<${destination(pageUrl)}>` })}`
   text += '\n'
-  const result: MdResult = { markdown: '', images: context.images, warnings, text }
+  const result: MdResult = { markdown: '', images: context.images, warnings, missingImages: context.missingImages, text }
   result.markdown = markdownWithImages(result)
   return result
 }

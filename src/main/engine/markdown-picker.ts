@@ -9,6 +9,7 @@
 import type { WebContents } from 'electron'
 import { MD_PAGE_CONFIG } from '@shared/markdown-export'
 import { getLanguage, t, type MessageKey, type PluralBase } from '@shared/i18n'
+import { SCROLL_WALK_MAX_HEIGHT, scrollWalkSource } from './page-scroll-walk'
 
 /** An isolated world of its own. Any number outside the ones Chromium hands to extensions would do (see SLEEP_WORLD and READER_WORLD). */
 export const MARKDOWN_WORLD = 4_200_019
@@ -204,11 +205,22 @@ ${library()}
  * The main content of the page, whole, with no picker: the snapshot of `<main>`, `[role=main]` or the first `<article>` (else the body),
  * without navigation, side columns, dialogs, and, when the page has no main part to hold them, headers and footers. Nothing a person typed
  * goes in: the form fields are dropped by the converter's own list, and an editable region (a mail being written, a document in a web editor)
- * is left out here. Hidden things are skipped by the walk itself. Resolves with the same JSON text as the picker (`parsePick`), as a whole-page save.
+ * is left out here. Hidden things are skipped by the walk itself. Before it reads, the page is scrolled from top to bottom (the walk of the full-page
+ * capture, see page-scroll-walk.ts) so that lazy images get their address, and put back where it was. Resolves with the same JSON text as the
+ * picker (`parsePick`), as a whole-page save.
  */
-export const pageScript = (): string => `(() => {
+export const pageScript = (): string => `(async () => {
 ${library()}
+  let walk = null
   try {
+    // Images that load only when they scroll into view have no address yet: the page is walked as the full-page capture walks it (a bounded
+    // number of steps, from the top down), and the position of the reader is given back once the snapshot is made. A page that cannot be walked
+    // is read as it stands: its images without an address are counted and told to the user (MdResult.missingImages).
+    try {
+      walk = await ${scrollWalkSource(SCROLL_WALK_MAX_HEIGHT)}
+    } catch (error) {
+      walk = null
+    }
     const root = document.querySelector('main, [role="main"]') || document.querySelector('article') || document.body || document.documentElement
     const wholeBody = root === document.body || root === document.documentElement
     const AROUND = 'nav, aside, dialog, [role="navigation"], [role="banner"], [role="complementary"], [role="contentinfo"], [role="dialog"], [role="alertdialog"]'
@@ -223,6 +235,8 @@ ${library()}
     return JSON.stringify({ action: 'save', scope: 'blocks', snapshot })
   } catch (error) {
     return JSON.stringify({ error: String(error && error.message ? error.message : error) })
+  } finally {
+    if (walk) walk.restore()
   }
 })()`
 
