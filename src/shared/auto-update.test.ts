@@ -177,3 +177,19 @@ describe('the window the notice may show in', () => {
     expect(noticeWindowAllowed(facts({ front: null }))).toBe(false)
   })
 })
+
+describe('the words of an urgent notice', () => {
+  afterEach(() => setLanguage('fr'))
+
+  it('says that the version fixes a security flaw, with the button that acts, whatever the kind', () => {
+    expect(updateNoticeText('install', '0.2.2', 5, false, undefined, true)).toEqual({ message: 'Lucium 0.2.2 corrige une faille de sécurité. Installez-la dès que possible.', action: 'Installer', later: 'Plus tard' })
+    expect(updateNoticeText('page', '0.2.2', undefined, false, undefined, true).action).toBe('Page de téléchargement')
+    expect(updateNoticeText('restart', '0.2.2', undefined, false, undefined, true)).toEqual({ message: 'Lucium 0.2.2 corrige une faille de sécurité et attend d’être installé.', action: 'Installer et relancer', later: 'Plus tard' })
+    setLanguage('en')
+    expect(updateNoticeText('install', '0.2.2', 5, false, undefined, true).message).toBe('Lucium 0.2.2 fixes a security flaw. Install it as soon as you can.')
+  })
+
+  it('is the ordinary notice when nothing says it is urgent', () => {
+    expect(updateNoticeText('install', '0.2.2', undefined, false, undefined, false).message).toBe('Lucium 0.2.2 est disponible.')
+  })
+})

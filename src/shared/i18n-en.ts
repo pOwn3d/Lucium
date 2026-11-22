@@ -6969,4 +6969,6 @@ export const en: Record<MessageKey, string> = {
   'discover.traqueurs-nom': 'Blocked hosts, page by page',
   'discover.traqueurs-resume': 'The site panel lists the hosts the blocker stopped from answering the page: the name of each host and its number of requests. Counted in memory, emptied at each new page, never in a private tab.',
   'discover.traqueurs-ou': 'In the site panel (the “{button}” button), under the blocking: “See which hosts were blocked”.',
+  'auto-update.lucium-version-corrige-une-faille': 'Lucium {version} fixes a security flaw. Install it as soon as you can.',
+  'auto-update.lucium-version-corrige-une-faille-et-attend': 'Lucium {version} fixes a security flaw and is waiting to be installed.',
 } as const

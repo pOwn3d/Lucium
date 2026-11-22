@@ -112,6 +112,23 @@ export function withdrawnVersions(raw: unknown): string[] {
 }
 
 /**
+ * The first version that carries the fix of a flaw that is being exploited (`security`, Lucium's own key, written into the release file by hand
+ * before it is signed; Squirrel ignores it). A plain version, or nothing: any other value (a flag, a number, a text) means the file was not
+ * written by the publication, so nothing of it is believed. The file is signed as a whole: the key cannot be added on the way.
+ */
+export function securityFixVersion(raw: unknown): string | null {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null
+  const fix = (raw as Record<string, unknown>)['security']
+  return typeof fix === 'string' && SQUIRREL_VERSION.test(fix) ? fix : null
+}
+
+/** Whether the update is urgent: the running version is below the fix the feed names, and the version offered carries it. */
+export function urgentSecurityFix(raw: unknown, current: string, offered: string): boolean {
+  const fix = securityFixVersion(raw)
+  return fix !== null && compareVersions(current, fix) < 0 && compareVersions(offered, fix) >= 0
+}
+
+/**
  * How the feed is asked for: no cookie or HTTP credential of the application's session goes with the request (`net.fetch` sends them by
  * default), and neither the request nor the answer touches the cache on the disk, so that a check always reads what the server says now.
  */

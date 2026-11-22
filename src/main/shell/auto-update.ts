@@ -17,7 +17,7 @@ import {
 } from '@shared/auto-update'
 import type { Settings } from '@shared/model'
 import type { FeatureGates } from './feature-gate'
-import { feedAnswer, feedFetchInit, updateOutcome, withdrawnVersions, type FeedAnswer, type UpdateOffer, type UpdateOutcome } from '@shared/update-check'
+import { feedAnswer, feedFetchInit, updateOutcome, urgentSecurityFix, withdrawnVersions, type FeedAnswer, type UpdateOffer, type UpdateOutcome } from '@shared/update-check'
 import { currentBackgroundFeed } from './update-source'
 import { feedSignatureCheck } from './update-signature'
 import { showUpdateNotice, updateInstaller, type InstallContext, type ToastHost } from './app-update'
@@ -59,7 +59,7 @@ export class AutoUpdater {
    * withdrawn, and `installable` says whether the offer is above it. `dropped`: the update downloaded in this run (or the last) was withdrawn
    * and dropped, to be told first; with no offer (the feed has nothing newer than the running version), it is all the notice says.
    */
-  private waiting: { offer: UpdateOffer | null; withdrawn: boolean; installable: boolean; dropped?: DroppedUpdate } | null = null
+  private waiting: { offer: UpdateOffer | null; withdrawn: boolean; installable: boolean; urgent?: true; dropped?: DroppedUpdate } | null = null
   /** The last notice shown in this run: the same version waits UPDATE_NOTICE_PAUSE_MS before it is shown again. */
   private lastShown: { version: string; at: number } | null = null
   private timers: Array<ReturnType<typeof setTimeout> | ReturnType<typeof setInterval>> = []
@@ -76,7 +76,9 @@ export class AutoUpdater {
     const told = dropped ? { dropped } : {}
     const outcome = updateOutcome(this.deps.version, feed, answer)
     if (outcome.kind === 'available') {
-      this.waiting = { offer: outcome.offer, withdrawn: false, installable: true, ...told }
+      // The feed says the flaw is exploited and this version fixes it (shared/update-check.ts): the notice is not held back by the cap.
+      const urgent = urgentSecurityFix(answer.ok ? answer.json : null, this.deps.version, outcome.offer.version)
+      this.waiting = { offer: outcome.offer, withdrawn: false, installable: true, ...(urgent ? { urgent: true as const } : {}), ...told }
       this.offer()
     } else if (outcome.kind === 'withdrawn') {
       this.waiting = { offer: outcome.offer, withdrawn: true, installable: outcome.newer, ...told }
@@ -122,7 +124,7 @@ export class AutoUpdater {
       return true
     }
     // A drop is news, told whatever the count and the pause of the version offered with it.
-    if (!dropped && noticeGivenUp(offer.version, memory)) {
+    if (!dropped && !waiting.urgent && noticeGivenUp(offer.version, memory)) {
       this.waiting = null
       return false
     }
@@ -136,11 +138,12 @@ export class AutoUpdater {
       return false
     }
     const version = kind === 'restart' ? installer?.readyVersion() || offer.version : offer.version
-    const shown = this.deps.notify({ kind, version, offer, current: this.deps.version, ...(waiting.withdrawn ? { withdrawn: true } : {}), ...(dropped ? { dropped } : {}), accepted: () => this.accepted(offer.version) })
+    const shown = this.deps.notify({ kind, version, offer, current: this.deps.version, ...(waiting.withdrawn ? { withdrawn: true } : {}), ...(waiting.urgent ? { urgent: true as const } : {}), ...(dropped ? { dropped } : {}), accepted: () => this.accepted(offer.version) })
     if (!shown) return false
     this.waiting = null
     this.lastShown = { version: offer.version, at: now }
-    this.deps.remember(afterNoticeShown(memory, offer.version))
+    // The showings of an urgent notice are not counted: the cap is the ordinary notice's, and takes up where it was.
+    if (!waiting.urgent) this.deps.remember(afterNoticeShown(memory, offer.version))
     return true
   }
 
