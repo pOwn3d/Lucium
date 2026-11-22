@@ -31,6 +31,13 @@ describe('the command « Découvrir Lucium » of the command bar', () => {
     expect(actions('recette de cuisine')).not.toContain('discover')
   })
 
+  it('is not offered in a private window, which does not open the panel (the entry of the Aide menu is greyed out for the same reason)', () => {
+    const inPrivate = (query: string) => rankCandidates(query, state, [], [], [], { platform: 'darwin', private: true }).flatMap((c) => (c.kind === 'action' ? [c.action] : []))
+    expect(inPrivate('découvrir')).not.toContain('discover')
+    expect(inPrivate('découvrir lucium')).not.toContain('discover')
+    expect(actions('découvrir')).toContain('discover')
+  })
+
   it('changes no state: the bar opens the panel', () => {
     expect(actionToDispatch('discover', state)).toBeNull()
   })
