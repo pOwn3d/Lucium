@@ -39,6 +39,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **Password vault care**: weak and reused passwords are flagged; “Copy password” clears itself after 30 seconds and at lock; Touch ID can be asked at every fill; “Never offer for this site” skips chosen sites. A login also fills on its `www.` twin. Nothing leaves your Mac.
 - **Find in page: case, whole words, accents**: with “Advanced find in page” on, the find bar has four buttons: case, whole words, accents and regular expression. Whole words skips “chat” inside “chatte”; accents tells e from é. Off, the bar is unchanged. Nothing is sent.
 - **Search engine for private windows**: Settings › Navigation › “Engine for private windows”. Empty by default, private windows follow the other windows’ engine. Chosen, only they use it; what you type is still never sent for suggestions, and no request is added.
+- **Forget permissions of unvisited sites**: Settings › Privacy and security, off by default. The camera, microphone and other answers of a site not visited for 30 to 365 days are taken back, and a notice names the sites. Only one visit day per site is kept, once a day, never in private; erasing history erases it.
+- **Hosts blocked on this page**: the site panel lists, page by page, the hosts the blocker stopped (up to 100). The list lives in memory only, is emptied at each navigation, and is never kept for private tabs.
+- **Urgent security notice**: when the signed update feed says a version fixes a flaw, the update notice names it and ignores its cap of three showings. Nothing more is requested, and the frequency of checks does not change.
+- **Security check**: Settings › Privacy and security › Security check reads, without changing anything, your extensions, remembered permissions, protections, updates and password vault, with a shortcut to each setting. Only counts are shown; nothing is measured or sent.
 
 ### Changed
 

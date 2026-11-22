@@ -33,6 +33,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 - **Soin du coffre** : mots de passe faibles et réutilisés signalés ; « Copier le mot de passe » s’efface après 30 secondes et au verrouillage ; Touch ID possible à chaque remplissage ; « Ne plus proposer pour ce site » écarte des sites. Une entrée se remplit aussi sur son jumeau `www.`. Rien ne quitte ton Mac.
 - **Recherche dans la page : casse, mots entiers, accents** : avec « Recherche avancée dans la page » activée, la barre de recherche a quatre boutons : casse, mots entiers, accents et expression régulière. Mots entiers écarte « chat » dans « chatte » ; accents distingue e et é. Désactivée, la barre ne change pas.
 - **Moteur de recherche des fenêtres privées** : Réglages › Navigation › « Moteur des fenêtres privées ». Vide par défaut, les fenêtres privées suivent le moteur des autres fenêtres. Choisi, elles seules l’utilisent ; ce que vous tapez n’est toujours pas envoyé pour des suggestions, et aucune requête n’est ajoutée.
+- **Oublier les autorisations des sites non visités** : Réglages › Vie privée et sécurité, éteint par défaut. Les réponses (caméra, micro…) d’un site non visité depuis 30 à 365 jours sont reprises, et une notice nomme les sites. Un jour de visite par site est gardé, jamais en privé ; effacer l’historique l’efface.
+- **Hôtes bloqués sur cette page** : le panneau du site liste, page par page, les hôtes arrêtés par le bloqueur (100 au plus). La liste reste en mémoire, se vide à chaque navigation et n’existe jamais pour un onglet privé.
+- **Avis de sécurité urgent** : quand le fichier de versions signé annonce qu’une version corrige une faille, la notice de mise à jour le dit et ignore son plafond de trois affichages. Aucune requête de plus ; la fréquence des recherches ne change pas.
+- **Vérification de sécurité** : Réglages › Vie privée et sécurité › Vérification de sécurité relit, sans rien modifier, vos extensions, autorisations retenues, protections, mises à jour et coffre, avec un raccourci vers chaque réglage. Seuls des décomptes s’affichent ; rien n’est mesuré ni envoyé.
 
 ### Changements
 
