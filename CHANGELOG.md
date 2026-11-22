@@ -29,6 +29,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **Markdown export loads lazy images**: the page is scrolled from top to bottom first, as “Page entière” does (at most 80 steps, position restored), so that images that load on scroll are fetched; the message says how many still had no address.
 - **Reminders keep the container**: a tab put away with “Me le rappeler” comes back in the container it was in, while that container exists.
 - **One-time codes (TOTP) in the password vault**: a login can hold the key of its two-step codes (base32 key or `otpauth://` address). The panel shows the code with its countdown and copies it, cleared after 30 seconds. The key stays encrypted in the vault and is never logged. RFC 6238, nothing filled into a page.
+- **Password vault care**: weak and reused passwords are flagged; “Copy password” clears itself after 30 seconds and at lock; Touch ID can be asked at every fill; “Never offer for this site” skips chosen sites. A login also fills on its `www.` twin. Nothing leaves your Mac.
 
 ### Changed
 

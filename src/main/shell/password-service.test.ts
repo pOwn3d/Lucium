@@ -9,6 +9,7 @@ import { PASSWORD_LIMITS, type PasswordReply, type PasswordRequest } from '@shar
 import { PasswordVault, writePrivateFile } from '../password-vault'
 import { VAULT_FORMAT, newSealKeys, seal } from '../vault-crypto'
 import { t, tp } from '@shared/i18n'
+import { SLEEP_HOSTS_MAX } from '@shared/sleep'
 import type { PowerEvent } from '../lock-service'
 import { PasswordService, type PasswordFiles, type PasswordTarget, type PasswordWindow } from './password-service'
 import { frenchSpaces } from '@shared/french-typography'
@@ -111,7 +112,7 @@ function setup(patch: Partial<ReturnType<typeof defaultSettings>> = { passwordMa
   const vault = new PasswordVault({ path, params: PARAMS })
   const power = new FakePower()
   const files = new FakeFiles()
-  const service = new PasswordService({ settings: () => settings, vault, power, files, randomInt: () => 0, now: () => Date.now() + skew })
+  const service = new PasswordService({ settings: () => settings, vault, power, files, randomInt: () => 0, now: () => Date.now() + skew, updateSettings: (change) => void Object.assign(settings, change) })
   return { service, vault, power, files, settings, path }
 }
 
@@ -126,7 +127,7 @@ function relaunch(s: Setup): Setup {
 
 const ask = (s: Setup, window: FakeWindow, request: PasswordRequest): Promise<PasswordReply> => s.service.handle(request, window)
 /** The answer of the panel to the offer it shows now (an offer that is gone has no number: the panel would send the one it last drew). */
-const answerTo = (s: Setup, window: FakeWindow, op: 'confirm' | 'dismiss'): PasswordRequest => ({ kind: 'capture', op, offer: s.service.view(window).capture?.offer ?? 1 })
+const answerTo = (s: Setup, window: FakeWindow, op: 'confirm' | 'dismiss' | 'never'): PasswordRequest => ({ kind: 'capture', op, offer: s.service.view(window).capture?.offer ?? 1 })
 async function withVault(s: Setup, logins: Array<[string, string, string]> = [[SITE, USER, SECRET]]): Promise<void> {
   await s.vault.create(PHRASE)
   for (const [origin, username, password] of logins) await s.vault.save({ origin, username, password })
@@ -274,6 +275,15 @@ describe('filling', () => {
     expect(window.fills).toEqual([{ origin: SITE, username: USER, password: SECRET }])
   })
 
+  it('fills the `www.` twin of the entry’s site with the origin of the page, and the entry of the twin into the apex', async () => {
+    const s = setup()
+    await withVault(s)
+    const www = new FakeWindow('https://www.example.com/login')
+    expect((await ask(s, www, { kind: 'fill', id: idOf(s, SITE) })).ok).toBe(true)
+    expect(www.fills).toEqual([{ origin: 'https://www.example.com', username: USER, password: SECRET }])
+    expect(s.service.view(www).page?.matching).toEqual([idOf(s, SITE)])
+  })
+
   it('never fills a page whose origin is not the entry’s, in any way an address can differ', async () => {
     const s = setup()
     await withVault(s)
@@ -281,7 +291,7 @@ describe('filling', () => {
     const near = [
       'http://example.com/login',
       'https://example.com:8443/login',
-      'https://www.example.com/login',
+      'https://www.example.com:8443/login',
       'https://example.com.evil.test/login',
       'https://evil-example.com/login',
       'https://sub.example.com/login',
@@ -613,6 +623,92 @@ describe('time and power', () => {
     expect(s.vault.isUnlocked()).toBe(false)
     expect(vi.getTimerCount()).toBe(0)
     expect(s.power.count()).toBe(0)
+  })
+})
+
+describe('the sites that never offer to save', () => {
+  const submit = (s: Setup, window: FakeWindow, frameUrl: string) => s.service.submitted(window, { privateTab: false, frameUrl }, { username: USER, password: SECRET })
+
+  it('are not offered a login: the listed host, its www. and its subdomains, and no other site', async () => {
+    const s = setup({ passwordManager: true, passwordNeverSaveHosts: ['example.com'] })
+    await withVault(s, [])
+    for (const url of ['https://example.com/login', 'https://www.example.com/login', 'https://sub.example.com/login']) {
+      const window = new FakeWindow()
+      submit(s, window, url)
+      expect(window.toasts, url).toHaveLength(0)
+      expect(s.service.view(window).capture, url).toBeNull()
+    }
+    for (const url of ['https://example.org/login', 'https://notexample.com/login']) {
+      const window = new FakeWindow()
+      submit(s, window, url)
+      expect(window.toasts, url).toHaveLength(1)
+    }
+  })
+
+  it('still fill: the list is about offering to save, not about the logins already in the vault', async () => {
+    const s = setup({ passwordManager: true, passwordNeverSaveHosts: ['example.com'] })
+    await withVault(s)
+    const window = new FakeWindow()
+    expect((await ask(s, window, { kind: 'fill', id: idOf(s, SITE) })).ok).toBe(true)
+    expect(window.fills).toHaveLength(1)
+  })
+
+  it('gain the site of an offer when « ne plus proposer » is answered, forget the login and take its notice away', async () => {
+    const s = setup()
+    await withVault(s, [])
+    const window = new FakeWindow()
+    submit(s, window, `${SITE}/login`)
+    const reply = await ask(s, window, answerTo(s, window, 'never'))
+    expect(reply.ok).toBe(true)
+    expect(s.settings.passwordNeverSaveHosts).toEqual(['example.com'])
+    expect(s.service.view(window).capture).toBeNull()
+    expect(window.dismissed).toHaveLength(1)
+    expect(s.vault.count()).toBe(0)
+    const later = new FakeWindow()
+    submit(s, later, `${SITE}/other`)
+    expect(later.toasts).toHaveLength(0)
+    expect(everything(reply)).not.toContain(SECRET)
+  })
+
+  it('are not added for an offer that is gone or was replaced: the answer was for another login', async () => {
+    const s = setup()
+    await withVault(s, [])
+    const window = new FakeWindow()
+    submit(s, window, `${SITE}/login`)
+    const stale = s.service.view(window).capture!.offer
+    skew += 5000
+    s.service.submitted(window, { privateTab: false, frameUrl: 'https://other.example/login' }, { username: USER, password: SECRET })
+    expect((await ask(s, window, { kind: 'capture', op: 'never', offer: stale })).ok).toBe(false)
+    expect((await ask(s, window, { kind: 'capture', op: 'never', offer: 999 })).ok).toBe(false)
+    expect(s.settings.passwordNeverSaveHosts).toEqual([])
+    expect(s.service.view(window).capture?.host).toBe('other.example')
+  })
+
+  it('refuse, and keep the offer, when the list is full: no « done » for a site that will be offered again', async () => {
+    const s = setup()
+    await withVault(s, [])
+    s.settings.passwordNeverSaveHosts = Array.from({ length: SLEEP_HOSTS_MAX }, (_, index) => `site${index}.test`)
+    const window = new FakeWindow()
+    submit(s, window, `${SITE}/login`)
+    const reply = await ask(s, window, answerTo(s, window, 'never'))
+    expect(reply.ok).toBe(false)
+    expect(reply.message).toBe(t('pwd.ne-plus-proposer-pleine'))
+    expect(s.settings.passwordNeverSaveHosts).toHaveLength(SLEEP_HOSTS_MAX)
+    expect(s.settings.passwordNeverSaveHosts).not.toContain('example.com')
+    expect(s.service.view(window).capture).not.toBeNull()
+  })
+
+  it('say so, and add nothing, when the settings cannot be written', async () => {
+    const s = setup()
+    await withVault(s, [])
+    const bare = new PasswordService({ settings: () => s.settings, vault: s.vault, power: s.power, files: s.files })
+    const window = new FakeWindow()
+    bare.submitted(window, { privateTab: false, frameUrl: `${SITE}/login` }, { username: USER, password: SECRET })
+    const reply = await bare.handle({ kind: 'capture', op: 'never', offer: bare.view(window).capture!.offer }, window)
+    expect(reply.ok).toBe(false)
+    expect(reply.message).toBe(t('pwd.ne-plus-proposer-impossible'))
+    expect(s.settings.passwordNeverSaveHosts).toEqual([])
+    expect(bare.view(window).capture).not.toBeNull()
   })
 })
 

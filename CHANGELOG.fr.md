@@ -23,6 +23,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 - **L’export Markdown charge les images paresseuses** : la page est d’abord parcourue de haut en bas, comme « Page entière » (80 pas au plus, position rendue), pour que les images chargées au défilement soient récupérées ; le message dit combien n’avaient toujours pas d’adresse.
 - **Les rappels gardent le conteneur** : un onglet mis de côté avec « Me le rappeler » revient dans le conteneur où il était, tant que ce conteneur existe.
 - **Codes à usage unique (TOTP) dans le coffre de mots de passe** : un identifiant peut garder la clé de ses codes de double authentification (clé en base32 ou adresse `otpauth://`). Le panneau montre le code avec son compte à rebours et le copie, effacé après 30 secondes. La clé reste chiffrée dans le coffre et n’est jamais journalisée. RFC 6238, rien n’est rempli dans une page.
+- **Soin du coffre** : mots de passe faibles et réutilisés signalés ; « Copier le mot de passe » s’efface après 30 secondes et au verrouillage ; Touch ID possible à chaque remplissage ; « Ne plus proposer pour ce site » écarte des sites. Une entrée se remplit aussi sur son jumeau `www.`. Rien ne quitte ton Mac.
 
 ### Changements
 

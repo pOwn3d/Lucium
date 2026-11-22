@@ -24,6 +24,7 @@ import { ExportCryptoError, SCRYPT_DEFAULT, deriveKeys, type ScryptParams } from
 import { ATTEMPTS_FILE_MAX, NO_ATTEMPTS, afterWrongPhrase, attemptsText, parseAttempts, waitMs, type Attempts } from './vault-attempts'
 import { PASSWORD_LIMITS, checkedLogin, cleanPassword, cleanUsername, eligibleOriginOf, entriesForPage, captureKind, rowOf, sameLogin, type ImportReport, type PasswordEntry, type PasswordRow } from '@shared/passwords'
 import { PASSWORD_EXPORT_FORMAT, SEALED_FILE_MAX, VAULT_FORMAT, keyMaterialOf, newSealKeys, openSealed, parseSealed, seal, sealKeysFor, sealKeysFromMaterial, zeroKeys, type ParsedSealed, type SealKeys } from './vault-crypto'
+import { passwordHealth } from '@shared/password-health'
 import { isRecord } from '@shared/record'
 import { storedTotp, type TotpConfig } from '@shared/totp'
 import { isOwnerOnlyMode, type PlatformId } from '@shared/platform'
@@ -401,8 +402,10 @@ export class PasswordVault {
 
   /** The logins without their passwords, by host then username. */
   rows(): PasswordRow[] {
-    return this.open()
-      .map(rowOf)
+    const entries = this.open()
+    const health = passwordHealth(entries)
+    return entries
+      .map((entry) => rowOf(entry, health.get(entry.id)))
       .sort((a, b) => a.host.localeCompare(b.host) || a.username.localeCompare(b.username))
   }
 
@@ -412,7 +415,8 @@ export class PasswordVault {
 
   /** The rows whose origin is exactly the page's. */
   rowsForPage(pageUrl: string | null | undefined): PasswordRow[] {
-    return entriesForPage(this.open(), pageUrl).map(rowOf)
+    const health = passwordHealth(this.open())
+    return entriesForPage(this.open(), pageUrl).map((entry) => rowOf(entry, health.get(entry.id)))
   }
 
   /** The kind of change a login seen on a page would make. */

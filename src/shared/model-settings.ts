@@ -449,6 +449,10 @@ export interface Settings {
   omniboxKeywords: boolean
   /** The password manager (see passwords.ts): a local vault, filled on request, offered on a submitted sign-in form. Off by default: it puts a script in the pages and keeps secrets. The vault is a file of its own, never part of this state. */
   passwordManager: boolean
+  /** Filling a login asks for a fingerprint first (the keychain's, never `promptTouchID`: shell/password-service.ts). Off by default; it needs Touch ID to be on for the vault. */
+  passwordTouchIdOnFill: boolean
+  /** Sites (host and subdomains) where Lucium never offers to save a login. A list of sites, empty by default; a login already in the vault still fills. */
+  passwordNeverSaveHosts: string[]
   // ---- Web tools (see web-tools.ts): every one is off by default and costs nothing while off ----
   /** File › Code QR de cette page, and "Code QR de ce lien" in the menu of a link. The code is drawn here, never by a service. */
   qrCode: boolean

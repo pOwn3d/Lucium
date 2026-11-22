@@ -5,6 +5,7 @@
 
 import { generatorOptionsOf, type GeneratorOptions } from './password-generator'
 import { t } from './i18n'
+import type { PasswordHealth } from './password-health'
 import { isRecord } from './record'
 import { TOTP_LIMITS, type TotpCode, type TotpConfig } from './totp'
 
@@ -22,7 +23,7 @@ export const PASSWORD_LIMITS = {
   captureTtlMs: 3 * 60_000,
   /** The vault locks itself after this long without use. */
   autoLockMs: 10 * 60_000,
-  /** A one-time code copied to the clipboard is taken off it after this long, if it is still the text there. */
+  /** A one-time code or a password copied to the clipboard is taken off it after this long, if it is still the text there. */
   clipboardClearMs: 30_000
 } as const
 
@@ -46,12 +47,16 @@ export interface PasswordRow {
   username: string
   /** The entry has a key for one-time codes (never the key). */
   totp: boolean
+  /** Its password is easy to guess (shared/password-health.ts). Only the verdict leaves the main process, never the password. */
+  weak: boolean
+  /** Another entry holds the very same password. */
+  reused: boolean
   updatedAt: number
 }
 
 /** The view of an entry for the interface. The one place a password could leak is here, and it is a copy of named fields. */
-export function rowOf(entry: PasswordEntry): PasswordRow {
-  return { id: entry.id, origin: entry.origin, host: hostLabel(entry.origin), username: entry.username, totp: entry.totp !== undefined, updatedAt: entry.updatedAt }
+export function rowOf(entry: PasswordEntry, health: PasswordHealth = { weak: false, reused: false }): PasswordRow {
+  return { id: entry.id, origin: entry.origin, host: hostLabel(entry.origin), username: entry.username, totp: entry.totp !== undefined, weak: health.weak, reused: health.reused, updatedAt: entry.updatedAt }
 }
 
 // ---------- origins ----------
@@ -157,10 +162,25 @@ export function captureKind(entries: readonly PasswordEntry[], login: { origin: 
 
 // ---------- which entry may be filled where ----------
 
-/** The entries whose origin is exactly the page's. No "same site", no "parent domain": a neighbour is not the site. */
+/**
+ * Whether two origins are the same, or differ only by a leading `www.` on the host (an entry saved on `example.com` fills `www.example.com` and the
+ * other way round). Nothing wider: the scheme and the port must be equal, only ONE `www.` is taken off, and what is left must be a name with a dot
+ * (`www.localhost` is not `localhost`). No "same site", no "parent domain", no other subdomain: a neighbour is not the site.
+ */
+export function sameSiteOrigin(entryOrigin: string, pageOrigin: string): boolean {
+  if (entryOrigin === pageOrigin) return true
+  if (!URL.canParse(entryOrigin) || !URL.canParse(pageOrigin)) return false
+  const [a, b] = [new URL(entryOrigin), new URL(pageOrigin)]
+  if (a.protocol !== b.protocol || a.port !== b.port) return false
+  const bare = (host: string): string => (host.startsWith('www.') ? host.slice(4) : host)
+  const [hostA, hostB] = [bare(a.hostname), bare(b.hostname)]
+  return hostA === hostB && hostA.includes('.') && a.hostname !== b.hostname
+}
+
+/** The entries that may be filled into the page: its exact origin, or its `www.` twin (`sameSiteOrigin`). */
 export function entriesForPage<T extends { origin: string }>(entries: readonly T[], pageUrl: string | null | undefined): T[] {
   const origin = eligibleOriginOf(pageUrl)
-  return origin === null ? [] : entries.filter((entry) => entry.origin === origin)
+  return origin === null ? [] : entries.filter((entry) => sameSiteOrigin(entry.origin, origin))
 }
 
 export type FillRefusal = 'off' | 'private' | 'untrusted' | 'locked' | 'no-page' | 'not-eligible' | 'origin-differs'
@@ -202,7 +222,7 @@ export function fillVerdict(context: FillContext): FillVerdict {
   if (!context.pageUrl) return refuse('no-page')
   const pageOrigin = eligibleOriginOf(context.pageUrl)
   if (pageOrigin === null) return refuse('not-eligible')
-  if (pageOrigin !== context.entryOrigin) return refuse('origin-differs')
+  if (!sameSiteOrigin(context.entryOrigin, pageOrigin)) return refuse('origin-differs')
   return { ok: true, origin: pageOrigin }
 }
 
@@ -268,7 +288,8 @@ export type PasswordRequest =
   | { kind: 'remove'; id: string }
   | { kind: 'fill'; id: string }
   | { kind: 'fill-active' }
-  | { kind: 'capture'; op: 'confirm' | 'dismiss'; offer: number }
+  /** `never`: do not offer this site again (its host goes to the list of the settings), and forget the login. */
+  | { kind: 'capture'; op: 'confirm' | 'dismiss' | 'never'; offer: number }
   | { kind: 'generate'; options: GeneratorOptions }
   | { kind: 'import-csv' }
   | { kind: 'export'; phrase: string }
@@ -286,6 +307,8 @@ export type PasswordRequest =
   | { kind: 'totp-code'; id: string; auto?: true }
   /** Puts the code of now on the clipboard (from the main process: the page is not told), and takes it off after `clipboardClearMs`. */
   | { kind: 'totp-copy'; id: string }
+  /** Puts the password of an entry on the clipboard, marked concealed, from the main process (the panel is not told it), and takes it off after `clipboardClearMs` and when the vault locks. */
+  | { kind: 'copy-password'; id: string }
 
 /** Touch ID for the vault: whether this Mac and this build can offer it, and whether it is on. */
 export interface TouchIdView {
@@ -382,11 +405,12 @@ export function parsePasswordRequest(raw: unknown): PasswordRequest | null {
     case 'fill':
     case 'totp-remove':
     case 'totp-copy':
+    case 'copy-password':
       return only('id') && idOf(raw['id']) ? ({ kind: raw['kind'], id: raw['id'] } as PasswordRequest) : null
     case 'totp-set':
       return only('id', 'secret') && idOf(raw['id']) && typeof raw['secret'] === 'string' && raw['secret'].length <= TOTP_LIMITS.inputMax ? { kind: 'totp-set', id: raw['id'], secret: raw['secret'] } : null
     case 'capture':
-      return only('op', 'offer') && (raw['op'] === 'confirm' || raw['op'] === 'dismiss') && Number.isSafeInteger(raw['offer']) && (raw['offer'] as number) > 0 ? { kind: 'capture', op: raw['op'], offer: raw['offer'] as number } : null
+      return only('op', 'offer') && (raw['op'] === 'confirm' || raw['op'] === 'dismiss' || raw['op'] === 'never') && Number.isSafeInteger(raw['offer']) && (raw['offer'] as number) > 0 ? { kind: 'capture', op: raw['op'], offer: raw['offer'] as number } : null
     case 'generate':
       return only('options') ? { kind: 'generate', options: generatorOptionsOf(raw['options']) } : null
     default:

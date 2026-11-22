@@ -21,6 +21,7 @@ import { generatePassword } from '@shared/password-generator'
 import { CSV_LIMITS, CSV_MESSAGES, describeReport, parseLoginCsv } from '@shared/password-csv'
 import { FILL_FAILURE_MESSAGES, parseFillOutcome, type FillOutcome, type FillPlan } from '@shared/login-form'
 import { siteOf } from '@shared/party'
+import { isSiteExcluded, setSiteExcluded } from '@shared/sleep'
 import { parseTotpInput } from '@shared/totp'
 import {
   NEW_LOGIN_MESSAGES,
@@ -85,6 +86,8 @@ export interface ClipboardPort {
   readText(): Promise<string>
   clear(): void
   writeText(text: string): Promise<void>
+  /** Writes a secret marked as concealed (`org.nspasteboard.ConcealedType`), so that clipboard managers do not keep it. Absent, a password is never copied. */
+  writeSecret?(text: string): Promise<void>
 }
 
 export interface PasswordDeps {
@@ -102,6 +105,8 @@ export interface PasswordDeps {
   clipboard?: ClipboardPort
   /** How long a copied code stays on the clipboard; the default is `PASSWORD_LIMITS.clipboardClearMs`. */
   clipboardClearMs?: number
+  /** Writes a change into the settings (the list of the sites that never offer to save). Absent, « ne plus proposer » says it cannot. */
+  updateSettings?: (patch: Partial<Settings>) => void
 }
 
 interface Pending {
@@ -131,7 +136,7 @@ export class PasswordService {
   private readonly pending = new Map<PasswordWindow, Pending>()
   private readonly lastOffer = new WeakMap<PasswordWindow, number>()
   private offers = 0
-  /** The code this service put on the clipboard, until it is taken off. */
+  /** The code or password this service put on the clipboard, until it is taken off. */
   private copied: { code: string; timer: NodeJS.Timeout } | null = null
   private readonly onPower = (): void => this.lock()
 
@@ -281,7 +286,7 @@ export class PasswordService {
       case 'fill-active':
         return this.fillActive(window)
       case 'capture':
-        return request.op === 'confirm' ? this.confirmCapture(window, request.offer) : this.dismissCapture(window, request.offer)
+        return request.op === 'confirm' ? this.confirmCapture(window, request.offer) : request.op === 'never' ? this.neverOffer(window, request.offer) : this.dismissCapture(window, request.offer)
       case 'import-csv':
         return this.importCsv(window, files)
       case 'export':
@@ -302,6 +307,8 @@ export class PasswordService {
         return this.totpCode(request.id, request.auto === true, window)
       case 'totp-copy':
         return this.totpCopy(request.id, window)
+      case 'copy-password':
+        return this.copyPassword(request.id, window)
     }
   }
 
@@ -578,28 +585,50 @@ export class PasswordService {
     if (!clipboard) return this.reply(window, false, t('pwd.totp-presse-papiers-indisponible'))
     const made = this.codeOf(id)
     if (typeof made === 'string') return this.reply(window, false, made)
-    // A code that was copied before is replaced, not left for its timer to wipe the new one. The new one is noted before the write is
+    return this.copyToClipboard(made.code, (text) => clipboard.writeText(text), window, { copied: (seconds) => t('pwd.totp-copie', { seconds }), failed: t('pwd.totp-copie-impossible'), what: 'a one-time code' })
+  }
+
+  /**
+   * Puts the password of an entry on the clipboard, concealed, from this process. It is the one place a password leaves the process other than a
+   * fill, so it asks the same fingerprint as a fill when « Touch ID à chaque remplissage » is on. It comes off after `clipboardClearMs`, and when the vault locks.
+   */
+  private async copyPassword(id: string, window: PasswordWindow): Promise<PasswordReply> {
+    if (!this.deps.vault.isUnlocked()) return this.reply(window, false, t('pwd.le-coffre-est-verrouille'))
+    const clipboard = this.deps.clipboard
+    if (!clipboard?.writeSecret) return this.reply(window, false, t('pwd.totp-presse-papiers-indisponible'))
+    const entry = this.deps.vault.secret(id)
+    if (!entry) return this.reply(window, false, t('pwd.cet-identifiant-n-existe-plus'))
+    const refused = await this.fingerprintBeforeFill()
+    if (refused !== null) return this.reply(window, false, refused)
+    if (!this.deps.vault.isUnlocked()) return this.reply(window, false, t('pwd.le-coffre-est-verrouille'))
+    const writeSecret = clipboard.writeSecret.bind(clipboard)
+    return this.copyToClipboard(entry.password, writeSecret, window, { copied: (seconds) => t('pwd.mdp-copie', { seconds }), failed: t('pwd.mdp-copie-impossible'), what: 'a password' })
+  }
+
+  /** The text goes to the clipboard through `write`; one copy at a time is tracked, and taken off after the delay or at the lock. Logs `what` failed, never the text. */
+  private async copyToClipboard(text: string, write: (text: string) => Promise<void>, window: PasswordWindow, say: { copied: (seconds: number) => string; failed: string; what: string }): Promise<PasswordReply> {
+    // A text that was copied before is replaced, not left for its timer to wipe the new one. The new one is noted before the write is
     // awaited: a vault that locks meanwhile finds it and takes it off.
     this.forgetCopiedCode()
     const delay = this.deps.clipboardClearMs ?? PASSWORD_LIMITS.clipboardClearMs
     const timer = setTimeout(() => void this.clearCopiedCode(), delay)
     timer.unref?.()
-    const mine = { code: made.code, timer }
+    const mine = { code: text, timer }
     this.copied = mine
     try {
-      await clipboard.writeText(made.code)
+      await write(text)
     } catch (error) {
-      console.error('[passwords] a one-time code could not be copied:', error instanceof Error ? error.name : typeof error)
+      console.error(`[passwords] ${say.what} could not be copied:`, error instanceof Error ? error.name : typeof error)
       if (this.copied === mine) this.forgetCopiedCode()
-      return this.reply(window, false, t('pwd.totp-copie-impossible'))
+      return this.reply(window, false, say.failed)
     }
-    // The vault locked while the code was being written: it is already on the clipboard, so it comes off at once.
+    // The vault locked while the text was being written: it is already on the clipboard, so it comes off at once.
     if (!this.deps.vault.isUnlocked()) {
       await this.takeOffClipboard(mine.code)
       return this.reply(window, false, t('pwd.le-coffre-est-verrouille'))
     }
     this.touch()
-    return this.reply(window, true, t('pwd.totp-copie', { seconds: Math.ceil(delay / 1000) }))
+    return this.reply(window, true, say.copied(Math.ceil(delay / 1000)))
   }
 
   private forgetCopiedCode(): void {
@@ -676,6 +705,30 @@ export class PasswordService {
       : t('pwd.aucun-mot-de-passe-enregistre-pour-page', { page: hostLabel(pageOrigin) })
   }
 
+  /**
+   * « Touch ID à chaque remplissage » (settings.passwordTouchIdOnFill): the fingerprint is asked of the keychain (`load`, never `promptTouchID`, which
+   * answers yes or no and protects nothing) before the page is touched. Null when the fill may go on, else the sentence for why not. With the setting
+   * on and Touch ID not usable, nothing is filled: a setting that quietly did nothing would be worse than a refusal the user can read and undo.
+   */
+  private async fingerprintBeforeFill(): Promise<string | null> {
+    if (this.deps.settings().passwordTouchIdOnFill !== true) return null
+    const keychain = this.deps.keychain
+    if (!keychain || !keychain.enabled()) return t('pwd-touch.remplissage-sans-touch-id')
+    if (!keychain.available()) return this.touchIdUnavailable()
+    if (this.touching) return t('pwd-touch.deja-en-cours')
+    this.touching = true
+    let key: Buffer | null = null
+    try {
+      key = await keychain.load(getLanguage(), this.deps.vault.saltOnDisk())
+    } catch (error) {
+      return await this.touchIdFailure(error)
+    } finally {
+      key?.fill(0)
+      this.touching = false
+    }
+    return null
+  }
+
   /** The only way a password goes to a page: one entry, into the page on screen, after the verdict on its origin. */
   async fillEntry(window: PasswordWindow, id: string, announce: boolean): Promise<PasswordReply> {
     const say = (message: string): PasswordReply => {
@@ -701,6 +754,10 @@ export class PasswordService {
       return say(verdict.message)
     }
     if (!entry || !target) return say(t('pwd.cet-identifiant-n-existe-plus'))
+    const refused = await this.fingerprintBeforeFill()
+    if (refused !== null) return say(refused)
+    // The vault locked while the fingerprint was awaited (idle timer, sleep): the password in hand is not to be used any more.
+    if (!this.deps.vault.isUnlocked()) return say(t('pwd.le-coffre-est-verrouille'))
     this.touch()
     let outcome: FillOutcome | null
     try {
@@ -740,6 +797,8 @@ export class PasswordService {
     if (cameOverUntrustedCertificate(from.frameUrl, from.untrustedCertificate)) return
     const origin = eligibleOriginOf(from.frameUrl)
     if (origin === null) return
+    // A site the user asked never to be offered a save for (« Ne plus proposer »): nothing is kept, no notice. A login already in the vault still fills.
+    if (isSiteExcluded(origin, this.deps.settings().passwordNeverSaveHosts)) return
     // A page that submits forms in a loop is not given a stream of notices.
     const at = this.now()
     const last = this.lastOffer.get(window)
@@ -771,6 +830,21 @@ export class PasswordService {
     } catch (error) {
       return this.reply(window, false, this.failure('saving the login of a page', error))
     }
+  }
+
+  /** « Ne plus proposer pour ce site »: the host of the offer joins the list of the settings, and the login is forgotten. For the offer that was shown, like the other answers. */
+  private neverOffer(window: PasswordWindow, offer: number): PasswordReply {
+    const seen = this.pending.get(window)
+    if (!seen || seen.offer !== offer) return this.reply(window, false, t('pwd.il-n-y-a-plus-rien-a-enregistrer'))
+    const update = this.deps.updateSettings
+    if (!update) return this.reply(window, false, t('pwd.ne-plus-proposer-impossible'))
+    const host = new URL(seen.origin).hostname
+    const hosts = setSiteExcluded(this.deps.settings().passwordNeverSaveHosts, host, true)
+    // A full list drops the new host: say so instead of answering « done » for a site that will be offered again.
+    if (!hosts.includes(host) && !hosts.some((entry) => host.endsWith(`.${entry}`))) return this.reply(window, false, t('pwd.ne-plus-proposer-pleine'))
+    update({ passwordNeverSaveHosts: hosts })
+    this.forgetCapture(window)
+    return this.reply(window, true, t('pwd.ne-plus-proposer-fait', { host: hostLabel(seen.origin) }))
   }
 
   private dismissCapture(window: PasswordWindow, offer: number): PasswordReply {

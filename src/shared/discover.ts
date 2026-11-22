@@ -532,6 +532,20 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     isNew: true
   },
   {
+    id: 'password-care',
+    task: 'protect',
+    level: 'advanced',
+    name: 'discover.mdp-soin-nom',
+    summary: 'discover.mdp-soin-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.mots-de-passe'] },
+    keywords: 'mot de passe faible reutilise copier presse-papiers touch id empreinte ne jamais enregistrer site weak reused copy clipboard fingerprint never save vault',
+    shortcut: 'passwords',
+    try: open({ panel: 'passwords' }),
+    needs: 'passwordManager',
+    isNew: true
+  },
+  {
     id: 'private-tab',
     task: 'protect',
     level: 'beginner',

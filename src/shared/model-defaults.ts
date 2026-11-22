@@ -277,6 +277,8 @@ export function defaultSettings(): Settings {
     tabGroupFolders: false,
     omniboxKeywords: false,
     passwordManager: false,
+    passwordTouchIdOnFill: false,
+    passwordNeverSaveHosts: [],
     qrCode: false,
     autoScroll: false,
     scrollSync: false,

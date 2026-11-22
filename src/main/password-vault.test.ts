@@ -333,6 +333,18 @@ describe('the logins', () => {
     expect(everything).not.toContain('OTHER-PASSWORD')
   })
 
+  it('tells in each row whether its password is weak or used twice, and nothing else about it', async () => {
+    const v = vault()
+    await v.create(PHRASE)
+    await v.save(LOGIN)
+    await v.save({ origin: 'https://b.example', username: 'ana', password: LOGIN.password })
+    await v.save({ origin: 'https://c.example', username: 'ana', password: '12345678' })
+    const flags = Object.fromEntries(v.rows().map((row) => [row.host, `${row.weak}/${row.reused}`]))
+    expect(flags).toEqual({ 'example.com': 'false/true', 'b.example': 'false/true', 'c.example': 'true/false' })
+    expect(v.rowsForPage('https://c.example/').map((row) => row.weak)).toEqual([true])
+    expect(JSON.stringify(v.rows())).not.toContain('12345678')
+  })
+
   it('is full at the limit, for a save and for an import, and says so', async () => {
     const v = vault()
     await v.create(PHRASE)
