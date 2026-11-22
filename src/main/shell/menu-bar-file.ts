@@ -37,6 +37,8 @@ export function fileMenu({ browser, store, actions, options, state, acc, alone, 
       { label: t('menu.nouvelle-fenetre'), accelerator: acc('newWindow'), click: actions.newWindow },
       { label: t('menu.fenetre-vierge'), accelerator: acc('blankWindow'), click: actions.blankWindow },
       { label: t('menu.nouvelle-fenetre-privee'), accelerator: acc('privateWindow'), click: actions.privateWindow },
+      // A private window is never kept (shared/closed-windows.ts), so the entry has nothing to bring back there.
+      { label: t('menu.rouvrir-la-derniere-fenetre-fermee'), accelerator: acc('reopenWindow'), enabled: options.private !== true && actions.canReopenWindow(), click: actions.reopenWindow },
       // The annotated window share (docs/design/annotation-partage-fenetre.md): listed only when it is built, that is unless LUCIUM_ANNOTATE=0 (sources or smoke run only).
       ...(actions.shareWindow ? [{ label: t('menu.partager-une-fenetre-annotee'), click: actions.shareWindow }] : []),
       // ⌥⌘M: the shortcut of this entry, heard while Lucium is in front. With « ⌥⌘M depuis toute

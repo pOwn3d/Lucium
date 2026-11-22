@@ -24,6 +24,8 @@ export const COMMANDS: readonly CommandDef[] = [
   // Fichier
   { id: 'newTab', get label() { return t('menu.nouvel-onglet') }, get group() { return t('menu.fichier') }, accelerator: 'CmdOrCtrl+T' },
   { id: 'newWindow', get label() { return t('menu.nouvelle-fenetre') }, get group() { return t('menu.fichier') }, accelerator: 'CmdOrCtrl+N' },
+  // No default key, the user can give one.
+  { id: 'reopenWindow', get label() { return t('menu.rouvrir-la-derniere-fenetre-fermee') }, get group() { return t('menu.fichier') }, accelerator: '' },
   { id: 'blankWindow', get label() { return t('menu.fenetre-vierge') }, get group() { return t('menu.fichier') }, accelerator: 'Ctrl+CmdOrCtrl+N' },
   { id: 'privateWindow', get label() { return t('menu.nouvelle-fenetre-privee') }, get group() { return t('menu.fichier') }, accelerator: 'CmdOrCtrl+Shift+N' },
   // No default key, the user can give one.

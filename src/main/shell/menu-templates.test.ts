@@ -234,6 +234,8 @@ function menuActions(rich: boolean): MenuActions {
     window: () => ({}) as BrowserWindow,
     isKeptOnTop: () => false,
     keepOnTop: () => {},
+    canReopenWindow: () => false,
+    reopenWindow: () => {},
     sessionStart: 0
   }
 }

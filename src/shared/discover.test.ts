@@ -280,8 +280,8 @@ describe('a card for every function', () => {
 
 describe('the functions without a switch', () => {
   it('number a score and more, each with words in both languages, a name, a line and a place', () => {
-    expect(DISCOVER_EXTRAS.length).toBe(38)
-    expect(ALL_DISCOVER_ENTRIES.length).toBe(166)
+    expect(DISCOVER_EXTRAS.length).toBe(39)
+    expect(ALL_DISCOVER_ENTRIES.length).toBe(167)
     for (const language of ['fr', 'en'] as const) {
       setLanguage(language)
       for (const entry of DISCOVER_EXTRAS) {
