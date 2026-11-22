@@ -492,6 +492,18 @@ function mainWorldShims(namespacePermission: Readonly<Record<string, string>>, d
       })
     }
 
+    // chrome.sessions: the tabs the person closed and their reopening (the main process answers, and refuses a call whose permission is missing). `onChanged` exists and stays
+    // silent: nothing tells an extension that the list changed, it asks again.
+    if (permissions.has('sessions')) {
+      define('sessions', {
+        MAX_SESSION_RESULTS: 25,
+        getRecentlyClosed: method('sessions', 'getRecentlyClosed'),
+        restore: method('sessions', 'restore'),
+        getDevices: method('sessions', 'getDevices'),
+        onChanged: event('sessions', 'onChanged')
+      })
+    }
+
     // chrome.history, chrome.bookmarks, chrome.browsingData: the main process answers (and refuses a call whose permission is missing).
     for (const api of Object.keys(dataMethods)) {
       if (!permissions.has(api)) continue
@@ -500,6 +512,9 @@ function mainWorldShims(namespacePermission: Readonly<Record<string, string>>, d
         ...Object.fromEntries((dataEvents[api] as readonly string[]).map((name) => [name, event(api, name)]))
       })
     }
+
+    // Where the platform has no chrome.management at all; where it has one (second pass), `getAll` is added to it.
+    if (permissions.has('management')) define('management', { getAll: method('management', 'getAll') })
 
     if (chrome.tabs) {
       if (permissions.has('tabGroups')) {
@@ -580,6 +595,15 @@ function mainWorldShims(namespacePermission: Readonly<Record<string, string>>, d
       } catch (error) {
         console.warn(`[lucium] chrome.${api}.${name} could not be defined, so a listener of it will fail:`, error instanceof Error ? error.message : String(error))
       }
+    }
+  }
+
+  // chrome.management.getAll, which the platform's partial chrome.management lacks: the main process answers, for an extension that holds "management".
+  if (permissions.has('management') && chrome.management && chrome.management.getAll === undefined) {
+    try {
+      Object.defineProperty(chrome.management, 'getAll', { value: method('management', 'getAll'), enumerable: true, configurable: true, writable: true })
+    } catch (error) {
+      console.warn('[lucium] chrome.management.getAll could not be defined, so a call to it will fail:', error instanceof Error ? error.message : String(error))
     }
   }
 
@@ -751,7 +775,7 @@ function mainWorldShims(namespacePermission: Readonly<Record<string, string>>, d
     for (const name of ['updateSessionRules', 'updateDynamicRules']) {
       netRules[name] = promised((options: unknown) => natively(name, options).then(() => copyRules()).then(() => undefined))
     }
-    for (const name of ['getEnabledRulesets', 'updateEnabledRulesets', 'updateStaticRules', 'getDisabledRuleIds', 'getAvailableStaticRuleCount']) netRules[name] = method('declarativeNetRequest', name)
+    for (const name of ['getEnabledRulesets', 'updateEnabledRulesets', 'updateStaticRules', 'getDisabledRuleIds', 'getAvailableStaticRuleCount', 'getMatchedRules']) netRules[name] = method('declarativeNetRequest', name)
     // The dynamic rules outlive the browser: the worker hands them over when it starts (a page of the extension would only repeat it).
     if (typeof document === 'undefined') void copyRules()
   }
@@ -797,6 +821,7 @@ function mainWorldShims(namespacePermission: Readonly<Record<string, string>>, d
         const told = { ...details }
         if (!held.extra.includes('requestHeaders')) delete told.requestHeaders
         if (!held.extra.includes('responseHeaders')) delete told.responseHeaders
+        if (!held.extra.includes('requestBody')) delete told.requestBody
         const isAsked = ask !== undefined && isBlocking(held)
         try {
           if (isAsked && held.extra.includes('asyncBlocking')) answers.push(new Promise((resolve) => held.fn(told, resolve)))

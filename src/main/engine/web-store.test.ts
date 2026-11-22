@@ -195,6 +195,36 @@ describe('WebStore: the folders an install writes', () => {
   })
 })
 
+describe('WebStore: the block list', () => {
+  const beforeInstall = (w: ReturnType<typeof world>, id: string, localizedName = 'Evil Tool') =>
+    (w.store as unknown as { beforeInstall: (profileId: string, details: unknown) => Promise<{ action: string }> }).beforeInstall.call(w.store, 'default', { id, localizedName, frame: { origin: 'https://chromewebstore.google.com' } })
+
+  it('refuses a listed extension before anything is downloaded, and says so, with its name and the reason', async () => {
+    const w = world()
+    ;(w.host as unknown as { blocked: (id: string) => unknown }).blocked = (id) => (id === EXT ? { id, reason: 'malware' } : undefined)
+    const downloads = vi.fn(async () => {})
+    ;(w.library as unknown as { downloadExtension: unknown }).downloadExtension = downloads
+    expect(await beforeInstall(w, EXT)).toEqual({ action: 'deny' })
+    expect(downloads).not.toHaveBeenCalled()
+    expect(w.notify).toHaveBeenCalledTimes(1)
+    expect(String(w.notify.mock.calls[0]![0])).toContain('Evil Tool')
+    expect(String(w.notify.mock.calls[0]![0])).toContain('liste de blocage')
+  })
+
+  it('does not stand in the way of another extension', async () => {
+    const w = world()
+    ;(w.host as unknown as { blocked: (id: string) => unknown }).blocked = () => undefined
+    ;(webContents as unknown as { fromFrame: () => null }).fromFrame = () => null
+    rmSync(join(userData, STAGING_DIR), { recursive: true, force: true })
+    ;(w.library as unknown as { downloadExtension: (id: string, into: string) => Promise<void> }).downloadExtension = async (id, into) => {
+      const folder = join(into, id, '1.0_0')
+      mkdirSync(folder, { recursive: true })
+      writeFileSync(join(folder, 'manifest.json'), JSON.stringify({ manifest_version: 3, name: 'Fine', version: '1.0' }))
+    }
+    expect(await beforeInstall(w, EXT)).toEqual({ action: 'allow' })
+  })
+})
+
 describe('WebStore: the script the store\'s pages run', () => {
   // The library's script only looks at the start of the address: https://chromewebstore.google.com.evil.example/ was handed its objects too.
   it('is registered for the pages of the store only, not for every page of the profile', () => {

@@ -345,7 +345,7 @@ export function hostPatternsOf(manifest: { manifest_version?: unknown; permissio
 }
 
 /** What the shims ask the main process about the request rules of an extension. */
-const NET_RULE_METHODS: ReadonlySet<string> = new Set(['mirror', 'getEnabledRulesets', 'updateEnabledRulesets', 'updateStaticRules', 'getDisabledRuleIds', 'getAvailableStaticRuleCount'])
+const NET_RULE_METHODS: ReadonlySet<string> = new Set(['mirror', 'getEnabledRulesets', 'updateEnabledRulesets', 'updateStaticRules', 'getDisabledRuleIds', 'getAvailableStaticRuleCount', 'getMatchedRules'])
 
 /**
  * Whether an extension may call a `chrome.*` API that Lucium provides itself. The extension platform only defines an API for an extension that
@@ -383,8 +383,16 @@ export function shimAllowed(manifest: { manifest_version?: unknown; permissions?
       return permissions.has('bookmarks')
     case 'browsingData':
       return permissions.has('browsingData')
+    // The recently closed tabs and their reopening (shared/extension-sessions.ts); another device is none here, so `getDevices` is an empty list.
+    case 'sessions':
+      return (method === 'getRecentlyClosed' || method === 'restore' || method === 'getDevices') && permissions.has('sessions')
+    // Only the list: the extension platform gives `getAll` to an extension that holds "management", and nothing that changes another extension is provided.
+    case 'management':
+      return method === 'getAll' && permissions.has('management')
     // The request rules: Lucium applies them itself (shared/net-rules.ts), for an extension that holds one of the two permissions of the API.
     case 'declarativeNetRequest':
+      // What matched is the business of an extension that asked for the feedback permission, as on the platform: the rules it applied say what a page asked for.
+      if (method === 'getMatchedRules' && !permissions.has('declarativeNetRequestFeedback')) return false
       return (permissions.has('declarativeNetRequest') || permissions.has('declarativeNetRequestWithHostAccess')) && NET_RULE_METHODS.has(method)
     case 'webRequest':
       // `answer`: what the blocking listeners of a context answer about a request it was asked about (engine/extension-net.ts).

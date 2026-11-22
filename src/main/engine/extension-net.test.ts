@@ -287,6 +287,27 @@ describe('the listeners of chrome.webRequest', () => {
     expect(sent[0]).toMatchObject({ extensionId: 'a', event: 'onCompleted', wake: false, details: { requestId: '1', url: 'https://x.example/a.js', type: 'script', tabId: 4, statusCode: 200, initiator: 'https://page.example' } })
   })
 
+  it('hands over the body of an upload to a listener of onBeforeRequest that asked for requestBody, and to no other', () => {
+    const { net, sent } = listening(['https://x.example/*'])
+    net.listen('a', 'worker:1', 'onBeforeRequest', { urls: ['<all_urls>'] }, ['requestBody'], true)
+    net.listen('a', 'worker:2', 'onBeforeRequest', { urls: ['<all_urls>'] }, [], true)
+    const posted = request('https://x.example/a', { method: 'POST', initiator: 'https://x.example', upload: [{ bytes: new TextEncoder().encode('hi') }] })
+    net.heard('onBeforeRequest', posted)
+    expect(sent).toHaveLength(1)
+    const body = sent[0]!.details['requestBody'] as { raw: Array<{ bytes: ArrayBuffer }> }
+    expect(new TextDecoder().decode(body.raw[0]!.bytes)).toBe('hi')
+    // The same details go to the contexts of the extension: the shims of each strip what its listeners did not ask for (src/preload/extension-shims.ts).
+    net.heard('onCompleted', posted)
+    expect(sent.slice(1).every((each) => each.details['requestBody'] === undefined)).toBe(true)
+  })
+
+  it('tells nothing of a body to an extension none of whose listeners asked for it', () => {
+    const { net, sent } = listening(['https://x.example/*'])
+    net.listen('a', 'worker:1', 'onBeforeRequest', { urls: ['<all_urls>'] }, [], true)
+    net.heard('onBeforeRequest', request('https://x.example/a', { method: 'POST', initiator: 'https://x.example', upload: [{ bytes: new TextEncoder().encode('hi') }] }))
+    expect(sent[0]!.details).not.toHaveProperty('requestBody')
+  })
+
   it('never hears a request to a site it has no host access to, nor one made by a page it has no access to, nor one of another extension', () => {
     const { net, sent } = listening(['https://x.example/*'])
     net.listen('a', 'worker:1', 'onBeforeRequest', { urls: ['<all_urls>'] }, [], true)
@@ -606,5 +627,60 @@ describe('a rule of an extension that its budget keeps from a request', () => {
     expect(ruleGivenUpNote(13, 'length', 228)).toContain('an address of 228 characters at most')
     setLanguage('fr')
     expect(ruleGivenUpNote(13, 'length', 228)).toContain('La règle réseau 13')
+  })
+})
+
+describe('getMatchedRules: the rules that decided a request', () => {
+  const declared = { declarative_net_request: { rule_resources: [{ id: 'main', enabled: true, path: 'rules/main.json' }] } }
+  const files = { '/ext/a/rules/main.json': [block(1, '/static-main/')] }
+
+  it('lists the rule that blocked a request with its ruleset, the tab and the time, and none that did not decide', async () => {
+    const { net } = world(files)
+    net.add('a', '/ext/a', manifest(declared))
+    await settle()
+    net.beforeRequest(request('https://x.example/static-main/a.js', { timeStamp: 500 }))
+    net.beforeRequest(request('https://x.example/nothing.js', { timeStamp: 600 }))
+    expect(net.matchedRules('a', undefined)).toEqual({ rulesMatchedInfo: [{ rule: { ruleId: 1, rulesetId: 'main' }, tabId: 4, timeStamp: 500 }] })
+  })
+
+  it('names the dynamic and the session rules as the platform does', async () => {
+    const { net } = world()
+    net.add('a', '/ext/a', manifest())
+    net.mirror('a', { dynamic: [block(7, '/dyn/')], session: [block(8, '/ses/')] })
+    net.beforeRequest(request('https://x.example/dyn/a.js'))
+    net.beforeRequest(request('https://x.example/ses/a.js'))
+    const ids = (net.matchedRules('a', {}) as { rulesMatchedInfo: Array<{ rule: { ruleId: number; rulesetId: string } }> }).rulesMatchedInfo.map((info) => `${info.rule.rulesetId}:${info.rule.ruleId}`)
+    expect(ids.sort()).toEqual(['_dynamic:7', '_session:8'])
+  })
+
+  it('filters by tab and by minimal time', async () => {
+    const { net } = world(files)
+    net.add('a', '/ext/a', manifest(declared))
+    await settle()
+    net.beforeRequest(request('https://x.example/static-main/1.js', { tabId: 4, timeStamp: 100 }))
+    net.beforeRequest(request('https://x.example/static-main/2.js', { tabId: 5, timeStamp: 200 }))
+    const times = (filter: unknown) => (net.matchedRules('a', filter) as { rulesMatchedInfo: Array<{ timeStamp: number }> }).rulesMatchedInfo.map((info) => info.timeStamp)
+    expect(times({ tabId: 5 })).toEqual([200])
+    expect(times({ minTimeStamp: 150 })).toEqual([200])
+    expect(times({})).toEqual([100, 200])
+  })
+
+  it('keeps the most recent ones only, and forgets an extension that is unloaded', async () => {
+    const { net } = world(files)
+    net.add('a', '/ext/a', manifest(declared))
+    await settle()
+    for (let i = 0; i < NET_LIMITS.matchedRulesKept + 5; i++) net.beforeRequest(request('https://x.example/static-main/a.js', { timeStamp: i }))
+    const kept = (net.matchedRules('a', {}) as { rulesMatchedInfo: Array<{ timeStamp: number }> }).rulesMatchedInfo
+    expect(kept).toHaveLength(NET_LIMITS.matchedRulesKept)
+    expect(kept[0]!.timeStamp).toBe(5)
+    net.remove('a')
+    net.add('a', '/ext/a', manifest(declared))
+    expect(net.matchedRules('a', {})).toEqual({ rulesMatchedInfo: [] })
+  })
+
+  it('refuses a filter that is not one', () => {
+    const { net } = world()
+    net.add('a', '/ext/a', manifest())
+    expect(() => net.matchedRules('a', { tabId: 'x' })).toThrow('Invalid value')
   })
 })

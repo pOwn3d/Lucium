@@ -19,6 +19,7 @@ import type { UpdateReport } from '@shared/web-store'
 import { omniboxKeywordOf } from '@shared/omnibox'
 import type { ExtensionConfig, ExtensionLogEntry, ExtensionMenuAction, ExtensionReviewAsk, WebAuthRequest } from './types'
 import { t } from '@shared/i18n'
+import { blockedDisabledMessage, blockedExtension } from '@shared/extension-blocklist'
 import { LOG_START } from './electron-engine-base'
 import { ElectronEngineNetwork } from './electron-engine-network'
 
@@ -92,7 +93,7 @@ export abstract class ElectronEngineExtensions extends ElectronEngineNetwork {
       const { profileId, id } = entry.info
       const profile = this.profiles.get(profileId)
       if (!profile) continue
-      const off = this.isDisabled(profileId, id)
+      const off = this.turnedOff(profileId, id, entry.info.name)
       if (off && this.loaded.has(key)) this.unloadExtension(profileId, id)
       else if (!off && !this.loaded.has(key)) {
         this.loadInto(profileId, profile.session, entry.path).catch((error: unknown) => {
@@ -159,8 +160,22 @@ export abstract class ElectronEngineExtensions extends ElectronEngineNetwork {
     return this.webStore.reviewUpdate(profileId, extensionId)
   }
 
+  /** Switched off by the person in this profile, or on the block list embedded in the application (every profile, whatever the settings say). */
   protected isDisabled(profileId: string, extensionId: string): boolean {
-    return this.disabled.get(profileId)?.has(extensionId) === true
+    return this.disabled.get(profileId)?.has(extensionId) === true || blockedExtension(extensionId) !== undefined
+  }
+
+  /** The block list's extensions the person was already told about in this run of the application: they are told once, not for each profile and each load. */
+  private readonly blockedTold = new Set<string>()
+
+  /** `isDisabled`, and the person is told (once) when it is the block list that turns the extension off. `name` is how the extension is called. */
+  protected turnedOff(profileId: string, extensionId: string, name: string): boolean {
+    const blocked = blockedExtension(extensionId)
+    if (blocked && !this.blockedTold.has(extensionId)) {
+      this.blockedTold.add(extensionId)
+      this.notice(blockedDisabledMessage(blocked, name))
+    }
+    return this.isDisabled(profileId, extensionId)
   }
 
   protected notice(message: string): void {
@@ -342,7 +357,10 @@ export abstract class ElectronEngineExtensions extends ElectronEngineNetwork {
    */
   protected loadFirst(profileId: string, ses: Session, path: string, knownId: string | undefined): Promise<void> {
     if (knownId !== undefined && this.isDisabled(profileId, knownId)) {
-      this.known.set(`${profileId}:${knownId}`, this.known.get(`${profileId}:${knownId}`) ?? { info: this.placeholder(profileId, knownId, path), path, manifest: this.readManifest(path) })
+      const placeholder = this.placeholder(profileId, knownId, path)
+      // Told only when the block list is what turned it off (it says nothing of an extension the person switched off).
+      this.turnedOff(profileId, knownId, placeholder.name)
+      this.known.set(`${profileId}:${knownId}`, this.known.get(`${profileId}:${knownId}`) ?? { info: placeholder, path, manifest: this.readManifest(path) })
       this.extensionsChanged()
       return Promise.resolve()
     }

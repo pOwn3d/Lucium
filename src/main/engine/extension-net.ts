@@ -34,6 +34,7 @@ import {
   type RuleOwner
 } from '@shared/net-rules'
 import { t } from '@shared/i18n'
+import { requestBodyOf, type UploadPart } from '@shared/extension-request-body'
 import {
   BLOCKING_WAIT_MS,
   isBlockableEvent,
@@ -81,7 +82,7 @@ export type WebRequestEvent = (typeof WEB_REQUEST_EVENTS)[number]
 const EVENT_SET: ReadonlySet<string> = new Set(WEB_REQUEST_EVENTS)
 
 /** The limits of the extension platform, kept here too: an extension cannot make the application hold more than it could make Chrome hold. */
-export const NET_LIMITS = { sessionRules: 5000, dynamicRules: 30_000, staticRules: 330_000, disabledRules: 5000, rulesets: 100, enabledRulesets: 50, listenersPerContext: 64, rulesetBytes: 64 * 1024 * 1024 } as const
+export const NET_LIMITS = { sessionRules: 5000, dynamicRules: 30_000, staticRules: 330_000, disabledRules: 5000, rulesets: 100, enabledRulesets: 50, listenersPerContext: 64, rulesetBytes: 64 * 1024 * 1024, matchedRulesKept: 500 } as const
 
 /** A document a request sits in: the frame that asks, then each frame above it. */
 export interface FrameDocument {
@@ -97,6 +98,8 @@ export interface HookRequest extends NetRequest {
   frameId: number
   parentFrameId: number
   timeStamp: number
+  /** The upload of the request, as the engine tells it (referenced, not copied: it is read only for an extension that asked for it). */
+  upload?: readonly UploadPart[]
 }
 
 /** What an event adds to the request it is about. */
@@ -150,6 +153,8 @@ interface Listener {
   tabId: number | null
   requestHeaders: boolean
   responseHeaders: boolean
+  /** It asked for `requestBody` (`onBeforeRequest` only). */
+  requestBody: boolean
   /** It asked to block, and its answer is applied (see `mayBlockRequests`). */
   blocking: boolean
 }
@@ -192,6 +197,16 @@ interface Entry {
   canBlock: boolean
   /** What the journal was told of its answers that were not applied (an event and a reason), once each. */
   toldIgnored: Set<string>
+  /** The rules that decided a request, the latest `NET_LIMITS.matchedRulesKept` of them (`getMatchedRules`). */
+  matched: MatchedRule[]
+}
+
+/** One match, as `getMatchedRules` tells it. `timeStamp` is the request's. */
+interface MatchedRule {
+  ruleId: number
+  rulesetId: string
+  tabId: number
+  timeStamp: number
 }
 
 const EMPTY = new RuleIndex([])
@@ -245,7 +260,8 @@ export class ExtensionNet {
       refused: { malformed: 0, unsupported: 0, backtracking: 0 },
       toldBlocking: false,
       canBlock: mayBlockRequests(manifest),
-      toldIgnored: new Set()
+      toldIgnored: new Set(),
+      matched: []
     }
     this.entries.set(extensionId, entry)
     if (!withRules && !access.permissions.has('declarativeNetRequestWithHostAccess')) return
@@ -414,6 +430,29 @@ export class ExtensionNet {
     return Math.max(0, NET_LIMITS.staticRules - used)
   }
 
+  /** Keeps that a rule decided a request, for `getMatchedRules`: the latest ones only. */
+  private recordMatch(entry: Entry, rule: NetRule, request: HookRequest): void {
+    const rulesetId = entry.session.has(rule) ? '_session' : entry.dynamic.has(rule) ? '_dynamic' : ([...entry.enabled].find((id) => entry.rulesets.get(id)?.index?.has(rule)) ?? null)
+    if (rulesetId === null) return
+    entry.matched.push({ ruleId: rule.id, rulesetId, tabId: request.tabId, timeStamp: request.timeStamp })
+    if (entry.matched.length > NET_LIMITS.matchedRulesKept) entry.matched.splice(0, entry.matched.length - NET_LIMITS.matchedRulesKept)
+  }
+
+  /** `chrome.declarativeNetRequest.getMatchedRules(filter)`: the rules that decided a request of the extension, oldest first; `filter.tabId` and `filter.minTimeStamp` narrow them. */
+  matchedRules(extensionId: string, filter: unknown): { rulesMatchedInfo: Array<{ rule: { ruleId: number; rulesetId: string }; tabId: number; timeStamp: number }> } {
+    const entry = this.rulesEntry(extensionId)
+    const given = filter === undefined ? {} : filter
+    const number = (value: unknown): boolean => value === undefined || (typeof value === 'number' && Number.isFinite(value))
+    if (!isRecord(given) || !number(given['tabId']) || !number(given['minTimeStamp'])) throw new Error("Invalid value for argument 1. Property 'tabId' or 'minTimeStamp': Expected a number.")
+    const tabId = given['tabId'] as number | undefined
+    const minTimeStamp = given['minTimeStamp'] as number | undefined
+    return {
+      rulesMatchedInfo: entry.matched
+        .filter((match) => (tabId === undefined || match.tabId === tabId) && (minTimeStamp === undefined || match.timeStamp >= minTimeStamp))
+        .map((match) => ({ rule: { ruleId: match.ruleId, rulesetId: match.rulesetId }, tabId: match.tabId, timeStamp: match.timeStamp }))
+    }
+  }
+
   private rulesEntry(extensionId: string): Entry {
     const entry = this.entries.get(extensionId)
     if (!entry) throw new Error('The extension is not loaded in this profile.')
@@ -445,7 +484,7 @@ export class ExtensionNet {
     if (first && context.startsWith('worker:')) entry.asleep = []
     const held = entry.listeners.get(context) ?? []
     if (held.length >= NET_LIMITS.listenersPerContext) throw new Error('Too many webRequest listeners in this context.')
-    held.push({ event: event as WebRequestEvent, urls, types, tabId, requestHeaders: asked.includes('requestHeaders'), responseHeaders: asked.includes('responseHeaders'), blocking })
+    held.push({ event: event as WebRequestEvent, urls, types, tabId, requestHeaders: asked.includes('requestHeaders'), responseHeaders: asked.includes('responseHeaders'), requestBody: asked.includes('requestBody'), blocking })
     entry.listeners.set(context, held)
     this.announce()
   }
@@ -561,7 +600,9 @@ export class ExtensionNet {
       const covering = this.covering(entry, prepared)
       const frame = this.framePriority(entry, request)
       if (covering.length === 0 && frame === 0) continue
-      outcomes.push(judge(entry.owner, covering, prepared, frame).outcome)
+      const judged = judge(entry.owner, covering, prepared, frame)
+      if (judged.rule) this.recordMatch(entry, judged.rule, request)
+      outcomes.push(judged.outcome)
     }
     return combineOutcomes(outcomes)
   }
@@ -578,7 +619,10 @@ export class ExtensionNet {
       const covering = this.covering(entry, prepared)
       if (!covering.some((rule) => rule[field] !== undefined)) continue
       const { allowPriority } = judge(entry.owner, covering, prepared, this.framePriority(entry, request))
-      for (const rule of headerRules(entry.owner, covering, prepared, allowPriority, field)) changes.push({ ownerId: entry.owner.id, ops: rule[field] ?? [] })
+      for (const rule of headerRules(entry.owner, covering, prepared, allowPriority, field)) {
+        this.recordMatch(entry, rule, request)
+        changes.push({ ownerId: entry.owner.id, ops: rule[field] ?? [] })
+      }
     }
     return changes.length === 0 ? headers : applyHeaderChanges(headers, changes, side)
   }
@@ -640,7 +684,7 @@ export class ExtensionNet {
         }
       }
       const all = wake ? asleep : told
-      const details = eventDetails(event, request, extras, all.some((listener) => listener.requestHeaders), all.some((listener) => listener.responseHeaders))
+      const details = eventDetails(event, request, extras, all.some((listener) => listener.requestHeaders), all.some((listener) => listener.responseHeaders), all.some((listener) => listener.requestBody))
       const to = [...contexts]
       sends.push({ extensionId, send: () => this.host.send(extensionId, event, details, wake, to, token) })
     }
@@ -814,7 +858,7 @@ export function authChallenge(statusCode: number | undefined, responseHeaders: R
 }
 
 /** The details an extension receives for an event, in the shape of the extension platform. */
-export function eventDetails(event: WebRequestEvent, request: HookRequest, extras: EventExtras, withRequestHeaders: boolean, withResponseHeaders: boolean): Record<string, unknown> {
+export function eventDetails(event: WebRequestEvent, request: HookRequest, extras: EventExtras, withRequestHeaders: boolean, withResponseHeaders: boolean, withRequestBody = false): Record<string, unknown> {
   const details: Record<string, unknown> = {
     requestId: String(request.id),
     url: request.url,
@@ -827,6 +871,10 @@ export function eventDetails(event: WebRequestEvent, request: HookRequest, extra
     ...(request.initiator !== null ? { initiator: request.initiator } : {})
   }
   if (withRequestHeaders && extras.requestHeaders && (event === 'onBeforeSendHeaders' || event === 'onSendHeaders')) details['requestHeaders'] = headerList(extras.requestHeaders)
+  if (withRequestBody && event === 'onBeforeRequest') {
+    const body = requestBodyOf(request.upload)
+    if (body) details['requestBody'] = body
+  }
   if (extras.statusCode !== undefined) details['statusCode'] = extras.statusCode
   if (extras.statusLine !== undefined) details['statusLine'] = extras.statusLine
   if (withResponseHeaders && extras.responseHeaders) details['responseHeaders'] = headerList(extras.responseHeaders)
