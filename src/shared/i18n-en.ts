@@ -1702,7 +1702,7 @@ export const en: Record<MessageKey, string> = {
   'features-settings.se-regle-dans-place': 'Set in {place}.',
   'features-settings.son-propre-volet': 'its own pane',
   'features.12-3-4-affiche-84-en-tete-de-liste-entree': '“12*(3+4)” shows “= 84” at the top of the list; Return copies the result.',
-  'features.accepte-lucium-open-url-lucium-new-tab-et': 'Accepts “lucium://open?url=…”, “lucium://new-tab” and “lucium://search?q=…” sent by a script, the Shortcuts app or the Terminal; nothing is read or erased.',
+  'features.accepte-lucium-open-url-lucium-new-tab-et': 'Accepts “lucium://open?url=…”, “lucium://new-tab” and “lucium://search?q=…” sent by a script, the Shortcuts app or the Terminal, and the “--new-window” and “--private-window” command-line options; nothing is read or erased.',
   'features.des-scripts-et-l-application-raccourcis': 'Scripts and the Shortcuts app open pages through a lucium:// address.',
   'features.active-le-bouton-d-installation-des-fiches-du-store': 'Turns on the install button of Store pages; no request without an action from you.',
   'features.adresse-complete-dans-la-barre-d-outils': 'Full address in the toolbar',

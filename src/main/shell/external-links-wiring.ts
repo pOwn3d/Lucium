@@ -7,6 +7,7 @@ import { app } from 'electron'
 import { routeFor } from '@shared/routing'
 import { activeProfileId, profileSearch } from '@shared/profiles'
 import { isAutomationUrl } from '@shared/automation-url'
+import type { LaunchWindow } from '@shared/launch-flags'
 import { isNavigableUrl } from '@shared/url'
 import { tp } from '@shared/i18n'
 import { WAITING_LINKS_MAX, WaitingLinks } from '@shared/waiting-links'
@@ -15,7 +16,7 @@ import type { WindowView } from '../store'
 import { Automation, getAutomation, setAutomation } from './automation'
 import type { Browser } from './browser'
 import type { LittleArc } from './little'
-import { handleSecondLaunch } from './single-instance'
+import { handleFirstLaunchSwitches, handleSecondLaunch } from './single-instance'
 import type { WindowManager } from './windows'
 
 export interface ExternalLinksDeps {
@@ -101,15 +102,22 @@ export function installExternalLinks({ browser, store, lock, little, windowManag
     }
     openInTab(url, spaceId)
   }
+  // --new-window and --private-window obey the setting of the commands by address (single-instance.ts).
+  const launchSwitches = {
+    isAppLocked: () => lock.isAppLocked(),
+    windowSwitchesAllowed: () => store.get().settings.urlAutomation,
+    openLaunchWindow: (kind: LaunchWindow) => void (kind === 'private' ? windowManager.openPrivate({ commandBar: true }) : windowManager.newWindow({ commandBar: true }))
+  }
   const listen = (): void => {
     openWaitingLinks(pendingExternalUrls)
+    handleFirstLaunchSwitches(process.argv, launchSwitches)
     // A second launch hands its links over, or asks for a window of its own, which a locked application does not open (shell/single-instance.ts).
     app.on('second-instance', (_e, argv) =>
       handleSecondLaunch(argv, {
         openLink: (url) => openExternalUrl?.(url),
-        isAppLocked: () => lock.isAppLocked(),
         newWindow: () => void windowManager.newWindow({ commandBar: true }),
-        focusMain
+        focusMain,
+        ...launchSwitches
       })
     )
   }
