@@ -1,0 +1,79 @@
+/*
+ * The animated demos of « Découvrir Lucium » (DiscoverDemo.tsx): a small fake window drawn with the tokens (no picture, no GIF, no video, nothing loaded), one scene for
+ * each demo. A loop of `--dvd-loop` (6 to 8 s). An element is drawn on its FINAL state at rest and the keyframes hide it on the way, so « Réduire les animations »
+ * (the system's, or the application's `data-motion='reduce'`) only has to stop the animation to leave the whole picture. Not on screen, or paused: the animation waits.
+ * Text is on the pairs of colours of design-tokens.ts; the frame has a real border (it stays when the colours are forced).
+ */
+.dvd { --dvd-loop: 7s; display: grid; gap: var(--sp-2); margin: 0; }
+.dvd-stage { position: relative; aspect-ratio: 16 / 9; overflow: hidden; border: 1px solid var(--text-3); border-radius: var(--r-m); background: var(--surface-2); color: var(--text-2); font-size: var(--t-xs); }
+.dvd-caption { margin: 0; font-size: var(--t-s); line-height: 1.45; color: var(--text-2); }
+.dvd-caption b { font-weight: var(--w-semibold); color: var(--text); }
+.dvd-pause { justify-self: start; }
+
+.dvd-win { position: absolute; inset: 9% 6%; display: flex; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--surface); color: var(--text); }
+.dvd-side { display: grid; align-content: start; gap: 4px; flex: 0 0 30%; padding: 6px; border-right: 1px solid var(--line); background: var(--surface-2); }
+.dvd-tab { display: block; overflow: hidden; padding: 3px 4px; border-radius: var(--r-s); white-space: nowrap; text-overflow: ellipsis; color: var(--text-2); background: var(--surface); }
+.dvd-page { position: relative; display: grid; flex: 1; align-content: start; gap: 6px; min-width: 0; padding: 8px; background: var(--surface); }
+.dvd-line { display: block; height: 5px; border-radius: 3px; background: var(--line-strong); }
+.dvd-line:nth-child(odd) { width: 92%; }
+.dvd-line:nth-child(even) { width: 68%; }
+.dvd-dim { color: var(--text-2); background: var(--surface); }
+.dvd-hot { color: var(--text); background: var(--accent-soft); }
+.dvd-chip { justify-self: start; padding: 2px 7px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-weight: var(--w-semibold); font-variant-numeric: tabular-nums; }
+
+.dvd-pop { position: absolute; left: 24%; top: 30%; display: grid; padding: 3px; border: 1px solid var(--line-strong); border-radius: var(--r-s); background: var(--surface); color: var(--text); white-space: nowrap; }
+.dvd-pop span { padding: 3px 8px; border-radius: var(--r-s); }
+.dvd-pop-wide { left: 34%; top: 26%; }
+.dvd-toast { position: absolute; right: 8px; bottom: 8px; max-width: 70%; overflow: hidden; padding: 4px 8px; border: 1px solid var(--accent); border-radius: var(--r-s); white-space: nowrap; text-overflow: ellipsis; }
+.dvd-block { position: absolute; inset: 0; display: grid; place-items: center; padding: 8px; text-align: center; background: var(--surface-2); color: var(--text); font-weight: var(--w-semibold); }
+.dvd-file { position: absolute; right: 8px; bottom: 8px; display: grid; gap: 4px; width: 38%; padding: 6px; border: 1px solid var(--accent); border-radius: var(--r-s); }
+.dvd-code { font-size: var(--t-xl); font-weight: var(--w-semibold); font-variant-numeric: tabular-nums; letter-spacing: 0.08em; color: var(--text); background: var(--surface); }
+.dvd-drain { display: block; height: 4px; border-radius: 2px; background: var(--accent); transform-origin: left; }
+.dvd-frame { position: absolute; left: 18%; top: 20%; width: 60%; height: 50%; border: 2px dashed var(--accent); border-radius: var(--r-s); }
+.dvd-split { gap: 0; }
+.dvd-split .dvd-page + .dvd-page { border-left: 1px solid var(--line-strong); }
+.dvd-second { overflow: hidden; }
+
+.dvd-barscene { position: absolute; inset: 12% 14%; display: grid; align-content: start; gap: 6px; padding: 8px; border: 1px solid var(--line-strong); border-radius: var(--r-m); background: var(--surface); color: var(--text); }
+.dvd-field { padding: 5px 8px; border: 1px solid var(--accent); border-radius: var(--r-s); font-size: var(--t-m); background: var(--surface); color: var(--text); }
+.dvd-typed { display: inline-block; max-width: 14ch; overflow: hidden; white-space: nowrap; vertical-align: bottom; }
+.dvd-row { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: var(--r-s); }
+.dvd-row .dvd-line { flex: 1; }
+.dvd-dot { flex: 0 0 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+
+/* Each step appears at its moment of the loop, stays, then fades before the loop starts again. */
+@keyframes dvd-a { 0%, 8% { opacity: 0; transform: translateY(6px); } 18%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes dvd-b { 0%, 30% { opacity: 0; transform: translateY(6px); } 40%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes dvd-c { 0%, 52% { opacity: 0; transform: translateY(6px); } 62%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes dvd-d { 0%, 72% { opacity: 0; transform: translateY(6px); } 82%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; } }
+@keyframes dvd-type { 0%, 8% { max-width: 0; } 34%, 92% { max-width: 14ch; } 100% { max-width: 0; } }
+@keyframes dvd-leave { 0%, 40% { opacity: 1; transform: none; } 50%, 75% { opacity: 0.2; transform: translateX(-6px); } 85%, 100% { opacity: 1; transform: none; } }
+@keyframes dvd-grow { 0%, 15% { flex-grow: 0.0001; opacity: 0; } 45%, 90% { flex-grow: 1; opacity: 1; } 100% { flex-grow: 0.0001; opacity: 0; } }
+@keyframes dvd-drain { 0% { transform: scaleX(1); } 85% { transform: scaleX(0.05); } 100% { transform: scaleX(1); } }
+@keyframes dvd-frame { 0%, 22% { width: 0; height: 0; opacity: 0; } 26% { opacity: 1; } 52%, 90% { width: 60%; height: 50%; opacity: 1; } 100% { opacity: 0; } }
+
+.dvd [data-step='a'] { animation: dvd-a var(--dvd-loop) infinite both; }
+.dvd [data-step='b'] { animation: dvd-b var(--dvd-loop) infinite both; }
+.dvd [data-step='c'] { animation: dvd-c var(--dvd-loop) infinite both; }
+.dvd [data-step='d'] { animation: dvd-d var(--dvd-loop) infinite both; }
+.dvd [data-step='type'] { animation: dvd-type var(--dvd-loop) infinite both steps(14); }
+.dvd [data-step='leave'] { animation: dvd-leave var(--dvd-loop) infinite both; }
+.dvd [data-step='grow'] { animation: dvd-grow var(--dvd-loop) infinite both; }
+.dvd [data-step='drain'] { animation: dvd-drain var(--dvd-loop) infinite both linear; }
+.dvd [data-step='frame'] { animation: dvd-frame var(--dvd-loop) infinite both; }
+
+/* Off screen, or paused: the animation waits where it is. */
+.dvd:not([data-playing='true']) [data-step] { animation-play-state: paused; }
+
+/* Less motion: the whole final picture and its text, no loop, and no pause button that would pause nothing. */
+@media (prefers-reduced-motion: reduce) {
+  .dvd [data-step] { animation: none; }
+  .dvd-pause { display: none; }
+}
+/* The same, forced by « Réduire les animations » (Réglages › Général): tokens.css would only shorten the loop to its last, empty frame. */
+:root[data-motion='reduce'] .dvd [data-step] { animation: none; }
+:root[data-motion='reduce'] .dvd-pause { display: none; }
+@media (prefers-contrast: more) {
+  .dvd-stage { border-width: 2px; }
+}
+:root[data-contrast='more'] .dvd-stage { border-width: 2px; }

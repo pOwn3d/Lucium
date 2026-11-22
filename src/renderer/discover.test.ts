@@ -102,7 +102,7 @@ describe('the panel', () => {
     expect(button(capture, 'Essayer')?.getAttribute('aria-label')).toBe('Essayer, Captures')
     expect(button(capture, 'Régler')?.getAttribute('aria-label')).toBe('Régler, Captures')
     const names = [...host.querySelectorAll('article button')].map((b) => b.getAttribute('aria-label'))
-    expect(names.every((name) => name !== null && /^(Essayer|Régler), ./.test(name))).toBe(true)
+    expect(names.every((name) => name !== null && /^(Essayer|Régler|Mettre l’animation en pause|Reprendre l’animation), ./.test(name))).toBe(true)
     // The name begins with the visible text (WCAG 2.5.3, label in name), and no two buttons of a card share a name.
     for (const b of host.querySelectorAll('article button')) expect(b.getAttribute('aria-label')!.startsWith(b.textContent!)).toBe(true)
     for (const card of cards()) {
@@ -292,5 +292,50 @@ describe('in English', () => {
     expect(button(cardNamed('Screenshots'), 'Try it')).toBeDefined()
     expect(button(cardNamed('Screenshots'), 'Adjust')).toBeDefined()
     expect(cardNamed('Screenshots').querySelector('.dv-where')?.textContent).toContain('Menu File › Capture')
+  })
+})
+
+describe('the demos in the cards', () => {
+  const demoIds = ['tab-reminders', 'focus-mode', 'markdown', 'totp', 'prefixes', 'split-view', 'command-bar', 'capture']
+
+  it('show an animated demo in the eight cards that have one, and in no other', () => {
+    show()
+    const figures = [...host.querySelectorAll<HTMLElement>('figure.dvd')]
+    expect(figures.map((figure) => figure.dataset['demo'])).toEqual(demoIds.map((id) => ALL_DISCOVER_ENTRIES.findIndex((entry) => entry.id === id)).sort((a, b) => a - b).map((index) => ALL_DISCOVER_ENTRIES[index]!.id))
+    for (const figure of figures) expect(figure.closest('article.dv-card'), figure.dataset['demo']).not.toBeNull()
+    expect(cards().filter((card) => card.querySelector('figure.dvd') === null).length).toBe(ALL_DISCOVER_ENTRIES.length - demoIds.length)
+  })
+
+  it('give the text equivalent after the summary, and a pause that is named after its own card', () => {
+    show()
+    const card = cardNamed('Rappel d’onglet')
+    const figure = card.querySelector('figure.dvd')!
+    expect(figure.querySelector('figcaption')!.textContent).toContain('Texte équivalent')
+    expect(card.querySelector('.dv-summary')!.compareDocumentPosition(figure) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    const pause = button(figure, 'Mettre l’animation en pause')!
+    expect(pause.getAttribute('aria-label')).toBe('Mettre l’animation en pause, Rappel d’onglet')
+    expect(pause.getAttribute('aria-describedby')).toBe(card.querySelector('h4')!.id)
+  })
+
+  it('pause and resume the animation of the card where the button is, and touch neither the other demos nor the application', () => {
+    show()
+    const [first, second] = [...host.querySelectorAll<HTMLElement>('figure.dvd')]
+    click(button(first!, 'Mettre l’animation en pause'))
+    expect(first!.dataset['paused']).toBe('true')
+    expect(button(first!, 'Reprendre l’animation')).toBeDefined()
+    expect(second!.dataset['paused']).toBe('false')
+    click(button(first!, 'Reprendre l’animation'))
+    expect(first!.dataset['paused']).toBe('false')
+    expect(holder.asked).toEqual([])
+  })
+
+  it('leave the count of the cards as it was, and follow the search: a search that finds a card finds its demo', () => {
+    show()
+    const total = cards().length
+    expect(status()).toContain(String(total))
+    type('2FA')
+    expect(cards().length).toBeGreaterThanOrEqual(1)
+    expect(host.querySelector('figure.dvd[data-demo="totp"]')).not.toBeNull()
+    expect(host.querySelector('figure.dvd[data-demo="capture"]')).toBeNull()
   })
 })

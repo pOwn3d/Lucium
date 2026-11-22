@@ -82,6 +82,8 @@ const MIGRATED: Record<string, { exempt?: RegExp[]; why?: string }> = {
   'arc-guide.css': {},
   // « Découvrir Lucium »: the features by task, with a search, cards and the other functions.
   'discover.css': {},
+  // The animated demos of some cards of « Découvrir Lucium » (DiscoverDemo.tsx): small scenes drawn with the tokens.
+  'discover-demos.css': {},
   // « Signaler un problème » (Aide): the report to read, copy or save.
   'problem-report.css': {},
   // « Notifications récentes »: the notices of the window, in the same card as the news.
