@@ -504,10 +504,12 @@ export const exitCodeOf = (outcomes: readonly SuiteOutcome[], stopped = false): 
  * What the checks assume of the settings, whatever the Mac they run on (the size of the panels, which depends on the screens, is pinned by the run):
  * - the interface is in French: the checks read the menus, the titles of the windows and the texts of the panels in French, and the default, « auto »,
  *   follows the language of the system, so a Mac or a CI runner in English showed « Settings » where the checks look for « Réglages »;
- * - the appearance is dark: the colours the checks expect are those of the dark appearance, and « Automatique » would follow the Mac.
+ * - the appearance is dark: the colours the checks expect are those of the dark appearance, and « Automatique » would follow the Mac;
+ * - the warning before a file that can run is off: it is on by default, and the files the suites download are `.bin` (a type that counts as a program), so
+ *   each of them would wait for a box nobody answers (« progressing », 0 bytes). The suite that checks the warning (smoke-downloads2.ts) turns it on and answers the box.
  * The rows of a page of the Settings that wait in its fold « Plus de réglages » are reached by opening it (`OPEN_MORE_SETTINGS`).
  */
-export const PINNED_SETTINGS = { interfaceTranslated: true, language: 'fr', interfaceAppearance: 'dark' } as const
+export const PINNED_SETTINGS = { interfaceTranslated: true, language: 'fr', interfaceAppearance: 'dark', warnExecutableDownload: false } as const
 
 /**
  * The script that opens « Plus de réglages » on the page of the Settings shown, so that every row of the page can be reached and clicked (the window keeps

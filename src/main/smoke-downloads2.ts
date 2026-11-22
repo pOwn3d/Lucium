@@ -17,7 +17,7 @@ import { app, BrowserWindow as ElectronWindow, Menu, type MenuItem, type WebCont
 import type { DownloadInfo, Settings } from '@shared/model'
 import { parseSavedState } from '@shared/sidebar'
 import { stagingRootFor } from './engine/download-staging'
-import type { SaveRequest } from './engine/types'
+import type { ExecutableRequest, SaveRequest } from './engine/types'
 import { menuItems } from './shell/context-menus'
 import { setDownloadUi } from './shell/download-ui'
 import { getWindowManager } from './shell/windows'
@@ -153,6 +153,10 @@ export async function smokeDownloads2(ctx: SmokeContext, check: Check): Promise<
       res.writeHead(200, { 'content-type': 'application/x-sh', 'content-disposition': 'attachment; filename="run.sh"' })
       return void res.end('#!/bin/sh\necho never run\n')
     }
+    if (path === '/warn.sh') {
+      res.writeHead(200, { 'content-type': 'application/x-sh', 'content-disposition': 'attachment; filename="warn.sh"' })
+      return void res.end('#!/bin/sh\necho never run\n')
+    }
     if (path === '/photo.jpg') {
       // A harmless name on a program: the server says what it is.
       res.writeHead(200, { 'content-type': 'application/x-sh', 'content-disposition': 'attachment; filename="photo.jpg"' })
@@ -169,13 +173,19 @@ export async function smokeDownloads2(ctx: SmokeContext, check: Check): Promise<
   const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`
 
   // ---- what the engine test replaces: the boxes of the system and the opening of files ----
-  const calls = { save: [] as SaveRequest[], chooseApp: [] as string[], openFile: [] as string[], openWith: [] as Array<[string, string]> }
+  const calls = { save: [] as SaveRequest[], warn: [] as ExecutableRequest[], chooseApp: [] as string[], openFile: [] as string[], openWith: [] as Array<[string, string]> }
+  /** What the person answers to the warning before a file that can run is saved (true: « Enregistrer »; false: « Annuler »). */
+  let warnAnswer = false
   let saveAnswer: (request: SaveRequest) => string | null | Promise<string | null> = () => null
   let chosenApplication: string | null = '/Applications/Preview.app'
   const restoreUi = setDownloadUi({
     chooseSave: async (_win, request) => {
       calls.save.push(request)
       return saveAnswer(request)
+    },
+    confirmExecutable: async (_win, request) => {
+      calls.warn.push(request)
+      return warnAnswer
     },
     chooseApplication: async (_win, name) => {
       calls.chooseApp.push(name)
@@ -378,7 +388,7 @@ export async function smokeDownloads2(ctx: SmokeContext, check: Check): Promise<
       throw new Error('the box exploded')
     }
     const broken = await start('/doc.pdf')
-    check('ask: a box that fails cancels the download, and the log names the download and the cause', (await finished(broken!)) && dlById(broken!)?.state === 'cancelled' && errors.some((e) => e.includes('save dialog') && e.includes(broken!) && e.includes('the box exploded')), JSON.stringify(errors.slice(-3)))
+    check('ask: a box that fails cancels the download, and the log names the download and the cause', (await finished(broken!)) && dlById(broken!)?.state === 'cancelled' && errors.some((e) => e.includes('the question before download') && e.includes(broken!) && e.includes('the box exploded')), JSON.stringify(errors.slice(-3)))
 
     errors.length = 0
     saveAnswer = () => 'relative/place.pdf'
@@ -410,6 +420,31 @@ export async function smokeDownloads2(ctx: SmokeContext, check: Check): Promise<
     const askedBefore = calls.save.length
     const quiet = await start('/doc.pdf')
     check('ask: with the setting off again the question is gone', (await finished(quiet!)) && calls.save.length === askedBefore)
+
+    // ====================================================================================================================
+    // the warning before a file that can run (« Enregistrer ce fichier ? »)
+    // ====================================================================================================================
+    // The run pins the setting off (PINNED_SETTINGS in smoke-kit.ts: the downloads of the other suites are .bin files, which count as programs and would
+    // wait for a box nobody answers); this suite is the one that turns it on, and answers the box itself.
+    check('warn: the run starts with the warning pinned off (see below)', settingsNow().warnExecutableDownload === false)
+    patch({ warnExecutableDownload: true })
+    const beforeWarn = profileFiles()
+    const warnsBefore = calls.warn.length
+    warnAnswer = false
+    seen.length = 0
+    const refused = await start('/warn.sh')
+    check('warn: a file that can run asks first, with its name and the site it comes from', refused !== null && (await waitFor(() => calls.warn.length === warnsBefore + 1)) && calls.warn.at(-1)?.filename === 'warn.sh' && calls.warn.at(-1)?.host.startsWith('127.0.0.1') === true, JSON.stringify(calls.warn.at(-1)))
+    check('warn: « Annuler » saves nothing: the download is cancelled and the downloads folder is as it was', (await finished(refused!)) && dlById(refused!)?.state === 'cancelled' && profileFiles() === beforeWarn && !existsSync(join(profileFolder, 'warn.sh')), JSON.stringify({ state: dlById(refused!)?.state, files: profileFiles() }))
+    check('warn: ...while it was asked the file waited in the temporary folder, and nothing is left there', seen.filter((d) => d.id === refused).every((d) => d.path.startsWith(`${stagingRoot}/`)) && (await waitFor(() => !existsSync(stagingRoot) || readdirSync(stagingRoot).length === 0, 3000)))
+    warnAnswer = true
+    const accepted = await start('/warn.sh')
+    check('warn: « Enregistrer » keeps the file, whole, in the downloads folder', accepted !== null && (await finished(accepted)) && dlById(accepted)?.state === 'completed' && calls.warn.length === warnsBefore + 2 && existsSync(join(profileFolder, 'warn.sh')) && sha(readFileSync(join(profileFolder, 'warn.sh'))) === sha('#!/bin/sh\necho never run\n'), JSON.stringify({ state: dlById(accepted!)?.state, asked: calls.warn.length - warnsBefore }))
+    const warnsAfterAccepted = calls.warn.length
+    const harmless = await start('/doc.pdf')
+    check('warn: a document is not asked about', harmless !== null && (await finished(harmless)) && dlById(harmless)?.state === 'completed' && calls.warn.length === warnsAfterAccepted)
+    patch({ warnExecutableDownload: false })
+    const unasked = await start('/warn.sh')
+    check('warn: with the setting off a file that can run is saved without the question', unasked !== null && (await finished(unasked)) && dlById(unasked)?.state === 'completed' && calls.warn.length === warnsAfterAccepted)
 
     // ====================================================================================================================
     // "Ouvrir avec…" remembered by type of file
