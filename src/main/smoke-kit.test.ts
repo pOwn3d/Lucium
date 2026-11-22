@@ -667,6 +667,12 @@ describe('what the checks pin in the settings', () => {
     expect(PINNED_SETTINGS).toMatchObject({ interfaceAppearance: 'dark' })
     expect(PINNED_SETTINGS).not.toHaveProperty('showAdvancedSettings')
   })
+
+  it('turns the warning before a file that can run off for the run, while it stays on by default (a .bin of a suite would wait for a box nobody answers)', () => {
+    expect(PINNED_SETTINGS).toMatchObject({ warnExecutableDownload: false })
+    expect(defaultSettings().warnExecutableDownload).toBe(true)
+    expect({ ...defaultSettings(), ...PINNED_SETTINGS }.warnExecutableDownload).toBe(false)
+  })
 })
 
 describe('a pattern written with ordinary spaces', () => {
