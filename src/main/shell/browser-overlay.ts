@@ -10,6 +10,7 @@ import { canOpenInPrivate } from '@shared/private-window'
 import { visibleTabIds } from '@shared/window-selection'
 import { canOpenWhileLocked, editsLockedSpace } from '@shared/lock'
 import { planDrop, veilFor, type DropHost, type SplitDropZone, type Veil } from '@shared/split-drop'
+import { gridPictures } from '@shared/tab-grid'
 import { firstSelection, stepSelection, visibleRecentCards, type CycleKey } from '@shared/tab-cycle'
 import { heldModifiers, physicalKey } from '@shared/keybindings'
 import { activeTab, splitFor, splitIsFull, tabOpenedSince } from '@shared/sidebar'
@@ -105,6 +106,12 @@ export abstract class BrowserOverlay extends BrowserSite {
     // A split view of four panes takes no more: the bar would open a tab of its own instead. The shortcut says so; the menus grey the entry out.
     if (request.panel === 'commandbar' && request.mode === 'split' && splitIsFull(this.store.get())) return this.showToast(t('split-drop.quatre-volets-au-plus'))
     if (request.panel === 'shortcuts' && !this.store.get().settings.shortcutHelp) return
+    // The tab overview is a function of its own. The pictures are taken here, from the ones the hover cards keep: whatever the request carries is dropped.
+    if (request.panel === 'tabgrid') {
+      if (!this.store.get().settings.tabGrid) return
+      const source = this.thumbnailSource
+      request = { panel: 'tabgrid', pictures: gridPictures(this.store.get(), (tabId) => source?.get(tabId) ?? null, this.isPrivate()) }
+    }
     if (request.panel === 'bookmarks' && !this.store.get().settings.bookmarkManager) return
     if (request.panel === 'livefolder' && !this.store.get().settings.liveFolders) return
     if (request.panel === 'notes' && !this.store.get().settings.notes) return

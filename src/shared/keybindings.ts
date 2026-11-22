@@ -129,6 +129,8 @@ export const COMMANDS: readonly CommandDef[] = [
   { id: 'pin', get label() { return t('keybindings.epingler-desepingler-l-onglet') }, get group() { return t('settings.onglets') }, accelerator: 'CmdOrCtrl+D' },
   // The command bar in "Onglets" mode, over the tabs of every space. ⇧⌘A is free (the archive is ⌥⌘A); the entry is dead while the function is off.
   { id: 'tabSearch', get label() { return t('menu.rechercher-un-onglet') }, get group() { return t('settings.onglets') }, accelerator: 'CmdOrCtrl+Shift+A' },
+  // The overview of the open tabs as a grid of thumbnails (setting `tabGrid`, off by default). ⇧⌘O is free; the entry is dead while the function is off.
+  { id: 'tabGrid', get label() { return t('menu.vue-d-ensemble-des-onglets') }, get group() { return t('settings.onglets') }, accelerator: 'CmdOrCtrl+Shift+O' },
   { id: 'nextTab', get label() { return t('menu.onglet-suivant') }, get group() { return t('settings.onglets') }, accelerator: 'CmdOrCtrl+Alt+Down' },
   { id: 'previousTab', get label() { return t('menu.onglet-precedent') }, get group() { return t('settings.onglets') }, accelerator: 'CmdOrCtrl+Alt+Up' },
   // ⌃Tab goes through the tabs in the order they were used, with a panel of pictures while ⌃ is held (Settings › Raccourcis can turn it off).

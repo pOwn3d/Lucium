@@ -334,6 +334,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
     'La barre de commandes (⌘T) retrouve un onglet déjà ouvert, la météo de la semaine, sous « Onglets ouverts »',
     'The command bar (⌘T) finds a tab that is already open, this week’s weather, under “Open tabs”'
   )),
+  setting('fn-tab-grid', 'tab-grid', t('Vue d’ensemble des onglets', 'Tab overview'), 'features', 'tabGrid', { why: 'une grille de captures de pages ouvertes, que la démonstration ne porte pas' }),
   setting('fn-vim-keys', 'vim-keys', t('Navigation au clavier de type Vim', 'Vim-style keyboard navigation'), 'keyboard', 'vimKeys', { fold: true, patch: { vimKeys: true }, on: true, why: behaviour }),
   // The feature itself: an extension of the demonstration groups the two tabs of the day of the space, and the group is a folder of the sidebar. (Its
   // row of Réglages names the API of the extensions by its name in code, which the site does not show.)

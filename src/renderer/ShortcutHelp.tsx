@@ -49,7 +49,7 @@ export function ShortcutHelp() {
   const settings = snapshot?.state.settings
   const platform = platformOf(snapshot?.platform)
   const sheet = useMemo(
-    () => (settings ? shortcutSheet(settings.keyBindings, { tabSearch: settings.tabSearch, shortcutHelp: settings.shortcutHelp, tabCycleRecent: settings.tabCycleRecent, notes: settings.notes }, platform, query) : null),
+    () => (settings ? shortcutSheet(settings.keyBindings, { tabSearch: settings.tabSearch, tabGrid: settings.tabGrid, shortcutHelp: settings.shortcutHelp, tabCycleRecent: settings.tabCycleRecent, notes: settings.notes }, platform, query) : null),
     [settings, platform, query]
   )
   if (!snapshot || !sheet) return null

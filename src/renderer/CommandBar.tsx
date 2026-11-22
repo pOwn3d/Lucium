@@ -416,6 +416,8 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
       case 'action': {
         // The same bar, in "Onglets" mode: the new request takes the place of this one (no closeOverlay: it would close the one that replaces it).
         if (c.action === 'search-tabs') return act.openOverlay({ panel: 'commandbar', mode: 'tabs', initial: '' })
+        // The overview of the tabs takes the place of the bar the same way.
+        if (c.action === 'tab-grid') return act.openOverlay({ panel: 'tabgrid' })
         if (c.action === 'archive') return act.openOverlay({ panel: 'archive' })
         if (c.action === 'capture-region') return act.openOverlay({ panel: 'capture' })
         // As the File menu does: the main process closes the bar first, so that the page is what is captured, not the bar over it.

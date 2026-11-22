@@ -149,7 +149,7 @@ export function privateAction(action: Action): Action | null {
   return PRIVATE_ACTIONS.has(action.type) ? action : null
 }
 
-const PRIVATE_PANELS = new Set<OverlayRequest['panel']>(['commandbar', 'shortcuts', 'find', 'findreplace', 'downloads', 'settings', 'extensions', 'capture', 'annotate', 'site', 'sitedata', 'tab', 'autoreload', 'permission', 'auth', 'dialog', 'leave', 'peek', 'qr', 'windowname', 'splitdrop', 'tabcycle', 'translate', 'translatepop'])
+const PRIVATE_PANELS = new Set<OverlayRequest['panel']>(['commandbar', 'shortcuts', 'find', 'findreplace', 'downloads', 'settings', 'extensions', 'capture', 'annotate', 'site', 'sitedata', 'tab', 'autoreload', 'permission', 'auth', 'dialog', 'leave', 'peek', 'qr', 'windowname', 'splitdrop', 'tabcycle', 'tabgrid', 'translate', 'translatepop'])
 
 /** Panels that make sense in a private window; the rest (archive, history, spaces, themes, Tweaks) are about data it does not keep. */
 export function canOpenInPrivate(panel: OverlayRequest['panel']): boolean {

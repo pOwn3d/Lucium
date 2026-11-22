@@ -68,6 +68,7 @@ const ACTION_SHORTCUT: Partial<Record<CommandAction, string>> = {
   notes: 'notes',
   'new-note': 'newNote',
   'search-tabs': 'tabSearch',
+  'tab-grid': 'tabGrid',
   'cookie-manager': 'cookieManager',
   'aside-space': 'asideSpace'
 }

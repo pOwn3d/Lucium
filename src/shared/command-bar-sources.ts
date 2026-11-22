@@ -193,6 +193,12 @@ export function tabSearchActions(state: SidebarState): Candidate[] {
   return [{ kind: 'action', id: 'action:search-tabs', label: t('cmd.rechercher-un-onglet'), detail: t('cmd.action'), action: 'search-tabs' }]
 }
 
+/** "Vue d’ensemble des onglets": offered when typed, while the function is on (the shortcut is ⇧⌘O); a private window has the panel too, without pictures. */
+export function tabGridActions(state: SidebarState): Candidate[] {
+  if (!state.settings.tabGrid) return []
+  return [{ kind: 'action', id: 'action:tab-grid', label: t('menu.vue-d-ensemble-des-onglets'), detail: t('cmd.action'), action: 'tab-grid' }]
+}
+
 /** "Ouvrir le Chrome Web Store": offered when typed, while installing from it is allowed. Extensions do not run in a private window. */
 export function webStoreActions(state: SidebarState, inPrivateWindow: boolean): Candidate[] {
   if (inPrivateWindow || !state.settings.webStoreInstall) return []

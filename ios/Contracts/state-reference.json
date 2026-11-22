@@ -599,6 +599,7 @@
     "commandBarSize": "m",
     "commandBarShape": "balanced",
     "tabSearch": true,
+    "tabGrid": false,
     "shortcutHelp": true,
     "findRegex": false,
     "compactMode": false,

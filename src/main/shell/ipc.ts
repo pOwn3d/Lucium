@@ -102,6 +102,9 @@ export function validOverlay(request: unknown, store: Pick<StateStore, 'get'>): 
     case 'commandbar':
       // The "Onglets" mode is the function `tabSearch`: with it off the request is refused, as the menu entry and its shortcut are dead.
       return (COMMAND_BAR_MODES as readonly unknown[]).includes(r.mode) && typeof r.initial === 'string' && (r.mode !== 'tabs' || store.get().settings.tabSearch)
+    // The tab overview is the function `tabGrid`; its pictures are the main process's to give.
+    case 'tabgrid':
+      return store.get().settings.tabGrid && r.pictures === undefined
     // The sheet of the shortcuts is the function `shortcutHelp`.
     case 'shortcuts':
       return store.get().settings.shortcutHelp

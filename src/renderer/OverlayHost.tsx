@@ -37,6 +37,7 @@ import { CookieManager } from './CookieManager'
 import { SpaceCreate } from './SpaceCreate'
 import { SplitDrop } from './SplitDrop'
 import { TabCycle } from './TabCycle'
+import { TabGrid } from './TabGrid'
 import { AutoReloadPanel } from './AutoReloadPanel'
 import { QrPanel } from './QrPanel'
 import { AnnotateSheet } from './AnnotateSheet'
@@ -56,7 +57,7 @@ import './popovers.css'
  * Panels that dim the window; a click outside closes them. The others are small and leave the page usable.
  * The Tweak editor and Glance are not in the set: they cover the window like modal panels, but draw (or do not draw) their own dimming.
  */
-const MODAL = new Set<OverlayRequest['panel']>(['commandbar', 'shortcuts', 'downloads', 'shortcut', 'space', 'spacecreate', 'plus', 'spacemenu', 'tidy', 'deadtabs', 'archive', 'site', 'sitedata', 'cookies', 'sessions', 'readlater', 'history', 'spaces', 'tab', 'autoreload', 'import', 'firstlaunch', 'qr', 'windowname', 'translate', 'translatepop', 'passwords', 'bookmarks', 'livefolder', 'foldericon', 'welcome', 'whatsnew', 'arcguide', 'discover', 'problemreport', 'notices', 'notes', 'workview'])
+const MODAL = new Set<OverlayRequest['panel']>(['commandbar', 'shortcuts', 'downloads', 'shortcut', 'space', 'spacecreate', 'plus', 'spacemenu', 'tidy', 'deadtabs', 'archive', 'site', 'sitedata', 'cookies', 'sessions', 'readlater', 'history', 'spaces', 'tab', 'autoreload', 'import', 'firstlaunch', 'qr', 'windowname', 'translate', 'translatepop', 'passwords', 'bookmarks', 'livefolder', 'foldericon', 'welcome', 'whatsnew', 'arcguide', 'discover', 'problemreport', 'notices', 'notes', 'workview', 'tabgrid'])
 
 /** Modal panels drawn as a popover next to what opened them (or, for the command bar, over the page): no dimming, and where they sit decides the variant. */
 const POPOVER_CLASS: Partial<Record<OverlayRequest['panel'], string>> = { site: 'popover', downloads: 'popover popover-left', commandbar: 'cb-backdrop', plus: 'plus-host', spacemenu: 'plus-host' }
@@ -296,6 +297,8 @@ export function OverlayHost() {
         return <NotesPanel key={version} compose={request.compose === true} scope={request.scope} />
       case 'splitdrop':
         return <SplitDrop key={version} size={request.size} snapshot={request.snapshot} sidebarRight={request.sidebarRight} split={request.split} />
+      case 'tabgrid':
+        return <TabGrid key={version} pictures={request.pictures ?? {}} />
       case 'tabcycle':
         return <TabCycle key={version} cards={request.cards} index={request.index} />
     }
