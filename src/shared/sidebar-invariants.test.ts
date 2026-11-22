@@ -85,6 +85,8 @@ const SETTING_PATCHES: Array<Record<string, unknown>> = [
   { reopenHistory: false },
   { reopenHistory: true },
   { autoArchiveHours: 0 },
+  { forgetUnusedPermissionsDays: 30 },
+  { forgetUnusedPermissionsDays: 0 },
   { autoArchiveHours: 1 },
   { tidyPinnedTitles: true },
   { sidebarRight: true },
@@ -418,7 +420,8 @@ const GENERATORS: Generators = {
   },
   'commandbar/put-back': (g) => ({ type: 'commandbar/put-back', profileId: g.pick(['default', 'work', 'gone', '__proto__']), url: `${g.pick(URLS)}${g.int(400)}`, count: g.pick([1, 3, 0, -2, 1.5, Number.NaN, 1e12]) }),
   'sidepanel/behavior': (g) => ({ type: 'sidepanel/behavior', extensionId: g.pick(['ext1', 'ext2']), openOnActionClick: g.chance(0.5) }),
-  'permission/visit': (g) => ({ type: 'permission/visit', origin: `https://o${g.int(30)}.example`, day: g.int(30_000) }),
+  // A visit means something only for a site that holds an answer: the run draws one of them when there is one.
+  'permission/visit': (g) => ({ type: 'permission/visit', origin: g.chance(0.8) && Object.keys(g.state.sitePermissions).length > 0 ? g.pick(Object.keys(g.state.sitePermissions)) : `https://o${g.int(30)}.example`, day: g.int(30_000) }),
   'permission/sweep': (g) => ({ type: 'permission/sweep', day: g.int(30_000) }),
   'permission/set': (g) => ({ type: 'permission/set', origin: `https://o${g.int(30)}.example`, permission: g.pick(['camera', 'geolocation', 'notifications']), decision: g.pick(['allow', 'deny', null] as const) }),
   'favorite/add': (g) => ({ type: 'favorite/add', url: g.goodUrl(), title: g.text(), ...(g.chance(0.3) ? { faviconUrl: 'https://a.example/i.png' } : {}), ...(g.chance(0.5) ? { toIndex: g.maybeIndex() } : {}), ...(g.chance(0.5) ? { spaceId: g.spaceId() } : {}) }),
@@ -762,7 +765,9 @@ export function play(seed: number, steps: number, survey?: (failure: Failure) =>
   }
   const types = ACTION_TYPES
   // Start from a small populated state, so that the first actions have something to act on, with a random choice of the optional functions on.
-  const patch = Object.fromEntries(FEATURES.filter(([, odds]) => gen.chance(odds)).map(([key]) => [key, true]))
+  const patch: Record<string, unknown> = Object.fromEntries(FEATURES.filter(([, odds]) => gen.chance(odds)).map(([key]) => [key, true]))
+  // The one option that is a delay, not a switch: the sweep of the permissions of unvisited sites does nothing without it.
+  if (gen.chance(0.5)) patch['forgetUnusedPermissionsDays'] = 30
   gen.state = reduce(gen.state, { type: 'settings/update', patch }, ctx)
   gen.state = [0, 1, 2, 3, 4, 5].reduce<SidebarState>((s, i) => reduce(s, { type: 'tab/open', url: URLS[i]!, background: true }, ctx), gen.state)
   // One space has a video behind it from the start, so that the framing of a video has one to act on.

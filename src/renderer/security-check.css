@@ -1,4 +1,0 @@
-.check-status { font-size: 12px; font-weight: 600; white-space: nowrap; }
-.check-status.good { color: var(--ok-ink); }
-.check-status.check { color: var(--warn-ink); }
-.check-status.info { color: var(--text-2); }

@@ -33,7 +33,7 @@ export interface SecurityFacts {
   settings: Settings
   sitePermissions: Readonly<Record<string, Readonly<Record<string, PermissionDecision>>>>
   extensions: ReadonlyArray<Pick<ExtensionInfo, 'id' | 'enabled' | 'source' | 'update'>>
-  engine?: Pick<EngineInfo, 'name' | 'version' | 'chromium'>
+  engine?: Pick<EngineInfo, 'name' | 'version'>
 }
 
 /** The permissions that give a site a view of the person or of the screen: a remembered « allow » for one of them is worth a second look. */
@@ -94,7 +94,7 @@ export function securityCheck(facts: SecurityFacts): CheckRow[] {
 
   // Updates: whether Lucium looks every day, and the version that runs.
   rows.push(switched('updates', settings.autoUpdate, 'upd-auto', 'security-check.upd-auto-on', 'security-check.upd-auto-off', 'autoUpdate'))
-  if (facts.engine) rows.push({ id: 'upd-version', area: 'updates', status: 'info', text: t('security-check.upd-version', { name: facts.engine.name, version: facts.engine.version, chromium: facts.engine.chromium }) })
+  if (facts.engine) rows.push({ id: 'upd-version', area: 'updates', status: 'info', text: t('security-check.upd-version', { name: facts.engine.name, version: facts.engine.version }) })
 
   // The vault: said only when the password manager is on; its lock and its fingerprint at each fill.
   if (!settings.passwordManager) rows.push({ id: 'vault-off', area: 'vault', status: 'info', text: t('pwd.le-gestionnaire-de-mots-de-passe-est-desactive'), where: 'passwords' })

@@ -43,6 +43,7 @@ const LINKS: Readonly<Record<string, Link>> = {
   'navigation/links': { from: 'la mini-fenêtre ; le guide « Vous venez d’Arc »', page: 'navigation', title: 'little-arc-settings.mini-fenetre', fold: true },
   'protection/permissions': { from: 'Infos et réglages du site (Autorisations) ; chrome://settings/content', page: 'protection', title: 'settings.sub-permissions' },
   'protection/sitedata': { from: 'la feuille « Effacer les données du site » (Réglages de l’effacement)', page: 'protection', title: 'site-data-settings.titre', fold: true },
+  'protection/securitycheck': { from: '« Découvrir Lucium » : la carte « Vérification de sécurité » (« Régler »)', page: 'protection', title: 'security-check.title' },
   'files/downloads': { from: 'chrome://settings/downloads', page: 'files', title: 'download-settings.telechargements-et-lecture' },
   'navigation/engine': { from: 'chrome://settings/search, chrome://settings/searchengines', page: 'navigation', title: 'settings-profiles.moteur-de-recherche' }
 }
