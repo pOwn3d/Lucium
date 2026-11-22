@@ -32,6 +32,8 @@ export interface QuitFlowDeps {
   quitClearMarker: string
   /** Makes the copy of the session "À la fermeture" (shell/backups.ts): for the forced exit, which skips the `will-quit` it is made on. */
   copyOnExit(): void
+  /** Removes the sign of a clean exit (shell/clean-exit.ts): the run ends the way it is meant to, by `will-quit` or by the forced exit that saves first. */
+  markCleanExit(): void
   /** Whether the quit goes ahead without the question: main() keeps it, as the last window closed confirms it too. */
   confirmed(): boolean
   confirm(): void
@@ -63,7 +65,10 @@ export function installQuitFlow(deps: QuitFlowDeps): SystemQuit {
     proc: deps.proc,
     power: deps.power,
     // `quit` saves, then quits; `exit`, for the quit that did not finish in time, makes the same saves and the copy of the session, then the process ends without its will-quit.
-    ...quitAndExit({ store, history, engine }, app, () => deps.copyOnExit()),
+    ...quitAndExit({ store, history, engine }, app, () => {
+      deps.copyOnExit()
+      deps.markCleanExit()
+    }),
     log: (line) => console.log(line)
   })
   systemQuit.start()
@@ -75,6 +80,8 @@ export function installQuitFlow(deps: QuitFlowDeps): SystemQuit {
     history.flush()
     // An answer that came while the windows closed may have named one more host held to strict transport security.
     engine.flushStrictTransport()
+    // Everything is written: this run ends cleanly (a crash before this point leaves the sign, and the next launch offers « Reprendre où vous en étiez ? »).
+    deps.markCleanExit()
   })
 
   // "Warn before quitting": ask once, then really quit. The engine test exits through app.exit and never gets here.

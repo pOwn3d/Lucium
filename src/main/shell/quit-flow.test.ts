@@ -60,6 +60,7 @@ function setup(options: { warn?: boolean; clearOnQuit?: boolean; smoke?: boolean
     smoke: options.smoke ?? false,
     quitClearMarker: marker,
     copyOnExit: () => calls.push('copyOnExit'),
+    markCleanExit: () => calls.push('markCleanExit'),
     confirmed: () => confirmed,
     confirm: () => {
       confirmed = true
@@ -89,7 +90,8 @@ describe('the quit main() installs', () => {
     const t = setup()
     expect(t.handlers['will-quit']).toHaveLength(2)
     t.emit('will-quit')
-    expect(t.calls).toEqual(['store.flush', 'history.flush', 'engine.flushStrictTransport'])
+    // The sign of a clean exit goes last: a crash before the writes are done leaves it, and the next launch offers « Reprendre où vous en étiez ? ».
+    expect(t.calls).toEqual(['store.flush', 'history.flush', 'engine.flushStrictTransport', 'markCleanExit'])
   })
 
   it('a quit of the system that does not finish in time saves again, makes the copy of the session, and ends the process', () => {
@@ -98,7 +100,7 @@ describe('the quit main() installs', () => {
     t.signals.get('SIGTERM')!()
     t.calls.length = 0
     vi.advanceTimersByTime(SYSTEM_QUIT_DEADLINE_MS)
-    expect(t.calls).toEqual(['store.flush', 'history.flush', 'engine.flushDownloadResume', 'engine.flushStrictTransport', 'copyOnExit', 'app.exit 0'])
+    expect(t.calls).toEqual(['store.flush', 'history.flush', 'engine.flushDownloadResume', 'engine.flushStrictTransport', 'copyOnExit', 'markCleanExit', 'app.exit 0'])
     t.systemQuit.stop()
   })
 

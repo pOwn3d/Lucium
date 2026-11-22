@@ -250,6 +250,8 @@ export type OverlayRequest =
   | { panel: 'arcguide'; imported?: ArcImported }
   /** « Découvrir Lucium » (Aide, the command bar, the welcome sheets): what Lucium can do by task, with where to find it, its shortcut and a button that tries it (shared/discover.ts). The interface may ask for it. */
   | { panel: 'discover' }
+  /** « Reprendre où vous en étiez ? »: the tabs kept after an abnormal exit, to untick the ones that should not come back. Main-only (the launch that follows the exit, shell/launch-sheets.ts). */
+  | { panel: 'restore' }
   /** « Signaler un problème » (Aide): the report in plain text, read before anything leaves the Mac. Main-only (the menu); the sheet asks `problemReport` for the text. */
   | { panel: 'problemreport' }
   /** « Notifications récentes »: the interface asks with no list; the main process fills it (browser-overlay.ts). */

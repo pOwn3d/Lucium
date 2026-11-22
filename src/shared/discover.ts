@@ -631,6 +631,17 @@ export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
     setting: { panel: 'settings', pane: 'appearance' }
   },
   {
+    id: 'restore-after-crash',
+    task: 'organise',
+    level: 'advanced',
+    name: 'restore.reprendre-ou-vous-en-etiez',
+    summary: 'discover.restaurer-resume',
+    where: 'discover.restaurer-ou',
+    keywords: 'restaurer reprendre plantage arret inattendu crash onglets cocher archive restore resume crash unexpected stop tabs tick archive',
+    try: { kind: 'hint' },
+    isNew: true
+  },
+  {
     id: 'reopen-window',
     task: 'organise',
     level: 'advanced',

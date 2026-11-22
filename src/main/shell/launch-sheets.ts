@@ -5,6 +5,7 @@
 import { getLanguage, type Language } from '@shared/i18n'
 import type { OverlayRequest } from '@shared/ipc'
 import type { Settings } from '@shared/model'
+import { shouldOfferRestore } from '@shared/session-restore'
 import { whatsNewDecision, whatsNewSheetOf } from '@shared/whats-new'
 import changelog from '../../../CHANGELOG.md?raw'
 import changelogFr from '../../../CHANGELOG.fr.md?raw'
@@ -27,6 +28,16 @@ export interface LaunchHost {
   settings(): Pick<Settings, 'welcomeDone' | 'whatsNewSheet' | 'lastSeenVersion' | 'firstLaunchDone'>
   update(patch: Partial<Pick<Settings, 'welcomeDone' | 'lastSeenVersion' | 'firstLaunchDone'>>): void
   open(request: OverlayRequest): void
+  /**
+   * What the sign of a clean exit said at this launch (clean-exit.ts), for « Reprendre où vous en étiez ? »: the sheet opens when the last run ended abnormally and
+   * no other sheet opens first. Absent in the engine test and in the tests of the sheets above, which have none.
+   */
+  recovery?: {
+    abnormal: boolean
+    /** How many tabs of the day the person could choose over, the tabs of a locked space left out. */
+    offerable(): number
+    appLocked(): boolean
+  }
 }
 
 /**
@@ -38,7 +49,17 @@ export interface LaunchHost {
  * profile whose guide is already noted as shown. An existing profile sees neither by itself (Aide › Premier lancement opens the guide), whatever its file says: a file written
  * before the flags existed has `welcomeDone` false (the default) and no `lastSeenVersion`, and it is still a profile that was used (decision of 3 November 2026).
  */
-export function showLaunchSheet(host: LaunchHost, version: string): 'welcome' | 'firstlaunch' | 'whatsnew' | null {
+export function showLaunchSheet(host: LaunchHost, version: string): 'welcome' | 'firstlaunch' | 'whatsnew' | 'restore' | null {
+  const shown = chooseLaunchSheet(host, version)
+  if (shown !== null || !host.recovery) return shown
+  // After an abnormal exit, and only when no other sheet took the launch (the news of an update, a first launch): one sheet at a time.
+  const facts = { abnormal: host.recovery.abnormal, newProfile: host.newProfile, appLocked: host.recovery.appLocked(), offerable: host.recovery.abnormal ? host.recovery.offerable() : 0 }
+  if (!shouldOfferRestore(facts)) return null
+  host.open({ panel: 'restore' })
+  return 'restore'
+}
+
+function chooseLaunchSheet(host: LaunchHost, version: string): 'welcome' | 'firstlaunch' | 'whatsnew' | null {
   const settings = host.settings()
   const fresh = settings.lastSeenVersion === ''
 
