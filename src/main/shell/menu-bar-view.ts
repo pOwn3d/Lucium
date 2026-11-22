@@ -20,7 +20,7 @@ import type { MenuBarKit } from './menu-bar-kit'
 
 const appearances = (): Array<[Settings['interfaceAppearance'], string]> => [['auto', t('menu.automatique')], ['light', t('menu.clair')], ['dark', t('menu.sombre')]]
 
-export function viewMenu({ browser, store, options, state, acc, kept, onTab, page, tabNow, facts, report, dispatch, withTab, archiveTab, toolsMenu }: MenuBarKit): MenuItemConstructorOptions {
+export function viewMenu({ browser, store, actions, options, state, acc, kept, onTab, page, tabNow, facts, report, dispatch, withTab, archiveTab, toolsMenu }: MenuBarKit): MenuItemConstructorOptions {
   const devToolsKey = devToolsExtraAccelerator(state().settings.keyBindings)
   const inSplit = tabNow ? splitFor(state(), tabNow.id) !== undefined : false
   /** View › the sidebar of this window: docked, at the right (checked as they are on screen), and the side of the new windows. */
@@ -164,7 +164,9 @@ export function viewMenu({ browser, store, options, state, acc, kept, onTab, pag
         }
       },
       { type: 'separator' },
-      { role: 'togglefullscreen', label: t('menu.activer-le-mode-plein-ecran'), accelerator: acc('fullscreen') }
+      { role: 'togglefullscreen', label: t('menu.activer-le-mode-plein-ecran'), accelerator: acc('fullscreen') },
+      // This window only, above the windows of the other applications (always-on-top.ts); each window keeps its own choice, and it is not saved.
+      { label: t('menu.toujours-au-premier-plan'), type: 'checkbox', checked: actions.isKeptOnTop(), click: () => actions.keepOnTop() }
     ]
   }
 }

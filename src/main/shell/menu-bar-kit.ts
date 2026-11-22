@@ -71,6 +71,9 @@ export interface MenuActions {
   setWindowName: (id: string, name: string) => void
   /** The window the menu acts on. */
   window: () => BrowserWindow
+  /** Affichage › Toujours au premier plan: whether the window the menu acts on is kept above the other applications' windows, and keeping it there or not. */
+  isKeptOnTop: () => boolean
+  keepOnTop: () => void
   /** When this session began: only what was archived since is something Edit › Undo can bring back. */
   sessionStart: number
 }
