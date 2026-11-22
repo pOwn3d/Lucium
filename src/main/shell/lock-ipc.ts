@@ -19,6 +19,13 @@ export function registerLockIpc(ipcMain: ScopedIpc, guard: (sender: WebContents,
     const lock = getLockService()
     const request = parseUnlockRequest(raw)
     if (!lock || !request) return { ok: false, message: t('feature.demande-invalide') }
+    // A private window left alone holds a lock of its own (shared/private-lock.ts), and its lock screen asks for the application's target: the phrase is checked as
+    // the application's is (the same tries, waits and Touch ID), and this window opens. When the application is locked too, the same phrase opens both.
+    if (browser.isWindowLocked() && request.target.scope === 'app') {
+      const reply = lock.isAppLocked() ? await lock.unlock(request) : await lock.confirm(request)
+      if (reply.ok) browser.unlockWindow()
+      return reply
+    }
     return lock.unlock(request)
   })
 

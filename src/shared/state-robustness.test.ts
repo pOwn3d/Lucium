@@ -54,6 +54,7 @@ import { NAME_MAX, TITLE_MAX, cleanHistory } from './state-clean'
 import { PROTECTION_BASELINE_OF_EARLIER_PROFILES, PROTECTION_OF_EARLIER_PROFILES } from './model-defaults'
 import { cleanTheme, defaultTheme, themeFromHue } from './theme'
 import { zoomHostOf } from './site-zoom'
+import { PRIVATE_IDLE_CHOICES } from './private-lock'
 import { PANEL_PERCENT_MAX, PANEL_PERCENT_MIN, PANEL_SCREENS_MAX, screenKey } from './panel-scale'
 import { isSpaceImageName } from './space-image'
 import { cleanIconColor, cleanIconLetter, isSpaceIconKind } from './space-icon'
@@ -358,6 +359,7 @@ function rich(): SidebarState {
     lockApp: true,
     lockedSpaces: ['sp-work'],
     lockTouchId: false,
+    lockPrivateIdle: 15,
     reopenHistory: true,
     interfaceTranslated: true,
     language: 'en',
@@ -656,6 +658,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   lockApp: bool,
   lockedSpaces: (v) => Array.isArray(v) && v.length <= 200 && unique(v) && v.every((id) => typeof id === 'string' && id !== '' && id !== '__proto__'),
   lockTouchId: bool,
+  lockPrivateIdle: (v) => (PRIVATE_IDLE_CHOICES as readonly unknown[]).includes(v),
   reopenHistory: bool,
   extensionOverflow: bool,
   unpinnedExtensions: (v) => Array.isArray(v) && v.length <= 200 && unique(v) && v.every((id) => typeof id === 'string' && /^[a-p]{32}$/.test(id)),

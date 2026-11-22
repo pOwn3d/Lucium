@@ -202,6 +202,24 @@ export class LockService {
     const { target } = request
     const guarded = target.scope === 'app' ? this.appLocked : this.isSpaceLocked(target.spaceId)
     if (!guarded) return { ok: true }
+    const checked = await this.authenticate(request)
+    if (!checked.ok) return checked
+    if (target.scope === 'app') this.appLocked = false
+    else this.unlocked.add(target.spaceId)
+    this.emit()
+    return { ok: true }
+  }
+
+  /**
+   * Checks the phrase of a request (or Touch ID when it carries none) and opens nothing: for a window that holds a lock of its own, a private window left alone
+   * (shared/private-lock.ts), which opens itself when this says yes. The same tries, the same waits and the same Touch ID as the application's lock.
+   */
+  async confirm(request: UnlockRequest): Promise<LockReply> {
+    if (!this.isActive()) return { ok: false, message: t('lock-service.le-verrou-n-est-pas-active') }
+    return this.authenticate(request)
+  }
+
+  private async authenticate(request: UnlockRequest): Promise<LockReply> {
     if (request.phrase === undefined) {
       const settings = this.deps.settings()
       if (!settings.lockTouchId || !this.touchId.available()) return { ok: false, message: t('lock-service.touch-id-n-est-pas-disponible-saisissez-la-phrase') }
@@ -212,14 +230,9 @@ export class LockService {
         console.error('[lock] Touch ID did not unlock:', (error as Error).message ?? error)
         return { ok: false, message: t('lock-service.touch-id-n-a-pas-abouti-saisissez-la-phrase') }
       }
-    } else {
-      const checked = await this.tryPhrase(request.phrase)
-      if (!checked.ok) return checked
+      return { ok: true }
     }
-    if (target.scope === 'app') this.appLocked = false
-    else this.unlocked.add(target.spaceId)
-    this.emit()
-    return { ok: true }
+    return this.tryPhrase(request.phrase)
   }
 
   /**
@@ -263,6 +276,12 @@ export class LockService {
         return { ok: true }
       case 'touch-id':
         this.deps.update({ lockTouchId: config.value })
+        this.emit()
+        return { ok: true }
+      case 'private-idle':
+        // More under the lock is free, as for the application lock: a delay needs a phrase to open the window with, and « never » is always allowed.
+        if (config.minutes > 0 && !this.isActive()) return { ok: false, message: t('lock-service.choisissez-d-abord-une-phrase') }
+        this.deps.update({ lockPrivateIdle: config.minutes })
         this.emit()
         return { ok: true }
       case 'space': {

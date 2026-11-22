@@ -356,6 +356,10 @@ export abstract class ElectronEngineBase {
   protected readonly lastActivated = new Map<string, number>()
   /** When the user last clicked or pressed a key anywhere in the application: what lets an extension put a sign-in window in front of them. */
   protected lastUserInput = 0
+
+  lastUserInputAt(): number {
+    return this.lastUserInput
+  }
   protected readonly contextGoneListeners: Array<(gone: { context?: string; extensionId?: string; profileId?: string }) => void> = []
   protected readonly watchedFrames = new WeakSet<WebContents>()
   protected heldWorkers = 0

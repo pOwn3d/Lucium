@@ -38,7 +38,7 @@ export const SUBPAGES: readonly SettingsSubpageDef[] = [
   { id: 'exceptions', pane: 'protection', title: 'settings.sub-exceptions', intro: 'settings.sub-exceptions-intro', keys: ['blockExceptions', 'popupExceptions', 'fingerprintExceptions', 'thirdPartyCookieExceptions'], at: 'page' },
   { id: 'clearonclose', pane: 'protection', title: 'settings.sub-clearonclose', intro: 'settings.sub-clearonclose-intro', keys: ['siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit'], at: 'page' },
   { id: 'permissions', pane: 'protection', title: 'settings.sub-permissions', intro: 'settings.sub-permissions-intro', keys: ['siteAutoplay'], at: 'page' },
-  { id: 'lockoptions', pane: 'protection', title: 'settings.sub-lockoptions', intro: 'settings.sub-lockoptions-intro', keys: ['lockApp', 'lockTouchId', 'lockedSpaces'], at: 'page' },
+  { id: 'lockoptions', pane: 'protection', title: 'settings.sub-lockoptions', intro: 'settings.sub-lockoptions-intro', keys: ['lockApp', 'lockTouchId', 'lockPrivateIdle', 'lockedSpaces'], at: 'page' },
   { id: 'filterlists', pane: 'protection', title: 'feature.listes-de-filtres', intro: 'settings.sub-filterlists-intro', keys: ['disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists'], at: 'page' },
   { id: 'network', pane: 'protection', title: 'settings.sub-network', intro: 'settings.sub-network-intro', keys: ['dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'], at: 'page' },
   { id: 'extensionfolders', pane: 'tools', title: 'settings.sub-extensionfolders', intro: 'settings.sub-extensionfolders-intro', keys: ['extensionPaths'], at: 'page' },

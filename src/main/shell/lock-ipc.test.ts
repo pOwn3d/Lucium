@@ -13,18 +13,19 @@ import { registerLockIpc } from './lock-ipc'
 type Handler = (event: { sender: object }, raw: unknown) => Promise<LockReply>
 
 /** The lock's channels of one window: the guard answers `trusted`, the window is private or not. */
-function windowLock(options: { trusted?: boolean; private?: boolean } = {}) {
+function windowLock(options: { trusted?: boolean; private?: boolean; windowLocked?: boolean } = {}) {
   const handlers = new Map<string, Handler>()
   const ipc: ScopedIpc = { on: () => undefined, handle: (channel, listener) => void handlers.set(channel, listener as unknown as Handler) }
   const guard = vi.fn(() => options.trusted ?? true)
-  registerLockIpc(ipc, guard, { isPrivate: () => options.private === true } as never)
+  const unlockWindow = vi.fn()
+  registerLockIpc(ipc, guard, { isPrivate: () => options.private === true, isWindowLocked: () => options.windowLocked === true, unlockWindow } as never)
   const sender = {}
-  return { guard, sender, ask: (channel: string, raw: unknown) => handlers.get(channel)!({ sender }, raw) }
+  return { guard, sender, unlockWindow, ask: (channel: string, raw: unknown) => handlers.get(channel)!({ sender }, raw) }
 }
 
 /** A lock service that takes everything it is asked, and keeps it. */
 function service() {
-  const lock = { unlock: vi.fn(async () => ({ ok: true }) as LockReply), configure: vi.fn(async () => ({ ok: true }) as LockReply) }
+  const lock = { unlock: vi.fn(async () => ({ ok: true }) as LockReply), confirm: vi.fn(async () => ({ ok: true }) as LockReply), configure: vi.fn(async () => ({ ok: true }) as LockReply), isAppLocked: vi.fn(() => false) }
   setLockService(lock as never)
   return lock
 }
@@ -98,3 +99,50 @@ describe('unlocking (lock-unlock)', () => {
     expect(lock.unlock).not.toHaveBeenCalled()
   })
 })
+
+// A private window left alone holds a lock of its own (shared/private-lock.ts): its lock screen asks for the application's target, the phrase is checked as the application's is
+// (`confirm`, which opens nothing), and only that window opens.
+describe('unlocking a private window left alone (lock-unlock)', () => {
+  const request = { target: { scope: 'app' }, phrase: 'the phrase' }
+
+  it('checks the phrase, opens this window, and leaves the application\'s lock out of it', async () => {
+    const lock = service()
+    const window = windowLock({ private: true, windowLocked: true })
+    expect(await window.ask(Channel.lockUnlock, request)).toEqual({ ok: true })
+    expect(lock.confirm).toHaveBeenCalledWith(request)
+    expect(window.unlockWindow).toHaveBeenCalledTimes(1)
+    expect(lock.unlock).not.toHaveBeenCalled()
+  })
+
+  it('keeps the window locked when the phrase is wrong, and passes the answer on (the waits and tries are the service\'s)', async () => {
+    const lock = service()
+    const wrong: LockReply = { ok: false, message: 'Phrase incorrecte', retryInMs: 1000 }
+    lock.confirm.mockResolvedValueOnce(wrong)
+    const window = windowLock({ private: true, windowLocked: true })
+    expect(await window.ask(Channel.lockUnlock, request)).toEqual(wrong)
+    expect(window.unlockWindow).not.toHaveBeenCalled()
+  })
+
+  it('opens the window with the application when both are locked: one phrase, the application\'s own unlocking', async () => {
+    const lock = service()
+    lock.isAppLocked.mockReturnValue(true)
+    const window = windowLock({ private: true, windowLocked: true })
+    expect(await window.ask(Channel.lockUnlock, request)).toEqual({ ok: true })
+    expect(lock.unlock).toHaveBeenCalledWith(request)
+    expect(lock.confirm).not.toHaveBeenCalled()
+    expect(window.unlockWindow).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not open the window for a space\'s unlocking, and a window that is not locked is unlocked as it always was', async () => {
+    const lock = service()
+    const locked = windowLock({ private: true, windowLocked: true })
+    await locked.ask(Channel.lockUnlock, { target: { scope: 'space', spaceId: 's1' }, phrase: 'the phrase' })
+    expect(locked.unlockWindow).not.toHaveBeenCalled()
+    expect(lock.unlock).toHaveBeenCalledTimes(1)
+    const open = windowLock({ private: true })
+    await open.ask(Channel.lockUnlock, request)
+    expect(open.unlockWindow).not.toHaveBeenCalled()
+    expect(lock.confirm).not.toHaveBeenCalled()
+  })
+})
+

@@ -7,6 +7,7 @@ import { activeTab, splitFor } from '@shared/sidebar'
 import { commandPane } from '@shared/split'
 import { themeHue } from '@shared/theme'
 import { canOpenWhileLocked } from '@shared/lock'
+import type { PrivateWindowLock } from './private-lock'
 import type { Bounds, Page } from '../engine/types'
 import { getLockService } from '../lock-service'
 import { notifyOwnWindowShare } from './page-annotate'
@@ -104,14 +105,38 @@ export abstract class BrowserAnnotation extends BrowserDownloads {
     return splitFor(state, active.id)?.tabIds ?? [active.id]
   }
 
-  /** Whether the lock keeps this tab's page from existing: its space is locked, or the whole application is. */
+  /** The lock of this window alone (a private window left alone, shell/private-lock.ts); none for a window that has no such lock. */
+  private privateLock: PrivateWindowLock | null = null
+
+  setPrivateLock(lock: PrivateWindowLock | null): void {
+    this.privateLock = lock
+  }
+
+  /** Whether this window is covered by its own lock (a private window left alone for the delay of the setting), whatever the lock of the application says. */
+  isWindowLocked(): boolean {
+    return this.privateLock?.isLocked() === true
+  }
+
+  /** The phrase (or Touch ID) was right for this window: it opens, and the delay starts again. */
+  unlockWindow(): void {
+    this.privateLock?.unlock()
+  }
+
+  /** The lock of this window changed (it locked, or opened): the pages go (or come back) as they do for the application's lock, and the window shows the lock screen. */
+  windowLockChanged(): void {
+    this.onLockChange()
+  }
+
+  /** Whether the lock keeps this tab's page from existing: its space is locked, or the whole application is, or this window is. */
   isTabLocked(tab: Pick<TabItem, 'spaceId'>): boolean {
     const lock = getLockService()
-    return lock !== null && (lock.isAppLocked() || lock.isSpaceLocked(tab.spaceId))
+    return this.isWindowLocked() || (lock !== null && (lock.isAppLocked() || lock.isSpaceLocked(tab.spaceId)))
   }
 
   /** The lock changed: the pages of what is locked are dropped (the tabs reload when they are unlocked and shown), and what the window shows follows. */
   protected onLockChange(): void {
+    // The delay of this window follows the lock and the setting (it lets go of its timer, and a window whose lock was removed opens).
+    this.privateLock?.follow()
     // A capture of the sound of a tab the lock now hides ends, and the sound comes back (the page itself goes below).
     this.engine.reconsiderTabCaptures()
     const state = this.store.get()
@@ -123,7 +148,7 @@ export abstract class BrowserAnnotation extends BrowserDownloads {
     if (this.webPanel && this.isTabLocked({ spaceId: this.webPanel.spaceId })) this.destroyWebPanel()
     this.thumbnailSource?.forgetLocked()
     const lock = getLockService()
-    if (lock?.isAppLocked()) {
+    if (lock?.isAppLocked() || this.isWindowLocked()) {
       // Whatever is open over the window goes with the pages: a preview, a side panel, a panel with a page's name in it.
       this.closeOverlay()
       this.destroyPeek()

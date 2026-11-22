@@ -16,6 +16,7 @@ import { parseDropTarget } from '@shared/dnd'
 import { DRAG_TTL_MS, tabsToDrag } from '@shared/tab-drag'
 import { MAIN_WINDOW_KEY, tabsOfEverySpace } from '@shared/window-tabs'
 import { redactForLock, redactSnapshotForLock, runtimeOfTabs } from '@shared/lock'
+import { lockedWindowView } from '@shared/private-lock'
 import { isBlockingExempt } from '@shared/blocker'
 import { extensionTabPage } from '@shared/chrome-pages'
 import { rememberedDecision } from '@shared/permissions'
@@ -446,7 +447,8 @@ export class Browser extends BrowserLayout {
   }
 
   snapshot(): UiSnapshot {
-    const lock = getLockService()?.view()
+    // A private window that holds its own lock is shown the lock screen of the application (shared/private-lock.ts): its state is redacted like the application's.
+    const lock = this.isWindowLocked() ? lockedWindowView(getLockService()?.view()) : getLockService()?.view()
     const raw = this.store.get()
     // What the lock hides is not in the state the interface is given (see redactForLock); the state itself is untouched.
     const state = lock ? redactForLock(raw, lock) : raw

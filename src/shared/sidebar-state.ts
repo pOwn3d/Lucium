@@ -28,6 +28,7 @@ import { cleanDohSettings } from './dns'
 import { cleanProxySetting } from './proxy'
 import { cleanKeepHosts } from './cookies'
 import { cleanBackupSettings } from './backup-settings'
+import { cleanPrivateIdle } from './private-lock'
 import { cleanLockedSpaces } from './lock'
 import { cleanExtensionBarSettings } from './extension-overflow'
 import { cleanWebToolsSettings } from './web-tools'
@@ -408,6 +409,7 @@ export function clampSettings(input: Settings): Settings {
     customFilterLists: cleanCustomFilterLists(settings.customFilterLists),
     ...cleanBackupSettings(settings),
     lockedSpaces: cleanLockedSpaces(settings.lockedSpaces),
+    lockPrivateIdle: cleanPrivateIdle(settings.lockPrivateIdle),
     interfaceTranslated: settings.interfaceTranslated === true,
     language: cleanLanguageSetting(settings.language),
     ...cleanTranslateSettings(settings),

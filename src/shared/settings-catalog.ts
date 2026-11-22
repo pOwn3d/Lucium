@@ -104,7 +104,7 @@ export const SETTINGS_KEYS = {
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
     'historyOff', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
-    'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager',
+    'lockEnabled', 'lockApp', 'lockTouchId', 'lockPrivateIdle', 'lockedSpaces', 'passwordManager',
     'disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists', 'dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'
   ],
   // Téléchargements et lecture · Ouverture des fichiers · Signets (the export) · Icônes des sites · Copies automatiques · Export
@@ -303,7 +303,8 @@ export const KEPT_ON_RESET = {
   lockEnabled: 'the lock changes through its own handler, after the passphrase',
   lockApp: 'the lock changes through its own handler, after the passphrase',
   lockedSpaces: 'the lock changes through its own handler, after the passphrase',
-  lockTouchId: 'the lock changes through its own handler, after the passphrase'
+  lockTouchId: 'the lock changes through its own handler, after the passphrase',
+  lockPrivateIdle: 'the lock changes through its own handler, after the passphrase'
 } as const satisfies Partial<Record<SettingKey, string>>
 
 const KEPT: ReadonlySet<string> = new Set(Object.keys(KEPT_ON_RESET))
