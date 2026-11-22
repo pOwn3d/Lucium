@@ -1,19 +1,21 @@
-// A set of host names kept as short hashes, the way the lists of Safe browsing travel in the application: sorted, 6 bytes a host, looked up by
-// binary search. 392,000 phishing hosts are 2.4 MB instead of 11 MB of text, and nothing is parsed or allocated per host when the set is read.
-// A host is a 48-bit hash: two different hosts meet with a chance of about 1 in 10^9 for a list of that size, and a meeting only means that a warning
-// page (with « Continue anyway ») shows for a harmless site. No import here: scripts/build-safe-browsing.mjs reads this file with Node directly.
+// A set of host names kept as short hashes, the way the lists of Safe browsing travel in the application: sorted, 8 bytes a host, looked up by
+// binary search. 392,000 phishing hosts are 3.1 MB instead of 11 MB of text, and nothing is parsed or allocated per host when the set is read.
+// A host is a 64-bit hash: two different hosts meet with a chance of about 1 in 10^13 for a list of that size, and a meeting only means that a warning
+// page (with « Continue anyway ») shows for a harmless site. The hash is not cryptographic: someone who got a host listed whose hash equals the one of a
+// target site would make the warning show there, which takes about 2^64 tries and costs a click. No import here: scripts/build-safe-browsing.mjs reads
+// this file with Node directly.
 
-/** The first bytes of a packed set: « Lucium Safe Browsing », version 1. */
-const MAGIC = [0x4c, 0x53, 0x42, 0x31] as const
+/** The first bytes of a packed set: « Lucium Safe Browsing », version 2 (8 bytes a host). */
+const MAGIC = [0x4c, 0x53, 0x42, 0x32] as const
 const HEADER_BYTES = 8
-const ENTRY_BYTES = 6
+const ENTRY_BYTES = 8
 /** A host name is at most 253 characters; a longer line is not one. */
 const HOST_MAX_CHARS = 253
 
-/** The most the packed lists may weigh together, in bytes: they travel in every download of the application. 4 MB is 1.7 times today's snapshot (2.36 MB). */
+/** The most the packed lists may weigh together, in bytes: they travel in every download of the application. 4 MB is 1.27 times today's snapshot (3.15 MB). */
 export const SNAPSHOT_MAX_BYTES = 4_000_000
 
-/** Two 32-bit halves of the 48-bit hash of a host (cyrb53-style mixing: fast, spreads well, and nothing a list could be crafted against). */
+/** Two 32-bit halves of the 64-bit hash of a host (cyrb53-style mixing: fast and spreads well; not cryptographic, see the head of the file). */
 export function hashHost(host: string): { hi: number; lo: number } {
   let h1 = 0xdeadbeef
   let h2 = 0x41c6ce57
@@ -24,7 +26,28 @@ export function hashHost(host: string): { hi: number; lo: number } {
   }
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909)
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909)
-  return { hi: (h2 >>> 0) & 0xffff, lo: h1 >>> 0 }
+  return { hi: h2 >>> 0, lo: h1 >>> 0 }
+}
+
+/**
+ * Hosts that serve pages of anyone (link shorteners, paste sites, storage, page builders, IPFS gateways): the public lists name them because a phishing page
+ * lives there, but warning on the whole host would call every legitimate page of it « deceptive ». They are left out of the snapshot, and the build refuses
+ * to write one that still holds one of them. A page there is judged by nobody: the list names hosts, not addresses.
+ */
+export const SHARED_HOSTS: readonly string[] = [
+  'sites.google.com', 'docs.google.com', 'drive.google.com', 'forms.gle', 'storage.googleapis.com', 'storage.cloud.google.com', 'firebasestorage.googleapis.com',
+  'bit.ly', 'tinyurl.com', 'is.gd', 'cutt.ly', 'rebrand.ly', 't.co', 'goo.gl', 'ow.ly', 'shorturl.at', 't.ly', 'rb.gy', 'tiny.cc',
+  'pastebin.com', 'telegra.ph', 'bio.link', 'linktr.ee', 'notion.site', 'github.io', 'github.com', 'raw.githubusercontent.com', 'gitlab.io', 'medium.com',
+  'dweb.link', 'ipfs.io', 'cloudflare-ipfs.com', 'gateway.pinata.cloud', 'nftstorage.link', 'w3s.link',
+  'dropbox.com', 'onedrive.live.com', '1drv.ms', 'sharepoint.com', 'mega.nz', 'wetransfer.com', 'we.tl', 'canva.com', 'typeform.com', 'trello.com',
+  'weebly.com', 'wixsite.com', 'wordpress.com', 'blogspot.com', 'netlify.app', 'pages.dev', 'vercel.app', 'web.app', 'firebaseapp.com', 'herokuapp.com',
+  'workers.dev', 'glitch.me', 'azurewebsites.net', 'cloudfront.net', 's3.amazonaws.com', 'youtube.com', 'youtu.be', 'google.com'
+]
+
+/** The hosts without the shared ones: the list the snapshot is packed from. */
+export function withoutSharedHosts(hosts: readonly string[]): string[] {
+  const shared = new Set(SHARED_HOSTS)
+  return hosts.filter((host) => !shared.has(host))
 }
 
 const DOMAIN = /^(?=.{1,253}$)(?:[a-z0-9_](?:[a-z0-9_-]{0,61}[a-z0-9_])?\.)+[a-z0-9-]{2,63}$/
@@ -69,8 +92,8 @@ export function packHosts(hosts: Iterable<string>): Uint8Array {
   view.setUint32(4, unique.length)
   unique.forEach((e, i) => {
     const at = HEADER_BYTES + i * ENTRY_BYTES
-    view.setUint16(at, e.hi)
-    view.setUint32(at + 2, e.lo)
+    view.setUint32(at, e.hi)
+    view.setUint32(at + 4, e.lo)
   })
   return bytes
 }
@@ -93,14 +116,14 @@ export class SafeSet {
     const size = view.getUint32(4)
     if (bytes.length !== HEADER_BYTES + size * ENTRY_BYTES) return null
     const set = new SafeSet(view, size)
-    for (let i = 1; i < size; i++) if (set.compare(i - 1, view.getUint16(HEADER_BYTES + i * ENTRY_BYTES), view.getUint32(HEADER_BYTES + i * ENTRY_BYTES + 2)) >= 0) return null
+    for (let i = 1; i < size; i++) if (set.compare(i - 1, view.getUint32(HEADER_BYTES + i * ENTRY_BYTES), view.getUint32(HEADER_BYTES + i * ENTRY_BYTES + 4)) >= 0) return null
     return set
   }
 
   /** Whether the entry at `index` is below (negative), equal to or above (positive) the hash. */
   private compare(index: number, hi: number, lo: number): number {
     const at = HEADER_BYTES + index * ENTRY_BYTES
-    return this.view.getUint16(at) - hi || this.view.getUint32(at + 2) - lo
+    return this.view.getUint32(at) - hi || this.view.getUint32(at + 4) - lo
   }
 
   has(host: string): boolean {

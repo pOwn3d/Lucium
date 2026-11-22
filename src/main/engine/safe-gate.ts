@@ -9,6 +9,8 @@ export interface SafeGate {
   verdict(url: string): SafeVerdict | null
   /** « Continuer quand même » on the warning page: the host of this address opens for the rest of this run. */
   allow(url: string): void
+  /** « Ne plus prévenir pour ce site » on the warning page: the host of this address joins the lasting exceptions of the settings. */
+  except(url: string): void
 }
 
 let current: SafeGate | null = null

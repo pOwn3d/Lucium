@@ -277,6 +277,10 @@ export class PageErrors {
       // The way through: this host opens for the rest of this run, then the address that was refused is asked for again.
       safeGate.get()?.allow(shown.url)
       this.host.reload()
+    } else if (action === 'unsafe-except' && shown.kind === 'unsafe') {
+      // The lasting way through: the host joins the exceptions of the settings, then the address that was refused is asked for again.
+      safeGate.get()?.except(shown.url)
+      this.host.reload()
     } else if (action === 'retry' && shown.kind !== 'crash') {
       this.host.reload()
     } else if (action === 'back' && (shown.kind === 'certificate' || shown.kind === 'status' || shown.kind === 'focus' || shown.kind === 'unsafe')) {

@@ -13,6 +13,7 @@ const { PageErrors } = await import('./error-pages')
 
 const BLOCKED = -20
 const allow = vi.fn()
+const except = vi.fn()
 
 function page() {
   const wc = new FakeContents()
@@ -25,7 +26,8 @@ const written = (wc: FakeContents): string => wc.scripts.at(-1) ?? ''
 beforeEach(() => {
   FakeCover.made = []
   allow.mockClear()
-  safeGate.set({ verdict: (url) => (new URL(url).hostname === 'phish.example' ? { category: 'phishing', host: 'phish.example' } : null), allow })
+  except.mockClear()
+  safeGate.set({ verdict: (url) => (new URL(url).hostname === 'phish.example' ? { category: 'phishing', host: 'phish.example' } : null), allow, except })
 })
 afterEach(() => safeGate.set(null))
 
@@ -62,11 +64,22 @@ describe('the warning page of safe browsing', () => {
     expect(host.reload).toHaveBeenCalledTimes(1)
   })
 
-  it('ignores the button of a page that is not the warning', () => {
+  it('adds the site to the lasting exceptions and reloads when « Ne plus prévenir pour ce site » is clicked, and lets nothing through for the run', () => {
+    const { wc, host } = page()
+    wc.fail('https://phish.example/login', BLOCKED, 'ERR_BLOCKED_BY_CLIENT')
+    wc.click('unsafe-except')
+    expect(except).toHaveBeenCalledWith('https://phish.example/login')
+    expect(allow).not.toHaveBeenCalled()
+    expect(host.reload).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores the buttons of a page that is not the warning', () => {
     const { wc, host } = page()
     wc.fail('https://absent.example/', -105, 'ERR_NAME_NOT_RESOLVED')
     wc.click('unsafe-continue')
+    wc.click('unsafe-except')
     expect(allow).not.toHaveBeenCalled()
+    expect(except).not.toHaveBeenCalled()
     expect(host.reload).not.toHaveBeenCalled()
   })
 })

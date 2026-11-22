@@ -14,15 +14,15 @@ import { SettingsView } from './SettingsWindow'
 let mounted: Mounted | null = null
 let dispatch: ReturnType<typeof vi.fn<(action: Action) => Promise<void>>>
 
-const snapshotWith = (patch: Partial<Settings>): UiSnapshot => {
+const snapshotWith = (patch: Partial<Settings>, extra: Partial<UiSnapshot> = {}): UiSnapshot => {
   const state = createInitialState({ now: 1, newId: () => 'id' })
-  return { state: { ...state, settings: { ...state.settings, ...patch } }, extensions: [], downloads: [], runtime: { tabs: {} }, platform: 'darwin' } as unknown as UiSnapshot
+  return { state: { ...state, settings: { ...state.settings, ...patch } }, extensions: [], downloads: [], runtime: { tabs: {} }, platform: 'darwin', ...extra } as unknown as UiSnapshot
 }
 
-async function open(hash: string, patch: Partial<Settings>): Promise<HTMLElement> {
+async function open(hash: string, patch: Partial<Settings>, extra: Partial<UiSnapshot> = {}): Promise<HTMLElement> {
   location.hash = hash
   await new Promise((resolve) => setTimeout(resolve, 0))
-  mounted = mount(createElement(SettingsView, { snapshot: snapshotWith(patch), initialQuery: '' }))
+  mounted = mount(createElement(SettingsView, { snapshot: snapshotWith(patch, extra), initialQuery: '' }))
   return mounted.container
 }
 const patches = (): unknown[] => dispatch.mock.calls.map(([action]) => (action as { patch?: unknown }).patch)
@@ -48,6 +48,23 @@ describe('the switch of safe browsing', () => {
     expect((box as HTMLInputElement).checked ?? box.getAttribute('aria-checked') === 'true').toBe(false)
     await click(box)
     expect(patches()).toContainEqual({ safeBrowsing: true })
+  })
+})
+
+describe('the lists of safe browsing missing or unreadable', () => {
+  it('says « List unavailable » (a status) while the switch is on and the lists are not there, and nothing otherwise', async () => {
+    const window = await open('#protection', { safeBrowsing: true }, { safeLists: 'unavailable' })
+    const status = [...window.querySelectorAll('[role="status"]')].find((node) => node.textContent?.includes('List unavailable'))
+    expect(status).toBeDefined()
+  })
+
+  it('says nothing when the lists are read, when the switch is off, and when nothing is known', async () => {
+    for (const [patch, extra] of [[{ safeBrowsing: true }, { safeLists: 'ready' }], [{ safeBrowsing: false }, { safeLists: 'unavailable' }], [{ safeBrowsing: true }, {}]] as const) {
+      const window = await open('#protection', patch, extra as Partial<UiSnapshot>)
+      expect(window.textContent).not.toContain('List unavailable')
+      mounted?.unmount()
+      mounted = null
+    }
   })
 })
 

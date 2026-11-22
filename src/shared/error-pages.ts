@@ -10,9 +10,9 @@ import { formatClock } from './focus-mode'
 import type { SafeCategory } from './safe-browsing'
 
 export const ERROR_SCHEME = 'lucium-error:'
-export type ErrorAction = 'retry' | 'proceed' | 'http' | 'back' | 'reload' | 'wait' | 'network-settings' | 'home' | 'copy-address' | 'open-mini-window' | 'toggle-blocker' | 'end-focus' | 'unsafe-continue'
+export type ErrorAction = 'retry' | 'proceed' | 'http' | 'back' | 'reload' | 'wait' | 'network-settings' | 'home' | 'copy-address' | 'open-mini-window' | 'toggle-blocker' | 'end-focus' | 'unsafe-continue' | 'unsafe-except'
 
-const ACTIONS: readonly ErrorAction[] = ['retry', 'proceed', 'http', 'back', 'reload', 'wait', 'network-settings', 'home', 'copy-address', 'open-mini-window', 'toggle-blocker', 'end-focus', 'unsafe-continue']
+const ACTIONS: readonly ErrorAction[] = ['retry', 'proceed', 'http', 'back', 'reload', 'wait', 'network-settings', 'home', 'copy-address', 'open-mini-window', 'toggle-blocker', 'end-focus', 'unsafe-continue', 'unsafe-except']
 
 /** The address of a button. `nonce` is drawn for each page shown and only that page contains it: a site cannot forge a click on it. */
 export function errorActionUrl(action: ErrorAction, nonce: string): string {
@@ -503,7 +503,7 @@ export function renderErrorPage(model: ErrorPageModel): ErrorPage {
         icon: glyph('<path d="M12 3 4.5 6v6c0 4.5 3.2 7.6 7.5 9 4.3-1.4 7.5-4.5 7.5-9V6z"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.6"/>'),
         title: model.category === 'phishing' ? t('errpage.unsafe-phishing-title') : t('errpage.unsafe-malware-title'),
         content: `<p class="addr">${escapeHtml(model.url)}</p><p>${text}</p><p>${escapeHtml(t('errpage.unsafe-local'))}</p>`,
-        actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : ''}${button('unsafe-continue', model.nonce, t('errpage.unsafe-continue'), 'proceed')}`
+        actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : ''}${button('unsafe-continue', model.nonce, t('errpage.unsafe-continue'), 'proceed')}${button('unsafe-except', model.nonce, t('errpage.unsafe-except'), 'quiet')}`
       })
     )
   }

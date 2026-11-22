@@ -12,6 +12,15 @@ describe('the warning page of safe browsing', () => {
     expect(page.body).toContain('nothing was sent')
     expect(page.body).toContain('lucium-error:back?n=abc-1')
     expect(page.body).toContain('lucium-error:unsafe-continue?n=abc-1')
+    expect(page.body).toContain('lucium-error:unsafe-except?n=abc-1')
+    expect(page.body).toContain('Stop warning for this site')
+  })
+
+  it('escapes the host where the text names it', () => {
+    setLanguage('en')
+    const page = renderErrorPage({ ...unsafe, url: 'https://a&b.example/' })
+    expect(page.body).toContain('<strong>a&amp;b.example</strong>')
+    expect(page.body).not.toContain('<strong>a&b')
   })
 
   it('says malware for the other list, and has no way back when there is no page to go back to', () => {
@@ -30,5 +39,6 @@ describe('the warning page of safe browsing', () => {
 
   it('knows the button as an action', () => {
     expect(parseErrorAction('lucium-error:unsafe-continue?n=abc')).toEqual({ action: 'unsafe-continue', nonce: 'abc' })
+    expect(parseErrorAction('lucium-error:unsafe-except?n=abc')).toEqual({ action: 'unsafe-except', nonce: 'abc' })
   })
 })

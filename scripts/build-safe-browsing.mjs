@@ -6,7 +6,8 @@
 //   node scripts/build-safe-browsing.mjs --out DIR                            writes elsewhere
 //
 // A step of the maintainer's Mac before a release (docs/community/release-process.md), not something the application does: the application downloads
-// nothing for this feature. The fetch is a plain GET with nothing sent. Nothing is written unless both lists were read and are not empty.
+// nothing for this feature. The fetch is a plain GET with nothing sent. Nothing is written unless both lists were read and are not empty, none of the shared
+// hosts of SHARED_HOSTS (shared/safe-set.ts) is left in, and the size of each list is within 20 % of the snapshot being replaced (`--force` to go past it).
 import { createHash } from 'node:crypto'
 import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -16,7 +17,7 @@ process.removeAllListeners('warning')
 process.on('warning', (warning) => {
   if (/** @type {NodeJS.ErrnoException} */ (warning).code !== 'MODULE_TYPELESS_PACKAGE_JSON' && warning.name !== 'ExperimentalWarning') console.error(`${warning.name}: ${warning.message}`)
 })
-const { hostsOfList, packHosts, SafeSet, SNAPSHOT_MAX_BYTES } = await import('../src/shared/safe-set.ts')
+const { hostsOfList, packHosts, SafeSet, SHARED_HOSTS, SNAPSHOT_MAX_BYTES, withoutSharedHosts } = await import('../src/shared/safe-set.ts')
 
 /** The lists, with what the licence of each lets us do (docs/licences-tierces.md). */
 export const SOURCES = {
@@ -34,6 +35,12 @@ export const SOURCES = {
 /** Below this a download is a failure, not a list: the real ones are thousands of hosts. */
 const MIN_HOSTS = { phishing: 10_000, malware: 500 }
 
+/** A download longer than this, or slower than this, is not a list: the biggest one today is 11 MB. */
+const FETCH_MAX_BYTES = 40_000_000
+const FETCH_TIMEOUT_MS = 120_000
+/** A list that grew or shrank by more than this since the snapshot being replaced is looked at by a person before it ships. */
+const MAX_CHANGE = 0.2
+
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const args = process.argv.slice(2)
 const valueOf = (flag) => {
@@ -47,24 +54,40 @@ const fail = (message) => {
 }
 
 const out = resolve(valueOf('--out') ?? join(root, 'resources/safe-browsing'))
+const force = args.includes('--force')
+const previous = (() => {
+  try {
+    return JSON.parse(readFileSync(join(out, 'SOURCES.json'), 'utf8')).lists ?? {}
+  } catch {
+    return {}
+  }
+})()
 const packed = {}
 const facts = {}
 for (const kind of /** @type {const} */ (['phishing', 'malware'])) {
   const file = valueOf(`--${kind}`)
-  let text
-  if (file) text = readFileSync(file, 'utf8')
+  let source
+  if (file) source = readFileSync(file)
   else {
-    const response = await fetch(SOURCES[kind].url, { redirect: 'follow' })
+    const response = await fetch(SOURCES[kind].url, { redirect: 'follow', signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
     if (!response.ok) fail(`${SOURCES[kind].url} answered ${response.status}`)
-    text = await response.text()
+    if (Number(response.headers.get('content-length') ?? 0) > FETCH_MAX_BYTES) fail(`${SOURCES[kind].url} is larger than ${FETCH_MAX_BYTES} bytes: not read`)
+    source = Buffer.from(await response.arrayBuffer())
+    if (source.length > FETCH_MAX_BYTES) fail(`${SOURCES[kind].url} is larger than ${FETCH_MAX_BYTES} bytes: not read`)
   }
-  const { hosts, skipped } = hostsOfList(text)
+  const { hosts: listed, skipped } = hostsOfList(source.toString('utf8'))
+  const hosts = withoutSharedHosts(listed)
+  const removedShared = listed.length - hosts.length
   if (hosts.length < MIN_HOSTS[kind]) fail(`the ${kind} list has ${hosts.length} hosts, fewer than ${MIN_HOSTS[kind]}: not written`)
   const bytes = packHosts(hosts)
   const set = SafeSet.read(bytes)
   if (set === null || !hosts.every((host) => set.has(host))) throw new Error(`the packed ${kind} list does not read back`)
+  const left = SHARED_HOSTS.filter((host) => set.has(host))
+  if (left.length > 0) fail(`the packed ${kind} list still holds shared hosts (${left.join(', ')}): not written`)
+  const before = previous[kind]?.hosts
+  if (!force && typeof before === 'number' && Math.abs(set.size - before) > before * MAX_CHANGE) fail(`the ${kind} list went from ${before} to ${set.size} hosts, more than ${MAX_CHANGE * 100} %: read the source, then run again with --force`)
   packed[kind] = bytes
-  facts[kind] = { ...SOURCES[kind], hosts: set.size, skipped, sha256: createHash('sha256').update(bytes).digest('hex') }
+  facts[kind] = { ...SOURCES[kind], hosts: set.size, skipped, removedShared, sourceSha256: createHash('sha256').update(source).digest('hex'), sha256: createHash('sha256').update(bytes).digest('hex') }
 }
 
 const total = Object.values(packed).reduce((sum, bytes) => sum + bytes.length, 0)

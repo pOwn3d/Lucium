@@ -111,6 +111,11 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
         checked={settings.safeBrowsing}
         onChange={(safeBrowsing) => update({ safeBrowsing })}
       />
+      {settings.safeBrowsing && snapshot.safeLists === 'unavailable' && (
+        <div className="pref-row pref-message pref-error" role="status">
+          {t('privacy-settings.liste-indisponible')}
+        </div>
+      )}
     </Group>
 
     {/* The sites where the cookies of a third party are accepted: on the subpage of the other exceptions, drawn whether the option is on or not. */}

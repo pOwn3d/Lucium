@@ -148,6 +148,17 @@ describe('the third-party cookie cut of a guest window', () => {
   })
 })
 
+describe('the safe browsing of a guest window', () => {
+  it('follows the main window, and the sites the owner let through stay out', () => {
+    expect(GUEST_INHERITED).toContain('safeBrowsing')
+    const on = guestInherited({ ...owner.settings, safeBrowsing: true, safeBrowsingExceptions: ['owner-only.example'] })
+    expect(on.safeBrowsing).toBe(true)
+    expect(on).not.toHaveProperty('safeBrowsingExceptions')
+    expect(guestInherited({ ...owner.settings, safeBrowsing: false }).safeBrowsing).toBe(false)
+    expect(createGuestState({ ...owner, settings: { ...owner.settings, safeBrowsing: true } }, ctx).settings.safeBrowsing).toBe(true)
+  })
+})
+
 describe('the rules of a private window apply to a guest window', () => {
   const guest = createGuestState(owner, ctx)
 

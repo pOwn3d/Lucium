@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { packHosts } from '@shared/safe-set'
 
 vi.mock('electron', () => ({ app: { getAppPath: () => '/nowhere' } }))
-const { allowSafeHost, releaseSafeLists, safeAllowedHosts, safeLists, safeListsLoaded } = await import('./safe-lists')
+const { allowSafeHost, RETRY_AFTER_MS, releaseSafeLists, safeAllowedHosts, safeLists, safeListsLoaded, safeListsStatus } = await import('./safe-lists')
 
 function folder(files: Record<string, Uint8Array | string>): string {
   const dir = mkdtempSync(join(tmpdir(), 'safe-lists-'))
@@ -15,6 +15,7 @@ function folder(files: Record<string, Uint8Array | string>): string {
 
 afterEach(() => {
   releaseSafeLists()
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -36,6 +37,29 @@ describe('the lists on this machine', () => {
     expect(warn).toHaveBeenCalledTimes(2)
     expect(String(warn.mock.calls[0]![0])).toContain('phishing.bin')
     expect(String(warn.mock.calls[1]![0])).toContain('malware.bin')
+  })
+
+  it('says « unavailable » when a list is missing or damaged, and « ready » when both are read', () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    safeLists(folder({ 'phishing.bin': packHosts(['a.example']) }))
+    expect(safeListsStatus()).toBe('unavailable')
+    releaseSafeLists()
+    safeLists(folder({ 'phishing.bin': packHosts(['a.example']), 'malware.bin': packHosts(['b.example']) }))
+    expect(safeListsStatus()).toBe('ready')
+  })
+
+  it('does not keep a failure for the whole run: it reads again after a while, and finds a file put back', () => {
+    vi.useFakeTimers()
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const dir = folder({ 'phishing.bin': packHosts(['a.example']) })
+    expect(safeLists(dir).malware).toBeNull()
+    // Within the delay the answer is the one in memory (no read at each page).
+    writeFileSync(join(dir, 'malware.bin'), packHosts(['b.example']))
+    vi.advanceTimersByTime(RETRY_AFTER_MS - 1)
+    expect(safeLists(dir).malware).toBeNull()
+    vi.advanceTimersByTime(1)
+    expect(safeLists(dir).malware?.has('b.example')).toBe(true)
+    expect(safeListsStatus()).toBe('ready')
   })
 
   it('lets go of the lists and of the hosts let through when the feature goes off', () => {

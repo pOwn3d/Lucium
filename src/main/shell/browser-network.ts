@@ -7,7 +7,7 @@ import { adsBlockingOn, blockerIsOn } from '@shared/blocker'
 import { focusBlock, focusIsConfigured, pauseFocusPatch } from '@shared/focus-mode'
 import { focusGate } from '../engine/focus-gate'
 import { safeGate } from '../engine/safe-gate'
-import { safeVerdict, type SafeVerdict } from '@shared/safe-browsing'
+import { cleanSafeBrowsingExceptions, hostToCheck, safeVerdict, type SafeVerdict } from '@shared/safe-browsing'
 import { allowSafeHost, releaseSafeLists, safeAllowedHosts, safeLists } from '../safe-lists'
 import { anyPrivacy, privacyOptionsOf } from '@shared/privacy'
 import { planHostResolver } from '@shared/dns'
@@ -112,11 +112,21 @@ export abstract class BrowserNetwork extends BrowserPublish {
       releaseSafeLists()
       return
     }
+    // Read now, so that Settings can say at once whether a list is missing (and not at the first page).
+    safeLists()
     safeGate.set({
       verdict: (url) => safeVerdictOf(this.store.get().settings, url),
       allow: (url) => {
         const host = new URL(url).hostname.toLowerCase().replace(/\.$/, '')
         allowSafeHost(host)
+      },
+      except: (url) => {
+        const host = hostToCheck(url)
+        if (host === null) return
+        // A site a private window or tab is on is not written to the saved settings: it opens for this run only (as the exceptions of the blocker do).
+        if ([...this.group].some((b) => b.isPrivate() || b.store.get().tabs.some((tab) => tab.private === true && hostToCheck(tab.url) === host))) return allowSafeHost(host)
+        const exceptions = this.store.get().settings.safeBrowsingExceptions
+        if (!exceptions.includes(host)) this.dispatch({ type: 'settings/update', patch: { safeBrowsingExceptions: cleanSafeBrowsingExceptions([...exceptions, host]) } })
       }
     })
   }

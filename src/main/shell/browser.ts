@@ -52,6 +52,7 @@ import { t } from '@shared/i18n'
 import { ACTION_NOTICE_MS } from '@shared/toast'
 import { MAX_DOWNLOADS_KEPT, MEMORY_MAX, SLEEP_SWEEP_MS, type WindowMoves } from './browser-base'
 import { BrowserLayout } from './browser-layout'
+import { safeListsStatus } from '../safe-lists'
 
 export { NO_HISTORY, type BrowserOptions, type HistoryLog, type ProfileHistoryLog, type WindowMoves } from './browser-base'
 
@@ -488,6 +489,7 @@ export class Browser extends BrowserLayout {
       ...(this.floatVisible && this.floatPhase ? { floating: this.floatPhase } : {}),
       ...(this.overlayRequest?.panel === 'plus' ? { plusOpen: true } : {}),
       ...(this.isPrivate() ? { private: true, ...(this.options.guest === true ? { guest: true } : {}) } : { blocking: blockingService().status() }),
+      ...(this.isPrivate() || !state.settings.safeBrowsing ? {} : { safeLists: safeListsStatus() }),
       ...(lock ? { lock } : {}),
       ...this.foreignDragOfSnapshot(),
       // With windows of their own, the tabs of every window in each space (« Gérer les espaces »).
