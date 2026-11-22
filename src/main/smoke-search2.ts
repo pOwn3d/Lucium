@@ -545,7 +545,7 @@ export async function smokeSearch2(ctx: SmokeContext, check: Check): Promise<voi
     }
 
     await openFind()
-    check('find: with the setting off the bar has no ".*" button (it stays as Arc draws it)', (await centre('.fb-toggle')) === null)
+    check('find: with the setting off the bar has no ".*" button (it stays as Arc draws it)', (await centre('[data-find-toggle="regex"]')) === null)
     await typeText('\\d{4}')
     check('find: and a regular expression is only text for the ordinary search (the request is not honoured)', browser.snapshot().find?.regex === undefined && /^0\/0$/.test(await counter()), `${await counter()} ${JSON.stringify(browser.snapshot().find)}`)
     browser.findInPage('\\d{4}', { regex: true })
@@ -556,10 +556,10 @@ export async function smokeSearch2(ctx: SmokeContext, check: Check): Promise<voi
 
     patch({ findRegex: true })
     await openFind()
-    const toggle = await centre('.fb-toggle')
-    check('find: with the setting on the bar has a ".*" button, not pressed', !!toggle && (await evaluate<string>(ui, `document.querySelector('.fb-toggle').getAttribute('aria-pressed')`)) === 'false')
+    const toggle = await centre('[data-find-toggle="regex"]')
+    check('find: with the setting on the bar has a ".*" button, not pressed', !!toggle && (await evaluate<string>(ui, `document.querySelector('[data-find-toggle="regex"]').getAttribute('aria-pressed')`)) === 'false')
     if (toggle) await click(ui, toggle.x, toggle.y)
-    check('find: a click on it presses it', (await evaluate<string>(ui, `document.querySelector('.fb-toggle').getAttribute('aria-pressed')`)) === 'true')
+    check('find: a click on it presses it', (await evaluate<string>(ui, `document.querySelector('[data-find-toggle="regex"]').getAttribute('aria-pressed')`)) === 'true')
     await clearField()
     await typeText('\\d{4}')
     check('find: "\\d{4}" counts the two years of the page (hidden text, a script and a style are left out)', await waitFor(async () => (await counter()) === '1/2', 6000), await counter())
@@ -610,8 +610,8 @@ export async function smokeSearch2(ctx: SmokeContext, check: Check): Promise<voi
     const slowTab = await open('/slow', 'slow page')
     const slowWc = wcOf(slowTab)!
     await openFind()
-    const press = await centre('.fb-toggle')
-    if (press && (await evaluate<string>(ui, `document.querySelector('.fb-toggle').getAttribute('aria-pressed')`)) !== 'true') await click(ui, press.x, press.y)
+    const press = await centre('[data-find-toggle="regex"]')
+    if (press && (await evaluate<string>(ui, `document.querySelector('[data-find-toggle="regex"]').getAttribute('aria-pressed')`)) !== 'true') await click(ui, press.x, press.y)
     await typeText('(a+)+b')
     const started = Date.now()
     let slowest = 0
@@ -632,8 +632,8 @@ export async function smokeSearch2(ctx: SmokeContext, check: Check): Promise<voi
     // limits: more text than the search reads, more matches than it counts
     await open('/big', 'big')
     await openFind()
-    const press2 = await centre('.fb-toggle')
-    if (press2 && (await evaluate<string>(ui, `document.querySelector('.fb-toggle').getAttribute('aria-pressed')`)) !== 'true') await click(ui, press2.x, press2.y)
+    const press2 = await centre('[data-find-toggle="regex"]')
+    if (press2 && (await evaluate<string>(ui, `document.querySelector('[data-find-toggle="regex"]').getAttribute('aria-pressed')`)) !== 'true') await click(ui, press2.x, press2.y)
     await typeText('ipsum')
     check('find: past the limit the count stops and says so ("1/2000+")', await waitFor(async () => (await counter()) === `1/${REGEX_MATCH_MAX}+`, 20_000), await counter())
     await key('Escape')
