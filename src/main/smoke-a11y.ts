@@ -742,6 +742,8 @@ export async function smokeA11y(ctx: SmokeContext, check: Check): Promise<void> 
     await overlay('archive', { panel: 'archive' }, 'button, div')
     await overlay('history', { panel: 'history' }, 'input, button')
     await overlay('spaces', { panel: 'spaces' }, 'button')
+    // « Découvrir Lucium »: written with the panel and not run (AGENTS.md §1); its row of docs/accessibilite.md says so.
+    await overlay('discover', { panel: 'discover' }, 'input, button')
     await overlay('site control centre', { panel: 'site' }, '.scc-tile')
     await overlay('space editor', { panel: 'space', spaceId }, 'input, button')
     if (favoriteId) await overlay('favourite', { panel: 'favorite', favoriteId }, 'input')
