@@ -20,8 +20,8 @@ export interface EngineStorage {
   removeCookies(profileId: string, cookies: readonly CookieEntry[]): Promise<CookieRemoval>
   /** Empties the HTTP cache of a profile. */
   clearCache(profileId: string): Promise<void>
-  /** Erases cookies, storage and cache of a profile. */
-  clearProfileData(profileId: string): Promise<void>
+  /** Erases cookies, storage and cache of a profile, sparing the sites in `keepHosts` (their cookies and storage; « Tout effacer »). */
+  clearProfileData(profileId: string, keepHosts?: readonly string[]): Promise<void>
   /** Erases all a deleted profile holds, the storage and the Chrome Web Store extensions of its extensions included (see shared/profile-retire.ts). */
   deleteProfileData(profileId: string): Promise<void>
   /** At launch, before any page: removes the folders of the retired profiles whose session is not open. Answers the ids that could not be removed. */

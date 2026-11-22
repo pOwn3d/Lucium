@@ -27,6 +27,9 @@ export interface MenuActions {
   exportBookmarks: () => void
   loadExtension: () => void
   clearHistory: () => void
+  /** Archive › Tout effacer… and Nouvelle identité…: the question, then the erasure (clear-everything.ts). */
+  clearEverything: () => void
+  newIdentity: () => void
   setDefaultBrowser: () => void
   /** Whether Lucium already is the system's browser (the entry is greyed out then). */
   isDefaultBrowser: () => boolean

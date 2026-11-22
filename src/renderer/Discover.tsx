@@ -3,6 +3,7 @@ import {
   DISCOVER_LEVELS,
   DISCOVER_TASKS,
   TASK_LABELS,
+  demoOf,
   discoverKeys,
   discoverName,
   discoverOff,
@@ -20,6 +21,9 @@ import type { OverlayRequest } from '@shared/ipc'
 import { isLeaveKey } from '@shared/panel-keys'
 import { platformOf } from '@shared/platform'
 import { api, useSnapshot } from './api'
+import { DiscoverPath } from './DiscoverPath'
+import { DiscoverTip } from './DiscoverTip'
+import { DiscoverDemo } from './DiscoverDemo'
 import { SearchGlyph, activeSpaceHue, hueProps, useFocusScope } from './templates'
 import './discover.css'
 
@@ -36,7 +40,8 @@ const LEVEL_LABELS = { beginner: 'discover.niveau-debut', advanced: 'discover.ni
  * « Découvrir Lucium »: what Lucium can do by what a person wants to do (shared/discover.ts holds the catalogue and the search). A search, chips for the
  * task and for the level, then one card for every function of Lucium: name, one line, where to find the function, its shortcut as it is set now, « Essayer »
  * (the real action) and « Régler » (the real setting). The count of the status is the count of the cards. Escape empties the search, then closes the panel.
- * Nothing moves by itself, so there is no motion to reduce; nothing is counted or sent.
+ * Eight cards carry a small animated demo (DiscoverDemo.tsx): it moves only while on screen and not paused, and stays still, with its text, when less motion is asked for.
+ * Nothing is counted or sent.
  */
 export function Discover() {
   const act = api()
@@ -73,6 +78,15 @@ export function Discover() {
     act.openOverlay(request)
   }
 
+  /** The « Essayer » of the tip and of the path: the same thing as the card's button (a setting leads to its page, as « Régler » does). */
+  const runEntry = (entry: DiscoverEntry): void => {
+    if (entry.try.kind === 'open') go(entry.try.request)
+    else if (entry.try.kind === 'call') tryCall(entry.try.call)
+    else go(discoverSettingsRequest(entry))
+  }
+  // The path and the tip are the front door: they give way to the cards as soon as the person searches or narrows the list.
+  const front = filter.query === '' && filter.task === 'all' && filter.level === 'all'
+
   const card = (entry: DiscoverEntry) => {
     const id = `${titleId}-${entry.id}`
     const name = discoverName(entry)
@@ -80,6 +94,7 @@ export function Discover() {
     const off = discoverOff(entry, settings)
     const kind = entry.try.kind
     const adjust = discoverSettingsRequest(entry)
+    const demo = demoOf(entry)
     return (
       <li key={entry.id}>
         <article className="dv-card" aria-labelledby={id}>
@@ -95,6 +110,7 @@ export function Discover() {
           </div>
           <h4 id={id}>{name}</h4>
           <p className="dv-summary">{discoverSummary(entry)}</p>
+          {demo && <DiscoverDemo demo={demo} name={name} describedBy={id} />}
           <p className="dv-where">
             <b>{t('discover.ou-label')}</b> {discoverWhere(entry)}
           </p>
@@ -187,6 +203,12 @@ export function Discover() {
 
       {/* One stop of Tab for the whole list, which the arrows then scroll; the cards and their buttons are stops of their own. */}
       <div className="dv-body" tabIndex={0} role="region" aria-label={t('discover.liste-label')}>
+        {front && (
+          <div className="dv-guides">
+            <DiscoverPath settings={settings} run={runEntry} />
+            <DiscoverTip settings={settings} platform={platform} run={runEntry} />
+          </div>
+        )}
         {DISCOVER_TASKS.map((task) => {
           const group = cards.filter((entry) => entry.task === task)
           if (group.length === 0) return null

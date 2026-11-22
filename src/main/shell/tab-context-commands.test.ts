@@ -104,7 +104,7 @@ describe('the tabs reloaded after a profile is erased', () => {
     const windowWith = (name: string) => ({ store: { get: () => state }, pages: new Map([[tab.id, { reload: () => void reloaded.push(name) }]]) })
     const other = windowWith('other window')
     const own = windowWith('this window')
-    const fake = fakeBrowser({ ...own, engine: { clearProfileData: async () => undefined }, eraseProfileHistory: () => true })
+    const fake = fakeBrowser({ ...own, engine: { clearProfileData: async () => undefined }, eraseProfileHistory: () => true, eraseHistory: () => true })
     fake.self['group'] = new Set([fake.self, other])
     await shell['clearProfile']!.call(fake.self, 'default')
     expect(reloaded.sort()).toEqual(['other window', 'this window'])

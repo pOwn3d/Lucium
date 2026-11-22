@@ -10,6 +10,8 @@ import { applyLanguage, t, tp } from '@shared/i18n'
 import { menuKey } from '@shared/menu-state'
 import { dockWorkViews } from '@shared/work-views'
 import { clearHistoryPrompt } from '@shared/history-scope'
+import type { ClearAllKind } from '@shared/clear-all'
+import { askAndClear, setClearEverythingStarter } from './clear-everything'
 import { defaultBrowserNotice, isDefaultBrowserNow, makeDefaultBrowser } from './default-browser'
 import { systemDefaultBrowserPorts } from './default-browser-ports'
 import { loadExtensionFromDialog } from './ipc'
@@ -85,6 +87,20 @@ export function installAppMenus(deps: AppMenuDeps): { refreshMenu: () => void } 
       ])
     )
   }
+  // « Tout effacer » and « Nouvelle identité »: the window in front asks, the menu and the command bar (through IPC) start it the same way.
+  const startClear = (kind: ClearAllKind): void => {
+    const target = windowManager.focused()
+    void askAndClear(kind, {
+      state: () => target.store.get(),
+      // A private window and a guest window keep nothing of a profile: there is nothing to erase.
+      isPrivate: () => target.browser.isPrivate() || target.guest === true,
+      ask: async (options) => (await dialog.showMessageBox(target.win, options)).response,
+      run: (what, scope) => (what === 'identity' ? target.browser.newIdentity(scope) : target.browser.clearEverything(scope)),
+      openWindow: () => void windowManager.newWindow({ commandBar: true }),
+      notify: (message) => target.browser.showToast(message)
+    }).catch((error: unknown) => console.error('[clear] cannot ask to clear everything:', error))
+  }
+  setClearEverythingStarter(startClear)
   const installMenu = (): void => {
     // The labels of every menu are read in the language of the settings (shared/i18n.ts); menuKey rebuilds the menu when they change it.
     applyLanguage(windowManager.focused().store.get().settings, app.getLocale())
@@ -138,6 +154,8 @@ export function installAppMenus(deps: AppMenuDeps): { refreshMenu: () => void } 
           const answer = dialog.showMessageBoxSync(target.win, { type: 'warning', buttons: [t('app.effacer'), t('confirm-box.annuler')], defaultId: 1, cancelId: 1, message: prompt.message, detail: prompt.detail })
           if (answer === 0) target.browser.eraseHistory(profileId)
         },
+        clearEverything: () => startClear('everything'),
+        newIdentity: () => startClear('identity'),
         clearArchive: () => {
           // The count is of what « Vider l'archive » removes: the entries of a locked space stay, and are not counted.
           const count = shownState(store.get(), lock.view()).archive.length

@@ -76,8 +76,7 @@ import { dropDevelopmentEnv, isBuiltApp, isSmokeRun, readDevelopmentEnv, refusal
 import { refuseLaunch } from './launch-refusal'
 import { formatMarker } from '@shared/perf-core'
 import { readState, StateStore, WindowView } from './store'
-import { sitesToClearOnQuit } from '@shared/site-clear'
-import { QUIT_CLEAR_MARKER, replayQuitClear } from './shell/quit-clear'
+import { QUIT_CLEAR_MARKER, launchReplayDeps, replayQuitClear } from './shell/quit-clear'
 import { settingsPath } from '@shared/settings-path'
 import { selectionOf } from '@shared/window-selection'
 import { TRAFFIC_LIGHTS } from '@shared/ipc'
@@ -596,7 +595,7 @@ async function main(): Promise<void> {
   // ids are free again (shared/profile-retire.ts). Not when the state was not read at this launch.
   browser.sweepRetiredProfiles(stateTrusted)
   // An erasure "à la fermeture de Lucium" that the last quit cut short is done now, in the background, as the first pages open.
-  if (!smoke) void replayQuitClear(quitClearMarker, { enabled: () => sitesToClearOnQuit(store.get(), { private: false }).length > 0, clear: () => browser.clearSitesOnQuit() }).catch((error: unknown) => console.error('[quit] cannot look for an erasure cut short at the last quit:', error))
+  if (!smoke) void replayQuitClear(quitClearMarker, launchReplayDeps(() => store.get(), () => browser.clearSitesOnQuit())).catch((error: unknown) => console.error('[quit] cannot look for an erasure cut short at the last quit:', error))
   browser.start()
 
   if (restoreWindows) {

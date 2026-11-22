@@ -33,6 +33,7 @@ const KEPT: ReadonlyArray<readonly [file: string, text: string | RegExp, why: st
   ['NoteTextEditor.tsx', /^(ArrowUp|ArrowDown|ArrowLeft|ArrowRight|Home|End|PageUp|PageDown)$/, 'the keys that move the caret, kept by the field'],
   ['NotesPanel.tsx', 'Files', 'the type of a drag that carries files'],
   ['ProxyEditor.tsx', 'socks5://127.0.0.1:1080', 'a sample address'],
+  ['DiscoverDemo.tsx', 'page.md', 'a file name drawn in a demo scene, not a word of the interface'],
   ['littlearc.tsx', /^la(-[a-z-]+)?( …| la-[a-z-]+)?$/, 'class names of the small window']
 ]
 

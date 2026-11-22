@@ -54,6 +54,7 @@ import { registerLockIpc } from './lock-ipc'
 import { registerSyncIpc } from './sync-ipc'
 import { registerPasswordIpc } from './password-ipc'
 import { getLockService } from '../lock-service'
+import { startClearEverything } from './clear-everything'
 import { ExportCryptoError, PASSPHRASE_MAX, exportErrorMessage } from '../export-crypto'
 import { exportText, parseExportRequest } from '../export-file'
 import { registerPrivacyIpc } from './privacy-ipc'
@@ -643,6 +644,8 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
   on<[]>(Channel.clearSiteNow, () => {
     void browser.quickClearSite().catch((error: unknown) => console.error('[site] cannot clear site data:', error))
   })
+  // The question and the erasure are the menu's own flow (clear-everything.ts); a kind that is not one of the two is refused there.
+  on<[unknown]>(Channel.clearEverything, (kind) => void startClearEverything(kind))
   // The button of the space on screen is a button only: it reloads every tab of the space, the sleeping ones too, whatever `reloadAllWakes` says.
   on<[]>(Channel.reloadSpaceTabs, () => {
     void browser.reloadAllTabs(undefined, true, true).catch((error: unknown) => noteFailure('[reload-space] cannot reload the tabs:', error, (message) => browser.showToast(message), t('ipc.les-ongl-space')))

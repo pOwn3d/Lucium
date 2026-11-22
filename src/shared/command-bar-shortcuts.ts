@@ -45,6 +45,8 @@ const ACTION_SHORTCUT: Partial<Record<CommandAction, string>> = {
   'capture-region': 'captureRegion',
   'clear-site-data': 'clearSiteData',
   'clear-site-now': 'clearSiteDataNow',
+  'clear-everything': 'clearEverything',
+  'new-identity': 'newIdentity',
   'reload-all': 'reloadAll',
   'new-private-tab': 'newPrivateTab',
   'new-folder': 'newFolder',

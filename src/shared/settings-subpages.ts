@@ -36,7 +36,7 @@ export const SUBPAGES: readonly SettingsSubpageDef[] = [
   { id: 'sitesearches', pane: 'navigation', title: 'settings.sub-sitesearches', intro: 'settings.sub-sitesearches-intro', keys: ['siteSearches'], at: 'page' },
   { id: 'linkroutes', pane: 'navigation', title: 'settings.choisissez-ou-les-liens-s-ouvrent-dans', intro: 'settings.sub-linkroutes-intro', keys: ['linkRoutes'], at: 'page' },
   { id: 'exceptions', pane: 'protection', title: 'settings.sub-exceptions', intro: 'settings.sub-exceptions-intro', keys: ['blockExceptions', 'popupExceptions', 'fingerprintExceptions', 'thirdPartyCookieExceptions', 'unwrapExceptions', 'safeBrowsingExceptions', 'httpsOnlyExceptions'], at: 'page' },
-  { id: 'clearonclose', pane: 'protection', title: 'settings.sub-clearonclose', intro: 'settings.sub-clearonclose-intro', keys: ['siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit'], at: 'page' },
+  { id: 'clearonclose', pane: 'protection', title: 'settings.sub-clearonclose', intro: 'settings.sub-clearonclose-intro', keys: ['siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'siteDataClearOnQuitAll', 'clearAllKeepHosts'], at: 'page' },
   { id: 'permissions', pane: 'protection', title: 'settings.sub-permissions', intro: 'settings.sub-permissions-intro', keys: ['siteAutoplay'], at: 'page' },
   { id: 'lockoptions', pane: 'protection', title: 'settings.sub-lockoptions', intro: 'settings.sub-lockoptions-intro', keys: ['lockApp', 'lockTouchId', 'lockedSpaces'], at: 'page' },
   { id: 'filterlists', pane: 'protection', title: 'feature.listes-de-filtres', intro: 'settings.sub-filterlists-intro', keys: ['disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists'], at: 'page' },

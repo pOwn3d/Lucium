@@ -2,7 +2,8 @@ import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } f
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { QUIT_CLEAR_MARKER, finishQuitClear, markQuitClear, replayQuitClear } from './quit-clear'
+import { QUIT_CLEAR_MARKER, finishQuitClear, launchReplayDeps, markQuitClear, replayQuitClear } from './quit-clear'
+import type { SidebarState } from '@shared/model'
 import { expectMode, onWindows } from '../windows.test-support'
 
 let dir: string
@@ -90,5 +91,24 @@ describe('resuming at launch', () => {
     ).toBe('incomplete')
     expect(logged).toHaveBeenCalledWith(expect.stringContaining('cannot resume'), boom)
     expect(existsSync(marker)).toBe(false)
+  })
+})
+
+describe('the replay at launch (launchReplayDeps)', () => {
+  const stateWith = (settings: Record<string, unknown>) => ({ settings: { siteDataClearOnCloseEnabled: true, siteDataClearOnQuit: true, siteDataClearOnQuitAll: false, siteDataClearOnClose: [], ...settings }, spaces: [{ id: 's', profileId: 'default' }] }) as unknown as SidebarState
+
+  it('resumes a cut « tous les sites » erasure even though the list of sites is empty', async () => {
+    markQuitClear(marker)
+    const clear = vi.fn(async () => [])
+    // Mutation: `enabled` reading only `sitesToClearOnQuit(...).length > 0` drops the marker without erasing, and fails this.
+    expect(await replayQuitClear(marker, launchReplayDeps(() => stateWith({ siteDataClearOnQuitAll: true }), clear))).toBe('done')
+    expect(clear).toHaveBeenCalledTimes(1)
+  })
+
+  it('drops the marker when nothing is asked for any more', async () => {
+    markQuitClear(marker)
+    const clear = vi.fn(async () => [])
+    expect(await replayQuitClear(marker, launchReplayDeps(() => stateWith({ siteDataClearOnQuit: false }), clear))).toBe('dropped')
+    expect(clear).not.toHaveBeenCalled()
   })
 })

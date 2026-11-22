@@ -6,7 +6,7 @@ import { newlyArchived } from '@shared/archive'
 import { javascriptHostOf } from '@shared/site-javascript'
 import { parseSiteHost } from '@shared/site-data'
 import { referencedImages } from '@shared/space-image'
-import { profilesInUse } from '@shared/profiles'
+import { activeProfileId, profilesInUse } from '@shared/profiles'
 import { changedSettings, inheritedSettings, privateAction } from '@shared/private-window'
 import { guestInherited } from '@shared/guest-window'
 import { containerById } from '@shared/containers'
@@ -21,6 +21,7 @@ import type { Action } from '@shared/sidebar'
 import { applyWithDeveloperTools } from './devtools-command'
 import { eraseProfile, eraseProfiles } from './profile-erase'
 import { WHOLE_STATE_ACTIONS } from '@shared/site-clear'
+import { identityActions, profilesToClear, type ClearAllScope } from '@shared/clear-all'
 import { changesSession } from '@shared/tab-transfer'
 import { windowsAreIndependent } from '@shared/window-tabs'
 import { bookmarkNotice, bookmarkOutcome } from '@shared/bookmarks'
@@ -323,12 +324,13 @@ export abstract class BrowserActions extends BrowserNetwork {
   }
 
   /** Erases a profile's cookies, storage, cache and visit history; its open tabs reload so they do not keep showing a signed-in page (see `eraseProfile`). */
-  async clearProfile(profileId: string): Promise<void> {
+  async clearProfile(profileId: string, keepHosts: readonly string[] = []): Promise<void> {
     if (!PROFILE_ID.test(profileId)) throw new Error(`Invalid profile id: ${profileId}`)
     await eraseProfile(
       {
-        clearEngine: (id) => this.engine.clearProfileData(id),
-        eraseHistory: (id) => this.eraseProfileHistory(id),
+        clearEngine: (id) => this.engine.clearProfileData(id, keepHosts),
+        // Through `eraseHistory`, so that the “Récents” list and the sites offered their search (hosts of visited pages) go with the history.
+        eraseHistory: (id) => this.eraseHistory(id),
         // In every window of the group: a window that shows a space of the profile would keep a signed-in page on screen.
         reloadTabs: (id) => {
           // The windows of a group share one state; each holds the pages it shows, so a tab of the profile may have its page in another window.
@@ -338,6 +340,29 @@ export abstract class BrowserActions extends BrowserNetwork {
       },
       profileId
     )
+  }
+
+  /**
+   * « Tout effacer »: the data of the profile in front, or of every profile a space uses, sparing the sites on `clearAllKeepHosts` (cookies and storage;
+   * the history goes whole). A private window has no profile data (its session is thrown away with it): refused. A profile that cannot be erased does not
+   * stop the others; the ones that kept something are named in the error.
+   */
+  async clearEverything(scope: ClearAllScope): Promise<number> {
+    if (this.isPrivate()) throw new Error(t('clear-all.indisponible-dans-une-fenetre-privee'))
+    const state = this.store.get()
+    const keep = state.settings.clearAllKeepHosts
+    return eraseProfiles((id) => this.clearProfile(id, keep), profilesToClear(state, activeProfileId(state), scope))
+  }
+
+  /**
+   * « Nouvelle identité »: « Tout effacer », then the tabs of the erased profiles are closed and their archive emptied (rules: `identityActions`). When
+   * something could not be erased the error goes up and no tab is closed: the identity is not new, and the user keeps what they had to try again.
+   */
+  async newIdentity(scope: ClearAllScope): Promise<void> {
+    const before = this.store.get()
+    const profiles = profilesToClear(before, activeProfileId(before), scope)
+    await this.clearEverything(scope)
+    for (const action of identityActions(this.store.get(), profiles)) this.dispatch(action)
   }
 
   /**

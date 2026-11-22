@@ -97,6 +97,7 @@ describe('the history of a profile', () => {
       // The window is alone in its group: erasing a profile reloads the tabs of every window of it.
       group: new Set(),
       eraseProfileHistory: (id: string) => method('eraseProfileHistory').call(self, id),
+      eraseHistory: (id: string) => method('eraseHistory').call(self, id),
       forgetClosedPages: (id: string, site?: unknown) => method('forgetClosedPages').call(self, id, site)
     })
     return { self, dispatch }

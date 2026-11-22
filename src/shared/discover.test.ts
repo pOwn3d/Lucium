@@ -4,12 +4,16 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   ALL_DISCOVER_ENTRIES,
+  DEMO_TEXTS,
+  DISCOVER_DEMOS,
   DISCOVER_ENTRIES,
   DISCOVER_EXTRAS,
   DISCOVER_LEVELS,
   DISCOVER_REQUEST,
   DISCOVER_TASKS,
   FEATURE_TASKS,
+  demoOf,
+  demoPlaying,
   discoverKeys,
   discoverName,
   discoverOff,
@@ -23,7 +27,7 @@ import {
   type DiscoverEntry
 } from './discover'
 import { FEATURES, featureById, type FeatureId } from './features'
-import { setLanguage } from './i18n'
+import { setLanguage, t } from './i18n'
 import { COMMANDS } from './keybindings'
 import { defaultSettings } from './model'
 import { categoryOfKey, resolveSettingsTarget } from './settings-catalog'
@@ -280,8 +284,8 @@ describe('a card for every function', () => {
 
 describe('the functions without a switch', () => {
   it('number a score and more, each with words in both languages, a name, a line and a place', () => {
-    expect(DISCOVER_EXTRAS.length).toBe(39)
-    expect(ALL_DISCOVER_ENTRIES.length).toBe(175)
+    expect(DISCOVER_EXTRAS.length).toBe(52)
+    expect(ALL_DISCOVER_ENTRIES.length).toBe(184)
     for (const language of ['fr', 'en'] as const) {
       setLanguage(language)
       for (const entry of DISCOVER_EXTRAS) {
@@ -330,6 +334,128 @@ describe('the functions without a switch', () => {
       expect(resolveSettingsTarget(discoverSettingsRequest(entry).pane, discoverSettingsRequest(entry).anchor), entry.id).not.toBeNull()
       if (entry.shortcut !== undefined) expect(known.has(entry.shortcut), entry.id).toBe(true)
     }
+  })
+})
+
+describe('the cards added with the demos: the guest window, a space set aside, the name of a window, the reading aloud and the everyday commands', () => {
+  const card = (id: string): DiscoverEntry => DISCOVER_EXTRAS.find((entry) => entry.id === id)!
+  const where = (id: string): string => discoverWhere(card(id))
+  const NEW = ['guest-window', 'aside-space', 'name-window', 'read-aloud', 'reopen-closed-tab', 'mute-tab', 'pin-tab', 'duplicate-tab', 'save-pdf', 'print', 'zoom']
+
+  it('exist, once each, with a name, a line and words to be found by in both languages', () => {
+    for (const id of NEW) expect(ids(DISCOVER_EXTRAS), id).toContain(id)
+    for (const language of ['fr', 'en'] as const) {
+      setLanguage(language)
+      for (const id of NEW) {
+        for (const text of [discoverName(card(id)), discoverSummary(card(id)), where(id)]) {
+          expect(text.length, `${id} ${language}`).toBeGreaterThan(3)
+          expect(text, `${id} ${language}`).not.toMatch(/[{}]|undefined/)
+        }
+        expect(card(id).keywords.trim().split(/\s+/).length, id).toBeGreaterThanOrEqual(4)
+      }
+    }
+  })
+
+  it('say the exact path of the menu, as the menus name it, in French and in English', () => {
+    setLanguage('fr')
+    expect(where('guest-window')).toBe('Menu Fichier › Nouvelle fenêtre invité.')
+    expect(where('aside-space')).toBe('Menu Espaces › Mettre l’espace de côté.')
+    expect(where('name-window')).toBe('Menu Fichier › Nommer la fenêtre.')
+    expect(where('reopen-closed-tab')).toBe('Menu Fichier › Rouvrir le dernier onglet fermé.')
+    expect(where('mute-tab')).toBe('Menu Onglets › Couper le son de l’onglet.')
+    expect(where('pin-tab')).toBe('Menu Onglets › Épingler l’onglet.')
+    expect(where('duplicate-tab')).toBe('Menu Onglets › Dupliquer l’onglet.')
+    expect(where('save-pdf')).toBe('Menu Fichier › Enregistrer en PDF avec l’adresse.')
+    expect(where('print')).toBe('Menu Fichier › Imprimer.')
+    expect(where('zoom')).toBe('Menu Affichage › Zoom avant, Affichage › Zoom arrière ou Affichage › Taille réelle.')
+    expect(where('read-aloud')).toContain('Lire la sélection à voix haute')
+    setLanguage('en')
+    expect(where('guest-window')).toBe('Menu File › New Guest Window.')
+    expect(where('aside-space')).toBe('Menu Spaces › Set Space Aside.')
+    expect(where('reopen-closed-tab')).toBe('Menu File › Reopen Last Closed Tab.')
+    expect(where('mute-tab')).toBe('Menu Tabs › Mute Tab.')
+    expect(where('zoom')).toBe('Menu View › Zoom In, View › Zoom Out or View › Actual Size.')
+    expect(where('read-aloud')).toContain('Speak Selection')
+  })
+
+  it('lend the registry its card for the four functions that have a switch, so that none is drawn twice', () => {
+    for (const [id, feature] of [['guest-window', 'guest-profile'], ['name-window', 'name-windows'], ['read-aloud', 'read-aloud'], ['save-pdf', 'pdf-with-source']] as const) {
+      expect(card(id).feature, id).toBe(feature)
+      expect(ALL_DISCOVER_ENTRIES.filter((entry) => entry.feature === feature).map((entry) => entry.id), feature).toEqual([id])
+      expect(card(id).task, id).toBe(FEATURE_TASKS[feature])
+    }
+  })
+
+  it('say a card is off, and offer no button, when the switch it needs is off', () => {
+    const settings = defaultSettings()
+    for (const [id, key] of [['guest-window', 'guestProfile'], ['name-window', 'nameWindows'], ['read-aloud', 'readAloud'], ['save-pdf', 'pdfWithSource']] as const) {
+      expect(card(id).needs, id).toBe(key)
+      expect(discoverOff(card(id), { ...settings, [key]: false }), id).toBe(true)
+      expect(discoverOff(card(id), { ...settings, [key]: true }), id).toBe(false)
+    }
+    for (const id of ['reopen-closed-tab', 'mute-tab', 'pin-tab', 'duplicate-tab', 'print', 'zoom', 'aside-space']) expect(card(id).needs, id).toBeUndefined()
+  })
+
+  it('show the shortcut in force of each command, none for a command nothing is bound to by default', () => {
+    expect(discoverKeys(card('reopen-closed-tab'), {}, 'darwin')?.text).toBe('⇧⌘T')
+    expect(discoverKeys(card('print'), {}, 'darwin')?.text).toBe('⌘P')
+    expect(discoverKeys(card('pin-tab'), {}, 'darwin')?.text).toBe('⌘D')
+    expect(discoverKeys(card('zoom'), {}, 'darwin')?.text).toBe('⌘+')
+    expect(discoverKeys(card('mute-tab'), {}, 'darwin')).toBeNull()
+    expect(discoverKeys(card('mute-tab'), { muteTab: 'CmdOrCtrl+Alt+M' }, 'darwin')?.text).toBe('⌥⌘M')
+    expect(discoverKeys(card('guest-window'), {}, 'darwin')).toBeNull()
+    const known = new Set(COMMANDS.map((command) => command.id))
+    for (const id of NEW) if (card(id).shortcut !== undefined) expect(known.has(card(id).shortcut!), id).toBe(true)
+  })
+
+  it('are found by the words of everyday, in French and in English', () => {
+    for (const [query, id] of [['invité', 'guest-window'], ['guest', 'guest-window'], ['mettre de côté', 'aside-space'], ['nommer fenêtre', 'name-window'], ['voix haute', 'read-aloud'], ['read aloud', 'read-aloud'], ['rouvrir onglet', 'reopen-closed-tab'], ['couper le son', 'mute-tab'], ['mute', 'mute-tab'], ['épingler', 'pin-tab'], ['dupliquer', 'duplicate-tab'], ['pdf', 'save-pdf'], ['imprimer', 'print'], ['zoom', 'zoom'], ['agrandir', 'zoom']] as const) {
+      expect(ids(filterDiscover({ ...none, query })), `${query} → ${id}`).toContain(id)
+    }
+  })
+})
+
+describe('the demos of the cards', () => {
+  it('are made for the five functions of the 21-22 November, then the split view, the command bar and the captures, each on a card that exists', () => {
+    expect([...DISCOVER_DEMOS]).toEqual(['tab-reminders', 'focus-mode', 'markdown', 'totp', 'prefixes', 'split-view', 'command-bar', 'capture'])
+    for (const demo of DISCOVER_DEMOS) expect(ids(ALL_DISCOVER_ENTRIES), demo).toContain(demo)
+    expect(Object.keys(DEMO_TEXTS).sort()).toEqual([...DISCOVER_DEMOS].sort())
+  })
+
+  it('say in words what is seen, in both languages: a sentence of their own for each, and never the same for two', () => {
+    const seen = new Set<string>()
+    for (const language of ['fr', 'en'] as const) {
+      setLanguage(language)
+      for (const demo of DISCOVER_DEMOS) {
+        const text = t(DEMO_TEXTS[demo])
+        expect(text.length, `${demo} ${language}`).toBeGreaterThan(40)
+        expect(text, `${demo} ${language}`).toMatch(/[.!]$/)
+        expect(text, `${demo} ${language}`).not.toMatch(/[{}]|undefined/)
+        expect(seen.has(`${language}:${text}`), `${demo} ${language} repeats a sentence`).toBe(false)
+        seen.add(`${language}:${text}`)
+      }
+    }
+  })
+
+  it('quote the entries of the interface as they are named in the language of the moment, not as someone remembers them', () => {
+    for (const language of ['fr', 'en'] as const) {
+      setLanguage(language)
+      expect(t(DEMO_TEXTS['tab-reminders']), language).toContain(t('reminder.me-le-rappeler'))
+      expect(t(DEMO_TEXTS.markdown), language).toContain(t('menu.enregistrer-la-page-en-markdown').replace(/…$/, ''))
+    }
+  })
+
+  it('belong to a card by its id, and to no other', () => {
+    for (const entry of ALL_DISCOVER_ENTRIES) expect(demoOf(entry), entry.id).toBe((DISCOVER_DEMOS as readonly string[]).includes(entry.id) ? entry.id : null)
+    expect(demoOf(find('markdown'))).toBe('markdown')
+    expect(demoOf(find('notes'))).toBeNull()
+  })
+
+  it('play only while the card is on screen and nobody paused them', () => {
+    expect(demoPlaying(true, false)).toBe(true)
+    expect(demoPlaying(false, false)).toBe(false)
+    expect(demoPlaying(true, true)).toBe(false)
+    expect(demoPlaying(false, true)).toBe(false)
   })
 })
 

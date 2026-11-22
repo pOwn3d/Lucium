@@ -6,7 +6,7 @@
 import type { App, Dialog } from 'electron'
 import { quitClearStep, quitDialogHost, quitQuestion, quitStep } from '@shared/quit-decision'
 import { windowTabCount } from '@shared/window-close'
-import { sitesToClearOnQuit } from '@shared/site-clear'
+import { quitClearPending } from '@shared/site-clear'
 import { t } from '@shared/i18n'
 import { SystemQuit, quitAndExit, type SystemQuitDeps } from './system-quit'
 import { finishQuitClear, markQuitClear } from './quit-clear'
@@ -112,7 +112,7 @@ export function installQuitFlow(deps: QuitFlowDeps): SystemQuit {
   // for it, for a few seconds at most: a site that does not answer must not keep the application open. Never while the confirmation above is pending.
   let clearedOnQuit = false
   app.on('before-quit', (event) => {
-    if (clearedOnQuit || smoke || event.defaultPrevented || sitesToClearOnQuit(store.get(), { private: false }).length === 0) return
+    if (clearedOnQuit || smoke || event.defaultPrevented || !quitClearPending(store.get(), { private: false })) return
     // Written before the erasure, removed once it is whole: a quit that cut it short leaves the marker, and the next launch does the rest.
     markQuitClear(quitClearMarker)
     // A quit the system asked for waits for nobody: the marker stays and the next launch erases (replayQuitClear in index.ts).

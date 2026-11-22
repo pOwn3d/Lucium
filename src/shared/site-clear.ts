@@ -112,14 +112,30 @@ export function sitesToClearOnClose(before: SidebarState, after: SidebarState, o
  * longer than one run may name. Empty in a private window and when the list is empty.
  */
 export function sitesToClearOnQuit(state: SidebarState, options: { private: boolean }): ClearOnCloseJob[] {
-  const { siteDataClearOnCloseEnabled, siteDataClearOnClose: list, siteDataClearOnQuit } = state.settings
-  if (options.private || !siteDataClearOnCloseEnabled || !siteDataClearOnQuit || list.length === 0) return []
+  const { siteDataClearOnCloseEnabled, siteDataClearOnClose: list, siteDataClearOnQuit, siteDataClearOnQuitAll } = state.settings
+  // In « tous les sites » mode the quit wipes whole profiles (`profilesToWipeOnQuit`): the sites are not named one by one.
+  if (options.private || !siteDataClearOnCloseEnabled || !siteDataClearOnQuit || siteDataClearOnQuitAll || list.length === 0) return []
   const profiles = [...new Set(state.spaces.map((space) => space.profileId))]
   const jobs: ClearOnCloseJob[] = []
   for (const profileId of profiles) {
     for (let at = 0; at < list.length; at += SITE_DATA_HOSTS_MAX) jobs.push({ profileId, request: requestFor(state, list.slice(at, at + SITE_DATA_HOSTS_MAX)) })
   }
   return jobs
+}
+
+/**
+ * « Tous les sites » at quit: the cookies and storage of every profile the spaces use, but the sites spared by `clearAllKeepHosts` (the same list as
+ * « Tout effacer »). Only while the function and its quit option are on; empty in a private window. The visit history is another setting's business.
+ */
+export function profilesToWipeOnQuit(state: SidebarState, options: { private: boolean }): string[] {
+  const { siteDataClearOnCloseEnabled, siteDataClearOnQuit, siteDataClearOnQuitAll } = state.settings
+  if (options.private || !siteDataClearOnCloseEnabled || !siteDataClearOnQuit || !siteDataClearOnQuitAll) return []
+  return [...new Set(state.spaces.map((space) => space.profileId))]
+}
+
+/** Whether the quit has anything to erase: the listed sites, or every site. The marker of a cut erasure is written only then (quit-flow.ts). */
+export function quitClearPending(state: SidebarState, options: { private: boolean }): boolean {
+  return sitesToClearOnQuit(state, options).length > 0 || profilesToWipeOnQuit(state, options).length > 0
 }
 
 /** What the notice says when a run at close or quit did not go through, naming the sites (never the profile). */

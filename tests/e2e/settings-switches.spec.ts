@@ -29,6 +29,7 @@ const INVERTED: Record<string, string> = {
 const GREYED_OUT: Record<string, string> = {
   fingerprintStrict: 'waits for the protection against fingerprinting to be on',
   siteDataClearOnQuit: 'waits for the erasure of site data at closing (siteDataClearOnCloseEnabled)',
+  siteDataClearOnQuitAll: 'waits for the erasure of site data at closing and for its switch (siteDataClearOnCloseEnabled, siteDataClearOnQuit)',
   translateSystemEngine: 'waits for the translation of the system, which this machine may not have'
 }
 

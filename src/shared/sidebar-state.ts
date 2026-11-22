@@ -21,6 +21,7 @@ import { isSearchTemplate } from './url'
 import { normalizeSiteDataPrefs } from './site-data'
 import { cleanSiteDataAnimation } from './site-data-overlay'
 import { cleanSleepHosts, cleanSleepSettings } from './sleep'
+import { cleanDiscoverDay, cleanDiscoverPath } from './discover-tips'
 import { cleanBlockingSettings } from './blocker'
 import { cleanFingerprintSettings } from './fingerprint'
 import { cleanPrivacySettings } from './privacy'
@@ -42,6 +43,7 @@ import { cleanSiteZoom } from './site-zoom'
 import { cleanAutoplayPolicy, cleanSiteAutoplay } from './autoplay'
 import { cleanSpellCheck } from './spell-check'
 import { cleanClearOnClose } from './site-clear'
+import { cleanClearAllKeep } from './clear-all'
 import { cleanSiteJavascriptOff } from './site-javascript'
 import { cleanCustomFilterLists } from './custom-filter-lists'
 import { cleanDeveloperHosts } from './developer-mode'
@@ -390,6 +392,8 @@ export function clampSettings(input: Settings): Settings {
     siteDataAnimation: cleanSiteDataAnimation(settings.siteDataAnimation),
     siteDataRecents: cleanSiteDataRecents(settings.siteDataRecents),
     searchDiscoverySeen: cleanSearchDiscoverySeen(settings.searchDiscoverySeen),
+    discoverTipDay: cleanDiscoverDay(settings.discoverTipDay),
+    discoverPath: cleanDiscoverPath(settings.discoverPath),
     ...cleanSleepSettings(settings),
     ...cleanBlockingSettings(settings),
     ...cleanFingerprintSettings(settings),
@@ -408,6 +412,8 @@ export function clampSettings(input: Settings): Settings {
     siteDataClearOnClose: cleanClearOnClose(settings.siteDataClearOnClose),
     siteJavascriptOff: cleanSiteJavascriptOff(settings.siteJavascriptOff),
     siteDataClearOnQuit: settings.siteDataClearOnQuit === true,
+    siteDataClearOnQuitAll: settings.siteDataClearOnQuitAll === true,
+    clearAllKeepHosts: cleanClearAllKeep(settings.clearAllKeepHosts),
     customFilterListsEnabled: settings.customFilterListsEnabled !== false,
     customFilterLists: cleanCustomFilterLists(settings.customFilterLists),
     ...cleanBackupSettings(settings),

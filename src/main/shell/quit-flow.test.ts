@@ -16,7 +16,7 @@ vi.mock('electron', () => ({ autoUpdater: {}, BrowserWindow: {}, dialog: {}, she
 
 type Handler = (event: { preventDefault(): void; defaultPrevented: boolean }) => void
 
-function setup(options: { warn?: boolean; clearOnQuit?: boolean; smoke?: boolean; answer?: { response: number; checkboxChecked?: boolean }; clear?: () => Promise<string[]> } = {}) {
+function setup(options: { warn?: boolean; clearOnQuit?: boolean; clearAll?: boolean; smoke?: boolean; answer?: { response: number; checkboxChecked?: boolean }; clear?: () => Promise<string[]> } = {}) {
   const calls: string[] = []
   const handlers: Record<string, Handler[]> = { 'before-quit': [], 'will-quit': [] }
   const app = {
@@ -34,7 +34,7 @@ function setup(options: { warn?: boolean; clearOnQuit?: boolean; smoke?: boolean
   const proc = { on: (signal: string, listener: () => void) => signals.set(signal, listener), off: (signal: string) => signals.delete(signal) }
   const power = { on: vi.fn(), off: vi.fn() }
   let state: SidebarState = createInitialState({ now: 1, newId: () => 'x' })
-  state = { ...state, settings: { ...state.settings, warnBeforeQuitting: options.warn ?? true, siteDataClearOnCloseEnabled: true, siteDataClearOnClose: options.clearOnQuit ? ['shop.example'] : [], siteDataClearOnQuit: options.clearOnQuit ?? false } }
+  state = { ...state, settings: { ...state.settings, warnBeforeQuitting: options.warn ?? true, siteDataClearOnCloseEnabled: true, siteDataClearOnClose: options.clearOnQuit ? ['shop.example'] : [], siteDataClearOnQuit: (options.clearOnQuit ?? false) || (options.clearAll ?? false), siteDataClearOnQuitAll: options.clearAll ?? false } }
   const store = { get: () => state, flush: () => calls.push('store.flush'), dispatch: vi.fn() }
   const win = { isDestroyed: () => false, isVisible: () => true, isMinimized: () => false }
   const windowManager = {
@@ -157,6 +157,26 @@ describe('the quit main() installs', () => {
     // The quit that follows is not held again.
     expect(t.emit('before-quit')).toBe(false)
     expect(t.clear).toHaveBeenCalledTimes(1)
+  })
+
+  it('« tous les sites » mode: holds the quit for the erasure even with an empty list, writes the marker and removes it once whole', async () => {
+    let finish: (failed: string[]) => void = () => undefined
+    const t = setup({ warn: false, clearAll: true, clear: () => new Promise((resolve) => (finish = resolve)) })
+    expect(t.emit('before-quit')).toBe(true)
+    expect(t.clear).toHaveBeenCalledTimes(1)
+    expect(existsSync(t.marker)).toBe(true)
+    finish([])
+    await vi.waitFor(() => expect(t.calls).toContain('app.quit'))
+    expect(existsSync(t.marker)).toBe(false)
+  })
+
+  it('« tous les sites » mode: an incomplete erasure leaves the marker for the next launch', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    const t = setup({ warn: false, clearAll: true, clear: async () => ['profile:default'] })
+    t.emit('before-quit')
+    await vi.waitFor(() => expect(t.calls).toContain('app.quit'))
+    expect(existsSync(t.marker)).toBe(true)
+    expect(error).toHaveBeenCalledWith('[quit] the data of some sites was not erased before quitting:', 'profile:default')
   })
 
   it('quits all the same when the erasure fails, says so, and leaves the marker for the next launch', async () => {

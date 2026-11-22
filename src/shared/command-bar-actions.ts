@@ -33,6 +33,8 @@ export function actionToDispatch(action: CommandAction, state: SidebarState): Ac
     case 'save-session':
     case 'sessions':
     case 'clear-site-now':
+    case 'clear-everything':
+    case 'new-identity':
     case 'reload-all':
     case 'recent-notices':
     case 'discover':

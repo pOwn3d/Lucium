@@ -3,6 +3,8 @@
 // means the erasure did not finish, and it is done then, before the listed sites are opened again. Only node:fs here.
 
 import { existsSync, rmSync } from 'node:fs'
+import type { SidebarState } from '@shared/model'
+import { quitClearPending } from '@shared/site-clear'
 import { writeDurableFile } from '../durable-write'
 
 export const QUIT_CLEAR_MARKER = 'clear-on-quit.pending'
@@ -52,4 +54,12 @@ export async function replayQuitClear(path: string, deps: { enabled: () => boole
     finishQuitClear(path)
     return 'incomplete'
   }
+}
+
+/**
+ * What the launch replay asks of the state: an erasure cut short is resumed whenever one is still asked for at quit (listed sites, or « tous les sites »,
+ * which has no list), so that the marker of an « all sites » erasure with an empty list is not dropped without erasing.
+ */
+export function launchReplayDeps(getState: () => SidebarState, clear: () => Promise<string[]>): { enabled: () => boolean; clear: () => Promise<string[]> } {
+  return { enabled: () => quitClearPending(getState(), { private: false }), clear }
 }
