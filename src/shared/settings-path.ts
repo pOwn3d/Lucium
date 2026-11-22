@@ -63,7 +63,15 @@ export const SETTINGS_PLACES = {
   webPanels: { key: 'webPanels', group: 'settings.fonctions-theme-fenetres' },
   bookmarkLibrary: { key: 'bookmarkManager', group: 'settings.fonctions-theme-signets' },
   notes: { key: 'notes', group: 'settings.fonctions-theme-signets' },
-  summary: { page: 'features', group: 'ollama-settings.title' }
+  summary: { page: 'features', group: 'ollama-settings.title' },
+  // « Découvrir Lucium » (shared/discover.ts) says where to switch on the functions it presents
+  protection: { page: 'protection' },
+  pageIndex: { key: 'pageContentIndex' },
+  pictureInPicture: { key: 'autoPictureInPicture' },
+  workViews: { key: 'workViewsEnabled' },
+  glance: { key: 'peekWithShift' },
+  rememberScroll: { key: 'rememberScroll' },
+  compactMode: { key: 'compactMode' }
 } as const satisfies Record<string, SettingsPlace>
 
 export type SettingsPlaceId = keyof typeof SETTINGS_PLACES
