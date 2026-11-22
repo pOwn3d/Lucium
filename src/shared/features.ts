@@ -248,6 +248,14 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'typo-guard',
+    key: 'typoGuard',
+    get label() { return t('privacy-settings.faute-de-frappe-d-adresse') },
+    group: 'privacy',
+    get description() { return t('features.prevenir-d-une-adresse-qui-ressemble-a-un-site') },
+    cost: ['listeners']
+  },
+  {
     id: 'strip-tracking',
     key: 'stripTrackingParams',
     get label() { return t('privacy-settings.retirer-les-parametres-de-suivi-des-adresses') },

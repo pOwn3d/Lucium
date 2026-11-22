@@ -446,6 +446,7 @@ export abstract class BrowserCommands extends BrowserOverlay {
     const resolved = resolveInput(input, this.searchTemplateFor(tab ? profileOfSpace(this.store.get(), tab.spaceId) : activeProfileId(this.store.get())))
     if (!resolved) return this.showToast(t('browser.adresse-non-reconnue'))
     if (!isNavigableUrl(resolved.url)) return this.showToast(t('browser.adresse-invalide'))
+    this.expectTypoWarning(resolved, tab ? profileOfSpace(this.store.get(), tab.spaceId) : activeProfileId(this.store.get()))
     const page = this.pages.get(tabId)
     // A tab that has no page in this window (asleep, or shown by another window) cannot be sent anywhere from here: the editor has closed as
     // after a save, so the person is told that the address did not change.

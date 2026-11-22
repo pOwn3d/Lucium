@@ -16,7 +16,7 @@ const NOW = Date.UTC(2026, 10, 23, 9, 0)
 type Filter = (request: { url: string; resourceType: string; pageUrl: string | null; pageId: string | null }) => unknown
 
 function windowWith(patch: Partial<Settings>) {
-  const state = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: { ...defaultSettings(), blockAds: false, blockTrackers: false, blockCookieBanners: false, ...patch } }
+  const state = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: { ...defaultSettings(), blockAds: false, blockTrackers: false, blockCookieBanners: false, typoGuard: false, ...patch } }
   return fakeBrowser({ store: { get: () => state }, extraBlockedHosts: [], containerScopes: new Map(), privateScope: null })
 }
 const request = (url: string, resourceType = 'mainFrame') => ({ url, resourceType, pageUrl: null, pageId: null })

@@ -41,6 +41,7 @@ import type { UpgradeFailure } from './https-upgrade'
 import { PageCover } from './page-cover'
 import { focusGate } from './focus-gate'
 import { safeGate } from './safe-gate'
+import { typoGate } from './typo-gate'
 import type { Bounds } from './types'
 
 /** After a hung renderer is ended on purpose to reload the page, the « gone » it reports within this long is ours, not a crash to show. */
@@ -214,10 +215,14 @@ export class PageErrors {
     // A main frame safe browsing refused (the request filter cancels it too): the warning, not the ad blocker's page. The gate answers for this address only
     // while the feature is on and the host has not been let through for this session.
     const unsafe = name === 'ERR_BLOCKED_BY_CLIENT' && isMainFrame && focus === null ? (safeGate.get()?.verdict(url) ?? null) : null
+    // A typed address the lookalike guard held (the request filter cancels it too): our page names the site it looks like, and « Continuer » is the way on.
+    const typo = focus === null && unsafe === null && name === 'ERR_BLOCKED_BY_CLIENT' && isMainFrame ? typoGate.warning(url) : null
     if (focus !== null) {
       this.pending = { kind: 'focus', url, nonce, canGoBack: false, until: focus.until, slotEnd: focus.slotEnd }
     } else if (unsafe !== null) {
       this.pending = { kind: 'unsafe', url, nonce, canGoBack: false, category: unsafe.category }
+    } else if (typo !== null) {
+      this.pending = { kind: 'typo', url, similar: typo.similar, nonce, canGoBack: false }
     } else if (upgrade.kind === 'refused' && upgrade.only === true && !isCertificateError(name) && this.host.continueOverHttp) {
       // « HTTPS seul »: no fall back to http by itself, whatever the failure; the page says so and offers the address on a click.
       this.pending = { kind: 'https-only', url, http: upgrade.http, nonce, canGoBack: false }
@@ -239,7 +244,7 @@ export class PageErrors {
     const model = this.pending
     if (!model || this.wc.isDestroyed()) return
     this.pending = null
-    const shown: ErrorPageModel = model.kind === 'certificate' || model.kind === 'focus' || model.kind === 'unsafe' || model.kind === 'https-only' ? { ...model, canGoBack: this.wc.navigationHistory.canGoBack() } : model
+    const shown: ErrorPageModel = model.kind === 'certificate' || model.kind === 'focus' || model.kind === 'unsafe' || model.kind === 'https-only' || model.kind === 'typo' ? { ...model, canGoBack: this.wc.navigationHistory.canGoBack() } : model
     this.shown = shown
     const page = renderErrorPage(shown)
     const markup = `<head>${page.head}</head><body>${page.body}</body>`
@@ -286,7 +291,7 @@ export class PageErrors {
       this.host.reload()
     } else if (action === 'retry' && shown.kind !== 'crash') {
       this.host.reload()
-    } else if (action === 'back' && (shown.kind === 'certificate' || shown.kind === 'status' || shown.kind === 'focus' || shown.kind === 'unsafe' || shown.kind === 'https-only')) {
+    } else if (action === 'back' && (shown.kind === 'certificate' || shown.kind === 'status' || shown.kind === 'focus' || shown.kind === 'unsafe' || shown.kind === 'https-only' || shown.kind === 'typo')) {
       this.host.goBack()
     } else if (action === 'home' && shown.kind === 'status') {
       // The home of the site the answer came from (its origin, a web address by construction): the page that answered goes, and so does our page with it.
@@ -304,6 +309,10 @@ export class PageErrors {
     } else if (action === 'toggle-blocker' && (shown.kind === 'load' || shown.kind === 'status')) {
       // Disable the ad/tracker blocker for this site
       this.host.toggleBlockException(shown.url)
+      this.host.reload()
+    } else if (action === 'typo-continue' && shown.kind === 'typo') {
+      // The way on: the host is let through for the run, then the address that was held is asked for again.
+      typoGate.allow(shown.url)
       this.host.reload()
     } else if (action === 'http' && shown.kind === 'https-only') {
       // The address the user asked for, in http: only this click opens it, once.

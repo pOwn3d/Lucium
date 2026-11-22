@@ -27,6 +27,8 @@ import { panelIsScaled, screenOf } from '@shared/panel-scale'
 import { isFindPanel, SPLIT_DRAG_GRACE_MS, VEIL_JPEG_QUALITY } from './browser-base'
 import { ScreenWatch, SETTLE_DELAY_MS, SHOWN_DELAY_MS } from './screen-notice'
 import { BrowserSite } from './browser-site'
+import { expectLookalikeWarning } from './typo-warn'
+import { typoGate } from '../engine/typo-gate'
 
 export abstract class BrowserOverlay extends BrowserSite {
   /**
@@ -246,6 +248,15 @@ export abstract class BrowserOverlay extends BrowserSite {
     return profileSearch(this.store.get().settings, profileId).url
   }
 
+  /**
+   * An address the person typed is announced to the lookalike gate when it is one keystroke from a site of their own (history of the profile,
+   * favourites, bookmarks, pinned tabs): the first load of that host then stops on a warning page (shared/typo-guard.ts). Never for a link or a redirect.
+   */
+  protected expectTypoWarning(resolved: { kind: 'url' | 'search'; url: string }, profileId: string): void {
+    if (resolved.kind !== 'url') return
+    expectLookalikeWarning(this.store.get().settings, this.store.get(), () => this.history.of(profileId).hosts(), resolved.url, typoGate)
+  }
+
   submitUrl(input: string, mode: CommandBarMode, instant = false): void {
     if (instant) {
       // ⇧↩: the first result of each search. Only web addresses come out of it, so the renderer can ask freely.
@@ -276,6 +287,7 @@ export abstract class BrowserOverlay extends BrowserSite {
     if (!resolved) return
     // An address typed with its scheme that cannot be read (`http://exa mple.com`): the page would refuse it by throwing, the user is told instead.
     if (!isNavigableUrl(resolved.url)) return this.showToast(t('browser.adresse-invalide'))
+    this.expectTypoWarning(resolved, activeProfileId(this.store.get()))
     const page = this.activePage()
     // The page of a private tab asked for in another place (⌘↩ on its line, a mini window, a split view): it stays private. An ordinary tab or a
     // mini window would write its address in the saved state and the history.

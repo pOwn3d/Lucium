@@ -10,7 +10,7 @@ import { formatClock } from './focus-mode'
 import type { SafeCategory } from './safe-browsing'
 
 export const ERROR_SCHEME = 'lucium-error:'
-export type ErrorAction = 'retry' | 'proceed' | 'http' | 'back' | 'reload' | 'wait' | 'network-settings' | 'home' | 'copy-address' | 'open-mini-window' | 'toggle-blocker' | 'end-focus' | 'unsafe-continue' | 'unsafe-except'
+export type ErrorAction = 'retry' | 'proceed' | 'http' | 'back' | 'reload' | 'wait' | 'network-settings' | 'home' | 'copy-address' | 'open-mini-window' | 'toggle-blocker' | 'end-focus' | 'unsafe-continue' | 'unsafe-except' | 'typo-continue'
 
 const ACTIONS: readonly ErrorAction[] = ['retry', 'proceed', 'http', 'back', 'reload', 'wait', 'network-settings', 'home', 'copy-address', 'open-mini-window', 'toggle-blocker', 'end-focus', 'unsafe-continue', 'unsafe-except']
 
@@ -396,6 +396,8 @@ export type ErrorPageModel =
   | { kind: 'unsafe'; url: string; nonce: string; canGoBack: boolean; category: SafeCategory }
   /** « HTTPS seul » (https-upgrade.ts): the site has no HTTPS, or does not answer on it. `http` is the address the page may go to, on a click only (« Continuer en HTTP »). */
   | { kind: 'https-only'; url: string; http: string; nonce: string; canGoBack: boolean }
+  /** An address typed that looks like a site of the person (typo-guard.ts): the page names that site and offers the way back, and « Continuer » on a click only. */
+  | { kind: 'typo'; url: string; similar: string; nonce: string; canGoBack: boolean }
   | { kind: 'status'; url: string; status: number; nonce: string; canGoBack: boolean; /** When the page was shown (ms since the epoch): the technical details give the time. */ at: number }
 
 export interface ErrorPage {
@@ -518,6 +520,18 @@ export function renderErrorPage(model: ErrorPageModel): ErrorPage {
         title: t('errpage.https-only-title'),
         content: `<p class="addr">${escapeHtml(model.http)}</p><p>${t('errpage.https-only-text', { site: host })}</p><p>${escapeHtml(t('errpage.https-only-risk'))}</p>`,
         actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : button('retry', model.nonce, t('errpage.reessayer'))}${button('http', model.nonce, t('errpage.https-only-continue'), 'quiet')}`
+      })
+    )
+  }
+  if (model.kind === 'typo') {
+    return document_(
+      site,
+      errorFrame({
+        tone: 'warn',
+        icon: ICON_LOCK,
+        title: t('errpage.typo-title'),
+        content: `<p class="addr">${escapeHtml(model.url)}</p><p>${t('errpage.typo-text', { site: host, similar: `<strong>${escapeHtml(model.similar)}</strong>` })}</p><p>${escapeHtml(t('errpage.typo-risk'))}</p>`,
+        actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : ''}${button('typo-continue', model.nonce, t('errpage.typo-continue'), 'quiet')}`
       })
     )
   }

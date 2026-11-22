@@ -389,6 +389,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-block-pings', 'block-pings', t('Bloquer les pings de suivi', 'Block tracking pings'), 'protection', 'blockPings', { fold: true, patch: { blockPings: true }, on: true, why: network }),
   setting('fn-trim-referer', 'trim-referer', t('Ne pas envoyer le chemin de la page aux autres sites', 'Do not send the page path to other sites'), 'protection', 'trimReferer', { fold: true, patch: { trimReferer: true }, on: true, why: network }),
   setting('fn-https-only', 'https-only', t('Ouvrir uniquement des sites en HTTPS', 'Open HTTPS sites only'), 'protection', 'httpsOnly', { fold: true, patch: { httpsOnly: true }, on: true, why: network }),
+  setting('fn-typo-guard', 'typo-guard', t('Prévenir d’une faute de frappe dans une adresse', 'Warn about a typo in an address'), 'protection', 'typoGuard', { fold: true, on: true, why: network }),
   setting('fn-strip-tracking', 'strip-tracking', t('Retirer les paramètres de suivi des adresses', 'Remove tracking parameters from addresses'), 'protection', 'stripTrackingParams', { on: true, why: network }),
   // The demonstration asks no search engine anything (demo.ts): the row shows the default of the application; nothing is typed while it is on.
   setting('fn-search-suggestions', 'search-suggestions', t('Suggestions du moteur de recherche', 'Search engine suggestions'), 'navigation', 'searchSuggestions', { label: t('Inclure les suggestions de recherche', 'Include search suggestions'), patch: { searchSuggestions: true }, why: network }),

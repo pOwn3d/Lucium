@@ -10,6 +10,7 @@ import { focusGate } from '../engine/focus-gate'
 import { safeGate } from '../engine/safe-gate'
 import { cleanSafeBrowsingExceptions, hostToCheck, safeVerdict, type SafeVerdict } from '@shared/safe-browsing'
 import { allowSafeHost, releaseSafeLists, safeAllowedHosts, safeLists } from '../safe-lists'
+import { typoGate } from '../engine/typo-gate'
 import { anyPrivacy, privacyOptionsOf } from '@shared/privacy'
 import { planHostResolver } from '@shared/dns'
 import { planProxies } from '@shared/proxy'
@@ -64,7 +65,7 @@ export abstract class BrowserNetwork extends BrowserPublish {
     this.configureNetwork()
     if (this.privateScope) this.configurePrivateContext(this.privateScope)
     for (const scope of this.containerScopes.values()) this.configurePrivateContext(scope)
-    const key = [adsOn, blockCookieBanners, blockCosmetic, disabledFilterLists.join(','), filterUpdateDays, blockExceptions.join(','), this.extraBlockedHosts.join(','), customFilterLists.map((l) => `${l.id}:${l.enabled}`).join(','), focusIsConfigured(this.store.get().settings), this.store.get().settings.safeBrowsing, this.store.get().settings.blockPings].join('|')
+    const key = [adsOn, blockCookieBanners, blockCosmetic, disabledFilterLists.join(','), filterUpdateDays, blockExceptions.join(','), this.extraBlockedHosts.join(','), customFilterLists.map((l) => `${l.id}:${l.enabled}`).join(','), focusIsConfigured(this.store.get().settings), this.store.get().settings.safeBrowsing, this.store.get().settings.blockPings, this.store.get().settings.typoGuard].join('|')
     if (key === this.blockerKey) return
     this.blockerKey = key
     // The lists belong to the application, not to a window: the main window drives them, a private window only gets its own request filter.
@@ -98,17 +99,20 @@ export abstract class BrowserNetwork extends BrowserPublish {
   /**
    * The request filter: the focus mode first (it closes the main frame of a listed site while it is active, shared/focus-mode.ts), then the tracking
    * pings (shared/ping-block.ts: cancelled and counted with the blocker's counter of the page), then the blocker settings. Null while neither the focus
-   * mode (switched on, with a site) nor the pings nor ad and tracker blocking nor banner blocking is on: a request is then not even heard.
+   * mode (switched on, with a site) nor the pings nor the lookalike guard nor ad and tracker blocking nor banner blocking is on: a request is then not even heard.
    */
   protected requestFilter(): RequestBlocker | null {
     const filtering = blockerIsOn(this.store.get().settings)
     const focusing = focusIsConfigured(this.store.get().settings)
     const safe = this.store.get().settings.safeBrowsing
     const pinging = this.store.get().settings.blockPings === true
-    if (!filtering && !focusing && !safe && !pinging) return null
+    const typing = this.store.get().settings.typoGuard === true
+    if (!filtering && !focusing && !safe && !pinging && !typing) return null
     return (request) => {
       if (focusing && request.resourceType === 'mainFrame' && focusBlock(this.store.get().settings, request.url, Date.now()) !== null) return true
       if (safe && request.resourceType === 'mainFrame' && safeVerdictOf(this.store.get().settings, request.url) !== null) return true
+      // A typed address that looks like a site of the person: its first load stops (the engine then shows the warning page, which has the way on).
+      if (typing && request.resourceType === 'mainFrame' && typoGate.holds(request.url)) return true
       if (pinging) {
         // The lists reset the counter of a page at its navigation; with them off nobody else would.
         if (!filtering && request.resourceType === 'mainFrame' && request.pageId) blockingService().resetPageCount(request.pageId)

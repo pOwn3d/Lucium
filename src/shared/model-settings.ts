@@ -224,6 +224,8 @@ export interface Settings {
   httpsOnly: boolean
   /** Sites (host and subdomains) that may be opened over `http://` with no warning, because they have no HTTPS. */
   httpsOnlyExceptions: string[]
+  /** A typed address one keystroke from a site of the person's history, bookmarks, favourites or pinned tabs stops on a warning page with « Continuer » (see typo-guard.ts). Local only. On by default. */
+  typoGuard: boolean
   /** Names shown for profiles, by profile id. The id stays the storage key, so renaming never loses data. */
   profileNames: Record<string, string>
   /** Expose the space theme to web pages as `--arc-palette-*` CSS variables (a page can read it, so it is opt-in). */

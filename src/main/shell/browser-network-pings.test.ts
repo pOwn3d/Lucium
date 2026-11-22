@@ -16,7 +16,7 @@ const shell = methodsOf(Browser.prototype)
 type Filter = (request: { url: string; resourceType: string; pageUrl: string | null; pageId: string | null; method?: string }) => unknown
 
 function windowWith(patch: Partial<Settings>) {
-  const state = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: { ...defaultSettings(), blockAds: false, blockTrackers: false, blockCookieBanners: false, ...patch } }
+  const state = { ...createInitialState({ now: 0, newId: () => 'x' }), settings: { ...defaultSettings(), blockAds: false, blockTrackers: false, blockCookieBanners: false, typoGuard: false, ...patch } }
   return fakeBrowser({ store: { get: () => state }, extraBlockedHosts: [], containerScopes: new Map(), privateScope: null })
 }
 const ping = (url = 'https://tracker.example/collect', pageUrl: string | null = 'https://news.test/a', resourceType = 'ping') => ({ url, resourceType, pageUrl, pageId: 'tab-1', method: 'POST' })
@@ -65,7 +65,7 @@ describe('the request filter with the pings cut', () => {
 
   it('gives the engine a new filter when the option changes, and not before', () => {
     const base = createInitialState({ now: 0, newId: () => 'x' })
-    let settings: Settings = { ...defaultSettings(), blockAds: false, blockTrackers: false, blockCookieBanners: false, blockPings: false }
+    let settings: Settings = { ...defaultSettings(), blockAds: false, blockTrackers: false, blockCookieBanners: false, blockPings: false, typoGuard: false }
     const fake = fakeBrowser({ store: { get: () => ({ ...base, settings }) }, extraBlockedHosts: [], containerScopes: new Map(), privateScope: null })
     const given = () => fake.calls.filter((call) => call.name === 'engine.setRequestBlocker').length
     shell['configureBlocker']!.call(fake.self)
