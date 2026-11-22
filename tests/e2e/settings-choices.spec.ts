@@ -53,6 +53,11 @@ const GREYED_OUT: Record<string, string> = {
  */
 const SAVED_AS: Record<string, (choice: string, state: Record<string, unknown>) => boolean> = {
   searchUrlTemplate: (name, state) => state['searchUrlTemplate'] === (SEARCH_ENGINES.find((engine) => engine.name === name)?.url ?? name),
+  // The private engine is kept as an address too; the entry « same as the other windows » is kept as the empty text.
+  privateSearchUrlTemplate: (name, state) => {
+    const engine = SEARCH_ENGINES.find((candidate) => candidate.name === name)
+    return engine ? state['privateSearchUrlTemplate'] === engine.url : state['privateSearchUrlTemplate'] === ''
+  },
   language: (choice, state) => (choice === 'fr' ? state['interfaceTranslated'] === false : state['interfaceTranslated'] === true && state['language'] === choice),
   restoreWindows: (option, state) => presetOf(PRESETS.lancement, { ...defaultSettings(), ...state } as Settings) === option
   // The level of the sleep is no menu any more but a row of buttons (PresetSettings.tsx, measured in preset-settings.test.ts): the one menu of
