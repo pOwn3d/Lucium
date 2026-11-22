@@ -18,6 +18,7 @@ import {
   parseFacts,
   parseFloatingCommand,
   soundCut,
+  takesSitePip,
   timeText,
   type FloatingVideoFacts
 } from './floating-video'
@@ -262,5 +263,18 @@ describe('the bar', () => {
     vi.advanceTimersByTime(FLOATING_BAR_HIDE_MS * 2)
     expect(bar.visible).toBe(true)
     expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+describe('the site’s own Picture in Picture button', () => {
+  const asked = { setting: true, privateWindow: false, floatingTab: null, tabId: 'tab' }
+  it('is taken into Lucium’s window', () => {
+    expect(takesSitePip(asked)).toBe(true)
+  })
+  it('is left to the system when the setting is off, in a private window, or when the tab already floats in Lucium’s window', () => {
+    expect(takesSitePip({ ...asked, setting: false })).toBe(false)
+    expect(takesSitePip({ ...asked, privateWindow: true })).toBe(false)
+    expect(takesSitePip({ ...asked, floatingTab: 'tab' })).toBe(false)
+    expect(takesSitePip({ ...asked, floatingTab: 'other' })).toBe(true)
   })
 })

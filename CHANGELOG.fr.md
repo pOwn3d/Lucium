@@ -4,6 +4,14 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Modifications
+
+- **Image dans l’image dans la fenêtre de Lucium, aussi depuis le site** : le bouton d’un site (Twitch, YouTube…) et l’image automatique ouvrent la fenêtre flottante de Lucium, plus celle du système. Un direct affiche « EN DIRECT », sans ligne de progression ni ±10 s. Un interrupteur de Réglages › Onglets et fenêtres le coupe pour le bouton du site.
+
+### Corrections
+
+- **Direct à durée finie** : un direct dont le lecteur annonce une durée finie qui grandit (Twitch) est reconnu comme direct dans la fenêtre flottante de Lucium : les boutons ±10 s sont masqués.
+
 ## [1.1.5] - 2026-11-20
 
 Votre iPhone peut maintenant se synchroniser avec votre Mac, directement et sans serveur, et leurs onglets du jour peuvent être partagés. Sous Windows, la fenêtre dessine sa propre barre de titre, et Windows et Linux disent qu’ils se mettent à jour à la main.

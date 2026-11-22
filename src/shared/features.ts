@@ -1005,6 +1005,7 @@ export type FeatureId = RegisteredFeature['id']
 // `blockTrackers` is named beside the boolean keys: it is typed optional (a state file of an older version may not carry it), so the keys of
 // the plain booleans do not hold it.
 export const NOT_OPTIONAL_SETTINGS: Partial<Record<BooleanSettingKey | 'blockTrackers', string>> = {
+  sitePictureInPictureInLucium: 'option de l’image dans l’image (`media-player`, `auto-pip`) : le bouton du site ouvre la fenêtre flottante de Lucium plutôt que celle du système ; un test quand le pont multimédia entend le bouton, rien ne tourne de plus ni de moins, et sans le pont (fonction `media-player` coupée) le bouton garde la fenêtre du système',
   translateSystemEngine: 'option de la traduction locale (`translate-local`) : choisit si macOS traduit d’abord les paires installées, sans rien coûter de plus ; coupée, la fonction passe par Bergamot ou un glossaire',
   translateSystemNoticeSeen: 'mémoire de l’avis de la traduction de macOS déjà donné (Apple peut compter son usage), pas une fonction : il ne paraît qu’une fois, la première fois que macOS traduit une page en un clic',
   aiSummary: 'sous-réglage du résumé de page (Réglages › IA) : l’entrée de menu et le résumé s’éteignent avec lui, sans fonction propre',

@@ -83,7 +83,10 @@ export abstract class ElectronEnginePreloads extends ElectronEngineBridge {
     const actions = (event: IpcMainEvent, raw: unknown): void => (isMainFrameSender(event) ? this.pageOfContents(event.sender) : undefined)?.reportTrackActions(raw)
     ipcMain.handle(MEDIA_BRIDGE.hello, (event) => (isMainFrameSender(event) ? this.pageOfContents(event.sender) : undefined)?.tabVolume() ?? 1)
     ipcMain.on(MEDIA_BRIDGE.actions, actions)
+    const pip = (event: IpcMainEvent): void => (isMainFrameSender(event) ? this.pageOfContents(event.sender) : undefined)?.sitePictureInPicture?.()
+    ipcMain.on(MEDIA_BRIDGE.pip, pip)
     this.stopMediaChannels = () => {
+      ipcMain.removeListener(MEDIA_BRIDGE.pip, pip)
       ipcMain.removeHandler(MEDIA_BRIDGE.hello)
       ipcMain.removeListener(MEDIA_BRIDGE.actions, actions)
     }

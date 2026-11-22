@@ -97,3 +97,18 @@ export class AutoPipMemory {
     this.closes.set(site, (this.closes.get(site) ?? 0) + 1)
   }
 }
+
+/**
+ * What happens to Lucium's floating window when the tab whose video it shows comes back on screen. `floatedSite` is the site of the window the
+ * automatic picture opened for this tab (`AutoPipMemory.returning`), null for a window asked for by hand or none at all. The automatic one gives the
+ * video back to the tab, as the system's window does; one asked for by hand comes back in front.
+ */
+export function floatingOnReturn(floatedSite: string | null, floatingHere: boolean): 'release' | 'show' | 'none' {
+  if (!floatingHere) return 'none'
+  return floatedSite !== null ? 'release' : 'show'
+}
+
+/** The user closed the window the automatic picture opened: the tab is back, and neither window floats its video (the system's, or Lucium's). */
+export function autoWindowWasClosed(floatedSite: string | null, floatingHere: boolean, systemWindowWasFloating: boolean): boolean {
+  return floatedSite !== null && !floatingHere && !systemWindowWasFloating
+}

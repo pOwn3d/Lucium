@@ -37,3 +37,35 @@ describe('a video asked to float when its tab is left', () => {
     expect(wc.executeJavaScript.mock.calls.filter((call) => (call as unknown[])[1] === true)).toEqual([])
   })
 })
+
+// The site's own Picture in Picture button and Lucium's own request both end in the same event of the page: only the first is taken into Lucium's window.
+describe('the system’s Picture in Picture window heard from the page', () => {
+  it('is the site’s own button when Lucium did not ask for it', async () => {
+    const sitePictureInPicture = vi.fn()
+    const { page } = await makePage({ events: { sitePictureInPicture } })
+    page.sitePictureInPicture()
+    expect(sitePictureInPicture).toHaveBeenCalledTimes(1)
+  })
+
+  it('is not the site’s when Lucium asked for it, while the request lasts and just after, so the fallback does not loop', async () => {
+    vi.useFakeTimers()
+    try {
+      const sitePictureInPicture = vi.fn()
+      const { page, wc } = await makePage({ events: { sitePictureInPicture } })
+      let answer: (value: unknown) => void = () => undefined
+      wc.executeJavaScript.mockReturnValueOnce(new Promise((resolve) => (answer = resolve)))
+      const floating = page.floatMainVideo()
+      page.sitePictureInPicture()
+      answer({ entered: true })
+      await floating
+      page.sitePictureInPicture()
+      expect(sitePictureInPicture).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(2000)
+      page.sitePictureInPicture()
+      expect(sitePictureInPicture).toHaveBeenCalledTimes(1)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+

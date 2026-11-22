@@ -3564,6 +3564,8 @@ export const fr = {
   'settings-shortcuts.saisissez-une-commande-ou-un-raccourci-comme': 'Saisissez une commande ou un raccourci (comme « {example} »)',
   'settings-shortcuts.voir-tous-les-raccourcis': 'Voir tous les raccourcis',
   'settings.rouvrir-les-fenetres-de-la-session-precedente': 'Rouvrir les fenêtres de la session précédente',
+  'settings.image-dans-l-image-d-un-site-dans-la-fenetre-de-lucium': 'Le bouton d’image dans l’image d’un site ouvre la fenêtre de Lucium',
+  'settings.le-bouton-d-un-site-ouvre-la-fenetre-de-lucium': 'La fenêtre de Lucium affiche « EN DIRECT » pour un flux, sans ligne de progression ni ±10 s. Désactivé : la fenêtre du système, telle que le site la dessine.',
   'settings.activer-l-image-dans-l-image-quand-vous': 'Image dans l’image en quittant un onglet vidéo',
   'settings.activer-les-retouches-sur-les-sites-web-que': 'Activer les Retouches sur les sites web que vous visitez',
   'settings.actualiser-tous-les-onglets-reveille-aussi': 'Réveiller aussi les onglets en veille',

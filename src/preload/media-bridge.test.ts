@@ -56,7 +56,7 @@ interface World {
 
 let page: Tree
 let session: FakeSession
-let listeners: Record<string, (event: { target: unknown }) => void>
+let listeners: Record<string, (event: { target?: unknown; isTrusted?: boolean }) => void>
 let world: World | null
 let hello: Promise<unknown>
 
@@ -107,7 +107,7 @@ beforeEach(() => {
   vi.stubGlobal('HTMLMediaElement', Media)
   vi.stubGlobal('MediaSession', Session)
   vi.stubGlobal('navigator', { mediaSession: session })
-  vi.stubGlobal('document', { ...queryable(page), querySelectorAll: (selector: string) => queryable(page).querySelectorAll(selector), addEventListener: (type: string, listener: (event: { target: unknown }) => void) => (listeners[type] = listener) })
+  vi.stubGlobal('document', { ...queryable(page), querySelectorAll: (selector: string) => queryable(page).querySelectorAll(selector), addEventListener: (type: string, listener: (event: { target?: unknown; isTrusted?: boolean }) => void) => (listeners[type] = listener) })
   vi.spyOn(console, 'warn').mockImplementation(() => {})
 })
 
@@ -328,5 +328,19 @@ describe('a document without context isolation (an offscreen document of an exte
   it('still tries where the renderer does not say (no `contextIsolated` at all): the attempt is made, as it always was', async () => {
     await install({ isolated: undefined })
     expect(contextBridge.executeInMainWorld).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('the site’s own Picture in Picture button', () => {
+  it('tells the shell when a video of the page enters the system’s window', async () => {
+    await install()
+    listeners['enterpictureinpicture']!({ target: element(), isTrusted: true })
+    expect(ipcRenderer.send).toHaveBeenCalledWith(MEDIA_BRIDGE.pip)
+  })
+
+  it('does not listen to an event the page made up', async () => {
+    await install()
+    listeners['enterpictureinpicture']!({ target: element(), isTrusted: false })
+    expect(ipcRenderer.send).not.toHaveBeenCalledWith(MEDIA_BRIDGE.pip)
   })
 })

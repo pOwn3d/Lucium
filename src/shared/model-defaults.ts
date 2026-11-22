@@ -180,6 +180,7 @@ export function defaultSettings(): Settings {
     externalLinksInLittleArc: true,
     peekOnExternalLinks: false,
     autoPictureInPicture: true,
+    sitePictureInPictureInLucium: true,
     mediaPlayer: true,
     autoArchiveHours: 12,
     profiles: {},

@@ -248,6 +248,7 @@ export abstract class BrowserPages extends BrowserTools {
       ...(tab.private === true ? {} : { createShortcut: () => this.openOverlay({ panel: 'shortcut', url: this.tabNow(tab).url, title: this.tabNow(tab).title }) }),
       canOpenUnsaved: () => this.store.get().settings.openUnsaved,
       toolMessage: (message) => this.onToolMessage(tab.id, message),
+      sitePictureInPicture: () => void this.takeSitePictureInPicture(tab.id).catch((error: unknown) => console.error('[pip] the site\'s Picture in Picture could not be taken into Lucium\'s window:', error instanceof Error ? error.message : String(error))),
       pageTools: () => this.toolsFor(tab.id),
       menuOptions: () => this.menuOptionsFor(tab.id),
       // The language of a page is read only while the translation is on: switched off, nothing runs in the pages for it.

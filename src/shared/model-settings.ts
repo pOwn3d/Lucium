@@ -217,6 +217,11 @@ export interface Settings {
   /** Leaving a tab that plays a video moves the video to a floating Picture in Picture window. */
   autoPictureInPicture: boolean
   /**
+   * The Picture in Picture button of a site (Twitch, YouTube…) opens Lucium's floating window instead of the system's, whose design is not ours:
+   * a live stream there has its own « EN DIRECT », no progress line, no ±10 s. Off: the system's window, as the site asks. On by default.
+   */
+  sitePictureInPictureInLucium: boolean
+  /**
    * The player at the foot of the sidebar for a tab that makes sound while it is not on screen (buttons, track, volume). It needs a script in
    * the main frame of every page; off, no page gets it, no player opens and the tab's volume is the page's own. On by default.
    */

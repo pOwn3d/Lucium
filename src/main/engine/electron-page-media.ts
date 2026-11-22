@@ -17,7 +17,39 @@ import { t } from '@shared/i18n'
 import { MEDIA_SCRIPT_TIMEOUT_MS, TOOL_SCRIPTS, PIP_TIMEOUT_MS, withTimeout } from './electron-page-scripts'
 import { ElectronPageContent } from './electron-page-content'
 
+/** How long after its own request for the system's Picture in Picture a page still counts the `enterpictureinpicture` it hears as its own (the event and the answer of the script travel on different pipes). */
+const OWN_PIP_GRACE_MS = 1500
+
 export abstract class ElectronPageMedia extends ElectronPageContent {
+  /** Requests of the system's Picture in Picture made by Lucium itself that are not over yet: the site's button is told apart from them. */
+  private ownPip = 0
+
+  /** Runs a request of Lucium for the system's Picture in Picture: the event it causes is not the site's button, and is not taken into Lucium's window. */
+  private async ownPictureInPicture<T>(request: () => Promise<T>): Promise<T> {
+    this.ownPip++
+    try {
+      return await request()
+    } finally {
+      setTimeout(() => void this.ownPip--, OWN_PIP_GRACE_MS).unref?.()
+    }
+  }
+
+  /** A video of the page entered the system's Picture in Picture (heard by the media bridge): unless Lucium asked for it, it is the site's own button. */
+  sitePictureInPicture(): void {
+    if (this.gone || this.ownPip > 0) return
+    this.events.sitePictureInPicture?.()
+  }
+
+  /** Whether a video being watched floats as the tab is left (shared/auto-pip.ts), asked in a world of our own and without a gesture. */
+  async watchedVideoCanFloat(): Promise<boolean> {
+    if (this.gone) return false
+    try {
+      return (await this.webContents.executeJavaScriptInIsolatedWorld(FLOATING_WORLD, [{ code: PIP_AUTO_CAN_ENTER }])) === true
+    } catch (error) {
+      if (!this.gone && !/disposed/i.test(String(error))) console.warn(`[pip] page ${this.id}: its watched video could not be looked for:`, error instanceof Error ? error.message : String(error))
+      return false
+    }
+  }
   /** Ends the hold on the menu of a right click (the last layer: electron-page.ts), which the mouse gestures of the tools decide. */
   protected abstract releaseHeld(show: boolean): void
 
@@ -131,7 +163,7 @@ export abstract class ElectronPageMedia extends ElectronPageContent {
       // would keep, at every tab switch.
       const canEnter = by === 'tab-switch' ? this.webContents.executeJavaScriptInIsolatedWorld(FLOATING_WORLD, [{ code: PIP_AUTO_CAN_ENTER }]) : this.webContents.executeJavaScript(PIP_CAN_ENTER)
       if ((await canEnter) !== true) return false
-      const result = (await this.webContents.executeJavaScript(by === 'tab-switch' ? PIP_AUTO_ENTER : PIP_ENTER, true)) as PictureInPictureResult
+      const result = (await this.ownPictureInPicture(() => this.webContents.executeJavaScript(by === 'tab-switch' ? PIP_AUTO_ENTER : PIP_ENTER, true))) as PictureInPictureResult
       // The script says a refusal to us only (the page reads its own console): the journal is where it is written.
       if (!result.entered && result.reason === 'refused') console.warn(`[pip] page ${this.id}: the video did not float (${by}): ${result.detail ?? ''}`)
       return result.entered
@@ -147,7 +179,7 @@ export abstract class ElectronPageMedia extends ElectronPageContent {
     try {
       // The user asked for it (a click in the menu): the script runs with a gesture, which requestPictureInPicture() needs.
       // The page can leave the request pending (a stream that never settles): a limit turns the wait into a reason, so the user is told.
-      const result = (await withTimeout(this.webContents.executeJavaScript(PIP_ENTER, true), PIP_TIMEOUT_MS)) as PictureInPictureResult | 'timeout'
+      const result = (await this.ownPictureInPicture(() => withTimeout(this.webContents.executeJavaScript(PIP_ENTER, true), PIP_TIMEOUT_MS))) as PictureInPictureResult | 'timeout'
       if (result === 'timeout') return { ok: false, reason: 'refused', detail: t('engine.la-page-n-a-pas-repondu-a-temps') }
       if (result.entered) return { ok: true }
       if (result.reason !== 'already') console.warn(`[pip] page ${this.id}: nothing floated (${result.reason}): ${result.detail ?? ''}`)
@@ -231,7 +263,7 @@ export abstract class ElectronPageMedia extends ElectronPageContent {
     for (const frame of this.liveFrames().slice(1, 1 + FLOAT_FRAMES_MAX)) {
       try {
         // The user asked (a click in the menu): the script runs with a gesture in that frame, which requestPictureInPicture() needs there.
-        const result = (await withTimeout(frame.executeJavaScript(PIP_ENTER, true), PIP_TIMEOUT_MS)) as PictureInPictureResult | 'timeout'
+        const result = (await this.ownPictureInPicture(() => withTimeout(frame.executeJavaScript(PIP_ENTER, true), PIP_TIMEOUT_MS))) as PictureInPictureResult | 'timeout'
         if (result === 'timeout') refused = t('engine.la-page-n-a-pas-repondu-a-temps')
         else if (result.entered) return { ok: true }
         else if (result.reason === 'refused') refused = result.detail
