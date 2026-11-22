@@ -1102,6 +1102,147 @@ export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
     keywords: 'apercu ligne barre commandes surbrillance colonne droite icone preview line command bar highlighted column right icon',
     try: { kind: 'hint' },
     setting: { panel: 'settings', pane: 'navigation' }
+  },
+
+  // ---- Added with the demos: a guest window, a space put aside, the name of a window, reading aloud, and the commands of every day for someone who is discovering ----
+  {
+    id: 'guest-window',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'guest-profile',
+    name: 'discover.invite-nom',
+    summary: 'discover.invite-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.nouvelle-fenetre-invite'] },
+    keywords: 'invite prete fenetre sans trace autre personne cookies historique effacee guest lend window no trace someone else cookies history erased',
+    shortcut: 'guestWindow',
+    try: { kind: 'hint' },
+    needs: 'guestProfile'
+  },
+  {
+    id: 'aside-space',
+    task: 'organise',
+    level: 'advanced',
+    name: 'discover.espace-cote-nom',
+    summary: 'discover.espace-cote-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.espaces', 'menu.mettre-l-espace-de-cote'] },
+    keywords: 'mettre espace de cote ranger fermer session plus tard liberer barre laterale set space aside put away close session later free sidebar',
+    shortcut: 'asideSpace',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'name-window',
+    task: 'organise',
+    level: 'advanced',
+    feature: 'name-windows',
+    name: 'discover.nommer-fenetre-nom',
+    summary: 'discover.nommer-fenetre-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.nommer-la-fenetre'] },
+    keywords: 'nommer fenetre nom titre reconnaitre travail perso name window title recognise recognize work personal',
+    shortcut: 'nameWindow',
+    try: open({ panel: 'windowname' }),
+    needs: 'nameWindows'
+  },
+  {
+    id: 'read-aloud',
+    task: 'read',
+    level: 'beginner',
+    feature: 'read-aloud',
+    name: 'discover.voix-haute-nom',
+    summary: 'discover.voix-haute-resume',
+    where: 'discover.voix-haute-ou',
+    whereVars: () => ({ item: t('engine.lire-la-selection-a-voix-haute') }),
+    keywords: 'lire voix haute ecouter texte article parler synthese vocale accessibilite read aloud listen text article speak speech accessibility',
+    try: { kind: 'hint' },
+    needs: 'readAloud'
+  },
+  {
+    id: 'reopen-closed-tab',
+    task: 'organise',
+    level: 'beginner',
+    name: 'menu.rouvrir-le-dernier-onglet-ferme',
+    summary: 'discover.rouvrir-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.rouvrir-le-dernier-onglet-ferme'] },
+    keywords: 'rouvrir onglet ferme par erreur retrouver annuler fermeture reopen closed tab by mistake undo close restore',
+    shortcut: 'restoreClosed',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'mute-tab',
+    task: 'organise',
+    level: 'beginner',
+    name: 'menu.couper-le-son-de-l-onglet',
+    summary: 'discover.son-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.onglets', 'menu.couper-le-son-de-l-onglet'] },
+    keywords: 'couper son muet silence onglet bruit video musique mute sound silent tab noise video music',
+    shortcut: 'muteTab',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'pin-tab',
+    task: 'organise',
+    level: 'beginner',
+    name: 'menu.epingler-l-onglet',
+    summary: 'discover.epingler-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.onglets', 'menu.epingler-l-onglet'] },
+    keywords: 'epingler onglet garder en haut fixe favori toujours pin tab keep top fixed favourite favorite always',
+    shortcut: 'pin',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'duplicate-tab',
+    task: 'organise',
+    level: 'beginner',
+    name: 'menu.dupliquer-l-onglet',
+    summary: 'discover.dupliquer-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.onglets', 'menu.dupliquer-l-onglet'] },
+    keywords: 'dupliquer onglet copie cloner meme page duplicate tab copy clone same page',
+    shortcut: 'duplicateTab',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'save-pdf',
+    task: 'keep',
+    level: 'beginner',
+    feature: 'pdf-with-source',
+    name: 'discover.pdf-nom',
+    summary: 'discover.pdf-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.enregistrer-en-pdf-avec-l-adresse'] },
+    keywords: 'pdf enregistrer page document adresse date pied de page save page document address date footer',
+    shortcut: 'savePdfSource',
+    try: { kind: 'hint' },
+    needs: 'pdfWithSource'
+  },
+  {
+    id: 'print',
+    task: 'keep',
+    level: 'beginner',
+    name: 'discover.imprimer-nom',
+    summary: 'discover.imprimer-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.imprimer'] },
+    keywords: 'imprimer impression papier page pdf print printing paper page pdf',
+    shortcut: 'print',
+    try: { kind: 'hint' }
+  },
+  {
+    id: 'zoom',
+    task: 'read',
+    level: 'beginner',
+    name: 'discover.zoom-nom',
+    summary: 'discover.zoom-resume',
+    where: 'discover.zoom-ou',
+    menus: { zoomin: ['menu.affichage', 'menu.zoom-avant'], zoomout: ['menu.affichage', 'menu.zoom-arriere'], reset: ['menu.affichage', 'menu.taille-reelle'] },
+    keywords: 'zoom agrandir reduire texte trop petit grand taille page loupe enlarge shrink text too small big size page magnify',
+    shortcut: 'zoomIn',
+    try: { kind: 'hint' }
   }
 ]
 
@@ -1260,6 +1401,35 @@ export const REGISTRY_ENTRIES: readonly DiscoverEntry[] = (() => {
 
 /** Every card of the panel, in the order it shows them under each task: the chosen ones first, then the functions without a switch, then the rest of the registry. */
 export const ALL_DISCOVER_ENTRIES: readonly DiscoverEntry[] = [...DISCOVER_ENTRIES, ...DISCOVER_EXTRAS, ...REGISTRY_ENTRIES]
+
+// ---------- the demos ----------
+
+/**
+ * The cards that carry an animated demo, in the order they were made: the five functions of 21-22 November, then the split view, the command bar and the
+ * captures. A demo is a small scene drawn with the tokens (renderer/DiscoverDemo.tsx, discover-demos.css), never a picture, a GIF or a video; its id is the id of its card.
+ */
+export const DISCOVER_DEMOS = ['tab-reminders', 'focus-mode', 'markdown', 'totp', 'prefixes', 'split-view', 'command-bar', 'capture'] as const
+export type DiscoverDemo = (typeof DISCOVER_DEMOS)[number]
+
+/** What a demo shows, in a sentence: the text equivalent under it, read by a screen reader and shown to whoever asks for less motion (WCAG 1.1.1, 2.2.2). */
+export const DEMO_TEXTS: Readonly<Record<DiscoverDemo, MessageKey>> = {
+  'tab-reminders': 'discover.demo-rappel-texte',
+  'focus-mode': 'discover.demo-concentration-texte',
+  markdown: 'discover.demo-markdown-texte',
+  totp: 'discover.demo-totp-texte',
+  prefixes: 'discover.demo-prefixes-texte',
+  'split-view': 'discover.demo-scinde-texte',
+  'command-bar': 'discover.demo-barre-texte',
+  capture: 'discover.demo-capture-texte'
+}
+
+/** The demo of a card, or null when it has none. */
+export function demoOf(entry: DiscoverEntry): DiscoverDemo | null {
+  return (DISCOVER_DEMOS as readonly string[]).includes(entry.id) ? (entry.id as DiscoverDemo) : null
+}
+
+/** A demo moves only while its card is on screen (nothing runs at rest) and nobody paused it (WCAG 2.2.2). */
+export const demoPlaying = (visible: boolean, paused: boolean): boolean => visible && !paused
 
 // ---------- what a card says ----------
 
