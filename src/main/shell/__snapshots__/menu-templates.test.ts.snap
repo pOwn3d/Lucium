@@ -744,6 +744,7 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
   - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
   - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
   - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - accelerator=undefined enabled=false label="Rouvrir la dernière fenêtre fermée" click
   - accelerator=undefined label="Nouvelle fenêtre invité" visible=false click
   - accelerator=undefined label="Nouvel onglet privé" visible=true click
   - label="Nouvel onglet dans un conteneur" visible=false
@@ -1037,6 +1038,7 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
   - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
   - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - accelerator=undefined enabled=false label="Rouvrir la dernière fenêtre fermée" click
   - label="Partager une fenêtre annotée…" click
   - accelerator="Alt+CmdOrCtrl+M" checked=true label="Annoter cette page" registerAccelerator=true type="checkbox" click(brings back)
   - accelerator=undefined label="Nouvelle fenêtre invité" visible=true click
@@ -1365,6 +1367,7 @@ exports[`the menu bar, as built > in a private window 1`] = `
   - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
   - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
   - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - accelerator=undefined enabled=false label="Rouvrir la dernière fenêtre fermée" click
   - label="Partager une fenêtre annotée…" click
   - accelerator="Alt+CmdOrCtrl+M" checked=true label="Annoter cette page" registerAccelerator=true type="checkbox" click
   - accelerator=undefined label="Nouvelle fenêtre invité" visible=false click
@@ -1683,6 +1686,7 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
   - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
   - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
   - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - accelerator=undefined enabled=false label="Rouvrir la dernière fenêtre fermée" click
   - label="Partager une fenêtre annotée…" click
   - accelerator="Alt+CmdOrCtrl+M" checked=true label="Annoter cette page" registerAccelerator=true type="checkbox" click
   - accelerator=undefined label="Nouvelle fenêtre invité" visible=true click
@@ -2014,6 +2018,7 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
   - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
   - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
   - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - accelerator=undefined enabled=false label="Rouvrir la dernière fenêtre fermée" click
   - label="Partager une fenêtre annotée…" click
   - accelerator="Alt+CmdOrCtrl+M" checked=true label="Annoter cette page" registerAccelerator=true type="checkbox" click
   - accelerator=undefined label="Nouvelle fenêtre invité" visible=true click
@@ -2345,6 +2350,7 @@ exports[`the menu bar, as built > with every optional setting off and windows th
   - accelerator="CmdOrCtrl+N" label="Nouvelle fenêtre" click
   - accelerator="Ctrl+CmdOrCtrl+N" label="Fenêtre vierge" click
   - accelerator="CmdOrCtrl+Shift+N" label="Nouvelle fenêtre privée" click
+  - accelerator=undefined enabled=false label="Rouvrir la dernière fenêtre fermée" click
   - accelerator=undefined label="Nouvelle fenêtre invité" visible=false click
   - accelerator=undefined label="Nouvel onglet privé" visible=true click
   - label="Nouvel onglet dans un conteneur" visible=false

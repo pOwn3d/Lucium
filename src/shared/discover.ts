@@ -747,6 +747,19 @@ export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
     setting: { panel: 'settings', pane: 'appearance' }
   },
   {
+    id: 'reopen-window',
+    task: 'organise',
+    level: 'advanced',
+    name: 'menu.rouvrir-la-derniere-fenetre-fermee',
+    summary: 'discover.rouvrir-fenetre-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.rouvrir-la-derniere-fenetre-fermee'] },
+    keywords: 'rouvrir fenetre fermee restaurer annuler fermeture derniere reopen closed window restore undo close last',
+    shortcut: 'reopenWindow',
+    try: { kind: 'hint' },
+    isNew: true
+  },
+  {
     id: 'always-on-top',
     task: 'organise',
     level: 'advanced',

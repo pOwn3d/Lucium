@@ -77,6 +77,9 @@ export interface MenuActions {
   /** Affichage › Toujours au premier plan: whether the window the menu acts on is kept above the other applications' windows, and keeping it there or not. */
   isKeptOnTop: () => boolean
   keepOnTop: () => void
+  /** File › Rouvrir la dernière fenêtre fermée: whether a window closed in this session can come back, and bringing it back. */
+  canReopenWindow: () => boolean
+  reopenWindow: () => void
   /** When this session began: only what was archived since is something Edit › Undo can bring back. */
   sessionStart: number
 }
@@ -121,7 +124,7 @@ export function menuBarKit(browser: Browser, store: StateStore, actions: MenuAct
   // A window put away shows no tab.
   const tabNow = options.away ? undefined : activeTab(state())
   // The clicks that do not bring a window put away back: they open a window of their own (or go to one), or stand apart from the window.
-  const standalone = new Set<unknown>([actions.showAbout, actions.newWindow, actions.blankWindow, actions.privateWindow, actions.guestWindow, actions.shareWindow, actions.closeWindow, actions.openTaskManager, actions.showDataFolder, actions.copyInfo, actions.recordTrace, actions.lockNow])
+  const standalone = new Set<unknown>([actions.showAbout, actions.newWindow, actions.blankWindow, actions.privateWindow, actions.guestWindow, actions.reopenWindow, actions.shareWindow, actions.closeWindow, actions.openTaskManager, actions.showDataFolder, actions.copyInfo, actions.recordTrace, actions.lockNow])
   const alone = <F extends MenuClick>(click: F): F => (standalone.add(click), click)
   // The entries that act on the tab on screen are greyed out without one (an empty space, a locked one), and their shortcuts do nothing.
   const onTab = { enabled: tabNow !== undefined }
