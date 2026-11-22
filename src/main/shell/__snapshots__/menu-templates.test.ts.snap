@@ -911,6 +911,7 @@ exports[`the menu bar, as built > for a first launch: one space, no tab, every o
   - accelerator="CmdOrCtrl+Shift+B" enabled=false label="Retoucher ce site…" click
   - type="separator"
   - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+  - checked=false label="Toujours au premier plan" type="checkbox" click
 - label="Espaces"
   - accelerator=undefined enabled=true label="Nouvel espace…" click
   - accelerator=undefined enabled=true label="Modifier le thème…" click
@@ -1212,6 +1213,7 @@ exports[`the menu bar, as built > for a main window put away, with the space on 
   - accelerator="CmdOrCtrl+Shift+B" enabled=false label="Retoucher ce site…" click(brings back)
   - type="separator"
   - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+  - checked=false label="Toujours au premier plan" type="checkbox" click(brings back)
 - label="Espaces"
   - accelerator=undefined enabled=true label="Nouvel espace…" click(brings back)
   - accelerator=undefined enabled=true label="Modifier le thème…" click(brings back)
@@ -1539,6 +1541,7 @@ exports[`the menu bar, as built > in a private window 1`] = `
   - accelerator="CmdOrCtrl+Shift+B" enabled=false label="Retoucher ce site…" click
   - type="separator"
   - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+  - checked=false label="Toujours au premier plan" type="checkbox" click
 - label="Espaces"
   - accelerator=undefined enabled=false label="Nouvel espace…" click
   - accelerator=undefined enabled=false label="Modifier le thème…" click
@@ -1859,6 +1862,7 @@ exports[`the menu bar, as built > with every optional entry, a Today tab on scre
   - accelerator="CmdOrCtrl+Shift+B" enabled=true label="Retoucher ce site…" click
   - type="separator"
   - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+  - checked=false label="Toujours au premier plan" type="checkbox" click
 - label="Espaces"
   - accelerator=undefined enabled=true label="Nouvel espace…" click
   - accelerator=undefined enabled=true label="Modifier le thème…" click
@@ -2189,6 +2193,7 @@ exports[`the menu bar, as built > with every optional entry, a pinned tab of a f
   - accelerator="CmdOrCtrl+Shift+B" enabled=true label="Retoucher ce site…" click
   - type="separator"
   - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+  - checked=false label="Toujours au premier plan" type="checkbox" click
 - label="Espaces"
   - accelerator=undefined enabled=true label="Nouvel espace…" click
   - accelerator=undefined enabled=true label="Modifier le thème…" click
@@ -2510,6 +2515,7 @@ exports[`the menu bar, as built > with every optional setting off and windows th
   - accelerator="CmdOrCtrl+Shift+B" enabled=true label="Retoucher ce site…" click
   - type="separator"
   - accelerator="Ctrl+CmdOrCtrl+F" label="Activer le mode plein écran" role="togglefullscreen"
+  - checked=false label="Toujours au premier plan" type="checkbox" click
 - label="Espaces"
   - accelerator=undefined enabled=true label="Nouvel espace…" click
   - accelerator=undefined enabled=true label="Modifier le thème…" click

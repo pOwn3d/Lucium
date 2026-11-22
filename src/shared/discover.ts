@@ -747,6 +747,18 @@ export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
     setting: { panel: 'settings', pane: 'appearance' }
   },
   {
+    id: 'always-on-top',
+    task: 'organise',
+    level: 'advanced',
+    name: 'menu.toujours-au-premier-plan',
+    summary: 'discover.toujours-au-premier-plan-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.affichage', 'menu.toujours-au-premier-plan'] },
+    keywords: 'toujours au premier plan epingler fenetre flottante dessus garder visible always on top pin float window keep visible',
+    try: { kind: 'hint' },
+    isNew: true
+  },
+  {
     id: 'move-tab',
     task: 'organise',
     level: 'advanced',

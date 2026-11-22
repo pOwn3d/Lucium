@@ -30,6 +30,7 @@ import type { Browser } from './browser'
 import type { WindowShare } from './window-share'
 import type { PageAnnotate } from './page-annotate'
 import type { TaskManager } from './task-manager'
+import { isKeptOnTop, toggleKeptOnTop } from './always-on-top'
 
 export interface AppMenuDeps {
   engine: ElectronEngine
@@ -128,6 +129,8 @@ export function installAppMenus(deps: AppMenuDeps): { refreshMenu: () => void } 
         focusWindow: (id) => void windowManager.focusWindow(id),
         setWindowName: (id, name) => void windowManager.setName(id, name),
         window: () => target.win,
+        isKeptOnTop: () => isKeptOnTop(target.win),
+        keepOnTop: () => void toggleKeptOnTop(target.win),
         sessionStart,
         loadExtension: () => void loadExtensionFromDialog(browser, store, target.win),
         extensions: () => (target.kind === 'private' ? [] : extensionsOfProfile(target.store.get())),
