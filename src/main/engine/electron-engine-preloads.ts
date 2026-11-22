@@ -6,13 +6,16 @@ import { MEDIA_BRIDGE } from '@shared/media-player'
 import { Channel } from '@shared/ipc-channels'
 import { replyOnce, withoutBoxReplyOf, type DialogReply, type PageDialogKind } from '@shared/page-dialog'
 import { PASSWORD_BRIDGE } from '@shared/passwords'
+import { FORM_GUARD } from '@shared/form-guard-wire'
 import { isMainFrameSender } from '@shared/surface-guard'
 import { addBounded } from '@shared/bounded'
 import { SIGN_IN_PRELOAD_EXCLUDES } from '@shared/google-sign-in'
+import type { InsecureFormAsk } from './types'
 import { ElectronPage } from './electron-page'
 import { EXTENSION_FRAME_MATCHES, registerLimitedPreload } from './extension-runtime'
-import { SHIM_CALL_CHANNEL, shimsPreloadPath, dialogBridgePath, chromeAppPath, lentTabPath, passwordBridgePath, WORKERS_MAX } from './electron-engine-base'
+import { SHIM_CALL_CHANNEL, shimsPreloadPath, dialogBridgePath, chromeAppPath, lentTabPath, passwordBridgePath, formGuardPath, WORKERS_MAX } from './electron-engine-base'
 import { ElectronEngineBridge } from './electron-engine-bridge'
+import { judgeFormAsk } from './form-guard'
 
 export abstract class ElectronEnginePreloads extends ElectronEngineBridge {
   /** Loads the dialog bridge (src/preload/dialog-bridge.ts: `alert()`, `confirm()`, `prompt()`) into the main frame of every page the session opens from now on. */
@@ -43,6 +46,64 @@ export abstract class ElectronEnginePreloads extends ElectronEngineBridge {
       ses.unregisterPreloadScript('lucium-password-bridge')
       this.passwordSessions.delete(ses)
     }
+  }
+
+  /** Registers or takes away the form guard in a session so that it matches the setting (`insecureFormAsk` is set while it is on). Every session comes here, a private context's too. */
+  protected syncFormGuard(ses: Session): void {
+    const has = this.formGuardSessions.has(ses)
+    if (this.insecureFormAsk !== null && !has) {
+      ses.registerPreloadScript({ id: 'lucium-form-guard', type: 'frame', filePath: formGuardPath(), excludeMatches: [...SIGN_IN_PRELOAD_EXCLUDES] })
+      this.formGuardSessions.add(ses)
+    } else if (this.insecureFormAsk === null && has) {
+      ses.unregisterPreloadScript('lucium-form-guard')
+      this.formGuardSessions.delete(ses)
+    }
+  }
+
+  setInsecureFormGuard(ask: InsecureFormAsk | null): void {
+    const wasOn = this.insecureFormAsk !== null
+    this.insecureFormAsk = ask
+    // The listener exists only while the setting is on: off, the channel has no one behind it.
+    if (ask !== null && !wasOn) ipcMain.on(FORM_GUARD.ask, this.onInsecureFormAsk)
+    else if (ask === null && wasOn) ipcMain.removeListener(FORM_GUARD.ask, this.onInsecureFormAsk)
+    for (const ses of this.liveSessions()) this.syncFormGuard(ses)
+  }
+
+  /**
+   * A form with a password about to go to an `http:` address (src/preload/form-guard.ts). The page waits for the reply, so every message is answered: true
+   * lets the form go, anything else stops it. Only the main frame is heard, and the address is judged again against the frame (engine/form-guard.ts).
+   * A box that could not be shown stops the form, with a line in the log: the password is not sent in the clear on the strength of a failure.
+   */
+  protected readonly onInsecureFormAsk = (event: IpcMainEvent, raw: unknown): void => {
+    const reply = replyOnce<boolean>(
+      (value) => {
+        event.returnValue = value
+      },
+      (error) => console.warn('[form-guard] the page that asked could not be answered:', error instanceof Error ? error.message : String(error))
+    )
+    let frameUrl = ''
+    try {
+      frameUrl = event.senderFrame?.url ?? ''
+    } catch (error) {
+      // The frame went away between the message and now: with no address to read the action against, a relative action is not insecure.
+      console.warn('[form-guard] the frame that asked is gone:', error instanceof Error ? error.message : String(error))
+    }
+    const verdict = judgeFormAsk({ mainFrame: isMainFrameSender(event), frameUrl }, raw)
+    if (verdict.kind === 'refuse') {
+      console.warn(`[form-guard] refused a message that is not the preload's (${verdict.why}): the form is stopped`)
+      reply(false)
+      return
+    }
+    const ask = this.insecureFormAsk
+    if (verdict.kind === 'allow' || ask === null) {
+      reply(true)
+      return
+    }
+    const pageId = this.pageByContents.get(event.sender.id)
+    ask({ host: verdict.host, ...(pageId !== undefined ? { pageId } : {}) }).then(reply, (error: unknown) => {
+      console.error('[form-guard] the box could not be shown, the form is stopped:', error instanceof Error ? error.message : String(error))
+      reply(false)
+    })
   }
 
   setPasswordBridge(on: boolean): void {

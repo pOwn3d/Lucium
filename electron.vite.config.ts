@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => (refuseFeedInEnvFiles(mode), {
         // `page-guard` runs in the main frame of the web pages only while the blocker's scriptlets or the fingerprint protection are on, and in the
         // service workers of the web while the fingerprint protection is on.
         // `password-bridge` runs in the main frame of the pages of normal tabs while the password manager is on: it reports a submitted sign-in form.
+        // `form-guard` runs in the main frame of the web pages while the setting is on: it stops a form with a password going to an `http:` address until the user has said yes.
         // `internal-extensions` is registered in the sessions of the tabs for the address of the Extensions page only (`lucium-ui://extensions/*`), and gives `window.lucium` to that page's top frame alone.
         input: {
           index: resolve(__dirname, 'src/preload/index.ts'),
@@ -58,6 +59,7 @@ export default defineConfig(({ mode }) => (refuseFeedInEnvFiles(mode), {
           'chrome-app': resolve(__dirname, 'src/preload/chrome-app.ts'),
           'page-guard': resolve(__dirname, 'src/preload/page-guard.ts'),
           'password-bridge': resolve(__dirname, 'src/preload/password-bridge.ts'),
+          'form-guard': resolve(__dirname, 'src/preload/form-guard.ts'),
           'internal-extensions': resolve(__dirname, 'src/preload/internal-extensions.ts'),
           // `lent-tab` is registered with the shims in the sessions that load an extension, for the pages of the web: it does nothing until the main process asks it, for a tab the user
           // lent to an extension with a click, to give the script the extension injects there its `chrome.runtime` and `chrome.storage` (src/main/engine/lent-tabs.ts).

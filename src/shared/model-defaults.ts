@@ -188,6 +188,7 @@ export function defaultSettings(): Settings {
     httpsOnly: false,
     httpsOnlyExceptions: [],
     typoGuard: true,
+    warnInsecureForm: true,
     profileNames: {},
     externalLinksInLittleArc: true,
     peekOnExternalLinks: false,

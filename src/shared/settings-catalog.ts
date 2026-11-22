@@ -101,7 +101,7 @@ export const SETTINGS_KEYS = {
   protection: [
     'blockAds', 'blockCookieBanners', 'blockMode', 'blockCosmetic', 'blockExceptions', 'popupExceptions',
     'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions', 'unwrapRedirects', 'unwrapExceptions', 'safeBrowsing', 'safeBrowsingExceptions',
-    'blockPings', 'trimReferer', 'httpsOnly', 'httpsOnlyExceptions', 'typoGuard',
+    'blockPings', 'trimReferer', 'httpsOnly', 'httpsOnlyExceptions', 'typoGuard', 'warnInsecureForm',
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
     'historyOff', 'historyKeepDays', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'siteDataClearOnQuitAll', 'clearAllKeepHosts',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',

@@ -256,6 +256,14 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'warn-insecure-form',
+    key: 'warnInsecureForm',
+    get label() { return t('privacy-settings.mot-de-passe-http') },
+    group: 'privacy',
+    get description() { return t('features.demande-avant-d-envoyer-un-mot-de-passe-sans-chiffrement') },
+    cost: ['listeners']
+  },
+  {
     id: 'strip-tracking',
     key: 'stripTrackingParams',
     get label() { return t('privacy-settings.retirer-les-parametres-de-suivi-des-adresses') },

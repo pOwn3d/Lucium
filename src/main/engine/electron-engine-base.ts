@@ -49,7 +49,7 @@ import type { ProxyPlan } from '@shared/proxy'
 import { HttpsUpgrades } from './https-upgrade'
 import type { PrivacyOptions } from '@shared/privacy'
 import { PendingReads } from './local-file-guard'
-import { type ActionMenuEntry, type DownloadPolicy, type ExtensionLogEntry, type ExtensionMenuAction, type ExtensionReviewAsk, type ExtensionTabHooks, type InnerGuardProvider, type PageGuardProvider, type PermissionPolicy, type RequestBlocker, type ResponsePolicy, type ShimHandler, type TabFacts, NO_DOWNLOAD_POLICY } from './types'
+import { type ActionMenuEntry, type DownloadPolicy, type ExtensionLogEntry, type ExtensionMenuAction, type ExtensionReviewAsk, type ExtensionTabHooks, type InnerGuardProvider, type InsecureFormAsk, type PageGuardProvider, type PermissionPolicy, type RequestBlocker, type ResponsePolicy, type ShimHandler, type TabFacts, NO_DOWNLOAD_POLICY } from './types'
 import { ElectronPage } from './electron-page'
 import { EphemeralScope } from './ephemeral-scope'
 import { refuseAlteredScripts, type PlainFs } from './unpacked-integrity'
@@ -99,6 +99,11 @@ export function dialogBridgePath(): string {
 /** The object `window.chrome.app` of the pages (src/preload/chrome-app.ts) is a frame preload too, and unpacked for the same reason. */
 export function chromeAppPath(): string {
   return join(__dirname, '../preload/chrome-app.js').replace('app.asar', 'app.asar.unpacked')
+}
+
+/** The form guard (a form with a password sent to an `http:` address) is a frame preload too, loaded only while its setting is on. */
+export function formGuardPath(): string {
+  return join(__dirname, '../preload/form-guard.js').replace('app.asar', 'app.asar.unpacked')
 }
 
 /** The password bridge (submitted sign-in forms) is a frame preload too, loaded only while the password manager is on. */
@@ -492,6 +497,11 @@ export abstract class ElectronEngineBase {
   protected readonly passwordSessions = new Set<Session>()
   protected passwordBridgeOn = false
   protected readonly onPasswordSubmitted = (event: IpcMainEvent, raw: unknown): void => this.pageOfContents(event.sender)?.passwordSubmitted(event, raw)
+
+  /** The question the form guard asks the shell, null while its setting is off (then no session carries the preload and the channel has no listener). */
+  protected insecureFormAsk: InsecureFormAsk | null = null
+  /** The sessions that load the form guard into their pages now. */
+  protected readonly formGuardSessions = new WeakSet<Session>()
 
   /** The listener of the page guard's channel (one function, so that `syncGuardListener` can take it off again). */
   protected readonly onGuardPlan = (event: IpcMainEvent, claimed?: unknown): void => this.answerGuardPlan(event, claimed)

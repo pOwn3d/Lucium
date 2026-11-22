@@ -11,6 +11,7 @@ import { safeGate } from '../engine/safe-gate'
 import { cleanSafeBrowsingExceptions, hostToCheck, safeVerdict, type SafeVerdict } from '@shared/safe-browsing'
 import { allowSafeHost, releaseSafeLists, safeAllowedHosts, safeLists } from '../safe-lists'
 import { typoGate } from '../engine/typo-gate'
+import { askInsecureForm } from './insecure-form-box'
 import { anyPrivacy, privacyOptionsOf } from '@shared/privacy'
 import { planHostResolver } from '@shared/dns'
 import { planProxies } from '@shared/proxy'
@@ -59,6 +60,7 @@ export abstract class BrowserNetwork extends BrowserPublish {
     this.engine.setDownloadNamer(tidyDownloads ? (name) => tidyFilename(name) : null)
     this.configureFocus()
     this.configureSafeBrowsing()
+    this.configureFormGuard()
     this.configureDownloads()
     this.configurePrivacy()
     this.guard.configure()
@@ -149,6 +151,18 @@ export abstract class BrowserNetwork extends BrowserPublish {
         if (!exceptions.includes(host)) this.dispatch({ type: 'settings/update', patch: { safeBrowsingExceptions: cleanSafeBrowsingExceptions([...exceptions, host]) } })
       }
     })
+  }
+
+  /**
+   * The form guard (a form with a password sent to an `http:` address): the engine loads its preload into every session and asks this window's box before
+   * the form goes, while the setting is on; off, the engine registers nothing and hears nothing. The box is put over the window that holds the page.
+   */
+  private configureFormGuard(): void {
+    this.engine.setInsecureFormGuard(
+      this.store.get().settings.warnInsecureForm
+        ? ({ host, pageId }) => askInsecureForm((pageId === undefined ? undefined : this.ownerOf(pageId)?.win) ?? this.win, host)
+        : null
+    )
   }
 
   /** What the block page of the engine asks of the focus mode: whether an address is closed now, and the pause. Present while the feature is on. */

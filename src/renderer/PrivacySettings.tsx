@@ -126,7 +126,7 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
       )}
     </Group>
 
-    <Group keys={['blockPings', 'trimReferer', 'httpsOnly', 'typoGuard']} title={t('privacy-settings.protection-du-reseau')}>
+    <Group keys={['blockPings', 'trimReferer', 'httpsOnly', 'typoGuard', 'warnInsecureForm']} title={t('privacy-settings.protection-du-reseau')}>
       <Check
         settingKey="blockPings"
         label={t('privacy-settings.bloquer-les-pings-de-suivi')}
@@ -158,6 +158,14 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
         more={t('privacy-settings.faute-de-frappe-more')}
         checked={settings.typoGuard}
         onChange={(typoGuard) => update({ typoGuard })}
+      />
+      <Check
+        settingKey="warnInsecureForm"
+        label={t('privacy-settings.mot-de-passe-http')}
+        hint={t('privacy-settings.mot-de-passe-http-hint')}
+        more={t('privacy-settings.mot-de-passe-http-more')}
+        checked={settings.warnInsecureForm}
+        onChange={(warnInsecureForm) => update({ warnInsecureForm })}
       />
     </Group>
 

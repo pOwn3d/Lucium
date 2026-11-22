@@ -310,6 +310,7 @@ export async function engineForPages(profile?: { ready: Promise<void> | null; cu
     mediaBridge: { ensure: vi.fn() },
     installDialogBridge: vi.fn(),
     installChromeApp: vi.fn(),
+    syncFormGuard: vi.fn(),
     syncPasswordBridge: vi.fn(),
     // The protection of the frames and workers of a page has its own tests (inner-guard-wiring.test.ts).
     primeInnerGuard: vi.fn(),

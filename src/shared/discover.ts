@@ -1349,6 +1349,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'trim-referer': 'protect',
   'https-only': 'protect',
   'typo-guard': 'protect',
+  'warn-insecure-form': 'protect',
   'strip-tracking': 'protect',
   'bypass-redirects': 'protect',
   'search-suggestions': 'fast',

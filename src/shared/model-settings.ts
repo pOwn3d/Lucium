@@ -226,6 +226,8 @@ export interface Settings {
   httpsOnlyExceptions: string[]
   /** A typed address one keystroke from a site of the person's history, bookmarks, favourites or pinned tabs stops on a warning page with « Continuer » (see typo-guard.ts). Local only. On by default. */
   typoGuard: boolean
+  /** A form with a password about to go to a public `http:` address asks first, and is not sent unless the user says so (see insecure-form.ts). Local only. On by default. */
+  warnInsecureForm: boolean
   /** Names shown for profiles, by profile id. The id stays the storage key, so renaming never loses data. */
   profileNames: Record<string, string>
   /** Expose the space theme to web pages as `--arc-palette-*` CSS variables (a page can read it, so it is opt-in). */

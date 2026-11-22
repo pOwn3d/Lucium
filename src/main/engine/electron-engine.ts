@@ -44,6 +44,8 @@ export class ElectronEngine extends ElectronEngineDownloads implements Engine {
       this.mediaBridge.ensure(sessionOfPage)
       this.installDialogBridge(sessionOfPage)
       this.installChromeApp(sessionOfPage)
+      // The form guard goes into every session while its setting is on, a private context's included.
+      this.syncFormGuard(sessionOfPage)
       // A session made after the manager was switched on gets the bridge with its first page. A private context never does.
       if (!scope) this.syncPasswordBridge(sessionOfPage)
     }
