@@ -11,6 +11,10 @@
 .dv-title h2 { margin: 0; font-size: var(--t-2xl); line-height: 1.15; font-weight: var(--w-semibold); }
 .dv-lead { margin: 0; max-width: 64ch; font-size: var(--t-m); line-height: 1.5; color: var(--text); }
 .dv .tk-field { border-color: var(--text-3); }
+/* The focus of the search field: the accent contour and the ring of the family. Without them `.tk-field:focus` (the same weight, later in the cascade of the
+   templates) would give back only its soft halo, 1,3 : 1 on the header. */
+.dv .tk-field:focus { border-color: var(--accent); }
+.dv .tk-field:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; }
 .dv .tk-btn { border-color: var(--text-3); }
 .dv .tk-btn.primary { border-color: var(--accent); }
 .dv .tk-btn.quiet { border-color: transparent; }
@@ -23,13 +27,14 @@
 .dv .tk-chip { border: 1px solid var(--text-3); background: var(--surface); color: var(--text); font-weight: var(--w-semibold); cursor: pointer; transition: background var(--dur); }
 .dv .tk-chip:hover { background: var(--tile); }
 .dv .tk-chip[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
-.dv .dv-n { font-weight: var(--w-regular); font-variant-numeric: tabular-nums; opacity: 0.85; }
+.dv .dv-n { font-weight: var(--w-regular); font-variant-numeric: tabular-nums; }
 .dv-status { min-height: 1.4em; margin: 0; font-size: var(--t-s); color: var(--text); }
 
 .dv-body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--sp-2) var(--sp-5) var(--sp-4); border-top: 1px solid var(--line); background: var(--surface-2); }
+.dv-body:focus-visible { outline-offset: -2px; }
 .dv-group { padding-top: var(--sp-3); }
 .dv-group h3 { margin: 0 0 var(--sp-3); font-size: var(--t-xl); font-weight: var(--w-semibold); }
-.dv-grid, .dv-others { list-style: none; margin: 0; padding: 0; }
+.dv-grid { list-style: none; margin: 0; padding: 0; }
 .dv-grid { display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 280px), 1fr)); }
 .dv-grid > li { display: flex; }
 
@@ -50,11 +55,6 @@
 .dv-nokey { font-size: var(--t-s); color: var(--text-2); }
 .dv-actions { display: inline-flex; flex-wrap: wrap; gap: var(--sp-2); margin-left: auto; }
 
-.dv-others { display: grid; gap: var(--sp-2); }
-.dv-other { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-4); padding: var(--sp-2) var(--sp-3); border: 1px solid var(--line); border-radius: var(--r-m); background: var(--surface); }
-.dv-other > div { display: grid; gap: 2px; min-width: 0; }
-.dv-other b { font-size: var(--t-m); font-weight: var(--w-semibold); }
-.dv-other span { font-size: var(--t-s); line-height: 1.4; color: var(--text-2); }
 .dv-empty { padding: var(--sp-5) var(--sp-4); }
 .dv-empty p { max-width: 44ch; }
 
@@ -62,13 +62,20 @@
 
 @media (max-width: 680px) {
   .dv-head, .dv-body, .dv-foot-note { padding-left: var(--sp-3); padding-right: var(--sp-3); }
-  .dv-other { flex-wrap: wrap; }
+  }
+/* A short window, or text at 200 %: the header would take the whole height and leave none to the cards, so the panel scrolls as one. */
+@media (max-height: 640px) {
+  .dv { overflow-y: auto; }
+  .dv-body { overflow: visible; }
+}
+/* « Forced colors » replaces the fills: the pressed chip would look like the others. */
+@media (forced-colors: active) {
+  .dv .tk-chip[aria-pressed='true'] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
 }
 @media (prefers-reduced-motion: reduce) {
   .dv .tk-chip { transition: none; }
 }
 @media (prefers-contrast: more) {
-  .dv-card, .dv-other { border-color: var(--text-3); border-width: 2px; }
-}
+  .dv-card, }
 /* The same, forced by « Toujours augmenter le contraste » (Réglages › Général), whatever the system asks. */
-:root[data-contrast='more'] .dv-card, :root[data-contrast='more'] .dv-other { border-color: var(--text-3); border-width: 2px; }
+:root[data-contrast='more'] .dv-card, :root[data-contrast='more'] 

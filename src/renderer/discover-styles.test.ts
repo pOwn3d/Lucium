@@ -3,6 +3,7 @@
 // itself; and the transitions that exist are cut by « Réduire les animations ».
 
 import { describe, expect, it } from 'vitest'
+import { TOKEN_PAIRS } from '@shared/design-tokens'
 import sheet from './discover.css?raw'
 import primitives from './templates/primitives.css?raw'
 
@@ -32,6 +33,53 @@ describe('the contours of the controls', () => {
   it('keep the accent contour of the primary button and none on the quiet close button', () => {
     expect(rule('.dv .tk-btn.primary')?.body).toContain('var(--accent)')
     expect(rule('.dv .tk-btn.quiet')?.body).toContain('transparent')
+  })
+})
+
+describe('the pairs of colours the panel relies on', () => {
+  it('stay in the checked pairs of the tokens: the header text and the contour on the gradient of the space, the badge of a switched-off card', () => {
+    const has = (fg: string, bg: string): boolean => TOKEN_PAIRS.some((pair) => pair.fg === `var(--${fg})` && pair.bg === `var(--${bg})`)
+    for (const [fg, bg] of [['text', 'space-a'], ['text', 'space-b'], ['text-3', 'space-a'], ['text-3', 'space-b'], ['warn-ink', 'surface']] as const) expect(has(fg, bg), `${fg} on ${bg}`).toBe(true)
+  })
+
+  it('are the ones the sheet draws: the header is on the gradient of the space, the status and the label are `text`, the contour is `text-3`', () => {
+    expect(rule('.dv-head')?.body).toMatch(/linear-gradient\([^)]*var\(--space-a\)[^)]*var\(--space-b\)/)
+    expect(rule('.dv-status')?.body).toContain('color: var(--text)')
+    expect(rule('.dv-chips .dv-label')?.body).toContain('color: var(--text)')
+    expect(rule('.dv .tk-field')?.body).toContain('var(--text-3)')
+    expect(rule('.dv-badge.off')?.body).toContain('var(--warn-ink)')
+  })
+})
+
+describe('the focus of the search field', () => {
+  it('takes the accent contour and a ring of the focus width, which outweigh the template (it gives the field only a soft halo and « outline: 0 » on :focus)', () => {
+    expect(rule('.dv .tk-field:focus')?.body).toMatch(/border-color:\s*var\(--accent\)/)
+    const ring = rule('.dv .tk-field:focus-visible')?.body ?? ''
+    expect(ring).toMatch(/outline:\s*var\(--focus-width\)\s+solid\s+var\(--focus\)/)
+    // A ring of its own, drawn by a selector heavier than `.tk-field:focus` (0,2,0) of the template: `.dv .tk-field:focus-visible` is 0,3,0.
+    expect(primitives).toMatch(/\.tk-field:focus \{[^}]*outline:\s*0/)
+  })
+
+  it('keeps the ring of the list that scrolls inside the panel, which would be cut at its edges', () => {
+    expect(rule('.dv-body:focus-visible')?.body).toMatch(/outline-offset:\s*-/)
+  })
+})
+
+describe('the count of a chip', () => {
+  it('is drawn without opacity: the colour of a pressed chip on the accent must keep 4,5 : 1 (an 85 % fill gave 3,75 : 1 in the light scheme)', () => {
+    const body = rule('.dv .dv-n')?.body ?? ''
+    expect(body).not.toMatch(/opacity/)
+    expect(code).not.toMatch(/\.dv-n[^{]*\{[^}]*opacity/)
+  })
+})
+
+describe('a short window and the forced colours', () => {
+  it('lets the panel scroll as one on a short window or at a large text, so that the cards stay reachable', () => {
+    expect(code).toMatch(/@media \(max-height: 640px\)\s*\{\s*\.dv \{ overflow-y: auto; \}\s*\.dv-body \{ overflow: visible; \}/)
+  })
+
+  it('tells the pressed chip from the others when the colours are forced', () => {
+    expect(code).toMatch(/@media \(forced-colors: active\)\s*\{[^}]*aria-pressed='true'\][^}]*Highlight/)
   })
 })
 
