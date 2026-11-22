@@ -27,6 +27,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Ajouts
 
 - **Recherche dans le contenu des pages visitées** : garde en local le texte des pages lues pour retrouver une page par une phrase, dans l’Historique (Réglages › Vie privée et sécurité › Plus de réglages). Désactivée par défaut ; rien n’est gardé quand l’historique est coupé ; jamais en navigation privée ni mots de passe ; rien n’est envoyé.
+### Ajouts
+
+- **Mode concentration** : Réglages › Fonctions en option › Mode concentration garde une liste de sites fermés pendant un minuteur (25 minutes par défaut) ou une plage horaire de la semaine. Un site bloqué affiche une page claire, avec « Faire une pause de 15 minutes » pour en sortir. Désactivé par défaut ; rien ne quitte votre Mac.
 
 ## [1.1.5] - 2026-11-20
 

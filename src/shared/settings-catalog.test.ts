@@ -174,7 +174,7 @@ describe('the catalogue of the features to add', () => {
     'web-panels', 'name-windows', 'independent-windows', 'pwa', 'document-pip',
     'containers', 'private-tabs', 'guest-profile',
     'bookmarks', 'live-folders', 'notes',
-    'user-scripts', 'qr-code', 'read-aloud', 'page-watch', 'annotate-capture',
+    'user-scripts', 'qr-code', 'read-aloud', 'page-watch', 'focus-mode', 'annotate-capture',
     'download-pause', 'open-unsaved', 'pdf-with-source',
     'find-regex', 'cookie-manager', 'shortcut-help', 'applescript'
   ]
@@ -191,13 +191,14 @@ describe('the catalogue of the features to add', () => {
     }
   })
 
-  it('takes the 41 settings there (the 30 switches, their options and their lists), and leaves the 80 other features in their category', () => {
+  it('takes the 48 settings there (the 31 switches, their options and their lists), and leaves the 80 other features in their category', () => {
     // The rows of annexes/correspondance.csv whose new place is « Fonctions en option »: 33 lines of the catalogue and 3 lists; then the switch of document
     // Picture-in-Picture, the one of the work views and the second button of the notes.
     const moved = [
       'webPanels', 'tabTree', 'tabSearch', 'tabGroupFolders', 'showReloadAllButton', 'reloadAllWakes', 'showTabMemory', 'nameWindows', 'independentWindows', 'tabContainers',
       'containers', 'containerRules', 'findRegex', 'webAppWindows', 'urlAutomation', 'shortcutHelp', 'cookieManager', 'privateTabs', 'guestProfile', 'downloadPause',
       'openUnsaved', 'pdfWithSource', 'bookmarkManager', 'liveFolders', 'notes', 'notesListButton', 'userScripts', 'qrCode', 'readAloud', 'pageWatch', 'pageWatches',
+      'focusMode', 'focusSites', 'focusScheduleOn', 'focusDays', 'focusFrom', 'focusTo', 'focusMinutes',
       'annotateCapture', 'annotateAutoClear', 'annotateAutoClearSeconds', 'annotateLetterKeys', 'ollamaConfig', 'aiSummary', 'documentPictureInPicture', 'workViewsEnabled', 'tabReminders'
     ]
     expect([...SETTINGS_KEYS.features].sort()).toEqual([...moved].sort())

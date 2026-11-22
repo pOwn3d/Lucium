@@ -32,6 +32,7 @@ import { cleanLockedSpaces } from './lock'
 import { cleanExtensionBarSettings } from './extension-overflow'
 import { cleanWebToolsSettings } from './web-tools'
 import { cleanKeyExtSettings } from './key-ext-settings'
+import { cleanFocusSettings } from './focus-mode'
 import { withoutGroupFolders } from './group-folders'
 import { cleanUiScale } from './ui-scale'
 import { cleanPanelSizes } from './panel-scale'
@@ -413,6 +414,7 @@ export function clampSettings(input: Settings): Settings {
     ...cleanExtensionBarSettings(settings),
     ...cleanWebToolsSettings(settings),
     ...cleanKeyExtSettings(settings),
+    ...cleanFocusSettings(settings),
     openWithApps: cleanOpenWithApps(settings.openWithApps),
     annotateBar: cleanBarPosition(settings.annotateBar),
     annotateAutoClearSeconds: cleanAutoClearSeconds(settings.annotateAutoClearSeconds),

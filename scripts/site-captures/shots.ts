@@ -43,7 +43,7 @@ export type SettingsPaneKey = 'home' | 'appearance' | 'tabs' | 'navigation' | 'p
  */
 export type SettingsSubpageKey =
   | 'contrast' | 'awake' | 'containers' | 'sitesearches' | 'linkroutes' | 'exceptions' | 'clearonclose' | 'permissions' | 'lockoptions' | 'filterlists'
-  | 'network' | 'extensionfolders' | 'translatelists' | 'userscripts' | 'pagewatches' | 'shortcuts' | 'siteexclusions' | 'sync'
+  | 'network' | 'extensionfolders' | 'translatelists' | 'userscripts' | 'pagewatches' | 'focus' | 'shortcuts' | 'siteexclusions' | 'sync'
 
 export type Localized<T> = Readonly<Record<Lang, T>>
 
