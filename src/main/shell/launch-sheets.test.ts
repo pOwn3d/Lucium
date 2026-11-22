@@ -166,3 +166,50 @@ describe('the timer of the launch sheet', () => {
     expect(closed.show).not.toHaveBeenCalled()
   })
 })
+
+// « Reprendre où vous en étiez ? »: the launch that follows an abnormal exit (shell/clean-exit.ts), when no other sheet takes the launch.
+describe('the sheet of the restore after an abnormal exit', () => {
+  function afterRun(recovery: { abnormal: boolean; offerable?: number; appLocked?: boolean }, patch: Partial<ReturnType<typeof defaultSettings>> = {}, newProfile = false) {
+    const settings = { ...defaultSettings(), ...patch }
+    const opened: OverlayRequest[] = []
+    const result = showLaunchSheet(
+      { newProfile, settings: () => settings, update: () => {}, open: (request) => opened.push(request), recovery: { abnormal: recovery.abnormal, offerable: () => recovery.offerable ?? 3, appLocked: () => recovery.appLocked === true } },
+      '0.2.0'
+    )
+    return { result, opened }
+  }
+  // A profile that was used and has seen this version: no sheet of its own takes the launch.
+  const SEEN = { welcomeDone: true, firstLaunchDone: true, lastSeenVersion: '0.2.0' }
+
+  it('opens after an abnormal exit, over a profile that was used, when there are tabs to choose among', () => {
+    const run = afterRun({ abnormal: true }, SEEN)
+    expect(run.result).toBe('restore')
+    expect(run.opened).toEqual([{ panel: 'restore' }])
+  })
+
+  it('does not open after a clean exit, and does not even count the tabs', () => {
+    const offerable = vi.fn(() => 3)
+    const opened: OverlayRequest[] = []
+    const result = showLaunchSheet({ newProfile: false, settings: () => ({ ...defaultSettings(), ...SEEN }), update: () => {}, open: (request) => opened.push(request), recovery: { abnormal: false, offerable, appLocked: () => false } }, '0.2.0')
+    expect(result).toBeNull()
+    expect(opened).toEqual([])
+    expect(offerable).not.toHaveBeenCalled()
+  })
+
+  it('does not open over a new profile, over the lock screen, or with fewer than two tabs', () => {
+    expect(afterRun({ abnormal: true }, { firstLaunchDone: true, welcomeDone: true, lastSeenVersion: '' }, true).opened.map((request) => request.panel)).not.toContain('restore')
+    expect(afterRun({ abnormal: true, appLocked: true }, SEEN).opened).toEqual([])
+    expect(afterRun({ abnormal: true, offerable: 1 }, SEEN).opened).toEqual([])
+  })
+
+  it('leaves the launch to the news of an update: one sheet at a time', () => {
+    const run = afterRun({ abnormal: true }, { welcomeDone: true, firstLaunchDone: true, lastSeenVersion: '0.1.0', whatsNewSheet: true })
+    expect(run.opened.map((request) => request.panel)).not.toContain('restore')
+  })
+
+  it('is not there for a launch that has no sign to read (the engine test)', () => {
+    const opened: OverlayRequest[] = []
+    expect(showLaunchSheet({ newProfile: false, settings: () => ({ ...defaultSettings(), ...SEEN }), update: () => {}, open: (request) => opened.push(request) }, '0.2.0')).toBeNull()
+    expect(opened).toEqual([])
+  })
+})

@@ -260,6 +260,68 @@ describe('the sheet of the launch (shell/launch-sheets.ts)', () => {
   })
 })
 
+describe('the sign of a clean exit and « Reprendre où vous en étiez ? » (shell/clean-exit.ts, shell/launch-sheets.ts)', { timeout: 30_000 }, () => {
+  afterEach(() => vi.useRealTimers())
+
+  /** A data folder whose profile was used (two tabs open, the state written) and left: the way it left is the test's. */
+  async function usedProfile(folder: string, leave: (first: MainRun) => void) {
+    const first = await run({ dataFolder: folder })
+    const { windows, engine } = await worlds()
+    const from = { id: windows.made[0]!.webContents.id, mainFrame: {}, getURL: () => 'file:///app/index.html' }
+    for (const url of ['https://one.example/', 'https://two.example/']) await engine.ipcHandle.get(Channel.dispatch)!({ sender: from, senderFrame: from.mainFrame }, { type: 'tab/open', url, background: true })
+    // The state is written on the quit, as in « knows whether the profile is new »: a profile that was used.
+    first.quit()
+    leave(first)
+    first.dispose()
+  }
+  const marker = (folder: string): string => join(folder, 'userData', 'running.marker')
+  /** The next launch: the window is shown, the sheet's clock runs out; the panels asked for are returned. */
+  async function nextLaunch(folder: string): Promise<Array<string | undefined>> {
+    await run({ dataFolder: folder })
+    const { windows } = await worlds()
+    const [window, layer] = windows.made as [(typeof windows.made)[number], (typeof windows.made)[number]]
+    ;(layer.webContents as unknown as { isLoading: () => boolean }).isLoading = () => false
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    window.emit('ready-to-show')
+    vi.advanceTimersByTime(LAUNCH_SHEET_DELAY_MS)
+    vi.useRealTimers()
+    return panelsAsked(windows).map((request) => request?.panel)
+  }
+
+  it('makes the marker at the start, and removes it when the run ends by will-quit: the next launch offers nothing', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'lucium-exit-'))
+    try {
+      await usedProfile(folder, (first) => {
+        expect(existsSync(marker(folder))).toBe(true)
+        for (const listener of first.listeners('will-quit')) listener({})
+        expect(existsSync(marker(folder))).toBe(false)
+      })
+      expect(await nextLaunch(folder)).not.toContain('restore')
+    } finally {
+      rmSync(folder, { recursive: true, force: true })
+    }
+  })
+
+  it('offers « Reprendre où vous en étiez ? » at the launch after a run that left the marker (a crash), once the window is shown', async () => {
+    const folder = mkdtempSync(join(tmpdir(), 'lucium-exit-'))
+    try {
+      await usedProfile(folder, () => {
+        // The run ended without its will-quit: the marker is still there.
+        expect(existsSync(marker(folder))).toBe(true)
+      })
+      expect(await nextLaunch(folder)).toContain('restore')
+    } finally {
+      rmSync(folder, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps no marker in the engine test, and offers nothing there', async () => {
+    const main = await run({ argv: SMOKE })
+    expect(existsSync(join(own, 'running.marker'))).toBe(false)
+    expect(existsSync(join(main.world.userData, 'running.marker'))).toBe(false)
+  })
+})
+
 describe('the folders of the containers the application left (the sweep of the launch)', () => {
   /** A data folder whose profile switched the containers on and left, with the folder of a container the state does not name. */
   async function leftWithAGhost() {
