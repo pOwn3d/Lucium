@@ -6425,4 +6425,11 @@ export const fr = {
   'space-transfer.importation-impossible': 'Importation impossible',
   'space-transfer.exportation-impossible': 'Exportation impossible',
   'space-transfer.un-espace-ne-se-transfere-pas-depuis-une-fenetre-privee': 'Un espace ne s’exporte ni ne s’importe depuis une fenêtre privée.',
+  'features.recherche-dans-le-contenu-des-pages-visitees': 'Rechercher dans le contenu des pages visitées',
+  'features.garde-en-local-le-texte-des-pages-lues-pour': 'Garde en local le texte des pages lues pour retrouver une page par une phrase, dans l’Historique. Jamais en navigation privée ni les mots de passe ni les saisies.',
+  'manage-panels.dans-le-contenu-des-pages': 'Dans le contenu des pages',
+  'privacy-extra-settings.effacer-l-index-du-contenu-des-pages': 'Effacer l’index du contenu des pages',
+  'privacy-extra-settings.efface-le-texte-garde-de-toutes-les-pages': 'Efface le texte gardé de toutes les pages, pour tous les profils. Le réglage reste tel quel.',
+  'privacy-extra-settings.index-efface': 'Index effacé',
+  'privacy-extra-settings.index-non-efface': 'L’index n’a pas pu être effacé en entier ; le détail est dans le journal.',
 } as const

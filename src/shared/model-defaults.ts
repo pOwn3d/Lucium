@@ -277,6 +277,7 @@ export function defaultSettings(): Settings {
     workViewsEnabled: true,
     mouseGestures: false,
     mouseGestureExcludedHosts: [],
+    pageContentIndex: false,
     pageWatch: false,
     pageWatches: [],
     readAloud: false,

@@ -451,6 +451,8 @@ export interface Settings {
   mouseGestures: boolean
   /** Sites (host and subdomains) where the gestures are off. */
   mouseGestureExcludedHosts: string[]
+  /** Full-text search in the pages visited: the text of each page read is kept in a local index, per profile (see page-index.ts). Off by default; off, the index is erased. */
+  pageContentIndex: boolean
   /** File › Surveiller cette page: the pages are fetched again now and then, and a system notice tells of a change (see page-watch.ts). */
   pageWatch: boolean
   /** The pages being watched, at most `PAGE_WATCH_MAX`. Never written from a private window. */

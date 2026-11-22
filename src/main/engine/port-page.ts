@@ -180,6 +180,11 @@ export interface PageScripts {
    * rejects for a page that is gone.
    */
   runAnnotateLayer?(code: string): Promise<unknown>
+  /**
+   * Runs the script that reads the text of the page for the full-text index (shared/page-index.ts) in its own isolated world (`PAGE_INDEX_WORLD`):
+   * the page cannot change what is read. Answers the text, or null for a page that must not be indexed; rejects for a page that is gone.
+   */
+  runPageIndex?(code: string): Promise<unknown>
 }
 
 /** The developer tools of the page, and the DevTools protocol the chrome.debugger shim drives. */

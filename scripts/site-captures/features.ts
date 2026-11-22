@@ -322,6 +322,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-remember-scroll', 'remember-scroll', t('Retrouver la position de défilement des onglets', 'Restore the scroll position of tabs'), 'tabs', 'rememberScroll', { fold: true, patch: { rememberScroll: true }, on: true, why: behaviour }),
   setting('fn-mouse-gestures', 'mouse-gestures', t('Gestes de souris', 'Mouse gestures'), 'keyboard', 'mouseGestures', { patch: { mouseGestures: true }, on: true, why: behaviour }),
   setting('fn-space-swipe', 'space-swipe', t('Balayer à deux doigts pour changer d’espace', 'Swipe with two fingers to switch Spaces'), 'keyboard', 'spaceSwipe', { why: needsHardware }),
+  setting('fn-page-content-index', 'page-content-index', t('Rechercher dans le contenu des pages visitées', 'Search the content of visited pages'), 'protection', 'pageContentIndex', { fold: true, why: background }),
   setting('fn-page-watch', 'page-watch', t('Surveiller des pages', 'Watch pages'), 'features', 'pageWatch', { why: background }),
   setting('fn-read-aloud', 'read-aloud', t('Lecture à voix haute', 'Read aloud'), 'features', 'readAloud', { patch: { readAloud: true }, on: true, why: 'se fait entendre, pas voir' }),
   setting('fn-tab-cycle-recent', 'tab-cycle-recent', t('⌃Tab dans l’ordre d’utilisation récente', '⌃Tab in order of recent use'), 'keyboard', 'tabCycleRecent', { label: t('⌃Tab suit l’ordre d’utilisation récente', '⌃Tab follows the order of recent use'), why: 'le panneau de ⌃Tab ne reste ouvert que tant que la touche est tenue' }),

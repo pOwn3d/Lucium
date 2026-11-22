@@ -30,6 +30,9 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Fixed
 
 - **Command bar ranking of a lost profile**: when spaces of a missing profile go back to the default profile, the ranking of that profile's command bar is dropped with it, as it already was at the next launch.
+### Added
+
+- **Search the content of visited pages**: keeps the text of the pages you read on your computer, to find a page by a sentence in History (Settings › Privacy and security › More settings). Off by default; nothing is kept while History is off; never private tabs or passwords; nothing is sent.
 
 ## [1.1.5] - 2026-11-20
 

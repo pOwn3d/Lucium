@@ -373,6 +373,7 @@ function rich(): SidebarState {
     rememberScroll: true,
     mouseGestures: true,
     mouseGestureExcludedHosts: ['maps.example.org'],
+    pageContentIndex: true,
     pageWatch: true,
     pageWatches: [{ id: 'w-1', url: 'https://example.org/prix', title: 'Prix', profileId: 'work', selector: '#price', minutes: 30, hash: '0123456789abcdef', checkedAt: 5, changedAt: 4, failure: 'La page n’a pas répondu.' }],
     readAloud: true,
@@ -650,6 +651,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   workViewsEnabled: bool,
   mouseGestures: bool,
   mouseGestureExcludedHosts: hostList(200),
+  pageContentIndex: bool,
   pageWatch: bool,
   pageWatches: (v) =>
     Array.isArray(v) && v.length <= 10 && unique(v.map((w) => (isRecord(w) ? w['id'] : w))) &&

@@ -24,6 +24,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Corrections
 
 - **Classement de la barre de commandes d’un profil perdu** : quand les espaces d’un profil manquant reviennent au profil par défaut, le classement de la barre de commandes de ce profil disparaît avec lui, comme il le faisait déjà au lancement suivant.
+### Ajouts
+
+- **Recherche dans le contenu des pages visitées** : garde en local le texte des pages lues pour retrouver une page par une phrase, dans l’Historique (Réglages › Vie privée et sécurité › Plus de réglages). Désactivée par défaut ; rien n’est gardé quand l’historique est coupé ; jamais en navigation privée ni mots de passe ; rien n’est envoyé.
 
 ## [1.1.5] - 2026-11-20
 
