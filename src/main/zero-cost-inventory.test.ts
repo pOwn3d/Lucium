@@ -350,6 +350,26 @@ describe('the wiring that keeps a function out of the sessions while it is off',
     expect(electronWorld.ipcHandle.has(MEDIA_BRIDGE.hello)).toBe(true)
   })
 
+  it('hears the site’s Picture in Picture button from the main frame of a page only, and stops hearing it with the bridge', async () => {
+    const constructed = (await constructEngine()) as unknown as { setMediaBridge(on: boolean): void; pageByContents: Map<number, string>; pages: Map<string, unknown> }
+    const sitePictureInPicture = vi.fn()
+    constructed.pageByContents.set(7, 'tab')
+    constructed.pages.set('tab', { sitePictureInPicture })
+    const main = { id: 'main' }
+    const pip = electronWorld.ipcOn.get(MEDIA_BRIDGE.pip) as (event: unknown) => void
+    expect(pip).toBeTypeOf('function')
+    // A frame of another site inside the page does not speak for it.
+    pip({ senderFrame: { id: 'child' }, sender: { id: 7, mainFrame: main } })
+    expect(sitePictureInPicture).not.toHaveBeenCalled()
+    pip({ senderFrame: main, sender: { id: 7, mainFrame: main } })
+    expect(sitePictureInPicture).toHaveBeenCalledTimes(1)
+    // The bridge off: the channel has no one behind it, and back on it is served again.
+    constructed.setMediaBridge(false)
+    expect(electronWorld.ipcOn.has(MEDIA_BRIDGE.pip)).toBe(false)
+    constructed.setMediaBridge(true)
+    expect(electronWorld.ipcOn.has(MEDIA_BRIDGE.pip)).toBe(true)
+  })
+
   it('loads the Web Store library for a profile only when something installed from the store is to be updated', () => {
     const run = method(read('engine/web-store.ts'), 'private async runUpdates(): Promise<UpdateReport> {')
     const nothing = run.indexOf('installed.length === 0')
