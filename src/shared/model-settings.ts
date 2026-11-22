@@ -561,6 +561,11 @@ export interface Settings {
   /** Size of the interface (sidebar, toolbar, panels) in percent, 100 to 200; the page keeps its own zoom. 100 is the default size and does nothing. */
   uiScale: number
   /**
+   * The smallest size, in CSS pixels, the text of a page is drawn at (Chromium's `minimumFontSize`); 0 is off and changes nothing. A web preference is fixed
+   * when a page is made: a new value reaches the tabs opened after it (shared/min-font-size.ts).
+   */
+  minimumFontSize: number
+  /**
    * The size of the panels that open over a window and of the windows of their own (Settings › Apparence › Taille des fenêtres et des panneaux), by screen
    * (shared/panel-scale.ts: a screen is known by its name, size and density, not by the id the system gives it). A screen with no entry is « Automatique »:
    * its size is worked out from the size of the screen. `{}` by default; the choices of the screens that are not connected stay until they are removed.

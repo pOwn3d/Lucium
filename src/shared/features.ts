@@ -15,6 +15,7 @@ import { interfaceMayDispatch } from './ipc-policy'
 import { defaultSettings, type Settings } from './model'
 import { getLanguage, t, type MessageKey } from './i18n'
 import { settingsPath } from './settings-path'
+import { MIN_FONT_SIZE_ON } from './min-font-size'
 
 /** What a feature costs while it is active. `none` stands alone: nothing runs for it except a check when its event happens. */
 export type FeatureCost = 'none' | 'timer' | 'listeners' | 'network' | 'memory' | 'process' | 'disk'
@@ -847,6 +848,16 @@ export const FEATURES = [
     get label() { return t('features.repere-du-niveau-de-zoom') },
     group: 'interface',
     get description() { return t('features.affiche-125-dans-la-barre-d-outils-quand-la') },
+    cost: ['none']
+  },
+  {
+    id: 'minimum-font-size',
+    kind: 'threshold',
+    key: 'minimumFontSize',
+    onValue: MIN_FONT_SIZE_ON,
+    get label() { return t('features.taille-minimale-du-texte-des-pages') },
+    group: 'interface',
+    get description() { return t('features.aucun-texte-de-page-n-est-dessine-plus-petit', { settingsPath: settingsPath('minimumFontSize') }) },
     cost: ['none']
   },
   {

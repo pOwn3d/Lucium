@@ -580,6 +580,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
     'The Lucium window, a thin outline around the notebook page'
   ), { space: 'work', tab: 'notes', patch: { cardOutline: true } }),
   setting('fn-zoom-indicator', 'zoom-indicator', t('Repère du niveau de zoom', 'Zoom level indicator'), 'appearance', 'showZoomIndicator', { fold: true, label: t('Afficher le niveau de zoom dans la barre d’outils', 'Show the zoom level in the toolbar'), why: 'le repère ne paraît que sur une page agrandie, que l’outil ne zoome pas' }),
+  setting('fn-minimum-font-size', 'minimum-font-size', t('Taille minimale du texte des pages', 'Minimum text size on pages'), 'appearance', 'minimumFontSize', { fold: true, why: 'le réglage vaut pour les onglets ouverts ensuite : l’image montre la ligne, pas une page agrandie' }),
   direct('fn-name-windows', 'name-windows', t('Nommer les fenêtres', 'Name windows'), t(
     'La feuille « Nommer la fenêtre » : le nom s’affiche dans le menu Fenêtre',
     'The “Name window” sheet: the name shows in the Window menu'

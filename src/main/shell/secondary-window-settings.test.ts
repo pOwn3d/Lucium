@@ -10,7 +10,7 @@ const { Browser } = await import('./browser')
 const shell = methodsOf(Browser.prototype)
 
 const state = createInitialState({ now: 0, newId: () => 'x' })
-const leaderOf = () => ({ configureBlocker: vi.fn(), configureAutoplay: vi.fn(), configureMediaBridge: vi.fn() })
+const leaderOf = () => ({ configureBlocker: vi.fn(), configureAutoplay: vi.fn(), configureMinimumFontSize: vi.fn(), configureMediaBridge: vi.fn() })
 
 /** A second window over the same tabs, whose main window is `leader` (itself when it is its own leader). */
 function secondWindow(leader: ReturnType<typeof leaderOf> | 'itself') {
@@ -35,6 +35,8 @@ describe('the engine-wide settings changed from a second window', () => {
     const second = secondWindow(leader)
     shell['configureAutoplay']!.call(second.self)
     shell['configureMediaBridge']!.call(second.self)
+    shell['configureMinimumFontSize']!.call(second.self)
+    expect(leader.configureMinimumFontSize).toHaveBeenCalledTimes(1)
     expect(leader.configureAutoplay).toHaveBeenCalledTimes(1)
     expect(leader.configureMediaBridge).toHaveBeenCalledTimes(1)
     expect(second.names()).toEqual([])

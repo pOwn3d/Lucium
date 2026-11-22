@@ -162,6 +162,7 @@ export class Browser extends BrowserLayout {
     }
     this.configureBlocker()
     this.configureAutoplay()
+    this.configureMinimumFontSize()
     this.configureMediaBridge()
     // A window saved with a material or a translucent background gets it now; with the default look this does nothing.
     this.applyWindowLookHere()

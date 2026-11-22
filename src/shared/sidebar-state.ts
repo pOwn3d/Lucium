@@ -36,6 +36,7 @@ import { cleanKeyExtSettings } from './key-ext-settings'
 import { cleanFocusSettings } from './focus-mode'
 import { withoutGroupFolders } from './group-folders'
 import { cleanUiScale } from './ui-scale'
+import { cleanMinimumFontSize } from './min-font-size'
 import { cleanPanelSizes } from './panel-scale'
 import { cleanSiteZoom } from './site-zoom'
 import { cleanAutoplayPolicy, cleanSiteAutoplay } from './autoplay'
@@ -426,6 +427,7 @@ export function clampSettings(input: Settings): Settings {
     ...cleanReadableSettings(settings),
     ...cleanWindowLook(settings),
     uiScale: cleanUiScale(settings.uiScale),
+    minimumFontSize: cleanMinimumFontSize(settings.minimumFontSize),
     panelSizes: cleanPanelSizes(settings.panelSizes),
     // The old level of the Settings window, which nothing reads any more: kept as the file says it (a damaged value is false), never rewritten otherwise.
     showAdvancedSettings: settings.showAdvancedSettings === true,

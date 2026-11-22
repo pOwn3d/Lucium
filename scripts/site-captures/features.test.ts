@@ -91,10 +91,11 @@ describe('the table of the features page', () => {
   // 130 since the card of document Picture-in-Picture (`fn-document-pip`), 131 since the one of the work views (`fn-work-views`), 132 since the one of the
   // capture of the sound of a tab by an extension (`fn-extension-tab-capture`): the features page of the site has yet to show them. 134 since the two
   // cards that had no scenario (`fn-extensions-page`, `fn-background-framing`), then 140 since the tab reminders, the full-text search of the pages, the focus mode,
-  // the scroll position and the third-party cookies (the cards of the five features added on 21 November 2026), then 141 since the bypass of tracking redirects (`fn-bypass-redirects`) and safe browsing (`fn-safe-browsing`).
-  it('has one scenario per card, 141 of them, with one name per image, made from the id of the card', () => {
+  // the scroll position and the third-party cookies (the cards of the five features added on 21 November 2026), then 142 since the bypass of tracking redirects
+  // (`fn-bypass-redirects`), safe browsing (`fn-safe-browsing`) and the minimum text size (`fn-minimum-font-size`).
+  it('has one scenario per card, 142 of them, with one name per image, made from the id of the card', () => {
     const cards = FEATURE_SCENARIOS.map((s) => s.card)
-    expect(cards).toHaveLength(141)
+    expect(cards).toHaveLength(142)
     expect(new Set(cards).size).toBe(cards.length)
     const names = FEATURE_SCENARIOS.flatMap((s) => (['fr', 'en'] as const).map((lang) => outputName(s.card, lang)))
     expect(new Set(names).size).toBe(names.length)

@@ -74,7 +74,7 @@ export const SETTINGS_KEYS = {
   home: ['language', 'interfaceTranslated'],
   // Accessibilité · Interface · Taille des fenêtres et des panneaux · Barre latérale · Fenêtre · Sites web
   appearance: [
-    'uiScale', 'panelSizes', 'forceReduceMotion', 'forceHighContrast', 'forceReduceTransparency',
+    'uiScale', 'minimumFontSize', 'panelSizes', 'forceReduceMotion', 'forceHighContrast', 'forceReduceTransparency',
     'hoverCards', 'interfaceAppearance', 'showZoomIndicator', 'fullUrlInToolbar', 'readableToolbarButton',
     'sidebarRight', 'compactMode', 'mediaPlayer', 'favoriteNames', 'resourceGauge',
     'windowVibrancy', 'sidebarOpacity', 'windowBorder', 'cardOutline',
