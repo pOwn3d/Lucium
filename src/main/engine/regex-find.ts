@@ -327,6 +327,8 @@ export interface FinderOptions {
   forward?: boolean
   matchCase?: boolean
   wholeWord?: boolean
+  /** The pattern is typed text, escaped: the expression limit does not apply (the text has its own, FIND_TEXT_MAX). */
+  literal?: boolean
 }
 
 /** The regular-expression search of one tab: scan, match, paint, step. A new search ends the one before it. */
@@ -361,7 +363,7 @@ export class RegexFinder {
     this.index = 0
     this.more = false
     this.active = true
-    if (pattern.length > REGEX_PATTERN_MAX) {
+    if (options.literal !== true && pattern.length > REGEX_PATTERN_MAX) {
       this.clearPage()
       return this.host.report({ matches: 0, ordinal: 0, error: 'too-long' })
     }

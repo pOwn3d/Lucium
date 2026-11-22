@@ -46,7 +46,7 @@ describe('ElectronPage.find', () => {
   ])('gives %s to our engine, and Chromium none of it', async (_name, options, text, pattern) => {
     const { page, wc } = await makePage()
     page.find(text, { ...options, matchCase: true, next: true })
-    expect(finderCalls).toEqual([[pattern, expect.objectContaining({ matchCase: true, next: true, wholeWord: options.wholeWord })]])
+    expect(finderCalls).toEqual([[pattern, expect.objectContaining({ matchCase: true, next: true, wholeWord: options.wholeWord, literal: options.regex !== true })]])
     expect(wc.findInPage).not.toHaveBeenCalled()
   })
 

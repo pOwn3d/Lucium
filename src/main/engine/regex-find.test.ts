@@ -253,6 +253,13 @@ describe('whole words and accents, in the engine', () => {
     expect(found(['l’école, cole'], 'cole', false, true)).toEqual([[0, 9, 13]])
   })
 
+  it('reads a letter outside the first plane as one letter, on either side of the match', () => {
+    // 𝒜 (U+1D49C) is a letter made of two code units: "cat" right after or right before it is inside a longer word.
+    expect(found(['𝒜cat'], 'cat', false, true)).toEqual([])
+    expect(found(['cat𝒜'], 'cat', false, true)).toEqual([])
+    expect(found(['𝒜 cat 𝒜'], 'cat', false, true)).toEqual([[0, 3, 6]])
+  })
+
   it('checks each block of text on its own (the end of one block is not the start of the next)', () => {
     expect(found(['un chat', 'chat noir'], 'chat', false, true)).toEqual([[0, 3, 7], [1, 0, 4]])
   })
@@ -384,6 +391,13 @@ describe('RegexFinder', () => {
     expect(r.scripts.some((s) => s.includes('regex-find:collect'))).toBe(false)
     r.finder.find('a'.repeat(REGEX_PATTERN_MAX))
     expect(r.reports).toHaveLength(1)
+  })
+
+  it('applies the expression limit to an expression only, not to typed text that was escaped', async () => {
+    const r = rig()
+    r.finder.find('a'.repeat(REGEX_PATTERN_MAX + 1), { literal: true })
+    await vi.waitFor(() => expect(r.runner.run).toHaveBeenCalled())
+    expect(r.reports.some((x) => x.error === 'too-long')).toBe(false)
   })
 
   it('searches only the last text of a quick series (the older ones are not run)', async () => {

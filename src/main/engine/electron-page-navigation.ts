@@ -298,7 +298,7 @@ export abstract class ElectronPageNavigation extends ElectronPageBase {
         setCss: (css) => this.applyCss(css, 'find'),
         report: (result) => this.events.found(result)
       })
-      this.regexFinder.find(findPattern(text, options), { next: options.next, forward: options.forward, matchCase: options.matchCase, wholeWord: options.wholeWord })
+      this.regexFinder.find(findPattern(text, options), { next: options.next, forward: options.forward, matchCase: options.matchCase, wholeWord: options.wholeWord, literal: options.regex !== true })
       return
     }
     this.regexFinder?.stop()
