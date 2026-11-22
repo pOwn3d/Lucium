@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-11-22
+
+This version brings a safer and more private browsing (safe browsing, network protection, third-party cookies, a JavaScript switch per site, warnings before a risk), new ways to work (tab reminders, focus mode, full-text search of visited pages, tab overview, one Space exported to another Mac) and a Discover Lucium panel with a tip of the day.
+
 ### Added
 
 - **Always on Top**: View › Always on Top keeps the window above the windows of other applications, so it stays in view while you work elsewhere. The choice is per window, unchecked at each launch, and nothing runs while it is off.

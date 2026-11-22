@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+## [1.1.6] - 2026-11-22
+
+Cette version apporte une navigation plus sûre et plus privée (navigation sûre, protection du réseau, cookies tiers, interrupteur JavaScript par site, avertissements avant un risque), de nouvelles façons de travailler (rappels d’onglets, mode concentration, recherche dans le contenu des pages visitées, vue d’ensemble des onglets, un espace exporté vers un autre Mac) et un panneau Découvrir Lucium avec un conseil du jour.
+
 ### Ajouts
 
 - **Toujours au premier plan** : Affichage › Toujours au premier plan garde la fenêtre au-dessus de celles des autres applications, pour la garder en vue pendant qu’on travaille ailleurs. Le choix est propre à chaque fenêtre, décoché à chaque lancement ; rien ne tourne tant qu’il est coupé.
