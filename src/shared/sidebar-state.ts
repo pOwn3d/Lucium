@@ -60,6 +60,7 @@ import { cleanRetiredProfiles } from './profile-retire'
 import { settleTree } from './tab-tree'
 import { normalizeFolders } from './folders'
 import { cleanKeepDays } from './history-range'
+import { cleanSiteVisits, cleanUnusedPermissionDays } from './unused-permissions'
 import { cleanTabReminders, cleanArchive, cleanCommandBarUsage, cleanDelay, cleanExtensionPaths, cleanFavorites, cleanFolders, cleanLinkRoutes, cleanReadLater, cleanReadLaterFolders, cleanSearchDiscoverySeen, cleanSidePanelBehavior, cleanSiteDataRecents, cleanSiteSearches, cleanSitePermissions, cleanSpaces, cleanSplits, SITE_SEARCHES_MAX, cleanTabs, coerceSettings, isRecord, printable } from './state-clean'
 import { clampOr } from './clamp'
 import { cleanBarPosition } from './annotate-bar-position'
@@ -85,6 +86,7 @@ export function createInitialState(ctx: Ctx): SidebarState {
     activeSpaceId: space.id,
     activeTabBySpace: { [space.id]: null },
     sitePermissions: {},
+    siteVisits: {},
     commandBarUsage: {},
     sidePanelBehavior: {},
     splits: [],
@@ -190,6 +192,7 @@ export function normalize(state: SidebarState): SidebarState {
   const active = raw['activeSpaceId']
   const revision = revisionOf(raw['revision'])
   const settings = clampSettings(migrateSettings(mergeSettings(raw['settings']), revision))
+  const sitePermissions = cleanSitePermissions(raw['sitePermissions'])
   const readLaterFolders = cleanReadLaterFolders(raw['readLaterFolders'])
   // The favourites of a file from before they were kept per profile are given to each profile in use (and the pages they have in spaces follow).
   const scoped = scopeFavorites(cleanFavorites(raw['favorites']), tabs, spaces)
@@ -211,7 +214,8 @@ export function normalize(state: SidebarState): SidebarState {
     settings: settings.lockedSpaces.every((id) => spaceIds.has(id)) ? settings : { ...settings, lockedSpaces: cleanLockedSpaces(settings.lockedSpaces, spaceIds) },
     activeSpaceId: typeof active === 'string' && spaceIds.has(active) ? active : spaces[0]!.id,
     activeTabBySpace,
-    sitePermissions: cleanSitePermissions(raw['sitePermissions']),
+    sitePermissions,
+    siteVisits: cleanSiteVisits(raw['siteVisits'], sitePermissions),
     sidePanelBehavior: cleanSidePanelBehavior(raw['sidePanelBehavior']),
     // One ranking per profile; the single list of an older file is left out, and so is the ranking of a profile that is gone (`pruneUsageProfiles`).
     commandBarUsage: cleanCommandBarUsage(raw['commandBarUsage'], USAGE_LIMIT),
@@ -458,6 +462,7 @@ export function clampSettings(input: Settings): Settings {
     autoArchiveHours: cleanDelay(settings.autoArchiveHours, defaults.autoArchiveHours),
     historyKeepDays: cleanKeepDays(settings.historyKeepDays),
     littleArcArchiveHours: cleanDelay(settings.littleArcArchiveHours, defaults.littleArcArchiveHours),
+    forgetUnusedPermissionsDays: cleanUnusedPermissionDays(settings.forgetUnusedPermissionsDays),
     interfaceAppearance: settings.interfaceAppearance === 'light' || settings.interfaceAppearance === 'dark' ? settings.interfaceAppearance : 'auto',
     websiteAppearance: settings.websiteAppearance === 'light' || settings.websiteAppearance === 'dark' ? settings.websiteAppearance : 'auto',
     // A word that is not one of the sizes or shapes of the command bar's card gives back the card it always had.

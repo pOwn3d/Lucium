@@ -491,6 +491,8 @@ export interface SidebarState {
   activeTabBySpace: Record<string, string | null>
   /** Remembered answers to web permission prompts, by origin then permission name. */
   sitePermissions: Record<string, Record<string, PermissionDecision>>
+  /** The day (days since 1970, UTC) each site that holds an answer was last visited: read only while `forgetUnusedPermissionsDays` is above 0 (unused-permissions.ts). */
+  siteVisits: Record<string, number>
   /** Extensions that asked for their side panel to open when their toolbar icon is clicked (chrome.sidePanel.setPanelBehavior). */
   sidePanelBehavior: Record<string, boolean>
   /** How often each page was picked in the command bar, a ranking bonus: by profile, then by page (command-bar-usage.ts). */

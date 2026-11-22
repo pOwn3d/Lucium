@@ -400,6 +400,10 @@ export type Action =
   | { type: 'commandbar/put-back'; profileId: string; url: string; count: number }
   | { type: 'sidepanel/behavior'; extensionId: string; openOnActionClick: boolean }
   | { type: 'permission/set'; origin: string; permission: string; decision: PermissionDecision | null }
+  /** A page of `origin` was visited on `day` (days since 1970, UTC): written only for a site that holds an answer, and once a day at most (unused-permissions.ts). */
+  | { type: 'permission/visit'; origin: string; day: number }
+  /** Takes back the answers of the sites not visited for `forgetUnusedPermissionsDays` days as of `day`; nothing while that setting is 0. */
+  | { type: 'permission/sweep'; day: number }
   /**
    * Adds a favourite to the profile of `spaceId` (the space the user is in when omitted), at `toIndex` of that profile's favourites (the end when omitted).
    * An address the profile has already changes nothing; another profile may have it too.

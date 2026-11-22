@@ -1443,6 +1443,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'compact-mode': 'focus',
   'tab-tree': 'organise',
   'web-hardware': 'protect',
+  'forget-unused-permissions': 'protect',
   'annotate-capture': 'keep',
   applescript: 'fast',
   containers: 'protect',

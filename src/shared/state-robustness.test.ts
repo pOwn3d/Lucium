@@ -192,6 +192,7 @@ function rich(): SidebarState {
     websiteAppearance: 'dark',
     peekWithShift: false,
     littleArcArchiveHours: 3,
+    forgetUnusedPermissionsDays: 90,
     littleArcModifier: true,
     littleArcNewTabLinks: false,
     littleDownloadBubble: true,
@@ -502,6 +503,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   websiteAppearance: (v) => v === 'auto' || v === 'light' || v === 'dark',
   peekWithShift: bool,
   littleArcArchiveHours: num(0),
+  forgetUnusedPermissionsDays: (v) => v === 0 || v === 30 || v === 60 || v === 90 || v === 180 || v === 365,
   littleArcModifier: bool,
   littleArcNewTabLinks: bool,
   littleDownloadBubble: bool,
@@ -831,7 +833,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
 }
 
 const LOADABLE_URL = /^(https?|file|about|chrome-extension|devtools|view-source):/i
-const TOP_LEVEL = ['version', 'revision', 'spaces', 'tabs', 'folders', 'favorites', 'archive', 'readLater', 'readLaterFolders', 'tabReminders', 'bookmarks', 'activeSpaceId', 'activeTabBySpace', 'sitePermissions', 'sidePanelBehavior', 'commandBarUsage', 'splits', 'boosts', 'sessions', 'workViews', 'settings']
+const TOP_LEVEL = ['version', 'revision', 'spaces', 'tabs', 'folders', 'favorites', 'archive', 'readLater', 'readLaterFolders', 'tabReminders', 'bookmarks', 'activeSpaceId', 'activeTabBySpace', 'sitePermissions', 'siteVisits', 'sidePanelBehavior', 'commandBarUsage', 'splits', 'boosts', 'sessions', 'workViews', 'settings']
 
 /** Every way a state that went through `normalize` may still be unfit to use. Empty means well formed. */
 function problems(state: SidebarState): string[] {
@@ -1841,7 +1843,7 @@ describe('structures that contradict each other', () => {
       const state = norm({ ...clone(rich()), spaces })
       expect(problems(state), show(spaces)).toEqual([])
     }
-    for (const part of ['tabs', 'folders', 'favorites', 'archive', 'splits', 'boosts', 'activeTabBySpace', 'sitePermissions', 'sidePanelBehavior', 'commandBarUsage']) {
+    for (const part of ['tabs', 'folders', 'favorites', 'archive', 'splits', 'boosts', 'activeTabBySpace', 'sitePermissions', 'siteVisits', 'sidePanelBehavior', 'commandBarUsage']) {
       for (const bad of [undefined, null, 'text', 7, true, [], {}]) {
         expect(problems(norm({ ...clone(rich()), [part]: bad })), `${part} = ${JSON.stringify(bad)}`).toEqual([])
       }

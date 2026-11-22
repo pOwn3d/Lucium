@@ -25,6 +25,7 @@ import { ExtensionShims } from './extension-shims'
 import { gateAutoArchive } from './auto-archive'
 import { gateHistoryPurge } from './history-purge'
 import { gateTabReminders } from './tab-reminders'
+import { forgottenNotice, gateUnusedPermissions } from './unused-permissions'
 import { AutoReloader } from './auto-reload'
 import { showSystemNotice } from './system-notice'
 import { batterySaver } from './battery-saver'
@@ -315,6 +316,19 @@ export class Browser extends BrowserLayout {
           new Notification({ title: t('reminder.onglet-rappele'), body: reminder.title, silent: false }).show()
         },
         fire: () => this.dispatch({ type: 'reminder/fire' })
+      })
+    }
+    // "Oublier les autorisations des sites non visités": a pass at launch and one a day, in the main window only (a private window keeps no answer on the disk).
+    if (!this.isPrivate() && !this.isSecondary()) {
+      gateUnusedPermissions(this.gates, {
+        store: this.store,
+        now: () => Date.now(),
+        setTimer: (run, ms) => setTimeout(run, ms),
+        clearTimer: (timer) => clearTimeout(timer as NodeJS.Timeout),
+        dispatch: (action) => this.dispatch(action),
+        notify: (forgotten) => {
+          this.showToast(forgottenNotice(forgotten, this.store.get().settings.forgetUnusedPermissionsDays), undefined, 12_000)
+        }
       })
     }
     // The launch loads what the windows show (this sync, and the sync of each window restored) and the tabs the user keeps alive, not every tab

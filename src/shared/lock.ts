@@ -94,6 +94,7 @@ export function redactForLock(state: SidebarState, view: Pick<LockView, 'appLock
       readLaterFolders: [],
       activeTabBySpace: Object.fromEntries(state.spaces.map((space) => [space.id, null])),
       sitePermissions: {},
+      siteVisits: {},
       sidePanelBehavior: {},
       commandBarUsage: {},
       splits: [],

@@ -55,6 +55,7 @@ export const SETTINGS_PLACES = {
   trimReferer: { key: 'trimReferer', group: 'privacy-settings.protection-du-reseau' },
   httpsOnly: { key: 'httpsOnly', group: 'privacy-settings.protection-du-reseau' },
   clearOnClose: { key: 'siteDataClearOnClose' },
+  forgetUnusedPermissions: { key: 'forgetUnusedPermissionsDays', group: 'settings.autorisations-memorisees' },
   webHardware: { key: 'webHardware', group: 'hardware-settings.api-materielles-du-web' },
   passwords: { key: 'passwordManager', group: 'passwords-panel.mots-de-passe' },
   lock: { key: 'lockEnabled', group: 'lock-settings.verrouillage' },

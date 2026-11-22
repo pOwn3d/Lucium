@@ -16,6 +16,7 @@ import { defaultSettings, type Settings } from './model'
 import { getLanguage, t, type MessageKey } from './i18n'
 import { settingsPath } from './settings-path'
 import { MIN_FONT_SIZE_ON } from './min-font-size'
+import { UNUSED_PERMISSION_DAYS_DEFAULT } from './unused-permissions'
 
 /** What a feature costs while it is active. `none` stands alone: nothing runs for it except a check when its event happens. */
 export type FeatureCost = 'none' | 'timer' | 'listeners' | 'network' | 'memory' | 'process' | 'disk'
@@ -1036,6 +1037,17 @@ export const FEATURES = [
     group: 'privacy',
     get description() { return t('features.un-site-securise-peut-apres-un-clic-demander-a', { settingsPath: settingsPath('webHardware') }) },
     cost: ['listeners']
+  },
+  {
+    id: 'forget-unused-permissions',
+    kind: 'threshold',
+    key: 'forgetUnusedPermissionsDays',
+    onValue: UNUSED_PERMISSION_DAYS_DEFAULT,
+    get label() { return t('features.oublier-les-autorisations-des-sites-non-visites') },
+    group: 'privacy',
+    get description() { return t('features.un-site-que-vous-n-avez-pas-visite-depuis-le-delai-choisi-perd', { settingsPath: settingsPath('forgetUnusedPermissions') }) },
+    // One pass at launch and one a day, in the main window only; the table of visits is written once a day per site at most.
+    cost: ['timer']
   },
   {
     id: 'annotate-capture',
