@@ -412,6 +412,8 @@ export interface Settings {
   lockedSpaces: string[]
   /** Touch ID is offered to unlock, where this Mac has it; the phrase stays the way in when it fails. */
   lockTouchId: boolean
+  /** A private window left alone for this many minutes (1, 5, 15 or 30; 0 = never) covers itself with the lock screen and asks for the phrase or Touch ID (see private-lock.ts). Needs the lock. */
+  lockPrivateIdle: number
   /** A tab that is archived keeps its last pages (up to 20 web addresses) so that reopening it brings its Back list back (see closed-history.ts). Costs memory in the archive: off. */
   reopenHistory: boolean
   // ---- Interface language (see i18n.ts). Off: the interface is French, whatever the system says. ----

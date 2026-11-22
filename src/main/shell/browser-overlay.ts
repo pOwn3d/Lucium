@@ -40,7 +40,7 @@ export abstract class BrowserOverlay extends BrowserSite {
       this.screenWatch = new ScreenWatch({
         screen: () => screenOf(screen.getDisplayMatching(this.win.getBounds())),
         sizes: () => this.store.get().settings.panelSizes,
-        busy: () => this.overlayRequest !== null || getLockService()?.isAppLocked() === true || !this.win.isVisible() || this.win.isMinimized(),
+        busy: () => this.overlayRequest !== null || getLockService()?.isAppLocked() === true || this.isWindowLocked() || !this.win.isVisible() || this.win.isMinimized(),
         show: (kind, info) => {
           // Remembered first: whatever happens to the notice, it is not offered twice.
           this.dispatch({ type: 'panel-size/noticed', screen: info })
@@ -92,7 +92,7 @@ export abstract class BrowserOverlay extends BrowserSite {
     if (this.zapping && request.panel === 'boost' && !request.zap) return this.endZap()
     if (this.isPrivate() && !canOpenInPrivate(request.panel)) return
     // Over the lock screen nothing opens: the command bar of a window made while the application is locked (the Dock's New Window) would hide the field of the phrase.
-    if (!canOpenWhileLocked(request.panel, getLockService()?.isAppLocked() === true)) return
+    if (!canOpenWhileLocked(request.panel, getLockService()?.isAppLocked() === true || this.isWindowLocked())) return
     // The editor of a locked space would only collect changes that are refused: the notice says why it does not open.
     if (editsLockedSpace(request, getLockService()?.lockedSpaces() ?? [])) return this.showToast(t('lock.deverrouillez-l-espace-d-abord'))
     // A page is blocked on this box: nothing else takes its place (a shortcut that opens a panel does nothing until the user has answered).

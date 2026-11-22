@@ -8,9 +8,10 @@
 import { defaultSettings, type RuntimeState, type Settings, type SidebarState, type Space } from './model'
 import { cleanId } from './state-clean'
 import { t } from './i18n'
+import { PRIVATE_IDLE_CHOICES } from './private-lock'
 
 /** The settings only the lock's own handler may change (the interface cannot patch them, see ipc-policy.ts). */
-export const LOCK_SETTING_KEYS = ['lockEnabled', 'lockApp', 'lockedSpaces', 'lockTouchId'] as const satisfies readonly (keyof Settings)[]
+export const LOCK_SETTING_KEYS = ['lockEnabled', 'lockApp', 'lockedSpaces', 'lockTouchId', 'lockPrivateIdle'] as const satisfies readonly (keyof Settings)[]
 
 export const LOCKED_SPACES_MAX = 200
 export const LOCK_PHRASE_MIN = 8
@@ -273,6 +274,7 @@ export type LockConfig =
   | { op: 'disable'; current: string }
   | { op: 'app'; value: boolean }
   | { op: 'touch-id'; value: boolean }
+  | { op: 'private-idle'; minutes: number }
   | { op: 'space'; spaceId: string; locked: boolean }
   | { op: 'lock-now' }
 
@@ -288,6 +290,8 @@ export function parseLockConfig(raw: unknown): LockConfig | null {
     case 'app':
     case 'touch-id':
       return typeof r['value'] === 'boolean' ? { op: r['op'], value: r['value'] } : null
+    case 'private-idle':
+      return (PRIVATE_IDLE_CHOICES as readonly unknown[]).includes(r['minutes']) ? { op: 'private-idle', minutes: r['minutes'] as number } : null
     case 'space': {
       const spaceId = cleanId(r['spaceId'])
       return spaceId !== null && typeof r['locked'] === 'boolean' ? { op: 'space', spaceId, locked: r['locked'] } : null

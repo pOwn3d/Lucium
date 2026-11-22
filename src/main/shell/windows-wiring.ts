@@ -68,7 +68,8 @@ export function createWindowManager({ engine, sharedStore, views, history, windo
     },
     openSettings: (pane, anchor) => settings.open(pane, anchor),
     openLittle: (url, origin) => little.openLink(url, origin),
-    systemDark: () => nativeTheme.shouldUseDarkColors
+    systemDark: () => nativeTheme.shouldUseDarkColors,
+    lastUserInputAt: () => engine.lastUserInputAt()
   })
 }
 

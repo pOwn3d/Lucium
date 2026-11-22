@@ -747,6 +747,18 @@ export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
     setting: { panel: 'settings', pane: 'appearance' }
   },
   {
+    id: 'private-window-lock',
+    task: 'protect',
+    level: 'advanced',
+    name: 'discover.verrou-prive-nom',
+    summary: 'discover.verrou-prive-resume',
+    where: 'discover.verrou-prive-ou',
+    keywords: 'verrouiller fenetre privee inactivite touch id phrase delai lock private window idle touch id passphrase delay',
+    try: { kind: 'hint' },
+    setting: { panel: 'settings', pane: 'protection', anchor: 'lock' },
+    isNew: true
+  },
+  {
     id: 'restore-after-crash',
     task: 'organise',
     level: 'advanced',

@@ -537,7 +537,7 @@ Une valeur reçue est **rebornée comme à la lecture d'un fichier** (`cleanPriv
 | Quoi | Pourquoi |
 |---|---|
 | **Mots de passe** (le coffre, `passwordManager`, les fichiers et le trousseau) | le coffre du Mac est chiffré par le trousseau du Mac ; en copier le contenu vers un autre appareil est un autre projet de sécurité (`docs/ios.md` §13.3). La ligne « Mots de passe » de la maquette n'est pas reprise (décision du 17 novembre 2026) |
-| **Verrous** : `lockEnabled`, `lockApp`, `lockedSpaces`, `lockTouchId`, `lock.json`, la phrase | ce qui est verrouillé n'a de sens que sur l'appareil ; un fichier ne doit **jamais** activer ni couper un verrou (même règle que `exportableState`, `lock.ts`) |
+| **Verrous** : `lockEnabled`, `lockApp`, `lockedSpaces`, `lockTouchId`, `lockPrivateIdle`, `lock.json`, la phrase | ce qui est verrouillé n'a de sens que sur l'appareil ; un fichier ne doit **jamais** activer ni couper un verrou (même règle que `exportableState`, `lock.ts`) |
 | **Cookies, stockage des sites, permissions des sites** (`sitePermissions`, `siteZoom`, `siteData*`…) | l'identité d'une personne sur un site ne se copie pas |
 | **Historique de navigation** | l'iPhone n'en garde aucun (`docs/ios.md` §4.1) : rien à fusionner. S'il en gagne un un jour, ce sera une carte à part, une décision à part, et la catégorie sera **non cochée** |
 | **Onglets privés**, fenêtres privées | jamais écrits nulle part (`persistableState`) |

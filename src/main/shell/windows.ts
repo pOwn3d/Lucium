@@ -21,6 +21,8 @@ import { setWindowManager } from './window-manager-holder'
 import { releaseIpcScope } from './ipc-scope'
 import { t } from '@shared/i18n'
 import { getLockService } from '../lock-service'
+import { cleanPrivateIdle } from '@shared/private-lock'
+import { PrivateWindowLock } from './private-lock'
 import { shownState } from './lock-state'
 import { mainCloseStep } from '../window-lifecycle'
 
@@ -64,6 +66,8 @@ export interface WindowManagerDeps {
   openSettings: (pane?: SettingsPane, anchor?: SettingsAnchor) => void
   openLittle: (url: string, origin?: LittleOrigin) => void
   systemDark: () => boolean
+  /** When the last real click or key was, anywhere in the application: a private window left alone locks itself by it (shell/private-lock.ts). Absent: never seen. */
+  lastUserInputAt?: () => number
   /** The system the application runs on (`process.platform`): on macOS the main window is put away instead of closed (window-lifecycle.ts). */
   platform?: string
 }
@@ -335,8 +339,30 @@ export class WindowManager {
       browser.inheritSettings(state.settings)
     })
 
+    // A private window left alone for the delay of the setting covers itself with the lock screen (shared/private-lock.ts). Not a guest window: it is a stranger's, and is not
+    // the owner's to guard with the owner's phrase.
+    const privateLock = guest
+      ? null
+      : new PrivateWindowLock({
+          minutes: () => cleanPrivateIdle(deps.mainStore.get().settings.lockPrivateIdle),
+          lockActive: () => getLockService()?.isActive() === true,
+          focused: () => !win.isDestroyed() && win.isFocused(),
+          lastInputAt: () => deps.lastUserInputAt?.() ?? 0,
+          now: () => Date.now(),
+          setTimer: (run, ms) => setTimeout(run, ms),
+          clearTimer: (timer) => clearTimeout(timer as NodeJS.Timeout),
+          changed: () => browser.windowLockChanged(),
+          log: (line) => console.info(line)
+        })
+    browser.setPrivateLock(privateLock)
+    if (privateLock) {
+      win.on('focus', () => privateLock.focused())
+      privateLock.follow()
+    }
+
     this.track({ id, kind: 'private', ...(guest ? { guest: true as const } : {}), win, browser, store }, chrome, () => {
       unfollow()
+      privateLock?.dispose()
       // The session is not erased with the window: that is explicit.
       const erasing = scope.dispose().catch((error: unknown) => console.error(`[windows] cannot erase ${id}:`, error))
       this.pending.add(erasing)

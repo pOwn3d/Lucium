@@ -4,9 +4,11 @@
 
 import { useContext, useState } from 'react'
 import { LOCK_PHRASE_MIN, type LockConfig, type LockReply } from '@shared/lock'
+import { PRIVATE_IDLE_CHOICES } from '@shared/private-lock'
+import { minutesLabel } from '@shared/backup-settings'
 import { PASSPHRASE_MAX_LENGTH, type UiSnapshot } from '@shared/ipc'
 import { api } from './api'
-import { Check, Group, Row, Subpage, SubpageEntry } from './settings-parts'
+import { Check, Choice, Group, Row, Subpage, SubpageEntry } from './settings-parts'
 import { SubpageContext } from './settings-context'
 import { t } from '@shared/i18n'
 import { ipcErrorText } from '@shared/ipc-error'
@@ -127,6 +129,15 @@ export function LockSettings({ snapshot }: { snapshot: UiSnapshot }) {
             disabled={busy}
             onChange={(value) => void send({ op: 'touch-id', value })}
           />
+          <Row settingKey="lockPrivateIdle" label={t('lock-settings.verrouiller-les-fenetres-privees-apres')} hint={t('lock-settings.une-fenetre-privee-laissee-seule-se-ferme-sur')}>
+            <Choice
+              label={t('lock-settings.verrouiller-les-fenetres-privees-apres')}
+              value={settings.lockPrivateIdle}
+              choices={PRIVATE_IDLE_CHOICES.map((minutes): [number, string] => [minutes, minutes === 0 ? t('lock-settings.jamais') : minutesLabel(minutes)])}
+              disabled={busy}
+              onChange={(minutes) => void send({ op: 'private-idle', minutes })}
+            />
+          </Row>
           <Row settingKey="lockedSpaces" label={t('lock-settings.espaces-verrouilles')} hint={t('lock-settings.le-menu-d-un-espace-clic-droit-sur-son')}>
             {guarded.length === 0 ? <span className="muted">{t('lock-settings.aucun')}</span> : <span>{guarded.map((space) => space.name).join(', ')}</span>}
           </Row>

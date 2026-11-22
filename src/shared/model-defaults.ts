@@ -263,6 +263,7 @@ export function defaultSettings(): Settings {
     lockApp: false,
     lockedSpaces: [],
     lockTouchId: true,
+    lockPrivateIdle: 0,
     reopenHistory: false,
     interfaceTranslated: true,
     language: 'auto',
