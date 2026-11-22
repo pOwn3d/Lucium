@@ -474,6 +474,7 @@
     "stripCopiedLinks": true,
     "protectionBaseline": "renforcee",
     "historyOff": false,
+    "historyKeepDays": 0,
     "dohCustom": false,
     "dohMode": "automatic",
     "dohProvider": "system",

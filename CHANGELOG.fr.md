@@ -6,6 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Ajouts
 
+- **Effacer l’historique d’une période, ou ne le garder qu’un temps** : Historique (⌘Y) › « Effacer une période… » (dernière heure, aujourd’hui, 7 jours, 4 semaines, tout), annulable quelques secondes. Réglages › Vie privée et sécurité › Historique et données › « Garder l’historique » (7, 30, 90 jours, un an) oublie les pages anciennes. Coupé par défaut ; tout reste sur ce Mac.
 - **Découvrir Lucium** : Aide › Découvrir Lucium, la barre de commandes et un bouton de « Pour commencer », de la bienvenue et des nouveautés ouvrent un panneau qui montre toutes les fonctions de Lucium, par tâche, avec où les trouver, leur raccourci, « Essayer » et « Régler ». Rien n’est compté ni envoyé.
 - **Un espace vers un autre Mac** : Espaces › Exporter cet espace… enregistre un espace avec ses onglets, ses dossiers et son archive dans un fichier, chiffré par une phrase secrète si vous le voulez ; Espaces › Importer un espace… l’ajoute sur un autre Mac, sans serveur. Ni cookies, ni mots de passe.
 - **Position de défilement retrouvée après un redémarrage** : Réglages › Onglets et fenêtres › « Retrouver la position de défilement des onglets », désactivé par défaut. Un onglet revient là où sa page était défilée. Seuls un nombre par onglet et son adresse sont gardés, sur votre Mac ; jamais la page, rien pour les onglets privés.

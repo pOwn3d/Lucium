@@ -102,7 +102,7 @@ export const SETTINGS_KEYS = {
     'blockAds', 'blockCookieBanners', 'blockMode', 'blockCosmetic', 'blockExceptions', 'popupExceptions',
     'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions',
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
-    'historyOff', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
+    'historyOff', 'historyKeepDays', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
     'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager',
     'disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists', 'dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'

@@ -10,9 +10,11 @@ import { useId, useState, type ReactNode } from 'react'
 import { api } from './api'
 import { FeatureSwitch } from './FeaturesSettings'
 import { fieldError } from './field-error'
-import { Check, Group, Row } from './settings-parts'
+import { Check, Choice, Group, Row } from './settings-parts'
 import { ProxyEditor } from './ProxyEditor'
-import { t } from '@shared/i18n'
+import { t, tp } from '@shared/i18n'
+import { HISTORY_KEEP_CHOICES, HISTORY_KEEP_LABELS, HISTORY_RANGES, HISTORY_RANGE_TEXTS, isHistoryRange, type HistoryRange } from '@shared/history-range'
+import { activeProfileId } from '@shared/profiles'
 
 /**
  * The row of the address of a server typed by the user. It is saved once it is finished (the field is left, or Return), and only when it is a valid https
@@ -72,10 +74,58 @@ export function HistorySettings({ snapshot, update, leading, trailing }: { snaps
         checked={!settings.historyOff}
         onChange={(keep) => update({ historyOff: !keep })}
       />
+      <Row settingKey="historyKeepDays" label={t('history-days.garder-l-historique')} hint={t('history-days.garder-aide')}>
+        <Choice
+          className="pop"
+          label={t('history-days.garder-l-historique')}
+          value={settings.historyKeepDays}
+          choices={HISTORY_KEEP_CHOICES.map((days): [number, string] => [days, t(HISTORY_KEEP_LABELS[days])])}
+          onChange={(historyKeepDays) => update({ historyKeepDays })}
+        />
+      </Row>
+      <ClearRangeRow profileId={activeProfileId(snapshot.state)} />
       <FeatureSwitch id="page-content-index" snapshot={snapshot} update={update} />
       {settings.pageContentIndex && <ClearPageIndexRow />}
       {trailing}
     </Group>
+  )
+}
+
+/**
+ * « Effacer une période de l’historique »: the span is chosen, then cleared by the button (nothing happens on the choice alone). The Settings have no
+ * undo queue, so this one is final; the history panel's menu, which has one, is the way back. A failure is said, never swallowed.
+ */
+function ClearRangeRow({ profileId }: { profileId: string }) {
+  const [range, setRange] = useState<HistoryRange>('hour')
+  const [outcome, setOutcome] = useState<{ gone: number } | 'failed' | null>(null)
+  const clear = () => {
+    setOutcome(null)
+    api()
+      .forgetHistoryRange(range, profileId)
+      .then(
+        (gone) => setOutcome({ gone }),
+        (error: unknown) => {
+          console.warn('[history] the period could not be forgotten:', error)
+          setOutcome('failed')
+        }
+      )
+  }
+  return (
+    <Row label={t('history-days.effacer-periode-reglages')} hint={t('history-days.effacer-periode-aide')}>
+      <select className="field pop" aria-label={t('history-days.effacer-periode-reglages')} value={range} onChange={(event) => isHistoryRange(event.target.value) && setRange(event.target.value)}>
+        {HISTORY_RANGES.map((one) => (
+          <option key={one} value={one}>
+            {t(HISTORY_RANGE_TEXTS[one].label)}
+          </option>
+        ))}
+      </select>
+      <button type="button" className="btn" onClick={clear}>
+        {t('history-days.effacer-periode-bouton')}
+      </button>
+      <span role="status" className="tk-status">
+        {outcome === 'failed' ? t('history-days.periode-echec') : outcome ? tp('history-days.periode-oubliee-comptee', outcome.gone) : ''}
+      </span>
+    </Row>
   )
 }
 

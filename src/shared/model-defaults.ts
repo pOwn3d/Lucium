@@ -220,6 +220,7 @@ export function defaultSettings(): Settings {
     stripCopiedLinks: PROTECTION_OF_NEW_PROFILES.stripCopiedLinks,
     protectionBaseline: 'renforcee',
     historyOff: false,
+    historyKeepDays: 0,
     dohCustom: false,
     dohMode: 'automatic',
     dohProvider: 'system',

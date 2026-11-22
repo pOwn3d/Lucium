@@ -675,6 +675,17 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    // Off by default (0): the history is kept until the person forgets it. On, a timer looks once an hour for the pages older than the delay.
+    id: 'history-purge',
+    kind: 'threshold',
+    key: 'historyKeepDays',
+    onValue: 30,
+    get label() { return t('features.garder-l-historique-seulement-un-temps') },
+    group: 'privacy',
+    get description() { return t('features.oublie-les-pages-visitees-il-y-a-plus-de') },
+    cost: ['timer']
+  },
+  {
     id: 'page-content-index',
     key: 'pageContentIndex',
     get label() { return t('features.recherche-dans-le-contenu-des-pages-visitees') },

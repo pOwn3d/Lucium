@@ -324,6 +324,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-mouse-gestures', 'mouse-gestures', t('Gestes de souris', 'Mouse gestures'), 'keyboard', 'mouseGestures', { patch: { mouseGestures: true }, on: true, why: behaviour }),
   setting('fn-space-swipe', 'space-swipe', t('Balayer à deux doigts pour changer d’espace', 'Swipe with two fingers to switch Spaces'), 'keyboard', 'spaceSwipe', { why: needsHardware }),
   setting('fn-page-content-index', 'page-content-index', t('Rechercher dans le contenu des pages visitées', 'Search the content of visited pages'), 'protection', 'pageContentIndex', { fold: true, why: background }),
+  setting('fn-history-purge', 'history-purge', t('Garder l’historique seulement un temps', 'Keep history only for a while'), 'protection', 'historyKeepDays', { fold: true, label: t('Garder l’historique', 'Keep history'), why: background }),
   setting('fn-page-watch', 'page-watch', t('Surveiller des pages', 'Watch pages'), 'features', 'pageWatch', { why: background }),
   setting('fn-focus-mode', 'focus-mode', t('Mode concentration', 'Focus mode'), 'features', 'focusMode', { patch: { focusMode: true }, on: true, why: behaviour }),
   setting('fn-read-aloud', 'read-aloud', t('Lecture à voix haute', 'Read aloud'), 'features', 'readAloud', { patch: { readAloud: true }, on: true, why: 'se fait entendre, pas voir' }),

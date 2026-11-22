@@ -208,7 +208,7 @@ describe('the catalogue of the features to add', () => {
       if (listed.has(feature.id)) expect(categoryOfKey(feature.key), feature.id).toBe('features')
       else expect(categoryOfKey(feature.key), feature.id).not.toBe('features')
     }
-    expect(FEATURES.length - listed.size).toBe(81)
+    expect(FEATURES.length - listed.size).toBe(82)
   })
 
   it('keeps the state each feature starts with: seven on, the others off', () => {

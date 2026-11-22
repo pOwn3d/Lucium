@@ -4,6 +4,7 @@
 
 import type { HistoryEntry } from './model'
 import { getLanguage, t } from './i18n'
+import { historyRangeBounds, HISTORY_RANGES } from './history-range'
 
 /** The column that lists every page found, whatever its day. */
 export const ALL_DAYS = 'all'
@@ -99,6 +100,17 @@ export function visitTime(time: number, withDay: boolean): string {
 /** The id under which the undo queue hides every page of a day that was forgotten at once. */
 export const DAY_UNDO = 'day:'
 
+/** The id under which the undo queue hides every page of a span (« Dernière heure », « Tout »…) that was forgotten at once. */
+export const RANGE_UNDO = 'range:'
+
+/** Whether a page is in a span the undo queue is hiding for now. */
+const inHiddenRange = (entry: HistoryEntry, hidden: ReadonlySet<string>, now: number): boolean =>
+  HISTORY_RANGES.some((range) => {
+    if (!hidden.has(RANGE_UNDO + range)) return false
+    const { from, to } = historyRangeBounds(range, now)
+    return entry.lastVisitAt >= from && entry.lastVisitAt < to
+  })
+
 export interface HistoryColumns {
   /** The pages left once the ones forgotten for now (the undo queue's ids: a page's address, or `DAY_UNDO` and a day) are taken away. */
   alive: HistoryEntry[]
@@ -111,7 +123,7 @@ export interface HistoryColumns {
 
 /** What the panel draws from what the search found: the days, the column shown and its pages. */
 export function historyColumns(entries: readonly HistoryEntry[], hidden: ReadonlySet<string>, chosen: string | null, searching: boolean, now: number): HistoryColumns {
-  const alive = entries.filter((entry) => !hidden.has(entry.url) && !hidden.has(DAY_UNDO + dayKey(entry.lastVisitAt)))
+  const alive = entries.filter((entry) => !hidden.has(entry.url) && !hidden.has(DAY_UNDO + dayKey(entry.lastVisitAt)) && !inHiddenRange(entry, hidden, now))
   const days = historyDays(alive, now)
   const day = shownDay(days, chosen, searching)
   return { alive, days, day, rows: entriesOfDay(alive, day) }

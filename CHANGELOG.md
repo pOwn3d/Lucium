@@ -12,6 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
+- **Clear history for a period, or keep it only for a while**: History (⌘Y) › “Clear a period…” (last hour, today, 7 days, 4 weeks, all), undoable for a few seconds. Settings › Privacy and security › History and data › “Keep history” (7, 30, 90 days, a year) forgets old pages. Off by default; local only.
 - **Discover Lucium**: Help › Discover Lucium, the command bar and a button on “Start here”, the welcome sheet and the news sheet open a panel with every function of Lucium, by task: where to find it, its shortcut, “Try it” and “Adjust”. Nothing is counted or sent.
 - **One Space to another Mac**: Spaces › Export This Space… saves one Space with its tabs, folders and archive to a file, sealed with a passphrase if you wish; Spaces › Import a Space… adds it on another Mac, with no server. No cookies, no passwords.
 - **Scroll position restored after a relaunch**: Settings › Tabs and windows › “Restore the scroll position of tabs”, off by default. A tab comes back to where its page was scrolled. Only a number per tab and its address is kept, on your Mac; never the page, nothing for private tabs.

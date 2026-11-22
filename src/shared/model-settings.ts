@@ -294,6 +294,8 @@ export interface Settings {
   retiredProfileIds: string[]
   /** The visited pages are not recorded (what is already in the history stays). A profile can say otherwise: see profiles.ts. */
   historyOff: boolean
+  /** Days of history kept: a page last visited longer ago is forgotten, at launch and once a day. 0 (the default) keeps everything, and nothing runs. */
+  historyKeepDays: number
   /** Encrypted DNS is set by the user (off: nothing is configured, Chromium's own behaviour stands). */
   dohCustom: boolean
   /** With `dohCustom`: Automatic (encrypted when the provider supports it), Secure (encrypted only; needs a server), or Off. */
