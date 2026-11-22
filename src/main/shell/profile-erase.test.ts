@@ -105,7 +105,7 @@ describe('Browser.clearEverything (« Tout effacer »)', () => {
   const make = (over: Record<string, unknown> = {}) => {
     const cleared: Array<{ id: string; keep: unknown }> = []
     const dispatched: Array<Record<string, unknown>> = []
-    const fake = fakeBrowser({ store: { get: () => state }, group: new Set(), isPrivate: () => false, engine: { clearProfileData: async (id: string, keep: unknown) => void cleared.push({ id, keep }) }, eraseProfileHistory: () => true, eraseHistory: shell['eraseHistory'], dispatch: (action: { patch: Record<string, unknown> }) => void dispatched.push(action.patch), clearProfile: shell['clearProfile'], ...over })
+    const fake = fakeBrowser({ store: { get: () => state }, group: new Set(), isPrivate: () => false, engine: { clearProfileData: async (id: string, keep: unknown) => void cleared.push({ id, keep }) }, eraseProfileHistory: () => true, eraseHistory: shell['eraseHistory'], dispatch: (action: Record<string, unknown>) => void dispatched.push(action), clearProfile: shell['clearProfile'], ...over })
     return { fake, cleared, dispatched }
   }
 
@@ -120,7 +120,7 @@ describe('Browser.clearEverything (« Tout effacer »)', () => {
     const { fake, dispatched } = make()
     await shell['clearEverything']!.call(fake.self, 'profile')
     // Mutation: erasing the history without `eraseHistory` (the bare profile history) leaves both lists and fails this.
-    expect(dispatched).toEqual([{ siteDataRecents: [] }, { searchDiscoverySeen: [] }])
+    expect(dispatched).toEqual([{ type: 'settings/update', patch: { siteDataRecents: [] } }, { type: 'settings/update', patch: { searchDiscoverySeen: [] } }, { type: 'permission/forget-visits' }])
   })
 
   it('erases every profile a space uses when the confirmation chose them all', async () => {
@@ -157,7 +157,7 @@ describe('Browser.newIdentity (« Nouvelle identité »)', () => {
   it('erases, then closes the tabs of the profile in front and empties its archive', async () => {
     const { fake, dispatched } = make(async () => undefined)
     await shell['newIdentity']!.call(fake.self, 'profile')
-    expect(dispatched.filter((a) => (a as { type: string }).type !== 'settings/update')).toEqual([{ type: 'tab/close', id: 'a' }, { type: 'archive/clear', keepSpaces: ['home-space'] }])
+    expect(dispatched.filter((a) => !['settings/update', 'permission/forget-visits'].includes((a as { type: string }).type))).toEqual([{ type: 'tab/close', id: 'a' }, { type: 'archive/clear', keepSpaces: ['home-space'] }])
   })
 
   it('forgets the “Récents” hosts too', async () => {
@@ -170,7 +170,7 @@ describe('Browser.newIdentity (« Nouvelle identité »)', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {})
     const { fake, dispatched } = make(() => Promise.reject(new Error('busy')))
     await expect(shell['newIdentity']!.call(fake.self, 'profile')).rejects.toThrow('travail')
-    expect(dispatched.filter((a) => (a as { type: string }).type !== 'settings/update')).toEqual([])
+    expect(dispatched.filter((a) => !['settings/update', 'permission/forget-visits'].includes((a as { type: string }).type))).toEqual([])
   })
 })
 

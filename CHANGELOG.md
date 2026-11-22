@@ -12,6 +12,11 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
+- **Always on Top**: View › Always on Top keeps the window above the windows of other applications, so it stays in view while you work elsewhere. The choice is per window, unchecked at each launch, and nothing runs while it is off.
+- **Reopen the last closed window**: File › Reopen Last Closed Window brings back the last window you closed, in the same place, with its name and the tab it showed. The last ten are kept in memory only, gone when Lucium quits. Private and guest windows are never kept; nothing opens while the app is locked.
+- **Pick up where you left off?**: After Lucium stopped unexpectedly (crash, power cut), a sheet at the next launch lists the tabs of the day: uncheck those you do not want back, they go to the archive (“Undo” returns them). Pinned and private tabs are not offered. It never shows after a normal quit.
+- **Lock for private windows**: Settings › Privacy and security › Lock options › “Lock private windows after”: Never, 1, 5, 15, 30 minutes. A private window left alone (no click or key, or in the background) covers itself with the lock screen and asks for the phrase or Touch ID. Needs a lock phrase.
+- **Command-line options for windows**: With “Commands by address” on, `--new-window` opens a window with the command bar and `--private-window` a private one, from a second launch of the program or the first. With the setting off they are ignored, and a locked app opens no window.
 - **Bypass tracking redirects and AMP pages**: Settings › Privacy and security › More settings › “Bypass tracking redirects and AMP pages”, off by default. A link through a tracking redirector or an AMP page opens the site’s own address, by a local calculation; no request is sent. A list of sites keeps their links as they are.
 - **Clear history for a period, or keep it only for a while**: History (⌘Y) › “Clear a period…” (last hour, today, 7 days, 4 weeks, all), undoable for a few seconds. Settings › Privacy and security › History and data › “Keep history” (7, 30, 90 days, a year) forgets old pages. Off by default; local only.
 - **Tab overview**: Tabs › Tab Overview (⇧⌘O) opens a grid of thumbnails of the open tabs, with search, close and move to another Space. Off by default.

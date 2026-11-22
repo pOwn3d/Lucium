@@ -12,7 +12,7 @@ import type { SafeCategory } from './safe-browsing'
 export const ERROR_SCHEME = 'lucium-error:'
 export type ErrorAction = 'retry' | 'proceed' | 'http' | 'back' | 'reload' | 'wait' | 'network-settings' | 'home' | 'copy-address' | 'open-mini-window' | 'toggle-blocker' | 'end-focus' | 'unsafe-continue' | 'unsafe-except' | 'typo-continue'
 
-const ACTIONS: readonly ErrorAction[] = ['retry', 'proceed', 'http', 'back', 'reload', 'wait', 'network-settings', 'home', 'copy-address', 'open-mini-window', 'toggle-blocker', 'end-focus', 'unsafe-continue', 'unsafe-except']
+const ACTIONS: readonly ErrorAction[] = ['retry', 'proceed', 'http', 'back', 'reload', 'wait', 'network-settings', 'home', 'copy-address', 'open-mini-window', 'toggle-blocker', 'end-focus', 'unsafe-continue', 'unsafe-except', 'typo-continue']
 
 /** The address of a button. `nonce` is drawn for each page shown and only that page contains it: a site cannot forge a click on it. */
 export function errorActionUrl(action: ErrorAction, nonce: string): string {
