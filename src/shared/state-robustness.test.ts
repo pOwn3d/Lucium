@@ -244,6 +244,14 @@ function rich(): SidebarState {
     fingerprintExceptions: ['exemple.org'],
     blockThirdPartyCookies: true,
     thirdPartyCookieExceptions: ['exemple.org'],
+    unwrapRedirects: true,
+    unwrapExceptions: ['exemple.org'],
+    safeBrowsing: true,
+    safeBrowsingExceptions: ['exemple.org'],
+    blockPings: true,
+    trimReferer: true,
+    httpsOnly: true,
+    httpsOnlyExceptions: ['exemple.org'],
     profileNames: { work: 'Travail' },
     allowThemeToSites: true,
     keyBindings: { [COMMANDS[0]!.id]: '' },
@@ -254,6 +262,7 @@ function rich(): SidebarState {
     sitePictureInPictureInLucium: false,
     mediaPlayer: false,
     autoArchiveHours: 5,
+    historyKeepDays: 90,
     profiles: { work: { searchUrlTemplate: 'https://s.example/?q=%s', searchSuggestions: false, autoArchiveHours: 2, downloadDir: '/tmp/telechargements', disabledExtensions: ['a'.repeat(32), 'p'.repeat(32)] } },
     sleepAfterMinutes: 15,
     sleepAwakeMax: 20,
@@ -301,6 +310,7 @@ function rich(): SidebarState {
     commandBarSize: 'xl',
     commandBarShape: 'wide',
     tabSearch: false,
+    tabGrid: true,
     shortcutHelp: false,
     findRegex: true,
     compactMode: true,
@@ -378,6 +388,8 @@ function rich(): SidebarState {
     tabGroupFolders: true,
     omniboxKeywords: true,
     passwordManager: true,
+    passwordTouchIdOnFill: true,
+    passwordNeverSaveHosts: ['mail.example.org'],
     qrCode: true,
     autoScroll: true,
     scrollSync: true,
@@ -413,7 +425,8 @@ function rich(): SidebarState {
     blankLinkBackground: true,
     showZoomIndicator: false,
     nameWindows: false,
-    uiScale: 125
+    uiScale: 125,
+    minimumFontSize: 14
   }
   return {
     ...base,
@@ -544,6 +557,14 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   fingerprintExceptions: hostList(200),
   blockThirdPartyCookies: bool,
   thirdPartyCookieExceptions: hostList(200),
+  unwrapRedirects: bool,
+  unwrapExceptions: hostList(200),
+  safeBrowsing: bool,
+  safeBrowsingExceptions: hostList(200),
+  blockPings: bool,
+  trimReferer: bool,
+  httpsOnly: bool,
+  httpsOnlyExceptions: hostList(200),
   profileNames: (v) => isRecord(v) && Object.entries(v).every(([id, name]) => PROFILE.test(id) && typeof name === 'string' && name === name.trim() && name !== '' && name.length <= 40),
   allowThemeToSites: bool,
   keyBindings: (v) => isRecord(v) && Object.entries(v).every(([id, key]) => COMMANDS.some((c) => c.id === id) && typeof key === 'string' && (key === '' || isValidAccelerator(key))),
@@ -554,6 +575,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   sitePictureInPictureInLucium: bool,
   mediaPlayer: bool,
   autoArchiveHours: num(0),
+  historyKeepDays: (v) => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 3650,
   profiles: (v) =>
     isRecord(v) &&
     Object.getPrototypeOf(v) === Object.prototype &&
@@ -664,6 +686,8 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   userScripts: bool,
   vimKeys: bool,
   vimKeysExcludedHosts: hostList(200),
+  passwordNeverSaveHosts: hostList(200),
+  passwordTouchIdOnFill: bool,
   tabGroupFolders: bool,
   omniboxKeywords: bool,
   passwordManager: bool,
@@ -711,6 +735,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   showAdvancedSettings: bool,
   nameWindows: bool,
   uiScale: (v) => Number.isInteger(v) && (v as number) >= 100 && (v as number) <= 200,
+  minimumFontSize: (v) => Number.isInteger(v) && ((v as number) === 0 || ((v as number) >= 9 && (v as number) <= 32)),
   panelSizes: (v) =>
     isRecord(v) &&
     Object.getPrototypeOf(v) === Object.prototype &&
@@ -738,6 +763,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   commandBarSize: (v) => (COMMAND_BAR_SIZES as readonly unknown[]).includes(v),
   commandBarShape: (v) => (COMMAND_BAR_SHAPES as readonly unknown[]).includes(v),
   tabSearch: bool,
+  tabGrid: bool,
   shortcutHelp: bool,
   findRegex: bool,
   compactMode: bool,
@@ -1189,7 +1215,7 @@ describe('a state written by an older build', () => {
       extensionPaths: ['/Users/moi/extensions/une']
     })
     // The recent fields, one by one, so that a default that is silently missing is named.
-    for (const key of ['webStoreInstall', 'webStoreUpdates', 'sleepMode', 'sleepExcludedHosts', 'sleepSkipAudible', 'siteDataTypes', 'siteDataHttp', 'siteDataAnimation', 'siteZoom', 'blockExceptions', 'blockMode', 'blockModeSites', 'disabledFilterLists', 'developerHosts', 'usedProfiles', 'restoreWindows', 'chromeNativeHosts', 'profileNames', 'keyBindings', 'appIcon', 'updateFeedUrl', 'updateChannel', 'updateNotices', 'resolveFavicons', 'autoplayPolicy', 'spellCheck', 'siteAutoplay', 'autoplayPerSite', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'customFilterListsEnabled', 'customFilterLists', 'qrCode', 'autoScroll', 'scrollSync', 'rememberScroll', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions', 'mouseGestures', 'mouseGestureExcludedHosts', 'pageWatch', 'pageWatches', 'readAloud', 'batterySaver', 'downloadPause', 'downloadAskWhere', 'openWithMemory', 'openWithApps', 'openUnsaved', 'pdfWithSource', 'useReadLaterFolders', 'vimKeys', 'vimKeysExcludedHosts', 'tabGroupFolders', 'omniboxKeywords', 'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions'] as const) {
+    for (const key of ['webStoreInstall', 'webStoreUpdates', 'sleepMode', 'sleepExcludedHosts', 'sleepSkipAudible', 'siteDataTypes', 'siteDataHttp', 'siteDataAnimation', 'siteZoom', 'blockExceptions', 'blockMode', 'blockModeSites', 'disabledFilterLists', 'developerHosts', 'usedProfiles', 'restoreWindows', 'chromeNativeHosts', 'profileNames', 'keyBindings', 'appIcon', 'updateFeedUrl', 'updateChannel', 'updateNotices', 'resolveFavicons', 'autoplayPolicy', 'spellCheck', 'siteAutoplay', 'autoplayPerSite', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit', 'customFilterListsEnabled', 'customFilterLists', 'qrCode', 'autoScroll', 'scrollSync', 'rememberScroll', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions', 'unwrapRedirects', 'unwrapExceptions', 'safeBrowsing', 'safeBrowsingExceptions', 'blockPings', 'trimReferer', 'httpsOnly', 'httpsOnlyExceptions', 'mouseGestures', 'mouseGestureExcludedHosts', 'pageWatch', 'pageWatches', 'readAloud', 'batterySaver', 'downloadPause', 'downloadAskWhere', 'openWithMemory', 'openWithApps', 'openUnsaved', 'pdfWithSource', 'useReadLaterFolders', 'vimKeys', 'vimKeysExcludedHosts', 'tabGroupFolders', 'omniboxKeywords', 'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions'] as const) {
       expect(settings[key], key).toEqual(defaults[key])
     }
     expect(settings.siteDataTypes).toEqual(SITE_DATA_TYPES.filter((type) => type !== 'history'))
@@ -1207,6 +1233,12 @@ describe('a state written by an older build', () => {
     expect([settings.blockScriptlets, settings.reduceFingerprint, settings.fingerprintStrict, settings.fingerprintExceptions]).toEqual([false, false, false, []])
     // Third-party cookies are cut only when asked: a file from before the option lets them through.
     expect([settings.blockThirdPartyCookies, settings.thirdPartyCookieExceptions]).toEqual([false, []])
+    // Links are unwrapped only when asked, for every site.
+    expect([settings.unwrapRedirects, settings.unwrapExceptions]).toEqual([false, []])
+    // Safe browsing closes a page only when asked: a file from before it has it off.
+    expect([settings.safeBrowsing, settings.safeBrowsingExceptions]).toEqual([false, []])
+    // The pings, the Referer and the HTTPS-only mode change what a site receives or how a page opens: a file from before them has them off.
+    expect([settings.blockPings, settings.trimReferer, settings.httpsOnly, settings.httpsOnlyExceptions]).toEqual([false, false, false, []])
     // The three switches: the clearing at close is off, the per-site autoplay and the custom lists are on.
     expect([settings.siteDataClearOnCloseEnabled, settings.autoplayPerSite, settings.customFilterListsEnabled]).toEqual([false, true, true])
   })

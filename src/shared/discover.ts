@@ -139,6 +139,19 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     needs: 'tabSearch'
   },
   {
+    id: 'tab-grid',
+    task: 'fast',
+    level: 'beginner',
+    feature: 'tab-grid',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.onglets', 'menu.vue-d-ensemble-des-onglets'] },
+    keywords: 'grille vignettes apercu onglets ouverts visuel retrouver fermer deplacer overview grid thumbnails tabs visual',
+    shortcut: 'tabGrid',
+    try: open({ panel: 'tabgrid' }),
+    needs: 'tabGrid',
+    isNew: true
+  },
+  {
     id: 'page-text-search',
     task: 'fast',
     level: 'advanced',
@@ -453,6 +466,66 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     isNew: true
   },
   {
+    id: 'bypass-redirects',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'bypass-redirects',
+    summary: 'discover.contournement-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('redirectBypass') }),
+    keywords: 'redirection suivi lien amp pistage deplier adresse finale redirect tracking link unwrap debounce de-amp canonical',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
+    id: 'block-pings',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'block-pings',
+    summary: 'discover.pings-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('blockPings') }),
+    keywords: 'ping sendbeacon balise suivi pistage hyperlink auditing beacon tracking',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
+    id: 'safe-browsing',
+    task: 'protect',
+    level: 'beginner',
+    feature: 'safe-browsing',
+    summary: 'discover.sure-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('safeBrowsing') }),
+    keywords: 'navigation sure hameconnage phishing malware logiciels malveillants site dangereux avertissement liste safe browsing warning dangerous',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
+    id: 'trim-referer',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'trim-referer',
+    summary: 'discover.referer-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('trimReferer') }),
+    keywords: 'referer referrer provenance adresse origine suivi pistage vie privee origin privacy',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
+    id: 'https-only',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'https-only',
+    summary: 'discover.https-seul-resume',
+    where: 'discover.reglage-ou',
+    whereVars: () => ({ path: settingsPath('httpsOnly') }),
+    keywords: 'https seul http chiffre connexion securise avertissement only encrypted secure warning insecure',
+    try: { kind: 'setting' },
+    isNew: true
+  },
+  {
     id: 'site-javascript',
     task: 'protect',
     level: 'advanced',
@@ -495,6 +568,20 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
     isNew: true
   },
   {
+    id: 'password-care',
+    task: 'protect',
+    level: 'advanced',
+    name: 'discover.mdp-soin-nom',
+    summary: 'discover.mdp-soin-resume',
+    where: 'discover.menu-ou',
+    menus: { menu: ['menu.fichier', 'menu.mots-de-passe'] },
+    keywords: 'mot de passe faible reutilise copier presse-papiers touch id empreinte ne jamais enregistrer site weak reused copy clipboard fingerprint never save vault',
+    shortcut: 'passwords',
+    try: open({ panel: 'passwords' }),
+    needs: 'passwordManager',
+    isNew: true
+  },
+  {
     id: 'private-tab',
     task: 'protect',
     level: 'beginner',
@@ -530,6 +617,35 @@ export const DISCOVER_ENTRIES: readonly DiscoverEntry[] = [
  * (main/shell/discover-wiring.test.ts).
  */
 export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
+  // ---- Protéger ma vie privée ----
+  {
+    id: 'history-range',
+    task: 'protect',
+    level: 'advanced',
+    name: 'discover.historique-periode-nom',
+    summary: 'discover.historique-periode-resume',
+    where: 'discover.historique-periode-ou',
+    whereVars: () => ({ path: settingsPath('historyKeep'), menu: menuPath(['menu.archive', 'menu.afficher-l-historique']) }),
+    menus: { menu: ['menu.archive', 'menu.afficher-l-historique'] },
+    keywords: 'effacer historique heure aujourd hui semaine tout periode plage vider supprimer clear history hour today week range delete forget',
+    shortcut: 'history',
+    try: open({ panel: 'history' }),
+    isNew: true
+  },
+  {
+    id: 'history-keep',
+    task: 'protect',
+    level: 'advanced',
+    feature: 'history-purge',
+    name: 'discover.historique-garder-nom',
+    summary: 'discover.historique-garder-resume',
+    where: 'discover.historique-garder-ou',
+    whereVars: () => ({ path: settingsPath('historyKeep') }),
+    keywords: 'historique garder conserver jours purge automatique oublier ancien 30 90 history keep days auto delete purge expire old',
+    try: { kind: 'setting' },
+    setting: { panel: 'settings', pane: 'protection' },
+    isNew: true
+  },
   // ---- Aller plus vite ----
   {
     id: 'guided-setup',
@@ -722,7 +838,7 @@ export const DISCOVER_EXTRAS: readonly DiscoverEntry[] = [
     summary: 'discover.lecture-resume',
     where: 'discover.menu-ou',
     menus: { menu: ['menu.affichage', 'menu.mode-lecture'] },
-    keywords: 'lecture article epure lisible texte sans pub readability reader article clean readable text distraction',
+    keywords: 'lecture article epure lisible texte sans pub readability reader article clean readable text distraction interligne espacement dyslexie contraste gris focus ligne line spacing letter spacing dyslexia high contrast gray line focus assisted',
     shortcut: 'readerMode',
     try: { kind: 'hint' }
   },
@@ -1011,7 +1127,12 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'https-first': 'protect',
   'global-privacy-control': 'protect',
   'third-party-cookies': 'protect',
+  'safe-browsing': 'protect',
+  'block-pings': 'protect',
+  'trim-referer': 'protect',
+  'https-only': 'protect',
   'strip-tracking': 'protect',
+  'bypass-redirects': 'protect',
   'search-suggestions': 'fast',
   'theme-to-sites': 'read',
   'peek-shift': 'read',
@@ -1027,6 +1148,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'tidy-downloads': 'keep',
   'native-hosts': 'read',
   'hover-cards': 'organise',
+  'tab-grid': 'fast',
   'tidy-pinned-titles': 'organise',
   'reload-all-button': 'organise',
   'full-url': 'fast',
@@ -1067,6 +1189,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'mouse-gestures': 'fast',
   'space-swipe': 'fast',
   'page-content-index': 'fast',
+  'history-purge': 'protect',
   'page-watch': 'read',
   'focus-mode': 'focus',
   'read-aloud': 'read',
@@ -1084,6 +1207,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'drag-to-split': 'organise',
   'warn-close-window': 'protect',
   'zoom-indicator': 'read',
+  'minimum-font-size': 'read',
   'name-windows': 'organise',
   'search-bangs': 'fast',
   'search-discovery': 'fast',

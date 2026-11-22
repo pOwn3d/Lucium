@@ -3,7 +3,7 @@
 // main() had these lines: the order of its will-quit handler among the others is the order of the calls of main().
 
 import { join } from 'node:path'
-import { app, clipboard, powerMonitor, systemPreferences, type BrowserWindow } from 'electron'
+import { app, clipboard, ClipboardItem, powerMonitor, systemPreferences, type BrowserWindow } from 'electron'
 import type { ElectronEngine } from '../engine/electron-engine'
 import type { LockService, PowerEvent } from '../lock-service'
 import { PasswordVault } from '../password-vault'
@@ -13,6 +13,7 @@ import type { StateStore } from '../store'
 import { stopSystemTranslateHelpers } from '../translate/system'
 import { VaultKeychain, helperRunner, keychainServiceFor, keychainTransport, stopKeychainHelpers } from '../vault-keychain'
 import type { FeatureGates } from './feature-gate'
+import { concealedWriter } from './password-clipboard'
 import { passwordFiles } from './password-ipc'
 import { PasswordService, setPasswordService } from './password-service'
 
@@ -53,7 +54,8 @@ export function installPasswordVault({ sharedStore, gates, engine, lock, win, pl
     power: passwordPower,
     files: passwordFiles(win),
     keychain,
-    clipboard: { readText: () => clipboard.readText(), writeText: (text) => clipboard.writeText(text), clear: () => clipboard.clear() }
+    updateSettings: (patch) => sharedStore.dispatch({ type: 'settings/update', patch }),
+    clipboard: { readText: () => clipboard.readText(), writeText: (text) => clipboard.writeText(text), writeSecret: concealedWriter(clipboard, (entries) => new ClipboardItem(entries)), clear: () => clipboard.clear() }
   })
   setPasswordService(passwords)
   gates.gate('password-manager', {

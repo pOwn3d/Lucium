@@ -78,6 +78,9 @@ extraResources:
   # The application icons of Settings › Icône, put in the Dock (main/shell/app-icon.ts).
   - from: resources/app-icons
     to: app-icons
+  # The two lists of safe browsing (main/safe-lists.ts reads them from here): packed hashes of public lists, renewed with each version, sources in SOURCES.json.
+  - from: resources/safe-browsing
+    to: safe-browsing
   # The videos Lucium offers for the background of a space (shared/builtin-backgrounds.ts, read by main/media-storage.ts), with their posters.
   - from: resources/backgrounds
     to: backgrounds

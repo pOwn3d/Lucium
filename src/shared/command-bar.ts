@@ -17,7 +17,7 @@ import type { PlatformId } from './platform'
 import { t } from './i18n'
 import { COMMAND_BAR_CARD } from './command-bar-surface'
 import type { Candidate } from './command-bar-types'
-import { onePerSplit, MAX_TABS, tabCandidate, actionCandidates, jotCandidate, spaceCandidates, MAX_ARCHIVED, readLaterCandidates, bookmarkCandidates, MAX_BANG_HINTS, MAX_SUGGESTIONS, MAX_HISTORY, searchOnlyActions, discoverActions, tabSearchActions, autoReloadActions, readLaterActions, containerActions, MAX_CONTAINER_ACTIONS, libraryActions, notesActions, webStoreActions, privacyActions, passwordActions, markdownActions, readableActions, shareActions, sessionActions, sessionCandidates, workViewCandidates, asideActions, lockActions, layoutActions, windowSidebarActions, webPanelCandidates, moveCandidates, paneCandidates, extensionCandidates, windowCandidates } from './command-bar-sources'
+import { onePerSplit, MAX_TABS, tabCandidate, actionCandidates, jotCandidate, spaceCandidates, MAX_ARCHIVED, readLaterCandidates, bookmarkCandidates, MAX_BANG_HINTS, MAX_SUGGESTIONS, MAX_HISTORY, searchOnlyActions, discoverActions, tabSearchActions, tabGridActions, autoReloadActions, readLaterActions, containerActions, MAX_CONTAINER_ACTIONS, libraryActions, notesActions, webStoreActions, privacyActions, passwordActions, markdownActions, readableActions, shareActions, sessionActions, sessionCandidates, workViewCandidates, asideActions, lockActions, layoutActions, windowSidebarActions, webPanelCandidates, moveCandidates, paneCandidates, extensionCandidates, windowCandidates } from './command-bar-sources'
 import { matchScore, fold, foldedQuery, nameScore, scoreFolded } from './command-bar-match'
 import type { BarScope } from './command-bar-groups'
 
@@ -292,6 +292,7 @@ export function rankCandidates(
   result.push(...searchOnlyActions(state, options.platform).filter((c) => nameScore(c.label, q) > 0))
   result.push(...discoverActions(options.private === true).filter((c) => nameScore(c.label, q) > 0))
   result.push(...tabSearchActions(state).filter((c) => nameScore(c.label, q) > 0))
+  result.push(...tabGridActions(state).filter((c) => nameScore(c.label, q) > 0))
   result.push(...autoReloadActions(state).filter((c) => nameScore(c.label, q) > 0))
   result.push(...readLaterActions(state, options.private === true).filter((c) => nameScore(c.label, q) > 0))
   result.push(...containerActions(state, options.private === true).filter((c) => nameScore(c.label, q) > 0).slice(0, MAX_CONTAINER_ACTIONS))

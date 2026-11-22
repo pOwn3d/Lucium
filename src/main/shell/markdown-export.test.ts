@@ -282,6 +282,27 @@ describe('savePage', () => {
     expect(toasts.at(-1)!.message).toBe(frenchSpaces('Enregistré : a b.md · 1/2 images'))
   })
 
+  it('says on screen how many images had no address to fetch (they load only on scroll, and the page could not show them)', async () => {
+    const lazy = [{ t: 'p', c: ['Texte ', { t: 'img', a: { src: 'https://img.example.com/cat.png' } }, { t: 'img', a: {} }, { t: 'img', a: {} }] }]
+    page.markdownPage.mockResolvedValue(whole(lazy))
+    ui.chooseSave.mockResolvedValue(join(dir, 'lazy.md'))
+    page.downloadImages.mockResolvedValue(downloaded([{ reference: 'image-1', name: 'images/image-001.png' }]))
+    await savePage(target())
+    expect(toasts.at(-1)!.message).toBe(frenchSpaces('Enregistré : lazy.md · 1/1 image. 2 images sans adresse n’ont pas pu être récupérées'))
+    page.markdownPage.mockResolvedValue(whole([{ t: 'p', c: ['Seul ', { t: 'img', a: {} }] }]))
+    ui.chooseSave.mockResolvedValue(join(dir, 'one.md'))
+    await savePage(target())
+    expect(toasts.at(-1)!.message).toBe(frenchSpaces('Enregistré : one.md. 1 image sans adresse n’a pas pu être récupérée'))
+  })
+
+  it('says nothing more when every image had its address', async () => {
+    page.markdownPage.mockResolvedValue(whole())
+    ui.chooseSave.mockResolvedValue(join(dir, 'ok.md'))
+    page.downloadImages.mockResolvedValue(downloaded([{ reference: 'image-1', name: 'images/image-001.png' }, { reference: 'image-2', name: 'images/image-002.jpg' }]))
+    await savePage(target())
+    expect(toasts.at(-1)!.message).toBe(frenchSpaces('Enregistré : ok.md · 2/2 images'))
+  })
+
   it('makes no folder when no image could be kept, and none for a page without images', async () => {
     page.markdownPage.mockResolvedValue(whole())
     ui.chooseSave.mockResolvedValue(join(dir, 'none.md'))

@@ -126,6 +126,14 @@ describe('featureRuns', () => {
     for (const f of all.filter((x) => !x.runsWhen)) for (const s of combos) expect(featureRuns(s, f.id as FeatureId), f.id).toBe(isFeatureOn(s, f.id as FeatureId))
   })
 
+  it('keeps the pictures of the tabs taken while the hover cards or the tab overview is on, and stops when both are off', () => {
+    expect(featureRuns(settings({ hoverCards: true, tabGrid: false }), 'hover-cards')).toBe(true)
+    expect(featureRuns(settings({ hoverCards: false, tabGrid: true }), 'hover-cards')).toBe(true)
+    expect(featureRuns(settings({ hoverCards: false, tabGrid: false }), 'hover-cards')).toBe(false)
+    // The switch of the pane is still the hover cards' own.
+    expect(isFeatureOn(settings({ hoverCards: false, tabGrid: true }), 'hover-cards')).toBe(false)
+  })
+
   it('lets archiving run while the general delay or a profile\'s delay is above 0, though the switch of the pane reads the general one', () => {
     const profiles = (hours: number) => ({ work: { autoArchiveHours: hours } })
     expect(featureRuns(settings({ autoArchiveHours: 12 }), 'auto-archive')).toBe(true)

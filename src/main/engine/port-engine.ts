@@ -48,6 +48,8 @@ export interface EnginePages {
   setPasswordBridge(on: boolean): void
   /** The autoplay mode of what the engine makes without being asked page by page (popups); Chromium's own until the shell says otherwise. */
   setDefaultAutoplay(mode: AutoplayMode): void
+  /** The smallest text size, in pixels, the pages made from now on are drawn at (0: off). A page keeps the value it was made with. */
+  setMinimumFontSize(size: number): void
   /**
    * Whether the pages get the script of the media player (the volume of a tab, the previous and next track of a site). On until the shell says
    * otherwise. Off, no session carries it: pages that load a new document afterwards have none.

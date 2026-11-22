@@ -4,8 +4,12 @@
 import { blockingService } from '../blocking'
 import { tidyFilename } from '@shared/tidy'
 import { adsBlockingOn, blockerIsOn } from '@shared/blocker'
+import { pingBlockedFor } from '@shared/ping-block'
 import { focusBlock, focusIsConfigured, pauseFocusPatch } from '@shared/focus-mode'
 import { focusGate } from '../engine/focus-gate'
+import { safeGate } from '../engine/safe-gate'
+import { cleanSafeBrowsingExceptions, hostToCheck, safeVerdict, type SafeVerdict } from '@shared/safe-browsing'
+import { allowSafeHost, releaseSafeLists, safeAllowedHosts, safeLists } from '../safe-lists'
 import { anyPrivacy, privacyOptionsOf } from '@shared/privacy'
 import { planHostResolver } from '@shared/dns'
 import { planProxies } from '@shared/proxy'
@@ -13,7 +17,13 @@ import type { Page, RequestBlocker } from '../engine/types'
 import { addCustomListFromFile, addCustomListFromText, removeCustomListById, type CustomListsEnvironment } from './custom-lists'
 import type { AddFilterListResult } from '@shared/custom-filter-lists'
 import { t } from '@shared/i18n'
+import type { Settings } from '@shared/model'
 import { BrowserPublish } from './browser-publish'
+
+/** The list an address is on, read from a window's settings at each request (the exceptions change without a new filter). Null while the feature is off. */
+function safeVerdictOf(settings: Pick<Settings, 'safeBrowsing' | 'safeBrowsingExceptions'>, url: string): SafeVerdict | null {
+  return settings.safeBrowsing ? safeVerdict(url, safeLists(), settings.safeBrowsingExceptions, safeAllowedHosts()) : null
+}
 
 export abstract class BrowserNetwork extends BrowserPublish {
   /** Hosts that count as ad networks on top of the built-in list. Only the engine test uses it, to block a local host. */
@@ -47,13 +57,14 @@ export abstract class BrowserNetwork extends BrowserPublish {
     }
     this.engine.setDownloadNamer(tidyDownloads ? (name) => tidyFilename(name) : null)
     this.configureFocus()
+    this.configureSafeBrowsing()
     this.configureDownloads()
     this.configurePrivacy()
     this.guard.configure()
     this.configureNetwork()
     if (this.privateScope) this.configurePrivateContext(this.privateScope)
     for (const scope of this.containerScopes.values()) this.configurePrivateContext(scope)
-    const key = [adsOn, blockCookieBanners, blockCosmetic, disabledFilterLists.join(','), filterUpdateDays, blockExceptions.join(','), this.extraBlockedHosts.join(','), customFilterLists.map((l) => `${l.id}:${l.enabled}`).join(','), focusIsConfigured(this.store.get().settings)].join('|')
+    const key = [adsOn, blockCookieBanners, blockCosmetic, disabledFilterLists.join(','), filterUpdateDays, blockExceptions.join(','), this.extraBlockedHosts.join(','), customFilterLists.map((l) => `${l.id}:${l.enabled}`).join(','), focusIsConfigured(this.store.get().settings), this.store.get().settings.safeBrowsing, this.store.get().settings.blockPings].join('|')
     if (key === this.blockerKey) return
     this.blockerKey = key
     // The lists belong to the application, not to a window: the main window drives them, a private window only gets its own request filter.
@@ -72,6 +83,12 @@ export abstract class BrowserNetwork extends BrowserPublish {
     if (!this.isPrivate()) this.engine.setDefaultAutoplay(this.store.get().settings.autoplayPolicy)
   }
 
+  /** The minimum text size the pages made from now on get (Settings › Apparence › Accessibilité); the main window's setting holds for every window, a private one included. */
+  protected configureMinimumFontSize(): void {
+    if (this.isSecondary() && this.leader !== this) return this.leader.configureMinimumFontSize()
+    this.engine.setMinimumFontSize(this.store.get().settings.minimumFontSize)
+  }
+
   /** The media player's script is in the pages only while the player is on (Settings › Fonctions); the main window's setting holds for every session. */
   protected configureMediaBridge(): void {
     if (this.isSecondary() && this.leader !== this) return this.leader.configureMediaBridge()
@@ -79,18 +96,55 @@ export abstract class BrowserNetwork extends BrowserPublish {
   }
 
   /**
-   * The request filter: the focus mode first (it closes the main frame of a listed site while it is active, shared/focus-mode.ts), then the blocker
-   * settings. Null while neither the focus mode (switched on, with a site) nor ad and tracker blocking nor banner blocking is on: a request is then
-   * not even heard.
+   * The request filter: the focus mode first (it closes the main frame of a listed site while it is active, shared/focus-mode.ts), then the tracking
+   * pings (shared/ping-block.ts: cancelled and counted with the blocker's counter of the page), then the blocker settings. Null while neither the focus
+   * mode (switched on, with a site) nor the pings nor ad and tracker blocking nor banner blocking is on: a request is then not even heard.
    */
   protected requestFilter(): RequestBlocker | null {
     const filtering = blockerIsOn(this.store.get().settings)
     const focusing = focusIsConfigured(this.store.get().settings)
-    if (!filtering && !focusing) return null
+    const safe = this.store.get().settings.safeBrowsing
+    const pinging = this.store.get().settings.blockPings === true
+    if (!filtering && !focusing && !safe && !pinging) return null
     return (request) => {
       if (focusing && request.resourceType === 'mainFrame' && focusBlock(this.store.get().settings, request.url, Date.now()) !== null) return true
+      if (safe && request.resourceType === 'mainFrame' && safeVerdictOf(this.store.get().settings, request.url) !== null) return true
+      if (pinging) {
+        // The lists reset the counter of a page at its navigation; with them off nobody else would.
+        if (!filtering && request.resourceType === 'mainFrame' && request.pageId) blockingService().resetPageCount(request.pageId)
+        if (pingBlockedFor({ url: request.url, resourceType: request.resourceType, pageUrl: request.pageUrl }, this.store.get().settings)) {
+          blockingService().noteStopped(request.pageId)
+          return true
+        }
+      }
       return filtering ? blockingService().verdict(request, this.store.get().settings, this.extraBlockedHosts) : false
     }
+  }
+
+  /** What the warning page of the engine asks of safe browsing. Present while the feature is on; off, the lists are let go of and nothing is read. */
+  private configureSafeBrowsing(): void {
+    if (!this.store.get().settings.safeBrowsing) {
+      safeGate.set(null)
+      releaseSafeLists()
+      return
+    }
+    // Read now, so that Settings can say at once whether a list is missing (and not at the first page).
+    safeLists()
+    safeGate.set({
+      verdict: (url) => safeVerdictOf(this.store.get().settings, url),
+      allow: (url) => {
+        const host = new URL(url).hostname.toLowerCase().replace(/\.$/, '')
+        allowSafeHost(host)
+      },
+      except: (url) => {
+        const host = hostToCheck(url)
+        if (host === null) return
+        // A site a private window or tab is on is not written to the saved settings: it opens for this run only (as the exceptions of the blocker do).
+        if ([...this.group].some((b) => b.isPrivate() || b.store.get().tabs.some((tab) => tab.private === true && hostToCheck(tab.url) === host))) return allowSafeHost(host)
+        const exceptions = this.store.get().settings.safeBrowsingExceptions
+        if (!exceptions.includes(host)) this.dispatch({ type: 'settings/update', patch: { safeBrowsingExceptions: cleanSafeBrowsingExceptions([...exceptions, host]) } })
+      }
+    })
   }
 
   /** What the block page of the engine asks of the focus mode: whether an address is closed now, and the pause. Present while the feature is on. */

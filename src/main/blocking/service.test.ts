@@ -416,6 +416,28 @@ describe('the counter of a page', () => {
   })
 })
 
+describe('what the shell stops for a protection of its own (the pings)', () => {
+  it('counts it on its page and in the session, like a block of the lists, and starts the page again at its next navigation', () => {
+    const service = make()
+    const before = service.sessionBlockedCount()
+    service.noteStopped('tab-1')
+    service.noteStopped('tab-1')
+    service.noteStopped('tab-2')
+    expect(service.blockedCount('tab-1')).toBe(2)
+    expect(service.blockedCount('tab-2')).toBe(1)
+    expect(service.sessionBlockedCount() - before).toBe(3)
+    service.resetPageCount('tab-1')
+    expect(service.blockedCount('tab-1')).toBe(0)
+    expect(service.blockedCount('tab-2')).toBe(1)
+  })
+
+  it('counts nothing for a request that belongs to no page', () => {
+    const service = make()
+    service.noteStopped(null)
+    expect(service.sessionBlockedCount()).toBe(0)
+  })
+})
+
 describe('the status shown in the settings', () => {
   it('lists every list with what is known about it', async () => {
     const service = make()

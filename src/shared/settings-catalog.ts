@@ -74,7 +74,7 @@ export const SETTINGS_KEYS = {
   home: ['language', 'interfaceTranslated'],
   // Accessibilité · Interface · Taille des fenêtres et des panneaux · Barre latérale · Fenêtre · Sites web
   appearance: [
-    'uiScale', 'panelSizes', 'forceReduceMotion', 'forceHighContrast', 'forceReduceTransparency',
+    'uiScale', 'minimumFontSize', 'panelSizes', 'forceReduceMotion', 'forceHighContrast', 'forceReduceTransparency',
     'hoverCards', 'interfaceAppearance', 'showZoomIndicator', 'fullUrlInToolbar', 'readableToolbarButton',
     'sidebarRight', 'compactMode', 'mediaPlayer', 'favoriteNames', 'resourceGauge',
     'windowVibrancy', 'sidebarOpacity', 'windowBorder', 'cardOutline',
@@ -100,11 +100,12 @@ export const SETTINGS_KEYS = {
   // · Listes de filtres · DNS chiffré · Proxy
   protection: [
     'blockAds', 'blockCookieBanners', 'blockMode', 'blockCosmetic', 'blockExceptions', 'popupExceptions',
-    'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions',
+    'httpsUpgrade', 'sendGpc', 'stripTrackingParams', 'stripCopiedLinks', 'blockThirdPartyCookies', 'thirdPartyCookieExceptions', 'unwrapRedirects', 'unwrapExceptions', 'safeBrowsing', 'safeBrowsingExceptions',
+    'blockPings', 'trimReferer', 'httpsOnly', 'httpsOnlyExceptions',
     'blockScriptlets', 'reduceFingerprint', 'fingerprintStrict', 'fingerprintExceptions',
-    'historyOff', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
+    'historyOff', 'historyKeepDays', 'pageContentIndex', 'siteDataConfirm', 'siteDataNotify', 'siteDataAnimation', 'siteDataClearOnCloseEnabled', 'siteDataClearOnClose', 'siteDataClearOnQuit',
     'autoplayPolicy', 'siteAutoplay', 'allowScreenShare', 'webHardware',
-    'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager',
+    'lockEnabled', 'lockApp', 'lockTouchId', 'lockedSpaces', 'passwordManager', 'passwordTouchIdOnFill', 'passwordNeverSaveHosts',
     'disabledFilterLists', 'filterUpdateDays', 'customFilterListsEnabled', 'customFilterLists', 'dohCustom', 'dohMode', 'dohProvider', 'dohCustomUrl', 'proxyEnabled', 'proxy'
   ],
   // Téléchargements et lecture · Ouverture des fichiers · Signets (the export) · Icônes des sites · Copies automatiques · Export
@@ -131,7 +132,7 @@ export const SETTINGS_KEYS = {
   // The catalogue of the features to add (`FEATURE_THEMES`), theme by theme: the switch of each feature, then what goes with it (its options, its list,
   // the settings of the page annotation and of the summary by a local model, which are no feature of the registry).
   features: [
-    'tabTree', 'tabReminders', 'tabSearch', 'tabGroupFolders', 'showReloadAllButton', 'reloadAllWakes', 'showTabMemory', 'workViewsEnabled',
+    'tabTree', 'tabReminders', 'tabSearch', 'tabGrid', 'tabGroupFolders', 'showReloadAllButton', 'reloadAllWakes', 'showTabMemory', 'workViewsEnabled',
     'webPanels', 'nameWindows', 'independentWindows', 'webAppWindows', 'documentPictureInPicture',
     'tabContainers', 'privateTabs', 'guestProfile', 'containers', 'containerRules',
     'bookmarkManager', 'liveFolders', 'notes', 'notesListButton',
@@ -183,7 +184,7 @@ export interface FeatureTheme {
 }
 
 export const FEATURE_THEMES: readonly FeatureTheme[] = [
-  { id: 'tabs', title: 'settings.fonctions-theme-onglets', features: ['tab-tree', 'tab-reminders', 'tab-search', 'tab-groups-ext', 'reload-all-button', 'tab-memory', 'work-views'] },
+  { id: 'tabs', title: 'settings.fonctions-theme-onglets', features: ['tab-tree', 'tab-reminders', 'tab-search', 'tab-grid', 'tab-groups-ext', 'reload-all-button', 'tab-memory', 'work-views'] },
   { id: 'windows', title: 'settings.fonctions-theme-fenetres', features: ['web-panels', 'name-windows', 'independent-windows', 'pwa', 'document-pip'] },
   { id: 'separate', title: 'settings.fonctions-theme-separer', features: ['containers', 'private-tabs', 'guest-profile'] },
   { id: 'bookmarks', title: 'settings.fonctions-theme-signets', features: ['bookmarks', 'live-folders', 'notes'] },
@@ -273,9 +274,13 @@ export const KEPT_ON_RESET = {
   popupExceptions: 'a list of sites',
   fingerprintExceptions: 'a list of sites',
   thirdPartyCookieExceptions: 'a list of sites',
+  unwrapExceptions: 'a list of sites',
+  safeBrowsingExceptions: 'a list of sites',
+  httpsOnlyExceptions: 'a list of sites',
   mouseGestureExcludedHosts: 'a list of sites',
   vimKeysExcludedHosts: 'a list of sites',
   translateNeverSites: 'a list of sites',
+  passwordNeverSaveHosts: 'a list of sites',
   translateAlways: 'a list of languages',
   siteDataClearOnClose: 'a list of sites',
   siteJavascriptOff: 'a list of sites',

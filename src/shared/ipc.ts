@@ -275,6 +275,12 @@ export type OverlayRequest =
    * `split`: the page on screen is a split view, which the tab would join (a picture of each pane, its pages put away) or which is full (its pages stay).
    */
   | { panel: 'splitdrop'; tabId: string; size: { width: number; height: number }; snapshot: string | null; sidebarRight: boolean; split?: DropHost }
+  /**
+   * The overview of the open tabs (setting `tabGrid`, ⇧⌘O, the Tabs menu, the command bar): a grid of cards with a picture of each page. The interface asks with no
+   * pictures; the main process fills them in from the ones it already took (`gridPictures`: none for a private tab, a private window or a locked space), so a surface of ours
+   * cannot hand the panel a picture.
+   */
+  | { panel: 'tabgrid'; pictures?: Record<string, string> }
   /** ⌃Tab (main only): the panel of pictures, kept while ⌃ is held. `index` is the entry the selection is on; it then moves through `Channel.cycleIndex`. */
   | { panel: 'tabcycle'; cards: CycleCard[]; index: number }
   /**
@@ -457,6 +463,8 @@ export interface UiSnapshot {
   plusOpen?: boolean
   /** The filter lists of the ad and tracker blocker: installed, updated when, failed how. Absent in a private window. */
   blocking?: BlockingStatus
+  /** Safe browsing, while it is on: `unavailable` when a list is missing or damaged, so that nothing is warned about. Absent while it is off. */
+  safeLists?: 'ready' | 'unavailable'
   /** The lock, when it is on and has a phrase (absent otherwise: nothing about it reaches the interface). With `appLocked` the state above is a skeleton. */
   lock?: LockView
   /** The windows the command bar can go to by name (the named ones other than this). Only present while windows can be named (a setting). */

@@ -15,6 +15,7 @@ import { interfaceMayDispatch } from './ipc-policy'
 import { defaultSettings, type Settings } from './model'
 import { getLanguage, t, type MessageKey } from './i18n'
 import { settingsPath } from './settings-path'
+import { MIN_FONT_SIZE_ON } from './min-font-size'
 
 /** What a feature costs while it is active. `none` stands alone: nothing runs for it except a check when its event happens. */
 export type FeatureCost = 'none' | 'timer' | 'listeners' | 'network' | 'memory' | 'process' | 'disk'
@@ -215,11 +216,51 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    id: 'safe-browsing',
+    key: 'safeBrowsing',
+    get label() { return t('privacy-settings.prevenir-avant-d-ouvrir-un-site-dangereux') },
+    group: 'privacy',
+    get description() { return t('features.compare-chaque-page-a-une-liste-de-sites', { settingsPath: settingsPath('safeBrowsing') }) },
+    cost: ['listeners', 'memory']
+  },
+  {
+    id: 'block-pings',
+    key: 'blockPings',
+    get label() { return t('privacy-settings.bloquer-les-pings-de-suivi') },
+    group: 'privacy',
+    get description() { return t('features.coupe-les-pings-de-suivi') },
+    cost: ['listeners']
+  },
+  {
+    id: 'trim-referer',
+    key: 'trimReferer',
+    get label() { return t('privacy-settings.rogner-le-referer') },
+    group: 'privacy',
+    get description() { return t('features.ne-donne-que-l-origine-de-la-page', { settingsPath: settingsPath('trimReferer') }) },
+    cost: ['listeners']
+  },
+  {
+    id: 'https-only',
+    key: 'httpsOnly',
+    get label() { return t('privacy-settings.https-seul') },
+    group: 'privacy',
+    get description() { return t('features.n-ouvre-que-du-https', { settingsPath: settingsPath('httpsOnly') }) },
+    cost: ['listeners']
+  },
+  {
     id: 'strip-tracking',
     key: 'stripTrackingParams',
     get label() { return t('privacy-settings.retirer-les-parametres-de-suivi-des-adresses') },
     group: 'privacy',
     get description() { return t('features.enleve-utm-fbclid-gclid-des-adresses-avant-de') },
+    cost: ['listeners']
+  },
+  {
+    id: 'bypass-redirects',
+    key: 'unwrapRedirects',
+    get label() { return t('privacy-settings.contourner-les-redirections-de-suivi-et-les-pages-amp') },
+    group: 'privacy',
+    get description() { return t('features.ouvre-l-adresse-finale-d-un-lien-de-suivi-ou-d-une', { settingsPath: settingsPath('redirectBypass') }) },
     cost: ['listeners']
   },
   {
@@ -347,6 +388,8 @@ export const FEATURES = [
     get label() { return t('features.apercus-au-survol-des-onglets') },
     group: 'interface',
     get description() { return t('features.une-carte-montre-le-titre-l-adresse-et-une') },
+    // The pictures of the pages are also what the tab overview shows: they are taken while either of the two is on.
+    runsWhen: (settings) => settings.hoverCards || settings.tabGrid,
     cost: ['timer', 'listeners', 'memory']
   },
   {
@@ -675,6 +718,17 @@ export const FEATURES = [
     cost: ['listeners']
   },
   {
+    // Off by default (0): the history is kept until the person forgets it. On, a timer looks once an hour for the pages older than the delay.
+    id: 'history-purge',
+    kind: 'threshold',
+    key: 'historyKeepDays',
+    onValue: 30,
+    get label() { return t('features.garder-l-historique-seulement-un-temps') },
+    group: 'privacy',
+    get description() { return t('features.oublie-les-pages-visitees-il-y-a-plus-de') },
+    cost: ['timer']
+  },
+  {
     id: 'page-content-index',
     key: 'pageContentIndex',
     get label() { return t('features.recherche-dans-le-contenu-des-pages-visitees') },
@@ -821,6 +875,16 @@ export const FEATURES = [
     cost: ['none']
   },
   {
+    id: 'minimum-font-size',
+    kind: 'threshold',
+    key: 'minimumFontSize',
+    onValue: MIN_FONT_SIZE_ON,
+    get label() { return t('features.taille-minimale-du-texte-des-pages') },
+    group: 'interface',
+    get description() { return t('features.aucun-texte-de-page-n-est-dessine-plus-petit', { settingsPath: settingsPath('minimumFontSize') }) },
+    cost: ['none']
+  },
+  {
     id: 'name-windows',
     key: 'nameWindows',
     get label() { return t('features.nommer-les-fenetres') },
@@ -876,6 +940,14 @@ export const FEATURES = [
     group: 'tabs',
     get description() { return t('features.la-barre-de-commandes-en-mode-onglets-sur-tous-les') },
     cost: ['none']
+  },
+  {
+    id: 'tab-grid',
+    key: 'tabGrid',
+    get label() { return t('features.vue-d-ensemble-des-onglets') },
+    group: 'tabs',
+    get description() { return t('features.tous-les-onglets-en-grille-de-vignettes-avec-recherche') },
+    cost: ['memory']
   },
   {
     id: 'shortcut-help',
@@ -1061,6 +1133,7 @@ export const NOT_OPTIONAL_SETTINGS: Partial<Record<BooleanSettingKey | 'blockTra
   autoplayPerSite: 'deprecated: « Un réglage pour chaque site » of the autoplay is gone, the choice of a site always applies and the site panel always offers it; nothing reads the key, which stays so that an older state file loads',
   siteDataClearOnQuit: 'option de « Effacer les données d’un site à la fermeture » (clear-on-close)',
   lockApp: 'option du verrouillage (lock) : verrouille aussi au lancement et à la sortie de veille',
+  passwordTouchIdOnFill: 'option du gestionnaire de mots de passe (`password-manager`) : la phrase ou l’empreinte du trousseau est redemandée avant chaque remplissage ; éteinte par défaut, rien ne tourne de plus ou de moins ; sans effet quand le gestionnaire est coupé',
   lockTouchId: 'option du verrouillage (lock) : Touch ID quand il est disponible',
   modifiedClickBackground: 'mode d’ouverture des liens (⌘-clic, clic du milieu), pas une fonction : le réglage choisit seulement si l’onglet s’ouvre au premier plan',
   blankLinkBackground: 'mode d’ouverture des liens (target="_blank"), pas une fonction : le réglage choisit seulement si l’onglet s’ouvre au premier plan',

@@ -515,6 +515,18 @@ export class BlockingService {
     if (this.counts.size > COUNTERS_MAX) this.counts.delete(this.counts.keys().next().value!)
   }
 
+  /** A request the shell stopped for a protection of its own (a tracking ping, shell/browser-network.ts): it counts like a block of the lists, on its page and in the session. */
+  noteStopped(pageId: string | null): void {
+    if (!pageId) return
+    this.count(pageId)
+    this.sessionTotal++
+  }
+
+  /** A page navigated: its counter starts again. The request filter of the lists does it itself while they are on; the shell does it when only its own protections are. */
+  resetPageCount(pageId: string): void {
+    this.counts.delete(pageId)
+  }
+
   /** Requests blocked on a page since it last navigated. */
   blockedCount(pageId: string): number {
     return this.counts.get(pageId) ?? 0

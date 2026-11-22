@@ -29,7 +29,7 @@ describe('the sheet', () => {
     expect(sheet.groups.map((g) => g.context)).toEqual([...HELP_CONTEXTS])
     expect(sheet.groups.map((g) => g.title)).toEqual(['Onglets', 'Espaces', 'Page', 'Fenêtre', 'Barre de commandes'])
     expect(rows(sheet).length).toBeGreaterThanOrEqual(30)
-    expect(rows(sheet).length).toBeLessThanOrEqual(41)
+    expect(rows(sheet).length).toBeLessThanOrEqual(42)
     expect(row(sheet, 'newTab')).toMatchObject({ label: 'Nouvel onglet…', keys: ['⌘T'], custom: false, was: null, note: null })
     expect(row(sheet, 'tabSearch')).toMatchObject({ keys: ['⇧⌘A'] })
     expect(row(sheet, 'shortcutHelp')).toMatchObject({ keys: ['⌘/'] })

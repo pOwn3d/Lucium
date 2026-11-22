@@ -69,6 +69,7 @@ export function menuKey(state: SidebarState, extensionIds: readonly string[], fa
     pdfSource: state.settings.pdfWithSource,
     // Onglets › Rechercher un onglet (⇧⌘A) and Aide › Raccourcis (⌘/) exist only with their function on: a change rebuilds the menu at once.
     tabSearch: state.settings.tabSearch,
+    tabGrid: state.settings.tabGrid,
     shortcutHelp: state.settings.shortcutHelp,
     sidebar: state.settings.sidebarVisible,
     // View › Pour les nouvelles fenêtres: the side of the new windows (the side of this window is in the facts).

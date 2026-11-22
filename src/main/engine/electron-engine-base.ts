@@ -312,6 +312,8 @@ export abstract class ElectronEngineBase {
   protected readonly upgrades = new HttpsUpgrades()
   /** What a web contents the shell does not create itself gets (a popup): the general choice of the user, Chromium's policy until the shell says. */
   protected defaultAutoplay: AutoplayMode = DEFAULT_AUTOPLAY
+  /** The smallest text size the pages made from now on are drawn at; 0 is off (Electron's own default; shared/min-font-size.ts). */
+  protected minimumFontSize = 0
   /** The popup windows pages opened: real windows, in the session of the page that opened them (see popup-windows.ts). */
   protected readonly popups = new PopupWindows(this.upgrades, () => this.defaultAutoplay, (pageId) => this.blockExceptionHandlers.get(pageId))
   /** The windows of document Picture-in-Picture (the floating window of a call), off until the shell switches the feature on. */

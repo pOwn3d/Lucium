@@ -6,6 +6,7 @@ import type { Settings } from './model'
 import { t } from './i18n'
 import { cleanBlockExceptions } from './blocker'
 import { hasLocalOnlySuffix } from './url'
+import { bypassNavigation } from './redirect-bypass'
 
 export interface PrivacyOptions {
   /** A main-frame navigation to `http://` goes to `https://` first, and falls back to `http://` when the site does not answer. */
@@ -18,11 +19,22 @@ export interface PrivacyOptions {
   blockThirdPartyCookies: boolean
   /** The sites (and their subdomains) where third-party cookies are let through. */
   thirdPartyCookieExceptions: readonly string[]
+  /** A link through a tracking redirector or an AMP viewer opens the address it leads to (redirect-bypass.ts). */
+  unwrapRedirects: boolean
+  /** The sites (and their subdomains) whose links are left as they are, at either end of the link. */
+  unwrapExceptions: readonly string[]
+  /** A request to another site carries the origin of the page as `Referer`, never its path or its query (referer-trim.ts). */
+  trimReferer: boolean
+  /** « HTTPS seul »: an `http://` page opens only on a click on « Continuer en HTTP », and a site with no HTTPS is never fallen back to by itself (https-upgrade.ts). */
+  httpsOnly: boolean
+  /** The sites (and their subdomains) that open over `http://` with no warning in « HTTPS seul ». */
+  httpsOnlyExceptions: readonly string[]
 }
 
-export const NO_PRIVACY: PrivacyOptions = { httpsUpgrade: false, globalPrivacyControl: false, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [] }
+export const NO_PRIVACY: PrivacyOptions = { httpsUpgrade: false, globalPrivacyControl: false, stripTrackingParams: false, blockThirdPartyCookies: false, thirdPartyCookieExceptions: [], unwrapRedirects: false, unwrapExceptions: [], trimReferer: false, httpsOnly: false, httpsOnlyExceptions: [] }
 
-export type PrivacySettings = Pick<Settings, 'httpsUpgrade' | 'sendGpc' | 'stripTrackingParams' | 'stripCopiedLinks' | 'blockThirdPartyCookies' | 'thirdPartyCookieExceptions'>
+/** `blockPings` is not an option of the engine's hooks (the shell's request filter reads it, ping-block.ts), but it is cleaned with the others. */
+export type PrivacySettings = Pick<Settings, 'httpsUpgrade' | 'sendGpc' | 'stripTrackingParams' | 'stripCopiedLinks' | 'blockThirdPartyCookies' | 'thirdPartyCookieExceptions' | 'unwrapRedirects' | 'unwrapExceptions' | 'blockPings' | 'trimReferer' | 'httpsOnly' | 'httpsOnlyExceptions'>
 
 /** Sites in the list of exceptions: more than anyone writes by hand, and a bound for a hand-edited file. */
 export const THIRD_PARTY_COOKIE_EXCEPTIONS_MAX = 200
@@ -30,17 +42,34 @@ export const THIRD_PARTY_COOKIE_EXCEPTIONS_MAX = 200
 /** The sites of the list as a saved file or a message may carry them: valid hosts, each once, at most `THIRD_PARTY_COOKIE_EXCEPTIONS_MAX`. */
 export const cleanThirdPartyCookieExceptions = (raw: unknown): string[] => cleanBlockExceptions(raw).slice(0, THIRD_PARTY_COOKIE_EXCEPTIONS_MAX)
 
+/** Sites in the list of exceptions of « HTTPS seul »: the same bound. */
+export const HTTPS_ONLY_EXCEPTIONS_MAX = 200
+
+/** The sites of the list as a saved file or a message may carry them: valid hosts, each once, at most `HTTPS_ONLY_EXCEPTIONS_MAX`. */
+export const cleanHttpsOnlyExceptions = (raw: unknown): string[] => cleanBlockExceptions(raw).slice(0, HTTPS_ONLY_EXCEPTIONS_MAX)
+
 export function privacyOptionsOf(settings: Partial<PrivacySettings>): PrivacyOptions {
-  return { httpsUpgrade: settings.httpsUpgrade === true, globalPrivacyControl: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true, blockThirdPartyCookies: settings.blockThirdPartyCookies === true, thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions) }
+  return {
+    httpsUpgrade: settings.httpsUpgrade === true,
+    globalPrivacyControl: settings.sendGpc === true,
+    stripTrackingParams: settings.stripTrackingParams === true,
+    blockThirdPartyCookies: settings.blockThirdPartyCookies === true,
+    thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions),
+    unwrapRedirects: settings.unwrapRedirects === true,
+    unwrapExceptions: cleanBlockExceptions(settings.unwrapExceptions),
+    trimReferer: settings.trimReferer === true,
+    httpsOnly: settings.httpsOnly === true,
+    httpsOnlyExceptions: cleanHttpsOnlyExceptions(settings.httpsOnlyExceptions)
+  }
 }
 
 export function anyPrivacy(options: PrivacyOptions): boolean {
-  return options.httpsUpgrade || options.globalPrivacyControl || options.stripTrackingParams || options.blockThirdPartyCookies
+  return options.httpsUpgrade || options.globalPrivacyControl || options.stripTrackingParams || options.blockThirdPartyCookies || options.unwrapRedirects || options.trimReferer || options.httpsOnly
 }
 
 /** The privacy settings of a saved file: anything but `true` is off, so a damaged file never switches a rewrite on. */
 export function cleanPrivacySettings(settings: Partial<PrivacySettings>): PrivacySettings {
-  return { httpsUpgrade: settings.httpsUpgrade === true, sendGpc: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true, stripCopiedLinks: settings.stripCopiedLinks === true, blockThirdPartyCookies: settings.blockThirdPartyCookies === true, thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions) }
+  return { httpsUpgrade: settings.httpsUpgrade === true, sendGpc: settings.sendGpc === true, stripTrackingParams: settings.stripTrackingParams === true, stripCopiedLinks: settings.stripCopiedLinks === true, blockThirdPartyCookies: settings.blockThirdPartyCookies === true, thirdPartyCookieExceptions: cleanThirdPartyCookieExceptions(settings.thirdPartyCookieExceptions), unwrapRedirects: settings.unwrapRedirects === true, unwrapExceptions: cleanBlockExceptions(settings.unwrapExceptions), blockPings: settings.blockPings === true, trimReferer: settings.trimReferer === true, httpsOnly: settings.httpsOnly === true, httpsOnlyExceptions: cleanHttpsOnlyExceptions(settings.httpsOnlyExceptions) }
 }
 
 // ---------- Tracking parameters ----------
@@ -160,7 +189,7 @@ export interface NavigationRequest {
 }
 
 /**
- * Where a main-frame GET should go instead, per the options, or null to leave it. Tracking parameters come off first, then the
+ * Where a main-frame GET should go instead, per the options, or null to leave it. The wrapper of a tracking redirect or of an AMP viewer comes off first, then the tracking parameters, then the
  * result is upgraded: one rewrite per request, and each round only ever removes parameters or moves from http to https, so a
  * chain of redirects ends. `upgrade` is how the caller decides whether this http address may be upgraded now (it remembers the
  * addresses it already tried, which is what stops a site that sends https visitors back to http from looping).
@@ -169,6 +198,12 @@ export function rewriteNavigation(request: NavigationRequest, options: PrivacyOp
   if (!request.isMainFrame || request.method !== 'GET') return null
   let url = request.url
   let changed = false
+  // First the wrapper comes off (the destination is what the next steps judge), then the parameters, then http to https.
+  const bypassed = bypassNavigation(url, options)
+  if (bypassed) {
+    url = bypassed.url
+    changed = true
+  }
   if (options.stripTrackingParams) {
     const stripped = stripTrackingParams(url)
     if (stripped) {
@@ -176,7 +211,8 @@ export function rewriteNavigation(request: NavigationRequest, options: PrivacyOp
       changed = true
     }
   }
-  if (options.httpsUpgrade) {
+  // « HTTPS seul » upgrades the same way; what differs is what happens when the site does not answer (https-upgrade.ts): there is no fall back.
+  if (options.httpsUpgrade || options.httpsOnly) {
     const upgraded = upgrade(url)
     if (upgraded && upgraded !== url) return upgraded
   }

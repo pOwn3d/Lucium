@@ -256,6 +256,9 @@ export function PasswordsPanel() {
             {withBold(view.capture.kind === 'update' ? t('passwords-panel.mettre-a-jour-le-mot-de-passe-de-username-pour-host', captured) : t('passwords-panel.enregistrer-le-mot-de-passe-de-username-pour-host', captured))}
           </p>
           <div className="row end">
+            <button type="button" className="link-button" disabled={busy} onClick={() => void ask({ kind: 'capture', op: 'never', offer: view.capture!.offer })}>
+              {t('passwords-panel.ne-plus-proposer')}
+            </button>
             <button className="button" disabled={busy} onClick={() => void ask({ kind: 'capture', op: 'dismiss', offer: view.capture!.offer })}>
               {t('passwords-panel.ignorer')}
             </button>
@@ -365,6 +368,20 @@ export function PasswordsPanel() {
                         {row.host}
                       </span>
                       <span className="muted">{row.username === '' ? t('passwords-panel.sans-identifiant') : row.username}</span>
+                      {(row.weak || row.reused) && (
+                        <span className="passwords-health">
+                          {row.weak && (
+                            <span className="passwords-flag" title={t('passwords-panel.faible-aide')}>
+                              {t('passwords-panel.faible')}
+                            </span>
+                          )}
+                          {row.reused && (
+                            <span className="passwords-flag" title={t('passwords-panel.reutilise-aide')}>
+                              {t('passwords-panel.reutilise')}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </div>
                     {removing === row.id ? (
                       <>
@@ -387,6 +404,9 @@ export function PasswordsPanel() {
                       <>
                         <button type="button" className="button" disabled={busy || !here} title={here ? t('passwords-panel.remplir-la-page') : t('passwords-panel.l-adresse-de-la-page-n-est-pas-exactement-celle')} aria-label={t('passwords-panel.remplir-username-sur-host', { username: row.username, host: row.host })} onClick={() => void fill(row.id)}>
                           {t('passwords-panel.remplir')}
+                        </button>
+                        <button type="button" className="link-button" disabled={busy} aria-label={t('passwords-panel.copier-le-mot-de-passe-de-username-sur-host', { username: row.username, host: row.host })} onClick={() => void ask({ kind: 'copy-password', id: row.id })}>
+                          {t('passwords-panel.copier-mdp')}
                         </button>
                         {row.totp ? (
                           <button type="button" className="link-button" disabled={busy} aria-expanded={shown?.id === row.id} aria-label={t('passwords-panel.totp-code-de-username-sur-host', { username: row.username, host: row.host })} onClick={() => (shown?.id === row.id ? setShown(null) : void showCode(row.id))}>

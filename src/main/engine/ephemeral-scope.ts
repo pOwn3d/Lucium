@@ -114,6 +114,7 @@ export class EphemeralScope implements EphemeralEngine {
 
   /** The popups of a private window take the general choice, which the main window sets. */
   setDefaultAutoplay(): void {}
+  setMinimumFontSize(): void {}
 
   /** The media bridge follows the main window's setting for every session (see ElectronEngine.setMediaBridge). */
   setMediaBridge(): void {}

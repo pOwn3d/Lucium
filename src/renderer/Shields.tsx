@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 import { blockerIsOn, isBlockingExempt, normalizeBlockHost, siteBlockModeOf } from '@shared/blocker'
 import { blockedLabel } from '@shared/filter-lists'
 import type { BlockMode } from '@shared/model'
+import { bypassExceptionsWith, bypassRowOf } from '@shared/redirect-bypass'
 import { api, useSnapshot } from './api'
 import './shields.css'
 
@@ -51,8 +52,27 @@ export function Shields({ url, tabId }: { url: string; tabId: string }) {
     setChanged(true)
   }
 
+  // The links of this site: unwrapped (tracking redirects, AMP), or left as they are. Shown only while the option is on.
+  const bypass = bypassRowOf(url, settings)
+  const toggleBypass = () => {
+    if (!bypass) return
+    void act.dispatch({ type: 'settings/update', patch: { unwrapExceptions: bypassExceptionsWith(settings.unwrapExceptions, bypass.host, bypass.active) } })
+  }
+
   return (
     <>
+      {bypass && (
+        <button className="scc-setting shields-row" role="switch" aria-checked={bypass.active} onClick={toggleBypass}>
+          <span className={`scc-badge ${bypass.active ? 'on' : ''}`}>
+            <LinkIcon />
+          </span>
+          <span className="scc-setting-text">
+            <strong>{t('shields.liens-de-suivi-et-amp')}</strong>
+            <span>{bypass.active ? t('shields.adresses-finales-ouvertes-pour-ce-site') : t('shields.liens-laisses-tels-quels-pour-ce-site')}</span>
+          </span>
+          <span className={`shields-switch ${bypass.active ? 'on' : ''}`} aria-hidden="true" />
+        </button>
+      )}
       {on ? (
         <button className="scc-setting shields-row" role="switch" aria-checked={active} onClick={toggle}>
           <span className={`scc-badge ${active ? 'on' : ''}`}>
@@ -101,6 +121,14 @@ export function Shields({ url, tabId }: { url: string; tabId: string }) {
         </div>
       )}
     </>
+  )
+}
+
+function LinkIcon() {
+  return (
+    <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8.500 11.500a3 3 0 0 0 4.200 0l2.300-2.300a3 3 0 0 0-4.200-4.200L9.700 6.100M11.500 8.500a3 3 0 0 0-4.200 0L5 10.800a3 3 0 0 0 4.200 4.200l1.100-1.100" />
+    </svg>
   )
 }
 

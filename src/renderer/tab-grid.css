@@ -1,0 +1,55 @@
+/*
+ * The tab overview (TabGrid.tsx): a panel of the family of the shortcut sheet (`tk-panel`), a head with the search and the Space chips, a body that scrolls with one grid of
+ * cards. Tokens only. The contour of a field and of a chip is `--text-3` (3 : 1 at least, WCAG 1.4.11). Nothing moves by itself: the one transition is cut by « Réduire les animations ».
+ */
+.tg { display: flex; flex-direction: column; width: min(1100px, calc(100% - 2 * var(--sp-4))); max-height: calc(100vh - 8vh - var(--sp-5)); overflow: hidden; border-radius: var(--r-xl); }
+
+.tg-head { display: grid; gap: var(--sp-3); padding: var(--sp-4) var(--sp-5) var(--sp-3); background: linear-gradient(135deg, var(--space-a), var(--space-b)); }
+.tg-title { display: flex; align-items: center; gap: var(--sp-3); }
+.tg-title h2 { margin: 0; font-size: var(--t-2xl); line-height: 1.15; font-weight: var(--w-semibold); }
+.tg-count { flex: 1; font-size: var(--t-s); color: var(--text); font-variant-numeric: tabular-nums; }
+.tg .tk-field { border-color: var(--text-3); }
+.tg .tk-field:focus { border-color: var(--accent); }
+.tg .tk-field:focus-visible { outline: var(--focus-width) solid var(--focus); outline-offset: 1px; }
+.tg .tk-search .tk-field { height: 36px; font-size: var(--t-l); }
+.tg .tk-search svg { stroke: var(--text-3); }
+.tg .tk-btn { border-color: var(--text-3); }
+.tg .tk-btn.quiet { border-color: transparent; }
+
+.tg-chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-2); }
+.tg .tk-chip { border: 1px solid var(--text-3); background: var(--surface); color: var(--text); font-weight: var(--w-semibold); cursor: pointer; transition: background var(--dur); }
+.tg .tk-chip:hover { background: var(--tile); }
+.tg .tk-chip[aria-pressed='true'] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.tg-n { margin-left: var(--sp-2); font-weight: var(--w-regular); font-variant-numeric: tabular-nums; }
+
+.tg-body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--sp-4) var(--sp-5); border-top: 1px solid var(--line); background: var(--surface-2); }
+.tg-grid { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--sp-4); grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+
+.tg-card { position: relative; display: flex; }
+.tg-go { display: flex; flex-direction: column; gap: var(--sp-2); width: 100%; padding: var(--sp-2); border: 1px solid var(--line-strong); border-radius: var(--r-l); background: var(--surface); color: var(--text); text-align: left; cursor: pointer; transition: background var(--dur); }
+.tg-go:hover { background: var(--tile); }
+.tg-card.current .tg-go { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.tg-card.asleep .tg-pic { opacity: 0.7; }
+.tg-pic { display: flex; align-items: center; justify-content: center; aspect-ratio: 16 / 10; overflow: hidden; border-radius: var(--r-inner); background: var(--tile); }
+.tg-pic img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.tg-pic img.tg-icon { width: 40px; height: 40px; object-fit: contain; }
+.tg-letter { font-size: var(--t-2xl); font-weight: var(--w-semibold); color: var(--text-2); }
+.tg-line { display: flex; align-items: center; gap: var(--sp-2); min-width: 0; padding: 0 var(--sp-1); }
+.tg-fav { flex: none; width: 16px; height: 16px; }
+.tg-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-m); font-weight: var(--w-semibold); }
+.tg-site { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 var(--sp-1) var(--sp-1); font-size: var(--t-s); color: var(--text-2); }
+
+/* The close button sits on the picture, at its corner: always there (a keyboard or a screen reader reaches it), plain until the card is pointed at or has the focus. */
+.tg-close { position: absolute; top: var(--sp-3); right: var(--sp-3); display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 1px solid var(--text-3); border-radius: 99px; background: var(--surface); color: var(--text); cursor: pointer; opacity: 0; transition: opacity var(--dur); }
+.tg-close svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; }
+.tg-card:hover .tg-close, .tg-card:focus-within .tg-close { opacity: 1; }
+.tg-close:hover { background: var(--tile); }
+.tg-close:focus-visible { opacity: 1; outline: var(--focus-width) solid var(--focus); outline-offset: 1px; }
+
+.tg-empty { padding: var(--sp-5) var(--sp-4); }
+.tg-empty p { max-width: 44ch; }
+.tg-foot { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--sp-2) var(--sp-4); padding: var(--sp-3) var(--sp-5); border-top: 1px solid var(--line); font-size: var(--t-s); color: var(--text-2); }
+
+@media (prefers-reduced-motion: reduce) {
+  .tg-go, .tg .tk-chip, .tg-close { transition: none; }
+}

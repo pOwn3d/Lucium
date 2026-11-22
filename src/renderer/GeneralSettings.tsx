@@ -9,7 +9,8 @@ import { UI_SCALE_MAX, UI_SCALE_MIN, UI_SCALE_STEP } from '@shared/ui-scale'
 import { updatesByHand } from '@shared/platform'
 import { api } from './api'
 import { FeatureSwitch } from './FeaturesSettings'
-import { Check, Group, ROW_ICONS, Row, RowIcon, type DrawsRows } from './settings-parts'
+import { MIN_FONT_SIZES } from '@shared/min-font-size'
+import { Check, Choice, Group, ROW_ICONS, Row, RowIcon, type DrawsRows } from './settings-parts'
 import { t } from '@shared/i18n'
 
 interface PaneProps {
@@ -176,6 +177,14 @@ export function AccessibilitySettings({ snapshot, update }: PaneProps) {
   return (
     <Group title={t('settings.accessibilite')} footnote={t('settings.un-reglage-coche-s-ajoute-a-ce-que-demande-le')}>
       <UiScaleRow snapshot={snapshot} update={update} />
+      <Row settingKey="minimumFontSize" label={t('settings.taille-minimale-du-texte-des-pages')} hint={t('settings.aucun-texte-de-page-n-est-dessine-plus-petit')} more={t('settings.les-onglets-deja-ouverts-gardent-la-taille-qu-ils')}>
+        <Choice
+          value={settings.minimumFontSize}
+          choices={MIN_FONT_SIZES.map((px): [number, string] => [px, px === 0 ? t('settings.minimum-desactive') : t('settings.minimum-px', { px })])}
+          onChange={(minimumFontSize) => update({ minimumFontSize })}
+          label={t('settings.taille-minimale-du-texte-des-pages')}
+        />
+      </Row>
       <Check
         settingKey="forceReduceMotion"
         label={t('settings.toujours-reduire-les-animations')}

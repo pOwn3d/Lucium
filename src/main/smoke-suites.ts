@@ -591,6 +591,13 @@ export const SUITES: readonly SuiteEntry[] = [
     run: async (context) => (await import('./smoke-client-hints')).runClientHintsSmoke(context)
   },
   {
+    name: 'engine-facts',
+    chain: false,
+    what: 'Measures six things the list of missing functions called « à confirmer »: the media keys (a page’s media session, the features of the keys and of the Control Center), WebGPU (adapter and device), the device mode (emulation of a phone: size, density, touch), a PDF form (a value typed in the viewer, found in the saved file), Encrypted Client Hello (one page of a third party, only with LUCIUM_SMOKE_ECH=1) and parallel downloads (whether Chromium fetches a file in parts). A check is green when the measure could be made; the finding is its detail and the line LUCIUM_SMOKE_ENGINE_FACTS.',
+    order: 'Not in the chain, and not run yet: it is a measurement, not a guard, and a person writes what it found in docs/limites-web.md. It opens tabs, switches the emulation of a device on and off, downloads one 12 MiB file into a folder of its own and sets the downloads folder of the profile, all put back. Run it alone, with LUCIUM_SMOKE_ONLY=engine-facts (the single stream of the downloads is not forced for it, which is what the last measure needs).',
+    run: async (context) => (await import('./smoke-engine-facts')).runEngineFactsSmoke(context)
+  },
+  {
     name: 'webstore-live',
     chain: false,
     driver: true,

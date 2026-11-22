@@ -40,6 +40,7 @@ import { strictTransportStore, type StoredSession } from './strict-transport-sto
 import type { UpgradeFailure } from './https-upgrade'
 import { PageCover } from './page-cover'
 import { focusGate } from './focus-gate'
+import { safeGate } from './safe-gate'
 import type { Bounds } from './types'
 
 /** After a hung renderer is ended on purpose to reload the page, the « gone » it reports within this long is ours, not a crash to show. */
@@ -210,8 +211,16 @@ export class PageErrors {
     const nonce = randomUUID()
     // A navigation the focus mode refused (the request filter cancels it): our page says why and offers the pause, not the ad blocker's page.
     const focus = name === 'ERR_BLOCKED_BY_CLIENT' && isMainFrame ? (focusGate.get()?.block(url) ?? null) : null
+    // A main frame safe browsing refused (the request filter cancels it too): the warning, not the ad blocker's page. The gate answers for this address only
+    // while the feature is on and the host has not been let through for this session.
+    const unsafe = name === 'ERR_BLOCKED_BY_CLIENT' && isMainFrame && focus === null ? (safeGate.get()?.verdict(url) ?? null) : null
     if (focus !== null) {
       this.pending = { kind: 'focus', url, nonce, canGoBack: false, until: focus.until, slotEnd: focus.slotEnd }
+    } else if (unsafe !== null) {
+      this.pending = { kind: 'unsafe', url, nonce, canGoBack: false, category: unsafe.category }
+    } else if (upgrade.kind === 'refused' && upgrade.only === true && !isCertificateError(name) && this.host.continueOverHttp) {
+      // « HTTPS seul »: no fall back to http by itself, whatever the failure; the page says so and offers the address on a click.
+      this.pending = { kind: 'https-only', url, http: upgrade.http, nonce, canGoBack: false }
     } else if (isCertificateError(name)) {
       const seen = this.lastCertificate?.host === exceptionHost(url) ? this.lastCertificate : null
       // What was refused belongs to this failure only: a later one without its own certificate must not borrow it.
@@ -230,7 +239,7 @@ export class PageErrors {
     const model = this.pending
     if (!model || this.wc.isDestroyed()) return
     this.pending = null
-    const shown: ErrorPageModel = model.kind === 'certificate' || model.kind === 'focus' ? { ...model, canGoBack: this.wc.navigationHistory.canGoBack() } : model
+    const shown: ErrorPageModel = model.kind === 'certificate' || model.kind === 'focus' || model.kind === 'unsafe' || model.kind === 'https-only' ? { ...model, canGoBack: this.wc.navigationHistory.canGoBack() } : model
     this.shown = shown
     const page = renderErrorPage(shown)
     const markup = `<head>${page.head}</head><body>${page.body}</body>`
@@ -267,9 +276,17 @@ export class PageErrors {
       // The way out: focus is paused for a while, then the address that was refused is asked for again.
       focusGate.get()?.pause()
       this.host.reload()
+    } else if (action === 'unsafe-continue' && shown.kind === 'unsafe') {
+      // The way through: this host opens for the rest of this run, then the address that was refused is asked for again.
+      safeGate.get()?.allow(shown.url)
+      this.host.reload()
+    } else if (action === 'unsafe-except' && shown.kind === 'unsafe') {
+      // The lasting way through: the host joins the exceptions of the settings, then the address that was refused is asked for again.
+      safeGate.get()?.except(shown.url)
+      this.host.reload()
     } else if (action === 'retry' && shown.kind !== 'crash') {
       this.host.reload()
-    } else if (action === 'back' && (shown.kind === 'certificate' || shown.kind === 'status' || shown.kind === 'focus')) {
+    } else if (action === 'back' && (shown.kind === 'certificate' || shown.kind === 'status' || shown.kind === 'focus' || shown.kind === 'unsafe' || shown.kind === 'https-only')) {
       this.host.goBack()
     } else if (action === 'home' && shown.kind === 'status') {
       // The home of the site the answer came from (its origin, a web address by construction): the page that answered goes, and so does our page with it.
@@ -288,6 +305,9 @@ export class PageErrors {
       // Disable the ad/tracker blocker for this site
       this.host.toggleBlockException(shown.url)
       this.host.reload()
+    } else if (action === 'http' && shown.kind === 'https-only') {
+      // The address the user asked for, in http: only this click opens it, once.
+      this.host.continueOverHttp?.(shown.http)
     } else if (action === 'http' && shown.kind === 'certificate' && shown.http !== undefined) {
       // The address the user asked for, in http, as it was before HTTPS first tried it: nothing of the page decides where it goes.
       this.host.continueOverHttp?.(shown.http)

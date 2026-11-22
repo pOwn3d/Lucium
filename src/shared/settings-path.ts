@@ -32,6 +32,7 @@ export const SETTINGS_PLACES = {
   appIcon: { key: 'appIcon', group: 'settings.icone-de-l-application' },
   // The state of Lucium: its log of errors, its report
   engineStatus: { page: 'about', fold: true, group: 'engine-status.etat-d-lucium' },
+  minimumFontSize: { key: 'minimumFontSize', group: 'settings.accessibilite' },
   archive: { key: 'autoArchiveHours', group: 'settings.archivage-et-organisation' },
   sleep: { key: 'sleepAfterMinutes', group: 'settings.mise-en-veille' },
   language: { key: 'language', group: 'lang.langue' },
@@ -47,7 +48,12 @@ export const SETTINGS_PLACES = {
   customFilterLists: { key: 'customFilterListsEnabled' },
   proxy: { key: 'proxyEnabled' },
   siteExceptions: { key: 'fingerprintExceptions' },
+  safeBrowsing: { key: 'safeBrowsing', group: 'privacy-settings.navigation-sure' },
   thirdPartyCookies: { key: 'blockThirdPartyCookies', group: 'privacy-settings.cookies-tiers' },
+  redirectBypass: { key: 'unwrapRedirects', group: 'privacy-settings.confidentialite-renforcee' },
+  blockPings: { key: 'blockPings', group: 'privacy-settings.protection-du-reseau' },
+  trimReferer: { key: 'trimReferer', group: 'privacy-settings.protection-du-reseau' },
+  httpsOnly: { key: 'httpsOnly', group: 'privacy-settings.protection-du-reseau' },
   clearOnClose: { key: 'siteDataClearOnClose' },
   webHardware: { key: 'webHardware', group: 'hardware-settings.api-materielles-du-web' },
   passwords: { key: 'passwordManager', group: 'passwords-panel.mots-de-passe' },
@@ -67,6 +73,7 @@ export const SETTINGS_PLACES = {
   // « Découvrir Lucium » (shared/discover.ts) says where to switch on the functions it presents
   protection: { page: 'protection' },
   pageIndex: { key: 'pageContentIndex' },
+  historyKeep: { key: 'historyKeepDays' },
   pictureInPicture: { key: 'autoPictureInPicture' },
   workViews: { key: 'workViewsEnabled' },
   glance: { key: 'peekWithShift' },

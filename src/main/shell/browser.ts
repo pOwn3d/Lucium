@@ -22,6 +22,7 @@ import { rememberedDecision } from '@shared/permissions'
 import type { ExtensionTabHooks } from '../engine/types'
 import { ExtensionShims } from './extension-shims'
 import { gateAutoArchive } from './auto-archive'
+import { gateHistoryPurge } from './history-purge'
 import { gateTabReminders } from './tab-reminders'
 import { AutoReloader } from './auto-reload'
 import { showSystemNotice } from './system-notice'
@@ -52,6 +53,7 @@ import { t } from '@shared/i18n'
 import { ACTION_NOTICE_MS } from '@shared/toast'
 import { MAX_DOWNLOADS_KEPT, MEMORY_MAX, SLEEP_SWEEP_MS, type WindowMoves } from './browser-base'
 import { BrowserLayout } from './browser-layout'
+import { safeListsStatus } from '../safe-lists'
 
 export { NO_HISTORY, type BrowserOptions, type HistoryLog, type ProfileHistoryLog, type WindowMoves } from './browser-base'
 
@@ -160,6 +162,7 @@ export class Browser extends BrowserLayout {
     }
     this.configureBlocker()
     this.configureAutoplay()
+    this.configureMinimumFontSize()
     this.configureMediaBridge()
     // A window saved with a material or a translucent background gets it now; with the default look this does nothing.
     this.applyWindowLookHere()
@@ -297,6 +300,8 @@ export class Browser extends BrowserLayout {
     if (!this.isPrivate() && !this.isSecondary()) this.gates.gate('resource-gauge', { start: () => this.startResourceWatch() })
     // A private window has no archive to sweep into; the main window sweeps the shared one. No timer and no pass while archiving is off everywhere.
     if (!this.isPrivate() && !this.isSecondary()) gateAutoArchive(this.gates, () => this.dispatch({ type: 'archive/sweep' }))
+    // The purge of the old pages of the history (« Garder l'historique : N jours »): the main window only, every profile at once; nothing runs while the delay is 0.
+    if (!this.isPrivate() && !this.isSecondary()) gateHistoryPurge(this.gates, () => void this.purgeHistory(Date.now()))
     // "Rappel d'onglet": one timer for the earliest reminder, in the main window only (a private window keeps none). The notification is local and names the page.
     if (!this.isPrivate() && !this.isSecondary()) {
       gateTabReminders(this.gates, {
@@ -488,6 +493,7 @@ export class Browser extends BrowserLayout {
       ...(this.floatVisible && this.floatPhase ? { floating: this.floatPhase } : {}),
       ...(this.overlayRequest?.panel === 'plus' ? { plusOpen: true } : {}),
       ...(this.isPrivate() ? { private: true, ...(this.options.guest === true ? { guest: true } : {}) } : { blocking: blockingService().status() }),
+      ...(this.isPrivate() || !state.settings.safeBrowsing ? {} : { safeLists: safeListsStatus() }),
       ...(lock ? { lock } : {}),
       ...this.foreignDragOfSnapshot(),
       // With windows of their own, the tabs of every window in each space (« Gérer les espaces »).

@@ -53,6 +53,7 @@ const SHEET: Readonly<Record<HelpContext, readonly Spec[]>> = {
     command('nextTab'),
     command('previousTab'),
     command('tabSearch'),
+    command('tabGrid'),
     { kind: 'range', first: 'item1', last: 'item9', label: () => t('shortcut-help.aller-a-l-element-1-a-9') }
   ],
   spaces: [
@@ -93,6 +94,7 @@ const SHEET: Readonly<Record<HelpContext, readonly Spec[]>> = {
 /** The setting behind a command that is a function of its own: with the setting off, the key does nothing, and the row says so. */
 const DEPENDS_ON: Readonly<Record<string, keyof Settings>> = {
   tabSearch: 'tabSearch',
+  tabGrid: 'tabGrid',
   shortcutHelp: 'shortcutHelp',
   recentTab: 'tabCycleRecent',
   recentTabBack: 'tabCycleRecent',
@@ -132,7 +134,7 @@ export interface ShortcutHelp {
 const fold = foldMarks
 
 /** The settings the sheet reads: the functions behind some of its keys. */
-export type HelpSettings = Pick<Settings, 'tabSearch' | 'shortcutHelp' | 'tabCycleRecent' | 'notes'>
+export type HelpSettings = Pick<Settings, 'tabSearch' | 'shortcutHelp' | 'tabCycleRecent' | 'notes'> & Partial<Pick<Settings, 'tabGrid'>>
 
 function rowOf(spec: Spec, bindings: KeyBindings | undefined, settings: HelpSettings, platform: PlatformId): { row: HelpRow; accelerators: string[] } | null {
   const drawn = (id: string): string | null => {

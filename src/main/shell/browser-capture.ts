@@ -23,6 +23,22 @@ import { forgottenRanking } from './forgotten-ranking'
 import { BrowserReload } from './browser-reload'
 import { getPageIndex } from '../page-index'
 import type { PageMatch } from '@shared/page-index'
+import { historyRangeBounds, purgeCutoff, type HistoryRange } from '@shared/history-range'
+
+/** The pages of a profile last visited from `from` to `to` forgotten, with their trace in the page index and in the ranking of the command bar. */
+function forgetSpan(browser: BrowserCapture, from: number, to: number, profileId: string, what: string): number {
+  if (!knownProfiles(browser['store'].get()).includes(profileId)) {
+    console.warn(`[history] ${what} was to be forgotten in the profile ${JSON.stringify(profileId.slice(0, 64))}, which does not exist: nothing is forgotten`)
+    return 0
+  }
+  const log = browser['history'].of(profileId)
+  // The pages leave the ranking of the command bar with the history: read before they go, the same ones (those the lock lets be read).
+  const urls = log.between(from, to).map((page) => page.url)
+  const gone = log.removeBetween(from, to)
+  for (const url of urls) getPageIndex()?.of(profileId).remove(url)
+  if (urls.length > 0) browser['dispatch']({ type: 'commandbar/forget', profileId, urls })
+  return gone
+}
 
 export abstract class BrowserCapture extends BrowserReload {
   /**
@@ -188,16 +204,28 @@ export abstract class BrowserCapture extends BrowserReload {
    * panel had not loaded included. Answers how many pages went; nothing for a profile that does not exist.
    */
   forgetHistoryDay(from: number, to: number, profileId: string): number {
-    if (!knownProfiles(this.store.get()).includes(profileId)) {
-      console.warn(`[history] a day was to be forgotten in the profile ${JSON.stringify(profileId.slice(0, 64))}, which does not exist: nothing is forgotten`)
-      return 0
-    }
-    const log = this.history.of(profileId)
-    // The pages of the day leave the ranking of the command bar with the history: read before they go, the same ones (those the lock lets be read).
-    const urls = log.between(from, to).map((page) => page.url)
-    const gone = log.removeBetween(from, to)
-    for (const url of urls) getPageIndex()?.of(profileId).remove(url)
-    if (urls.length > 0) this.dispatch({ type: 'commandbar/forget', profileId, urls })
+    return forgetSpan(this, from, to, profileId, 'a day')
+  }
+
+  /**
+   * « Effacer l'historique » over a span (the last hour, today, 7 days, 4 weeks, everything) in `profileId`. The interface names the span by a
+   * word; its bounds are worked out here, so that a message cannot ask for another span. Answers how many pages went.
+   */
+  forgetHistoryRange(range: HistoryRange, profileId: string): number {
+    const { from, to } = historyRangeBounds(range, Date.now())
+    return forgetSpan(this, from, to, profileId, 'a span')
+  }
+
+  /**
+   * The automatic purge (« Garder l'historique : N jours »): every page last visited before the delay goes, in every profile. Nothing runs while the
+   * delay is 0 (the default). Answers how many pages went.
+   */
+  purgeHistory(now: number): number {
+    const state = this.store.get()
+    const cutoff = purgeCutoff(state.settings.historyKeepDays, now)
+    if (cutoff === null) return 0
+    let gone = 0
+    for (const profileId of knownProfiles(state)) gone += forgetSpan(this, 0, cutoff, profileId, 'old pages')
     return gone
   }
 

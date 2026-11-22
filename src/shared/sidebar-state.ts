@@ -20,10 +20,11 @@ import { cleanProfileOverrides, isProfileId } from './profiles'
 import { isSearchTemplate } from './url'
 import { normalizeSiteDataPrefs } from './site-data'
 import { cleanSiteDataAnimation } from './site-data-overlay'
-import { cleanSleepSettings } from './sleep'
+import { cleanSleepHosts, cleanSleepSettings } from './sleep'
 import { cleanBlockingSettings } from './blocker'
 import { cleanFingerprintSettings } from './fingerprint'
 import { cleanPrivacySettings } from './privacy'
+import { cleanSafeBrowsingSettings } from './safe-browsing'
 import { cleanDohSettings } from './dns'
 import { cleanProxySetting } from './proxy'
 import { cleanKeepHosts } from './cookies'
@@ -35,6 +36,7 @@ import { cleanKeyExtSettings } from './key-ext-settings'
 import { cleanFocusSettings } from './focus-mode'
 import { withoutGroupFolders } from './group-folders'
 import { cleanUiScale } from './ui-scale'
+import { cleanMinimumFontSize } from './min-font-size'
 import { cleanPanelSizes } from './panel-scale'
 import { cleanSiteZoom } from './site-zoom'
 import { cleanAutoplayPolicy, cleanSiteAutoplay } from './autoplay'
@@ -54,6 +56,7 @@ import { cleanUsedProfiles } from './profile-recovery'
 import { cleanRetiredProfiles } from './profile-retire'
 import { settleTree } from './tab-tree'
 import { normalizeFolders } from './folders'
+import { cleanKeepDays } from './history-range'
 import { cleanTabReminders, cleanArchive, cleanCommandBarUsage, cleanDelay, cleanExtensionPaths, cleanFavorites, cleanFolders, cleanLinkRoutes, cleanReadLater, cleanReadLaterFolders, cleanSearchDiscoverySeen, cleanSidePanelBehavior, cleanSiteDataRecents, cleanSiteSearches, cleanSitePermissions, cleanSpaces, cleanSplits, SITE_SEARCHES_MAX, cleanTabs, coerceSettings, isRecord, printable } from './state-clean'
 import { clampOr } from './clamp'
 import { cleanBarPosition } from './annotate-bar-position'
@@ -391,6 +394,7 @@ export function clampSettings(input: Settings): Settings {
     ...cleanBlockingSettings(settings),
     ...cleanFingerprintSettings(settings),
     ...cleanPrivacySettings(settings),
+    ...cleanSafeBrowsingSettings(settings),
     ...cleanDohSettings(settings),
     proxy: cleanProxySetting(settings.proxy),
     cookieKeepHosts: cleanKeepHosts(settings.cookieKeepHosts),
@@ -416,6 +420,8 @@ export function clampSettings(input: Settings): Settings {
     ...cleanExtensionBarSettings(settings),
     ...cleanWebToolsSettings(settings),
     ...cleanKeyExtSettings(settings),
+    passwordTouchIdOnFill: settings.passwordTouchIdOnFill === true,
+    passwordNeverSaveHosts: cleanSleepHosts(settings.passwordNeverSaveHosts),
     ...cleanFocusSettings(settings),
     openWithApps: cleanOpenWithApps(settings.openWithApps),
     annotateBar: cleanBarPosition(settings.annotateBar),
@@ -423,6 +429,7 @@ export function clampSettings(input: Settings): Settings {
     ...cleanReadableSettings(settings),
     ...cleanWindowLook(settings),
     uiScale: cleanUiScale(settings.uiScale),
+    minimumFontSize: cleanMinimumFontSize(settings.minimumFontSize),
     panelSizes: cleanPanelSizes(settings.panelSizes),
     // The old level of the Settings window, which nothing reads any more: kept as the file says it (a damaged value is false), never rewritten otherwise.
     showAdvancedSettings: settings.showAdvancedSettings === true,
@@ -440,6 +447,7 @@ export function clampSettings(input: Settings): Settings {
     updateChannel: settings.updateChannel === 'test' ? 'test' : 'stable',
     updateNotices: cleanUpdateNotices(settings.updateNotices),
     autoArchiveHours: cleanDelay(settings.autoArchiveHours, defaults.autoArchiveHours),
+    historyKeepDays: cleanKeepDays(settings.historyKeepDays),
     littleArcArchiveHours: cleanDelay(settings.littleArcArchiveHours, defaults.littleArcArchiveHours),
     interfaceAppearance: settings.interfaceAppearance === 'light' || settings.interfaceAppearance === 'dark' ? settings.interfaceAppearance : 'auto',
     websiteAppearance: settings.websiteAppearance === 'light' || settings.websiteAppearance === 'dark' ? settings.websiteAppearance : 'auto',

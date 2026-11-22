@@ -79,6 +79,7 @@ interface Entry {
 }
 
 const INVENTORY: Entry[] = [
+  { kind: 'recurring timer', file: 'shell/history-purge.ts', count: 1, why: "gate 'history-purge': no timer while « Garder l'historique » is on « Toujours » (0, the default) (history-purge.test.ts)" },
   { kind: 'recurring timer', file: 'shell/auto-archive.ts', count: 1, why: "gate 'auto-archive': no timer while the general delay and every profile's are 'Jamais' (feature-wiring.test.ts)" },
   { kind: 'subscription to the state', file: 'shell/tab-reminders.ts', count: 1, why: "gate 'tab-reminders': subscribed and armed only while the setting is on, and the timer only while a reminder waits (tab-reminders.test.ts)" },
   { kind: 'recurring timer', file: 'shell/auto-update.ts', count: 1, why: "gate 'auto-update' (feature-wiring.test.ts)" },
@@ -407,6 +408,17 @@ describe('the wiring that keeps a function out of the sessions while it is off',
     shell['start']!.call(fake.self)
     return gates
   }
+
+  it("purges the old pages of the history only through the gate of 'history-purge', in the main window", () => {
+    vi.useFakeTimers()
+    try {
+      expect(gatesOf('main')).toContain('history-purge')
+      expect(vi.getTimerCount()).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+    expect(gatesOf('private')).not.toContain('history-purge')
+  })
 
   it("sweeps the archive only through the gate of 'auto-archive'", () => {
     // The gate is made by the main window, which sweeps the shared archive; a private window has none. No timer of the window's own is made at the start.

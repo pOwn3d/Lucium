@@ -64,6 +64,8 @@ export type CommandAction =
   | 'open-as-app'
   /** "Rechercher un onglet…": the bar becomes the "Onglets" mode, over the tabs of every space. Only while the function `tabSearch` is on. */
   | 'search-tabs'
+  /** "Vue d’ensemble des onglets": the panel of the open tabs as a grid of thumbnails takes the place of the bar. Only while the function `tabGrid` is on. */
+  | 'tab-grid'
   /** "Ouvrir les notes": the panel of the quick notes takes the place of the bar. Only while the function `notes` is on, never in a private window. */
   | 'notes'
   /** "Nouvelle note": the same panel, on a new note tied to the page on screen. Same conditions. */

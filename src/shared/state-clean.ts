@@ -355,12 +355,15 @@ export function cleanTabReminders(raw: unknown, spaceIds: ReadonlySet<string>): 
     if (!isReadLaterUrl(url) || typeof dueAt !== 'number' || !Number.isFinite(dueAt)) continue
     const favicon = readLaterFavicon(entry['faviconUrl'])
     const spaceId = cleanId(entry['spaceId'])
+    // Only the shape of the id is checked here; whether the container still exists is asked when the tab comes back (sidebar-library.ts).
+    const container = isContainerId(entry['container']) ? entry['container'] : undefined
     out.push({
       id,
       url,
       title: printable(entry['title'], READ_LATER_TITLE_MAX)?.trim() || cutText(hostOf(url) || url, READ_LATER_TITLE_MAX),
       ...(favicon ? { faviconUrl: favicon } : {}),
       spaceId: spaceId !== null && spaceIds.has(spaceId) ? spaceId : '',
+      ...(container ? { container } : {}),
       dueAt,
       createdAt: finite(entry['createdAt'], 0)
     })

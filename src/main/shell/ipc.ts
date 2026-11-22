@@ -78,6 +78,7 @@ import { t, tp } from '@shared/i18n'
 import { LOCAL_FILES_MAX, localFileUrls } from '@shared/local-documents'
 import { DROPPED_LINKS_MAX, droppedLinkUrls } from '@shared/dropped-links'
 import { isHistoryDay } from '@shared/history-days'
+import { isHistoryRange } from '@shared/history-range'
 import { HISTORY_URL_MAX } from '@shared/state-clean'
 import type { DefaultBrowserOutcome } from '@shared/default-browser'
 import { isDefaultBrowser, makeDefaultBrowser } from './default-browser'
@@ -101,6 +102,9 @@ export function validOverlay(request: unknown, store: Pick<StateStore, 'get'>): 
     case 'commandbar':
       // The "Onglets" mode is the function `tabSearch`: with it off the request is refused, as the menu entry and its shortcut are dead.
       return (COMMAND_BAR_MODES as readonly unknown[]).includes(r.mode) && typeof r.initial === 'string' && (r.mode !== 'tabs' || store.get().settings.tabSearch)
+    // The tab overview is the function `tabGrid`; its pictures are the main process's to give.
+    case 'tabgrid':
+      return store.get().settings.tabGrid && r.pictures === undefined
     // The sheet of the shortcuts is the function `shortcutHelp`.
     case 'shortcuts':
       return store.get().settings.shortcutHelp
@@ -259,6 +263,16 @@ export function registerIpc(browser: Browser, store: StateStore, win: BrowserWin
       return 0
     }
     return browser.forgetHistoryDay(from, to, profileId)
+  })
+
+  // « Effacer l'historique » over a span: one of five words and a named profile, never two moments (a message cannot name a span of its own).
+  ipcMain.handle(Channel.forgetHistoryRange, (e, range: unknown, profileId: unknown) => {
+    if (!guard(e.sender, Channel.forgetHistoryRange)) return 0
+    if (!isHistoryRange(range) || typeof profileId !== 'string') {
+      console.warn('[ipc] a request to forget a span of the history was refused: it names no known span, or no profile')
+      return 0
+    }
+    return browser.forgetHistoryRange(range, profileId)
   })
 
   ipcMain.handle(Channel.loadExtension, async (e) => {

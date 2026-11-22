@@ -7,6 +7,7 @@ import { readFile, rm, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { app, session, ipcMain, type Session, type IpcMainEvent, type WebContents, type WebFrameMain } from 'electron'
 import type { EngineInfo } from '@shared/ipc'
+import { cleanMinimumFontSize } from '@shared/min-font-size'
 import type { SiteDataResult } from '@shared/site-data'
 import { NO_PLAN, PAGE_GUARD, guardPageUrl, type GuardPlan } from '@shared/page-guard'
 import { pageOrigin } from '@shared/inner-guard'
@@ -30,6 +31,7 @@ import type { HostResolverConfig } from '@shared/dns'
 import type { CookieEntry, CookieRemoval } from '@shared/cookies'
 import { readPageText, type ReadOutcome } from './page-reader'
 import { rewriteNavigation, type PrivacyOptions } from '@shared/privacy'
+import { withTrimmedReferer } from '@shared/referer-trim'
 import { takesNavigationHints, withNavigationHints, type ClientHintHeaders } from '@shared/client-hints'
 import { SIGN_IN_PRELOAD_EXCLUDES, isSignInRequest, signInRequestHeaders } from '@shared/google-sign-in'
 import { engineClientHints, type HintSource } from './engine-client-hints'
@@ -304,7 +306,7 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     this.installPrivacyHeaders(ses, privacyOf)
     const rewrites = (): boolean => {
       const options = privacyOf()
-      return options !== null && (options.httpsUpgrade || options.stripTrackingParams)
+      return options !== null && (options.httpsUpgrade || options.httpsOnly || options.stripTrackingParams || options.unwrapRedirects)
     }
     // The extensions of the session: their rules are judged here, after the application's own, and their listeners are told (extension-net.ts).
     const net = this.extensionNets.get(ses)
@@ -339,8 +341,17 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
           if (typeof verdict === 'object' && verdict !== null) console.error('[engine] the request filter asked for an address that is not allowed; the request goes through unchanged:', String(verdict.redirect).slice(0, 80))
           const options = privacyOf()
           // Only the navigations of a page of ours are rewritten: never a worker's, an extension's or a subresource's request.
-          const rewritten = alive && options ? rewriteNavigation({ url: details.url, method: details.method, isMainFrame: details.resourceType === 'mainFrame' }, options, (httpUrl) => this.upgrades.upgrade(owner.id, httpUrl)) : null
-          answer = rewritten ? { redirectURL: rewritten } : { cancel: false }
+          // « HTTPS seul »: the same upgrade, with no fall back, and an address that cannot be upgraded is refused (the error page then offers « Continuer en HTTP »).
+          // A site of its list of exceptions, and the local network, are not upgraded at all: they open over http as they are asked.
+          let refused = false
+          const upgrade = (httpUrl: string): string | null => {
+            if (!options?.httpsOnly) return this.upgrades.upgrade(owner!.id, httpUrl)
+            const only = this.upgrades.onlyVerdict(owner!.id, httpUrl, options.httpsOnlyExceptions)
+            refused = only === 'refuse'
+            return only !== null && only !== 'refuse' ? only.redirect : null
+          }
+          const rewritten = alive && options ? rewriteNavigation({ url: details.url, method: details.method, isMainFrame: details.resourceType === 'mainFrame' }, options, upgrade) : null
+          answer = rewritten ? { redirectURL: rewritten } : refused ? { cancel: true } : { cancel: false }
         }
         if (net && forExtensions && !this.keptFromExtensions(details)) {
           const decided = this.withExtensionRules(net, details, answer)
@@ -936,12 +947,14 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
    * (`navigationHints`, shared/client-hints.ts): with nothing else to do the hook sees the navigations of the web alone. Global Privacy Control: `Sec-GPC: 1`
    * on every web request while the option is on, the handshake of a WebSocket included. And, once a local file was opened in the session, the
    * note of what a local page asks the web to read (`watchLocalPages`). And, once a tab was on the sign-in hosts of Google, the user agent of the
-   * application on every request of such a tab, and none of the hints above on them (`watchSignInPages`).
+   * application on every request of such a tab, and none of the hints above on them (`watchSignInPages`). The Referer of a request to another site is
+   * cut to the origin of the page while `trimReferer` is on (shared/referer-trim.ts).
    */
   private installPrivacyHeaders(ses: Session, privacyOf: () => PrivacyOptions | null): void {
     this.headerHooks.set(ses, { ...this.headerHooks.get(ses), privacyOf })
     const signal = privacyOf()?.globalPrivacyControl === true
     const cookieCut = privacyOf()?.blockThirdPartyCookies === true
+    const refererCut = privacyOf()?.trimReferer === true
     const local = this.localPageSessions.has(ses)
     const net = this.extensionNets.get(ses)
     const needs = net?.needs()
@@ -952,7 +965,7 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
     const trial = this.signIn
     const onSignIn = trial !== null && this.signInSessions.has(ses)
     const filter: { urls: string[]; types?: Array<'mainFrame' | 'subFrame'> } =
-      forExtensions || signal || cookieCut ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : local || onSignIn ? { urls: ['http://*/*', 'https://*/*'] } : { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame', 'subFrame'] }
+      forExtensions || signal || cookieCut || refererCut ? { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] } : local || onSignIn ? { urls: ['http://*/*', 'https://*/*'] } : { urls: ['http://*/*', 'https://*/*'], types: ['mainFrame', 'subFrame'] }
     ses.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
       // The method of every main-frame request, told before anything else can answer it: the redirect that follows is of this request, and a redirect that follows a POST is never taken over (google-sign-in-agent.ts).
       if (trial !== null && details.resourceType === 'mainFrame') trial.noteRequest(details.webContents?.id, details.method)
@@ -970,7 +983,9 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
           // Whatever case a rule wrote the name in: the request carries the signal once.
           const headers = signal && /^(https?|wss?):/i.test(details.url) ? { ...Object.fromEntries(Object.entries(rewritten).filter(([name]) => name.toLowerCase() !== 'sec-gpc')), 'Sec-GPC': '1' } : rewritten
           // Last of all, as the signal: what an extension added is cut too. A request whose cookies are cut leaves without the header.
-          const sentOut = cookieCut && this.thirdPartyCookiesCut(details, privacyOf()) ? withoutCookieHeader(headers) : headers
+          const uncooked = cookieCut && this.thirdPartyCookiesCut(details, privacyOf()) ? withoutCookieHeader(headers) : headers
+          // And the Referer: what an extension wrote is trimmed too, and the page a request comes from tells another site no more than its origin.
+          const sentOut = refererCut && /^(https?|wss?):/i.test(details.url) ? withTrimmedReferer(details.url, uncooked) : uncooked
           callback(sentOut !== details.requestHeaders ? { requestHeaders: sentOut } : {})
         }
         const rewritten = net && forExtensions ? this.requestForExtensions(net, details, sent) : sent
@@ -1017,6 +1032,10 @@ export abstract class ElectronEngineNetwork extends ElectronEnginePreloads {
 
   setDefaultAutoplay(mode: AutoplayMode): void {
     this.defaultAutoplay = mode
+  }
+
+  setMinimumFontSize(size: number): void {
+    this.minimumFontSize = cleanMinimumFontSize(size)
   }
 
   siteCookieCount(profileId: string, host: string, subdomains: boolean): Promise<number> {

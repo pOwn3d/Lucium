@@ -10,7 +10,7 @@ import { getLanguage, setLanguage, t } from '@shared/i18n'
 import type { PowerEvent } from '../lock-service'
 import { PasswordVault } from '../password-vault'
 import { VaultKeychain, helperRunner, keychainServiceFor, type HelperRequest, type HelperRunner, type KeychainTransport } from '../vault-keychain'
-import { PasswordService, type PasswordFiles, type PasswordTarget, type PasswordWindow } from './password-service'
+import { PasswordService, type ClipboardPort, type PasswordFiles, type PasswordTarget, type PasswordWindow } from './password-service'
 
 const PHRASE = 'une phrase maître assez longue'
 const NEXT = 'une autre phrase maître bien longue'
@@ -80,16 +80,18 @@ afterEach(() => {
   rmSync(dir, { recursive: true, force: true })
 })
 
-function setup(options: { feature?: boolean; helper?: SimulatedHelper | null; canPrompt?: boolean } = {}) {
-  const settings = { ...defaultSettings(), passwordManager: options.feature ?? true }
+function setup(options: { feature?: boolean; helper?: SimulatedHelper | null; canPrompt?: boolean; onFill?: boolean } = {}) {
+  const settings = { ...defaultSettings(), passwordManager: options.feature ?? true, passwordTouchIdOnFill: options.onFill ?? false }
   const path = join(dir, 'passwords.vault')
   const helper = options.helper === undefined ? new SimulatedHelper() : options.helper
   const keychain = new VaultKeychain({ recordPath: `${path}.touchid`, service: keychainServiceFor(path), runner: () => (helper ? helperRunner(helper.transport) : null), canPrompt: () => options.canPrompt ?? true })
   const vault = new PasswordVault({ path, params: PARAMS })
-  const service = new PasswordService({ settings: () => settings, vault, power, files, keychain })
+  const secrets: string[] = []
+  const clipboard: ClipboardPort = { readText: async () => '', writeText: async () => undefined, writeSecret: async (text) => void secrets.push(text), clear: () => undefined }
+  const service = new PasswordService({ settings: () => settings, vault, power, files, keychain, clipboard })
   const window = new FakeWindow()
   const ask = (request: PasswordRequest): Promise<PasswordReply> => service.handle(request, window)
-  return { service, vault, helper: helper!, keychain, window, ask, path, record: `${path}.touchid` }
+  return { service, vault, helper: helper!, keychain, window, ask, path, record: `${path}.touchid`, secrets }
 }
 
 /** A vault with Touch ID turned on, then locked: the state in which Touch ID is offered. */
@@ -374,5 +376,116 @@ describe('what Touch ID costs and shows', () => {
     expect(parsePasswordRequest({ kind: 'touch-id-on' })).toBeNull()
     expect(parsePasswordRequest({ kind: 'unlock-touch-id', key: 'AAAA' })).toBeNull()
     expect(parsePasswordRequest({ kind: 'touch-id-off', service: 'com.apple.account' })).toBeNull()
+  })
+})
+
+describe('a fingerprint before every fill (passwordTouchIdOnFill)', () => {
+  /** An open vault with Touch ID on and one login for the page the window shows; `fills` counts what reached the page. */
+  async function withLogin(options: Parameters<typeof setup>[0] = {}) {
+    const s = setup(options)
+    expect((await s.ask({ kind: 'create', phrase: PHRASE })).ok).toBe(true)
+    if (options.helper !== null) expect((await s.ask({ kind: 'touch-id-on', phrase: PHRASE })).ok).toBe(true)
+    expect((await s.ask({ kind: 'add', address: SITE, username: 'ana', password: 'k7#Vq2!mZp9x' })).ok).toBe(true)
+    const fills: unknown[] = []
+    s.window.current = { url: `${SITE}/login`, privateTab: false, fill: async (plan) => (fills.push(plan), { ok: true, username: true }) }
+    const id = s.vault.rows()[0]!.id
+    return { ...s, fills, id }
+  }
+
+  it('is off by default: a fill asks for nothing, as before', async () => {
+    const s = await withLogin()
+    expect((await s.ask({ kind: 'fill', id: s.id })).ok).toBe(true)
+    expect(s.fills).toHaveLength(1)
+    expect(s.helper.loads()).toBe(0)
+  })
+
+  it('asks the keychain for the fingerprint before the page is touched, every time, and fills after a match', async () => {
+    const s = await withLogin({ onFill: true })
+    expect((await s.ask({ kind: 'fill', id: s.id })).ok).toBe(true)
+    expect((await s.ask({ kind: 'fill', id: s.id })).ok).toBe(true)
+    expect(s.helper.loads()).toBe(2)
+    expect(s.fills).toHaveLength(2)
+  })
+
+  it('fills nothing when the fingerprint is refused, whatever the way it fails, and says so', async () => {
+    const s = await withLogin({ onFill: true })
+    for (const biometry of ['cancel', 'fail', 'unavailable'] as const) {
+      s.helper.biometry = biometry
+      const reply = await s.ask({ kind: 'fill', id: s.id })
+      expect(reply.ok, biometry).toBe(false)
+      expect(reply.message, biometry).toBeTruthy()
+    }
+    expect(s.fills).toHaveLength(0)
+    expect(s.vault.isUnlocked()).toBe(true)
+  })
+
+  it('does not ask for a fingerprint for a fill that would be refused anyway (another origin)', async () => {
+    const s = await withLogin({ onFill: true })
+    s.window.current = { ...s.window.current!, url: 'https://elsewhere.example/' }
+    expect((await s.ask({ kind: 'fill', id: s.id })).ok).toBe(false)
+    expect(s.helper.loads()).toBe(0)
+  })
+
+  it('refuses to fill, rather than fill without it, when Touch ID is not on for the vault', async () => {
+    const s = setup({ onFill: true })
+    await s.ask({ kind: 'create', phrase: PHRASE })
+    await s.ask({ kind: 'add', address: SITE, username: 'ana', password: 'k7#Vq2!mZp9x' })
+    const fills: unknown[] = []
+    s.window.current = { url: `${SITE}/login`, privateTab: false, fill: async (plan) => (fills.push(plan), { ok: true }) }
+    const reply = await s.ask({ kind: 'fill', id: s.vault.rows()[0]!.id })
+    expect(reply.ok).toBe(false)
+    expect(reply.message).toBe(t('pwd-touch.remplissage-sans-touch-id'))
+    expect(fills).toHaveLength(0)
+  })
+
+  it('turns Touch ID off when the key is gone, as an opening does, and keeps refusing', async () => {
+    const s = await withLogin({ onFill: true })
+    s.helper.biometry = 'other-fingers'
+    expect((await s.ask({ kind: 'fill', id: s.id })).message).toBe(t('pwd-touch.empreintes-changees'))
+    expect(s.keychain.enabled()).toBe(false)
+    s.helper.biometry = 'match'
+    expect((await s.ask({ kind: 'fill', id: s.id })).message).toBe(t('pwd-touch.remplissage-sans-touch-id'))
+    expect(s.fills).toHaveLength(0)
+  })
+
+  it('fills nothing when the vault locked while the fingerprint was awaited', async () => {
+    const s = await withLogin({ onFill: true })
+    let release: () => void = () => undefined
+    const original = s.helper.run
+    s.helper.run = async (request, ms) => (request.command === 'load' ? (await new Promise<void>((resolve) => (release = resolve)), original(request, ms)) : original(request, ms))
+    const pending = s.ask({ kind: 'fill', id: s.id })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    s.service.lock()
+    release()
+    const reply = await pending
+    expect(reply.ok).toBe(false)
+    expect(reply.message).toBe(t('pwd.le-coffre-est-verrouille'))
+    expect(s.fills).toHaveLength(0)
+  })
+
+  it('asks the same fingerprint before a password is copied, and copies nothing without it', async () => {
+    const s = await withLogin({ onFill: true })
+    s.helper.biometry = 'cancel'
+    expect((await s.ask({ kind: 'copy-password', id: s.id })).ok).toBe(false)
+    expect(s.secrets).toEqual([])
+    s.helper.biometry = 'match'
+    expect((await s.ask({ kind: 'copy-password', id: s.id })).ok).toBe(true)
+    expect(s.secrets).toEqual(['k7#Vq2!mZp9x'])
+    expect(s.helper.loads()).toBe(2)
+  })
+
+  it('asks one fingerprint at a time', async () => {
+    const s = await withLogin({ onFill: true })
+    let release: () => void = () => undefined
+    const original = s.helper.run
+    s.helper.run = async (request, ms) => (request.command === 'load' ? (await new Promise<void>((resolve) => (release = resolve)), original(request, ms)) : original(request, ms))
+    const first = s.ask({ kind: 'fill', id: s.id })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    const second = await s.ask({ kind: 'fill', id: s.id })
+    expect(second.ok).toBe(false)
+    expect(second.message).toBe(t('pwd-touch.deja-en-cours'))
+    release()
+    expect((await first).ok).toBe(true)
+    expect(s.fills).toHaveLength(1)
   })
 })

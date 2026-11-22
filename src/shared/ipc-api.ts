@@ -5,6 +5,7 @@ import type { OllamaModelList } from './ollama'
 import type { TranslateRequest, TranslateView } from './translate-local'
 import type { HistoryEntry } from './model'
 import type { PageMatch } from './page-index'
+import type { HistoryRange } from './history-range'
 import type { Action } from './sidebar'
 import type { AddFilterListResult } from './custom-filter-lists'
 import type { SiteDataBatchRequest, SiteDataSiteResult } from './site-data'
@@ -73,6 +74,8 @@ export interface LuciumApi {
   putBackHistory(url: string, profileId: string): Promise<boolean>
   /** Removes from the history of `profileId` every page last visited from `from` (included) to `to` (excluded), the bounds of one day. Answers how many went. */
   forgetHistoryDay(from: number, to: number, profileId: string): Promise<number>
+  /** « Effacer l'historique » over a span named by a word (the last hour, today, 7 days, 4 weeks, all): the main process works the bounds out. Answers how many pages went. */
+  forgetHistoryRange(range: HistoryRange, profileId: string): Promise<number>
   /** The pages whose text holds the words (the full-text index of the profile on screen; nothing while the setting is off or in a private window). */
   searchPageContent(query: string, profileId?: string): Promise<PageMatch[]>
   /** Erases the full-text index of every profile; answers whether nothing is left. */

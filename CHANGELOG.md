@@ -12,6 +12,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
+- **Bypass tracking redirects and AMP pages**: Settings › Privacy and security › More settings › “Bypass tracking redirects and AMP pages”, off by default. A link through a tracking redirector or an AMP page opens the site’s own address, by a local calculation; no request is sent. A list of sites keeps their links as they are.
+- **Clear history for a period, or keep it only for a while**: History (⌘Y) › “Clear a period…” (last hour, today, 7 days, 4 weeks, all), undoable for a few seconds. Settings › Privacy and security › History and data › “Keep history” (7, 30, 90 days, a year) forgets old pages. Off by default; local only.
+- **Tab overview**: Tabs › Tab Overview (⇧⌘O) opens a grid of thumbnails of the open tabs, with search, close and move to another Space. Off by default.
+- **Safe browsing**: Settings › Privacy and security › Safe browsing. Before a page opens, Lucium compares its host with a list of phishing and malware sites that comes with the application, and warns first. Off by default; the check is made on your Mac, nothing is sent or downloaded.
 - **Discover Lucium**: Help › Discover Lucium, the command bar and a button on “Start here”, the welcome sheet and the news sheet open a panel with every function of Lucium, by task: where to find it, its shortcut, “Try it” and “Adjust”. Nothing is counted or sent.
 - **One Space to another Mac**: Spaces › Export This Space… saves one Space with its tabs, folders and archive to a file, sealed with a passphrase if you wish; Spaces › Import a Space… adds it on another Mac, with no server. No cookies, no passwords.
 - **Scroll position restored after a relaunch**: Settings › Tabs and windows › “Restore the scroll position of tabs”, off by default. A tab comes back to where its page was scrolled. Only a number per tab and its address is kept, on your Mac; never the page, nothing for private tabs.
@@ -19,10 +23,14 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **Search the content of visited pages**: keeps the text of the pages you read on your computer, to find a page by a sentence in History (Settings › Privacy and security › More settings). Off by default; nothing is kept while History is off; never private tabs or passwords; nothing is sent.
 - **Focus mode**: Settings › Optional features › Focus mode keeps a list of sites closed during a timer (25 minutes by default) or a weekly time slot. A blocked site shows a clear page with “Take a 15-minute break” as the way out. Off by default; nothing leaves your Mac.
 - **Bookmark and history prefixes in the command bar**: type `*` or `^` alone or followed by a space (`* recipe`), or `@bookmarks` / `@history`, to search only your bookmarks or your history. A search such as `*.example.com` or `^2`, and a custom site search keyword that starts with `*` or `^`, stay what they were. With no text after it, the bar lists them. Everything stays on this Mac.
+- **Network protection**: three new switches, all off. Block tracking pings, send other sites only the origin of the page (no path), and open HTTPS sites only, with a warning page and “Continue over HTTP”.
 - **Block third-party cookies**: Settings › Privacy and security › Third-party cookies. Content from another site than the tab’s neither receives your cookies nor can set its own, WebSocket included. Off by default, with a list of sites where they stay accepted. Scripts’ own `document.cookie` is not touched.
 - **JavaScript switch per site**: a “JavaScript” row in the site panel turns the scripts of a site off. The page reloads without any script, and a notice or the row turns them back on in one click. Off for no site by default; Lucium’s own pages are never affected.
-- **Save Page as Markdown**: File › Save Page as Markdown… and the command bar save the page’s main content in one click: a `.md` file and a `<name>-images/` folder beside it. A private tab asks first; a folder that exists is never reused (`-2`); images that load only on scroll are not fetched.
+- **Save Page as Markdown**: File › Save Page as Markdown… and the command bar save the page’s main content in one click: a `.md` file and a `<name>-images/` folder beside it. A private tab asks first; a folder that exists is never reused (`-2`).
+- **Markdown export loads lazy images**: the page is scrolled from top to bottom first, as “Page entière” does (at most 80 steps, position restored), so that images that load on scroll are fetched; the message says how many still had no address.
+- **Reminders keep the container**: a tab put away with “Me le rappeler” comes back in the container it was in, while that container exists.
 - **One-time codes (TOTP) in the password vault**: a login can hold the key of its two-step codes (base32 key or `otpauth://` address). The panel shows the code with its countdown and copies it, cleared after 30 seconds. The key stays encrypted in the vault and is never logged. RFC 6238, nothing filled into a page.
+- **Password vault care**: weak and reused passwords are flagged; “Copy password” clears itself after 30 seconds and at lock; Touch ID can be asked at every fill; “Never offer for this site” skips chosen sites. A login also fills on its `www.` twin. Nothing leaves your Mac.
 
 ### Changed
 

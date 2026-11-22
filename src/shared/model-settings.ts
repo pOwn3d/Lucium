@@ -206,6 +206,22 @@ export interface Settings {
   blockThirdPartyCookies: boolean
   /** Sites (host and subdomains) where third-party cookies are let through, because blocking them broke the site. */
   thirdPartyCookieExceptions: string[]
+  /** A link through a tracking redirector (l.facebook.com, google.com/url…) or an AMP viewer opens the address it leads to, locally (see redirect-bypass.ts). Off by default: it changes where a click goes. */
+  unwrapRedirects: boolean
+  /** Sites (host and subdomains) whose links are left as they are, at either end of the link, because unwrapping them broke the site. */
+  unwrapExceptions: string[]
+  /** Safe browsing (safe-browsing.ts): a page whose host is on a local list of phishing or malware hosts shows a warning first. Off by default; no connection. */
+  safeBrowsing: boolean
+  /** Sites (host and subdomains) where the warning of safe browsing is never shown. */
+  safeBrowsingExceptions: string[]
+  /** Pings to another site (the `ping=` of a link, `sendBeacon`) are cancelled and counted by the blocker (see ping-block.ts). Off by default. Sites left off: `blockExceptions`. */
+  blockPings: boolean
+  /** A request to another site carries only the origin of the page as `Referer`, never its path or its query (see privacy.ts). Off by default: some sites check the full address. */
+  trimReferer: boolean
+  /** « HTTPS seul »: an `http://` page is never opened without a click on « Continuer en HTTP », and there is no fall back by itself (see https-only.ts). Off by default. */
+  httpsOnly: boolean
+  /** Sites (host and subdomains) that may be opened over `http://` with no warning, because they have no HTTPS. */
+  httpsOnlyExceptions: string[]
   /** Names shown for profiles, by profile id. The id stays the storage key, so renaming never loses data. */
   profileNames: Record<string, string>
   /** Expose the space theme to web pages as `--arc-palette-*` CSS variables (a page can read it, so it is opt-in). */
@@ -294,6 +310,8 @@ export interface Settings {
   retiredProfileIds: string[]
   /** The visited pages are not recorded (what is already in the history stays). A profile can say otherwise: see profiles.ts. */
   historyOff: boolean
+  /** Days of history kept: a page last visited longer ago is forgotten, at launch and once a day. 0 (the default) keeps everything, and nothing runs. */
+  historyKeepDays: number
   /** Encrypted DNS is set by the user (off: nothing is configured, Chromium's own behaviour stands). */
   dohCustom: boolean
   /** With `dohCustom`: Automatic (encrypted when the provider supports it), Secure (encrypted only; needs a server), or Off. */
@@ -439,6 +457,10 @@ export interface Settings {
   omniboxKeywords: boolean
   /** The password manager (see passwords.ts): a local vault, filled on request, offered on a submitted sign-in form. Off by default: it puts a script in the pages and keeps secrets. The vault is a file of its own, never part of this state. */
   passwordManager: boolean
+  /** Filling a login asks for a fingerprint first (the keychain's, never `promptTouchID`: shell/password-service.ts). Off by default; it needs Touch ID to be on for the vault. */
+  passwordTouchIdOnFill: boolean
+  /** Sites (host and subdomains) where Lucium never offers to save a login. A list of sites, empty by default; a login already in the vault still fills. */
+  passwordNeverSaveHosts: string[]
   // ---- Web tools (see web-tools.ts): every one is off by default and costs nothing while off ----
   /** File › Code QR de cette page, and "Code QR de ce lien" in the menu of a link. The code is drawn here, never by a service. */
   qrCode: boolean
@@ -551,6 +573,11 @@ export interface Settings {
   /** Size of the interface (sidebar, toolbar, panels) in percent, 100 to 200; the page keeps its own zoom. 100 is the default size and does nothing. */
   uiScale: number
   /**
+   * The smallest size, in CSS pixels, the text of a page is drawn at (Chromium's `minimumFontSize`); 0 is off and changes nothing. A web preference is fixed
+   * when a page is made: a new value reaches the tabs opened after it (shared/min-font-size.ts).
+   */
+  minimumFontSize: number
+  /**
    * The size of the panels that open over a window and of the windows of their own (Settings › Apparence › Taille des fenêtres et des panneaux), by screen
    * (shared/panel-scale.ts: a screen is known by its name, size and density, not by the id the system gives it). A screen with no entry is « Automatique »:
    * its size is worked out from the size of the screen. `{}` by default; the choices of the screens that are not connected stay until they are removed.
@@ -588,6 +615,8 @@ export interface Settings {
   commandBarShape: CommandBarShape
   /** ⌘⇧A: the command bar in "Onglets" mode, over the tabs of every space, with filters and the closing of duplicates. */
   tabSearch: boolean
+  /** The overview of the open tabs as a grid of thumbnails, with a search, the closing and the moving of a tab (⌘⇧O). Off by default; the side column is not changed. */
+  tabGrid: boolean
   /** ⌘/: the sheet that lists the shortcuts by context, with a search and the ones the user changed marked. */
   shortcutHelp: boolean
   /** The find bar gets a ".*" button that reads the text as a regular expression. Off by default. */

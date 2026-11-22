@@ -26,6 +26,7 @@ const api: LuciumApi = {
   forgetHistory: (url, profileId, undoable) => ipcRenderer.invoke(Channel.forgetHistory, url, profileId, undoable),
   putBackHistory: (url, profileId) => ipcRenderer.invoke(Channel.putBackHistory, url, profileId),
   forgetHistoryDay: (from, to, profileId) => ipcRenderer.invoke(Channel.forgetHistoryDay, from, to, profileId),
+  forgetHistoryRange: (range, profileId) => ipcRenderer.invoke(Channel.forgetHistoryRange, range, profileId),
   searchPageContent: (query, profileId) => ipcRenderer.invoke(Channel.searchPageContent, query, profileId),
   clearPageIndex: () => ipcRenderer.invoke(Channel.clearPageIndex),
   showMenu: (target) => ipcRenderer.send(Channel.showMenu, target),

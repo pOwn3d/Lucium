@@ -324,6 +324,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-mouse-gestures', 'mouse-gestures', t('Gestes de souris', 'Mouse gestures'), 'keyboard', 'mouseGestures', { patch: { mouseGestures: true }, on: true, why: behaviour }),
   setting('fn-space-swipe', 'space-swipe', t('Balayer à deux doigts pour changer d’espace', 'Swipe with two fingers to switch Spaces'), 'keyboard', 'spaceSwipe', { why: needsHardware }),
   setting('fn-page-content-index', 'page-content-index', t('Rechercher dans le contenu des pages visitées', 'Search the content of visited pages'), 'protection', 'pageContentIndex', { fold: true, why: background }),
+  setting('fn-history-purge', 'history-purge', t('Garder l’historique seulement un temps', 'Keep history only for a while'), 'protection', 'historyKeepDays', { fold: true, label: t('Garder l’historique', 'Keep history'), why: background }),
   setting('fn-page-watch', 'page-watch', t('Surveiller des pages', 'Watch pages'), 'features', 'pageWatch', { why: background }),
   setting('fn-focus-mode', 'focus-mode', t('Mode concentration', 'Focus mode'), 'features', 'focusMode', { patch: { focusMode: true }, on: true, why: behaviour }),
   setting('fn-read-aloud', 'read-aloud', t('Lecture à voix haute', 'Read aloud'), 'features', 'readAloud', { patch: { readAloud: true }, on: true, why: 'se fait entendre, pas voir' }),
@@ -333,6 +334,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
     'La barre de commandes (⌘T) retrouve un onglet déjà ouvert, la météo de la semaine, sous « Onglets ouverts »',
     'The command bar (⌘T) finds a tab that is already open, this week’s weather, under “Open tabs”'
   )),
+  setting('fn-tab-grid', 'tab-grid', t('Vue d’ensemble des onglets', 'Tab overview'), 'features', 'tabGrid', { why: 'une grille de captures de pages ouvertes, que la démonstration ne porte pas' }),
   setting('fn-vim-keys', 'vim-keys', t('Navigation au clavier de type Vim', 'Vim-style keyboard navigation'), 'keyboard', 'vimKeys', { fold: true, patch: { vimKeys: true }, on: true, why: behaviour }),
   // The feature itself: an extension of the demonstration groups the two tabs of the day of the space, and the group is a folder of the sidebar. (Its
   // row of Réglages names the API of the extensions by its name in code, which the site does not show.)
@@ -382,6 +384,11 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
   setting('fn-https-first', 'https-first', t('HTTPS d’abord', 'HTTPS first'), 'protection', 'httpsUpgrade', { fold: true, label: t('Toujours essayer HTTPS d’abord', 'Always try HTTPS first'), why: network }),
   setting('fn-global-privacy-control', 'global-privacy-control', t('Envoyer le signal Global Privacy Control', 'Send the Global Privacy Control signal'), 'protection', 'sendGpc', { fold: true, label: t('Demander aux sites de ne pas me suivre (signal GPC)', 'Ask sites not to track me (GPC signal)'), on: true, why: network }),
   setting('fn-third-party-cookies', 'third-party-cookies', t('Bloquer les cookies tiers', 'Block third-party cookies'), 'protection', 'blockThirdPartyCookies', { fold: true, patch: { blockThirdPartyCookies: true }, on: true, why: network }),
+  setting('fn-bypass-redirects', 'bypass-redirects', t('Contourner les redirections de suivi et les pages AMP', 'Bypass tracking redirects and AMP pages'), 'protection', 'unwrapRedirects', { fold: true, patch: { unwrapRedirects: true }, on: true, why: network }),
+  setting('fn-safe-browsing', 'safe-browsing', t('Prévenir avant d’ouvrir un site dangereux', 'Warn before opening a dangerous site'), 'protection', 'safeBrowsing', { fold: true, patch: { safeBrowsing: true }, on: true, why: network }),
+  setting('fn-block-pings', 'block-pings', t('Bloquer les pings de suivi', 'Block tracking pings'), 'protection', 'blockPings', { fold: true, patch: { blockPings: true }, on: true, why: network }),
+  setting('fn-trim-referer', 'trim-referer', t('Ne pas envoyer le chemin de la page aux autres sites', 'Do not send the page path to other sites'), 'protection', 'trimReferer', { fold: true, patch: { trimReferer: true }, on: true, why: network }),
+  setting('fn-https-only', 'https-only', t('Ouvrir uniquement des sites en HTTPS', 'Open HTTPS sites only'), 'protection', 'httpsOnly', { fold: true, patch: { httpsOnly: true }, on: true, why: network }),
   setting('fn-strip-tracking', 'strip-tracking', t('Retirer les paramètres de suivi des adresses', 'Remove tracking parameters from addresses'), 'protection', 'stripTrackingParams', { on: true, why: network }),
   // The demonstration asks no search engine anything (demo.ts): the row shows the default of the application; nothing is typed while it is on.
   setting('fn-search-suggestions', 'search-suggestions', t('Suggestions du moteur de recherche', 'Search engine suggestions'), 'navigation', 'searchSuggestions', { label: t('Inclure les suggestions de recherche', 'Include search suggestions'), patch: { searchSuggestions: true }, why: network }),
@@ -576,6 +583,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
     'The Lucium window, a thin outline around the notebook page'
   ), { space: 'work', tab: 'notes', patch: { cardOutline: true } }),
   setting('fn-zoom-indicator', 'zoom-indicator', t('Repère du niveau de zoom', 'Zoom level indicator'), 'appearance', 'showZoomIndicator', { fold: true, label: t('Afficher le niveau de zoom dans la barre d’outils', 'Show the zoom level in the toolbar'), why: 'le repère ne paraît que sur une page agrandie, que l’outil ne zoome pas' }),
+  setting('fn-minimum-font-size', 'minimum-font-size', t('Taille minimale du texte des pages', 'Minimum text size on pages'), 'appearance', 'minimumFontSize', { fold: true, why: 'le réglage vaut pour les onglets ouverts ensuite : l’image montre la ligne, pas une page agrandie' }),
   direct('fn-name-windows', 'name-windows', t('Nommer les fenêtres', 'Name windows'), t(
     'La feuille « Nommer la fenêtre » : le nom s’affiche dans le menu Fenêtre',
     'The “Name window” sheet: the name shows in the Window menu'

@@ -164,6 +164,11 @@ describe('images', () => {
     expect(out.warnings).toContain('Une image sans adresse web ne peut pas être exportée.')
   })
 
+  it('counts the images it could not keep for want of an address, though the warning is said once', () => {
+    expect(result('<p>x<img src="data:image/png;base64,AAAA"><img alt="rien"><img src="https://example.com/ok.png"></p>').missingImages).toBe(2)
+    expect(result('<p>x<img src="https://example.com/ok.png"></p>').missingImages).toBe(0)
+  })
+
   it('keeps an image inside its link', () => {
     expect(md('<a href="https://example.com/p"><img src="https://example.com/i.png" alt="logo"></a>')).toBe('[![logo][image-1]](https://example.com/p)\n\n[image-1]: https://example.com/i.png\n')
   })
