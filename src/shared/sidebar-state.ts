@@ -24,6 +24,7 @@ import { cleanSleepSettings } from './sleep'
 import { cleanBlockingSettings } from './blocker'
 import { cleanFingerprintSettings } from './fingerprint'
 import { cleanPrivacySettings } from './privacy'
+import { cleanSafeBrowsingSettings } from './safe-browsing'
 import { cleanDohSettings } from './dns'
 import { cleanProxySetting } from './proxy'
 import { cleanKeepHosts } from './cookies'
@@ -391,6 +392,7 @@ export function clampSettings(input: Settings): Settings {
     ...cleanBlockingSettings(settings),
     ...cleanFingerprintSettings(settings),
     ...cleanPrivacySettings(settings),
+    ...cleanSafeBrowsingSettings(settings),
     ...cleanDohSettings(settings),
     proxy: cleanProxySetting(settings.proxy),
     cookieKeepHosts: cleanKeepHosts(settings.cookieKeepHosts),

@@ -206,6 +206,10 @@ export interface Settings {
   blockThirdPartyCookies: boolean
   /** Sites (host and subdomains) where third-party cookies are let through, because blocking them broke the site. */
   thirdPartyCookieExceptions: string[]
+  /** Safe browsing (safe-browsing.ts): a page whose host is on a local list of phishing or malware hosts shows a warning first. Off by default; no connection. */
+  safeBrowsing: boolean
+  /** Sites (host and subdomains) where the warning of safe browsing is never shown. */
+  safeBrowsingExceptions: string[]
   /** Names shown for profiles, by profile id. The id stays the storage key, so renaming never loses data. */
   profileNames: Record<string, string>
   /** Expose the space theme to web pages as `--arc-palette-*` CSS variables (a page can read it, so it is opt-in). */

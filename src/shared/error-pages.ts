@@ -7,11 +7,12 @@
 import { ERROR_PAGE_STYLE, errorButton, errorFrame, escapeText, type ErrorTone } from './error-page-template'
 import { getLanguage, t } from './i18n'
 import { formatClock } from './focus-mode'
+import type { SafeCategory } from './safe-browsing'
 
 export const ERROR_SCHEME = 'lucium-error:'
-export type ErrorAction = 'retry' | 'proceed' | 'http' | 'back' | 'reload' | 'wait' | 'network-settings' | 'home' | 'copy-address' | 'open-mini-window' | 'toggle-blocker' | 'end-focus'
+export type ErrorAction = 'retry' | 'proceed' | 'http' | 'back' | 'reload' | 'wait' | 'network-settings' | 'home' | 'copy-address' | 'open-mini-window' | 'toggle-blocker' | 'end-focus' | 'unsafe-continue'
 
-const ACTIONS: readonly ErrorAction[] = ['retry', 'proceed', 'http', 'back', 'reload', 'wait', 'network-settings', 'home', 'copy-address', 'open-mini-window', 'toggle-blocker', 'end-focus']
+const ACTIONS: readonly ErrorAction[] = ['retry', 'proceed', 'http', 'back', 'reload', 'wait', 'network-settings', 'home', 'copy-address', 'open-mini-window', 'toggle-blocker', 'end-focus', 'unsafe-continue']
 
 /** The address of a button. `nonce` is drawn for each page shown and only that page contains it: a site cannot forge a click on it. */
 export function errorActionUrl(action: ErrorAction, nonce: string): string {
@@ -391,6 +392,8 @@ export type ErrorPageModel =
    * midnight), one of the two; the page offers a pause, which is the way out.
    */
   | { kind: 'focus'; url: string; nonce: string; canGoBack: boolean; until: number | null; slotEnd: number | null }
+  /** Safe browsing (safe-browsing.ts) refused this address before it opened: the page warns, « Continuer quand même » opens it for this session. */
+  | { kind: 'unsafe'; url: string; nonce: string; canGoBack: boolean; category: SafeCategory }
   | { kind: 'status'; url: string; status: number; nonce: string; canGoBack: boolean; /** When the page was shown (ms since the epoch): the technical details give the time. */ at: number }
 
 export interface ErrorPage {
@@ -488,6 +491,19 @@ export function renderErrorPage(model: ErrorPageModel): ErrorPage {
         title: t('errpage.focus-title'),
         content: `<p class="addr">${escapeHtml(model.url)}</p><p>${t('errpage.focus-text', { site: host })}</p><p>${escapeHtml(t('errpage.focus-until', { time }))}</p>`,
         actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : ''}${button('end-focus', model.nonce, t('errpage.focus-pause'), 'quiet')}`
+      })
+    )
+  }
+  if (model.kind === 'unsafe') {
+    const text = model.category === 'phishing' ? t('errpage.unsafe-phishing-text', { site: host }) : t('errpage.unsafe-malware-text', { site: host })
+    return document_(
+      site,
+      errorFrame({
+        tone: 'danger',
+        icon: glyph('<path d="M12 3 4.5 6v6c0 4.5 3.2 7.6 7.5 9 4.3-1.4 7.5-4.5 7.5-9V6z"/><path d="M12 8v5"/><circle cx="12" cy="16" r="0.6"/>'),
+        title: model.category === 'phishing' ? t('errpage.unsafe-phishing-title') : t('errpage.unsafe-malware-title'),
+        content: `<p class="addr">${escapeHtml(model.url)}</p><p>${text}</p><p>${escapeHtml(t('errpage.unsafe-local'))}</p>`,
+        actions: `${model.canGoBack ? button('back', model.nonce, t('errpage.retour')) : ''}${button('unsafe-continue', model.nonce, t('errpage.unsafe-continue'), 'proceed')}`
       })
     )
   }

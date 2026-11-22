@@ -47,6 +47,7 @@ export const SETTINGS_PLACES = {
   customFilterLists: { key: 'customFilterListsEnabled' },
   proxy: { key: 'proxyEnabled' },
   siteExceptions: { key: 'fingerprintExceptions' },
+  safeBrowsing: { key: 'safeBrowsing', group: 'privacy-settings.navigation-sure' },
   thirdPartyCookies: { key: 'blockThirdPartyCookies', group: 'privacy-settings.cookies-tiers' },
   clearOnClose: { key: 'siteDataClearOnClose' },
   webHardware: { key: 'webHardware', group: 'hardware-settings.api-materielles-du-web' },

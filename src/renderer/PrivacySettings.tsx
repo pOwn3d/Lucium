@@ -4,6 +4,7 @@
 import { useId, useState } from 'react'
 import { checkBlockException } from '@shared/blocker'
 import { THIRD_PARTY_COOKIE_EXCEPTIONS_MAX, trackingParamList } from '@shared/privacy'
+import { SAFE_BROWSING_EXCEPTIONS_MAX } from '@shared/safe-browsing'
 import { fieldError } from './field-error'
 import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
@@ -12,17 +13,50 @@ import { t } from '@shared/i18n'
 
 const SHOWN_PARAMS = 8
 
-export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; update: (patch: Partial<Settings>) => void }) {
-  const { settings } = snapshot.state
-  const exceptions = settings.thirdPartyCookieExceptions
+/** A list of sites (a host and its subdomains) with a field to add one: what the exceptions of an option are. */
+function SiteList({ settingKey, sites, max, title, footnote, label, onChange }: { settingKey: 'thirdPartyCookieExceptions' | 'safeBrowsingExceptions'; sites: readonly string[]; max: number; title: string; footnote: string; label: string; onChange: (sites: string[]) => void }) {
   const [draft, setDraft] = useState('')
-  const verdict = draft.trim() === '' ? null : exceptions.length >= THIRD_PARTY_COOKIE_EXCEPTIONS_MAX ? { error: t('guard-settings.la-liste-est-pleine') } : checkBlockException(draft, exceptions)
+  const verdict = draft.trim() === '' ? null : sites.length >= max ? { error: t('guard-settings.la-liste-est-pleine') } : checkBlockException(draft, sites)
   const error = fieldError(useId(), verdict !== null && 'error' in verdict)
   const add = () => {
     if (!verdict || !('host' in verdict)) return
-    update({ thirdPartyCookieExceptions: [...exceptions, verdict.host] })
+    onChange([...sites, verdict.host])
     setDraft('')
   }
+  return (
+    <Group keys={[settingKey]} title={title} footnote={footnote}>
+      <>
+        {sites.length === 0 && <Row label={<span className="muted">{t('settings.aucun-site')}</span>} />}
+        {sites.map((host) => (
+          <div key={host} className="pref-row">
+            <div className="pref-label">
+              <code>{host}</code>
+            </div>
+            <div className="pref-control">
+              <button className="link-button" onClick={() => onChange(sites.filter((h) => h !== host))} aria-label={t('settings.retirer-name', { name: host })}>
+                {t('settings.retirer')}
+              </button>
+            </div>
+          </div>
+        ))}
+        <div className="pref-row pref-form">
+          <input className="field" placeholder={t('settings.exemple-org')} aria-label={label} {...error.field} value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && add()} />
+          <button className="button" disabled={!verdict || 'error' in verdict} onClick={add}>
+            {t('settings.ajouter')}
+          </button>
+        </div>
+        {verdict && 'error' in verdict && (
+          <div className="pref-row pref-message pref-error" {...error.message}>
+            {verdict.error}
+          </div>
+        )}
+      </>
+    </Group>
+  )
+}
+
+export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; update: (patch: Partial<Settings>) => void }) {
+  const { settings } = snapshot.state
   return (
     <>
     <Group keys={['httpsUpgrade', 'sendGpc', 'stripTrackingParams']} title={t('privacy-settings.confidentialite-renforcee')} footnote={t('privacy-settings.allumees-pour-un-nouveau-profil-elles-valent')} more={t('privacy-settings.quatre-protections-que-d-autres-navigateurs')}>
@@ -68,44 +102,37 @@ export function PrivacySettings({ snapshot, update }: { snapshot: UiSnapshot; up
       />
     </Group>
 
+    <Group keys={['safeBrowsing']} title={t('privacy-settings.navigation-sure')}>
+      <Check
+        settingKey="safeBrowsing"
+        label={t('privacy-settings.prevenir-avant-d-ouvrir-un-site-dangereux')}
+        hint={t('privacy-settings.compare-chaque-page-a-une-liste-livree')}
+        more={t('privacy-settings.la-liste-est-livree-avec-lucium')}
+        checked={settings.safeBrowsing}
+        onChange={(safeBrowsing) => update({ safeBrowsing })}
+      />
+    </Group>
+
     {/* The sites where the cookies of a third party are accepted: on the subpage of the other exceptions, drawn whether the option is on or not. */}
     <Subpage id="exceptions">
-      <Group keys={['thirdPartyCookieExceptions']} title={t('privacy-settings.sites-ou-les-cookies-tiers-sont-acceptes')} footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}>
-        <>
-          {exceptions.length === 0 && <Row label={<span className="muted">{t('settings.aucun-site')}</span>} />}
-          {exceptions.map((host) => (
-            <div key={host} className="pref-row">
-              <div className="pref-label">
-                <code>{host}</code>
-              </div>
-              <div className="pref-control">
-                <button className="link-button" onClick={() => update({ thirdPartyCookieExceptions: exceptions.filter((h) => h !== host) })} aria-label={t('settings.retirer-name', { name: host })}>
-                  {t('settings.retirer')}
-                </button>
-              </div>
-            </div>
-          ))}
-          <div className="pref-row pref-form">
-            <input
-              className="field"
-              placeholder={t('settings.exemple-org')}
-              aria-label={t('privacy-settings.site-ou-accepter-les-cookies-tiers')}
-              {...error.field}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && add()}
-            />
-            <button className="button" disabled={!verdict || 'error' in verdict} onClick={add}>
-              {t('settings.ajouter')}
-            </button>
-          </div>
-          {verdict && 'error' in verdict && (
-            <div className="pref-row pref-message pref-error" {...error.message}>
-              {verdict.error}
-            </div>
-          )}
-        </>
-      </Group>
+      <SiteList
+        settingKey="thirdPartyCookieExceptions"
+        sites={settings.thirdPartyCookieExceptions}
+        max={THIRD_PARTY_COOKIE_EXCEPTIONS_MAX}
+        title={t('privacy-settings.sites-ou-les-cookies-tiers-sont-acceptes')}
+        footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}
+        label={t('privacy-settings.site-ou-accepter-les-cookies-tiers')}
+        onChange={(thirdPartyCookieExceptions) => update({ thirdPartyCookieExceptions })}
+      />
+      <SiteList
+        settingKey="safeBrowsingExceptions"
+        sites={settings.safeBrowsingExceptions}
+        max={SAFE_BROWSING_EXCEPTIONS_MAX}
+        title={t('privacy-settings.sites-ou-la-navigation-sure-ne-previent-pas')}
+        footnote={t('privacy-settings.un-site-de-la-liste-couvre-aussi-ses-sous')}
+        label={t('privacy-settings.site-ou-ne-pas-prevenir')}
+        onChange={(safeBrowsingExceptions) => update({ safeBrowsingExceptions })}
+      />
     </Subpage>
     </>
   )

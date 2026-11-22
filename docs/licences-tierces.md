@@ -81,6 +81,21 @@ Aucune dépendance ni donnée ajoutée : ces listes sont celles que l'utilisateu
 
 Listes examinées et non retenues : « I don't care about cookies » (<https://www.i-dont-care-about-cookies.eu/abp/>, GPL-3.0 d'après son en-tête, mais dernière modification le 30 novembre 2023 : périmée) ; les listes du dépôt `brave/adblock-lists` (Unbreak, Specific, Social, liste « première partie ») : licence **MPL-2.0** (API GitHub), compatible comme le moteur, mais non incluses : elles sont écrites pour un autre moteur de filtres (options `:5`, ressources propres à ce moteur), et une comparaison n'a montré aucune requête qu'elles bloquent et que nous laissons passer une fois les listes uBlock complètes ; « Fanboy's Mobile Notifications » (CC BY 3.0) : bannières « installez l'application », hors du périmètre des deux options du bloqueur.
 
+## Navigation sûre : listes de sites dangereux (`resources/safe-browsing/`)
+
+Deux listes publiques d'**hôtes** (noms de domaine et adresses IPv4), **embarquées** sous forme d'empreintes de 6 octets (`src/shared/safe-set.ts`) : on ne peut pas en relire les noms, seulement tester un nom connu. Elles sont préparées par `scripts/build-safe-browsing.mjs` sur la machine du mainteneur avant une version, et **ne changent qu'avec l'application** : l'application ne télécharge rien pour cette fonction, n'envoie aucune adresse visitée, et le tableau des connexions du README ne gagne aucune ligne. `resources/safe-browsing/SOURCES.json` dit pour chaque liste l'adresse, la licence, le nombre d'hôtes, la date de la copie et l'empreinte sha-256 du fichier.
+
+| Liste | Source | Licence (relevée le 22 novembre 2026) | Usage |
+|---|---|---|---|
+| Hameçonnage | Phishing.Database, `phishing-domains-ACTIVE.txt` (<https://github.com/Phishing-Database/Phishing.Database>) | **MIT** (fichier `LICENSE` du dépôt : © 2018-2025 Mitchell Krog, Nissar Chababy et les contributeurs), compatible avec la GPL-3.0-or-later. Le texte de la licence MIT est repris ici par renvoi : elle exige de garder l'avis de copyright, ce que ce paragraphe et `SOURCES.json` font | 392 063 hôtes retenus (100 lignes qui n'étaient pas un nom d'hôte simple ont été écartées) |
+| Logiciels malveillants | `urlhaus-filter`, `urlhaus-filter-domains-online.txt` (<https://gitlab.com/malware-filter/urlhaus-filter>), fait des données de abuse.ch URLhaus | **CC0 1.0 et MIT** d'après le README du dépôt (fichiers `LICENSE-CC0.md` et `LICENSE` présents) ; les données d'URLhaus y sont déclarées CC0. **Non confirmé par cette vérification sur le site d'abuse.ch** (la page lue n'énonce pas la licence) : à relire sur <https://urlhaus.abuse.ch/> avant une version publique | 1 932 hôtes retenus |
+
+Listes examinées et écartées : URLhaus en direct (une clé, donc un compte, est désormais exigée : réponse 410 sans clé) ; OpenPhish (conditions non commerciales, incompatibles avec la GPL) ; PhishTank (compte et clé ; CC-BY-SA) ; HaGeZi « Threat Intelligence Feeds » (GPL-3.0 seule, sans « ou ultérieure », et 4 à 34 Mo) ; `phishing-filter` de malware-filter (sources OpenPhish et PhishTank).
+
+**Taille** : bornée à 4 000 000 d'octets pour les deux fichiers ensemble (`SNAPSHOT_MAX_BYTES` de `src/shared/safe-set.ts`) ; le script refuse d'écrire au-delà et `safe-set.test.ts` échoue si les fichiers livrés la dépassent. L'instantané du 22 novembre 2026 pèse 2 364 000 octets environ (2 352 386 + 11 600).
+
+**Limite** : une liste livrée avec l'application a l'âge de sa dernière version. Elle protège de ce qui est listé à cette date, pas des sites apparus depuis ; l'application le dit dans le réglage et sur la page d'avertissement.
+
 ## Mode lecture : `@mozilla/readability` 0.6.0
 
 | Paquet | Licence | Rôle |

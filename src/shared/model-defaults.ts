@@ -178,6 +178,8 @@ export function defaultSettings(): Settings {
     fingerprintExceptions: [],
     blockThirdPartyCookies: false,
     thirdPartyCookieExceptions: [],
+    safeBrowsing: false,
+    safeBrowsingExceptions: [],
     profileNames: {},
     externalLinksInLittleArc: true,
     peekOnExternalLinks: false,
