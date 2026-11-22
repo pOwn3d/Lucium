@@ -98,6 +98,7 @@ export function fileMenu({ browser, store, actions, options, state, acc, alone, 
         click: () => void captureActivePagePortrait(browser).catch(report('portrait capture'))
       },
       { label: t('menu.enregistrer-la-page-sous'), accelerator: acc('savePage'), ...onTab, click: actions.savePage },
+      { label: t('menu.enregistrer-la-page-en-markdown'), accelerator: acc('saveMarkdown'), enabled: page !== null, click: () => void browser.saveMarkdownPage().catch(report('Markdown save')) },
       { label: t('menu.exporter-la-page-en-markdown'), accelerator: acc('exportMarkdown'), enabled: page !== null, click: () => void browser.exportMarkdown().catch(report('Markdown export')) },
       { label: t('menu.imprimer'), accelerator: acc('print'), ...onTab, click: () => browser.printPage() },
       // Optional: only with the setting "Enregistrer en PDF avec l’adresse" on (among the settings of the downloads).

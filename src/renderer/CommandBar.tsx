@@ -423,9 +423,9 @@ export function CommandBar({ mode, initial, little }: { mode: CommandBarMode; in
         if (c.action === 'site-info') return act.openOverlay({ panel: 'site' })
         if (c.action === 'create-shortcut' && c.url) return act.openOverlay({ panel: 'shortcut', url: c.url, title: hostOf(c.url) })
         if (c.action === 'clear-site-data') return act.openOverlay({ panel: 'sitedata' })
-        if (c.action === 'export-markdown') {
-          // The main process closes the bar and gives the page the keyboard before its picker opens.
-          act.markdownExport()
+        if (c.action === 'export-markdown' || c.action === 'save-markdown') {
+          // The main process closes the bar and gives the page the keyboard before its picker opens (or the save starts).
+          act.markdownExport(c.action === 'save-markdown' ? 'save' : 'pick')
           break
         }
         if (c.action === 'sessions') return act.openOverlay({ panel: 'sessions' })

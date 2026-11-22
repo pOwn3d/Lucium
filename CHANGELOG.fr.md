@@ -45,6 +45,9 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Ajouts
 
 - **Interrupteur JavaScript par site** : une ligne « JavaScript » du panneau du site coupe les scripts d’un site. La page se recharge sans aucun script, et un avis ou la ligne les rétablit en un clic. Coupé pour aucun site par défaut ; les pages de Lucium ne sont jamais concernées.
+### Ajouts
+
+- **Enregistrer la page en Markdown** : Fichier › Enregistrer la page en Markdown… et la barre de commandes enregistrent le contenu principal de la page en un clic : un fichier `.md` et un dossier `<nom>-images/` à côté. Un onglet privé demande d’abord ; un dossier existant n’est jamais réutilisé (`-2`) ; les images chargées au défilement ne sont pas récupérées.
 
 ## [1.1.5] - 2026-11-20
 

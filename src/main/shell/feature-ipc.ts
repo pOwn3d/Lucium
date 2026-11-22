@@ -158,10 +158,12 @@ export function registerFeatureIpc(ipcMain: ScopedIpc, guard: (sender: WebConten
   })
 
   // The command bar's "Exporter la page en Markdown": the bar goes first, so that the page has the keyboard when its picker opens.
-  ipcMain.on(Channel.markdownExport, (e) => {
+  ipcMain.on(Channel.markdownExport, (e, mode: unknown) => {
     if (!guard(e.sender, Channel.markdownExport)) return
+    // Anything but the two known words is read as the picker, the original behaviour of this channel.
+    const save = mode === 'save'
     browser.closeOverlay()
-    void browser.exportMarkdown().catch((error: unknown) => console.error('[markdown] cannot export the page:', error))
+    void (save ? browser.saveMarkdownPage() : browser.exportMarkdown()).catch((error: unknown) => console.error('[markdown] cannot export the page:', error))
   })
 
   // The automatic copies of the session: the files belong to the normal windows' state, so a private window lists none and restores none.

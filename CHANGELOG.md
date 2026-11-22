@@ -49,6 +49,9 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Added
 
 - **JavaScript switch per site**: a “JavaScript” row in the site panel turns the scripts of a site off. The page reloads without any script, and a notice or the row turns them back on in one click. Off for no site by default; Lucium’s own pages are never affected.
+### Added
+
+- **Save Page as Markdown**: File › Save Page as Markdown… and the command bar save the page’s main content in one click: a `.md` file and a `<name>-images/` folder beside it. A private tab asks first; a folder that exists is never reused (`-2`); images that load only on scroll are not fetched.
 
 ## [1.1.5] - 2026-11-20
 

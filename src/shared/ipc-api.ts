@@ -318,8 +318,8 @@ export interface LuciumApi {
   readClipboardText(): Promise<ClipboardTextReply>
   /** The command bar's "Copier": puts a text of 1 to 65,536 characters on the clipboard, without a notice (the button says it). False when the text was refused or could not be written. */
   writeClipboardText(text: string): Promise<boolean>
-  /** The command bar's "Exporter la page en Markdown": the bar closes, and the page shows the picker (see shell/markdown-export.ts). */
-  markdownExport(): void
+  /** The command bar's "Exporter la page en Markdown" (`'pick'`: the picker) or "Enregistrer la page en Markdown" (`'save'`: the whole page, saved): the bar closes first (see shell/markdown-export.ts). */
+  markdownExport(mode: 'pick' | 'save'): void
   /** The theme editor's code fields and the theme files: copy a code or a colour, paste one into the space, apply a theme to every space, save the theme as a file or take one from a file. */
   themeCode(request: ThemeRequest): Promise<ThemeReply>
   /** Sharing a Tweak: bring one in from a file or the clipboard, send one out as a file or a link. The shell shows the dialogs and says how it went. */

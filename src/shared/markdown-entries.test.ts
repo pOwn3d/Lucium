@@ -29,6 +29,16 @@ describe('the command bar', () => {
 
   it('changes no state: the main process starts the export', () => {
     expect(actionToDispatch('export-markdown', stateOn('https://example.com/'))).toBeNull()
+    expect(actionToDispatch('save-markdown', stateOn('https://example.com/'))).toBeNull()
+  })
+
+  it('offers the one-click save of the whole page next to the export, for a web page only', () => {
+    const saves = (query: string, url: string) => rankCandidates(query, stateOn(url)).filter((c) => c.kind === 'action' && c.action === 'save-markdown')
+    for (const query of ['markdown', 'enregistrer la page', 'Enregistrer la page en Markdown']) {
+      expect(saves(query, 'https://example.com/a'), query).toMatchObject([{ label: 'Enregistrer la page en Markdown', detail: 'Action' }])
+    }
+    expect(saves('markdown', 'about:blank')).toEqual([])
+    expect(saves('', 'https://example.com/a')).toEqual([])
   })
 })
 
@@ -38,6 +48,11 @@ describe('the shortcuts', () => {
     expect(command).toMatchObject({ label: 'Exporter la page en Markdown…', group: 'Fichier', accelerator: '' })
     expect(effectiveAccelerator('exportMarkdown', undefined)).toBeUndefined()
     expect(effectiveAccelerator('exportMarkdown', { exportMarkdown: 'CmdOrCtrl+Alt+M' })).toBe('CmdOrCtrl+Alt+M')
+  })
+
+  it('lists the save of the whole page, with no shortcut of its own either', () => {
+    expect(COMMANDS.find((c) => c.id === 'saveMarkdown')).toMatchObject({ label: 'Enregistrer la page en Markdown…', group: 'Fichier', accelerator: '' })
+    expect(effectiveAccelerator('saveMarkdown', undefined)).toBeUndefined()
   })
 })
 

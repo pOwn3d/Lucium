@@ -24,6 +24,7 @@ export type CommandAction =
   | 'edit-shortcuts'
   | 'clear-site-data'
   | 'export-markdown'
+  | 'save-markdown'
   | 'save-session'
   | 'sessions'
   | 'clear-site-now'

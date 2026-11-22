@@ -88,6 +88,18 @@ describe('the commands that tell the user when they fail', () => {
     expect(error).toHaveBeenCalledWith('[menu] Markdown export failed:', cause)
     expect(showToast).toHaveBeenCalledWith(commandFailed())
   })
+
+  it('menu.ts (save as Markdown): [menu] ${what} failed: goes through noteFailure, not to the journal alone', async () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const showToast = vi.fn()
+    const browser = browserWith({ showToast, saveMarkdownPage: () => Promise.reject(cause), menuFacts: () => ({ canGoBack: false, canGoForward: false, loading: false, finding: false, scrollSynced: false, saverAsked: false }) })
+    const actions = new Proxy({ windows: () => [], extensions: () => [], sessionStart: 0, window: () => ({}) } as Record<string, unknown>, { get: (target, prop: string) => (prop in target ? target[prop] : () => {}) })
+    const items = leaves(buildMenu(browser, storeOf(withTab), actions as never) as unknown as MenuItem[])
+    items.find((item) => item.label === t('menu.enregistrer-la-page-en-markdown'))!.click!()
+    await settle()
+    expect(error).toHaveBeenCalledWith('[menu] Markdown save failed:', cause)
+    expect(showToast).toHaveBeenCalledWith(commandFailed())
+  })
 })
 
 interface MenuItem {
