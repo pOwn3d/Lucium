@@ -10,6 +10,14 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-11-23
+
+This version fixes the floating video window: it now shows one bar, Lucium's, and no longer the controls of the site's player.
+
+### Fixed
+
+- **Picture in Picture, a single bar**: in the floating window of a video (a Twitch live, for example) only Lucium's bar remains: pause, volume, live or position, and the button that gives the video back to its tab. The site's own controls and the header are hidden; they were shown twice before.
+
 ## [1.1.6] - 2026-11-23
 
 This version brings a safer and more private browsing (safe browsing, network protection, third-party cookies, a JavaScript switch per site, warnings before a risk), new ways to work (tab reminders, focus mode, full-text search of visited pages, tab overview, one Space exported to another Mac) and a Discover Lucium panel with a tip of the day.
