@@ -10,6 +10,10 @@
 //   --page https://…    the page "Télécharger manuellement" opens (by default the site's /telecharger/ page, on the host of the folder)
 //   --page-en https://… that page for an interface in English (by default the site's /en/download/ page)
 //   --date 2026-11-06T09:00:00Z   the publication date (by default now)
+//   --target win32-x64|linux-x64|linux-arm64   the file is the installer of that system (Windows NSIS .exe, Linux .AppImage or .deb), not the archive of the
+//                       Mac: the feed then says which system it is for (`platform`, `arch`, `kind`: src/shared/update-target.ts) and the version is package.json's
+//                       (an installer is not opened here: the name carries the version, and the publication has checked that the build is of it)
+//   --kind nsis|appimage|deb     with --target: which installer it is (by default the one the extension says: .exe, .AppImage, .deb)
 //
 // The version is the CFBundleShortVersionString of the app inside the archive, the one Squirrel compares; it must be the one of package.json
 // and of the archive's name. Publish the archive first, then this file (docs/drm.md, « Mise à jour »): a feed that names a missing archive fails
@@ -26,7 +30,7 @@ process.removeAllListeners('warning')
 process.on('warning', (warning) => {
   if (/** @type {NodeJS.ErrnoException} */ (warning).code !== 'MODULE_TYPELESS_PACKAGE_JSON') console.error(`${warning.name}: ${warning.message}`)
 })
-const { notesFromChangelog, releaseFile } = await import('../src/main/update-feed-file.ts')
+const { KIND_EXTENSIONS, notesFromChangelog, releaseFile } = await import('../src/main/update-feed-file.ts')
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const usage = () => console.error(readFileSync(new URL(import.meta.url), 'utf8').split('\n').filter((l) => l.startsWith('//')).map((l) => l.slice(3)).join('\n'))
@@ -36,7 +40,7 @@ const options = {}
 const args = process.argv.slice(2)
 for (let at = 0; at < args.length; at++) {
   const arg = args[at]
-  const named = /^--(notes-en|page-en|notes|page|date)(?:=(.*))?$/s.exec(arg)
+  const named = /^--(notes-en|page-en|notes|page|date|target|kind)(?:=(.*))?$/s.exec(arg)
   if (named) {
     const value = named[2] ?? args[++at]
     if (value === undefined) {
@@ -58,6 +62,19 @@ if (positional.length !== 2) {
   process.exit(2)
 }
 const [archive, base] = positional
+if (options.kind !== undefined && options.target === undefined) {
+  console.error('❌ --kind only goes with --target')
+  process.exit(2)
+}
+/** The system an installer is for, with its kind: `--target win32-x64`, and the kind the extension of the file says unless `--kind` does. */
+function installerTarget() {
+  if (options.target === undefined) return null
+  const found = /^(win32|linux)-(x64|arm64)$/.exec(options.target)
+  if (!found) throw new Error(`--target is win32-x64, linux-x64 or linux-arm64 (got ${options.target}): the feed of the Mac is written without it`)
+  const kind = options.kind ?? Object.keys(KIND_EXTENSIONS).find((name) => archive.endsWith(KIND_EXTENSIONS[name]))
+  if (!kind) throw new Error(`${basename(archive)} is neither an .exe, an .AppImage nor a .deb: it is not an installer of Windows or Linux`)
+  return { platform: found[1], arch: found[2], kind }
+}
 
 /** The CFBundleShortVersionString of the app in the archive, read without unpacking it (unzip -p, then plutil). */
 function archiveVersion(path) {
@@ -82,13 +99,14 @@ const sha256Of = (path) =>
   })
 
 try {
-  const version = archiveVersion(archive)
+  const target = installerTarget()
   const packageVersion = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8')).version
+  const version = target ? packageVersion : archiveVersion(archive)
   if (version !== packageVersion) throw new Error(`the app in the archive is ${version}, package.json says ${packageVersion}: build the archive again, or check out the right version`)
   const notes = options.notes ?? notesFromChangelog(readFileSync(resolve(root, 'CHANGELOG.fr.md'), 'utf8'), version)
   const notesEn = options['notes-en'] ?? notesFromChangelog(readFileSync(resolve(root, 'CHANGELOG.md'), 'utf8'), version, '; ')
   const date = options.date === undefined ? new Date() : new Date(options.date)
-  const file = releaseFile({ version, base, fileName: basename(archive), sha256: await sha256Of(archive), size: statSync(archive).size, date, notes, notesEn, ...(options.page ? { page: options.page } : {}), ...(options['page-en'] ? { pageEn: options['page-en'] } : {}) })
+  const file = releaseFile({ version, base, fileName: basename(archive), sha256: await sha256Of(archive), size: statSync(archive).size, date, notes, notesEn, ...(options.page ? { page: options.page } : {}), ...(options['page-en'] ? { pageEn: options['page-en'] } : {}), ...(target ? { target } : {}) })
   process.stdout.write(`${JSON.stringify(file, null, 2)}\n`)
   console.error(`✅ Lucium ${version}: ${file.releases[0].updateTo.url} (${file.releases[0].updateTo.size} bytes). Publish the archive first, then this file.`)
 } catch (error) {

@@ -39,6 +39,16 @@
 //      the tag, the engine run, and for "stable" what let the version in. A publication that stopped half way adds a line that says what the server
 //      holds; it never counts as a passage through a channel.
 //
+// The installers of Windows and Linux go through the same script (docs/community/release-process.md, « Publishing the installers of Windows and Linux »):
+//
+//   node scripts/publish-update.mjs Lucium-Setup-1.1.7-x64.exe --platform win32-x64 --sha256 <sum of the CI run> --dry-run
+//
+//   --platform win32-x64|linux-x64|linux-arm64   the file is the installer of that system, copied from the CI run on the tag; its extension says the kind
+//                          (.exe, .AppImage, .deb); its folder of the server is "folders" of the channel in the file of the servers; the Mac's options
+//                          (--app, --installed-app, --build-log, --build-record, --no-dmg) are refused with it
+//   --sha256 <sum>         with --platform: the SHA-256 the CI run logged; the file must have it, and without it nothing is published
+//   (with --withdraw: --platform names the system whose channel the version is taken out of)
+//
 // Withdrawing a version that must no longer be offered (docs/community/release-process.md, "Withdrawing a version"). It publishes nothing:
 //
 //   node scripts/publish-update.mjs --withdraw 1.0.1 --channel stable --dry-run     reads the server, changes nothing, prints what it would run

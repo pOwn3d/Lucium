@@ -8,8 +8,9 @@
 // the page that "Télécharger manuellement" opens; Squirrel ignores it. `en` is Lucium's own too: the page and the notes an interface in
 // English shows in place of the French ones (a Lucium that does not know the key keeps the French ones).
 //
-// The file this writer makes is the one of macOS, with none of `platform`, `arch` and `kind`, the keys by which the feeds of Windows and Linux say which system they are
-// for (shared/update-target.ts): the publication that writes those is not written yet, and a Mac reads this file as it always did.
+// The file this writer makes for macOS carries none of `platform`, `arch` and `kind`, the keys by which the feeds of Windows and Linux say which system they are
+// for (shared/update-target.ts), and a Mac reads it as it always did. Given a `target`, it writes those three keys, in the bytes the key signs, for the installer of
+// Windows (NSIS) or of Linux (AppImage, .deb); the same tables as shared/update-target.ts are kept here by hand (this file imports nothing), and a test keeps them equal.
 
 /** A version both readers compare the same way: digits and dots only (no "v", no suffix). */
 export const RELEASE_VERSION = /^\d+(?:\.\d+){0,3}$/
@@ -17,12 +18,32 @@ export const RELEASE_VERSION = /^\d+(?:\.\d+){0,3}$/
 /** The notes the box of the offer shows: a sentence or two. */
 export const NOTES_MAX = 300
 
+/** The installers a feed for Windows or Linux may name, by system (`<platform>-<arch>`): shared/update-target.ts, `INSTALLER_KINDS`, without macOS. */
+export const TARGET_KINDS: Readonly<Record<string, readonly string[]>> = {
+  'win32-x64': ['nsis'],
+  'linux-x64': ['appimage', 'deb'],
+  'linux-arm64': ['appimage', 'deb']
+}
+
+/** The extension of the file each installer is: the one a name that says otherwise is refused for. */
+export const KIND_EXTENSIONS: Readonly<Record<string, string>> = { nsis: '.exe', appimage: '.AppImage', deb: '.deb' }
+
+/** How the builds spell an architecture in a file name (`electron-builder.yml`, `artifactName`): a name that spells another one is not the installer of this system. */
+export const ARCH_WORDS: Readonly<Record<string, readonly string[]>> = { x64: ['x64', 'amd64'], arm64: ['arm64', 'aarch64'] }
+
+/** The system a feed for Windows or Linux is for, and the installer it names. */
+export interface ReleaseTarget {
+  platform: string
+  arch: string
+  kind: string
+}
+
 export interface ReleaseFacts {
   /** The version of the archive's app (its CFBundleShortVersionString). */
   version: string
   /** Where the archive is published: an https folder ending with "/". */
   base: string
-  /** The archive's file name (Lucium-<version>-arm64.zip). */
+  /** The archive's file name (Lucium-<version>-arm64.zip), or the installer's when there is a `target`. */
   fileName: string
   /** Its SHA-256, hexadecimal. */
   sha256: string
@@ -38,10 +59,16 @@ export interface ReleaseFacts {
   page?: string
   /** That page in English; by default the English download page of the same site. */
   pageEn?: string
+  /** The system the file is for, when it is not the Mac (no `target`: the file of Squirrel.Mac, as it always was). */
+  target?: ReleaseTarget
 }
 
 export interface ReleaseFile {
   currentRelease: string
+  /** Only the file of an installer of Windows or Linux carries these three (see `ReleaseFacts.target`). */
+  platform?: string
+  arch?: string
+  kind?: string
   page: string
   en: { page: string; notes: string }
   releases: Array<{
@@ -62,13 +89,35 @@ const httpsUrl = (text: string): URL | null => {
 /** "2026-11-06T09:00:00Z": the format Squirrel parses (`toISOString` adds milliseconds it would not read). */
 export const squirrelDate = (date: Date): string => date.toISOString().replace(/\.\d{3}Z$/, 'Z')
 
+/**
+ * What is wrong with the installer a feed for Windows or Linux names: a system there is a build for (never macOS: its feed carries no target), an installer that
+ * system takes, a plain file name that ends with the extension of that installer (an .exe is not an AppImage), carries the version and the architecture of the
+ * system. A name that cannot be told from the installer of another system is refused rather than guessed.
+ */
+export function installerProblems(fileName: string, version: string, target: ReleaseTarget): string[] {
+  const kinds = Object.prototype.hasOwnProperty.call(TARGET_KINDS, `${target.platform}-${target.arch}`) ? (TARGET_KINDS[`${target.platform}-${target.arch}`] as readonly string[]) : null
+  if (!kinds) return [`no installer is published for ${JSON.stringify(`${target.platform}-${target.arch}`)} (known: ${Object.keys(TARGET_KINDS).join(', ')}): the feed of macOS carries no platform`]
+  if (!kinds.includes(target.kind)) return [`${target.platform}-${target.arch} does not take an installer of the kind ${JSON.stringify(target.kind)} (it takes: ${kinds.join(', ')})`]
+  const extension = KIND_EXTENSIONS[target.kind] as string
+  const problems: string[] = []
+  if (!/^[A-Za-z0-9._-]+$/.test(fileName) || !fileName.endsWith(extension)) problems.push(`the installer of the kind ${target.kind} must be a ${extension} with a plain name: ${fileName}`)
+  else {
+    if (!fileName.includes(`-${version}-`)) problems.push(`the name of the installer does not carry its version ${version}: ${fileName}`)
+    const words = ARCH_WORDS[target.arch] ?? []
+    if (!words.some((word) => fileName.includes(`-${word}.`) || fileName.includes(`-${word}-`))) problems.push(`the name of the installer does not carry the architecture ${target.arch} (${words.join(' or ')}): ${fileName}`)
+  }
+  return problems
+}
+
 /** What is wrong with the facts, or null: every refusal is said at once, before anything is written. */
 export function releaseProblems(facts: ReleaseFacts): string[] {
   const problems: string[] = []
   if (!RELEASE_VERSION.test(facts.version)) problems.push(`the version "${facts.version}" is not digits and dots only: Squirrel and Lucium would compare it differently`)
   const base = httpsUrl(facts.base)
   if (!base || base.search || base.hash || !facts.base.endsWith('/')) problems.push(`the address of the folder must be https and end with "/": ${facts.base}`)
-  if (!/^[A-Za-z0-9._-]+\.zip$/.test(facts.fileName)) problems.push(`the archive must be a .zip with a plain name: ${facts.fileName}`)
+  const target = facts.target
+  if (target) problems.push(...installerProblems(facts.fileName, facts.version, target))
+  else if (!/^[A-Za-z0-9._-]+\.zip$/.test(facts.fileName)) problems.push(`the archive must be a .zip with a plain name: ${facts.fileName}`)
   else if (!facts.fileName.includes(`-${facts.version}-`)) problems.push(`the name of the archive does not carry its version ${facts.version}: ${facts.fileName}`)
   if (!/^[0-9a-f]{64}$/.test(facts.sha256)) problems.push('the SHA-256 is not 64 hexadecimal digits')
   if (!Number.isSafeInteger(facts.size) || facts.size <= 0) problems.push('the size is not a positive number of bytes')
@@ -102,6 +151,7 @@ export function releaseFile(facts: ReleaseFacts): ReleaseFile {
   const base = new URL(facts.base)
   return {
     currentRelease: facts.version,
+    ...(facts.target ? { platform: facts.target.platform, arch: facts.target.arch, kind: facts.target.kind } : {}),
     page: facts.page ?? new URL('/telecharger/', base.origin).href,
     en: { page: facts.pageEn ?? new URL('/en/download/', base.origin).href, notes: fileNotes(facts.notesEn ?? '', facts.version) },
     releases: [

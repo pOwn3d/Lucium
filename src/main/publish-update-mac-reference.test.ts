@@ -11,7 +11,7 @@ import { FEED_KEY_FILE, feedKeysIn, publicKeyOfPrivate, signFeedText } from './u
 import { writtenFeed } from './update-feed-keys.test-support'
 import { posix } from './windows.test-support'
 
-// The publication of the Mac must stay what it was, to the byte, when the publication of the other systems was added to the same code (docs/maj-auto-windows-linux-2026-11.md,
+// The publication of the Mac must stay what it was, to the byte, when the publication of the other systems was added to the same code (the study of card 819,
 // lot 1). The reference is the whole of what a publication of the Mac says, runs, writes and journals, recorded from the code as it was before that lot
 // (publish-update-mac-reference.golden.json), for a publication on each channel, a dry run, and a withdrawal. Nothing here reaches a network: the effects are fakes.
 // To record it again, on purpose, after a change of the Mac's publication that was wanted: RECORD_MAC_REFERENCE=1 pnpm vitest run src/main/publish-update-mac-reference.test.ts.

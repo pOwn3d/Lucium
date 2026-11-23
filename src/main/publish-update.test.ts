@@ -317,12 +317,12 @@ describe('the file of the servers', () => {
 
 describe('the arguments', () => {
   it('default to the test channel, a real run and nothing else', () => {
-    expect(parsePublishArgs([])).toEqual({ ok: true, options: { archive: null, channel: 'test', dryRun: false, help: false, app: null, installedApp: null, sshKey: null, buildLog: null, config: null, noDmg: false, journal: null, buildRecord: null, engineRun: null, noEngineRun: null, attestation: null, minTestHours: null, securityFix: null, withdraw: null, to: null } })
+    expect(parsePublishArgs([])).toEqual({ ok: true, options: { archive: null, channel: 'test', dryRun: false, help: false, app: null, installedApp: null, sshKey: null, buildLog: null, config: null, noDmg: false, journal: null, buildRecord: null, engineRun: null, noEngineRun: null, attestation: null, minTestHours: null, securityFix: null, withdraw: null, to: null, platform: null, sha256: null } })
   })
 
   it('read the archive, the flag and the options with a value (separate or after "=")', () => {
     const parsed = parsePublishArgs(['dist-drm/a.zip', '--dry-run', '--channel', 'stable', '--ssh-key=/k', '--app', '/a.app', '--installed-app', '/i.app', '--build-log', '/log', '--config', '/c.json'])
-    expect(parsed).toEqual({ ok: true, options: { archive: 'dist-drm/a.zip', channel: 'stable', dryRun: true, help: false, app: '/a.app', installedApp: '/i.app', sshKey: '/k', buildLog: '/log', config: '/c.json', noDmg: false, journal: null, buildRecord: null, engineRun: null, noEngineRun: null, attestation: null, minTestHours: null, securityFix: null, withdraw: null, to: null } })
+    expect(parsed).toEqual({ ok: true, options: { archive: 'dist-drm/a.zip', channel: 'stable', dryRun: true, help: false, app: '/a.app', installedApp: '/i.app', sshKey: '/k', buildLog: '/log', config: '/c.json', noDmg: false, journal: null, buildRecord: null, engineRun: null, noEngineRun: null, attestation: null, minTestHours: null, securityFix: null, withdraw: null, to: null, platform: null, sha256: null } })
     expect(parsePublishArgs(['--config=/d.json'])).toMatchObject({ ok: true, options: { config: '/d.json' } })
     expect(parsePublishArgs(['--help'])).toMatchObject({ ok: true, options: { help: true } })
   })
