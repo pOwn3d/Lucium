@@ -18,9 +18,9 @@ import {
   revealLabel,
   settingsLink,
   splitPathList,
-  looksInBackground,
+  autoUpdateKey,
+  autoUpdateOn,
   updatesByHand,
-  updatesOnDemandOnly,
   usesCtrlAlt,
   WINDOWS_DEFAULTS
 } from './platform'
@@ -53,23 +53,31 @@ describe('updatesByHand: which systems have no update installer', () => {
   })
 })
 
-describe('looksInBackground: which systems look for an update by themselves', () => {
-  it('is false on Windows alone: it installs after a click but is read only when asked; Linux keeps what it had (an address written by hand is read in the background)', () => {
-    expect(looksInBackground('darwin')).toBe(true)
-    expect(looksInBackground('win32')).toBe(false)
-    expect(looksInBackground('linux')).toBe(true)
-    expect(looksInBackground('freebsd')).toBe(true)
+describe('autoUpdateKey and autoUpdateOn: which switch commands the look for an update by itself', () => {
+  it('is the Windows switch on Windows alone; every other system, a non-system value included, reads autoUpdate', () => {
+    expect(autoUpdateKey('win32')).toBe('windowsAutoUpdate')
+    expect(autoUpdateKey('darwin')).toBe('autoUpdate')
+    expect(autoUpdateKey('linux')).toBe('autoUpdate')
+    expect(autoUpdateKey('freebsd')).toBe('autoUpdate')
+    for (const value of [undefined, null, 42]) expect(autoUpdateKey(value)).toBe('autoUpdate')
   })
 
-  it('gives anything that is not a system name the macOS behaviour, as updatesByHand does', () => {
-    for (const value of [undefined, null, 42]) expect(looksInBackground(value)).toBe(true)
+  it('reads on Windows the Windows switch alone: the old autoUpdate, true without having been chosen, turns nothing on', () => {
+    expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: false }, 'win32')).toBe(false)
+    expect(autoUpdateOn({ autoUpdate: false, windowsAutoUpdate: true }, 'win32')).toBe(true)
+    expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: true }, 'win32')).toBe(true)
   })
 
-  it('names the one system that installs but does not look by itself: Windows', () => {
-    expect(updatesOnDemandOnly('win32')).toBe(true)
-    expect(updatesOnDemandOnly('darwin')).toBe(false)
-    expect(updatesOnDemandOnly('linux')).toBe(false)
-    for (const value of [undefined, null, 42]) expect(updatesOnDemandOnly(value)).toBe(false)
+  it('reads elsewhere autoUpdate alone: the Windows switch turns nothing on', () => {
+    for (const platform of ['darwin', 'linux', undefined]) {
+      expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: false }, platform), String(platform)).toBe(true)
+      expect(autoUpdateOn({ autoUpdate: false, windowsAutoUpdate: true }, platform), String(platform)).toBe(false)
+    }
+  })
+
+  it('counts only a real true: a value that is not a boolean is off', () => {
+    expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: 'true' as unknown as boolean }, 'win32')).toBe(false)
+    expect(autoUpdateOn({ autoUpdate: 1 as unknown as boolean, windowsAutoUpdate: false }, 'darwin')).toBe(false)
   })
 })
 
@@ -84,10 +92,6 @@ describe('facts', () => {
 
   it('give an installer to macOS and Windows, and none to Linux yet', () => {
     expect(PLATFORM_IDS.map((id) => PLATFORM_FACTS[id].selfUpdate)).toEqual([true, true, false])
-  })
-
-  it('make Windows the one system that does not look for an update by itself', () => {
-    expect(PLATFORM_IDS.map((id) => PLATFORM_FACTS[id].lookInBackground)).toEqual([true, false, true])
   })
 
   it('leave the spell checker off by default where it would download dictionaries from Chromium’s CDN', () => {

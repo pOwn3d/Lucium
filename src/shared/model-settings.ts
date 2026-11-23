@@ -144,8 +144,14 @@ export interface Settings {
   appIcon: string
   /** Ask before ⌘Q. */
   warnBeforeQuitting: boolean
-  /** Look for a newer version at launch and once a day when an update feed is configured. */
+  /** Look for a newer version at launch and once a day when an update feed is configured. macOS and Linux read it; Windows reads `windowsAutoUpdate` instead (shared/platform.ts, `autoUpdateOn`). */
   autoUpdate: boolean
+  /**
+   * The same look, for Windows alone, and OFF by default for everyone: the first Windows version that reads the signed feed makes no request nobody asked for
+   * (AGENTS.md §5). It is a setting of its own, not `autoUpdate`, because every profile of the 1.1.5 carries `autoUpdate: true` without having chosen it: the old
+   * switch must not turn the look on. A profile that has `autoUpdate: true` and no such field gets false (the defaults fill it).
+   */
+  windowsAutoUpdate: boolean
   /**
    * The channel the updates come from: `stable` (the default) or `test`, which gets the versions before the stable one does. It only chooses between the two
    * addresses sealed into a build, and means something only for a build that carries a test one: it can never name an address.

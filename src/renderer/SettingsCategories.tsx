@@ -198,7 +198,7 @@ function BlockerCategory({ snapshot, update }: PaneProps) {
         <ProtectionLevelRow snapshot={snapshot} update={update} />
       </Group>
       <Group title={t('security-check.title')}>
-        <SubpageEntry id="securitycheck" snapshot={snapshot} summary={securityCheckSummary(securityCheck({ settings, sitePermissions: snapshot.state.sitePermissions, extensions: snapshot.extensions, engine: snapshot.engine }))} />
+        <SubpageEntry id="securitycheck" snapshot={snapshot} summary={securityCheckSummary(securityCheck({ settings, sitePermissions: snapshot.state.sitePermissions, extensions: snapshot.extensions, engine: snapshot.engine, platform: snapshot.platform }))} />
       </Group>
       <Subpage id="securitycheck">
         <SecurityCheck snapshot={snapshot} />

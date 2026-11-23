@@ -9,6 +9,7 @@
 import { AUTOMATION_SCHEME } from './automation-url'
 import { DISK_ACCESS_SETTINGS_URL } from './import-sources'
 import { t } from './i18n'
+import type { Settings } from './model'
 
 export type PlatformId = 'darwin' | 'win32' | 'linux'
 
@@ -72,12 +73,6 @@ export interface PlatformFacts {
    * (main/shell/windows-update.ts). Linux has none yet (its AppImage and .deb are a later lot): an update is made by hand from the download page (`updatesByHand`).
    */
   selfUpdate: boolean
-  /**
-   * The application may look for an update by itself, in the background, while « Rechercher les mises à jour automatiquement » is on. macOS does (the decision of
-   * 5 November 2026), and so does Linux for an address written by hand (it reads no built-in one: `updatesByHand`); Windows does not yet: its first look is the one
-   * the person asks for (the menu, the About button), and a network call that nobody asked for waits for the maintainer's answer (docs/plateformes.md, `looksInBackground`).
-   */
-  lookInBackground: boolean
 }
 
 export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
@@ -102,8 +97,7 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     pathDelimiter: ':',
     systemSpellChecker: true,
     posixFileModes: true,
-    selfUpdate: true,
-    lookInBackground: true
+    selfUpdate: true
   },
   win32: {
     trafficLights: false,
@@ -127,8 +121,7 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     pathDelimiter: ';',
     systemSpellChecker: false,
     posixFileModes: false,
-    selfUpdate: true,
-    lookInBackground: false
+    selfUpdate: true
   },
   linux: {
     trafficLights: false,
@@ -151,8 +144,7 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     pathDelimiter: ':',
     systemSpellChecker: false,
     posixFileModes: true,
-    selfUpdate: false,
-    lookInBackground: true
+    selfUpdate: false
   }
 }
 
@@ -166,16 +158,19 @@ export function updatesByHand(platform: unknown): boolean {
 }
 
 /**
- * Whether the application looks for an update by itself on this system (`lookInBackground`): the daily look and the notice it gives. A system that can install
- * but does not look by itself (Windows) is read only when the person asks, and its Settings show a sentence in place of the switch. Anything that is not a
+ * The setting that switches the daily look for an update on, on this system: Windows has one of its own, `windowsAutoUpdate`, off by default for everyone; every
+ * other system reads `autoUpdate`. Not a fact of the table above: a fact says what a system offers, this says which switch is the person's. Anything that is not a
  * string gets the macOS behaviour, as in `updatesByHand`.
  */
-export function looksInBackground(platform: unknown): boolean {
-  return typeof platform !== 'string' || PLATFORM_FACTS[platformOf(platform)].lookInBackground
+export function autoUpdateKey(platform: unknown): 'autoUpdate' | 'windowsAutoUpdate' {
+  return typeof platform === 'string' && platformOf(platform) === 'win32' ? 'windowsAutoUpdate' : 'autoUpdate'
 }
 
-/** Whether an update is searched on demand only on this system: it installs one (`selfUpdate`) but never looks by itself (Windows). */
-export const updatesOnDemandOnly = (platform: unknown): boolean => typeof platform === 'string' && !updatesByHand(platform) && !looksInBackground(platform)
+/**
+ * Whether the person has switched the look for an update by itself on, on this system. Strictly `true`: a value that is not a boolean (a file written by hand) is off,
+ * and on Windows the old `autoUpdate` says nothing, whatever it holds.
+ */
+export const autoUpdateOn = (settings: Pick<Settings, 'autoUpdate' | 'windowsAutoUpdate'>, platform: unknown): boolean => settings[autoUpdateKey(platform)] === true
 
 // ---- words ----
 

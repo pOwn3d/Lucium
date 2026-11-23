@@ -144,7 +144,7 @@ export const SETTINGS_KEYS = {
     'urlAutomation'
   ],
   // Mises à jour · Icône du Dock · À propos · État de Lucium
-  about: ['autoUpdate', 'updateChannel', 'whatsNewSheet', 'appIcon']
+  about: ['autoUpdate', 'windowsAutoUpdate', 'updateChannel', 'whatsNewSheet', 'appIcon']
 } as const satisfies Record<SettingsPage, readonly SettingKey[]>
 
 /**

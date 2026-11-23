@@ -16,6 +16,7 @@ import {
   type UpdateNoticeMemory
 } from '@shared/auto-update'
 import type { Settings } from '@shared/model'
+import { autoUpdateOn } from '@shared/platform'
 import type { FeatureGates } from './feature-gate'
 import { feedAnswer, feedFetchInit, updateOutcome, urgentSecurityFix, withdrawnVersions, type FeedAnswer, type UpdateOffer, type UpdateOutcome } from '@shared/update-check'
 import { runningTarget, type FeedTarget } from '@shared/update-target'
@@ -32,6 +33,8 @@ export interface AutoUpdateDeps {
   version: string
   /** The system this copy runs on (a test's stand-in); absent, the real one. A feed for another system is not read (shared/update-target.ts). */
   target?: FeedTarget
+  /** The system this copy runs on (a test's stand-in); absent, the real one: it says which switch is the person's (`autoUpdateOn`). */
+  platform?: string
   /** The feed to read for these settings, or null: the setting is off, or there is no address to read (update-source.ts, `backgroundFeed`). */
   feed: (settings: Settings) => string | null
   fetchFeed: (url: string) => Promise<FeedAnswer>
@@ -115,7 +118,7 @@ export class AutoUpdater {
     if (!waiting) return false
     const settings = this.deps.settings()
     const memory = cleanUpdateNotices(settings.updateNotices)
-    if (!settings.autoUpdate) {
+    if (!autoUpdateOn(settings, this.deps.platform ?? process.platform)) {
       this.waiting = null
       return false
     }
@@ -174,9 +177,10 @@ export class AutoUpdater {
   }
 }
 
-/** The looks (a timer at launch and one a day) run only while "Rechercher les mises à jour automatiquement" is on: the setting off owns no timer. */
-export function gateAutoUpdate(gates: FeatureGates, updater: AutoUpdater): void {
-  gates.gate('auto-update', {
+/** The looks (a timer at launch and one a day) run only while "Rechercher les mises à jour automatiquement" is on (the switch of the system: `autoUpdateOn`): the setting off owns no timer. */
+export function gateAutoUpdate(gates: FeatureGates, updater: AutoUpdater, platform: string = process.platform): void {
+  // Windows follows its own switch, off by default; the other systems follow the one they always had. The other feature is never gated: the unused switch commands nothing.
+  gates.gate(platform === 'win32' ? 'auto-update-windows' : 'auto-update', {
     start: () => {
       updater.start()
       return () => updater.stop()

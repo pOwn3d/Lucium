@@ -3162,6 +3162,7 @@
     "updateFeedUrl",
     "updateChannel",
     "autoUpdate",
+    "windowsAutoUpdate",
     "proxyEnabled",
     "proxy",
     "dohMode",

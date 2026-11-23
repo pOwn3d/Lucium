@@ -462,9 +462,9 @@ export function reduceSpaces(state: SidebarState, action: Action, ctx: Ctx, agai
       const network = { translateModelsDir, proxyEnabled, proxy, dohCustom, dohMode, dohProvider, dohCustomUrl, profiles, containers }
       // Nor does it decide what Lucium does on its own: reading pages again on a timer, taking addresses from other applications, looking for updates.
       // The pages to watch are the file's only while watching is off here: they then wait for the person to turn it on.
-      const { pageWatch, urlAutomation, autoUpdate } = state.settings
+      const { pageWatch, urlAutomation, autoUpdate, windowsAutoUpdate } = state.settings
       const pageWatches = pageWatch ? state.settings.pageWatches : restored.settings.pageWatches
-      const unattended = { pageWatch, pageWatches, urlAutomation, autoUpdate }
+      const unattended = { pageWatch, pageWatches, urlAutomation, autoUpdate, windowsAutoUpdate }
       const kept = { ...restored.settings, ...unattended, extensionPaths, chromeNativeHosts, updateFeedUrl, updateChannel, webStoreInstall, webStoreUpdates, openWithApps, retiredProfileIds, ...network, ...lock }
       // Nor does it run its scripts: as with boost/import, a Tweak that carries JavaScript comes back with the script waiting for the person to turn it on.
       // Nor does it fetch anything through its styles: a Tweak whose CSS would be refused to a shared Tweak (an address to load, a selector that

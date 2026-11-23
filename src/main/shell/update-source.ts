@@ -11,14 +11,15 @@
 // setting (`stable` by default) only chooses between the two sealed addresses, so that a profile file still cannot name an address: `test` is
 // followed only by a build that carries a test address, and a build with one address behaves as it always did, whatever the setting says.
 //
-// The look runs when the user asks (the menu command, the About button), and on macOS in the background while "Rechercher les mises à jour
-// automatiquement" is on (auto-update.ts, `backgroundFeed`): the built application then reads the same address as the menu, the built-in one (the
-// maintainer's decision of 5 November 2026: the notice of an update comes by itself). Windows reads only when asked: its background look waits for the
-// maintainer's answer (shared/platform.ts, `looksInBackground`). A run from the sources never reads the built-in address in the background. A build without a built-in address keeps the old behaviour: the address of the environment or of the setting, and a download page
-// opened in the browser.
+// The look runs when the user asks (the menu command, the About button), and in the background while the switch of the system is on (auto-update.ts,
+// `backgroundFeed`): the built application then reads the same address as the menu, the built-in one (the maintainer's decision of 5 November 2026: the
+// notice of an update comes by itself). The switch is `autoUpdate` on macOS (on by default) and `windowsAutoUpdate` on Windows (off by default, the maintainer's
+// decision of 23 November 2026: AGENTS.md §5, a request nobody asked for is off; shared/platform.ts, `autoUpdateOn`). A run from the sources never reads the
+// built-in address in the background. A build without a built-in address keeps the old behaviour: the address of the environment or of the setting, and a
+// download page opened in the browser.
 
 import type { Settings, UpdateChannel } from '@shared/model'
-import { looksInBackground, updatesByHand } from '@shared/platform'
+import { autoUpdateOn, updatesByHand } from '@shared/platform'
 import { isBuiltApp } from '../runtime'
 
 const https = (url: string): boolean => /^https:\/\/\S+$/i.test(url)
@@ -75,18 +76,20 @@ export function updateSources(facts: UpdateSourceFacts): UpdateSources {
 
 /**
  * The feed the background look reads (Réglages › Général, "Rechercher les mises à jour automatiquement"), or null when nothing is to be read:
- * - the setting off: null, whatever else is configured;
- * - a system that does not look by itself (Windows, `looksInBackground`): null, whatever the setting says. What the person asks for (the menu) is read;
- *   what nobody asked for is not;
+ * - the switch of this system off (`autoUpdateOn`: `autoUpdate` everywhere but Windows, `windowsAutoUpdate` there and only there): null, whatever else is
+ *   configured. On Windows `autoUpdate` is not read at all, so that the old switch (on by default in the 1.1.5, never chosen) asks nothing of the network;
  * - the built application: the feed the menu reads (`updateSources`), the built-in address when the build has one, else the one written by hand;
  * - a run from the sources: only an address given by hand (the variable, then the setting), never the built-in one;
  * and always an https address, or null.
  */
-export function backgroundFeed(facts: UpdateSourceFacts, autoUpdate: boolean): string | null {
-  if (!autoUpdate || !looksInBackground(facts.platform)) return null
+export function backgroundFeed(facts: UpdateSourceFacts, switches: UpdateSwitches): string | null {
+  if (!autoUpdateOn(switches, facts.platform)) return null
   const feed = facts.builtApp ? updateSources(facts).check : (facts.env ?? facts.setting).trim()
   return https(feed) ? feed : null
 }
+
+/** The two switches of the look in the background: the system reads one of them (`autoUpdateOn`). */
+export type UpdateSwitches = Pick<Settings, 'autoUpdate' | 'windowsAutoUpdate'>
 
 /** The stable address built into this application by electron-vite (replaced by a literal at build time). */
 export const builtInFeed = (): string => (import.meta.env.MAIN_VITE_UPDATE_FEED ?? '').trim()
@@ -119,6 +122,6 @@ export function currentUpdateSources(settings: UpdateSourceSettings): UpdateSour
 }
 
 /** The feed the background look of this run reads for these settings, or null. */
-export function currentBackgroundFeed(settings: UpdateSourceSettings & Pick<Settings, 'autoUpdate'>): string | null {
-  return backgroundFeed(currentFacts(settings), settings.autoUpdate)
+export function currentBackgroundFeed(settings: UpdateSourceSettings & UpdateSwitches): string | null {
+  return backgroundFeed(currentFacts(settings), settings)
 }

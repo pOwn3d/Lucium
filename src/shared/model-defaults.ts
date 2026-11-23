@@ -127,6 +127,7 @@ export function defaultSettings(): Settings {
     websiteAppearance: 'auto',
     warnBeforeQuitting: true,
     autoUpdate: true,
+    windowsAutoUpdate: false,
     updateChannel: 'stable',
     chromeNativeHosts: false,
     littleArcShortcut: true,

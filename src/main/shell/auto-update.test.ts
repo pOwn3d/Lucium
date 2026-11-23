@@ -33,7 +33,7 @@ function profile(over: Partial<Settings> = {}) {
 }
 
 /** One launch of Lucium on that profile: a fresh updater, with a feed, a window that may or may not show the notice, and an installer. */
-function launch(p: ReturnType<typeof profile>, options: { answer?: () => FeedAnswer; window?: () => boolean; installer?: InstallerState | null; target?: FeedTarget } = {}) {
+function launch(p: ReturnType<typeof profile>, options: { answer?: () => FeedAnswer; window?: () => boolean; installer?: InstallerState | null; target?: FeedTarget; platform?: string; feed?: (settings: Settings) => string | null } = {}) {
   const shown: UpdateNotice[] = []
   const told: DroppedNotice[] = []
   const fetchFeed = vi.fn(async () => (options.answer ?? (() => releaseFile('0.2.2')))())
@@ -43,7 +43,8 @@ function launch(p: ReturnType<typeof profile>, options: { answer?: () => FeedAns
     version: '0.2.1',
     // The feed of this test is a release file of macOS (no `platform`): it is read as one, on whatever system the test runs.
     target: options.target ?? { platform: 'darwin', arch: 'arm64' },
-    feed: (settings) => (settings.autoUpdate ? FEED : null),
+    ...(options.platform ? { platform: options.platform } : {}),
+    feed: options.feed ?? ((settings) => (settings.autoUpdate ? FEED : null)),
     fetchFeed,
     notify: (notice) => {
       if (options.window && !options.window()) return false
@@ -100,6 +101,29 @@ describe('the background look', () => {
     expect(await run.updater.check()).toBeNull()
     expect(run.fetchFeed).not.toHaveBeenCalled()
     expect(run.shown).toEqual([])
+  })
+
+  // The notice is shown only while the switch of THIS system is on (`autoUpdateOn`): the feed of these tests answers whatever the switches say, so that the
+  // guard of the notice itself is what is tried.
+  it('on Windows, shows the notice of an offer found only while its own switch is on: the old autoUpdate, true without having been chosen, shows nothing', async () => {
+    const off = launch(profile({ autoUpdate: true, windowsAutoUpdate: false }), { platform: 'win32', feed: () => FEED, installer: installer() })
+    expect((await off.updater.check())?.kind).toBe('available')
+    expect(off.shown).toEqual([])
+    expect(off.updater.offer()).toBe(false)
+    const on = launch(profile({ autoUpdate: false, windowsAutoUpdate: true }), { platform: 'win32', feed: () => FEED, installer: installer() })
+    expect((await on.updater.check())?.kind).toBe('available')
+    expect(on.shown.map((n) => n.version)).toEqual(['0.2.2'])
+  })
+
+  it('on macOS and Linux, shows the notice with autoUpdate on and never for the Windows switch alone', async () => {
+    for (const platform of ['darwin', 'linux']) {
+      const windowsOnly = launch(profile({ autoUpdate: false, windowsAutoUpdate: true }), { platform, feed: () => FEED, installer: installer() })
+      expect((await windowsOnly.updater.check())?.kind, platform).toBe('available')
+      expect(windowsOnly.shown, platform).toEqual([])
+      const own = launch(profile({ autoUpdate: true, windowsAutoUpdate: false }), { platform, feed: () => FEED, installer: installer() })
+      expect((await own.updater.check())?.kind, platform).toBe('available')
+      expect(own.shown.map((n) => n.version), platform).toEqual(['0.2.2'])
+    }
   })
 
   it('shows nothing when the look fails, and offers the version at the next look that succeeds', async () => {

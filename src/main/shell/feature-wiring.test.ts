@@ -18,6 +18,7 @@ const { gateAutoArchive, ARCHIVE_SWEEP_MS } = await import('./auto-archive')
 const { AutoReloader } = await import('./auto-reload')
 const { LittleShortcut, gateLittleShortcut } = await import('./little-shortcut')
 const { gateThumbnails } = await import('./thumbnails')
+const { backgroundFeed } = await import('./update-source')
 
 const MINUTE = 60_000
 const HOUR = 60 * MINUTE
@@ -177,6 +178,81 @@ describe('the automatic update look, through its gate', () => {
     expect(t.fetchFeed).toHaveBeenCalledTimes(2)
     t.gates.disposeAll()
     expect(vi.getTimerCount()).toBe(0)
+  })
+})
+
+// The look in the background follows ONE switch per system: `autoUpdate` on macOS and Linux, `windowsAutoUpdate` on Windows, which is off by default for everyone
+// (shared/platform.ts, `autoUpdateOn`). The feed of these tests is the real `backgroundFeed` of a built application with a built-in address, so that the switch
+// of the system is what decides, from the gate to the request.
+describe('the automatic update look, on each system, through the gate of its own switch', () => {
+  const WINDOWS_FEED = 'https://lucium.app/updates/win32-x64/feed.json'
+  function setup(platform: NodeJS.Platform, settings: Partial<Settings>) {
+    const store = liveStore(settings)
+    const fetchFeed = vi.fn(async () => ({ ok: false as const, reason: 'test feed' }))
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const updater = new AutoUpdater({
+      settings: () => store.get().settings,
+      version: '1.0.0',
+      platform,
+      feed: (current) => backgroundFeed({ builtIn: WINDOWS_FEED, builtInTest: '', channel: 'stable', builtApp: true, platform, env: undefined, setting: '' }, current),
+      fetchFeed,
+      notify: () => true,
+      remember: () => undefined
+    })
+    const gates = new FeatureGates(store)
+    gateAutoUpdate(gates, updater, platform)
+    return { store, fetchFeed, gates }
+  }
+
+  it('on Windows, a profile that only has the old autoUpdate on (the 1.1.5 default) owns no timer and asks nothing: the new switch is off by default', async () => {
+    const t = setup('win32', {})
+    expect(t.store.get().settings).toMatchObject({ autoUpdate: true, windowsAutoUpdate: false })
+    expect(t.gates.running()).toEqual([])
+    expect(vi.getTimerCount()).toBe(0)
+    await vi.advanceTimersByTimeAsync(72 * HOUR)
+    expect(t.fetchFeed).not.toHaveBeenCalled()
+    t.gates.disposeAll()
+  })
+
+  it('on Windows, looks 20 seconds after launch, then once a day, while its own switch is on, whatever the old one says', async () => {
+    const t = setup('win32', { autoUpdate: false, windowsAutoUpdate: true })
+    expect(t.gates.running()).toEqual(['auto-update-windows'])
+    expect(vi.getTimerCount()).toBe(2)
+    await vi.advanceTimersByTimeAsync(19_000)
+    expect(t.fetchFeed).not.toHaveBeenCalled()
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(t.fetchFeed).toHaveBeenCalledTimes(1)
+    expect(t.fetchFeed).toHaveBeenLastCalledWith(WINDOWS_FEED)
+    await vi.advanceTimersByTimeAsync(24 * HOUR)
+    expect(t.fetchFeed).toHaveBeenCalledTimes(2)
+    t.gates.disposeAll()
+  })
+
+  it('on Windows, frees both timers when its switch goes off, and the old switch turns nothing on afterwards', async () => {
+    const t = setup('win32', { windowsAutoUpdate: true })
+    await vi.advanceTimersByTimeAsync(21_000)
+    expect(t.fetchFeed).toHaveBeenCalledTimes(1)
+    t.store.set({ windowsAutoUpdate: false })
+    expect(vi.getTimerCount()).toBe(0)
+    t.store.set({ autoUpdate: false })
+    t.store.set({ autoUpdate: true })
+    expect(vi.getTimerCount()).toBe(0)
+    expect(t.gates.running()).toEqual([])
+    await vi.advanceTimersByTimeAsync(72 * HOUR)
+    expect(t.fetchFeed).toHaveBeenCalledTimes(1)
+    t.gates.disposeAll()
+  })
+
+  it.each(['darwin', 'linux'] as const)('on %s, the Windows switch turns nothing on, and the switch it always had still does', async (platform) => {
+    const t = setup(platform, { autoUpdate: false, windowsAutoUpdate: true })
+    expect(t.gates.running()).toEqual([])
+    expect(vi.getTimerCount()).toBe(0)
+    await vi.advanceTimersByTimeAsync(72 * HOUR)
+    expect(t.fetchFeed).not.toHaveBeenCalled()
+    t.store.set({ autoUpdate: true })
+    expect(t.gates.running()).toEqual(['auto-update'])
+    expect(vi.getTimerCount()).toBe(2)
+    t.gates.disposeAll()
   })
 })
 

@@ -452,6 +452,16 @@ export const FEATURES = [
     cost: ['network', 'timer']
   },
   {
+    // The same look, for Windows alone (shared/platform.ts, `autoUpdateKey`): its own switch, off by default for everyone. The application gates this one on Windows and
+    // `auto-update` everywhere else, so the one that is not the system's commands nothing.
+    id: 'auto-update-windows',
+    key: 'windowsAutoUpdate',
+    get label() { return t('features.rechercher-les-mises-a-jour-automatiquement-windows') },
+    group: 'system',
+    get description() { return t('features.lit-le-fichier-des-versions-signe-de-windows') },
+    cost: ['network', 'timer']
+  },
+  {
     id: 'warn-quit',
     key: 'warnBeforeQuitting',
     get label() { return t('settings.avertir-avant-de-quitter') },

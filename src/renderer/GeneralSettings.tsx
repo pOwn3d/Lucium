@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
 import { UI_SCALE_MAX, UI_SCALE_MIN, UI_SCALE_STEP } from '@shared/ui-scale'
-import { updatesByHand, updatesOnDemandOnly } from '@shared/platform'
+import { autoUpdateKey, updatesByHand } from '@shared/platform'
 import { api } from './api'
 import { FeatureSwitch } from './FeaturesSettings'
 import { MIN_FONT_SIZES } from '@shared/min-font-size'
@@ -79,7 +79,7 @@ export function DefaultBrowserRow() {
 }
 
 /**
- * The updates (« À propos et mises à jour »): the automatic check (on macOS; on Windows, which looks only when asked, and on Linux, which installs nothing yet, a sentence
+ * The updates (« À propos et mises à jour »): the automatic check (on macOS; on Windows its own switch, off by default; on Linux, which installs nothing yet, a sentence
  * instead), the test channel of a build that carries one, the news after an update.
  */
 export function UpdatesSettings({ snapshot, update }: PaneProps) {
@@ -91,11 +91,15 @@ export function UpdatesSettings({ snapshot, update }: PaneProps) {
         <div className="pref-row pref-message" role="status" data-role="updates-by-hand">
           {t('settings.cette-version-ne-se-met-pas-a-jour-toute-seule')}
         </div>
-      ) : updatesOnDemandOnly(snapshot.platform) ? (
-        // Windows installs an update after a click but never looks by itself: a switch would promise a daily look that does not exist, so the row says what does.
-        <div className="pref-row pref-message" role="status" data-role="updates-on-demand">
-          {t('settings.lucium-cherche-une-nouvelle-version-quand-vous-le-demandez')}
-        </div>
+      ) : autoUpdateKey(snapshot.platform) === 'windowsAutoUpdate' ? (
+        // Windows has a switch of its own, off by default for everyone: `autoUpdate` (on in every profile of the 1.1.5, never chosen) commands nothing there. The help says what is sent.
+        <Check
+          settingKey="windowsAutoUpdate"
+          label={t('features.rechercher-les-mises-a-jour-automatiquement')}
+          hint={t('settings.windows-recherche-automatique-eteinte-par-defaut')} more={t('settings.windows-recherche-automatique-ce-qui-est-envoye')}
+          checked={settings.windowsAutoUpdate}
+          onChange={(windowsAutoUpdate) => update({ windowsAutoUpdate })}
+        />
       ) : (
         <Check
           settingKey="autoUpdate"

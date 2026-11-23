@@ -691,7 +691,7 @@ describe('iOS contract: the closed list of settings (docs/synchronisation.md §1
   })
 
   it('keeps out what sets where the traffic and the updates go', () => {
-    for (const key of ['updateFeedUrl', 'proxy', 'dohCustomUrl', 'customFilterLists', 'extensionPaths']) expect(messageVectors.settingsNever, key).toContain(key)
+    for (const key of ['updateFeedUrl', 'proxy', 'dohCustomUrl', 'customFilterLists', 'extensionPaths', 'autoUpdate', 'windowsAutoUpdate']) expect(messageVectors.settingsNever, key).toContain(key)
   })
 })
 

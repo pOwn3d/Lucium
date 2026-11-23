@@ -228,6 +228,7 @@ function rich(): SidebarState {
     appIcon: APP_ICONS[1]!.id,
     warnBeforeQuitting: false,
     autoUpdate: false,
+    windowsAutoUpdate: true,
     chromeNativeHosts: true,
     littleArcShortcut: false,
     boostsEnabled: false,
@@ -548,6 +549,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   appIcon: isAppIconId,
   warnBeforeQuitting: bool,
   autoUpdate: bool,
+  windowsAutoUpdate: bool,
   chromeNativeHosts: bool,
   littleArcShortcut: bool,
   boostsEnabled: bool,
@@ -2041,6 +2043,32 @@ describe('what reaches the state by other doors than the file', () => {
     const { updateChannel: _gone, ...older } = rich().settings
     expect(norm({ ...clone(rich()), settings: older as never }).settings.updateChannel).toBe('stable')
     expect(defaultSettings().updateChannel).toBe('stable')
+  })
+
+  it('the Windows update switch is OFF by default and for every profile that never chose it: the old autoUpdate, true in the 1.1.5, does not turn it on', () => {
+    expect(defaultSettings().windowsAutoUpdate).toBe(false)
+    // The profile of a 1.1.5 on Windows: autoUpdate true (the default, never chosen), no such field.
+    const { windowsAutoUpdate: _gone, ...before } = rich().settings
+    const older = norm({ ...clone(rich()), settings: { ...before, autoUpdate: true } as never })
+    expect(older.settings.autoUpdate).toBe(true)
+    expect(older.settings.windowsAutoUpdate).toBe(false)
+    // A choice made on this version is kept as it is.
+    expect(norm(clone(rich())).settings.windowsAutoUpdate).toBe(true)
+    expect(norm({ ...clone(rich()), settings: { ...rich().settings, windowsAutoUpdate: false, autoUpdate: true } }).settings.windowsAutoUpdate).toBe(false)
+  })
+
+  it('a Windows update switch that is not exactly true is off: a damaged or hand-edited file never starts the daily look', () => {
+    for (const odd of ['true', 'yes', 1, 'on', null, {}, [true], 'True']) {
+      expect(norm({ ...clone(rich()), settings: { ...rich().settings, windowsAutoUpdate: odd as never, autoUpdate: true } }).settings.windowsAutoUpdate, JSON.stringify(odd)).toBe(false)
+    }
+  })
+
+  it('a restore keeps this installation\'s update switches: a file from elsewhere decides nothing on its own about the look for updates', () => {
+    const current = norm({ ...clone(rich()), settings: { ...rich().settings, autoUpdate: true, windowsAutoUpdate: false } })
+    const fromElsewhere = clone(rich())
+    fromElsewhere.settings = { ...fromElsewhere.settings, autoUpdate: false, windowsAutoUpdate: true }
+    const restored = reduce(current, { type: 'state/restore', state: fromElsewhere }, ctx)
+    expect(restored.settings).toMatchObject({ autoUpdate: true, windowsAutoUpdate: false })
   })
 
   it('a damaged list of remembered applications is rebuilt entry by entry, and nothing named by a file can be an executable type or a program', () => {
