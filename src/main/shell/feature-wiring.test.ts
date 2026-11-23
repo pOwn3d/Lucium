@@ -134,13 +134,15 @@ describe('the automatic update look, through its gate', () => {
     const updater = new AutoUpdater({
       settings: () => store.get().settings,
       version: '1.0.0',
+      // The system of this test is macOS, whatever runs it: the switch read is `autoUpdate`, not the CI runner's.
+      platform: 'darwin',
       feed: (settings) => (settings.autoUpdate ? 'https://feed.example/latest' : null),
       fetchFeed,
       notify: () => true,
       remember: () => undefined
     })
     const gates = new FeatureGates(store)
-    gateAutoUpdate(gates, updater)
+    gateAutoUpdate(gates, updater, 'darwin')
     return { store, fetchFeed, gates }
   }
 

@@ -43,7 +43,8 @@ function launch(p: ReturnType<typeof profile>, options: { answer?: () => FeedAns
     version: '0.2.1',
     // The feed of this test is a release file of macOS (no `platform`): it is read as one, on whatever system the test runs.
     target: options.target ?? { platform: 'darwin', arch: 'arm64' },
-    ...(options.platform ? { platform: options.platform } : {}),
+    // Fixed like the target: the switch read is the one of this system (autoUpdate on macOS and Linux, windowsAutoUpdate on Windows), not the CI runner's.
+    platform: options.platform ?? 'darwin',
     feed: options.feed ?? ((settings) => (settings.autoUpdate ? FEED : null)),
     fetchFeed,
     notify: (notice) => {
