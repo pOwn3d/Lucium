@@ -32,6 +32,13 @@
 // The feed also lists the versions withdrawn from its channel (`withdrawn`, Lucium's own key): a copy that runs one of them reads it in the file it
 // reads anyway and says so (shared/update-check.ts). A withdrawal writes the list, and every later publication carries it.
 //
+// The same publication carries the installers of Windows (NSIS) and of Linux (AppImage, .deb) with `--platform win32-x64|linux-x64|linux-arm64`
+// (the study of card 819, section 5.5). What is the Mac's alone (the notarization ticket, the fuses of the installed app, the disk image, the
+// record of the build) is not asked of them; in its place the installer is the file that CI built on the tag and the maintainer copied (its SHA-256 is given
+// with `--sha256`, the sum the CI run logged), the tag names the commit, and the feed it writes says which system it is for (`platform`, `arch`, `kind`: signed
+// with the rest). Each system has its own folder of the server and its own https folder, its own journal lines and its own withdrawal. The Mac publishes
+// as it always did: a test keeps what it says, runs, writes and journals (publish-update-mac-reference.test.ts).
+//
 // The code is either pure (the channels, the arguments, the commands, the checks) or takes its effects as `PublishDeps`: the script gives the real
 // ones (`realDeps`), the tests a fake one. So the order of the steps, and what stops them, is tested without a network or a server.
 import { spawn, spawnSync } from 'node:child_process'
@@ -72,6 +79,56 @@ export const TEST_CHANNEL = 'test'
 /** The name of the release file, on the server and in the https folder. */
 export const FEED_NAME = 'feed.json'
 
+/** The system the publication is for when `--platform` is not given: the Mac, which publishes as it always did. */
+export const MAC_TARGET = 'darwin-arm64'
+
+/**
+ * The systems a publication can be for (`<platform>-<arch>`: also the folder of the https address and of the server, `updates/<id>/`), and the installers each takes
+ * (the same table as shared/update-target.ts: this file imports nothing of the project, and a test keeps the two equal). The Mac takes the archive of Squirrel.Mac.
+ */
+export const INSTALLER_KINDS: Readonly<Record<string, readonly string[]>> = {
+  'darwin-arm64': ['zip'],
+  'win32-x64': ['nsis'],
+  'linux-x64': ['appimage', 'deb'],
+  'linux-arm64': ['appimage', 'deb']
+}
+
+/** The extension of the file of each installer: what tells the kind (an .exe is not an AppImage), as in update-feed-file.ts. */
+export const KIND_EXTENSIONS: Readonly<Record<string, string>> = { zip: '.zip', nsis: '.exe', appimage: '.AppImage', deb: '.deb' }
+
+/** How a file name spells an architecture (electron-builder.yml, `artifactName`): an installer whose name spells another one is not the one of this system. */
+export const ARCH_WORDS: Readonly<Record<string, readonly string[]>> = { x64: ['x64', 'amd64'], arm64: ['arm64', 'aarch64'] }
+
+/** Whether `id` is a system a publication can be for. */
+export const isTargetId = (id: string): boolean => Object.prototype.hasOwnProperty.call(INSTALLER_KINDS, id)
+
+/**
+ * The kind of installer a file is for `target`, from its extension, or why it is none. The extension decides, and it must be one the system takes: an .exe
+ * published for Linux, or an AppImage for Windows, is refused here, before anything is read of it.
+ */
+export function installerKindOf(fileName: string, target: string): { kind: string } | { problem: string } {
+  const kinds = INSTALLER_KINDS[target]
+  if (!kinds || target === MAC_TARGET) return { problem: `${target} is not a system whose installer is published here (${Object.keys(INSTALLER_KINDS).filter((id) => id !== MAC_TARGET).join(', ')})` }
+  const kind = kinds.find((candidate) => fileName.endsWith(KIND_EXTENSIONS[candidate] as string))
+  if (!kind) return { problem: `${fileName} is not an installer of ${target}: it must end with ${kinds.map((candidate) => KIND_EXTENSIONS[candidate]).join(' or ')}` }
+  return { kind }
+}
+
+/** What is wrong with the name of the installer of `version` for `target`, or null: a plain name that carries the version and the architecture of the system. */
+export function installerNameProblem(fileName: string, version: string, target: string): string | null {
+  if (!/^[A-Za-z0-9._-]+$/.test(fileName)) return `the name of the installer must be plain letters, digits, dots, hyphens and underscores: ${fileName}`
+  if (!fileName.includes(`-${version}-`)) return `the installer is not named for ${version} (the name must carry -${version}-): ${fileName}. Copy the installer of the version of package.json`
+  const words = ARCH_WORDS[target.slice(target.indexOf('-') + 1)] ?? []
+  if (!words.some((word) => fileName.includes(`-${word}.`) || fileName.includes(`-${word}-`))) return `the name of the installer does not carry the architecture of ${target} (${words.join(' or ')}): ${fileName}`
+  return null
+}
+
+/** The https folder of a system on a channel: the Mac's is the one of the repository, the others' sit beside it (`updates/<id>/`). Null when the channel's address is not the Mac's. */
+export const baseUrlOf = (macBaseUrl: string, target: string): string | null => {
+  if (target === MAC_TARGET) return macBaseUrl
+  return macBaseUrl.endsWith(`/${MAC_TARGET}/`) ? `${macBaseUrl.slice(0, -`${MAC_TARGET}/`.length)}${target}/` : null
+}
+
 /** The name of the archive the build writes, `Lucium-<version>-arm64.zip`. */
 const ARCHIVE_NAME = /^Lucium-(\d+\.\d+\.\d+)-arm64\.zip$/
 
@@ -98,6 +155,9 @@ export const DEFAULT_CONFIG_PATH = ['Library', 'Application Support', 'lucium-se
 
 /** The shape of the file, shown whenever it is missing or wrong. */
 export const CONFIG_SHAPE = '{ "test": { "host": "user@host", "folder": "/absolute/folder" }, "stable": { "host": "user@host", "folder": "/absolute/folder" } }'
+
+/** The key of a channel that holds the folders of the other systems (`--platform`), as `{ "win32-x64": "/absolute/folder" }`. The Mac's is "folder". */
+export const FOLDERS_KEY = 'folders'
 
 /** The file, as it was read: missing, unusable (not readable, not JSON), or its parsed content. */
 export type ChannelFile = { path: string; state: 'missing' } | { path: string; state: 'unusable'; reason: string } | { path: string; state: 'read'; config: unknown }
@@ -132,7 +192,7 @@ const asRecord = (value: unknown): Record<string, unknown> | null => (typeof val
  * The channel `name`: its https folder from the repository, its server and folder from the file. Nothing is guessed: a missing file, a missing
  * channel or a wrong value is refused with a message that names the file and the shape it must have.
  */
-export function resolveChannel(name: string, file: ChannelFile, publicChannels: Record<string, { baseUrl: string }> = PUBLIC_CHANNELS): ChannelChoice {
+export function resolveChannel(name: string, file: ChannelFile, publicChannels: Record<string, { baseUrl: string }> = PUBLIC_CHANNELS, target: string = MAC_TARGET): ChannelChoice {
   if (!Object.prototype.hasOwnProperty.call(publicChannels, name)) return { ok: false, message: `Unknown channel "${name}" (known: ${Object.keys(publicChannels).join(', ')})` }
   const shape = `Expected shape of ${file.path}:\n  ${CONFIG_SHAPE}`
   if (file.state === 'missing') {
@@ -147,8 +207,26 @@ export function resolveChannel(name: string, file: ChannelFile, publicChannels: 
   const problems: string[] = []
   for (const key of ['host', 'folder']) if (typeof entry[key] !== 'string') problems.push(`"${key}" must be a string`)
   // The address is the repository's: a "baseUrl" in the file would look as if it were used and would not be.
-  for (const key of Object.keys(entry)) if (key !== 'host' && key !== 'folder') problems.push(`"${key}" is not a key of a channel (only "host" and "folder": the address is the repository's)`)
-  const channel: Channel = { host: String(entry['host']), folder: String(entry['folder']), baseUrl: (publicChannels[name] as { baseUrl: string }).baseUrl }
+  for (const key of Object.keys(entry)) if (key !== 'host' && key !== 'folder' && key !== FOLDERS_KEY) problems.push(`"${key}" is not a key of a channel (only "host", "folder" and "${FOLDERS_KEY}": the address is the repository's)`)
+  // The folders of the other systems: one entry each, never a guess from the Mac's folder.
+  const folders = FOLDERS_KEY in entry ? asRecord(entry[FOLDERS_KEY]) : {}
+  if (!folders) problems.push(`"${FOLDERS_KEY}" must be an object with one absolute folder per system (${Object.keys(INSTALLER_KINDS).filter((id) => id !== MAC_TARGET).join(', ')})`)
+  else {
+    for (const [id, folder] of Object.entries(folders)) {
+      if (!isTargetId(id) || id === MAC_TARGET) problems.push(`"${FOLDERS_KEY}.${id}" is not a system of another folder than "folder" (${Object.keys(INSTALLER_KINDS).filter((known) => known !== MAC_TARGET).join(', ')})`)
+      else if (typeof folder !== 'string') problems.push(`"${FOLDERS_KEY}.${id}" must be a string`)
+    }
+  }
+  const macBaseUrl = (publicChannels[name] as { baseUrl: string }).baseUrl
+  const baseUrl = baseUrlOf(macBaseUrl, target)
+  if (baseUrl === null) problems.push(`the address of the channel ${macBaseUrl} does not end with /${MAC_TARGET}/: the address of ${target} cannot be made from it`)
+  let folder = String(entry['folder'])
+  if (target !== MAC_TARGET) {
+    const given = folders?.[target]
+    if (typeof given === 'string') folder = given
+    else problems.push(`"${FOLDERS_KEY}.${target}" is missing: the folder of ${target} on the server is not guessed from the Mac's`)
+  }
+  const channel: Channel = { host: String(entry['host']), folder, baseUrl: baseUrl ?? macBaseUrl }
   if (problems.length === 0) problems.push(...channelProblems(channel))
   if (problems.length > 0) return { ok: false, message: `The channel "${name}" in ${file.path} is misconfigured:\n  ${problems.join('\n  ')}\n${shape}` }
   return { ok: true, channel }
@@ -192,6 +270,10 @@ export interface PublishOptions {
   minTestHours: string | null
   /** `--security-fix "<reason>"`: the stable channel without the wait; the reason goes to the journal. */
   securityFix: string | null
+  /** `--platform <system>`: the system the file is the installer of (win32-x64, linux-x64, linux-arm64); null for the Mac, which publishes as it always did. */
+  platform: string | null
+  /** `--sha256 <sum>`, with `--platform`: the SHA-256 of the installer as the CI run logged it, compared with the file at hand. */
+  sha256: string | null
 }
 
 const VALUE_OPTIONS = {
@@ -209,7 +291,9 @@ const VALUE_OPTIONS = {
   '--min-test-hours': 'minTestHours',
   '--security-fix': 'securityFix',
   '--withdraw': 'withdraw',
-  '--to': 'to'
+  '--to': 'to',
+  '--platform': 'platform',
+  '--sha256': 'sha256'
 } as const
 
 /** A reason shorter than this says nothing ("urgent", "ok"). */
@@ -257,7 +341,9 @@ export function parsePublishArgs(args: string[]): ParsedArgs {
     minTestHours: null,
     securityFix: null,
     withdraw: null,
-    to: null
+    to: null,
+    platform: null,
+    sha256: null
   }
   for (let at = 0; at < args.length; at++) {
     const arg = args[at] as string
@@ -277,6 +363,16 @@ export function parsePublishArgs(args: string[]): ParsedArgs {
     } else if (options.archive === null) options.archive = arg
     else return { ok: false, message: `Only one archive can be published at a time (got ${options.archive} and ${arg})` }
   }
+  if (options.platform !== null) {
+    if (!isTargetId(options.platform) || options.platform === MAC_TARGET) {
+      return { ok: false, message: `--platform is one of ${Object.keys(INSTALLER_KINDS).filter((id) => id !== MAC_TARGET).join(', ')} (got ${options.platform}): the Mac is published without it` }
+    }
+    // What belongs to the Mac's build is not asked of an installer: an option that names it would look as if it were read.
+    for (const [flag, key] of [['--app', 'app'], ['--installed-app', 'installedApp'], ['--build-log', 'buildLog'], ['--build-record', 'buildRecord']] as const) {
+      if (options[key] !== null) return { ok: false, message: `${flag} is an option of the Mac's build: it does not go with --platform ${options.platform}` }
+    }
+    if (options.noDmg) return { ok: false, message: `--no-dmg is an option of the Mac's disk image: it does not go with --platform ${options.platform}` }
+  } else if (options.sha256 !== null) return { ok: false, message: '--sha256 only goes with --platform: the sum of the archive of the Mac is the one the build record holds' }
   // A withdrawal publishes nothing: an archive or an option of the build beside it would be a publication the maintainer did not mean.
   if (options.withdraw !== null) {
     if (!PLAIN_VERSION.test(options.withdraw)) return { ok: false, message: `--withdraw needs a version such as 1.0.1 (got ${options.withdraw})` }
@@ -291,7 +387,8 @@ export function parsePublishArgs(args: string[]): ParsedArgs {
       ['--no-engine-run', 'noEngineRun'],
       ['--attestation', 'attestation'],
       ['--min-test-hours', 'minTestHours'],
-      ['--security-fix', 'securityFix']
+      ['--security-fix', 'securityFix'],
+      ['--sha256', 'sha256']
     ] as const
     for (const [flag, key] of ofThePublication) {
       if (options[key] !== null) return { ok: false, message: `${flag} is an option of the publication: it does not go with --withdraw` }
@@ -330,6 +427,16 @@ export interface PublishInput {
   minTestHours: number
   /** The reason the stable channel is reached without the wait, or null. */
   securityFix: string | null
+  /** Set for the installer of Windows or Linux (`archive` is then that installer; the Mac's `app`, `installedApp`, `buildLog` and `buildRecord` are not read). Absent for the Mac. */
+  target?: InstallerTarget
+}
+
+/** What an installer is, beside its file: the system it is for, the sort of installer its extension says, and the SHA-256 of the CI run it is compared with. */
+export interface InstallerTarget {
+  /** `<platform>-<arch>`: win32-x64, linux-x64 or linux-arm64. */
+  id: string
+  kind: string
+  sha256: string
 }
 
 /** The journal, unless `--journal` or LUCIUM_PUBLISH_JOURNAL says otherwise: beside the file of the servers, outside the repository. */
@@ -341,6 +448,8 @@ export const DEFAULT_ENGINE_RUN = ['out-engine', 'release-run.json']
 /** The two files of a version that sit beside its archive (release-gate.ts has the same names, and a test keeps them equal). */
 export const buildRecordNameOf = (version: string): string => `Lucium-${version}-arm64.build.json`
 export const attestationNameOf = (version: string): string => `Lucium-${version}-arm64.attestation.json`
+/** The attestation of an installer: beside it, named for its system. */
+export const installerAttestationNameOf = (version: string, target: string): string => `Lucium-${version}-${target}.attestation.json`
 
 /** The key of the default: the name ssh-keygen gives a new key. Another one is named by `--ssh-key` or LUCIUM_PUBLISH_SSH_KEY. */
 export const DEFAULT_SSH_KEY = 'id_ed25519'
@@ -352,7 +461,7 @@ export function resolveInput(
   options: PublishOptions,
   env: { cwd: string; root: string; home: string; version: string; servers: ChannelFile; sshKeyFromEnv?: string | undefined; journalFromEnv?: string | undefined }
 ): ResolvedInput {
-  const choice = resolveChannel(options.channel, env.servers)
+  const choice = resolveChannel(options.channel, env.servers, PUBLIC_CHANNELS, options.platform ?? MAC_TARGET)
   if (!choice.ok) return choice
   // The ways out are checked before anything is read: a reason that says nothing, or a wait that is none, is an argument that is wrong.
   const waited = options.minTestHours === null ? { hours: DEFAULT_MIN_TEST_HOURS } : minTestHoursOf(options.minTestHours)
@@ -365,6 +474,7 @@ export function resolveInput(
   if (options.channel === TEST_CHANNEL && (options.securityFix !== null || options.minTestHours !== null)) {
     return { ok: false, message: `--security-fix and --min-test-hours are about the wait before the stable channel: they mean nothing on the channel "${TEST_CHANNEL}"` }
   }
+  if (options.platform !== null) return resolveInstallerInput(options, options.platform, choice.channel, env, waited.hours)
   const archive = options.archive ? resolve(env.cwd, options.archive) : join(env.root, 'dist-drm', `Lucium-${env.version}-arm64.zip`)
   const beside = (name: string): string => join(dirname(archive), name)
   return {
@@ -392,6 +502,49 @@ export function resolveInput(
   }
 }
 
+/**
+ * The input of the publication of an installer of Windows or Linux. The installer is named (nothing is guessed: there is no default place for a file copied from
+ * a CI run), its kind is what its extension says, and the SHA-256 of the CI run is given: an installer without a sum to compare it with is refused here.
+ */
+function resolveInstallerInput(
+  options: PublishOptions,
+  id: string,
+  channel: Channel,
+  env: { cwd: string; root: string; home: string; version: string; sshKeyFromEnv?: string | undefined; journalFromEnv?: string | undefined },
+  minTestHours: number
+): ResolvedInput {
+  if (options.archive === null) return { ok: false, message: `--platform ${id} publishes the installer that CI built on the tag and that was copied: name its file (node scripts/publish-update.mjs <installer> --platform ${id} --sha256 <sum of the CI run>)` }
+  if (options.sha256 === null) return { ok: false, message: `--platform ${id} needs --sha256 <sum>: the SHA-256 of the installer as the CI run logged it. An installer without a sum to compare it with is not published` }
+  if (!/^[0-9a-f]{64}$/.test(options.sha256)) return { ok: false, message: `--sha256 is 64 lowercase hexadecimal digits (got ${JSON.stringify(options.sha256)})` }
+  const archive = resolve(env.cwd, options.archive)
+  const kind = installerKindOf(basename(archive), id)
+  if ('problem' in kind) return { ok: false, message: kind.problem }
+  return {
+    ok: true,
+    input: {
+      version: env.version,
+      root: env.root,
+      archive,
+      app: '',
+      installedApp: '',
+      buildLog: null,
+      channelName: options.channel,
+      channel,
+      sshKey: resolve(env.cwd, options.sshKey || env.sshKeyFromEnv?.trim() || join(env.home, '.ssh', DEFAULT_SSH_KEY)),
+      dmg: false,
+      dryRun: options.dryRun,
+      journal: resolve(env.cwd, options.journal || env.journalFromEnv?.trim() || join(env.home, ...DEFAULT_JOURNAL_PATH)),
+      buildRecord: '',
+      engineRun: options.engineRun ? resolve(env.cwd, options.engineRun) : join(env.root, ...DEFAULT_ENGINE_RUN),
+      noEngineRun: options.noEngineRun?.trim() ?? null,
+      attestation: options.attestation ? resolve(env.cwd, options.attestation) : join(dirname(archive), installerAttestationNameOf(env.version, id)),
+      minTestHours,
+      securityFix: options.securityFix?.trim() ?? null,
+      target: { id, kind: kind.kind, sha256: options.sha256 }
+    }
+  }
+}
+
 export interface WithdrawInput {
   /** The version taken out of the channel. */
   version: string
@@ -403,6 +556,8 @@ export interface WithdrawInput {
   dryRun: boolean
   /** The journal of the publications: a withdrawal adds one line to it, of its own type, and reads nothing from it. */
   journal: string
+  /** The system whose channel the version is taken out of (`--platform`); absent for the Mac. */
+  target?: string
 }
 
 export type ResolvedWithdrawal = { ok: true; input: WithdrawInput } | { ok: false; message: string }
@@ -413,7 +568,7 @@ export function resolveWithdrawal(
   env: { cwd: string; home: string; servers: ChannelFile; sshKeyFromEnv?: string | undefined; journalFromEnv?: string | undefined }
 ): ResolvedWithdrawal {
   if (options.withdraw === null) return { ok: false, message: 'No version to withdraw (--withdraw <version>)' }
-  const choice = resolveChannel(options.channel, env.servers)
+  const choice = resolveChannel(options.channel, env.servers, PUBLIC_CHANNELS, options.platform ?? MAC_TARGET)
   if (!choice.ok) return choice
   return {
     ok: true,
@@ -424,7 +579,8 @@ export function resolveWithdrawal(
       channel: choice.channel,
       sshKey: resolve(env.cwd, options.sshKey || env.sshKeyFromEnv?.trim() || join(env.home, '.ssh', DEFAULT_SSH_KEY)),
       dryRun: options.dryRun,
-      journal: resolve(env.cwd, options.journal || env.journalFromEnv?.trim() || join(env.home, ...DEFAULT_JOURNAL_PATH))
+      journal: resolve(env.cwd, options.journal || env.journalFromEnv?.trim() || join(env.home, ...DEFAULT_JOURNAL_PATH)),
+      ...(options.platform !== null ? { target: options.platform } : {})
     }
   }
 }
@@ -598,18 +754,20 @@ export interface WithdrawPlan {
   statusOf: (url: string) => Command
   /** Writes `text` as the feed of the channel: the feed a withdrawal goes back to, or the one in place, with the list of the withdrawn versions. */
   writeFeed: (text: string) => Command
-  /** For the version the feed goes back to. */
-  target: (version: string) => { archiveUrl: string; readKept: Command; weighArchive: Command }
+  /** For the version the feed goes back to; `archiveName` is the file the kept feed names when it is not the Mac's archive. */
+  target: (version: string, archiveName?: string) => { archiveUrl: string; readKept: Command; weighArchive: Command }
 }
 
-export function withdrawPlan(plan: { version: string; channel: Channel; sshKey: string }): WithdrawPlan {
+export function withdrawPlan(plan: { version: string; channel: Channel; sshKey: string; installers?: readonly string[] }): WithdrawPlan {
   const { channel, version } = plan
   const ssh = (script: string): Command => sshCommand(channel, plan.sshKey, script)
   const D = `D=${shellWord(channel.folder)}`
   const feedUrl = new URL(FEED_NAME, channel.baseUrl).href
   // No --fail: the status is the answer (a withdrawn file must say 404). A HEAD, so that a check is not counted as a download.
   const statusOf = (url: string): Command => ({ program: 'curl', args: ['-sS', '-I', '-o', '/dev/null', '-w', '%{http_code}', url], timeoutMs: 2 * MINUTE })
-  const aside = [archiveNameOf(version), dmgNameOf(version), sumNameOf(version), keptFeedNameOf(version)]
+  // The Mac's files are made from the version. The installers of the other systems are named by the build: the ones the folder holds for the version (`installers`).
+  const files = plan.installers ? [...plan.installers] : [archiveNameOf(version), dmgNameOf(version), sumNameOf(version)]
+  const aside = [...files, keptFeedNameOf(version)]
   return {
     feedUrl,
     list: ssh(`sudo -n ls -1 ${shellWord(channel.folder)}`),
@@ -618,7 +776,7 @@ export function withdrawPlan(plan: { version: string; channel: Channel; sshKey: 
     keepWithdrawnFeed: ssh(`${D}; sudo -n cp -p $D/${FEED_NAME} $D/${keptFeedNameOf(version)}${WITHDRAWN_SUFFIX}`),
     dropFeed: ssh(`${D}; sudo -n mv -f $D/${FEED_NAME} $D/${keptFeedNameOf(version)}${WITHDRAWN_SUFFIX}`),
     setAsideFiles: ssh(`${D}; ${sudoWorks('set the files aside')}; for F in ${aside.join(' ')}; do if sudo -n test -e $D/$F; then sudo -n mv -f $D/$F $D/$F${WITHDRAWN_SUFFIX} || exit 1; fi; done`),
-    withdrawnUrls: [archiveNameOf(version), dmgNameOf(version), sumNameOf(version)].map((name) => new URL(name, channel.baseUrl).href),
+    withdrawnUrls: files.map((name) => new URL(name, channel.baseUrl).href),
     statusOf,
     // The text goes in the command itself, in base64 (letters, digits, "+", "/" and "=": nothing a shell reads), to a temporary file of the
     // server. Then the same way as a publication writes the feed: a temporary name in the folder, then renamed, root:root 0644.
@@ -626,18 +784,18 @@ export function withdrawPlan(plan: { version: string; channel: Channel; sshKey: 
       ssh(
         `${D}; T=$(mktemp) && printf %s ${Buffer.from(text, 'utf8').toString('base64')} | base64 -d > $T && sudo -n install -o root -g root -m 644 $T $D/.${FEED_NAME}.part && sudo -n mv $D/.${FEED_NAME}.part $D/${FEED_NAME}; S=$?; rm -f $T; if [ $S != 0 ]; then sudo -n rm -f $D/.${FEED_NAME}.part; exit 1; fi`
       ),
-    target: (to) => ({
-      archiveUrl: new URL(archiveNameOf(to), channel.baseUrl).href,
+    target: (to, archiveName = archiveNameOf(to)) => ({
+      archiveUrl: new URL(archiveName, channel.baseUrl).href,
       readKept: ssh(`sudo -n cat ${shellWord(`${channel.folder}/${keptFeedNameOf(to)}`)}`),
       // The sum, then the size alone on the next line. The size is counted on what root reads: a `wc -c < file` would open the file as the account.
-      weighArchive: ssh(`${D}; sudo -n sha256sum $D/${archiveNameOf(to)} && sudo -n cat $D/${archiveNameOf(to)} | wc -c`)
+      weighArchive: ssh(`${D}; sudo -n sha256sum $D/${archiveName} && sudo -n cat $D/${archiveName} | wc -c`)
     })
   }
 }
 
-export const makeFeedCommand = (root: string, archive: string, baseUrl: string): Command => ({
+export const makeFeedCommand = (root: string, archive: string, baseUrl: string, target?: { id: string; kind: string }): Command => ({
   program: 'node',
-  args: [join(root, 'scripts', 'make-update-feed.mjs'), archive, baseUrl],
+  args: [join(root, 'scripts', 'make-update-feed.mjs'), archive, baseUrl, ...(target ? ['--target', target.id, '--kind', target.kind] : [])],
   timeoutMs: 2 * MINUTE
 })
 
@@ -680,6 +838,8 @@ export interface ExpectedRelease {
   url: string
   sha256: string
   size: number
+  /** For the feed of an installer of Windows or Linux: the three words the feed must carry (`platform`, `arch`, `kind`). Absent for the Mac's, which carries none. */
+  target?: { platform: string; arch: string; kind: string }
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -706,6 +866,12 @@ export function feedProblems(text: string, want: ExpectedRelease): string[] {
   if (update['url'] !== want.url) problems.push(`the archive address is ${JSON.stringify(update['url'])}, expected ${want.url}`)
   if (update['sha256'] !== want.sha256) problems.push(`the SHA-256 is ${JSON.stringify(update['sha256'])}, expected ${want.sha256}`)
   if (update['size'] !== want.size) problems.push(`the size is ${JSON.stringify(update['size'])}, expected ${want.size}`)
+  // The words by which a copy knows the feed is for its system: a feed that names the right installer under the wrong platform is refused by the copies, so it is not published.
+  if (want.target) {
+    for (const key of ['platform', 'arch', 'kind'] as const) {
+      if (feed[key] !== want.target[key]) problems.push(`${key} is ${JSON.stringify(feed[key])}, expected "${want.target[key]}"`)
+    }
+  }
   return problems
 }
 
@@ -901,6 +1067,17 @@ export function imageRecordProblem(text: string, image: { name: string; sha256: 
   return null
 }
 
+/**
+ * The installers of `version` for `target` that a folder holds, from the names `ls -1` printed: the files whose extension is one the system takes, whose plain name
+ * is the installer of that version and of that system's architecture. Never the `.withdrawn` ones (their extension is not an installer's), never another version's.
+ */
+export function installerFilesOf(listing: string, version: string, target: string): string[] {
+  return listing
+    .split('\n')
+    .map((name) => name.trim())
+    .filter((name) => name !== '' && !('problem' in installerKindOf(name, target)) && installerNameProblem(name, version, target) === null)
+}
+
 /** The versions whose feed the folder keeps (`feed-<version>.json`), the highest first, from the names `ls -1` printed. */
 export function keptFeedVersions(listing: string): string[] {
   return listing
@@ -915,14 +1092,21 @@ export function keptFeedVersions(listing: string): string[] {
  * out. It must be the feed of `to`, a version below the withdrawn one and not before the first one of the channels, and name the archive of `to`
  * in the folder of this channel.
  */
-export function returnProblems(kept: ExpectedRelease | null, to: string, withdrawn: string, channel: Channel): string[] {
+export function returnProblems(kept: ExpectedRelease | null, to: string, withdrawn: string, channel: Channel, target?: string): string[] {
   const problems: string[] = []
   if (compareDotted(to, withdrawn) >= 0) problems.push(`${to} is not below ${withdrawn}: a withdrawal only goes back; a higher version is published, not returned to`)
   if (compareDotted(to, FIRST_FEED_VERSION) < 0) problems.push(`${to} is before ${FIRST_FEED_VERSION}, the first version these channels serve: no feed may name it`)
   if (!kept) return [...problems, `${keptFeedNameOf(to)} is not a release file`]
   if (kept.version !== to) problems.push(`${keptFeedNameOf(to)} offers ${kept.version}, not ${to}`)
-  const url = new URL(archiveNameOf(to), channel.baseUrl).href
+  // The installer of another system has no name made from the version alone: it is the one the kept feed names, in the folder of this channel, named for `to` and this system.
+  const name = target ? kept.url.slice(kept.url.lastIndexOf('/') + 1) : archiveNameOf(to)
+  const url = new URL(name, channel.baseUrl).href
   if (kept.url !== url) problems.push(`${keptFeedNameOf(to)} names ${kept.url}, expected ${url}`)
+  if (target) {
+    const kind = installerKindOf(name, target)
+    const nameProblem = 'problem' in kind ? kind.problem : installerNameProblem(name, to, target)
+    if (nameProblem) problems.push(`${keptFeedNameOf(to)} names an installer that is not the one of ${to} for ${target}: ${nameProblem}`)
+  }
   return problems
 }
 
@@ -1091,6 +1275,8 @@ const failureOf = (result: CommandResult | OutputHash): string => firstLines(res
 export async function publish(input: PublishInput, deps: PublishDeps): Promise<PublishResult> {
   const { say } = deps
   const { dryRun } = input
+  // Set for the installer of Windows or Linux: what is the Mac's alone is then not asked, and the conditions that tie the file to the sources are those of an installer.
+  const target = input.target ?? null
   const feedFile = join(dirname(input.archive), FEED_NAME)
   const dmgFile = join(dirname(input.archive), dmgNameOf(input.version))
   const sumFile = join(dirname(input.archive), sumNameOf(input.version))
@@ -1144,98 +1330,140 @@ export async function publish(input: PublishInput, deps: PublishDeps): Promise<P
   }
 
   try {
-    say(`${dryRun ? 'Dry run of the publication' : 'Publication'} of Lucium ${input.version} on the channel "${input.channelName}" (${input.channel.baseUrl})`)
+    say(`${dryRun ? 'Dry run of the publication' : 'Publication'} of Lucium ${input.version}${target ? ` for ${target.id}` : ''} on the channel "${input.channelName}" (${input.channel.baseUrl})`)
 
     // 1. The build.
-    const stapler: Command = { program: 'xcrun', args: ['stapler', 'validate', input.app], timeoutMs: 2 * MINUTE }
-    const plist: Command = { program: '/usr/bin/plutil', args: ['-extract', 'CFBundleShortVersionString', 'raw', '-o', '-', join(input.app, 'Contents', 'Info.plist')], timeoutMs: MINUTE }
-    begin('Check the build', [plist, stapler], false)
-    if (!deps.exists(input.archive)) fail(`${input.archive} does not exist: build the release first (scripts/build-drm-release.sh --notarize --no-install …)`)
-    const nameProblem = archiveNameProblem(basename(input.archive), input.version)
-    if (nameProblem) fail(nameProblem)
-    ok(`${basename(input.archive)} is the archive of ${input.version}`)
-    if (!deps.exists(input.app)) fail(`${input.app} does not exist: it is the app the archive was made from (--app)`)
-    const builtVersion = deps.run(plist)
-    if (builtVersion.status !== 0) fail(`cannot read the version of ${input.app}: ${failureOf(builtVersion)}`)
-    if (builtVersion.stdout.trim() !== input.version) fail(`the built app is ${builtVersion.stdout.trim()}, package.json says ${input.version}: the build is not of this version`)
-    ok(`the built app is ${input.version}, as package.json`)
-    if (compareDotted(input.version, FIRST_FEED_VERSION) < 0) fail(`${input.version} is before ${FIRST_FEED_VERSION}, the first version these channels serve: it is another application, and no feed of these channels may name it`)
-    const staple = deps.run(stapler)
-    if (staple.status !== 0) fail(`the app has no valid notarization ticket stapled to it (xcrun stapler validate): ${failureOf(staple)}`)
-    ok('the notarization ticket is stapled')
-    if (input.buildLog) {
-      if (!deps.exists(input.buildLog)) fail(`${input.buildLog} does not exist (--build-log)`)
-      const logProblem = buildLogProblem(deps.readText(input.buildLog))
-      if (logProblem) fail(logProblem)
-      ok('the build log says "Notarized, stapled"')
+    if (!target) {
+      const stapler: Command = { program: 'xcrun', args: ['stapler', 'validate', input.app], timeoutMs: 2 * MINUTE }
+      const plist: Command = { program: '/usr/bin/plutil', args: ['-extract', 'CFBundleShortVersionString', 'raw', '-o', '-', join(input.app, 'Contents', 'Info.plist')], timeoutMs: MINUTE }
+      begin('Check the build', [plist, stapler], false)
+      if (!deps.exists(input.archive)) fail(`${input.archive} does not exist: build the release first (scripts/build-drm-release.sh --notarize --no-install …)`)
+      const nameProblem = archiveNameProblem(basename(input.archive), input.version)
+      if (nameProblem) fail(nameProblem)
+      ok(`${basename(input.archive)} is the archive of ${input.version}`)
+      if (!deps.exists(input.app)) fail(`${input.app} does not exist: it is the app the archive was made from (--app)`)
+      const builtVersion = deps.run(plist)
+      if (builtVersion.status !== 0) fail(`cannot read the version of ${input.app}: ${failureOf(builtVersion)}`)
+      if (builtVersion.stdout.trim() !== input.version) fail(`the built app is ${builtVersion.stdout.trim()}, package.json says ${input.version}: the build is not of this version`)
+      ok(`the built app is ${input.version}, as package.json`)
+      if (compareDotted(input.version, FIRST_FEED_VERSION) < 0) fail(`${input.version} is before ${FIRST_FEED_VERSION}, the first version these channels serve: it is another application, and no feed of these channels may name it`)
+      const staple = deps.run(stapler)
+      if (staple.status !== 0) fail(`the app has no valid notarization ticket stapled to it (xcrun stapler validate): ${failureOf(staple)}`)
+      ok('the notarization ticket is stapled')
+      if (input.buildLog) {
+        if (!deps.exists(input.buildLog)) fail(`${input.buildLog} does not exist (--build-log)`)
+        const logProblem = buildLogProblem(deps.readText(input.buildLog))
+        if (logProblem) fail(logProblem)
+        ok('the build log says "Notarized, stapled"')
+      }
+      const builtWire = await deps.readFuseWire(input.app)
+      if (!builtWire) fail(`no Electron fuse wire in ${fuseFileOf(input.app)}`)
+      if (!deps.exists(input.installedApp)) fail(`${input.installedApp} does not exist: the fuses of the new build are compared with the installed app's (--installed-app)`)
+      const installedWire = await deps.readFuseWire(input.installedApp)
+      if (!installedWire) fail(`no Electron fuse wire in ${fuseFileOf(input.installedApp)}`)
+      const fuseProblems = fuseWireProblems(builtWire, installedWire)
+      if (fuseProblems.length > 0) fail(`the Electron fuses of the new build are not the installed app's:\n    ${fuseProblems.join('\n    ')}`)
+      ok(`the ${builtWire.bytes.length} Electron fuses equal those of ${input.installedApp}`)
+      if (dryRun) say(`  --  the key ${input.sshKey} is passed to ssh by its path, never opened (not looked for in a dry run)`)
+      else if (!deps.exists(input.sshKey)) fail(`the ssh key ${input.sshKey} does not exist (--ssh-key, or LUCIUM_PUBLISH_SSH_KEY)`)
+    } else {
+      // The installer of Windows or Linux: the file CI built on the tag and the maintainer copied. What is asked of the Mac's build (the notarization ticket, the fuses
+      // of the installed app, the disk image) does not exist for it; what can be checked here is the file itself: its extension (an .exe is not an AppImage), its
+      // name (the version and the architecture of the system), and, below, its SHA-256 against the sum of the CI run.
+      begin('Check the installer', [], false)
+      if (!deps.exists(input.archive)) fail(`${input.archive} does not exist: it is the installer that CI built on the tag of ${input.version}, copied from the run (docs/community/release-process.md)`)
+      const kindOfFile = installerKindOf(basename(input.archive), target.id)
+      if ('problem' in kindOfFile) fail(kindOfFile.problem)
+      if (kindOfFile.kind !== target.kind) fail(`the installer is a ${kindOfFile.kind} and the publication says ${target.kind}`)
+      const installerName = installerNameProblem(basename(input.archive), input.version, target.id)
+      if (installerName) fail(installerName)
+      ok(`${basename(input.archive)} is the ${target.kind} installer of ${input.version} for ${target.id}`)
+      if (!/^[0-9a-f]{64}$/.test(target.sha256)) fail(`no SHA-256 of the CI run to compare the installer with (--sha256 <64 lowercase hexadecimal digits>): an installer without a sum is not published`)
+      if (compareDotted(input.version, FIRST_FEED_VERSION) < 0) fail(`${input.version} is before ${FIRST_FEED_VERSION}, the first version these channels serve: it is another application, and no feed of these channels may name it`)
+      if (dryRun) say(`  --  the key ${input.sshKey} is passed to ssh by its path, never opened (not looked for in a dry run)`)
+      else if (!deps.exists(input.sshKey)) fail(`the ssh key ${input.sshKey} does not exist (--ssh-key, or LUCIUM_PUBLISH_SSH_KEY)`)
     }
-    const builtWire = await deps.readFuseWire(input.app)
-    if (!builtWire) fail(`no Electron fuse wire in ${fuseFileOf(input.app)}`)
-    if (!deps.exists(input.installedApp)) fail(`${input.installedApp} does not exist: the fuses of the new build are compared with the installed app's (--installed-app)`)
-    const installedWire = await deps.readFuseWire(input.installedApp)
-    if (!installedWire) fail(`no Electron fuse wire in ${fuseFileOf(input.installedApp)}`)
-    const fuseProblems = fuseWireProblems(builtWire, installedWire)
-    if (fuseProblems.length > 0) fail(`the Electron fuses of the new build are not the installed app's:\n    ${fuseProblems.join('\n    ')}`)
-    ok(`the ${builtWire.bytes.length} Electron fuses equal those of ${input.installedApp}`)
-    if (dryRun) say(`  --  the key ${input.sshKey} is passed to ssh by its path, never opened (not looked for in a dry run)`)
-    else if (!deps.exists(input.sshKey)) fail(`the ssh key ${input.sshKey} does not exist (--ssh-key, or LUCIUM_PUBLISH_SSH_KEY)`)
 
     // 2. The archive's hash and size.
     begin('Weigh the archive', [], false)
     const weight = await deps.sha256File(input.archive).catch((error: unknown) => fail(`cannot read ${input.archive}: ${error instanceof Error ? error.message : String(error)}`))
     ok(`SHA-256 ${weight.sha256}, ${weight.size} bytes`)
     const archiveFile: ReleaseGate.WeighedFile = { name: basename(input.archive), sha256: weight.sha256, size: weight.size }
-
-    // 2a. The archive holds the app that was checked above. The signature of a bundle is in its executable (the code directory, which seals
-    // Info.plist and the resources): the same executable is the same signed app. An app built again after the archive was made differs here.
-    const executable = join(input.app, 'Contents', 'MacOS', 'Lucium')
-    const zipped: Command = { program: '/usr/bin/unzip', args: ['-p', input.archive, 'Lucium.app/Contents/MacOS/Lucium'], timeoutMs: 5 * MINUTE }
-    begin('Check that the archive holds the built app', [zipped], false)
-    const inArchive = await deps.hashOutput(zipped)
-    if (inArchive.status !== 0) fail(`cannot read Lucium.app/Contents/MacOS/Lucium in ${input.archive}: ${failureOf(inArchive)}`)
-    const onDisk = await deps.sha256File(executable).catch((error: unknown) => fail(`cannot read ${executable}: ${error instanceof Error ? error.message : String(error)}`))
-    if (inArchive.sha256 !== onDisk.sha256 || inArchive.size !== onDisk.size) {
-      fail(`the app in the archive is not ${input.app} (its executable has SHA-256 ${inArchive.sha256}, the built one ${onDisk.sha256}): the app was built again after the archive was made. Build the release again, archive and disk image together`)
+    // An installer of Windows or Linux is the file of a CI run: its sum is what that run logged. A file that is not that one (rebuilt, damaged in the copy, another run) goes nowhere.
+    if (target && weight.sha256 !== target.sha256) {
+      fail(`the installer has SHA-256 ${weight.sha256}, the CI run logged ${target.sha256}: it is not the file of that run. Copy it again from the run, or give the sum of the run that built this one`)
     }
-    ok('the executable in the archive is the built one, with its signature')
 
-    // 2a'. The archive carries no custom icon. Settings › About and updates › App icon puts the chosen icon on a running copy (an `Icon\r` at the root of its
-    // bundle, src/main/shell/bundle-icon.ts): an archive made from such a copy would hand that file to every copy it updates. The build makes the
-    // archive from the app it has just checked, before anything runs it; this is read in the archive itself.
-    const listing: Command = { program: '/usr/bin/zipinfo', args: ['-1', input.archive], timeoutMs: MINUTE }
-    begin('Check that the archive carries no custom icon', [listing], false)
-    const listed = deps.run(listing)
-    if (listed.status !== 0) fail(`cannot list the files of ${input.archive}: ${failureOf(listed)}`)
-    if (listed.stdout.split('\n').includes(ARCHIVED_CUSTOM_ICON)) {
-      fail(`the archive carries a custom icon (Lucium.app/Icon\\r): it was made from a copy that the icon of Settings › About and updates › App icon was put on, not from the build as it was checked. Build the release again, archive and disk image together`)
-    }
-    ok('the archive carries no custom icon')
-
-    // 2b. Which commit the archive was built from: the record the build wrote beside it. Without it, nothing ties what is published to the sources.
-    const tagName = `v${input.version}`
-    const tagCommit: Command = { program: 'git', args: ['-C', input.root, 'rev-parse', '-q', '--verify', `refs/tags/${tagName}^{commit}`], timeoutMs: MINUTE }
-    const tagSignature: Command = { program: 'git', args: ['-C', input.root, 'tag', '-v', tagName], timeoutMs: MINUTE }
-    begin('Check where the build comes from', [tagCommit], false)
-    if (!deps.exists(input.buildRecord)) {
-      fail(`${input.buildRecord} does not exist: scripts/build-drm-release.sh --notarize writes it beside the archive, with the commit the archive was built from. An archive without its record is not published (--build-record names another file)`)
-    }
-    const built = gate.readBuildRecord(readOrFail(input.buildRecord, 'the build record'))
-    if ('problem' in built) fail(`${input.buildRecord} is not a build record: ${built.problem}`)
-    const recordProblems = gate.buildRecordProblems(built.record, { version: input.version, archive: archiveFile })
-    if (recordProblems.length > 0) fail(`${input.buildRecord} is not the record of this archive:\n    ${recordProblems.join('\n    ')}`)
-    const { commit } = built.record
-    ok(`built from the commit ${commit}, the working tree clean`)
-    // The tag of the version, when it exists, must name that commit. Its absence is said and kept in the journal, not refused: the versions that
-    // came before the public repository have no tag.
-    const tagged = deps.run(tagCommit)
+    // What the checks of the build leave for the conditions below: the executable of the built app (the Mac), the commit the file was built from, and the tag of the version.
+    let onDisk = { sha256: '', size: 0 }
+    let commit = ''
     let tag: { name: string; signatureVerified: boolean } | null = null
-    if (tagged.status === 0) {
-      if (tagged.stdout.trim() !== commit) fail(`the tag ${tagName} names the commit ${tagged.stdout.trim()}, the archive was built from ${commit}: the tag and the build are not of the same sources`)
+    if (!target) {
+      // 2a. The archive holds the app that was checked above. The signature of a bundle is in its executable (the code directory, which seals
+      // Info.plist and the resources): the same executable is the same signed app. An app built again after the archive was made differs here.
+      const executable = join(input.app, 'Contents', 'MacOS', 'Lucium')
+      const zipped: Command = { program: '/usr/bin/unzip', args: ['-p', input.archive, 'Lucium.app/Contents/MacOS/Lucium'], timeoutMs: 5 * MINUTE }
+      begin('Check that the archive holds the built app', [zipped], false)
+      const inArchive = await deps.hashOutput(zipped)
+      if (inArchive.status !== 0) fail(`cannot read Lucium.app/Contents/MacOS/Lucium in ${input.archive}: ${failureOf(inArchive)}`)
+      onDisk = await deps.sha256File(executable).catch((error: unknown) => fail(`cannot read ${executable}: ${error instanceof Error ? error.message : String(error)}`))
+      if (inArchive.sha256 !== onDisk.sha256 || inArchive.size !== onDisk.size) {
+        fail(`the app in the archive is not ${input.app} (its executable has SHA-256 ${inArchive.sha256}, the built one ${onDisk.sha256}): the app was built again after the archive was made. Build the release again, archive and disk image together`)
+      }
+      ok('the executable in the archive is the built one, with its signature')
+
+      // 2a'. The archive carries no custom icon. Settings › About and updates › App icon puts the chosen icon on a running copy (an `Icon\r` at the root of its
+      // bundle, src/main/shell/bundle-icon.ts): an archive made from such a copy would hand that file to every copy it updates. The build makes the
+      // archive from the app it has just checked, before anything runs it; this is read in the archive itself.
+      const listing: Command = { program: '/usr/bin/zipinfo', args: ['-1', input.archive], timeoutMs: MINUTE }
+      begin('Check that the archive carries no custom icon', [listing], false)
+      const listed = deps.run(listing)
+      if (listed.status !== 0) fail(`cannot list the files of ${input.archive}: ${failureOf(listed)}`)
+      if (listed.stdout.split('\n').includes(ARCHIVED_CUSTOM_ICON)) {
+        fail(`the archive carries a custom icon (Lucium.app/Icon\\r): it was made from a copy that the icon of Settings › About and updates › App icon was put on, not from the build as it was checked. Build the release again, archive and disk image together`)
+      }
+      ok('the archive carries no custom icon')
+
+      // 2b. Which commit the archive was built from: the record the build wrote beside it. Without it, nothing ties what is published to the sources.
+      const tagName = `v${input.version}`
+      const tagCommit: Command = { program: 'git', args: ['-C', input.root, 'rev-parse', '-q', '--verify', `refs/tags/${tagName}^{commit}`], timeoutMs: MINUTE }
+      const tagSignature: Command = { program: 'git', args: ['-C', input.root, 'tag', '-v', tagName], timeoutMs: MINUTE }
+      begin('Check where the build comes from', [tagCommit], false)
+      if (!deps.exists(input.buildRecord)) {
+        fail(`${input.buildRecord} does not exist: scripts/build-drm-release.sh --notarize writes it beside the archive, with the commit the archive was built from. An archive without its record is not published (--build-record names another file)`)
+      }
+      const built = gate.readBuildRecord(readOrFail(input.buildRecord, 'the build record'))
+      if ('problem' in built) fail(`${input.buildRecord} is not a build record: ${built.problem}`)
+      const recordProblems = gate.buildRecordProblems(built.record, { version: input.version, archive: archiveFile })
+      if (recordProblems.length > 0) fail(`${input.buildRecord} is not the record of this archive:\n    ${recordProblems.join('\n    ')}`)
+      commit = built.record.commit
+      ok(`built from the commit ${commit}, the working tree clean`)
+      // The tag of the version, when it exists, must name that commit. Its absence is said and kept in the journal, not refused: the versions that
+      // came before the public repository have no tag.
+      const tagged = deps.run(tagCommit)
+      if (tagged.status === 0) {
+        if (tagged.stdout.trim() !== commit) fail(`the tag ${tagName} names the commit ${tagged.stdout.trim()}, the archive was built from ${commit}: the tag and the build are not of the same sources`)
+        tag = { name: tagName, signatureVerified: deps.run(tagSignature).status === 0 }
+        ok(`the tag ${tagName} names that commit${tag.signatureVerified ? ', and Git verified its signature' : ''}`)
+        if (!tag.signatureVerified) say(`  --  Git could not verify the signature of ${tagName} (git tag -v): unsigned, or no key to check it with on this Mac. Kept in the journal`)
+      } else if (tagged.status === 1) say(`  --  no tag ${tagName} in ${input.root}: kept in the journal`)
+      else fail(`cannot ask Git for the tag ${tagName}: ${failureOf(tagged)}`)
+    } else {
+      // The installer was built by CI on the tag, so the tag IS what ties it to the sources: it must exist, and it names the commit. (The Mac's build record does that
+      // for the archive; a CI run leaves none that a copy could be checked against.)
+      const tagName = `v${input.version}`
+      const tagCommit: Command = { program: 'git', args: ['-C', input.root, 'rev-parse', '-q', '--verify', `refs/tags/${tagName}^{commit}`], timeoutMs: MINUTE }
+      const tagSignature: Command = { program: 'git', args: ['-C', input.root, 'tag', '-v', tagName], timeoutMs: MINUTE }
+      begin('Check where the installer comes from', [tagCommit], false)
+      const tagged = deps.run(tagCommit)
+      if (tagged.status === 1) fail(`no tag ${tagName} in ${input.root}: the installer is the file CI built on that tag, and the tag is what ties it to the sources`)
+      if (tagged.status !== 0) fail(`cannot ask Git for the tag ${tagName}: ${failureOf(tagged)}`)
+      commit = tagged.stdout.trim()
+      if (!/^[0-9a-f]{40}$/.test(commit)) fail(`git printed ${JSON.stringify(firstLines(tagged.stdout, 2))} for the tag ${tagName}, not a commit`)
       tag = { name: tagName, signatureVerified: deps.run(tagSignature).status === 0 }
-      ok(`the tag ${tagName} names that commit${tag.signatureVerified ? ', and Git verified its signature' : ''}`)
+      ok(`the tag ${tagName} names the commit ${commit}${tag.signatureVerified ? ', and Git verified its signature' : ''}`)
       if (!tag.signatureVerified) say(`  --  Git could not verify the signature of ${tagName} (git tag -v): unsigned, or no key to check it with on this Mac. Kept in the journal`)
-    } else if (tagged.status === 1) say(`  --  no tag ${tagName} in ${input.root}: kept in the journal`)
-    else fail(`cannot ask Git for the tag ${tagName}: ${failureOf(tagged)}`)
+    }
 
     // 2c. The changelogs say when: a version published under « Unreleased » keeps that heading for good.
     begin('Check the changelogs', [], false)
@@ -1262,7 +1490,7 @@ export async function publish(input: PublishInput, deps: PublishDeps): Promise<P
       engineRun = { endedAt: ran.record.endedAt, reportSha256: ran.record.reportSha256 }
       ok(`the engine suites passed on that commit (${ran.record.endedAt})`)
     }
-    trace = { commit, archive: archiveFile, tag, engineRun }
+    trace = { commit, archive: archiveFile, tag, engineRun, ...(target ? { platform: target.id, kind: target.kind } : {}) }
 
     // 2e. The lock between the channels: every channel but the test one takes a version that waited there, and that the maintainer tried.
     if (input.channelName !== TEST_CHANNEL) {
@@ -1270,54 +1498,57 @@ export async function publish(input: PublishInput, deps: PublishDeps): Promise<P
       const journalText = deps.exists(input.journal) ? readOrFail(input.journal, 'the journal') : ''
       const journal = gate.readJournal(journalText)
       if (journal.problems.length > 0) fail(`the journal ${input.journal} cannot be trusted (${journal.problems.join('; ')}): repair it before anything goes to "${input.channelName}"`)
-      const lock = gate.stableGate({ entries: journal.entries, withdrawals: gate.readWithdrawals(journalText), version: input.version, sha256: weight.sha256, now: deps.now(), minTestHours: input.minTestHours, securityFix: input.securityFix })
+      const lock = gate.stableGate({ entries: journal.entries, withdrawals: gate.readWithdrawals(journalText), version: input.version, sha256: weight.sha256, now: deps.now(), minTestHours: input.minTestHours, securityFix: input.securityFix, ...(target ? { platform: target.id } : {}) })
       if (lock.problems.length > 0) fail(`${lock.problems.join('\n    ')}\n    (journal: ${input.journal})`)
       if (lock.waived.length > 0) say(`  !!  --security-fix: ${lock.waived.join('; ')}. Published all the same. Reason, kept in the journal: ${input.securityFix}`)
       else ok(`this archive has been on the channel "${TEST_CHANNEL}" since ${lock.testPublishedAt}, ${input.minTestHours} h or more`)
       const testPublishedAt = lock.testPublishedAt as string
       if (!deps.exists(input.attestation)) {
-        fail(`${input.attestation} does not exist: it is the maintainer's attestation of what was tried on the version of the test channel. Fill in and save:\n${gate.attestationTemplate(input.version, weight.sha256)}`)
+        fail(`${input.attestation} does not exist: it is the maintainer's attestation of what was tried on the version of the test channel. Fill in and save:\n${gate.attestationTemplate(input.version, weight.sha256, target?.id)}`)
       }
-      const attested = gate.attestationProblems(readOrFail(input.attestation, 'the attestation'), { version: input.version, sha256: weight.sha256, testPublishedAt: new Date(testPublishedAt), now: deps.now() })
+      const attested = gate.attestationProblems(readOrFail(input.attestation, 'the attestation'), { version: input.version, sha256: weight.sha256, testPublishedAt: new Date(testPublishedAt), now: deps.now(), ...(target ? { platform: target.id } : {}) })
       if (attested.problems.length > 0 || !attested.attestation) fail(`${input.attestation} does not let ${input.version} into "${input.channelName}":\n    ${attested.problems.join('\n    ')}`)
-      ok(`attested by ${attested.attestation.attestedBy} on ${attested.attestation.attestedAt}: ${gate.ATTESTED_CHECKS.join(', ')}`)
+      ok(`attested by ${attested.attestation.attestedBy} on ${attested.attestation.attestedAt}: ${(target ? gate.INSTALLER_ATTESTED_CHECKS : gate.ATTESTED_CHECKS).join(', ')}`)
       // The reason of --security-fix is kept only when it waived something: a wait that was long enough needed none.
       trace = { ...trace, stable: { testPublishedAt, minTestHours: input.minTestHours, ...attested.attestation, securityFix: lock.waived.length > 0 ? input.securityFix : null } }
     }
 
-    // 2b. The disk image beside the archive, if there is one: the public download. Its sum is the maintainer's word for it, so it is read here, not trusted.
-    const stapleDmg: Command = { program: 'xcrun', args: ['stapler', 'validate', dmgFile], timeoutMs: 2 * MINUTE }
-    const hasDmg = input.dmg && deps.exists(dmgFile)
-    const hasSum = input.dmg && deps.exists(sumFile)
-    begin('Check the disk image', hasDmg && hasSum ? [stapleDmg] : [], false)
+    // No disk image for the installers of the other systems: the image is the Mac's public download.
     let image: { sha256: string; size: number; sumText: string } | null = null
-    if (!input.dmg) say('  --  --no-dmg: the disk image, if there is one, is not published')
-    else if (!hasDmg && !hasSum) say(`  --  no ${basename(dmgFile)} beside the archive: only the archive and the feed are published (scripts/make-dmg.mjs makes the image)`)
-    else if (hasDmg !== hasSum) fail(`${hasDmg ? `${basename(sumFile)} is missing` : `${basename(dmgFile)} is missing`}: the disk image and its sum go together (scripts/make-dmg.mjs writes both), or neither (--no-dmg)`)
-    else {
-      const stapledDmg = deps.run(stapleDmg)
-      if (stapledDmg.status !== 0) fail(`the disk image has no valid notarization ticket stapled to it (xcrun stapler validate): ${failureOf(stapledDmg)}`)
-      ok('the disk image has its notarization ticket stapled')
-      const weighed = await deps.sha256File(dmgFile).catch((error: unknown) => fail(`cannot read ${dmgFile}: ${error instanceof Error ? error.message : String(error)}`))
-      let sumText = ''
-      try {
-        sumText = deps.readText(sumFile)
-      } catch (error) {
-        fail(`cannot read ${sumFile}: ${error instanceof Error ? error.message : String(error)}`)
+    if (!target) {
+      // 2b. The disk image beside the archive, if there is one: the public download. Its sum is the maintainer's word for it, so it is read here, not trusted.
+      const stapleDmg: Command = { program: 'xcrun', args: ['stapler', 'validate', dmgFile], timeoutMs: 2 * MINUTE }
+      const hasDmg = input.dmg && deps.exists(dmgFile)
+      const hasSum = input.dmg && deps.exists(sumFile)
+      begin('Check the disk image', hasDmg && hasSum ? [stapleDmg] : [], false)
+      if (!input.dmg) say('  --  --no-dmg: the disk image, if there is one, is not published')
+      else if (!hasDmg && !hasSum) say(`  --  no ${basename(dmgFile)} beside the archive: only the archive and the feed are published (scripts/make-dmg.mjs makes the image)`)
+      else if (hasDmg !== hasSum) fail(`${hasDmg ? `${basename(sumFile)} is missing` : `${basename(dmgFile)} is missing`}: the disk image and its sum go together (scripts/make-dmg.mjs writes both), or neither (--no-dmg)`)
+      else {
+        const stapledDmg = deps.run(stapleDmg)
+        if (stapledDmg.status !== 0) fail(`the disk image has no valid notarization ticket stapled to it (xcrun stapler validate): ${failureOf(stapledDmg)}`)
+        ok('the disk image has its notarization ticket stapled')
+        const weighed = await deps.sha256File(dmgFile).catch((error: unknown) => fail(`cannot read ${dmgFile}: ${error instanceof Error ? error.message : String(error)}`))
+        let sumText = ''
+        try {
+          sumText = deps.readText(sumFile)
+        } catch (error) {
+          fail(`cannot read ${sumFile}: ${error instanceof Error ? error.message : String(error)}`)
+        }
+        const sumProblem = sumFileProblem(sumText, basename(dmgFile), weighed.sha256)
+        if (sumProblem) fail(`${sumFile}: ${sumProblem}`)
+        // The image is notarized and has its sum, and nothing so far says it holds the app of the archive: its record does.
+        const recordFile = join(dirname(input.archive), imageRecordNameOf(input.version))
+        if (!deps.exists(recordFile)) {
+          fail(`${basename(recordFile)} is missing: scripts/make-dmg.mjs writes it with the image, and it says which app the image holds. Without it nothing ties the image to the archive: make the image again from ${input.app}, or publish without it (--no-dmg)`)
+        }
+        const recordProblem = imageRecordProblem(readOrFail(recordFile, 'the record of the disk image'), { name: basename(dmgFile), sha256: weighed.sha256, size: weighed.size }, onDisk)
+        if (recordProblem) fail(`${recordFile}: ${recordProblem}`)
+        ok('the disk image holds the app of the archive (the executable its record names)')
+        image = { sha256: weighed.sha256, size: weighed.size, sumText }
+        imageOfTrace = { name: basename(dmgFile), sha256: weighed.sha256, size: weighed.size }
+        ok(`${basename(dmgFile)}: SHA-256 ${weighed.sha256}, ${weighed.size} bytes, as its sum says`)
       }
-      const sumProblem = sumFileProblem(sumText, basename(dmgFile), weighed.sha256)
-      if (sumProblem) fail(`${sumFile}: ${sumProblem}`)
-      // The image is notarized and has its sum, and nothing so far says it holds the app of the archive: its record does.
-      const recordFile = join(dirname(input.archive), imageRecordNameOf(input.version))
-      if (!deps.exists(recordFile)) {
-        fail(`${basename(recordFile)} is missing: scripts/make-dmg.mjs writes it with the image, and it says which app the image holds. Without it nothing ties the image to the archive: make the image again from ${input.app}, or publish without it (--no-dmg)`)
-      }
-      const recordProblem = imageRecordProblem(readOrFail(recordFile, 'the record of the disk image'), { name: basename(dmgFile), sha256: weighed.sha256, size: weighed.size }, onDisk)
-      if (recordProblem) fail(`${recordFile}: ${recordProblem}`)
-      ok('the disk image holds the app of the archive (the executable its record names)')
-      image = { sha256: weighed.sha256, size: weighed.size, sumText }
-      imageOfTrace = { name: basename(dmgFile), sha256: weighed.sha256, size: weighed.size }
-      ok(`${basename(dmgFile)}: SHA-256 ${weighed.sha256}, ${weighed.size} bytes, as its sum says`)
     }
     // Planned first in the folder of the template (the addresses do not depend on it, and a dry run prints it), then again in the folder `mktemp` made.
     const planIn = (folder: string): RemotePlan => remotePlan({ archive: input.archive, feed: feedFile, channel: input.channel, sshKey: input.sshKey, disk: image ? { dmg: dmgFile, sum: sumFile } : null, staging: folder })
@@ -1326,11 +1557,11 @@ export async function publish(input: PublishInput, deps: PublishDeps): Promise<P
     let disk = diskOf(remote)
 
     // 3. The release file, written by scripts/make-update-feed.mjs and checked against the archive before it goes anywhere.
-    const makeFeed = makeFeedCommand(input.root, input.archive, input.channel.baseUrl)
+    const makeFeed = makeFeedCommand(input.root, input.archive, input.channel.baseUrl, target ?? undefined)
     begin('Write the feed', [makeFeed], false)
     const made = deps.run(makeFeed)
     if (made.status !== 0) fail(`scripts/make-update-feed.mjs refused:\n    ${firstLines(made.stderr, 10).replace(/\n/g, '\n    ')}`)
-    const expected: ExpectedRelease = { version: input.version, url: remote.archiveUrl, sha256: weight.sha256, size: weight.size }
+    const expected: ExpectedRelease = { version: input.version, url: remote.archiveUrl, sha256: weight.sha256, size: weight.size, ...(target ? { target: { platform: target.id.split('-')[0] as string, arch: target.id.split('-')[1] as string, kind: target.kind } } : {}) }
     const written = feedProblems(made.stdout, expected)
     if (written.length > 0) fail(`the feed that was written does not describe the archive:\n    ${written.join('\n    ')}`)
     ok(`the feed names ${remote.archiveUrl} with its SHA-256 and size`)
@@ -1368,7 +1599,7 @@ export async function publish(input: PublishInput, deps: PublishDeps): Promise<P
       const listed = readWithdrawn(inPlaceSigned ?? '')
       if (listed.problem) say(`  warning: in the feed in place, ${listed.problem}: only the versions of that list are carried`)
       const journalText = deps.exists(input.journal) ? readOrFail(input.journal, 'the journal') : ''
-      const inJournal = gate.withdrawnOn({ entries: gate.readJournal(journalText).entries, withdrawals: gate.readWithdrawals(journalText), channel: input.channelName })
+      const inJournal = gate.withdrawnOn({ entries: gate.readJournal(journalText).entries, withdrawals: gate.readWithdrawals(journalText), channel: input.channelName, ...(target ? { platform: target.id } : {}) })
       carried = withdrawnList([...listed.versions, ...inJournal], input.version)
       if (carried.length > 0) {
         deps.writeText(feedFile, feedWithWithdrawn(made.stdout, carried))
@@ -1588,7 +1819,8 @@ export function describeWithdrawFailure(result: { step: string; problem: string;
 export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'say' | 'run' | 'exists' | 'appendText' | 'now' | 'gate' | 'feedKeys'>): Promise<WithdrawResult> {
   const { say } = deps
   const { dryRun, version } = input
-  const plan = withdrawPlan({ version, channel: input.channel, sshKey: input.sshKey })
+  // The Mac's files are named from the version; the installers of the other systems are the ones the folder holds for it, known once it is listed (below).
+  let plan = withdrawPlan({ version, channel: input.channel, sshKey: input.sshKey })
   let offered: Offered = 'unchanged'
   let step = ''
   // What the journal keeps: the version the feed went back to, and whether a command that changes the server was run at all.
@@ -1596,7 +1828,7 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
   let changed = false
   let journalOnly = false
   const lineOf = (outcome: 'withdrawn' | 'partial'): string =>
-    deps.gate.withdrawalLine({ at: deps.now().toISOString(), type: deps.gate.WITHDRAWAL, version, channel: input.channelName, outcome, offers: offered, to: wentBackTo })
+    deps.gate.withdrawalLine({ at: deps.now().toISOString(), type: deps.gate.WITHDRAWAL, version, channel: input.channelName, outcome, offers: offered, to: wentBackTo, ...(input.target ? { platform: input.target } : {}) })
   const begin = (title: string): void => {
     step = title
     say(`\n${title}`)
@@ -1624,7 +1856,7 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
   }
 
   try {
-    say(`${dryRun ? 'Dry run of the withdrawal' : 'Withdrawal'} of Lucium ${version} from the channel "${input.channelName}" (${input.channel.baseUrl})`)
+    say(`${dryRun ? 'Dry run of the withdrawal' : 'Withdrawal'} of Lucium ${version}${input.target ? ` for ${input.target}` : ''} from the channel "${input.channelName}" (${input.channel.baseUrl})`)
     if (dryRun) say('A dry run reads the server (the folder, the feeds, the sums) and changes nothing there.')
     begin('Check the key')
     if (!deps.exists(input.sshKey)) fail(`the ssh key ${input.sshKey} does not exist (--ssh-key, or LUCIUM_PUBLISH_SSH_KEY)`)
@@ -1634,6 +1866,12 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
     begin('Read the channel')
     const listed = read(plan.list)
     if (listed.status !== 0) fail(`cannot list the folder of the channel: ${failureOf(listed)}`)
+    if (input.target) {
+      const installers = installerFilesOf(listed.stdout, version, input.target)
+      plan = withdrawPlan({ version, channel: input.channel, sshKey: input.sshKey, installers })
+      if (installers.length === 0) say(`  --  the folder holds no installer of ${version} for ${input.target}: only its feed is dealt with`)
+      else ok(`the installer of ${version} for ${input.target}: ${installers.join(', ')}`)
+    }
     const current = read(plan.readFeed)
     if (current.status !== 0) fail(`cannot read the feed in place: ${failureOf(current)}`)
     const hasFeed = current.stdout.trim() !== ''
@@ -1709,12 +1947,14 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
             `    Publish a higher version (the fix, or the code of the previous version under a new number), or take the feed away with --to ${NO_FEED}.`
         )
       }
-      const target = plan.target(to)
+      let target = plan.target(to)
       const kept = read(target.readKept)
       if (kept.status !== 0) fail(`cannot read ${keptFeedNameOf(to)} in the folder of the channel: ${failureOf(kept)}`)
       const release = readRelease(kept.stdout)
-      const problems = returnProblems(release, to, version, input.channel)
+      const problems = returnProblems(release, to, version, input.channel, input.target)
       if (problems.length > 0 || !release) fail(`the feed cannot go back to ${to}:\n    ${problems.join('\n    ')}`)
+      // An installer is named by its build: the file to weigh, and to ask the web for, is the one the kept feed names (checked above to be the installer of `to` for this system).
+      if (input.target) target = plan.target(to, release.url.slice(release.url.lastIndexOf('/') + 1))
       ok(`${keptFeedNameOf(to)} is the feed of ${to}, below ${version}`)
       // The feed that goes back is signed again here: only one that was signed here before is taken, never whatever the server holds under that name.
       const keptSource = deps.feedKeys.signedPart(kept.stdout)
@@ -1763,7 +2003,7 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
         const answer = statusOf(url)
         if (answer !== '404') fail(`${url} answers ${answer} and not 404: the file is still served`)
       }
-      ok(`the archive, the disk image and its sum answer 404 (the files stay on the server, renamed *${WITHDRAWN_SUFFIX})`)
+      ok(input.target ? `the installer answers 404 (the files stay on the server, renamed *${WITHDRAWN_SUFFIX})` : `the archive, the disk image and its sum answer 404 (the files stay on the server, renamed *${WITHDRAWN_SUFFIX})`)
     }
 
     // 4. The journal: a line of its own type, after everything, so that it says what the channel really offers. No condition reads it.
@@ -1782,7 +2022,8 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
 
     say(dryRun ? '\nDry run done: nothing was changed on the server.' : `\nLucium ${version} is withdrawn from the channel "${input.channelName}".`)
     say('Still to do by hand (docs/community/release-process.md, "Withdrawing a version"):')
-    say('  - the download pages of the site name the disk image by hand: point them to another version, and deploy;')
+    if (!input.target) say('  - the download pages of the site name the disk image by hand: point them to another version, and deploy;')
+    else say(`  - the download page of the site names the installer of ${input.target} by hand: point it to another version, and deploy;`)
     say(`  - the copies that already run ${version} stay on it until a higher version is published: no feed makes a copy go back. From the version that reads the list of the feed on, they say "This version has been withdrawn" and name the version to install.`)
     return { ok: true, dryRun, offered }
   } catch (error) {

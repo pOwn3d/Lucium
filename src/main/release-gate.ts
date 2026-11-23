@@ -205,6 +205,12 @@ export function changelogHeadingProblem(text: string, version: string, file: str
 // ---------------------------------------------------------------------------------------------------------------------------------------------
 // The journal: one line per publication
 
+/**
+ * The system a line of the journal is about when it names none: the Mac, which the journal knew alone before the other systems were published. The lock of the
+ * stable channel and the list of withdrawn versions are read by system: what was published or withdrawn for one says nothing of another.
+ */
+export const MAC_TARGET = 'darwin-arm64'
+
 /** What the server holds when a publication ends: everything it was meant to (`published`), or less (`partial`, with what in `holds`). */
 export interface JournalEntry {
   at: string
@@ -222,6 +228,9 @@ export interface JournalEntry {
   tag: { name: string; signatureVerified: boolean } | null
   /** The engine run the publication rests on, or the reason it went without one. */
   engineRun: { endedAt: string; reportSha256: string | null } | { waived: string }
+  /** The system an installer is for (`win32-x64`, `linux-x64`, `linux-arm64`) and its kind; absent for the Mac, whose lines are as they always were. */
+  platform?: string
+  kind?: string
   /** For the stable channel: what let the version in. */
   stable?: {
     testPublishedAt: string
@@ -255,6 +264,8 @@ export interface WithdrawalEntry {
   offers: 'unchanged' | 'earlier version' | 'nothing'
   /** The version the feed went back to; null when the feed was left as it was, or taken away. */
   to: string | null
+  /** The system whose channel it was withdrawn from; absent for the Mac. */
+  platform?: string
 }
 
 export const withdrawalLine = (entry: WithdrawalEntry): string => `${JSON.stringify(entry)}\n`
@@ -276,15 +287,16 @@ export function readWithdrawals(text: string): WithdrawalEntry[] {
  * maintainer meant the version to go); a publication that stopped half way puts nothing back. It is what a publication writes in the feed for the
  * copies that still run one of them, with what the feed in place already lists: a channel left without a feed has no feed to carry the list.
  */
-export function withdrawnOn(input: { entries: readonly JournalEntry[]; withdrawals: readonly WithdrawalEntry[]; channel: string }): string[] {
+export function withdrawnOn(input: { entries: readonly JournalEntry[]; withdrawals: readonly WithdrawalEntry[]; channel: string; platform?: string }): string[] {
   const time = (iso: string): number => new Date(iso).getTime()
+  const platform = input.platform ?? MAC_TARGET
   const last = new Map<string, number>()
   for (const entry of input.withdrawals) {
-    if (entry.channel !== input.channel || !VERSION.test(entry.version)) continue
+    if (entry.channel !== input.channel || (entry.platform ?? MAC_TARGET) !== platform || !VERSION.test(entry.version)) continue
     last.set(entry.version, Math.max(last.get(entry.version) ?? 0, time(entry.at)))
   }
   return [...last]
-    .filter(([version, at]) => !input.entries.some((entry) => entry.channel === input.channel && entry.version === version && entry.outcome === 'published' && time(entry.at) > at))
+    .filter(([version, at]) => !input.entries.some((entry) => entry.channel === input.channel && (entry.platform ?? MAC_TARGET) === platform && entry.version === version && entry.outcome === 'published' && time(entry.at) > at))
     .map(([version]) => version)
 }
 
@@ -319,18 +331,25 @@ export function readJournal(text: string): { entries: JournalEntry[]; problems: 
 /** The three things a version must have shown on the test channel before it goes to stable. */
 export const ATTESTED_CHECKS = ['netflixPlays', 'touchIdUnlocksTheVault', 'updateFromPreviousVersion'] as const
 
+/**
+ * What an installer of Windows or Linux must have shown on the test channel: it installs on a real machine of its system (not a runner or a virtual machine
+ * of another architecture), and the update from the previous version installs. Netflix and Touch ID are the Mac's.
+ */
+export const INSTALLER_ATTESTED_CHECKS = ['installsOnARealMachine', 'updateFromPreviousVersion'] as const
+
 /** The attestation beside the archive, unless `--attestation` names another file. */
 export const attestationNameOf = (version: string): string => `Lucium-${version}-arm64.attestation.json`
 
 /** The file to fill in, shown when it is missing: every check is false until the maintainer has made it. */
-export function attestationTemplate(version: string, sha256: string): string {
+export function attestationTemplate(version: string, sha256: string, platform?: string): string {
   return `${JSON.stringify(
     {
       version,
+      ...(platform ? { platform } : {}),
       archiveSha256: sha256,
       attestedBy: '',
       attestedAt: 'YYYY-MM-DDTHH:MM:SSZ',
-      checks: { netflixPlays: false, touchIdUnlocksTheVault: false, updateFromPreviousVersion: false },
+      checks: Object.fromEntries((platform ? INSTALLER_ATTESTED_CHECKS : ATTESTED_CHECKS).map((name) => [name, false])),
       updatedFrom: 'X.Y.Z'
     },
     null,
@@ -351,14 +370,16 @@ export interface Attestation {
  * - `updatedFrom` names the earlier version the update was installed from;
  * - it is signed with a name and dated after the version reached the test channel (what was tried is what the channel serves), not in the future.
  */
-export function attestationProblems(text: string, want: { version: string; sha256: string; testPublishedAt: Date | null; now: Date }): { problems: string[]; attestation: Attestation | null } {
+export function attestationProblems(text: string, want: { version: string; sha256: string; testPublishedAt: Date | null; now: Date; platform?: string }): { problems: string[]; attestation: Attestation | null } {
   const data = parseObject(text)
   if (!data) return { problems: ['it is not a JSON object'], attestation: null }
   const problems: string[] = []
   if (data['version'] !== want.version) problems.push(`it is the attestation of ${JSON.stringify(data['version'])}, not of ${want.version}`)
+  // What was tried on one system says nothing of another: the attestation of an installer names its system.
+  if (want.platform !== undefined && data['platform'] !== want.platform) problems.push(`it is the attestation of ${JSON.stringify(data['platform'])}, not of ${want.platform}: what was tried on one system says nothing of another`)
   if (data['archiveSha256'] !== want.sha256) problems.push(`it attests the archive ${JSON.stringify(data['archiveSha256'])}, the one being published has SHA-256 ${want.sha256}: what was tried is not what goes to stable`)
   const checks = isRecord(data['checks']) ? data['checks'] : {}
-  for (const name of ATTESTED_CHECKS) {
+  for (const name of want.platform === undefined ? ATTESTED_CHECKS : INSTALLER_ATTESTED_CHECKS) {
     const value = Object.prototype.hasOwnProperty.call(checks, name) ? checks[name] : undefined
     if (value === true) continue
     if (name === 'updateFromPreviousVersion' && isRecord(value) && typeof value['notApplicable'] === 'string') {
@@ -414,12 +435,15 @@ export function stableGate(input: {
   now: Date
   minTestHours: number
   securityFix: string | null
+  /** The system the archive or installer is for; the Mac when absent. The test channel of another system is another channel. */
+  platform?: string
 }): StableGate {
   const time = (iso: string): number => new Date(iso).getTime()
-  const onTest = input.entries.filter((entry) => entry.channel === 'test' && entry.version === input.version && entry.outcome === 'published')
+  const platform = input.platform ?? MAC_TARGET
+  const onTest = input.entries.filter((entry) => entry.channel === 'test' && (entry.platform ?? MAC_TARGET) === platform && entry.version === input.version && entry.outcome === 'published')
   const published = onTest.filter((entry) => entry.archive.sha256 === input.sha256).sort((a, b) => time(a.at) - time(b.at))
   const withdrawnAt = input.withdrawals
-    .filter((entry) => entry.channel === 'test' && entry.version === input.version)
+    .filter((entry) => entry.channel === 'test' && (entry.platform ?? MAC_TARGET) === platform && entry.version === input.version)
     .map((entry) => entry.at)
     .sort((a, b) => time(b) - time(a))[0]
   // A publication at the very instant of the withdrawal does not come after it.

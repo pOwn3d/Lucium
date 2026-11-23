@@ -3,6 +3,9 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import {
   ATTESTED_CHECKS,
+  INSTALLER_ATTESTED_CHECKS,
+  MAC_TARGET,
+  WITHDRAWAL,
   ENGINE_RUN_FILE,
   ENGINE_RUN_STEPS,
   MIN_REASON,
@@ -376,6 +379,87 @@ describe('the lock of the stable channel', () => {
       for (const other of [{ ...withdrawal, version: '0.2.15' }, { ...withdrawal, channel: 'stable' }]) {
         expect(gateOf({ withdrawals: [other], now })).toEqual({ problems: [], testPublishedAt: ENTRY.at, waived: [] })
       }
+    })
+  })
+})
+
+// Windows and Linux are published beside the Mac (the study of card 819, lot 1): the journal, the withdrawals and the lock are read per system.
+// A line that names no system is the Mac's (the journal knew the Mac alone), and what was published or withdrawn for one system says nothing of another.
+describe('the journal, the withdrawals and the lock, per system', () => {
+  const WIN = 'win32-x64'
+  const onWindows = (over: Partial<JournalEntry> = {}): JournalEntry => ({ ...ENTRY, archive: { name: 'Lucium-Setup-0.3.0-x64.exe', sha256: OTHER_HASH, size: 138_000_000 }, platform: WIN, kind: 'nsis', ...over })
+  const withdrawal = (over: Partial<WithdrawalEntry> = {}): WithdrawalEntry => ({ at: '2026-11-21T10:00:00.000Z', type: WITHDRAWAL, version: VERSION, channel: 'test', outcome: 'withdrawn', offers: 'nothing', to: null, ...over })
+  const now = new Date('2026-11-22T12:00:00Z')
+  const gateFor = (input: Partial<Parameters<typeof stableGate>[0]>) => stableGate({ entries: [], withdrawals: [], version: VERSION, sha256: OTHER_HASH, now, minTestHours: 24, securityFix: null, ...input })
+
+  it('names the Mac when a line names no system, and keeps the Mac’s lines as they were written', () => {
+    expect(MAC_TARGET).toBe('darwin-arm64')
+    expect(JSON.parse(journalLine(ENTRY))).not.toHaveProperty('platform')
+    expect(JSON.parse(withdrawalLine(withdrawal()))).not.toHaveProperty('platform')
+    expect(JSON.parse(journalLine(onWindows()))).toMatchObject({ platform: WIN, kind: 'nsis' })
+    expect(readJournal(journalLine(onWindows())).entries[0]).toMatchObject({ platform: WIN, kind: 'nsis' })
+  })
+
+  it('lets a version into stable on the test channel of its own system, and on no other', () => {
+    expect(gateFor({ entries: [onWindows()], platform: WIN }).problems).toEqual([])
+    // A Mac entry whose archive happens to carry the same sum still does not count for Windows, and the reverse.
+    expect(gateFor({ entries: [{ ...ENTRY, archive: { ...ARCHIVE, sha256: OTHER_HASH } }], platform: WIN }).problems).toEqual([expect.stringMatching(/no publication of 0\.3\.0 on the test channel/)])
+    expect(gateFor({ entries: [onWindows()] }).problems).toEqual([expect.stringMatching(/no publication of 0\.3\.0 on the test channel/)])
+    expect(gateFor({ entries: [onWindows({ platform: 'linux-x64' })], platform: WIN }).problems).toEqual([expect.stringMatching(/no publication of 0\.3\.0 on the test channel/)])
+    expect(gateFor({ entries: [{ ...ENTRY }], sha256: HASH }).problems).toEqual([])
+  })
+
+  it('reads the withdrawals of its own system only: what was taken out of another system’s test channel says nothing of this one', () => {
+    const entries = [onWindows()]
+    expect(gateFor({ entries, withdrawals: [withdrawal({ platform: WIN })], platform: WIN }).problems).toEqual([expect.stringMatching(/was withdrawn from the test channel/)])
+    for (const other of [undefined, 'linux-x64']) {
+      expect(gateFor({ entries, withdrawals: [withdrawal(other ? { platform: other } : {})], platform: WIN }).problems, String(other)).toEqual([])
+    }
+    // And the Mac is not stopped by a withdrawal of Windows.
+    expect(gateFor({ entries: [{ ...ENTRY }], sha256: HASH, withdrawals: [withdrawal({ platform: WIN })] }).problems).toEqual([])
+  })
+
+  it('lists as withdrawn from a channel the versions withdrawn there for that system, not published there since', () => {
+    const published = (at: string, platform?: string): JournalEntry => ({ ...ENTRY, at, ...(platform ? { platform } : {}) })
+    expect(withdrawnOn({ entries: [], withdrawals: [withdrawal({ platform: WIN })], channel: 'test', platform: WIN })).toEqual([VERSION])
+    expect(withdrawnOn({ entries: [], withdrawals: [withdrawal({ platform: WIN })], channel: 'test' })).toEqual([])
+    expect(withdrawnOn({ entries: [], withdrawals: [withdrawal()], channel: 'test', platform: WIN })).toEqual([])
+    expect(withdrawnOn({ entries: [], withdrawals: [withdrawal()], channel: 'test' })).toEqual([VERSION])
+    expect(withdrawnOn({ entries: [], withdrawals: [withdrawal({ platform: WIN })], channel: 'test', platform: 'linux-x64' })).toEqual([])
+    // Published again since, on its own system: no longer withdrawn. Published again on another system: still withdrawn.
+    expect(withdrawnOn({ entries: [published('2026-11-21T11:00:00.000Z', WIN)], withdrawals: [withdrawal({ platform: WIN })], channel: 'test', platform: WIN })).toEqual([])
+    expect(withdrawnOn({ entries: [published('2026-11-21T11:00:00.000Z')], withdrawals: [withdrawal({ platform: WIN })], channel: 'test', platform: WIN })).toEqual([VERSION])
+    expect(withdrawnOn({ entries: [published('2026-11-21T11:00:00.000Z', WIN)], withdrawals: [withdrawal()], channel: 'test' })).toEqual([VERSION])
+  })
+
+  describe('the attestation of an installer', () => {
+    const attestation = (over: Record<string, unknown> = {}): string =>
+      JSON.stringify({ version: VERSION, platform: WIN, archiveSha256: OTHER_HASH, attestedBy: 'The maintainer', attestedAt: '2026-11-21T18:30:00Z', checks: { installsOnARealMachine: true, updateFromPreviousVersion: true }, updatedFrom: '0.2.9', ...over })
+    const want = { version: VERSION, sha256: OTHER_HASH, testPublishedAt: new Date('2026-11-20T10:00:00Z'), now, platform: WIN }
+
+    it('asks what an installer must show on a real machine, not what the Mac’s must', () => {
+      expect(INSTALLER_ATTESTED_CHECKS).toEqual(['installsOnARealMachine', 'updateFromPreviousVersion'])
+      expect(attestationProblems(attestation(), want)).toEqual({ problems: [], attestation: { attestedBy: 'The maintainer', attestedAt: '2026-11-21T18:30:00.000Z' } })
+      expect(attestationProblems(attestation({ checks: { installsOnARealMachine: false, updateFromPreviousVersion: true } }), want).problems).toEqual(['checks.installsOnARealMachine is not true'])
+      expect(attestationProblems(attestation({ checks: { netflixPlays: true, touchIdUnlocksTheVault: true, updateFromPreviousVersion: true } }), want).problems).toEqual(['checks.installsOnARealMachine is not true'])
+    })
+
+    it('is of its own system: the attestation of another system, or of none, is refused', () => {
+      expect(attestationProblems(attestation({ platform: 'linux-x64' }), want).problems).toEqual([expect.stringMatching(/attestation of "linux-x64", not of win32-x64/)])
+      expect(attestationProblems(attestation({ platform: undefined }), want).problems).toEqual([expect.stringMatching(/not of win32-x64/)])
+    })
+
+    it('leaves the Mac’s attestation as it was: its three checks, and no system', () => {
+      const mac = JSON.stringify({ version: VERSION, archiveSha256: HASH, attestedBy: 'The maintainer', attestedAt: '2026-11-21T18:30:00Z', checks: { netflixPlays: true, touchIdUnlocksTheVault: true, updateFromPreviousVersion: true }, updatedFrom: '0.2.9' })
+      expect(attestationProblems(mac, { version: VERSION, sha256: HASH, testPublishedAt: new Date('2026-11-20T10:00:00Z'), now }).problems).toEqual([])
+      expect(attestationTemplate(VERSION, HASH)).toBe(attestationTemplate(VERSION, HASH, undefined))
+      expect(JSON.parse(attestationTemplate(VERSION, HASH))).toMatchObject({ checks: { netflixPlays: false, touchIdUnlocksTheVault: false, updateFromPreviousVersion: false } })
+      expect(JSON.parse(attestationTemplate(VERSION, HASH))).not.toHaveProperty('platform')
+    })
+
+    it('shows the file to fill in for the system, with its own checks', () => {
+      expect(JSON.parse(attestationTemplate(VERSION, OTHER_HASH, WIN))).toMatchObject({ version: VERSION, platform: WIN, archiveSha256: OTHER_HASH, checks: { installsOnARealMachine: false, updateFromPreviousVersion: false } })
+      expect(JSON.parse(attestationTemplate(VERSION, OTHER_HASH, WIN)).checks).not.toHaveProperty('netflixPlays')
     })
   })
 })
