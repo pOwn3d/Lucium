@@ -4,7 +4,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
-## [1.1.6] - 2026-11-22
+## [1.1.6] - 2026-11-23
 
 Cette version apporte une navigation plus sûre et plus privée (navigation sûre, protection du réseau, cookies tiers, interrupteur JavaScript par site, avertissements avant un risque), de nouvelles façons de travailler (rappels d’onglets, mode concentration, recherche dans le contenu des pages visitées, vue d’ensemble des onglets, un espace exporté vers un autre Mac) et un panneau Découvrir Lucium avec un conseil du jour.
 
