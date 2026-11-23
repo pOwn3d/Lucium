@@ -171,7 +171,7 @@ describe('the update of a .deb from the menu: told, with the command, never inst
   })
 
   it('says a download that failed, with its cause, and offers the page', async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     record.outcome = { ok: false, kind: 'mismatch', detail: 'the SHA-256 differs' }
     electron.showMessageBox.mockResolvedValueOnce({ response: 0 }).mockResolvedValueOnce({ response: 0 })
     await menu()
@@ -179,6 +179,7 @@ describe('the update of a .deb from the menu: told, with the command, never inst
     expect(box(1).message).toBe(t('app-update.la-mise-a-jour-n-a-pas-pu-etre-telechargee'))
     expect(box(1).detail).toContain(t('windows-update.le-fichier-telecharge-ne-correspond-pas'))
     expect(box(1).detail).toContain('the SHA-256 differs')
+    expect(String(warned.mock.calls[0]![0])).toContain('was not kept (mismatch)')
     expect(record.copied).toEqual([])
   })
 
