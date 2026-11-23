@@ -24,6 +24,7 @@ function ports(platform: PlatformId, set: Partial<DefaultBrowserPorts> = {}): { 
       isClient: () => false,
       setClient: (scheme) => (calls.registered.push(scheme), true),
       queryRegistry: async (key) => (calls.queried.push(key), printed('MSEdgeHTM')),
+      linuxWebBrowser: async () => 'lucium.desktop',
       openSettings: async (url) => void calls.opened.push(url),
       ...set
     }
@@ -74,27 +75,38 @@ describe('is Lucium the default browser, on Windows', () => {
     expect(await isDefaultBrowser(ports('win32', { queryRegistry: async () => null }).ports)).toBe(false)
   })
 
-  it('says no and logs why when the registry cannot be read', async () => {
+  it('says it does not know, and logs why, when the registry cannot be read', async () => {
     const warned = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     const { ports: p } = ports('win32', { queryRegistry: () => Promise.reject(new Error('spawn reg.exe ENOENT')) })
-    expect(await isDefaultBrowser(p)).toBe(false)
+    expect(await isDefaultBrowser(p)).toBeNull()
     expect(warned).toHaveBeenCalledWith(expect.stringContaining('[default-browser]'), 'spawn reg.exe ENOENT')
   })
 })
 
 describe('is Lucium the default browser, elsewhere', () => {
   it('asks Electron for both schemes and never reads the registry', async () => {
-    for (const platform of ['darwin', 'linux'] as const) {
-      const yes = ports(platform, { isClient: () => true })
-      expect(await isDefaultBrowser(yes.ports)).toBe(true)
-      expect(yes.calls.queried).toEqual([])
-      expect(await isDefaultBrowser(ports(platform, { isClient: (scheme) => scheme === 'http' }).ports)).toBe(false)
-    }
+    const yes = ports('darwin', { isClient: () => true })
+    expect(await isDefaultBrowser(yes.ports)).toBe(true)
+    expect(yes.calls.queried).toEqual([])
+    expect(await isDefaultBrowser(ports('darwin', { isClient: (scheme) => scheme === 'http' }).ports)).toBe(false)
+  })
+
+  it('on Linux, believes Electron only when the desktop names Lucium too', async () => {
+    expect(await isDefaultBrowser(ports('linux', { isClient: () => true }).ports)).toBe(true)
+    expect(await isDefaultBrowser(ports('linux', { isClient: () => true, linuxWebBrowser: async () => 'firefox_firefox.desktop\n' }).ports)).toBe(false)
+    expect(await isDefaultBrowser(ports('linux', { isClient: (scheme) => scheme === 'http' }).ports)).toBe(false)
+  })
+
+  it('on Linux, says it does not know when xdg-settings answers nothing or cannot run', async () => {
+    const warned = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    expect(await isDefaultBrowser(ports('linux', { isClient: () => true, linuxWebBrowser: async () => null }).ports)).toBeNull()
+    expect(await isDefaultBrowser(ports('linux', { isClient: () => true, linuxWebBrowser: () => Promise.reject(new Error('spawn xdg-settings ENOENT')) }).ports)).toBeNull()
+    expect(warned).toHaveBeenCalledWith(expect.stringContaining('[default-browser]'), 'spawn xdg-settings ENOENT')
   })
 
   it('answers the menu at once from Electron, and never dims the entry on Windows, which cannot be read without waiting', () => {
     expect(isDefaultBrowserNow(ports('darwin', { isClient: () => true }).ports)).toBe(true)
-    expect(isDefaultBrowserNow(ports('linux', { isClient: () => false }).ports)).toBe(false)
+    expect(isDefaultBrowserNow(ports('linux', { isClient: () => true }).ports)).toBe(false)
     expect(isDefaultBrowserNow(ports('win32', { isClient: () => true }).ports)).toBe(false)
   })
 })

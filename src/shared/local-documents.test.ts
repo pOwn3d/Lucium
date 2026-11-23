@@ -10,6 +10,13 @@ describe('localFileUrl', () => {
     }
   })
 
+  it('gives the file address of a Windows path, with the drive letter kept and the backslashes turned into slashes', () => {
+    expect(localFileUrl('C:\\Users\\jane\\essai.html')).toBe('file:///C:/Users/jane/essai.html')
+    expect(localFileUrl('d:/a b/#1.html')).toBe('file:///d:/a%20b/%231.html')
+    expect(localFileUrl('C:\\Users\\jane\\setup.exe')).toBeNull()
+    expect(localFileUrl('C:essai.html')).toBeNull()
+  })
+
   it('reads the type whatever its case, and from the last dot only', () => {
     expect(localFileUrl('/tmp/PAGE.HTML')).toBe('file:///tmp/PAGE.HTML')
     expect(localFileUrl('/tmp/archive.tar.html')).toBe('file:///tmp/archive.tar.html')

@@ -162,7 +162,8 @@ export interface LuciumApi {
   /** Reloads the tabs of the space on screen only (the button next to the one that reloads the tabs of every space). */
   reloadSpaceTabs(): void
   /** Whether Lucium is the system's default web browser. */
-  defaultBrowser(): Promise<boolean>
+  /** Whether Lucium is the default browser; `null` when the system gave no answer to trust. */
+  defaultBrowser(): Promise<boolean | null>
   /** Asks the system to make Lucium the default web browser: `done`, `system-settings` (Windows: Settings was opened, the choice is the user's) or `failed`. */
   setDefaultBrowser(): Promise<DefaultBrowserOutcome>
   /** Why the Dock does not show the icon chosen in Settings › Icône (its picture is missing from the application); null when it does. */

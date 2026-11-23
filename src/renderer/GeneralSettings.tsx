@@ -23,7 +23,8 @@ interface PaneProps {
  * is drawn; until it answers, the row says nothing of it.
  */
 export function DefaultBrowserRow() {
-  const [isDefault, setIsDefault] = useState<boolean | null>(null)
+  // undefined: not asked yet; null: the system gave no answer to trust.
+  const [isDefault, setIsDefault] = useState<boolean | null | undefined>(undefined)
   // What is said when Lucium could not be made the default browser.
   const [defaultNote, setDefaultNote] = useState('')
   useEffect(() => {
@@ -58,11 +59,11 @@ export function DefaultBrowserRow() {
       })
   }
 
-  const hint = isDefault === null ? undefined : isDefault ? t('settings.home-lucium-est-par-defaut') : t('settings.lucium-n-est-pas-votre-navigateur-par')
+  const hint = isDefault === undefined ? undefined : isDefault === null ? t('settings.navigateur-par-defaut-inconnu') : isDefault ? t('settings.home-lucium-est-par-defaut') : t('settings.lucium-n-est-pas-votre-navigateur-par')
   return (
     <>
       <Row label={t('settings.home-navigateur-par-defaut')} hint={hint} searchKey="defaultBrowser">
-        {isDefault === false && (
+        {(isDefault === false || isDefault === null) && (
           <button className="button" onClick={makeDefault}>
             {t('settings.definir-lucium-par-defaut')}
           </button>

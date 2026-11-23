@@ -7,6 +7,7 @@
 // Importable by the interface as well as the main process: no Node and no Electron types.
 
 import { AUTOMATION_SCHEME } from './automation-url'
+import { localFileUrl } from './local-documents'
 import { DISK_ACCESS_SETTINGS_URL } from './import-sources'
 import { t } from './i18n'
 import type { LinuxPackaging } from './linux-install'
@@ -228,7 +229,12 @@ export function isAbsolutePath(path: string, platform: PlatformId = 'darwin'): b
  * macOS delivers it through an event instead.
  */
 export function linksFromArgv(argv: readonly string[]): string[] {
-  return argv.filter((arg) => /^https?:\/\//i.test(arg) || arg.slice(0, AUTOMATION_SCHEME.length + 2).toLowerCase() === `${AUTOMATION_SCHEME}//`)
+  return argv.flatMap((arg) => {
+    if (/^https?:\/\//i.test(arg) || arg.slice(0, AUTOMATION_SCHEME.length + 2).toLowerCase() === `${AUTOMATION_SCHEME}//`) return [arg]
+    // A file the system opens with Lucium (a double-click on Windows, « Ouvrir avec » on Linux) arrives as its path: it opens as a `file:` address, of the types a tab shows only.
+    const file = localFileUrl(arg)
+    return file === null ? [] : [file]
+  })
 }
 
 // ---- shortcuts ----
