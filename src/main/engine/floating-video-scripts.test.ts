@@ -387,6 +387,59 @@ describe('bringing the video to fill the page', () => {
   })
 })
 
+describe('the scrollbar of the page behind the player', () => {
+  // The tab's own view is lent to the window: the scrollbar of the page's document would be drawn along the right edge of the window, over nothing
+  // the player needs (YouTube and Netflix show it, Twitch's page does not scroll). The page never scrolls from the window.
+  it('hides the scrollbar of the document and of its body, and lets nothing scroll, whatever the site', () => {
+    const { world, body } = page(youtube().column)
+    run(FLOAT_STAGE, world)
+    for (const root of [html, body]) {
+      expect(root.style.getPropertyValue('overflow-x'), root.name).toBe('hidden')
+      expect(root.style.getPropertyValue('overflow-y'), root.name).toBe('hidden')
+      expect(root.style.getPropertyValue('scrollbar-width'), root.name).toBe('none')
+      expect(root.style.getPropertyValue('overscroll-behavior'), root.name).toBe('none')
+      // The page's own rules cannot win over it.
+      expect(root.style.getPropertyPriority('overflow-y'), root.name).toBe('important')
+      expect(root.style.getPropertyPriority('scrollbar-width'), root.name).toBe('important')
+    }
+  })
+
+  it('gives the page its own scrolling back with the rest, with the values it had', () => {
+    const { world, body } = page(youtube().column)
+    html.style.setProperty('overflow-y', 'scroll', '')
+    body.style.setProperty('scrollbar-width', 'thin', 'important')
+    run(FLOAT_STAGE, world)
+    run(FLOAT_UNSTAGE, world)
+    expect(html.style.getPropertyValue('overflow-y')).toBe('scroll')
+    expect(html.style.getPropertyValue('overflow-x')).toBe('')
+    expect(html.style.getPropertyValue('scrollbar-width')).toBe('')
+    expect(body.style.getPropertyValue('scrollbar-width')).toBe('thin')
+    expect(body.style.getPropertyPriority('scrollbar-width')).toBe('important')
+    expect(body.style.getPropertyValue('overflow-y')).toBe('')
+  })
+
+  it('hides it again when the page puts its own styles back on the document or its body (a player that resets them)', () => {
+    const { world, body } = page(youtube().column)
+    run(FLOAT_STAGE, world)
+    const observer = FakeObserver.all[0]!
+    // The document and its body are watched for their styles, as the player is.
+    expect(observer.watched.some(([target]) => target === html)).toBe(true)
+    expect(observer.watched.some(([target]) => target === body)).toBe(true)
+    html.style.setProperty('overflow-y', 'scroll', '')
+    body.style.removeProperty('scrollbar-width')
+    observer.fire([{ type: 'attributes' }])
+    expect(html.style.getPropertyValue('overflow-y')).toBe('hidden')
+    expect(body.style.getPropertyValue('scrollbar-width')).toBe('none')
+  })
+
+  it('does not touch the document of a page with no video', () => {
+    const { world, body } = page(new FakeElement('main'))
+    run(FLOAT_STAGE, world)
+    expect(html.style.getPropertyValue('overflow-y')).toBe('')
+    expect(body.style.getPropertyValue('scrollbar-width')).toBe('')
+  })
+})
+
 describe('giving the page back', () => {
   it('takes the player out of the top layer and gives every element its own styles again', () => {
     const { video, player, column } = youtube()
@@ -464,14 +517,14 @@ describe('a page that changes its player while the video floats', () => {
 
   it('does not take its own changes for the page’s: it stops watching while it makes them', () => {
     const { player, column } = youtube()
-    const { world } = page(column)
+    const { world, body } = page(column)
     run(FLOAT_STAGE, world)
     const observer = FakeObserver.all[0]!
     const spy = vi.spyOn(observer, 'disconnect')
     observer.fire([{ type: 'attributes' }])
     expect(spy).toHaveBeenCalled()
-    // Watching again afterwards: the document and the two elements.
-    expect(observer.watched.map(([target]) => target)).toEqual([fakeDocument, player, expect.any(FakeVideo)])
+    // Watching again afterwards: the document, the two elements, and the styles of the page's own document and body (its scrollbar is hidden).
+    expect(observer.watched.map(([target]) => target)).toEqual([fakeDocument, player, expect.any(FakeVideo), html, body])
   })
 })
 

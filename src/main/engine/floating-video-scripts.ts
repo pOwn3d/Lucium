@@ -109,6 +109,9 @@ export const FLOAT_STAGE = `(() => {
     }
     return stage
   }
+  // The document and its body while the video floats: the tab's view is lent to the window, so their scrollbar would be drawn along its edge (YouTube,
+  // Netflix) and the wheel would scroll the page under the player. Neither scrolls nor shows a bar; the page is given its own values back.
+  const NO_SCROLL = { 'overflow-x': 'hidden', 'overflow-y': 'hidden', 'scrollbar-width': 'none', 'overscroll-behavior': 'none' }
   const HIDDEN = { display: 'none' }
   const CONTROLS = ${JSON.stringify(CONTROLS)}
   // The boxes of the player (below it, not the ones the video is in) that hold a control of the site: its bar, its click catcher, its gradients.
@@ -140,6 +143,7 @@ export const FLOAT_STAGE = `(() => {
     if (!current) return
     for (const el of [current.stage, current.video]) observer.observe(el, { attributes: true, attributeFilter: ['style', 'popover', 'hidden'] })
     for (const hidden of current.hidden) observer.observe(hidden.el, { attributes: true, attributeFilter: ['style'] })
+    for (const scroller of current.scrollers) observer.observe(scroller.el, { attributes: true, attributeFilter: ['style'] })
     const root = current.video.getRootNode ? current.video.getRootNode() : null
     if (root && root !== document) observer.observe(root, { childList: true, subtree: true })
   }
@@ -170,12 +174,13 @@ export const FLOAT_STAGE = `(() => {
   const stage = (video) => {
     const el = stageOf(video)
     const added = !el.hasAttribute('popover')
-    const entry = { video, stage: el, added, stageSaved: [], videoSaved: [], hidden: [] }
+    const entry = { video, stage: el, added, stageSaved: [], videoSaved: [], hidden: [], scrollers: [document.documentElement, document.body].filter(Boolean).map((root) => ({ el: root, saved: [] })) }
     current = entry
     // No attribute marks the player or the video: the page reads its own elements, and a mark of ours would name the browser to it.
     if (added) el.setAttribute('popover', 'manual')
     put(el, STAGE, entry.stageSaved)
     if (el !== video) put(video, VIDEO, entry.videoSaved)
+    for (const scroller of entry.scrollers) put(scroller.el, NO_SCROLL, scroller.saved)
     el.addEventListener('toggle', onToggle)
     sweep()
     show()
@@ -194,6 +199,7 @@ export const FLOAT_STAGE = `(() => {
     giveBack(entry.stage, entry.stageSaved)
     if (entry.stage !== entry.video) giveBack(entry.video, entry.videoSaved)
     for (const hidden of entry.hidden) giveBack(hidden.el, hidden.saved)
+    for (const scroller of entry.scrollers) giveBack(scroller.el, scroller.saved)
   }
   const reconcile = (records) => {
     observer.disconnect()
@@ -213,6 +219,7 @@ export const FLOAT_STAGE = `(() => {
       } else if (records.some((record) => record.type === 'attributes')) {
         put(current.stage, STAGE, null)
         if (current.stage !== current.video) put(current.video, VIDEO, null)
+        for (const scroller of current.scrollers) put(scroller.el, NO_SCROLL, null)
         if (current.added && !current.stage.hasAttribute('popover')) current.stage.setAttribute('popover', 'manual')
         show()
       }
