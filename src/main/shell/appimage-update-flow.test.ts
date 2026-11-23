@@ -275,7 +275,8 @@ describe('what an AppImage does not take', () => {
   })
 
   it('tells a copy whose folder cannot be written the page instead of an update that could not be put in place', async () => {
-    if (process.platform === 'win32' || process.getuid?.() === 0) return
+    // process.platform is faked as linux by beforeEach, so the real one decides: chmod cannot make a folder read-only on Windows.
+    if (real.platform.value === 'win32' || process.getuid?.() === 0) return
     wire()
     chmodSync(folder, 0o555)
     vi.spyOn(console, 'warn').mockImplementation(() => undefined)
