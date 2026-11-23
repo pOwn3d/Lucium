@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+## [1.1.8] - 2026-11-23
+
+Cette version ramène toutes les fenêtres de Lucium devant quand on passe à l'application, améliore la fenêtre flottante d'une vidéo (plus de barre de défilement, et on la déplace par la vidéo) et apporte la mise à jour de Windows par Lucium lui-même, éteinte par défaut.
+
 ### Ajouté
 
 - **Windows, mises à jour par Lucium** : « Rechercher les mises à jour… » lit le flux signé de Windows ; après votre clic, Lucium télécharge l’installeur, ne le garde que si sa taille et son SHA-256 sont ceux du flux signé, et le lance en silence après un second clic. Rien ne se lance sans vos clics.
