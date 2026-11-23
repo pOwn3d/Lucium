@@ -5027,6 +5027,7 @@ export const en: Record<MessageKey, string> = {
   'ui.recharger-l-interface': 'Reload Interface',
   'update-check.aucune-reponse': 'No response',
   'update-check.l-adresse-du-flux-de-mises-a-jour-doit-commencer': 'The address of the update feed must start with https://',
+  'update-check.le-flux-de-mises-a-jour-est-plus-ancien-que-le-dernier-lu': 'The update feed is older than the last one read: it is refused, so no update is offered.',
   'update-check.le-flux-de-mises-a-jour-est-trop-gros': 'The update feed is larger than {size} KB: it is not a release file, so it is not read.',
   'update-check.le-flux-de-mises-a-jour-a-redirige-vers-une': 'The update feed redirected to an insecure address (http://)',
   'update-check.le-flux-de-mises-a-jour-n-a-pas-de-signature-valide': 'The update feed has no valid signature: no update is offered.',

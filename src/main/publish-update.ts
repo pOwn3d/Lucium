@@ -759,12 +759,75 @@ export function withdrawnList(versions: readonly string[], offered: string): str
 /**
  * The feed `text` with `versions` as its list of withdrawn versions (no key at all for an empty list), written as scripts/make-update-feed.mjs
  * writes a feed. Everything else of the feed is kept as it is. `text` is a feed that was read as a release file already.
+ *
+ * `redated`, for a withdrawal: the date the feed is written, which becomes the `pub_date` of the release it names. A copy keeps the latest `pub_date` it
+ * accepted and refuses an older feed (shared/update-feed-date.ts): the feed that goes back to an earlier version, or that only gains a withdrawn version,
+ * would otherwise carry the date of its own publication, before the feed the copies read last, and every one of them would refuse it, the list included.
  */
-export function feedWithWithdrawn(text: string, versions: readonly string[]): string {
+export function feedWithWithdrawn(text: string, versions: readonly string[], redated?: Date): string {
   const feed: unknown = JSON.parse(text)
   if (!isRecord(feed)) throw new Error('the feed is not an object')
   const rest = Object.fromEntries(Object.entries(feed).filter(([key]) => key !== WITHDRAWN_KEY))
-  return `${JSON.stringify(versions.length > 0 ? { ...rest, [WITHDRAWN_KEY]: versions } : rest, null, 2)}\n`
+  const dated = redated === undefined ? rest : { ...rest, releases: redatedReleases(rest['releases'], rest['currentRelease'], redated) }
+  return `${JSON.stringify(versions.length > 0 ? { ...dated, [WITHDRAWN_KEY]: versions } : dated, null, 2)}\n`
+}
+
+/** The date as Squirrel parses it and as update-feed-file.ts writes it: "2026-11-06T09:00:00Z", with no fraction of a second. */
+const feedDate = (date: Date): string => date.toISOString().replace(/\.\d{3}Z$/, 'Z')
+
+/** `releases` with the `pub_date` of the entry whose version is `current` set to `date`; anything else is returned as it is. */
+function redatedReleases(releases: unknown, current: unknown, date: Date): unknown {
+  if (!Array.isArray(releases)) return releases
+  return releases.map((release: unknown) => {
+    if (!isRecord(release) || release['version'] !== current || !isRecord(release['updateTo'])) return release
+    return { ...release, updateTo: { ...release['updateTo'], pub_date: feedDate(date) } }
+  })
+}
+
+const FEED_DATE_FORMAT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/
+
+/** The `pub_date` of the release a feed names, in milliseconds, or null when the text is not a feed with one (it is no constraint then: `dateProblem` says nothing of it). */
+export function feedDateOf(text: string): number | null {
+  let feed: unknown
+  try {
+    feed = JSON.parse(text)
+  } catch {
+    // A feed in place that is not JSON is said by the step that reads it ("not a release file"); here it simply gives no date.
+    return null
+  }
+  if (!isRecord(feed) || !Array.isArray(feed['releases'])) return null
+  const entry = feed['releases'].find((release: unknown) => isRecord(release) && release['version'] === feed['currentRelease'])
+  const written = isRecord(entry) && isRecord(entry['updateTo']) ? entry['updateTo']['pub_date'] : undefined
+  const at = typeof written === 'string' && FEED_DATE_FORMAT.test(written) ? Date.parse(written) : Number.NaN
+  return Number.isFinite(at) ? at : null
+}
+
+/**
+ * Why the feed about to be written would be refused by every copy that read the one in place, or null. A copy keeps the latest `pub_date` it accepted and
+ * refuses a feed dated before it (shared/update-feed-date.ts): a feed written with an earlier date than the one in place (the clock of this machine is behind,
+ * a `--date` that is old) reaches nobody, and nobody would be told why. The same date is fine.
+ */
+export function dateProblem(inPlace: string, written: string): string | null {
+  return datesProblem(feedDateOf(inPlace), feedDateOf(written))
+}
+
+/** How far ahead of the clock of this machine a feed may be dated: the time between writing the date and reading the clock, not a margin to publish ahead. */
+export const FEED_DATE_SLACK_MS = 60_000
+
+/**
+ * Why the feed about to be written must not go out, or null: it is dated after the clock of this machine (a wrong `--date`, a clock that is ahead). A copy keeps the
+ * latest date it accepted and never reads its own clock, so a date in the future would make it refuse every honest feed published until that date.
+ */
+export function futureProblem(written: string, now: Date): string | null {
+  const at = feedDateOf(written)
+  if (at === null || at <= now.getTime() + FEED_DATE_SLACK_MS) return null
+  return `the feed to write is dated ${feedDate(new Date(at))}, after the clock of this machine (${feedDate(now)}): a copy that accepted it would refuse every feed published before that date. Check the clock of this machine, or the --date of the feed`
+}
+
+/** `dateProblem` on two instants (milliseconds), either of which may be unknown: a feed with no date is no constraint, and none is made up. */
+export function datesProblem(before: number | null, now: number | null): string | null {
+  if (before === null || now === null || now >= before) return null
+  return `the feed to write is dated ${feedDate(new Date(now))}, before the feed in place (${feedDate(new Date(before))}): every copy that read the feed in place would refuse it as older. Check the clock of this machine, or the --date of the feed, then run it again`
 }
 
 /** What is wrong with the list of withdrawn versions of a feed read back from the server, or null: it must be exactly `want`. */
@@ -1271,6 +1334,8 @@ export async function publish(input: PublishInput, deps: PublishDeps): Promise<P
     const written = feedProblems(made.stdout, expected)
     if (written.length > 0) fail(`the feed that was written does not describe the archive:\n    ${written.join('\n    ')}`)
     ok(`the feed names ${remote.archiveUrl} with its SHA-256 and size`)
+    const ahead = futureProblem(made.stdout, deps.now())
+    if (ahead) fail(ahead)
     if (dryRun) say(`  --  ${feedFile} is not written in a dry run`)
     else {
       deps.writeText(feedFile, made.stdout)
@@ -1288,6 +1353,9 @@ export async function publish(input: PublishInput, deps: PublishDeps): Promise<P
       const refusal = replacementProblem(offeredNow, { version: input.version, sha256: weight.sha256, size: weight.size })
       if (refusal) fail(refusal)
       alreadyOffered = offeredNow?.version === input.version
+      // A copy refuses a feed dated before the one it read last: this one must not be (a clock that is behind, an old --date).
+      const stale = dateProblem(inPlace.stdout, made.stdout)
+      if (stale) fail(stale)
       if (inPlace.stdout.trim() === '') ok('the channel has no feed yet')
       else if (!offeredNow) say('  warning: the feed in place is not a release file: it cannot be compared with this version, and will be kept aside before it is replaced')
       else if (alreadyOffered) ok(`the channel already offers ${input.version}, with this same archive: nothing a copy installs changes`)
@@ -1598,6 +1666,12 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
       return true
     }
 
+    // The feed a withdrawal writes is dated now (see `feedWithWithdrawn`): it must not be before the feed in place, or no copy would take it. Said before anything is changed.
+    const clockProblem = (): void => {
+      const stale = datesProblem(feedDateOf(current.stdout), deps.now().getTime())
+      if (stale) fail(stale)
+    }
+
     // 2. The feed first: nothing may name a file that is about to go.
     if (inPlace?.version !== version) {
       const list = inPlace ? withdrawnList([...listedInPlace.versions, version], inPlace.version) : []
@@ -1607,13 +1681,14 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
       } else {
         // What the channel offers does not change; the copies that still run the version are told it was withdrawn.
         begin(`List ${version} as withdrawn in the feed`)
+        clockProblem()
         say(`  --  the feed does not offer ${version} (it offers ${inPlace.version}): what it offers is not changed`)
         // What is signed here is the feed of the server with one list changed: it must be a feed that was signed here, not whatever the server holds.
         const source = deps.feedKeys.signedPart(current.stdout)
         if (source === null) {
           fail(`the feed in place carries no signature by a key of the feed, so it is not signed again as it is: it was published before the feeds were signed, or it was changed on the server. Look at ${plan.feedUrl}, then publish a version (its feed is written and signed here)`)
         }
-        if (writeFeed(feedWithWithdrawn(source, list), inPlace, list, `${version} was not listed as withdrawn in the feed, which is as it was`, `the one of ${inPlace.version} with ${version} listed as withdrawn`)) ok(`the feed online still offers ${inPlace.version}, and lists as withdrawn: ${list.join(', ')}`)
+        if (writeFeed(feedWithWithdrawn(source, list, deps.now()), inPlace, list, `${version} was not listed as withdrawn in the feed, which is as it was`, `the one of ${inPlace.version} with ${version} listed as withdrawn`)) ok(`the feed online still offers ${inPlace.version}, and lists as withdrawn: ${list.join(', ')}`)
       }
     } else if (input.to === NO_FEED) {
       begin('Take the feed away')
@@ -1661,6 +1736,7 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
       ok(`the archive of ${to} is on the server with the SHA-256 and the size its feed says`)
 
       begin(`Put the feed of ${to} back`)
+      clockProblem()
       const aside = change(plan.keepWithdrawnFeed)
       if (aside && aside.status !== 0) fail(`the feed of ${version} was not kept aside, so it is not replaced: ${failureOf(aside)}`)
       // The kept feed, with the withdrawn version in its list: the one thing that tells a copy on that version why nothing higher is offered.
@@ -1671,7 +1747,7 @@ export async function withdraw(input: WithdrawInput, deps: Pick<PublishDeps, 'sa
         offered = 'earlier version'
         wentBackTo = to
       }
-      if (writeFeed(feedWithWithdrawn(keptSource, list), release, list, `the feed of ${to} was not put back`, `the one of ${to}`, wentBack)) {
+      if (writeFeed(feedWithWithdrawn(keptSource, list, deps.now()), release, list, `the feed of ${to} was not put back`, `the one of ${to}`, wentBack)) {
         const answer = statusOf(target.archiveUrl)
         if (answer !== '200') fail(`${target.archiveUrl} answers ${answer} and not 200: the feed names an archive that does not answer`)
         ok(`the feed online offers ${to}, lists as withdrawn: ${list.join(', ')}, and its archive answers`)

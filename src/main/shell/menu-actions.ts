@@ -14,6 +14,7 @@ import { downloadPageUrl, feedAnswer, feedFetchInit, updateOutcome, withdrawnVer
 import { UPDATE_NOTICE_MS, droppedUpdateText } from '@shared/auto-update'
 import { unreachableFeedReason } from '@shared/update-install'
 import { feedSignatureCheck } from './update-signature'
+import { withFeedFreshness } from './update-fresh'
 import { currentUpdateSources } from './update-source'
 import { offerInstall, offerWithdrawn, updateInstaller } from './app-update'
 import type { Settings } from '@shared/model'
@@ -43,7 +44,7 @@ export interface CheckOptions {
 }
 
 /** Reads the feed: what it answered, or why it did not (no answer at all, or a body that is not a release file). */
-async function readFeed(feed: string): Promise<FeedAnswer> {
+async function fetchFeed(feed: string): Promise<FeedAnswer> {
   let response: Response
   try {
     response = await net.fetch(feed, feedFetchInit(AbortSignal.timeout(FEED_TIMEOUT_MS)))
@@ -58,6 +59,9 @@ async function readFeed(feed: string): Promise<FeedAnswer> {
     return { ok: false, reason: t('update-install.le-flux-de-mises-a-jour-est-invalide') }
   }
 }
+
+/** The same, and only a feed that is not older than the last one accepted for this address (update-fresh.ts). */
+const readFeed = withFeedFreshness(fetchFeed)
 
 /**
  * Windows and Linux (`updatesByHand`): the build reads no update address (the one it carries, update-source.ts, is not read yet) and has no installer, so there is nothing to read and nothing to configure. The box says so

@@ -21,6 +21,7 @@ import { feedAnswer, feedFetchInit, updateOutcome, urgentSecurityFix, withdrawnV
 import { runningTarget, type FeedTarget } from '@shared/update-target'
 import { currentBackgroundFeed } from './update-source'
 import { feedSignatureCheck } from './update-signature'
+import { withFeedFreshness } from './update-fresh'
 import { showUpdateNotice, updateInstaller, type InstallContext, type ToastHost } from './app-update'
 
 const FEED_TIMEOUT_MS = 10_000
@@ -192,7 +193,7 @@ export interface AutoUpdateHost {
 }
 
 /** The feed over the network: no cookie, no credential, and only what a key of the application signed. */
-async function readUpdateFeed(url: string): Promise<FeedAnswer> {
+async function fetchUpdateFeed(url: string): Promise<FeedAnswer> {
   try {
     const response = await net.fetch(url, feedFetchInit(AbortSignal.timeout(FEED_TIMEOUT_MS)))
     return await feedAnswer(url, response, feedSignatureCheck(url))
@@ -200,6 +201,9 @@ async function readUpdateFeed(url: string): Promise<FeedAnswer> {
     return { ok: false, reason: String((error as Error).message ?? error) }
   }
 }
+
+/** The same, and only a feed that is not older than the last one accepted for this address (update-fresh.ts). */
+const readUpdateFeed = withFeedFreshness(fetchUpdateFeed)
 
 /**
  * The versions a feed lists as withdrawn, read now (update-quit-check.ts, before the quit installs a downloaded update); null when there is no feed
