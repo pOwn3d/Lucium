@@ -54,7 +54,8 @@ export const FLOAT_FIND = `(() => { ${CHOOSE}
 
 /**
  * A player is an ancestor of the video at most this much larger than the video, in each direction: the site's box around the video, which holds the
- * subtitles it draws as text (not the page around it, which is larger).
+ * subtitles it draws as text (not the page around it, which is larger), and that holds nothing larger than that beside the video (content of the page
+ * under or beside the player is not the player, even in a box about the video's size).
  */
 export const STAGE_SLACK = 1.25
 
@@ -95,6 +96,13 @@ export const FLOAT_STAGE = `(() => {
     for (let el = parentOf(video); el && el !== document.body && el !== document.documentElement; el = parentOf(el)) {
       const around = el.getBoundingClientRect()
       if (around.width > box.width * ${STAGE_SLACK} + 2 || around.height > box.height * ${STAGE_SLACK} + 2) break
+      // A box that also holds content of the page beside the player (a child much larger than the video: the channel under it, the page's column) is
+      // the page, even when the video nearly fills the window and the box is about its size: the player stops below it.
+      if (Array.from(el.children || []).some((child) => {
+        if (child === stage) return false
+        const own = child.getBoundingClientRect()
+        return own.width > box.width * ${STAGE_SLACK} + 2 || own.height > box.height * ${STAGE_SLACK} + 2
+      })) break
       // An element the page already uses as a popover is the page's: the player stops below it.
       if (el.hasAttribute('popover')) break
       stage = el

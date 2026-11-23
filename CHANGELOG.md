@@ -17,6 +17,7 @@ This version fixes the floating video window: it now shows one bar, Lucium's, an
 ### Fixed
 
 - **Picture in Picture, a single bar**: in the floating window of a video (a Twitch live, for example) only Lucium's bar remains: pause, volume, live or position, and the button that gives the video back to its tab. The site's own controls and the header are hidden; they were shown twice before.
+- **Picture in Picture, no more black window on a large Twitch page**: when the video nearly filled the window (Twitch signed in, chat folded), the floating window could stay black and the tab, once the video was given back, showed no player. The player is now only the box around the video, never the page around it.
 
 ## [1.1.6] - 2026-11-23
 
