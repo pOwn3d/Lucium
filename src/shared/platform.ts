@@ -69,7 +69,7 @@ export interface PlatformFacts {
   posixFileModes: boolean
   /**
    * The system has an update installer (Squirrel.Mac, which installs only after the user's click). It exists on macOS alone: the Windows and Linux builds
-   * carry no update address, so an update is made by hand from the download page (`updatesByHand`).
+   * carry the address of their feed but nothing reads it yet, so an update is made by hand from the download page (`updatesByHand`).
    */
   selfUpdate: boolean
 }

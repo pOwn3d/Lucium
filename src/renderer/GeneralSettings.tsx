@@ -84,7 +84,7 @@ export function UpdatesSettings({ snapshot, update }: PaneProps) {
   return (
     <Group title={t('settings.section-mises-a-jour')}>
       {updatesByHand(snapshot.platform) ? (
-        // Windows and Linux carry no update address and no installer: a switch for a check that reads nothing would only mislead. The row says how an update is made instead.
+        // Windows and Linux read no update address and have no installer: a switch for a check that reads nothing would only mislead. The row says how an update is made instead.
         <div className="pref-row pref-message" role="status" data-role="updates-by-hand">
           {t('settings.cette-version-ne-se-met-pas-a-jour-toute-seule')}
         </div>

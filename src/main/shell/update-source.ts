@@ -17,6 +17,7 @@
 // opened in the browser.
 
 import type { Settings, UpdateChannel } from '@shared/model'
+import { updatesByHand } from '@shared/platform'
 import { isBuiltApp } from '../runtime'
 
 const https = (url: string): boolean => /^https:\/\/\S+$/i.test(url)
@@ -62,7 +63,9 @@ export function channelFeed(facts: Pick<UpdateSourceFacts, 'builtIn' | 'builtInT
  * made with one), and nothing installs.
  */
 export function updateSources(facts: UpdateSourceFacts): UpdateSources {
-  const builtIn = channelFeed(facts)
+  // Windows and Linux builds carry the address of their feed (the CI builds: .github/workflows/windows.yml, linux.yml), and no client reads it yet: a system that
+  // updates by hand reads no built-in address, so that the check, the background look and the menu do exactly what they did before the address was there.
+  const builtIn = updatesByHand(facts.platform) ? '' : channelFeed(facts)
   const install = facts.builtApp && facts.platform === 'darwin' && https(builtIn) ? builtIn : null
   if (install) return { check: install, install }
   return { check: (facts.env ?? facts.setting).trim() || builtIn, install: null }
@@ -88,7 +91,7 @@ export const builtInFeed = (): string => (import.meta.env.MAIN_VITE_UPDATE_FEED 
 export const builtInTestFeed = (): string => (import.meta.env.MAIN_VITE_UPDATE_FEED_TEST ?? '').trim()
 
 /** Whether this build carries a test channel: the Settings show « Recevoir les versions de test » only then (the snapshot's `updateTestChannel`). */
-export const testChannelAvailable = (): boolean => hasTestFeed(builtInTestFeed())
+export const testChannelAvailable = (): boolean => !updatesByHand(process.platform) && hasTestFeed(builtInTestFeed())
 
 /** What the snapshot of a window says of the build: `updateTestChannel` while it carries a test address, nothing otherwise (the Settings hide the choice then). */
 export const testChannelOfSnapshot = (): { updateTestChannel?: true } => (testChannelAvailable() ? { updateTestChannel: true } : {})

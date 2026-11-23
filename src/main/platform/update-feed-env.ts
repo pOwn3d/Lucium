@@ -1,6 +1,7 @@
 // The addresses of the update feeds are built into a build by electron-vite from MAIN_VITE_UPDATE_FEED (stable) and MAIN_VITE_UPDATE_FEED_TEST (test),
 // which Vite also reads from the .env files of the project. scripts/build-drm-release.sh gives them from --update-feed and --test-feed only and
-// refuses a .env file that sets either; every other build (`pnpm package`, the release and CI workflows) goes through electron.vite.config.ts, which
+// refuses a .env file that sets either (the packaging jobs of windows.yml and linux.yml give them in the environment of their Build step, a place no file
+// of the project can reach); every other build (`pnpm package`, the release and CI workflows) goes through electron.vite.config.ts, which
 // refuses the same files with this: a forgotten .env.local must not build an address into a build nobody meant to carry one. Not part of
 // the application: the configuration imports it, and it imports nothing but Node's modules.
 

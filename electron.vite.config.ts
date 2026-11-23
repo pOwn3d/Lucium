@@ -5,7 +5,7 @@ import { envFilesSettingFeed } from './src/main/platform/update-feed-env'
 
 const shared = resolve(__dirname, 'src/shared')
 
-/** A build carries the addresses of the update feeds only from --update-feed and --test-feed of scripts/build-drm-release.sh, never from a .env file (update-feed-env.ts). */
+/** A build carries the addresses of the update feeds only from --update-feed and --test-feed of scripts/build-drm-release.sh, or from the Build step of the packaging jobs of windows.yml and linux.yml, never from a .env file (update-feed-env.ts). */
 function refuseFeedInEnvFiles(mode: string): void {
   if (mode !== 'production') return
   const found = envFilesSettingFeed(__dirname)

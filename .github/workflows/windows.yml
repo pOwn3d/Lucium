@@ -78,7 +78,13 @@ jobs:
       - uses: ./.github/actions/setup
       # A safety net when the install script of the electron package did not fetch its binary (allowBuilds in pnpm-workspace.yaml).
       - run: node node_modules/electron/install.js
+      # The addresses of the update feeds of this system, built into app.asar (public: no secret). Nothing reads them yet: a Windows build installs no update
+      # and its checks ignore the built-in address (src/main/shell/update-source.ts); they are here so that the first version that does carries them.
+      # Never from a .env file (electron.vite.config.ts refuses one): only from this step.
       - name: Build
+        env:
+          MAIN_VITE_UPDATE_FEED: https://lucium.app/updates/win32-x64/feed.json
+          MAIN_VITE_UPDATE_FEED_TEST: https://test.lucium.app/updates/win32-x64/feed.json
         run: pnpm build
       # The NSIS installer of electron-builder.yml (win.target), x64, with build/icon.ico and build/installer.nsh. Never a signing identity, never a publication.
       - name: Package the installer (unsigned, nothing published)

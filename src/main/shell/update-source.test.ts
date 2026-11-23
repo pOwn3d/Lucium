@@ -1,5 +1,5 @@
 // Where the check reads and where Squirrel installs from (update-source.ts): the built application installs only from the address built into it.
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('electron', () => ({ app: { isPackaged: false } }))
 
@@ -8,7 +8,15 @@ const STABLE_FEED = 'https://lucium.app/updates/darwin-arm64/feed.json'
 
 const { backgroundFeed, builtInFeed, builtInTestFeed, channelFeed, currentBackgroundFeed, currentUpdateSources, hasTestFeed, testChannelAvailable, testChannelOfSnapshot, updateSources } = await import('./update-source')
 
-afterEach(() => vi.unstubAllEnvs())
+// The tests of the built-in addresses are the ones of macOS, the system that installs from them: the system is set, whatever machine runs them (a Windows or Linux
+// run reads no built-in address: the tests of that are below).
+const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!
+const runningOn = (platform: NodeJS.Platform) => Object.defineProperty(process, 'platform', { value: platform })
+beforeEach(() => runningOn('darwin'))
+afterEach(() => {
+  vi.unstubAllEnvs()
+  Object.defineProperty(process, 'platform', realPlatform)
+})
 
 describe('builtInFeed', () => {
   it('is the address electron-vite wrote at build time (MAIN_VITE_UPDATE_FEED), and none for a build made without it', () => {
@@ -102,7 +110,6 @@ describe('backgroundFeed: what « Rechercher les mises à jour automatiquement �
   it('in the built application, reads the built-in address, the one the menu reads and Squirrel installs from', () => {
     expect(backgroundFeed(facts(), true)).toBe(BUILT_IN)
     expect(backgroundFeed(facts({ setting: 'https://set.example/latest' }), true)).toBe(BUILT_IN)
-    expect(backgroundFeed(facts({ platform: 'linux' }), true)).toBe(BUILT_IN)
   })
 
   it('reads nothing at all with the setting off, whatever is configured', () => {
@@ -203,5 +210,45 @@ describe('the two channels: the setting chooses between two addresses sealed int
     expect(currentUpdateSources({ updateFeedUrl: '', updateChannel: 'test' })).toEqual({ check: BUILT_IN, install: null })
     vi.stubEnv('MAIN_VITE_UPDATE_FEED_TEST', undefined)
     expect(currentUpdateSources({ updateFeedUrl: '', updateChannel: 'test' })).toEqual({ check: STABLE_FEED, install: null })
+  })
+})
+
+// Windows and Linux builds carry the address of their feed (windows.yml, linux.yml), and nothing reads it yet: the lot of the client comes after.
+describe('a system that updates by hand reads no built-in address', () => {
+  const both = (over: Partial<Parameters<typeof updateSources>[0]> = {}) => facts({ builtIn: STABLE_FEED, builtInTest: BUILT_IN, ...over })
+
+  it('checks and installs nothing from it, on either channel, in the menu or in the background', () => {
+    for (const platform of ['win32', 'linux'] as const) {
+      for (const channel of ['stable', 'test'] as const) {
+        const there = both({ platform, channel })
+        expect(updateSources(there), `${platform} ${channel}`).toEqual({ check: '', install: null })
+        expect(backgroundFeed(there, true), `${platform} ${channel}`).toBeNull()
+      }
+    }
+  })
+
+  it('still reads an address given by hand, as it did before the build carried one', () => {
+    expect(updateSources(both({ platform: 'win32', setting: 'https://set.example/latest' }))).toEqual({ check: 'https://set.example/latest', install: null })
+    expect(updateSources(both({ platform: 'linux', env: 'https://env.example/latest', setting: 'https://set.example/latest' }))).toEqual({ check: 'https://env.example/latest', install: null })
+    expect(backgroundFeed(both({ platform: 'linux', setting: 'https://set.example/latest' }), true)).toBe('https://set.example/latest')
+  })
+
+  it('does not offer the test channel in the Settings, which would show a switch that changes nothing', () => {
+    vi.stubEnv('MAIN_VITE_UPDATE_FEED_TEST', BUILT_IN)
+    for (const platform of ['win32', 'linux'] as const) {
+      runningOn(platform)
+      expect(testChannelAvailable(), platform).toBe(false)
+      expect(testChannelOfSnapshot(), platform).toEqual({})
+    }
+    runningOn('darwin')
+    expect(testChannelAvailable()).toBe(true)
+  })
+
+  it('reads the built-in addresses of this run as nothing, through the current facts', () => {
+    vi.stubEnv('MAIN_VITE_UPDATE_FEED', STABLE_FEED)
+    vi.stubEnv('LUCIUM_UPDATE_FEED', undefined)
+    runningOn('win32')
+    expect(currentUpdateSources({ updateFeedUrl: '', updateChannel: 'stable' })).toEqual({ check: '', install: null })
+    expect(currentBackgroundFeed({ updateFeedUrl: '', updateChannel: 'stable', autoUpdate: true })).toBeNull()
   })
 })
