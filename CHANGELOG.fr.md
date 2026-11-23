@@ -11,6 +11,7 @@ Cette version corrige la fenêtre flottante d'une vidéo : elle ne montre plus q
 ### Corrections
 
 - **Image dans l'image, une seule barre** : dans la fenêtre flottante d'une vidéo (un direct Twitch, par exemple), il ne reste que la barre de Lucium : pause, volume, direct ou position, et retour à l'onglet. Les contrôles du site et l'en-tête sont masqués.
+- **Image dans l'image, plus de fenêtre noire sur une grande page Twitch** : quand la vidéo occupait presque toute la fenêtre (Twitch connecté, chat replié), la fenêtre flottante pouvait rester noire et l'onglet, une fois la vidéo rendue, n'affichait plus le lecteur. Le lecteur est désormais seulement la boîte autour de la vidéo, jamais la page qui l'entoure.
 
 ## [1.1.6] - 2026-11-23
 

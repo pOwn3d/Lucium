@@ -325,6 +325,25 @@ describe('bringing the video to fill the page', () => {
     expect(menu.getAttribute('popover')).toBe('auto')
   })
 
+  it('does not take the page around the player when the video nearly fills the window (Twitch signed in: the player and the channel are in boxes about its size)', () => {
+    const { video, player } = twitch()
+    // The scrolling box of the page is about the size of the video, but it holds the channel's own content (much taller than the video) beside the
+    // player: bringing it to the top layer would take the page along and hide the boxes the player needs, the video then shows black.
+    const channel = new FakeElement('div.channel-root', { width: 1280, height: 1800 }).append(new FakeElement('button.follow', { width: 80, height: 30 }))
+    const wrapper = new FakeElement('div.scrollable', { width: 1280, height: 760 }).append(player, channel)
+    const app = new FakeElement('div.root', { width: 1440, height: 800 }).append(new FakeElement('div.nav', { width: 1440, height: 50 }).append(new FakeElement('button.menu')), wrapper)
+    const { world } = page(app)
+    run(FLOAT_STAGE, world)
+    expect(player.open).toBe(true)
+    expect(wrapper.open).toBe(false)
+    expect(app.open).toBe(false)
+    // What is outside the player is neither in the top layer nor hidden by the script, and nothing of the page is restyled.
+    expect(channel.style.getPropertyValue('display')).toBe('')
+    expect(wrapper.style.getPropertyValue('position')).toBe('')
+    expect(app.style.getPropertyValue('position')).toBe('')
+    expect(video.style.getPropertyValue('object-fit')).toBe('contain')
+  })
+
   it('says why when there is no video', () => {
     const { world } = page(new FakeElement('main'))
     expect(run(FLOAT_STAGE, world)).toEqual({ staged: false, reason: 'no-video' })
