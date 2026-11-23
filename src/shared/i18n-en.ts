@@ -7018,4 +7018,11 @@ export const en: Record<MessageKey, string> = {
   'discover.verification-nom': 'Security check',
   'discover.verification-resume': 'A page that reads again, changing nothing, what protects your browsing: extensions, site permissions, protections, updates and the vault, with what is worth a look.',
   'discover.verification-ou': 'In {path}, the “Security check” row.',
+  'windows-update.le-fichier-telecharge-ne-correspond-pas': 'The downloaded file doesn’t match what the signed feed announces (size or SHA-256 sum): it was deleted and not run. Nothing was installed.',
+  'windows-update.le-fichier-n-a-pas-pu-etre-enregistre': 'The update file couldn’t be saved in Lucium’s temporary folder: check the free space, then try again.',
+  'windows-update.le-flux-ne-decrit-pas-un-installeur': 'The update feed doesn’t describe an installer Lucium can check (https address, SHA-256 sum and size): nothing was downloaded.',
+  'windows-update.l-installeur-n-a-pas-pu-etre-lance': 'The installer couldn’t be started: Lucium stays open and nothing was replaced.',
+  'windows-update.lucium-se-ferme-l-installeur-le-remplace': 'Lucium quits, the installer replaces it with version {version}, then Lucium opens again with your Spaces and tabs. Private windows and downloads in progress are not kept. Nothing runs without this click.',
+  'settings.lucium-cherche-une-nouvelle-version-quand-vous-le-demandez': 'Lucium looks for a new version when you ask (Lucium menu › Check for Updates…), never by itself. It is installed only after your click.',
+  'about-window.cherche-maintenant-sur-demande': 'This button checks right now: on Windows, Lucium never looks by itself. An update is installed only after your click.',
 } as const

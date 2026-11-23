@@ -213,33 +213,28 @@ describe('the two channels: the setting chooses between two addresses sealed int
   })
 })
 
-// Windows and Linux builds carry the address of their feed (windows.yml, linux.yml), and nothing reads it yet: the lot of the client comes after.
-describe('a system that updates by hand reads no built-in address', () => {
+// Linux builds carry the address of their feed (linux.yml), and nothing reads it yet: the client of Linux is a later lot.
+describe('Linux, which updates by hand, reads no built-in address', () => {
   const both = (over: Partial<Parameters<typeof updateSources>[0]> = {}) => facts({ builtIn: STABLE_FEED, builtInTest: BUILT_IN, ...over })
 
   it('checks and installs nothing from it, on either channel, in the menu or in the background', () => {
-    for (const platform of ['win32', 'linux'] as const) {
-      for (const channel of ['stable', 'test'] as const) {
-        const there = both({ platform, channel })
-        expect(updateSources(there), `${platform} ${channel}`).toEqual({ check: '', install: null })
-        expect(backgroundFeed(there, true), `${platform} ${channel}`).toBeNull()
-      }
+    for (const channel of ['stable', 'test'] as const) {
+      const there = both({ platform: 'linux', channel })
+      expect(updateSources(there), channel).toEqual({ check: '', install: null })
+      expect(backgroundFeed(there, true), channel).toBeNull()
     }
   })
 
   it('still reads an address given by hand, as it did before the build carried one', () => {
-    expect(updateSources(both({ platform: 'win32', setting: 'https://set.example/latest' }))).toEqual({ check: 'https://set.example/latest', install: null })
     expect(updateSources(both({ platform: 'linux', env: 'https://env.example/latest', setting: 'https://set.example/latest' }))).toEqual({ check: 'https://env.example/latest', install: null })
     expect(backgroundFeed(both({ platform: 'linux', setting: 'https://set.example/latest' }), true)).toBe('https://set.example/latest')
   })
 
   it('does not offer the test channel in the Settings, which would show a switch that changes nothing', () => {
     vi.stubEnv('MAIN_VITE_UPDATE_FEED_TEST', BUILT_IN)
-    for (const platform of ['win32', 'linux'] as const) {
-      runningOn(platform)
-      expect(testChannelAvailable(), platform).toBe(false)
-      expect(testChannelOfSnapshot(), platform).toEqual({})
-    }
+    runningOn('linux')
+    expect(testChannelAvailable()).toBe(false)
+    expect(testChannelOfSnapshot()).toEqual({})
     runningOn('darwin')
     expect(testChannelAvailable()).toBe(true)
   })
@@ -247,8 +242,55 @@ describe('a system that updates by hand reads no built-in address', () => {
   it('reads the built-in addresses of this run as nothing, through the current facts', () => {
     vi.stubEnv('MAIN_VITE_UPDATE_FEED', STABLE_FEED)
     vi.stubEnv('LUCIUM_UPDATE_FEED', undefined)
-    runningOn('win32')
+    runningOn('linux')
     expect(currentUpdateSources({ updateFeedUrl: '', updateChannel: 'stable' })).toEqual({ check: '', install: null })
+    expect(currentBackgroundFeed({ updateFeedUrl: '', updateChannel: 'stable', autoUpdate: true })).toBeNull()
+  })
+})
+
+// Windows builds carry the address of their feed (windows.yml) and read it (windows-update.ts): the lot of the client lifted the rule above for them. What the
+// person did not ask for stays unread: no look in the background (the maintainer's answer is awaited, shared/platform.ts `looksInBackground`).
+describe('Windows reads the built-in address, when asked', () => {
+  const WIN_STABLE = 'https://lucium.app/updates/win32-x64/feed.json'
+  const WIN_TEST = 'https://test.lucium.app/updates/win32-x64/feed.json'
+  const win = (over: Partial<Parameters<typeof updateSources>[0]> = {}) => facts({ builtIn: WIN_STABLE, builtInTest: WIN_TEST, platform: 'win32', ...over })
+
+  it('checks and installs from the built-in address of the channel the setting follows, in the built application', () => {
+    expect(updateSources(win())).toEqual({ check: WIN_STABLE, install: WIN_STABLE })
+    expect(updateSources(win({ channel: 'test' }))).toEqual({ check: WIN_TEST, install: WIN_TEST })
+  })
+
+  it('never installs from an address given by hand (the environment, the setting), nor from a run from the sources', () => {
+    expect(updateSources(win({ env: 'https://env.example/feed.json', setting: 'https://set.example/feed.json' }))).toEqual({ check: WIN_STABLE, install: WIN_STABLE })
+    expect(updateSources(win({ builtIn: '', builtInTest: '', env: 'https://env.example/feed.json' }))).toEqual({ check: 'https://env.example/feed.json', install: null })
+    expect(updateSources(win({ builtApp: false }))).toEqual({ check: WIN_STABLE, install: null })
+  })
+
+  it('refuses a built-in address that is not https', () => {
+    expect(updateSources(win({ builtIn: 'http://lucium.app/updates/win32-x64/feed.json' }))).toEqual({ check: 'http://lucium.app/updates/win32-x64/feed.json', install: null })
+  })
+
+  it('looks for nothing in the background, whatever the setting says, on either channel and in the sources too', () => {
+    for (const channel of ['stable', 'test'] as const) expect(backgroundFeed(win({ channel }), true), channel).toBeNull()
+    expect(backgroundFeed(win({ builtApp: false, setting: 'https://set.example/feed.json' }), true)).toBeNull()
+    expect(backgroundFeed(win(), false)).toBeNull()
+  })
+
+  it('offers the test channel in the Settings when the build carries a test address, and not otherwise', () => {
+    vi.stubEnv('MAIN_VITE_UPDATE_FEED_TEST', WIN_TEST)
+    runningOn('win32')
+    expect(testChannelAvailable()).toBe(true)
+    expect(testChannelOfSnapshot()).toEqual({ updateTestChannel: true })
+    vi.stubEnv('MAIN_VITE_UPDATE_FEED_TEST', undefined)
+    expect(testChannelOfSnapshot()).toEqual({})
+  })
+
+  it('reads the built-in addresses of this run for the menu, and for nothing in the background, through the current facts', () => {
+    vi.stubEnv('MAIN_VITE_UPDATE_FEED', WIN_STABLE)
+    vi.stubEnv('LUCIUM_UPDATE_FEED', undefined)
+    runningOn('win32')
+    // A run from the sources (the test is not a built application) reads the built-in address for the menu and installs nothing.
+    expect(currentUpdateSources({ updateFeedUrl: '', updateChannel: 'stable' })).toEqual({ check: WIN_STABLE, install: null })
     expect(currentBackgroundFeed({ updateFeedUrl: '', updateChannel: 'stable', autoUpdate: true })).toBeNull()
   })
 })

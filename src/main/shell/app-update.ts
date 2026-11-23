@@ -19,7 +19,7 @@
 
 import { BrowserWindow, autoUpdater, dialog, shell, type MessageBoxOptions } from 'electron'
 import { downloadedVersion, type UpdateOffer } from '@shared/update-check'
-import { UPDATE_NOTICE_MS, droppedUpdateText, updateNoticeText, type DropOutcome, type DroppedNotice, type UpdateNotice } from '@shared/auto-update'
+import { UPDATE_NOTICE_MS, droppedUpdateText, updateNoticeText, type DropOutcome, type DroppedNotice, type InstallerState, type UpdateNotice } from '@shared/auto-update'
 import { installFailureReason, type InstallError } from '@shared/update-install'
 import { formatSize } from '@shared/translate-local'
 import { t } from '@shared/i18n'
@@ -36,6 +36,29 @@ export interface NativeUpdater {
 }
 
 export type DownloadOutcome = { kind: 'downloaded' } | { kind: 'not-available' } | { kind: 'failed'; reason: string }
+
+/**
+ * What the boxes and the notice of an update ask of the installer of this run: Squirrel.Mac's (`UpdateInstaller`, below) or the NSIS one of Windows
+ * (windows-update.ts). One of the two is made at start-up (main/index.ts), by the system.
+ */
+export interface Installer extends InstallerState {
+  /**
+   * The update that was downloaded is installed by the system as Lucium ends, without another click (Squirrel.Mac does): the box says « À la prochaine
+   * fermeture ». False when only « Installer et relancer » installs it (Windows): the box says « Plus tard », and a quit installs nothing.
+   */
+  readonly installsAtQuit: boolean
+  /** Downloads the update `offer` names (`version`: the one the user was offered). A second call while one runs gets the same answer. */
+  download(version: string, offer?: UpdateOffer): Promise<DownloadOutcome>
+  /** « Installer et relancer »: true when the installation was begun. */
+  restart(): boolean
+  /** « Installer et relancer » was chosen in this run: the quit under way is the install's. */
+  isInstalling(): boolean
+  /** What must be done before the installation replaces the application. */
+  prepareInstall(): Promise<void>
+  dropWithdrawn(withdrawn: readonly string[]): Promise<DropOutcome>
+  /** The application ends: what this installer keeps on the disk for an update that was not installed goes. */
+  leave(): void
+}
 
 export interface UpdateInstallerDeps {
   /**
@@ -69,7 +92,9 @@ export interface UpdateInstallerDeps {
 }
 
 /** One installer per run: one download at a time, the listeners put once. */
-export class UpdateInstaller {
+export class UpdateInstaller implements Installer {
+  /** Squirrel installs a downloaded update as the application ends. */
+  readonly installsAtQuit = true
   private listening = false
   /** What the autoUpdater was last given (the address, marked when it went with the header of Global Privacy Control), null before the first download. */
   private fedWith: string | null = null
@@ -107,7 +132,7 @@ export class UpdateInstaller {
    * Downloads the update the feed names (`version`: the one the user was offered, which the notice of a ready update names). A second call while one
    * runs gets the same answer, never a second download.
    */
-  download(version = ''): Promise<DownloadOutcome> {
+  download(version = '', _offer?: UpdateOffer): Promise<DownloadOutcome> {
     const feed = this.deps.feed()
     if (feed === null) return Promise.resolve({ kind: 'failed', reason: installFailureReason(null) })
     if (this.ready) return Promise.resolve({ kind: 'downloaded' })
@@ -167,6 +192,9 @@ export class UpdateInstaller {
     return this.installing
   }
 
+  /** Squirrel keeps its staging for the next quit, which installs it: nothing to take away. */
+  leave(): void {}
+
   /**
    * The update that waits, when the feed read again lists its version among `withdrawn`: Squirrel's job and files for it are taken back, and this
    * run offers it no more, even when a part of it could not be removed (the next download, of the version the feed offers now, takes its place).
@@ -220,15 +248,21 @@ export class UpdateInstaller {
   }
 }
 
-let shared: UpdateInstaller | null = null
+let shared: Installer | null = null
 
 /** The installer of this run, made by main() once the quit exists (null before, and in a run that never made one). */
-export const updateInstaller = (): UpdateInstaller | null => shared
+export const updateInstaller = (): Installer | null => shared
 
 /** Replaces the installer of this run (main(), and the tests). */
-export function setUpdateInstaller(installer: UpdateInstaller | null): void {
+export function setUpdateInstaller(installer: Installer | null): void {
   shared = installer
 }
+
+/**
+ * The installer as the quit handlers see it: only one that installs a downloaded update as the application ends (Squirrel.Mac). The look at the feed
+ * before such a quit, and what is prepared for it (update-quit-check.ts), concern no other: Windows runs its installer on a click, never at a quit.
+ */
+export const installerAtQuit = (): Installer | null => (shared?.installsAtQuit === true ? shared : null)
 
 /**
  * The real one: Electron's autoUpdater, a failure no box waits for told in a box of its own, and `beforeInstall` done before Squirrel replaces the
@@ -284,7 +318,7 @@ function box(context: InstallContext, options: MessageBoxOptions) {
  * The check found a newer version Squirrel can install: "Télécharger et installer" or "Plus tard". The download runs on after this returns (the
  * About window's button stops waiting), and its end is a box of its own: "Installer et relancer", or what went wrong with "Télécharger manuellement".
  */
-export async function offerInstall(context: InstallContext, offer: UpdateOffer, current: string, installer: UpdateInstaller): Promise<void> {
+export async function offerInstall(context: InstallContext, offer: UpdateOffer, current: string, installer: Installer): Promise<void> {
   if (installer.isReady()) return askRestart(context, installer.readyVersion() || offer.version, installer)
   if (installer.isDownloading()) {
     await box(context, { type: 'info', message: t('app-update.le-telechargement-de-lucium-version-est-deja', { version: offer.version }), detail: t('app-update.lucium-vous-previent-des-que-la-mise-a-jour-est-prete') })
@@ -315,7 +349,7 @@ export async function offerInstall(context: InstallContext, offer: UpdateOffer, 
  * and the feed names its archive; else « Télécharger manuellement », the download page: Squirrel.Mac installs no older version, so the way back to
  * an earlier one is the disk image.
  */
-export async function offerWithdrawn(context: InstallContext, found: { offer: UpdateOffer; current: string; newer: boolean }, available: UpdateInstaller | null): Promise<void> {
+export async function offerWithdrawn(context: InstallContext, found: { offer: UpdateOffer; current: string; newer: boolean }, available: Installer | null): Promise<void> {
   const { offer, current } = found
   const installer = found.newer && offer.archive && available?.canInstall() ? available : null
   if (installer?.isReady()) return askRestart(context, installer.readyVersion() || offer.version, installer)
@@ -340,7 +374,7 @@ export async function offerWithdrawn(context: InstallContext, found: { offer: Up
  * The download the user just accepted (« Télécharger et installer » in the box, « Installer » in the notice): the notice of the download, then a box at
  * its end. An update that is ready already is offered at once; a download under way is not started twice.
  */
-export function startDownload(context: InstallContext, offer: UpdateOffer, current: string, installer: UpdateInstaller): void {
+export function startDownload(context: InstallContext, offer: UpdateOffer, current: string, installer: Installer): void {
   if (installer.isReady()) {
     void askRestart(context, installer.readyVersion() || offer.version, installer).catch((error: unknown) => console.error('[update] the restart could not be offered:', error))
     return
@@ -352,7 +386,7 @@ export function startDownload(context: InstallContext, offer: UpdateOffer, curre
     DOWNLOAD_NOTICE_MS
   )
   void installer
-    .download(offer.version)
+    .download(offer.version, offer)
     .then((outcome) => afterDownload(context, offer, current, outcome, installer))
     .catch((error: unknown) => console.error('[update] the end of the download could not be shown:', error))
 }
@@ -362,7 +396,7 @@ export function startDownload(context: InstallContext, offer: UpdateOffer, curre
  * (the download, then « Installer et relancer »), « Installer et relancer » for an update already downloaded, or the download page for a run that
  * installs nothing; and « Plus tard », which only closes it. Never a box: the typing goes on.
  */
-export function showUpdateNotice(context: InstallContext & { browser: ToastHost }, notice: UpdateNotice | DroppedNotice, installer: UpdateInstaller | null): void {
+export function showUpdateNotice(context: InstallContext & { browser: ToastHost }, notice: UpdateNotice | DroppedNotice, installer: Installer | null): void {
   // A dropped update with nothing else to install: the sentence alone, with nothing to choose.
   if (notice.kind === 'dropped') return context.browser.showToast(droppedUpdateText(notice.dropped), undefined, UPDATE_NOTICE_MS)
   const text = updateNoticeText(notice.kind, notice.version, notice.kind === 'restart' ? undefined : notice.offer.size, notice.withdrawn === true, notice.dropped, notice.urgent === true)
@@ -378,7 +412,7 @@ export function showUpdateNotice(context: InstallContext & { browser: ToastHost 
   context.browser.showToast(text.message, { label: text.action, run: act, second: { label: text.later, run: () => undefined } }, UPDATE_NOTICE_MS)
 }
 
-async function afterDownload(context: InstallContext, offer: UpdateOffer, current: string, outcome: DownloadOutcome, installer: UpdateInstaller): Promise<void> {
+async function afterDownload(context: InstallContext, offer: UpdateOffer, current: string, outcome: DownloadOutcome, installer: Installer): Promise<void> {
   if (outcome.kind === 'downloaded') return askRestart(context, installer.readyVersion() || offer.version, installer)
   if (outcome.kind === 'not-available') {
     await box(context, { type: 'info', message: t('menu-actions.lucium-est-a-jour'), detail: t('app-update.le-serveur-ne-propose-pas-de-version-plus-recente', { current }) })
@@ -396,12 +430,12 @@ async function afterDownload(context: InstallContext, offer: UpdateOffer, curren
 }
 
 /** "Lucium X est prête": "Installer et relancer" now, or at the next quit (Squirrel installs a downloaded update when the application ends). */
-async function askRestart(context: InstallContext, version: string, installer: UpdateInstaller): Promise<void> {
+async function askRestart(context: InstallContext, version: string, installer: Installer): Promise<void> {
   const { response } = await box(context, {
     type: 'question',
     message: t('app-update.lucium-version-est-pret', { version }),
-    detail: t('app-update.lucium-se-ferme-se-remplace-puis-se-rouvre', { version }),
-    buttons: [t('app-update.installer-et-relancer'), t('app-update.a-la-prochaine-fermeture')],
+    detail: installer.installsAtQuit ? t('app-update.lucium-se-ferme-se-remplace-puis-se-rouvre', { version }) : t('windows-update.lucium-se-ferme-l-installeur-le-remplace', { version }),
+    buttons: [t('app-update.installer-et-relancer'), installer.installsAtQuit ? t('app-update.a-la-prochaine-fermeture') : t('menu-actions.plus-tard')],
     defaultId: 0,
     cancelId: 1
   })

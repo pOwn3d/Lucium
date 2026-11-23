@@ -268,13 +268,18 @@ describe('what the categories draw', () => {
     expect(update.mock.calls).toEqual([[{ updateChannel: 'test' }], [{ updateChannel: 'stable' }]])
   })
 
-  it('draws no « Rechercher les mises à jour automatiquement » switch on Windows and Linux, which install nothing, but a sentence that says how an update is made; macOS keeps the switch', () => {
-    const sentence = frenchSpaces('Cette version ne se met pas à jour toute seule : téléchargez la dernière sur lucium.app.')
+  it('draws no « Rechercher les mises à jour automatiquement » switch on Windows and Linux, but a sentence that says how an update is made (by hand on Linux, on demand on Windows); macOS keeps the switch', () => {
+    const sentences: Record<string, string> = {
+      linux: frenchSpaces('Cette version ne se met pas à jour toute seule : téléchargez la dernière sur lucium.app.'),
+      win32: frenchSpaces('Lucium cherche une nouvelle version quand vous le demandez (menu Lucium › Rechercher les mises à jour…), jamais de lui-même. Elle ne s’installe qu’après votre clic.')
+    }
     for (const platform of ['win32', 'linux']) {
       const html = markup('about', snapshotWith({}, { platform }))
       expect(html, platform).not.toContain('data-setting="autoUpdate"')
       expect(html, platform).not.toContain('Rechercher les mises à jour automatiquement')
-      expect(html, platform).toContain(sentence)
+      expect(html, platform).toContain(sentences[platform])
+      // Each system says its own sentence, not the other's.
+      expect(html, platform).not.toContain(sentences[platform === 'win32' ? 'linux' : 'win32'])
       // The rest of the group is where it was.
       expect(html, platform).toContain('data-setting="whatsNewSheet"')
     }
@@ -282,7 +287,8 @@ describe('what the categories draw', () => {
       const html = markup('about', snapshotWith({}, extra))
       expect(html).toContain('data-setting="autoUpdate"')
       expect(html).toContain('Rechercher les mises à jour automatiquement')
-      expect(html).not.toContain(sentence)
+      expect(html).not.toContain(sentences['linux'])
+      expect(html).not.toContain(sentences['win32'])
     }
   })
 

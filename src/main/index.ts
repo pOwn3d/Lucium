@@ -72,7 +72,8 @@ import { restoreRefusal } from '@shared/lock'
 import { createBlockHandlerFollower } from './block-handlers'
 import { lastWindowClosedStep } from './window-lifecycle'
 import { installQuitFlow, prepareQuitForUpdate } from './shell/quit-flow'
-import { createUpdateInstaller, setUpdateInstaller, updateInstaller } from './shell/app-update'
+import { createUpdateInstaller, installerAtQuit, setUpdateInstaller, updateInstaller } from './shell/app-update'
+import { createWindowsUpdateInstaller } from './shell/windows-update-real'
 import { installPrepareBeforeQuit, installUpdateQuitCheck } from './shell/update-quit-check'
 import { currentUpdateSources } from './shell/update-source'
 import { dropDevelopmentEnv, isBuiltApp, isSmokeRun, readDevelopmentEnv, refusalMessage, refusedSwitches, smokeWindowOptions } from './runtime'
@@ -470,6 +471,8 @@ async function main(): Promise<void> {
     app.on('will-quit', () => systemScrollBars().stop())
   }
 
+  // An installer that was downloaded and not run goes with the application (Windows runs it on a click only; the installer is made further down, and read when the quit comes).
+  app.on('will-quit', () => updateInstaller()?.leave())
   // The quit: the watch of a quit the system asks for, the last writes of will-quit, the question before quitting and the erasure of the sites
   // "à la fermeture de Lucium" (shell/quit-flow.ts). Installed here, after every other will-quit handler of main(): its last write runs after them.
   const quitClearMarker = join(app.getPath('userData'), QUIT_CLEAR_MARKER)
@@ -492,30 +495,31 @@ async function main(): Promise<void> {
       quitConfirmed = true
     }
   })
-  // Lucium › Rechercher les mises à jour… › Installer et relancer: the installer of the built-in feed of the channel the setting follows (shell/app-update.ts,
-  // null outside a built application that has one, and asked again at each download). Nothing of Electron's autoUpdater is touched before the user asks; its `before-quit-for-update` lets the quit through.
+  // Lucium › Rechercher les mises à jour… › Installer et relancer: the installer of the built-in feed of the channel the setting follows (null outside a built
+  // application that has one, and asked again at each download). macOS: Squirrel.Mac through Electron's autoUpdater (shell/app-update.ts), which touches nothing before the user
+  // asks and whose `before-quit-for-update` lets the quit through. Windows: the NSIS installer the signed feed names, downloaded and checked on the click, run silently on the
+  // next one (shell/windows-update.ts). Linux has no installer yet: its feed is null.
+  const prepareQuit = (): void =>
+    prepareQuitForUpdate({
+      store,
+      history,
+      engine,
+      windowManager,
+      confirm: () => {
+        quitConfirmed = true
+      }
+    })
+  const installFeed = (): string | null => currentUpdateSources(store.get().settings).install
   setUpdateInstaller(
-    createUpdateInstaller(
-      () => currentUpdateSources(store.get().settings).install,
-      () =>
-        prepareQuitForUpdate({
-          store,
-          history,
-          engine,
-          windowManager,
-          confirm: () => {
-            quitConfirmed = true
-          }
-        }),
-      () => store.get().settings.sendGpc === true,
-      takeAppIconOffForUpdate
-    )
+    process.platform === 'win32'
+      ? createWindowsUpdateInstaller(installFeed, prepareQuit, () => store.get().settings.sendGpc === true, () => withdrawnInFeed(installFeed()))
+      : createUpdateInstaller(installFeed, prepareQuit, () => store.get().settings.sendGpc === true, takeAppIconOffForUpdate)
   )
   // An update downloaded in this run is installed by Squirrel as Lucium ends: the feed is read once more before (shell/update-quit-check.ts),
   // and a version it now lists as withdrawn is dropped, then told at the next launch. After the handlers of the quit flow, which it waits for.
   installUpdateQuitCheck({
     app,
-    installer: updateInstaller,
+    installer: installerAtQuit,
     allowed: () => store.get().settings.autoUpdate,
     withdrawn: () => withdrawnInFeed(currentUpdateSources(store.get().settings).install),
     remember: (dropped) => store.dispatch({ type: 'settings/update', patch: { updateNotices: { ...cleanUpdateNotices(store.get().settings.updateNotices), dropped } } }),
@@ -528,7 +532,7 @@ async function main(): Promise<void> {
   // The update that waits is installed as Lucium ends: the custom icon comes off the bundle first (shell/update-quit-check.ts), after the look above.
   installPrepareBeforeQuit({
     app,
-    installer: updateInstaller,
+    installer: installerAtQuit,
     system: () => systemQuit.isActive(),
     confirm: () => {
       quitConfirmed = true

@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouté
+
+- **Windows, mises à jour par Lucium** : « Rechercher les mises à jour… » lit le flux signé de Windows ; après votre clic, Lucium télécharge l’installeur, ne le garde que si sa taille et son SHA-256 sont ceux du flux signé, et le lance en silence après un second clic. Windows ne cherche jamais de lui-même, et rien ne se lance sans vos clics.
+
 ### Corrections
 
 - **Clic sur le Dock ou passage à Lucium : toutes les fenêtres au premier plan** : sur macOS, un clic sur l'icône du Dock ramène toutes les fenêtres devant, minimisées comprises ; passer à Lucium par ⌘⇥ ou un clic remonte aussi les fenêtres affichées, sans prendre le focus.

@@ -68,10 +68,16 @@ export interface PlatformFacts {
    */
   posixFileModes: boolean
   /**
-   * The system has an update installer (Squirrel.Mac, which installs only after the user's click). It exists on macOS alone: the Windows and Linux builds
-   * carry the address of their feed but nothing reads it yet, so an update is made by hand from the download page (`updatesByHand`).
+   * The system has an update installer that runs only after the user's click: Squirrel.Mac on macOS, the NSIS installer of the signed feed on Windows
+   * (main/shell/windows-update.ts). Linux has none yet (its AppImage and .deb are a later lot): an update is made by hand from the download page (`updatesByHand`).
    */
   selfUpdate: boolean
+  /**
+   * The application may look for an update by itself, in the background, while « Rechercher les mises à jour automatiquement » is on. macOS does (the decision of
+   * 5 November 2026), and so does Linux for an address written by hand (it reads no built-in one: `updatesByHand`); Windows does not yet: its first look is the one
+   * the person asks for (the menu, the About button), and a network call that nobody asked for waits for the maintainer's answer (docs/plateformes.md, `looksInBackground`).
+   */
+  lookInBackground: boolean
 }
 
 export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
@@ -96,7 +102,8 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     pathDelimiter: ':',
     systemSpellChecker: true,
     posixFileModes: true,
-    selfUpdate: true
+    selfUpdate: true,
+    lookInBackground: true
   },
   win32: {
     trafficLights: false,
@@ -120,7 +127,8 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     pathDelimiter: ';',
     systemSpellChecker: false,
     posixFileModes: false,
-    selfUpdate: false
+    selfUpdate: true,
+    lookInBackground: false
   },
   linux: {
     trafficLights: false,
@@ -143,18 +151,31 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     pathDelimiter: ':',
     systemSpellChecker: false,
     posixFileModes: true,
-    selfUpdate: false
+    selfUpdate: false,
+    lookInBackground: true
   }
 }
 
 /**
- * Whether an update of Lucium is made by hand on this system: it has no update installer (`selfUpdate`), so the menu says where to download the latest
+ * Whether an update of Lucium is made by hand on this system: it has no update installer (`selfUpdate`: Linux), so the menu says where to download the latest
  * version and the Settings show no switch for a check that cannot install. `platform` is a `process.platform` value (any Unix other than macOS counts as
  * Linux, as in `platformOf`); anything that is not a string (a stand-in snapshot with no platform) is not a system and gets the macOS behaviour.
  */
 export function updatesByHand(platform: unknown): boolean {
   return typeof platform === 'string' && !PLATFORM_FACTS[platformOf(platform)].selfUpdate
 }
+
+/**
+ * Whether the application looks for an update by itself on this system (`lookInBackground`): the daily look and the notice it gives. A system that can install
+ * but does not look by itself (Windows) is read only when the person asks, and its Settings show a sentence in place of the switch. Anything that is not a
+ * string gets the macOS behaviour, as in `updatesByHand`.
+ */
+export function looksInBackground(platform: unknown): boolean {
+  return typeof platform !== 'string' || PLATFORM_FACTS[platformOf(platform)].lookInBackground
+}
+
+/** Whether an update is searched on demand only on this system: it installs one (`selfUpdate`) but never looks by itself (Windows). */
+export const updatesOnDemandOnly = (platform: unknown): boolean => typeof platform === 'string' && !updatesByHand(platform) && !looksInBackground(platform)
 
 // ---- words ----
 

@@ -18,7 +18,9 @@ import {
   revealLabel,
   settingsLink,
   splitPathList,
+  looksInBackground,
   updatesByHand,
+  updatesOnDemandOnly,
   usesCtrlAlt,
   WINDOWS_DEFAULTS
 } from './platform'
@@ -37,9 +39,9 @@ describe('platformOf', () => {
 })
 
 describe('updatesByHand: which systems have no update installer', () => {
-  it('is false on macOS, which installs an update itself (Squirrel.Mac), and true on Windows and Linux, which carry no update address', () => {
+  it('is false on macOS (Squirrel.Mac) and on Windows (the NSIS installer of the signed feed), and true on Linux, which has none yet', () => {
     expect(updatesByHand('darwin')).toBe(false)
-    expect(updatesByHand('win32')).toBe(true)
+    expect(updatesByHand('win32')).toBe(false)
     expect(updatesByHand('linux')).toBe(true)
   })
 
@@ -51,13 +53,41 @@ describe('updatesByHand: which systems have no update installer', () => {
   })
 })
 
+describe('looksInBackground: which systems look for an update by themselves', () => {
+  it('is false on Windows alone: it installs after a click but is read only when asked; Linux keeps what it had (an address written by hand is read in the background)', () => {
+    expect(looksInBackground('darwin')).toBe(true)
+    expect(looksInBackground('win32')).toBe(false)
+    expect(looksInBackground('linux')).toBe(true)
+    expect(looksInBackground('freebsd')).toBe(true)
+  })
+
+  it('gives anything that is not a system name the macOS behaviour, as updatesByHand does', () => {
+    for (const value of [undefined, null, 42]) expect(looksInBackground(value)).toBe(true)
+  })
+
+  it('names the one system that installs but does not look by itself: Windows', () => {
+    expect(updatesOnDemandOnly('win32')).toBe(true)
+    expect(updatesOnDemandOnly('darwin')).toBe(false)
+    expect(updatesOnDemandOnly('linux')).toBe(false)
+    for (const value of [undefined, null, 42]) expect(updatesOnDemandOnly(value)).toBe(false)
+  })
+})
+
 describe('facts', () => {
   it('give macOS everything that was written for it, and the other systems none of the macOS-only ones', () => {
-    for (const key of ['trafficLights', 'vibrancy', 'dock', 'touchId', 'globalMenuBar', 'openWithBundle', 'settingsLinks', 'shareSheet', 'openUrlEvent', 'screenRecordingPermission', 'importSafari', 'importArc', 'selfUpdate'] as const) {
+    for (const key of ['trafficLights', 'vibrancy', 'dock', 'touchId', 'globalMenuBar', 'openWithBundle', 'settingsLinks', 'shareSheet', 'openUrlEvent', 'screenRecordingPermission', 'importSafari', 'importArc'] as const) {
       expect(PLATFORM_FACTS.darwin[key], `darwin ${key}`).toBe(true)
       expect(PLATFORM_FACTS.win32[key], `win32 ${key}`).toBe(false)
       expect(PLATFORM_FACTS.linux[key], `linux ${key}`).toBe(false)
     }
+  })
+
+  it('give an installer to macOS and Windows, and none to Linux yet', () => {
+    expect(PLATFORM_IDS.map((id) => PLATFORM_FACTS[id].selfUpdate)).toEqual([true, true, false])
+  })
+
+  it('make Windows the one system that does not look for an update by itself', () => {
+    expect(PLATFORM_IDS.map((id) => PLATFORM_FACTS[id].lookInBackground)).toEqual([true, false, true])
   })
 
   it('leave the spell checker off by default where it would download dictionaries from Chromium’s CDN', () => {

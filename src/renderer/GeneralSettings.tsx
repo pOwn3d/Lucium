@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
 import { UI_SCALE_MAX, UI_SCALE_MIN, UI_SCALE_STEP } from '@shared/ui-scale'
-import { updatesByHand } from '@shared/platform'
+import { updatesByHand, updatesOnDemandOnly } from '@shared/platform'
 import { api } from './api'
 import { FeatureSwitch } from './FeaturesSettings'
 import { MIN_FONT_SIZES } from '@shared/min-font-size'
@@ -78,15 +78,23 @@ export function DefaultBrowserRow() {
   )
 }
 
-/** The updates (« À propos et mises à jour »): the automatic check (on Windows and Linux, which install nothing, a sentence instead), the test channel of a build that carries one, the news after an update. */
+/**
+ * The updates (« À propos et mises à jour »): the automatic check (on macOS; on Windows, which looks only when asked, and on Linux, which installs nothing yet, a sentence
+ * instead), the test channel of a build that carries one, the news after an update.
+ */
 export function UpdatesSettings({ snapshot, update }: PaneProps) {
   const { settings } = snapshot.state
   return (
     <Group title={t('settings.section-mises-a-jour')}>
       {updatesByHand(snapshot.platform) ? (
-        // Windows and Linux read no update address and have no installer: a switch for a check that reads nothing would only mislead. The row says how an update is made instead.
+        // Linux reads no update address and has no installer yet: a switch for a check that reads nothing would only mislead. The row says how an update is made instead.
         <div className="pref-row pref-message" role="status" data-role="updates-by-hand">
           {t('settings.cette-version-ne-se-met-pas-a-jour-toute-seule')}
+        </div>
+      ) : updatesOnDemandOnly(snapshot.platform) ? (
+        // Windows installs an update after a click but never looks by itself: a switch would promise a daily look that does not exist, so the row says what does.
+        <div className="pref-row pref-message" role="status" data-role="updates-on-demand">
+          {t('settings.lucium-cherche-une-nouvelle-version-quand-vous-le-demandez')}
         </div>
       ) : (
         <Check

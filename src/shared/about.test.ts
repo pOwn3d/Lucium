@@ -173,26 +173,33 @@ describe('what the About window says of the engine', () => {
     expect(aboutEngine({}, 'freebsd').platform).toBe('freebsd')
   })
 
-  it('says on Windows and Linux, which have no update installer, that updates are by hand, and nothing on macOS (its answer keeps its three words)', () => {
+  it('says on Linux, which has no update installer, that updates are by hand; on Windows, that they are on demand only; and nothing on macOS (its answer keeps its three words)', () => {
     expect(engine).not.toHaveProperty('updatesByHand')
-    expect(aboutEngine({}, 'win32').updatesByHand).toBe(true)
+    expect(engine).not.toHaveProperty('updatesOnDemandOnly')
     expect(aboutEngine({}, 'linux').updatesByHand).toBe(true)
-    // The flag is not part of what a bug report copies.
+    expect(aboutEngine({}, 'linux')).not.toHaveProperty('updatesOnDemandOnly')
+    expect(aboutEngine({}, 'win32').updatesOnDemandOnly).toBe(true)
+    expect(aboutEngine({}, 'win32')).not.toHaveProperty('updatesByHand')
+    // The flags are not part of what a bug report copies.
     expect(aboutReport('0.1.0', aboutEngine({ chrome: '156.0', electron: '45.2' }, 'linux'))).toBe('Lucium 0.1.0 · Chromium 156 · Electron 45 · Linux')
+    expect(aboutReport('0.1.0', aboutEngine({ chrome: '156.0', electron: '45.2' }, 'win32'))).toBe('Lucium 0.1.0 · Chromium 156 · Electron 45 · Windows')
   })
 
-  it('gives the note under « Rechercher les mises à jour » by system: the switch it ignores on macOS, where the latest version is on Windows and Linux', () => {
+  it('gives the note under « Rechercher les mises à jour » by system: the switch it ignores on macOS, the only look on Windows, where the latest version is on Linux', () => {
     setLanguage('fr')
     const macNote = frenchSpaces('Ce bouton vérifie tout de suite, que « Rechercher les mises à jour automatiquement » soit activé ou non.')
     expect(aboutCheckNote(null)).toBe(macNote)
     expect(aboutCheckNote(engine)).toBe(macNote)
-    for (const system of ['win32', 'linux']) {
-      const note = aboutCheckNote(aboutEngine({}, system))
-      expect(note).toBe(frenchSpaces('Cette version ne se met pas à jour toute seule : ce bouton indique où télécharger la dernière.'))
-      expect(note).not.toContain('automatiquement')
-    }
+    const linux = aboutCheckNote(aboutEngine({}, 'linux'))
+    expect(linux).toBe(frenchSpaces('Cette version ne se met pas à jour toute seule : ce bouton indique où télécharger la dernière.'))
+    expect(linux).not.toContain('automatiquement')
+    // Windows has no switch to name, and does not send anyone to a download page: the button is its only look.
+    const windows = aboutCheckNote(aboutEngine({}, 'win32'))
+    expect(windows).toBe(frenchSpaces('Ce bouton vérifie tout de suite : sur Windows, Lucium ne cherche jamais de lui-même. Une mise à jour ne s’installe qu’après votre clic.'))
+    expect(windows).not.toContain('automatiquement')
     setLanguage('en')
-    expect(aboutCheckNote(aboutEngine({}, 'win32'))).toBe('This version doesn’t update by itself: this button shows where to download the latest one.')
+    expect(aboutCheckNote(aboutEngine({}, 'linux'))).toBe('This version doesn’t update by itself: this button shows where to download the latest one.')
+    expect(aboutCheckNote(aboutEngine({}, 'win32'))).toBe('This button checks right now: on Windows, Lucium never looks by itself. An update is installed only after your click.')
     expect(aboutCheckNote(engine)).toBe('Checks right away, whether or not “Check for updates automatically” is on.')
     setLanguage('fr')
   })

@@ -7022,4 +7022,11 @@ export const fr = {
   'discover.verification-nom': 'Vérification de sécurité',
   'discover.verification-resume': 'Une page qui relit, sans rien changer, ce qui protège votre navigation : extensions, autorisations des sites, protections, mises à jour et coffre, avec ce qui mérite un coup d’œil.',
   'discover.verification-ou': 'Dans {path}, la ligne « Vérification de sécurité ».',
+  'windows-update.le-fichier-telecharge-ne-correspond-pas': 'Le fichier téléchargé ne correspond pas à ce que le flux signé annonce (taille ou somme SHA-256) : il a été supprimé et n’a pas été lancé. Rien n’a été installé.',
+  'windows-update.le-fichier-n-a-pas-pu-etre-enregistre': 'Le fichier de la mise à jour n’a pas pu être enregistré dans le dossier temporaire de Lucium : vérifiez la place disponible, puis réessayez.',
+  'windows-update.le-flux-ne-decrit-pas-un-installeur': 'Le flux de mises à jour ne décrit pas un installeur que Lucium peut vérifier (adresse https, somme SHA-256 et taille) : rien n’a été téléchargé.',
+  'windows-update.l-installeur-n-a-pas-pu-etre-lance': 'L’installeur n’a pas pu être lancé : Lucium reste ouvert et rien n’a été remplacé.',
+  'windows-update.lucium-se-ferme-l-installeur-le-remplace': 'Lucium se ferme, l’installeur le remplace par la version {version}, puis Lucium se rouvre avec vos espaces et vos onglets. Les fenêtres privées et les téléchargements en cours ne sont pas gardés. Rien n’est lancé sans ce clic.',
+  'settings.lucium-cherche-une-nouvelle-version-quand-vous-le-demandez': 'Lucium cherche une nouvelle version quand vous le demandez (menu Lucium › Rechercher les mises à jour…), jamais de lui-même. Elle ne s’installe qu’après votre clic.',
+  'about-window.cherche-maintenant-sur-demande': 'Ce bouton vérifie tout de suite : sur Windows, Lucium ne cherche jamais de lui-même. Une mise à jour ne s’installe qu’après votre clic.',
 } as const

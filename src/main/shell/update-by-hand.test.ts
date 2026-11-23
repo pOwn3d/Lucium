@@ -1,5 +1,5 @@
-// Lucium › Rechercher les mises à jour… on Windows and Linux (carte 469). Those builds carry no update address and no installer (the beta of 1.1.4 published
-// on 18 November 2026): the box used to say « La vérification des mises à jour n’est pas configurée » and name the `updateFeedUrl` setting to a person who
+// Lucium › Rechercher les mises à jour… on Linux (carte 469). Those builds carry no update address and no installer yet (the beta of 1.1.4 published
+// on 18 November 2026; Windows has had a client since lot 2 of card 853, and keeps the box below only for a build that carries no address): the box used to say « La vérification des mises à jour n’est pas configurée » and name the `updateFeedUrl` setting to a person who
 // had configured nothing. It now says that updates are made by hand and offers the download page of the site, in the language of the interface. macOS keeps
 // its box, which the tests of update-feed.test.ts and update-source.test.ts hold: the one test of it here only proves the rule does not reach it.
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -42,7 +42,7 @@ afterEach(() => {
   setLanguage('fr')
 })
 
-describe.each<NodeJS.Platform>(['win32', 'linux'])('Rechercher les mises à jour… on %s, with no update address', (platform) => {
+describe.each<NodeJS.Platform>(['linux'])('Rechercher les mises à jour… on %s, with no update address', (platform) => {
   beforeEach(() => system(platform))
 
   it('says in French that updates are made by hand, with the version in use, and offers the page; it names no setting and reads no feed', async () => {
@@ -85,6 +85,18 @@ describe.each<NodeJS.Platform>(['win32', 'linux'])('Rechercher les mises à jour
     await checkForUpdates(target(), { ...settings, updateFeedUrl: 'https://feed.example/latest' })
     expect(electron.fetch).toHaveBeenCalledOnce()
     expect(shown().message).not.toBe('Les mises à jour se font à la main')
+  })
+})
+
+describe('Rechercher les mises à jour… on Windows, with no update address (a build made by hand)', () => {
+  it('no longer says that updates are made by hand: Windows has an installer, so it says what macOS says, and offers no page by this rule', async () => {
+    system('win32')
+    await checkForUpdates(target(), settings)
+    const box = shown()
+    expect(box.message).toBe('La vérification des mises à jour n’est pas configurée')
+    expect(box.message).not.toBe('Les mises à jour se font à la main')
+    expect(electron.fetch).not.toHaveBeenCalled()
+    expect(electron.openExternal).not.toHaveBeenCalled()
   })
 })
 

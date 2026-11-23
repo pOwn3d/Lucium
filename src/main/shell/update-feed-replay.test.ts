@@ -26,7 +26,7 @@ const keys = await vi.hoisted(async () => {
 vi.mock('../update-feed-keys', () => ({ UPDATE_FEED_PUBLIC_KEYS: [keys.ours.publicKey] }))
 
 const { signFeedText } = await import('../update-feed-signature')
-const { createAutoUpdater, withdrawnInFeed } = await import('./auto-update')
+const { AutoUpdater, readUpdateFeed, withdrawnInFeed } = await import('./auto-update')
 const { checkForUpdates } = await import('./menu-actions')
 
 const STALE = t('update-check.le-flux-de-mises-a-jour-est-plus-ancien-que-le-dernier-lu')
@@ -75,8 +75,9 @@ afterEach(() => {
 
 const menuBox = (at: number) => electron.showMessageBox.mock.calls[at]![1] as { message: string; detail: string }
 const menu = (feed: string) => checkForUpdates({ win: {} } as Parameters<typeof checkForUpdates>[0], settingsFor(feed), { searching: false })
-const background = (feed: string) =>
-  createAutoUpdater({ settings: () => settingsFor(feed), update: vi.fn(), noticeWindow: () => null })
+// The look of the background, with the reader the application uses and the feed given to it: Windows never starts this look by itself (update-source.ts, `backgroundFeed`),
+// but its reader is the same as the one of the menu and of the quit, and the rule is held here on every system.
+const background = (feed: string) => new AutoUpdater({ settings: () => settingsFor(feed), version: '1.1.0', feed: () => feed, fetchFeed: readUpdateFeed, notify: () => false, remember: () => undefined })
 
 describe('a feed older than the last one accepted, on Windows', () => {
   beforeEach(() => runOn('win32', 'x64'))

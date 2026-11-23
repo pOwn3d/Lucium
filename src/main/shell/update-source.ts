@@ -4,20 +4,21 @@
 // `MAIN_VITE_UPDATE_FEED_TEST`, the test channel, written by electron-vite at build time, inside app.asar, which the integrity fuse and the
 // Developer ID signature seal). Never from LUCIUM_UPDATE_FEED (another process can set it), never from the `updateFeedUrl` setting (a file of
 // the profile). Squirrel.Mac installs any build signed by the same team: a feed that another party could name could push an older build of ours,
-// so nothing but a built-in address may reach it.
+// so nothing but a built-in address may reach it. The same holds on Windows, where the installer the feed names is run: only the built-in address,
+// signed by a key of the application, ever names one (windows-update.ts). Linux reads no built-in address yet (its client is a later lot).
 //
 // Two channels (the maintainer's decision of 7 November 2026): a build carries the stable address, and may carry a test one. The `updateChannel`
 // setting (`stable` by default) only chooses between the two sealed addresses, so that a profile file still cannot name an address: `test` is
 // followed only by a build that carries a test address, and a build with one address behaves as it always did, whatever the setting says.
 //
-// The look runs when the user asks (the menu command, the About button), and in the background while "Rechercher les mises à jour automatiquement"
-// is on (auto-update.ts, `backgroundFeed`): the built application then reads the same address as the menu, the built-in one (the maintainer's
-// decision of 5 November 2026: the notice of an update comes by itself). A run from the sources never reads the built-in address in the
-// background. A build without a built-in address keeps the old behaviour: the address of the environment or of the setting, and a download page
+// The look runs when the user asks (the menu command, the About button), and on macOS in the background while "Rechercher les mises à jour
+// automatiquement" is on (auto-update.ts, `backgroundFeed`): the built application then reads the same address as the menu, the built-in one (the
+// maintainer's decision of 5 November 2026: the notice of an update comes by itself). Windows reads only when asked: its background look waits for the
+// maintainer's answer (shared/platform.ts, `looksInBackground`). A run from the sources never reads the built-in address in the background. A build without a built-in address keeps the old behaviour: the address of the environment or of the setting, and a download page
 // opened in the browser.
 
 import type { Settings, UpdateChannel } from '@shared/model'
-import { updatesByHand } from '@shared/platform'
+import { looksInBackground, updatesByHand } from '@shared/platform'
 import { isBuiltApp } from '../runtime'
 
 const https = (url: string): boolean => /^https:\/\/\S+$/i.test(url)
@@ -42,7 +43,7 @@ export interface UpdateSourceFacts {
 export interface UpdateSources {
   /** The feed the check reads; empty when none is configured. */
   check: string
-  /** The feed Squirrel installs from, or null when this run cannot install (not built, not macOS, no built-in https address). */
+  /** The feed the installer installs from (Squirrel.Mac, the NSIS installer of Windows), or null when this run cannot install (not built, not macOS or Windows, no built-in https address). */
   install: string | null
 }
 
@@ -63,10 +64,11 @@ export function channelFeed(facts: Pick<UpdateSourceFacts, 'builtIn' | 'builtInT
  * made with one), and nothing installs.
  */
 export function updateSources(facts: UpdateSourceFacts): UpdateSources {
-  // Windows and Linux builds carry the address of their feed (the CI builds: .github/workflows/windows.yml, linux.yml), and no client reads it yet: a system that
-  // updates by hand reads no built-in address, so that the check, the background look and the menu do exactly what they did before the address was there.
+  // Windows and Linux builds carry the address of their feed (the CI builds: .github/workflows/windows.yml, linux.yml). Windows reads it (its client is
+  // windows-update.ts); Linux has no client yet: a system that updates by hand reads no built-in address, so that its check, its menu and its Settings do
+  // exactly what they did before the address was there.
   const builtIn = updatesByHand(facts.platform) ? '' : channelFeed(facts)
-  const install = facts.builtApp && facts.platform === 'darwin' && https(builtIn) ? builtIn : null
+  const install = facts.builtApp && (facts.platform === 'darwin' || facts.platform === 'win32') && https(builtIn) ? builtIn : null
   if (install) return { check: install, install }
   return { check: (facts.env ?? facts.setting).trim() || builtIn, install: null }
 }
@@ -74,12 +76,14 @@ export function updateSources(facts: UpdateSourceFacts): UpdateSources {
 /**
  * The feed the background look reads (Réglages › Général, "Rechercher les mises à jour automatiquement"), or null when nothing is to be read:
  * - the setting off: null, whatever else is configured;
+ * - a system that does not look by itself (Windows, `looksInBackground`): null, whatever the setting says. What the person asks for (the menu) is read;
+ *   what nobody asked for is not;
  * - the built application: the feed the menu reads (`updateSources`), the built-in address when the build has one, else the one written by hand;
  * - a run from the sources: only an address given by hand (the variable, then the setting), never the built-in one;
  * and always an https address, or null.
  */
 export function backgroundFeed(facts: UpdateSourceFacts, autoUpdate: boolean): string | null {
-  if (!autoUpdate) return null
+  if (!autoUpdate || !looksInBackground(facts.platform)) return null
   const feed = facts.builtApp ? updateSources(facts).check : (facts.env ?? facts.setting).trim()
   return https(feed) ? feed : null
 }

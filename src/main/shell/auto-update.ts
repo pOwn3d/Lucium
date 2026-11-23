@@ -203,7 +203,7 @@ async function fetchUpdateFeed(url: string): Promise<FeedAnswer> {
 }
 
 /** The same, and only a feed that is not older than the last one accepted for this address (update-fresh.ts). */
-const readUpdateFeed = withFeedFreshness(fetchUpdateFeed)
+export const readUpdateFeed = withFeedFreshness(fetchUpdateFeed)
 
 /**
  * The versions a feed lists as withdrawn, read now (update-quit-check.ts, before the quit installs a downloaded update); null when there is no feed
