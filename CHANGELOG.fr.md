@@ -8,6 +8,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 - **Windows, mises à jour par Lucium** : « Rechercher les mises à jour… » lit le flux signé de Windows ; après votre clic, Lucium télécharge l’installeur, ne le garde que si sa taille et son SHA-256 sont ceux du flux signé, et le lance en silence après un second clic. Rien ne se lance sans vos clics.
 - **Windows, recherche automatique (éteinte par défaut)** : un interrupteur à part dans Réglages › À propos et mises à jour, éteint pour tout le monde ; allumé, Lucium demande chaque jour à lucium.app s’il existe une version plus récente. Rien n’est téléchargé sans votre clic.
+- **Linux, mises à jour par Lucium** : un AppImage télécharge son successeur à côté de lui après votre clic, ne le garde que si sa taille et son SHA-256 sont les bons, et se remplace après un second clic ; un .deb reçoit la commande exacte, sans être installé. Recherche automatique éteinte par défaut.
 
 ### Corrections
 

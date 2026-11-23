@@ -12,6 +12,7 @@ import type { StateStore } from '../store'
 import { checkForUpdates, openDocumentation } from './menu-actions'
 import { errorLog } from '../error-log'
 import { componentsOf } from '../engine/widevine'
+import { currentLinuxInstall } from '../platform/linux-install'
 import { collectEngineHost } from './engine-status'
 
 let applied: AboutPanelOptions | null = null
@@ -34,7 +35,7 @@ export const appliedAboutPanel = (): AboutPanelOptions | null => applied
 export function registerAboutIpc(ipcMain: ScopedIpc, guard: (sender: WebContents, channel: string) => boolean, browser: Browser, win: BrowserWindow, store: StateStore): void {
   ipcMain.handle(Channel.aboutVersion, (e) => (guard(e.sender, Channel.aboutVersion) ? aboutVersion(app.getVersion()) : ''))
   // The About window: the engine under the browser, and the look for a newer version, whose answer is a box of the system on that window.
-  ipcMain.handle(Channel.aboutEngine, (e) => aboutEngine(guard(e.sender, Channel.aboutEngine) ? process.versions : {}, process.platform))
+  ipcMain.handle(Channel.aboutEngine, (e) => aboutEngine(guard(e.sender, Channel.aboutEngine) ? process.versions : {}, process.platform, currentLinuxInstall().packaging))
   ipcMain.handle(Channel.aboutCheckUpdates, async (e) => {
     if (!guard(e.sender, Channel.aboutCheckUpdates)) return
     const owner = BrowserWindow.fromWebContents(e.sender)

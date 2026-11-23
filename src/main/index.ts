@@ -72,8 +72,12 @@ import { restoreRefusal } from '@shared/lock'
 import { createBlockHandlerFollower } from './block-handlers'
 import { lastWindowClosedStep } from './window-lifecycle'
 import { installQuitFlow, prepareQuitForUpdate } from './shell/quit-flow'
-import { createUpdateInstaller, installerAtQuit, setUpdateInstaller, updateInstaller } from './shell/app-update'
+import { createUpdateInstaller, installerAtQuit, setDebAdviser, setUpdateInstaller, updateInstaller } from './shell/app-update'
 import { createWindowsUpdateInstaller } from './shell/windows-update-real'
+import { createAppImageUpdateInstaller } from './shell/appimage-update'
+import { createDebAdviser } from './shell/deb-update-real'
+import { currentLinuxInstall } from './platform/linux-install'
+import { removePreviousAppImage } from './update-appimage-file'
 import { installPrepareBeforeQuit, installUpdateQuitCheck } from './shell/update-quit-check'
 import { currentUpdateSources } from './shell/update-source'
 import { dropDevelopmentEnv, isBuiltApp, isSmokeRun, readDevelopmentEnv, refusalMessage, refusedSwitches, smokeWindowOptions } from './runtime'
@@ -498,7 +502,8 @@ async function main(): Promise<void> {
   // Lucium › Rechercher les mises à jour… › Installer et relancer: the installer of the built-in feed of the channel the setting follows (null outside a built
   // application that has one, and asked again at each download). macOS: Squirrel.Mac through Electron's autoUpdater (shell/app-update.ts), which touches nothing before the user
   // asks and whose `before-quit-for-update` lets the quit through. Windows: the NSIS installer the signed feed names, downloaded and checked on the click, run silently on the
-  // next one (shell/windows-update.ts). Linux has no installer yet: its feed is null.
+  // next one (shell/windows-update.ts). Linux: an AppImage downloads its successor beside itself and swaps it in on the second click (shell/appimage-update.ts); a .deb is only told
+  // the command, as installing a package asks for root (shell/deb-update-real.ts); any other copy installs nothing.
   const prepareQuit = (): void =>
     prepareQuitForUpdate({
       store,
@@ -510,11 +515,20 @@ async function main(): Promise<void> {
       }
     })
   const installFeed = (): string | null => currentUpdateSources(store.get().settings).install
+  const linuxInstall = currentLinuxInstall()
+  const sendsGpc = (): boolean => store.get().settings.sendGpc === true
   setUpdateInstaller(
     process.platform === 'win32'
-      ? createWindowsUpdateInstaller(installFeed, prepareQuit, () => store.get().settings.sendGpc === true, () => withdrawnInFeed(installFeed()))
-      : createUpdateInstaller(installFeed, prepareQuit, () => store.get().settings.sendGpc === true, takeAppIconOffForUpdate)
+      ? createWindowsUpdateInstaller(installFeed, prepareQuit, sendsGpc, () => withdrawnInFeed(installFeed()))
+      : process.platform === 'linux'
+        ? linuxInstall.packaging === 'appimage'
+          ? createAppImageUpdateInstaller(linuxInstall.file, installFeed, prepareQuit, sendsGpc, () => withdrawnInFeed(installFeed()))
+          : null
+        : createUpdateInstaller(installFeed, prepareQuit, sendsGpc, takeAppIconOffForUpdate)
   )
+  setDebAdviser(process.platform === 'linux' && linuxInstall.packaging === 'deb' ? createDebAdviser(sendsGpc) : null)
+  // The AppImage this run replaced is kept as `.previous` until the new one runs: this is the new one, and it is running.
+  if (linuxInstall.packaging === 'appimage') void removePreviousAppImage(linuxInstall.file, (line) => console.warn(line))
   // An update downloaded in this run is installed by Squirrel as Lucium ends: the feed is read once more before (shell/update-quit-check.ts),
   // and a version it now lists as withdrawn is dropped, then told at the next launch. After the handlers of the quit flow, which it waits for.
   installUpdateQuitCheck({

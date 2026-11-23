@@ -21,6 +21,7 @@ import { installFailureReason } from '@shared/update-install'
 import { t } from '@shared/i18n'
 import { compareVersions } from '@shared/versions'
 import type { UpdateOffer } from '@shared/update-check'
+import type { InstallerKind } from '@shared/update-target'
 import { installerClaim, type InstallerDownload } from '../update-installer-file'
 import type { DownloadOutcome, Installer } from './app-update'
 
@@ -52,8 +53,27 @@ export interface WindowsUpdateDeps {
   log?: (line: string) => void
 }
 
+/**
+ * The sentences that say where the download is kept and what the start of the installation was: the installer of Windows and the AppImage of Linux (appimage-update.ts,
+ * which extends this class) are the same two clicks with the same checks, and differ by these and by what « start » does.
+ */
+export interface InstallerTexts {
+  /** The file could not be written (Windows: the temporary folder; Linux: the folder of the AppImage). */
+  diskFailed: () => string
+  /** The installation could not start: Lucium stays open and nothing was replaced. */
+  notStarted: () => string
+  /** What « Installer et relancer » says will happen. */
+  restartDetail: (version: string) => string
+}
+
+const WINDOWS_TEXTS: InstallerTexts = {
+  diskFailed: () => t('windows-update.le-fichier-n-a-pas-pu-etre-enregistre'),
+  notStarted: () => t('windows-update.l-installeur-n-a-pas-pu-etre-lance'),
+  restartDetail: (version) => t('windows-update.lucium-se-ferme-l-installeur-le-remplace', { version })
+}
+
 /** The sentence of a failed download, by the way it failed. */
-function failureReason(download: Extract<InstallerDownload, { ok: false }>): string {
+export function failureReason(download: Extract<InstallerDownload, { ok: false }>, texts: Pick<InstallerTexts, 'diskFailed'>): string {
   const detail = `\n\n${t('update-install.detail-words', { words: download.detail })}`
   switch (download.kind) {
     case 'network':
@@ -61,13 +81,16 @@ function failureReason(download: Extract<InstallerDownload, { ok: false }>): str
     case 'mismatch':
       return t('windows-update.le-fichier-telecharge-ne-correspond-pas') + detail
     case 'disk':
-      return t('windows-update.le-fichier-n-a-pas-pu-etre-enregistre') + detail
+      return texts.diskFailed() + detail
     case 'offer':
       return t('windows-update.le-flux-ne-decrit-pas-un-installeur') + detail
   }
 }
 
-/** One installer per run: one download at a time, one file that waits. */
+/**
+ * One installer per run: one download at a time, one file that waits. Windows' own, and the base of the AppImage's: `kind` is the sort of installer the offer must name,
+ * `texts` the sentences that differ, and `launch` of the deps what « start » means (run the installer; swap the AppImage and relaunch it).
+ */
 export class WindowsUpdateInstaller implements Installer {
   /** Nothing is installed at a quit: the installer runs only on the click of « Installer et relancer ». */
   readonly installsAtQuit = false
@@ -76,7 +99,16 @@ export class WindowsUpdateInstaller implements Installer {
   private ready: { offer: UpdateOffer; file: string } | null = null
   private installing = false
 
-  constructor(private readonly deps: WindowsUpdateDeps) {}
+  constructor(
+    private readonly deps: WindowsUpdateDeps,
+    private readonly kind: InstallerKind = 'nsis',
+    private readonly texts: InstallerTexts = WINDOWS_TEXTS
+  ) {}
+
+  /** What « Installer et relancer » says will happen: the box of app-update.ts shows it. */
+  restartDetail(version: string): string {
+    return this.texts.restartDetail(version)
+  }
 
   canInstall(): boolean {
     return this.deps.feed() !== null
@@ -109,7 +141,7 @@ export class WindowsUpdateInstaller implements Installer {
     if (this.deps.feed() === null) return Promise.resolve({ kind: 'failed', reason: installFailureReason(null) })
     if (this.ready) return Promise.resolve({ kind: 'downloaded' })
     if (this.pending) return this.pending
-    if (!offer || installerClaim(offer) === null) return Promise.resolve({ kind: 'failed', reason: t('windows-update.le-flux-ne-decrit-pas-un-installeur') })
+    if (!offer || installerClaim(offer, this.kind) === null) return Promise.resolve({ kind: 'failed', reason: t('windows-update.le-flux-ne-decrit-pas-un-installeur') })
     const pending = this.run(offer).finally(() => {
       this.pending = null
     })
@@ -122,7 +154,7 @@ export class WindowsUpdateInstaller implements Installer {
       const done = await this.deps.download(offer)
       if (!done.ok) {
         this.deps.log?.(`[update] the installer of ${offer.version} was not kept (${done.kind}): ${done.detail}`)
-        return { kind: 'failed', reason: failureReason(done) }
+        return { kind: 'failed', reason: failureReason(done, this.texts) }
       }
       this.ready = { offer, file: done.file }
       return { kind: 'downloaded' }
@@ -143,7 +175,7 @@ export class WindowsUpdateInstaller implements Installer {
     void this.install(this.ready).catch((error: unknown) => {
       this.installing = false
       this.deps.log?.(`[update] the installation could not start: ${error instanceof Error ? error.message : String(error)}`)
-      this.deps.report(t('windows-update.l-installeur-n-a-pas-pu-etre-lance') + `\n\n${t('update-install.detail-words', { words: error instanceof Error ? error.message : String(error) })}`)
+      this.deps.report(this.texts.notStarted() + `\n\n${t('update-install.detail-words', { words: error instanceof Error ? error.message : String(error) })}`)
     })
     return true
   }

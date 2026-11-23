@@ -6,7 +6,6 @@ import { join } from 'node:path'
 import { app, contentTracing, dialog, net, shell, type BrowserWindow } from 'electron'
 import { importSource } from '@shared/import-sources'
 import { updatesByHand, type PlatformId } from '@shared/platform'
-import { runningTarget } from '@shared/update-target'
 import { browserDataDir, type PathEnv } from '../platform/paths'
 import { exportBookmarks } from './bookmarks-export'
 import { restoredState } from '@shared/sidebar'
@@ -16,7 +15,9 @@ import { unreachableFeedReason } from '@shared/update-install'
 import { feedSignatureCheck } from './update-signature'
 import { withFeedFreshness } from './update-fresh'
 import { currentUpdateSources } from './update-source'
-import { offerInstall, offerWithdrawn, updateInstaller } from './app-update'
+import { currentFeedTarget } from './update-target'
+import { currentLinuxInstall } from '../platform/linux-install'
+import { debAdviser, offerDebUpdate, offerInstall, offerWithdrawn, updateInstaller } from './app-update'
 import type { Settings } from '@shared/model'
 import type { Browser } from './browser'
 import { backUpBeforeRestore } from '../persist'
@@ -64,7 +65,7 @@ async function fetchFeed(feed: string): Promise<FeedAnswer> {
 const readFeed = withFeedFreshness(fetchFeed)
 
 /**
- * Windows and Linux (`updatesByHand`): the build reads no update address (the one it carries, update-source.ts, is not read yet) and has no installer, so there is nothing to read and nothing to configure. The box says so
+ * A Linux copy that is neither an AppImage nor a .deb (`updatesByHand`: a run from the sources, an unpacked build): it reads no update address (update-source.ts) and has no installer, so there is nothing to read and nothing to configure. The box says so
  * in plain words, without the name of a setting nobody has, and offers the download page of the site, where the latest version is.
  */
 async function offerManualUpdates(win: BrowserWindow, current: string): Promise<void> {
@@ -99,10 +100,10 @@ export async function checkForUpdates({ win, browser }: FocusedWindow, settings:
     const dropped = await updateInstaller()?.dropWithdrawn(withdrawnVersions(answer.json))
     if (dropped && dropped.kind !== 'kept') browser?.showToast(droppedUpdateText({ version: dropped.version, failed: dropped.kind === 'failed' }), undefined, UPDATE_NOTICE_MS)
   }
-  const outcome = updateOutcome(current, feed, answer, runningTarget(process.platform, process.arch))
+  const outcome = updateOutcome(current, feed, answer, currentFeedTarget())
   switch (outcome.kind) {
     case 'not-configured':
-      if (updatesByHand(process.platform)) return offerManualUpdates(win, current)
+      if (updatesByHand(process.platform, currentLinuxInstall().packaging)) return offerManualUpdates(win, current)
       await dialog.showMessageBox(win, {
         type: 'info',
         message: t('menu-actions.la-verification-des-mises-a-jour-n-est-pas'),
@@ -121,6 +122,9 @@ export async function checkForUpdates({ win, browser }: FocusedWindow, settings:
       // Installed from the built-in feed only, like any update (sources.install); offerWithdrawn keeps an older version for the download page.
       return offerWithdrawn({ win, browser }, outcome, sources.install !== null ? updateInstaller() : null)
     case 'available': {
+      // A .deb is told, with the command, and never installed (app-update.ts, offerDebUpdate); the feed it reads is the feed of .deb, so its offer is one.
+      const deb = debAdviser()
+      if (deb && outcome.offer.kind === 'deb') return offerDebUpdate({ win, browser }, outcome.offer, outcome.current, deb)
       // Installed only from the built-in feed (sources.install), and only when the feed names the archive Squirrel downloads.
       const installer = sources.install !== null && outcome.offer.archive ? updateInstaller() : null
       if (installer?.canInstall()) return offerInstall({ win, browser }, outcome.offer, outcome.current, installer)

@@ -34,19 +34,21 @@ describe('the lines of the security check', () => {
     }
   })
 
-  it('reads the switch of the system for the automatic check: on Windows its own, off by default and said without asking for a look; elsewhere autoUpdate', () => {
-    // Windows: the old autoUpdate (true in every profile of the 1.1.5) says nothing; the line follows windowsAutoUpdate.
-    const windowsDefault = row(securityCheck(facts({ autoUpdate: true, windowsAutoUpdate: false }, { platform: 'win32' })), 'upd-auto')
-    expect(windowsDefault?.status).toBe('info')
-    expect(windowsDefault?.where).toBe('autoUpdate')
-    expect(row(securityCheck(facts({ autoUpdate: false, windowsAutoUpdate: true }, { platform: 'win32' })), 'upd-auto')?.status).toBe('good')
-    // macOS, Linux and a snapshot without a system read autoUpdate, and keep « to review » when it is off.
-    for (const platform of ['darwin', 'linux', undefined]) {
+  it('reads the switch of the system for the automatic check: on Windows and Linux its own, off by default and said without asking for a look; on macOS autoUpdate', () => {
+    // Windows and Linux: the old autoUpdate (true in every profile of the 1.1.5) says nothing; the line follows windowsAutoUpdate.
+    for (const platform of ['win32', 'linux']) {
+      const ownDefault = row(securityCheck(facts({ autoUpdate: true, windowsAutoUpdate: false }, { platform })), 'upd-auto')
+      expect(ownDefault?.status, platform).toBe('info')
+      expect(ownDefault?.where, platform).toBe('autoUpdate')
+      expect(row(securityCheck(facts({ autoUpdate: false, windowsAutoUpdate: true }, { platform })), 'upd-auto')?.status, platform).toBe('good')
+    }
+    // macOS and a snapshot without a system read autoUpdate, and keep « to review » when it is off.
+    for (const platform of ['darwin', undefined]) {
       expect(row(securityCheck(facts({ autoUpdate: true, windowsAutoUpdate: false }, { platform })), 'upd-auto')?.status, String(platform)).toBe('good')
       expect(row(securityCheck(facts({ autoUpdate: false, windowsAutoUpdate: true }, { platform })), 'upd-auto')?.status, String(platform)).toBe('check')
     }
-    // Off by default on Windows is not a line to review: the count is the one of a Mac where the check is on.
-    expect(checksToReview(securityCheck(facts({ autoUpdate: true, windowsAutoUpdate: false }, { platform: 'win32' })))).toBe(checksToReview(securityCheck(facts({ autoUpdate: true }, { platform: 'darwin' }))))
+    // Off by default on Windows and Linux is not a line to review: the count is the one of a Mac where the check is on.
+    for (const platform of ['win32', 'linux']) expect(checksToReview(securityCheck(facts({ autoUpdate: true, windowsAutoUpdate: false }, { platform })))).toBe(checksToReview(securityCheck(facts({ autoUpdate: true }, { platform: 'darwin' }))))
   })
 
   it('names the engine that runs, only when the interface knows it', () => {

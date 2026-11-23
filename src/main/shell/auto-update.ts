@@ -16,10 +16,11 @@ import {
   type UpdateNoticeMemory
 } from '@shared/auto-update'
 import type { Settings } from '@shared/model'
-import { autoUpdateOn } from '@shared/platform'
+import { autoUpdateKey, autoUpdateOn } from '@shared/platform'
 import type { FeatureGates } from './feature-gate'
 import { feedAnswer, feedFetchInit, updateOutcome, urgentSecurityFix, withdrawnVersions, type FeedAnswer, type UpdateOffer, type UpdateOutcome } from '@shared/update-check'
-import { runningTarget, type FeedTarget } from '@shared/update-target'
+import type { FeedTarget } from '@shared/update-target'
+import { currentFeedTarget } from './update-target'
 import { currentBackgroundFeed } from './update-source'
 import { feedSignatureCheck } from './update-signature'
 import { withFeedFreshness } from './update-fresh'
@@ -81,7 +82,7 @@ export class AutoUpdater {
     const answer = await this.deps.fetchFeed(feed)
     const dropped = await this.dropWithdrawn(answer)
     const told = dropped ? { dropped } : {}
-    const outcome = updateOutcome(this.deps.version, feed, answer, this.deps.target ?? runningTarget(process.platform, process.arch))
+    const outcome = updateOutcome(this.deps.version, feed, answer, this.deps.target ?? currentFeedTarget())
     if (outcome.kind === 'available') {
       // The feed says the flaw is exploited and this version fixes it (shared/update-check.ts): the notice is not held back by the cap.
       const urgent = urgentSecurityFix(answer.ok ? answer.json : null, this.deps.version, outcome.offer.version)
@@ -179,8 +180,8 @@ export class AutoUpdater {
 
 /** The looks (a timer at launch and one a day) run only while "Rechercher les mises à jour automatiquement" is on (the switch of the system: `autoUpdateOn`): the setting off owns no timer. */
 export function gateAutoUpdate(gates: FeatureGates, updater: AutoUpdater, platform: string = process.platform): void {
-  // Windows follows its own switch, off by default; the other systems follow the one they always had. The other feature is never gated: the unused switch commands nothing.
-  gates.gate(platform === 'win32' ? 'auto-update-windows' : 'auto-update', {
+  // Windows and Linux follow their own switch, off by default; macOS follows the one it always had. The other feature is never gated: the unused switch commands nothing.
+  gates.gate(autoUpdateKey(platform) === 'windowsAutoUpdate' ? 'auto-update-windows' : 'auto-update', {
     start: () => {
       updater.start()
       return () => updater.stop()

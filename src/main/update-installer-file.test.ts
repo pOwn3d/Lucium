@@ -15,6 +15,7 @@ import {
   downloadVerifiedInstaller,
   installerClaim,
   installerFolder,
+  verifyFileAgainst,
   verifyInstallerFile,
   type DownloadResponse,
   type InstallerFetch
@@ -349,5 +350,57 @@ describe('discardInstallerFolder', () => {
     discardInstallerFolderNow(folder)
     expect(existsSync(folder)).toBe(false)
     expect(() => discardInstallerFolderNow(folder)).not.toThrow()
+  })
+})
+
+describe('the installer of another kind: the same checks, a name and a kind of its own', () => {
+  const DEB = { kind: 'deb', fileName: 'Lucium-1.2.0-linux-amd64.deb' } as const
+  const debOffer = (bytes: Uint8Array, over: Partial<UpdateOffer> = {}): UpdateOffer => offerFor(bytes, { kind: 'deb', archive: 'https://lucium.app/updates/linux-x64/deb/Lucium-1.2.0-linux-amd64.deb', ...over })
+
+  it('takes an offer of the kind asked, and none of another: an NSIS offer is no .deb, a .deb offer is no NSIS installer', () => {
+    expect(installerClaim(debOffer(BYTES), 'deb')).toEqual({ url: debOffer(BYTES).archive, sha256: sha(BYTES), size: BYTES.byteLength })
+    expect(installerClaim(debOffer(BYTES))).toBeNull()
+    expect(installerClaim(offerFor(BYTES), 'deb')).toBeNull()
+    expect(installerClaim(offerFor(BYTES), 'appimage')).toBeNull()
+    expect(installerClaim(offerFor(BYTES, { kind: undefined }), 'deb')).toBeNull()
+  })
+
+  it('keeps the bytes of a .deb under the name it is given, and refuses an offer of the wrong kind before asking the network', async () => {
+    const { fetch } = serving(BYTES)
+    const done = await downloadVerifiedInstaller({ fetch, folder }, debOffer(BYTES), DEB)
+    expect(done).toEqual({ ok: true, file: join(folder, DEB.fileName), sha256: sha(BYTES) })
+    expect(readdirSync(folder)).toEqual([DEB.fileName])
+    const none = serving(BYTES)
+    expect(await downloadVerifiedInstaller({ fetch: none.fetch, folder }, offerFor(BYTES), DEB)).toMatchObject({ ok: false, kind: 'offer' })
+    expect(none.fetch).not.toHaveBeenCalled()
+  })
+
+  it('checks again the file of a kind by its own name, and refuses the name of the other kind', async () => {
+    const { fetch } = serving(BYTES)
+    const done = await downloadVerifiedInstaller({ fetch, folder }, debOffer(BYTES), DEB)
+    expect(done.ok && (await verifyInstallerFile(folder, done.file, debOffer(BYTES), DEB))).toBe(true)
+    expect(done.ok && (await verifyInstallerFile(folder, done.file, debOffer(BYTES)))).toBe(false)
+    expect(done.ok && (await verifyInstallerFile(folder, done.file, offerFor(BYTES), DEB))).toBe(false)
+  })
+
+  it('verifyFileAgainst takes a file wherever it is, and refuses a link, a folder, a wrong size, other bytes and a file that is gone', async (context) => {
+    mkdirSync(folder)
+    const file = join(folder, 'a.bin')
+    writeFileSync(file, BYTES)
+    expect(await verifyFileAgainst(file, debOffer(BYTES), 'deb')).toBe(true)
+    expect(await verifyFileAgainst(file, debOffer(BYTES), 'appimage')).toBe(false)
+    expect(await verifyFileAgainst(folder, debOffer(BYTES), 'deb')).toBe(false)
+    writeFileSync(file, BYTES.slice(0, 10))
+    expect(await verifyFileAgainst(file, debOffer(BYTES), 'deb')).toBe(false)
+    const changed = BYTES.slice()
+    changed[0] = changed[0]! ^ 1
+    writeFileSync(file, changed)
+    expect(await verifyFileAgainst(file, debOffer(BYTES), 'deb')).toBe(false)
+    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    expect(await verifyFileAgainst(join(folder, 'gone.bin'), debOffer(BYTES), 'deb')).toBe(false)
+    writeFileSync(file, BYTES)
+    const linked = join(folder, 'link.bin')
+    if (!link(file, linked, 'file')) return context.skip()
+    expect(await verifyFileAgainst(linked, debOffer(BYTES), 'deb')).toBe(false)
   })
 })

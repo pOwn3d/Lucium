@@ -1,4 +1,4 @@
-// The installer of a Windows update, from the network to a file that is safe to run. The feed (read and signed by a key of the application: update-check.ts)
+// The installer of an update (the NSIS installer of Windows, the AppImage of Linux, the .deb the person is told to install), from the network to a file that is safe to use. The feed (read and signed by a key of the application: update-check.ts)
 // names the installer by its address, its size and its SHA-256; nothing else makes the file the one the maintainer published, so nothing else is believed:
 // not the https of the download (a server is the party the signature does not trust), and not a file name (the folder and the name below are Lucium's own,
 // never taken from the address).
@@ -15,7 +15,7 @@ import { constants } from 'node:fs'
 import { rmSync } from 'node:fs'
 import { lstat, mkdir, open, readFile, rename, rm } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
-import { SHA256_HEX } from '@shared/update-target'
+import { SHA256_HEX, type InstallerKind } from '@shared/update-target'
 import type { UpdateOffer } from '@shared/update-check'
 
 /** The name of the folder in the temporary folder. */
@@ -27,7 +27,15 @@ export const INSTALLER_MAX_BYTES = 1024 * 1024 * 1024
 /** The longest a download may take: a connection that stalls does not hold the update for ever. */
 export const INSTALLER_TIMEOUT_MS = 30 * 60 * 1000
 
-/** What the installer of an offer is, as the signed feed says it; null when the offer is not a Windows installer that can be checked. */
+/** The sort of installer a download is, and the name Lucium gives its file (its own, whatever the address says). Windows' NSIS installer unless told otherwise. */
+export interface InstallerSpec {
+  kind: InstallerKind
+  fileName: string
+}
+
+export const NSIS_SPEC: InstallerSpec = { kind: 'nsis', fileName: INSTALLER_FILE_NAME }
+
+/** What the installer of an offer is, as the signed feed says it; null when the offer is not an installer of the sort asked that can be checked. */
 export interface InstallerClaim {
   url: string
   sha256: string
@@ -35,13 +43,13 @@ export interface InstallerClaim {
 }
 
 /**
- * The address, the sum and the size of the installer an offer names, or null: the offer must name an NSIS installer (`kind`), at an https address, with a
- * SHA-256 of 64 lowercase hexadecimal digits and a size that is a positive whole number within INSTALLER_MAX_BYTES. A feed written for macOS before these
- * keys existed has no `kind`, so it is never taken for an installer.
+ * The address, the sum and the size of the installer an offer names, or null: the offer must name an installer of the `kind` asked (NSIS unless told otherwise), at an
+ * https address, with a SHA-256 of 64 lowercase hexadecimal digits and a size that is a positive whole number within INSTALLER_MAX_BYTES. A feed written for macOS
+ * before these keys existed has no `kind`, so it is never taken for an installer.
  */
-export function installerClaim(offer: UpdateOffer): InstallerClaim | null {
+export function installerClaim(offer: UpdateOffer, wanted: InstallerKind = 'nsis'): InstallerClaim | null {
   const { archive, sha256, size, kind } = offer
-  if (kind !== 'nsis' || typeof archive !== 'string' || !/^https:\/\/\S+$/i.test(archive)) return null
+  if (kind !== wanted || typeof archive !== 'string' || !/^https:\/\/\S+$/i.test(archive)) return null
   if (typeof sha256 !== 'string' || !SHA256_HEX.test(sha256)) return null
   if (typeof size !== 'number' || !Number.isSafeInteger(size) || size <= 0 || size > INSTALLER_MAX_BYTES) return null
   return { url: archive, sha256, size }
@@ -66,9 +74,9 @@ export type InstallerFailureKind = 'offer' | 'network' | 'mismatch' | 'disk'
 
 export type InstallerDownload = { ok: true; file: string; sha256: string } | { ok: false; kind: InstallerFailureKind; detail: string }
 
-const refused = (kind: InstallerFailureKind, detail: string): InstallerDownload => ({ ok: false, kind, detail })
+export const refused = (kind: InstallerFailureKind, detail: string): InstallerDownload => ({ ok: false, kind, detail })
 
-const words = (error: unknown): string => (error instanceof Error ? error.message : String(error))
+export const words = (error: unknown): string => (error instanceof Error ? error.message : String(error))
 
 /** Ends the body of a download that is refused; a stream that cannot even be cancelled is only logged, the refusal is the answer. */
 const stopReading = (reader: ReadableStreamDefaultReader<Uint8Array>): Promise<void> =>
@@ -84,28 +92,22 @@ export function discardInstallerFolderNow(folder: string): void {
   rmSync(folder, { recursive: true, force: true })
 }
 
+/** What a download needs of the system, the same whatever the installer is. */
+export interface DownloadDeps {
+  fetch: InstallerFetch
+  headers?: Record<string, string>
+  timeoutMs?: number
+}
+
 /**
- * Downloads the installer of `offer` into `folder` (a new folder: the one of the earlier download is taken away first) and returns the file once its size
- * and its SHA-256 are the ones the offer carries. Otherwise the folder is removed and the reason says which of the four it is: the offer is not an installer
- * (`offer`, nothing asked of the network), the network failed or refused (`network`), the bytes are not the announced ones (`mismatch`), or the disk failed (`disk`).
+ * The bytes of `claim` into `part` (created new: nothing may be there), counted and hashed as they arrive, and the file given its name `target` only when its size and
+ * its SHA-256 are the signed ones. `cleanup` runs on every end but success and takes away whatever the download made, so that nothing half-written or wrong stays where
+ * it could be used. The failure says which of the four it is: the network failed or refused (`network`), the bytes are not the announced ones (`mismatch`), the disk
+ * failed (`disk`).
  */
-export async function downloadVerifiedInstaller(
-  deps: { fetch: InstallerFetch; folder: string; headers?: Record<string, string>; timeoutMs?: number },
-  offer: UpdateOffer
-): Promise<InstallerDownload> {
-  const claim = installerClaim(offer)
-  if (!claim) return refused('offer', 'the offer does not name an NSIS installer with an https address, a SHA-256 and a size')
-  const target = join(deps.folder, INSTALLER_FILE_NAME)
-  const part = `${target}.part`
-  try {
-    await discardInstallerFolder(deps.folder)
-    // Not recursive: the folder must not exist (it was just taken away), so a program that made one in between makes this fail instead of being used.
-    await mkdir(deps.folder, { mode: 0o700 })
-  } catch (error) {
-    return refused('disk', `the folder of the download could not be made: ${words(error)}`)
-  }
+export async function fetchVerifiedFile(deps: DownloadDeps, claim: InstallerClaim, part: string, target: string, cleanup: () => Promise<void>): Promise<InstallerDownload> {
   const fail = async (result: InstallerDownload): Promise<InstallerDownload> => {
-    await discardInstallerFolder(deps.folder).catch((error: unknown) => console.warn(`[update] the folder of a refused download could not be removed: ${words(error)}`))
+    await cleanup().catch((error: unknown) => console.warn(`[update] what a refused download made could not be removed: ${words(error)}`))
     return result
   }
   let response: DownloadResponse
@@ -131,7 +133,7 @@ export async function downloadVerifiedInstaller(
   let file: Awaited<ReturnType<typeof open>> | null = null
   const reader = response.body.getReader()
   try {
-    // 'wx': created new, failing if anything is already there (the folder is new, so nothing is).
+    // 'wx': created new, failing if anything is already there (the caller made sure nothing is).
     file = await open(part, constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL, 0o600)
   } catch (error) {
     await stopReading(reader)
@@ -175,13 +177,39 @@ export async function downloadVerifiedInstaller(
 }
 
 /**
+ * Downloads the installer of `offer` into `folder` (a new folder: the one of the earlier download is taken away first) and returns the file once its size
+ * and its SHA-256 are the ones the offer carries. Otherwise the folder is removed and the reason says which of the four it is: the offer is not an installer
+ * of the sort asked (`offer`, nothing asked of the network), the network failed or refused (`network`), the bytes are not the announced ones (`mismatch`), or the
+ * disk failed (`disk`). The NSIS installer of Windows unless `spec` says otherwise.
+ */
+export async function downloadVerifiedInstaller(deps: DownloadDeps & { folder: string }, offer: UpdateOffer, spec: InstallerSpec = NSIS_SPEC): Promise<InstallerDownload> {
+  const claim = installerClaim(offer, spec.kind)
+  if (!claim) return refused('offer', `the offer does not name an installer of the kind ${spec.kind} with an https address, a SHA-256 and a size`)
+  const target = join(deps.folder, spec.fileName)
+  try {
+    await discardInstallerFolder(deps.folder)
+    // Not recursive: the folder must not exist (it was just taken away), so a program that made one in between makes this fail instead of being used.
+    await mkdir(deps.folder, { mode: 0o700 })
+  } catch (error) {
+    return refused('disk', `the folder of the download could not be made: ${words(error)}`)
+  }
+  return fetchVerifiedFile(deps, claim, `${target}.part`, target, () => discardInstallerFolder(deps.folder))
+}
+
+/**
  * Whether `file` is, right now on the disk, the installer `offer` names: the file of the download folder under Lucium's own name (not another path, not a
  * link, a regular file), of the signed size and of the signed SHA-256. Asked just before the installer is run, so that a file that changed since the download
  * (or never was the one) is not run.
  */
-export async function verifyInstallerFile(folder: string, file: string, offer: UpdateOffer): Promise<boolean> {
-  const claim = installerClaim(offer)
-  if (!claim || resolve(file) !== resolve(join(folder, INSTALLER_FILE_NAME))) return false
+export async function verifyInstallerFile(folder: string, file: string, offer: UpdateOffer, spec: InstallerSpec = NSIS_SPEC): Promise<boolean> {
+  if (resolve(file) !== resolve(join(folder, spec.fileName))) return false
+  return verifyFileAgainst(file, offer, spec.kind)
+}
+
+/** The same check of a file wherever it is: a regular file (not a link) of the signed size and the signed SHA-256. The caller says whether the place is the right one. */
+export async function verifyFileAgainst(file: string, offer: UpdateOffer, kind: InstallerKind): Promise<boolean> {
+  const claim = installerClaim(offer, kind)
+  if (!claim) return false
   try {
     const info = await lstat(file)
     if (!info.isFile() || info.isSymbolicLink() || info.size !== claim.size) return false

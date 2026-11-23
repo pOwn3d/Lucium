@@ -9,6 +9,7 @@
 import { AUTOMATION_SCHEME } from './automation-url'
 import { DISK_ACCESS_SETTINGS_URL } from './import-sources'
 import { t } from './i18n'
+import type { LinuxPackaging } from './linux-install'
 import type { Settings } from './model'
 
 export type PlatformId = 'darwin' | 'win32' | 'linux'
@@ -68,11 +69,6 @@ export interface PlatformFacts {
    * there is the access list of the user's profile folder, which Node cannot read, so a check of the mode cannot be made (and must not refuse the file).
    */
   posixFileModes: boolean
-  /**
-   * The system has an update installer that runs only after the user's click: Squirrel.Mac on macOS, the NSIS installer of the signed feed on Windows
-   * (main/shell/windows-update.ts). Linux has none yet (its AppImage and .deb are a later lot): an update is made by hand from the download page (`updatesByHand`).
-   */
-  selfUpdate: boolean
 }
 
 export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
@@ -96,8 +92,7 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     nativeHosts: 'folders',
     pathDelimiter: ':',
     systemSpellChecker: true,
-    posixFileModes: true,
-    selfUpdate: true
+    posixFileModes: true
   },
   win32: {
     trafficLights: false,
@@ -120,8 +115,7 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     nativeHosts: 'registry',
     pathDelimiter: ';',
     systemSpellChecker: false,
-    posixFileModes: false,
-    selfUpdate: true
+    posixFileModes: false
   },
   linux: {
     trafficLights: false,
@@ -143,32 +137,34 @@ export const PLATFORM_FACTS: Readonly<Record<PlatformId, PlatformFacts>> = {
     nativeHosts: 'folders',
     pathDelimiter: ':',
     systemSpellChecker: false,
-    posixFileModes: true,
-    selfUpdate: false
+    posixFileModes: true
   }
 }
 
 /**
- * Whether an update of Lucium is made by hand on this system: it has no update installer (`selfUpdate`: Linux), so the menu says where to download the latest
- * version and the Settings show no switch for a check that cannot install. `platform` is a `process.platform` value (any Unix other than macOS counts as
- * Linux, as in `platformOf`); anything that is not a string (a stand-in snapshot with no platform) is not a system and gets the macOS behaviour.
+ * Whether an update of Lucium is made by hand in this run: macOS and Windows have an update installer that runs after the user's click (Squirrel.Mac, the NSIS
+ * installer of the signed feed: main/shell/windows-update.ts). Linux has one only for a copy installed as an AppImage (it replaces itself) or as a .deb (it is told
+ * the command: shared/linux-install.ts, `packaging`); a copy that is neither (a run from the sources, an unpacked build) has nothing to read or to install over,
+ * so the menu says where to download the latest version and the Settings show no switch for a check that cannot act. `platform` is a `process.platform` value (any
+ * Unix other than macOS counts as Linux, as in `platformOf`); anything that is not a string (a stand-in snapshot with no platform) is not a system and gets the
+ * macOS behaviour. `packaging` is what the running copy is (`linuxInstallOf`); left out, a Linux copy is taken for one that is neither.
  */
-export function updatesByHand(platform: unknown): boolean {
-  return typeof platform === 'string' && !PLATFORM_FACTS[platformOf(platform)].selfUpdate
+export function updatesByHand(platform: unknown, packaging?: LinuxPackaging | null): boolean {
+  return typeof platform === 'string' && platformOf(platform) === 'linux' && !packaging
 }
 
 /**
- * The setting that switches the daily look for an update on, on this system: Windows has one of its own, `windowsAutoUpdate`, off by default for everyone; every
- * other system reads `autoUpdate`. Not a fact of the table above: a fact says what a system offers, this says which switch is the person's. Anything that is not a
- * string gets the macOS behaviour, as in `updatesByHand`.
+ * The setting that switches the daily look for an update on, on this system: Windows and Linux, which read a feed of their own, have one, `windowsAutoUpdate` (the
+ * name it was born with; it is the switch of both), off by default for everyone; macOS reads `autoUpdate`. Not a fact of the table above: a fact says what a system
+ * offers, this says which switch is the person's. Anything that is not a string gets the macOS behaviour, as in `updatesByHand`.
  */
 export function autoUpdateKey(platform: unknown): 'autoUpdate' | 'windowsAutoUpdate' {
-  return typeof platform === 'string' && platformOf(platform) === 'win32' ? 'windowsAutoUpdate' : 'autoUpdate'
+  return typeof platform === 'string' && platformOf(platform) !== 'darwin' ? 'windowsAutoUpdate' : 'autoUpdate'
 }
 
 /**
  * Whether the person has switched the look for an update by itself on, on this system. Strictly `true`: a value that is not a boolean (a file written by hand) is off,
- * and on Windows the old `autoUpdate` says nothing, whatever it holds.
+ * and on Windows and Linux the old `autoUpdate` says nothing, whatever it holds.
  */
 export const autoUpdateOn = (settings: Pick<Settings, 'autoUpdate' | 'windowsAutoUpdate'>, platform: unknown): boolean => settings[autoUpdateKey(platform)] === true
 

@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react'
 import type { UiSnapshot } from '@shared/ipc'
 import type { Settings } from '@shared/model'
 import { UI_SCALE_MAX, UI_SCALE_MIN, UI_SCALE_STEP } from '@shared/ui-scale'
-import { autoUpdateKey, updatesByHand } from '@shared/platform'
+import { autoUpdateKey } from '@shared/platform'
 import { api } from './api'
 import { FeatureSwitch } from './FeaturesSettings'
 import { MIN_FONT_SIZES } from '@shared/min-font-size'
@@ -79,24 +79,25 @@ export function DefaultBrowserRow() {
 }
 
 /**
- * The updates (« À propos et mises à jour »): the automatic check (on macOS; on Windows its own switch, off by default; on Linux, which installs nothing yet, a sentence
+ * The updates (« À propos et mises à jour »): the automatic check (on macOS; on Windows and Linux its own switch, off by default; on a Linux copy that is neither an AppImage nor a .deb, a sentence
  * instead), the test channel of a build that carries one, the news after an update.
  */
 export function UpdatesSettings({ snapshot, update }: PaneProps) {
   const { settings } = snapshot.state
   return (
     <Group title={t('settings.section-mises-a-jour')}>
-      {updatesByHand(snapshot.platform) ? (
-        // Linux reads no update address and has no installer yet: a switch for a check that reads nothing would only mislead. The row says how an update is made instead.
+      {snapshot.updatesByHand === true ? (
+        // A Linux copy that is neither an AppImage nor a .deb (a run from the sources) reads no update address and installs nothing: a switch for a check that reads nothing would only mislead. The row says how an update is made instead.
         <div className="pref-row pref-message" role="status" data-role="updates-by-hand">
           {t('settings.cette-version-ne-se-met-pas-a-jour-toute-seule')}
         </div>
       ) : autoUpdateKey(snapshot.platform) === 'windowsAutoUpdate' ? (
-        // Windows has a switch of its own, off by default for everyone: `autoUpdate` (on in every profile of the 1.1.5, never chosen) commands nothing there. The help says what is sent.
+        // Windows and Linux have a switch of their own, off by default for everyone: `autoUpdate` (on in every profile of the 1.1.5, never chosen) commands nothing there. The help says what is sent.
         <Check
           settingKey="windowsAutoUpdate"
           label={t('features.rechercher-les-mises-a-jour-automatiquement')}
-          hint={t('settings.windows-recherche-automatique-eteinte-par-defaut')} more={t('settings.windows-recherche-automatique-ce-qui-est-envoye')}
+          hint={t(snapshot.platform === 'win32' ? 'settings.windows-recherche-automatique-eteinte-par-defaut' : 'settings.linux-recherche-automatique-eteinte-par-defaut')}
+          more={t(snapshot.platform === 'win32' ? 'settings.windows-recherche-automatique-ce-qui-est-envoye' : 'settings.linux-recherche-automatique-ce-qui-est-envoye')}
           checked={settings.windowsAutoUpdate}
           onChange={(windowsAutoUpdate) => update({ windowsAutoUpdate })}
         />

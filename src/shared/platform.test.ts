@@ -38,11 +38,19 @@ describe('platformOf', () => {
   })
 })
 
-describe('updatesByHand: which systems have no update installer', () => {
-  it('is false on macOS (Squirrel.Mac) and on Windows (the NSIS installer of the signed feed), and true on Linux, which has none yet', () => {
+describe('updatesByHand: which copies have no update path', () => {
+  it('is false on macOS (Squirrel.Mac) and on Windows (the NSIS installer of the signed feed), and true on a Linux copy that is neither an AppImage nor a .deb', () => {
     expect(updatesByHand('darwin')).toBe(false)
     expect(updatesByHand('win32')).toBe(false)
     expect(updatesByHand('linux')).toBe(true)
+    expect(updatesByHand('linux', null)).toBe(true)
+  })
+
+  it('is false on Linux for an AppImage (it replaces itself) and for a .deb (it is told the command), and the packaging means nothing elsewhere', () => {
+    expect(updatesByHand('linux', 'appimage')).toBe(false)
+    expect(updatesByHand('linux', 'deb')).toBe(false)
+    expect(updatesByHand('darwin', null)).toBe(false)
+    expect(updatesByHand('win32', null)).toBe(false)
   })
 
   it('counts any other Unix as Linux, and anything that is not a system name (a stand-in snapshot with no platform) as macOS', () => {
@@ -54,22 +62,24 @@ describe('updatesByHand: which systems have no update installer', () => {
 })
 
 describe('autoUpdateKey and autoUpdateOn: which switch commands the look for an update by itself', () => {
-  it('is the Windows switch on Windows alone; every other system, a non-system value included, reads autoUpdate', () => {
+  it('is the own switch of Windows and Linux (any other Unix counts as Linux); macOS, a non-system value included, reads autoUpdate', () => {
     expect(autoUpdateKey('win32')).toBe('windowsAutoUpdate')
+    expect(autoUpdateKey('linux')).toBe('windowsAutoUpdate')
+    expect(autoUpdateKey('freebsd')).toBe('windowsAutoUpdate')
     expect(autoUpdateKey('darwin')).toBe('autoUpdate')
-    expect(autoUpdateKey('linux')).toBe('autoUpdate')
-    expect(autoUpdateKey('freebsd')).toBe('autoUpdate')
     for (const value of [undefined, null, 42]) expect(autoUpdateKey(value)).toBe('autoUpdate')
   })
 
-  it('reads on Windows the Windows switch alone: the old autoUpdate, true without having been chosen, turns nothing on', () => {
-    expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: false }, 'win32')).toBe(false)
-    expect(autoUpdateOn({ autoUpdate: false, windowsAutoUpdate: true }, 'win32')).toBe(true)
-    expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: true }, 'win32')).toBe(true)
+  it('reads on Windows and on Linux the own switch alone: the old autoUpdate, true without having been chosen, turns nothing on', () => {
+    for (const platform of ['win32', 'linux']) {
+      expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: false }, platform), platform).toBe(false)
+      expect(autoUpdateOn({ autoUpdate: false, windowsAutoUpdate: true }, platform), platform).toBe(true)
+      expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: true }, platform), platform).toBe(true)
+    }
   })
 
-  it('reads elsewhere autoUpdate alone: the Windows switch turns nothing on', () => {
-    for (const platform of ['darwin', 'linux', undefined]) {
+  it('reads on macOS (and where no system is named) autoUpdate alone: the own switch of the others turns nothing on', () => {
+    for (const platform of ['darwin', undefined]) {
       expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: false }, platform), String(platform)).toBe(true)
       expect(autoUpdateOn({ autoUpdate: false, windowsAutoUpdate: true }, platform), String(platform)).toBe(false)
     }
@@ -88,10 +98,6 @@ describe('facts', () => {
       expect(PLATFORM_FACTS.win32[key], `win32 ${key}`).toBe(false)
       expect(PLATFORM_FACTS.linux[key], `linux ${key}`).toBe(false)
     }
-  })
-
-  it('give an installer to macOS and Windows, and none to Linux yet', () => {
-    expect(PLATFORM_IDS.map((id) => PLATFORM_FACTS[id].selfUpdate)).toEqual([true, true, false])
   })
 
   it('leave the spell checker off by default where it would download dictionaries from Chromium’s CDN', () => {

@@ -87,3 +87,30 @@ describe('SHA256_HEX', () => {
     for (const bad of ['', 'ab'.repeat(31), 'ab'.repeat(33), 'AB'.repeat(32), `${'a'.repeat(63)}g`, ` ${'a'.repeat(64)}`, `${'a'.repeat(64)}\n`]) expect(SHA256_HEX.test(bad), bad).toBe(false)
   })
 })
+
+describe('readFeedIdentity: a Linux copy reads the feed of its own packaging, and no other', () => {
+  const APPIMAGE_COPY: FeedTarget = { ...LINUX_X64, kind: 'appimage' }
+  const DEB_COPY: FeedTarget = { ...LINUX_X64, kind: 'deb' }
+
+  it('takes the file of the kind it is, and refuses the file of the other kind served at its address, signed as it may be', () => {
+    expect(readFeedIdentity(says(LINUX_X64, 'appimage'), APPIMAGE_COPY)).toEqual({ ok: true, kind: 'appimage', legacy: false })
+    expect(readFeedIdentity(says(LINUX_X64, 'deb'), DEB_COPY)).toEqual({ ok: true, kind: 'deb', legacy: false })
+    expect(readFeedIdentity(says(LINUX_X64, 'deb'), APPIMAGE_COPY).ok).toBe(false)
+    expect(readFeedIdentity(says(LINUX_X64, 'appimage'), DEB_COPY).ok).toBe(false)
+  })
+
+  it('still reads the system and the architecture first: the right kind for another architecture is refused', () => {
+    expect(readFeedIdentity(says(LINUX_ARM, 'appimage'), APPIMAGE_COPY).ok).toBe(false)
+    expect(readFeedIdentity(says(WINDOWS, 'nsis'), APPIMAGE_COPY).ok).toBe(false)
+  })
+
+  it('takes any kind of the system when the copy does not say which it is (a reader that asks no packaging)', () => {
+    expect(readFeedIdentity(says(LINUX_X64, 'appimage'), LINUX_X64).ok).toBe(true)
+    expect(readFeedIdentity(says(LINUX_X64, 'deb'), LINUX_X64).ok).toBe(true)
+  })
+
+  it('carries the kind in the target it makes, for Linux alone: runningTarget leaves it out when none is given', () => {
+    expect(runningTarget('linux', 'x64', 'deb')).toEqual({ platform: 'linux', arch: 'x64', kind: 'deb' })
+    expect(runningTarget('linux', 'x64')).toEqual(LINUX_X64)
+  })
+})

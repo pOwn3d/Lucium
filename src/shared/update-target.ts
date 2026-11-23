@@ -18,6 +18,11 @@ export type InstallerKind = 'zip' | 'nsis' | 'appimage' | 'deb'
 export interface FeedTarget {
   platform: PlatformId
   arch: string
+  /**
+   * The one sort of installer this copy takes, when the system has several (Linux: an AppImage takes the feed of AppImages, a .deb the feed of .deb; one feed names one kind,
+   * the maintainer's decision of 23 November 2026). Absent, the system takes any kind it has.
+   */
+  kind?: InstallerKind
 }
 
 /** The systems a release file may be for (`<platform>-<arch>`, also the folder of the server: `updates/<id>/`), and the installers each may name. */
@@ -29,7 +34,7 @@ export const INSTALLER_KINDS: Readonly<Record<string, readonly InstallerKind[]>>
 }
 
 /** The system this copy runs on (`process.platform` and `process.arch`): any Unix other than macOS counts as Linux, as everywhere else (`platformOf`). */
-export const runningTarget = (platform: unknown, arch: unknown): FeedTarget => ({ platform: platformOf(platform), arch: typeof arch === 'string' ? arch : '' })
+export const runningTarget = (platform: unknown, arch: unknown, kind?: InstallerKind): FeedTarget => ({ platform: platformOf(platform), arch: typeof arch === 'string' ? arch : '', ...(kind ? { kind } : {}) })
 
 /** What a file says of itself: the sort of installer it names, and whether it is one of the files written before the keys existed (macOS only). */
 export type FeedIdentity = { ok: true; kind: InstallerKind; legacy: boolean } | { ok: false }
@@ -41,7 +46,9 @@ export const SHA256_HEX = /^[0-9a-f]{64}$/
  * Whether `feed` (the release file, as parsed) is for `running`, and what it names. Refused when:
  * - it says it is for a system other than the running one (`platform` or `arch` differ), or for one no build exists for;
  * - it gives only part of its identity (a `platform` without an `arch`, a `kind` alone), or a `kind` the system does not take;
- * - it gives none of the three and the running system is not macOS: only the files written for macOS before the keys existed may omit them.
+ * - it gives none of the three and the running system is not macOS: only the files written for macOS before the keys existed may omit them;
+ * - it names a kind other than the one this copy takes (`running.kind`): an AppImage reads the feed of AppImages and a .deb the feed of .deb, so a feed of the other
+ *   kind served at its address, signed as it is, is not believed.
  * A file that names `platform` and `arch` but no `kind` is read as a `zip` on macOS, and refused anywhere else (an installer must be named, not guessed).
  */
 export function readFeedIdentity(feed: Record<string, unknown>, running: FeedTarget): FeedIdentity {
@@ -53,5 +60,5 @@ export function readFeedIdentity(feed: Record<string, unknown>, running: FeedTar
   if (!taken || platform !== running.platform || arch !== running.arch) return { ok: false }
   const named = kind === undefined && platform === 'darwin' ? 'zip' : kind
   const installer = taken.find((candidate) => candidate === named)
-  return installer ? { ok: true, kind: installer, legacy: false } : { ok: false }
+  return installer && (running.kind === undefined || running.kind === installer) ? { ok: true, kind: installer, legacy: false } : { ok: false }
 }

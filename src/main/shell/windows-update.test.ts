@@ -369,3 +369,42 @@ describe('launchInstaller: how the installer is started', () => {
     await expect(launchInstaller(FILE, start)).rejects.toThrow('invalid argument')
   })
 })
+
+// The AppImage's installer is this class with another kind and other sentences (appimage-update.ts): what differs is held here, the rest is held above.
+describe('the same installer for an AppImage: its kind and its sentences', () => {
+  const TEXTS = { diskFailed: () => 'DISK', notStarted: () => 'NOT-STARTED', restartDetail: (version: string) => `RESTART ${version}` }
+  const appimage = (over: Partial<WindowsUpdateDeps> = {}) => {
+    const made = setup(over)
+    return { ...made, installer: new WindowsUpdateInstaller(made.deps, 'appimage', TEXTS) }
+  }
+  const appImageOffer = (over: Partial<UpdateOffer> = {}): UpdateOffer => offer({ kind: 'appimage', archive: 'https://lucium.app/updates/linux-x64/appimage/Lucium-1.2.0-linux-x64.AppImage', ...over })
+
+  it('takes the offer of an AppImage and refuses the offer of an NSIS installer or a .deb before asking the network, with the sentence of the offer', async () => {
+    const { installer, deps } = appimage()
+    for (const bad of [offer(), appImageOffer({ kind: 'deb' }), appImageOffer({ kind: 'zip' }), appImageOffer({ kind: undefined })]) {
+      expect(await installer.download('1.2.0', bad), String(bad.kind)).toEqual({ kind: 'failed', reason: t('windows-update.le-flux-ne-decrit-pas-un-installeur') })
+    }
+    expect(deps.download).not.toHaveBeenCalled()
+    expect(await installer.download('1.2.0', appImageOffer())).toEqual({ kind: 'downloaded' })
+    expect(deps.download).toHaveBeenCalledOnce()
+  })
+
+  it('refuses the offer of an AppImage when it is the installer of Windows', async () => {
+    const { installer, deps } = setup()
+    expect(await installer.download('1.2.0', appImageOffer())).toMatchObject({ kind: 'failed' })
+    expect(deps.download).not.toHaveBeenCalled()
+  })
+
+  it('says a disk that failed, and an installation that could not start, with its own sentences, and tells what the restart does', async () => {
+    const failing = appimage({ download: async () => ({ ok: false, kind: 'disk', detail: 'no room' }) })
+    expect(await failing.installer.download('1.2.0', appImageOffer())).toEqual({ kind: 'failed', reason: `DISK\n\n${t('update-install.detail-words', { words: 'no room' })}` })
+    const stuck = appimage({ launch: async () => Promise.reject(new Error('cannot swap')) })
+    await stuck.installer.download('1.2.0', appImageOffer())
+    expect(stuck.installer.restart()).toBe(true)
+    await settled()
+    expect(stuck.reported).toEqual([`NOT-STARTED\n\n${t('update-install.detail-words', { words: 'cannot swap' })}`])
+    expect(stuck.deps.quit).not.toHaveBeenCalled()
+    expect(stuck.installer.restartDetail('1.2.0')).toBe('RESTART 1.2.0')
+    expect(setup().installer.restartDetail('1.2.0')).toBe(t('windows-update.lucium-se-ferme-l-installeur-le-remplace', { version: '1.2.0' }))
+  })
+})

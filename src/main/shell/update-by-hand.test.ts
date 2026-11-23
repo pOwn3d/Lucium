@@ -1,4 +1,4 @@
-// Lucium › Rechercher les mises à jour… on Linux (carte 469). Those builds carry no update address and no installer yet (the beta of 1.1.4 published
+// Lucium › Rechercher les mises à jour… on a Linux copy that is neither an AppImage nor a .deb (card 469). Those copies read no update address and have no installer (the beta of 1.1.4 published
 // on 18 November 2026; Windows has had a client since lot 2 of card 853, and keeps the box below only for a build that carries no address): the box used to say « La vérification des mises à jour n’est pas configurée » and name the `updateFeedUrl` setting to a person who
 // had configured nothing. It now says that updates are made by hand and offers the download page of the site, in the language of the interface. macOS keeps
 // its box, which the tests of update-feed.test.ts and update-source.test.ts hold: the one test of it here only proves the rule does not reach it.
@@ -22,6 +22,8 @@ const { checkForUpdates } = await import('./menu-actions')
 
 const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!
 const system = (platform: NodeJS.Platform): void => void Object.defineProperty(process, 'platform', { value: platform })
+// The box below is the one of a copy that is neither an AppImage nor a .deb (shared/linux-install.ts): no APPIMAGE, and an executable outside /opt and /usr.
+const realExecPath = Object.getOwnPropertyDescriptor(process, 'execPath')!
 /** The settings of a profile that wrote no address: what a person of the beta has. */
 const settings: Settings = { ...defaultSettings(), updateFeedUrl: '' }
 const target = () => ({ win: { isDestroyed: () => false }, browser: { showToast: vi.fn() } }) as unknown as Parameters<typeof checkForUpdates>[0]
@@ -30,6 +32,8 @@ const shown = () => electron.showMessageBox.mock.calls[0]![1] as { type: string;
 beforeEach(() => {
   vi.stubEnv('LUCIUM_UPDATE_FEED', undefined)
   vi.stubEnv('MAIN_VITE_UPDATE_FEED', undefined)
+  vi.stubEnv('APPIMAGE', '')
+  Object.defineProperty(process, 'execPath', { value: '/home/ana/src/lucium/node_modules/electron/dist/electron', configurable: true })
   electron.fetch.mockReset().mockRejectedValue(new Error('no network in this test'))
   electron.showMessageBox.mockReset().mockResolvedValue({ response: 1 })
   electron.openExternal.mockReset().mockResolvedValue(undefined)
@@ -38,6 +42,7 @@ beforeEach(() => {
 
 afterEach(() => {
   Object.defineProperty(process, 'platform', realPlatform)
+  Object.defineProperty(process, 'execPath', realExecPath)
   vi.unstubAllEnvs()
   setLanguage('fr')
 })

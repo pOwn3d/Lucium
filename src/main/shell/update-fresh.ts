@@ -3,7 +3,7 @@
 
 import { app } from 'electron'
 import type { FeedAnswer } from '@shared/update-check'
-import { runningTarget } from '@shared/update-target'
+import { currentFeedTarget } from './update-target'
 import { fileFeedDateStore, freshFeedReader } from '../update-feed-memory'
 
 /** `read`, with the date of publication of the feed it gives checked against the memory of the data folder, and remembered when accepted. */
@@ -11,5 +11,5 @@ export const withFeedFreshness = (read: (url: string) => Promise<FeedAnswer>): (
   freshFeedReader(
     read,
     () => fileFeedDateStore(app.getPath('userData')),
-    () => runningTarget(process.platform, process.arch)
+    currentFeedTarget
   )
