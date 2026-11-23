@@ -158,6 +158,8 @@ export async function smokeWorkViews(ctx: SmokeContext, check: Check): Promise<v
     const plus = await rect(chrome, '.footer-plus')
     if (plus) await click(chrome, plus)
     check('+: the popover has « Nouvelle vue de travail… »', await waitFor(async () => (await rect(ui, '.plus-row[data-entry="workview"]')) !== null))
+    // The popover grows for 0.2 s (plus-grow): measured on its first frames the row is half its height and the click lands on the row below it on the final card (seen on the slow runner of the tag v1.1.6).
+    await evaluate(ui, `Promise.all(document.getAnimations().map((animation) => animation.finished.catch(() => {})))`)
     const row = await rect(ui, '.plus-row[data-entry="workview"]')
     if (row) await click(ui, row)
     check('+: it opens the whole sheet of a new view', await waitFor(() => JSON.stringify(browser.currentOverlay()) === JSON.stringify({ panel: 'workview', full: true })), JSON.stringify(browser.currentOverlay()))
