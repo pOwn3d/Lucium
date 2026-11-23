@@ -10,7 +10,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
-## [1.1.6] - 2026-11-22
+## [1.1.6] - 2026-11-23
 
 This version brings a safer and more private browsing (safe browsing, network protection, third-party cookies, a JavaScript switch per site, warnings before a risk), new ways to work (tab reminders, focus mode, full-text search of visited pages, tab overview, one Space exported to another Mac) and a Discover Lucium panel with a tip of the day.
 
