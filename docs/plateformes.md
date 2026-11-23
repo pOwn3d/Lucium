@@ -366,6 +366,7 @@ Ce qui est configuré (`electron-builder.yml`, section `nsis`) : installation **
    ./Lucium-<version>-linux-<arch>-beta-unsigned.AppImage
    ```
 4. Si l'AppImage ne se lance pas faute de FUSE : `sudo apt install libfuse2t64` (Ubuntu 24.04 ne l'a pas par défaut ; vérifié en CI).
+   Si elle n'ouvre aucune fenêtre et que la sortie d'erreur dit `error while loading shared libraries: libz.so` : `sudo apt install zlib1g-dev` (vu sur Ubuntu 24.04 arm64 en VM, §11.1).
 5. **Désinstaller** : supprimer le fichier. Une AppImage ne crée ni entrée de menu ni profil AppArmor.
 
 **Si la boîte « Lucium ne peut pas démarrer » apparaît** (AppImage sous Ubuntu 24.04 et plus récent) : AppArmor restreint les espaces de noms d'utilisateur (`kernel.apparmor_restrict_unprivileged_userns=1`), l'`AppRun` ajoute `--no-sandbox` et Lucium refuse de tourner sans bac à sable (§8.4). Le bac à sable n'est jamais coupé. Deux issues :
@@ -475,9 +476,9 @@ L'option existe dans Electron (`titleBarOverlay` est documenté pour `win32,linu
 ### 11.1 AppImage : prérequis `zlib1g-dev` sur Ubuntu 24.04
 
 - **Constat** : sur un Ubuntu 24.04 neuf sans le paquet `zlib1g-dev`, l'AppImage (1.1.4 comme 1.1.7) n'ouvre aucune fenêtre. Seule la sortie d'erreur dit `error while loading shared libraries: libz.so`.
-- **Contournement vu en VM** : `sudo apt install zlib1g-dev`. L'AppImage passe alors à l'étape suivante : la boîte « Lucium ne peut pas démarrer » du §8.4 (AppArmor), puis, avec `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (jusqu'au redémarrage), elle démarre. Le `.deb` n'est pas concerné : il apporte la règle AppArmor et ses dépendances.
+- **Contournement vu en VM** : `sudo apt install zlib1g-dev`. L'AppImage passe alors à l'étape suivante : la boîte « Lucium ne peut pas démarrer » du §8.4 (AppArmor), puis, avec `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (jusqu'au redémarrage), elle démarre. Le `.deb` s'est installé et lancé sans ce paquet (vu en VM arm64).
 - **À confirmer** : sur Linux x64 (non essayé : la VM est arm64) ; le paquet exact qui apporte `libz.so` n'est pas établi, `zlib1g-dev` est celui qui a résolu l'erreur.
-- **Corrigé ou documenté** : documenté (cette section, §8.5 pour la marche à suivre, page Télécharger). Aucune AppImage sans cette dépendance n'est fournie.
+- **Corrigé ou documenté** : documenté ici (cette section et §8.5) ; la page Télécharger le dira une fois la PR du site fusionnée. Aucune AppImage sans cette dépendance n'est fournie.
 
 ### 11.2 Windows : avertissement SmartScreen
 
