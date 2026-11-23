@@ -2,9 +2,15 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { SQUIRREL_VERSION, parseFeed, updateOutcome } from '@shared/update-check'
+import { SQUIRREL_VERSION, parseFeed as parseFeedOn, updateOutcome as updateOutcomeOn, type FeedAnswer } from '@shared/update-check'
+import type { FeedTarget } from '@shared/update-target'
 import { setLanguage } from '@shared/i18n'
 import { NOTES_MAX, RELEASE_VERSION, notesFromChangelog, releaseFile, releaseProblems, shortNotes, squirrelDate, type ReleaseFacts } from './update-feed-file'
+
+// The file this writer makes is the one of macOS (it carries no `platform`), read as a Mac reads it.
+const MAC: FeedTarget = { platform: 'darwin', arch: 'arm64' }
+const parseFeed = (raw: unknown) => parseFeedOn(raw, MAC)
+const updateOutcome = (current: string, feedUrl: string, answer: FeedAnswer | null) => updateOutcomeOn(current, feedUrl, answer, MAC)
 
 const facts = (over: Partial<ReleaseFacts> = {}): ReleaseFacts => ({
   version: '0.2.1',
@@ -47,7 +53,8 @@ describe('releaseFile', () => {
       url: 'https://test.lucium.app/telecharger/',
       notes: 'Essai du parcours de mise à jour.',
       archive: 'https://test.lucium.app/updates/darwin-arm64/Lucium-0.2.1-arm64.zip',
-      size: 128172732
+      size: 128172732,
+      sha256: 'ab'.repeat(32)
     })
     expect(updateOutcome('0.2.0', 'https://test.lucium.app/updates/darwin-arm64/feed.json', { ok: true, json: file })).toMatchObject({ kind: 'available' })
     expect(updateOutcome('0.2.1', 'https://test.lucium.app/updates/darwin-arm64/feed.json', { ok: true, json: file })).toMatchObject({ kind: 'up-to-date' })

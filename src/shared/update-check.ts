@@ -5,6 +5,7 @@
 
 import { joinPieces, readPiecesWithin } from './bounded-stream'
 import { getLanguage, t, type Language } from './i18n'
+import { SHA256_HEX, readFeedIdentity, type FeedTarget, type InstallerKind } from './update-target'
 import { compareVersions, isDottedVersion } from './versions'
 
 export interface UpdateOffer {
@@ -16,13 +17,17 @@ export interface UpdateOffer {
   archive?: string
   /** Its size in bytes, when the feed gives it (shown before the download). */
   size?: number
+  /** The SHA-256 of the archive, read from the feed (64 lowercase hexadecimal digits); a Windows or Linux feed always has one, an old macOS file may not (Squirrel.Mac checks it itself). */
+  sha256?: string
+  /** The sort of installer the feed names; only a file that says it (`platform`, `arch`, `kind`: update-target.ts) has one. */
+  kind?: InstallerKind
 }
 
 const https = (url: unknown): url is string => typeof url === 'string' && /^https:\/\/\S+$/i.test(url)
 
 /**
- * The page of the site where the latest version is downloaded by hand, in the language of the interface. It is where Windows and Linux, whose builds carry no
- * update address and install nothing (`updatesByHand`, shared/platform.ts), send a person who asks for updates.
+ * The page of the site where the latest version is downloaded by hand, in the language of the interface. It is where Windows and Linux, which install
+ * nothing yet (`updatesByHand`, shared/platform.ts), send a person who asks for updates.
  */
 export const DOWNLOAD_PAGES: Readonly<Record<Language, string>> = { fr: 'https://lucium.app/telecharger/', en: 'https://lucium.app/en/download/' }
 
@@ -50,8 +55,15 @@ export function downloadedVersion(releaseName: unknown): string | null {
  * reads only the entry whose `version` is exactly `currentRelease`, and downloads its `updateTo.url`; `page` is Lucium's own key (Squirrel
  * ignores it), the page that "Télécharger manuellement" opens. `en: { page, notes }` is Lucium's own as well: what an interface in English
  * shows in place of the French page and notes. A file without it, or with a part of it missing, gives the French ones.
+ *
+ * The same file serves Windows and Linux, with three more keys of Lucium's own, signed with the rest (update-target.ts): `platform`, `arch` and `kind`.
+ * A file that is for another system than `running` is not read at all, and one for Windows or Linux must give the `sha256` and the `size` of its
+ * installer: nothing else would tell the copy what it downloaded is what the maintainer published. A `sha256` that is not 64 hexadecimal digits makes
+ * the file unreadable, on every system.
  */
-function parseSquirrelFeed(feed: Record<string, unknown>): UpdateOffer | null {
+function parseSquirrelFeed(feed: Record<string, unknown>, running: FeedTarget): UpdateOffer | null {
+  const identity = readFeedIdentity(feed, running)
+  if (!identity.ok) return null
   const current = feed['currentRelease']
   const releases = feed['releases']
   if (typeof current !== 'string' || !SQUIRREL_VERSION.test(current) || !Array.isArray(releases)) return null
@@ -62,6 +74,11 @@ function parseSquirrelFeed(feed: Record<string, unknown>): UpdateOffer | null {
   const archive = target['url']
   if (!https(archive)) return null
   const size = target['size']
+  const sha256 = target['sha256']
+  if (sha256 !== undefined && !(typeof sha256 === 'string' && SHA256_HEX.test(sha256))) return null
+  const validSize = typeof size === 'number' && Number.isSafeInteger(size) && size > 0
+  // What a file written for macOS before these keys existed leaves to Squirrel.Mac (it discards a download whose sum or size differ) a file that names its system must give.
+  if (!identity.legacy && (sha256 === undefined || !validSize)) return null
   const page = feed['page']
   const en = feed['en']
   const english: Record<string, unknown> = getLanguage() === 'en' && typeof en === 'object' && en !== null ? (en as Record<string, unknown>) : {}
@@ -72,7 +89,9 @@ function parseSquirrelFeed(feed: Record<string, unknown>): UpdateOffer | null {
     url: https(englishPage) ? englishPage : https(page) ? page : archive,
     notes: typeof englishNotes === 'string' && englishNotes.trim() !== '' ? englishNotes : typeof target['notes'] === 'string' ? target['notes'] : '',
     archive,
-    ...(typeof size === 'number' && Number.isSafeInteger(size) && size > 0 ? { size } : {})
+    ...(validSize ? { size } : {}),
+    ...(sha256 !== undefined ? { sha256 } : {}),
+    ...(identity.legacy ? {} : { kind: identity.kind })
   }
 }
 
@@ -85,13 +104,13 @@ export type UpdateOutcome =
   | { kind: 'failed'; reason: string }
 
 /**
- * Reads Squirrel.Mac's release file (`currentRelease`, `releases`), or a feed in the shape of a GitHub "latest release" answer (`tag_name`,
- * `html_url`, `body`). Anything else is a feed we cannot read: null.
+ * Reads Squirrel.Mac's release file (`currentRelease`, `releases`) when it is for the system this copy runs on (`running`), or a feed in the shape of a
+ * GitHub "latest release" answer (`tag_name`, `html_url`, `body`: it only names a page, whatever the system). Anything else is a feed we cannot read: null.
  */
-export function parseFeed(raw: unknown): UpdateOffer | null {
+export function parseFeed(raw: unknown, running: FeedTarget): UpdateOffer | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null
   const feed = raw as Record<string, unknown>
-  if ('currentRelease' in feed || 'releases' in feed) return parseSquirrelFeed(feed)
+  if ('currentRelease' in feed || 'releases' in feed) return parseSquirrelFeed(feed, running)
   const version = typeof feed['tag_name'] === 'string' ? feed['tag_name'] : typeof feed['version'] === 'string' ? feed['version'] : null
   const url = typeof feed['html_url'] === 'string' ? feed['html_url'] : typeof feed['url'] === 'string' ? feed['url'] : null
   if (!version || !url || !/^https:\/\//i.test(url) || !isDottedVersion(version)) return null
@@ -203,16 +222,16 @@ export async function feedAnswer(requested: string, response: FeedResponse, sign
 }
 
 /**
- * The result of a check, given the running version and what the feed answered (`feed` undefined: no feed configured). A running version the
- * feed lists as withdrawn is told so, whether the version the feed offers is above it or below it.
+ * The result of a check, given the running version, the system it runs on and what the feed answered (`feed` undefined: no feed configured). A feed
+ * for another system is not readable. A running version the feed lists as withdrawn is told so, whether the version the feed offers is above it or below it.
  */
-export function updateOutcome(current: string, feedUrl: string, answer: FeedAnswer | null): UpdateOutcome {
+export function updateOutcome(current: string, feedUrl: string, answer: FeedAnswer | null, running: FeedTarget): UpdateOutcome {
   if (!feedUrl.trim()) return { kind: 'not-configured' }
   // A feed read over plain http could be swapped on the way: the download page it names would be too.
   if (!/^https:\/\//i.test(feedUrl.trim())) return { kind: 'failed', reason: t('update-check.l-adresse-du-flux-de-mises-a-jour-doit-commencer') }
   if (!answer) return { kind: 'failed', reason: t('update-check.aucune-reponse') }
   if (!answer.ok) return { kind: 'failed', reason: answer.reason }
-  const offer = parseFeed(answer.json)
+  const offer = parseFeed(answer.json, running)
   if (!offer) return { kind: 'failed', reason: t('update-check.le-flux-de-mises-a-jour-n-est-pas-lisible') }
   const order = compareVersions(offer.version, current)
   // The version the file offers is never a withdrawn one for the copies that run it: the file in place is the last word of the channel.

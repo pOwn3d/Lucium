@@ -7,6 +7,9 @@
 // whose `size` or `sha256` differ. `pub_date` is read as "yyyy-MM-dd'T'HH:mm:ssZZZZZ" (no fraction of a second). `page` is Lucium's own key,
 // the page that "Télécharger manuellement" opens; Squirrel ignores it. `en` is Lucium's own too: the page and the notes an interface in
 // English shows in place of the French ones (a Lucium that does not know the key keeps the French ones).
+//
+// The file this writer makes is the one of macOS, with none of `platform`, `arch` and `kind`, the keys by which the feeds of Windows and Linux say which system they are
+// for (shared/update-target.ts): the publication that writes those is not written yet, and a Mac reads this file as it always did.
 
 /** A version both readers compare the same way: digits and dots only (no "v", no suffix). */
 export const RELEASE_VERSION = /^\d+(?:\.\d+){0,3}$/
