@@ -1,6 +1,7 @@
 // The bar of Lucium's floating video window (FloatingVideoBar.tsx), drawn to markup: a recorded video and a live stream, the small window, the
 // sound, the names of the buttons in both languages, the keys they say, and what each button asks of the window.
 
+import { readFileSync } from 'node:fs'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -45,6 +46,57 @@ describe('the bar of a recorded video', () => {
     expect(markup.indexOf('Avancer de 10 s')).toBeLessThan(markup.indexOf('Revenir à l’onglet'))
   })
 
+  it('has a layer over the whole window, under the bar, that moves the window from any part of the video, and the handle at the top as before', () => {
+    const { markup } = draw(state(recorded()))
+    expect(markup).toMatch(/^<div class="fv shown"><div class="fv-grab" aria-hidden="true"><\/div><div class="fv-top"/)
+    // The bar comes after the layer, so its buttons and its slider are above it: pressing them never moves the window.
+    expect(markup.indexOf('class="fv-grab"')).toBeLessThan(markup.indexOf('class="fv-bar"'))
+  })
+
+  it('moves the window while the video is held: where the pointer is on the screen goes to the window, from the press to the release', () => {
+    const { elements, act } = draw(state(recorded()))
+    const grab = elements.find((el: Element) => el.props['className'] === 'fv-grab')!
+    const captured = new Set<number>()
+    const target = { setPointerCapture: (id: number) => captured.add(id) }
+    const event = (over: Record<string, unknown>) => ({ button: 0, pointerId: 7, screenX: 0, screenY: 0, currentTarget: target, ...over })
+    const handler = (name: string) => grab.props[name] as (event: unknown) => void
+    // A move with no press first (the pointer only passes over the video) moves nothing.
+    handler('onPointerMove')(event({ screenX: 5, screenY: 5 }))
+    expect(act).not.toHaveBeenCalled()
+    handler('onPointerDown')(event({ screenX: 300, screenY: 200 }))
+    handler('onPointerMove')(event({ screenX: 320, screenY: 190 }))
+    handler('onPointerUp')(event({ screenX: 330, screenY: 185 }))
+    expect(act.mock.calls.map(([command]) => command)).toEqual([
+      { kind: 'drag', phase: 'start', x: 300, y: 200 },
+      { kind: 'drag', phase: 'move', x: 320, y: 190 },
+      { kind: 'drag', phase: 'end', x: 330, y: 185 }
+    ])
+    // The pointer was captured for the drag; after the release, a lost capture adds nothing.
+    expect([...captured]).toEqual([7])
+    handler('onLostPointerCapture')(event({ screenX: 330, screenY: 185 }))
+    expect(act).toHaveBeenCalledTimes(3)
+  })
+
+  it('does not move the window for another button than the main one, and ends the drag when the pointer is lost', () => {
+    const { elements, act } = draw(state(recorded()))
+    const grab = elements.find((el: Element) => el.props['className'] === 'fv-grab')!
+    const captured = new Set<number>()
+    const target = { setPointerCapture: (id: number) => captured.add(id) }
+    const event = (over: Record<string, unknown>) => ({ button: 0, pointerId: 7, screenX: 10, screenY: 10, currentTarget: target, ...over })
+    const handler = (name: string) => grab.props[name] as (event: unknown) => void
+    handler('onPointerDown')(event({ button: 2 }))
+    expect(act).not.toHaveBeenCalled()
+    handler('onPointerDown')(event({}))
+    // Another pointer than the one held (a second finger) moves nothing.
+    handler('onPointerMove')(event({ pointerId: 8, screenX: 99, screenY: 99 }))
+    handler('onLostPointerCapture')(event({ screenX: 40, screenY: 41 }))
+    handler('onPointerMove')(event({ screenX: 60, screenY: 61 }))
+    expect(act.mock.calls.map(([command]) => command)).toEqual([
+      { kind: 'drag', phase: 'start', x: 10, y: 10 },
+      { kind: 'drag', phase: 'end', x: 40, y: 41 }
+    ])
+  })
+
   it('is a named group, not a toolbar: ← and → seek the video, so they cannot go from button to button as a toolbar promises', () => {
     const { markup } = draw(state(recorded()))
     expect(markup).not.toContain('role="toolbar"')
@@ -74,6 +126,23 @@ describe('the bar of a recorded video', () => {
     click('Revenir à l’onglet')
     ;(button('Volume')!.props['onChange'] as (event: unknown) => void)({ currentTarget: { value: '0.25' } })
     expect(act.mock.calls.map(([command]) => command)).toEqual([{ kind: 'toggle' }, { kind: 'mute' }, { kind: 'seek', seconds: -10 }, { kind: 'seek', seconds: 10 }, { kind: 'back' }, { kind: 'volume', value: 0.25 }])
+  })
+})
+
+describe('the sheet of the window', () => {
+  const css = readFileSync(new URL('./floating-video.css', import.meta.url), 'utf8')
+  const rules = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].map(([, selector, body]) => ({ selector: selector!.replace(/\/\*[\s\S]*?\*\//g, '').trim(), body: body! }))
+
+  // A draggable region takes the mouse events of what it covers: over the whole video, the pointer moving would no longer show the bar.
+  it('has no draggable region but the handle at the top, and keeps the buttons and the slider of the bar out of any', () => {
+    expect(rules.filter((rule) => /-webkit-app-region:\s*drag/.test(rule.body)).map((rule) => rule.selector)).toEqual(['.fv-top'])
+    expect(rules.find((rule) => rule.selector === '.fv-bar button,\n.fv-bar input')?.body).toMatch(/-webkit-app-region:\s*no-drag/)
+    expect(rules.find((rule) => rule.selector === '.fv-slider')?.body).toMatch(/-webkit-app-region:\s*no-drag/)
+  })
+
+  it('lays the layer that holds the video over the whole window, and never shows a scrollbar', () => {
+    expect(rules.find((rule) => rule.selector === '.fv-grab')?.body).toMatch(/position:\s*absolute;\s*inset:\s*0/)
+    expect(rules.find((rule) => rule.selector.includes('#root'))?.body).toMatch(/overflow:\s*hidden/)
   })
 })
 

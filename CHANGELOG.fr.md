@@ -7,6 +7,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Corrections
 
 - **Clic sur le Dock ou passage à Lucium : toutes les fenêtres au premier plan** : sur macOS, un clic sur l'icône du Dock ramène toutes les fenêtres devant, minimisées comprises ; passer à Lucium par ⌘⇥ ou un clic remonte aussi les fenêtres affichées, sans prendre le focus.
+- **Image dans l'image, plus de barre de défilement, et la fenêtre se déplace par sa vidéo** : la fenêtre flottante d'une vidéo YouTube ou Netflix n'affiche plus la barre de défilement de la page, qui ne défile plus. On la déplace en saisissant n'importe quelle partie de la vidéo, plus seulement sa bande du haut.
 
 ## [1.1.7] - 2026-11-23
 

@@ -13,6 +13,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Fixed
 
 - **Dock click or switching to Lucium brings every window forward**: on macOS, a click on Lucium's icon in the Dock brings all its windows to the front, minimized ones included; switching to Lucium with ⌘⇥ or a click raises the windows on screen too, without taking the focus.
+- **Picture in Picture, no more scrollbar, and the window moves by its video**: the floating window of a YouTube or Netflix video no longer shows the page's scrollbar along its edge, and the page no longer scrolls under it. The window is now moved by holding any part of the video, not only its top strip.
 
 ## [1.1.7] - 2026-11-23
 

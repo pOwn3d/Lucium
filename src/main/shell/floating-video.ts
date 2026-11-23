@@ -7,7 +7,7 @@
 
 import { ipcMain, type BrowserWindow, type IpcMainEvent, type WebContentsView } from 'electron'
 import { Channel } from '@shared/ipc'
-import { aspectOf, canSeek, floatingBounds, muteSteps, parseFloatingCommand, FLOATING_WATCH_MS, type FloatingVideoCommand, type FloatingVideoFacts, type FloatingVideoState } from '@shared/floating-video'
+import { aspectOf, canSeek, dragTarget, floatingBounds, muteSteps, parseFloatingCommand, FLOATING_WATCH_MS, type FloatingVideoCommand, type FloatingVideoFacts, type FloatingVideoState } from '@shared/floating-video'
 import { isMainFrameSender } from '@shared/surface-guard'
 import { shutByLock } from './lock-gate'
 import type { Rect } from '@shared/window-layout'
@@ -65,6 +65,8 @@ interface Floating {
   /** The reading of the video while the bar is on screen. */
   watch: ReturnType<typeof setInterval> | null
   over: boolean
+  /** The video is held: where the pointer and the window were at the press (the bar moves the frameless window by its video). */
+  drag: { pointer: { x: number; y: number }; window: { x: number; y: number } } | null
 }
 
 export class FloatingVideo {
@@ -133,7 +135,7 @@ export class FloatingVideo {
       this.deps.trusted.add(bar.webContents.id)
       // Above the page: the bar covers the whole window, so the page under it is shown but never touched.
       win.contentView.addChildView(bar)
-      floating = { tabId, page, owner, win, bar, loan, aspect, pinned: true, facts: null, watch: null, over: false }
+      floating = { tabId, page, owner, win, bar, loan, aspect, pinned: true, facts: null, watch: null, over: false, drag: null }
       const self = floating
       this.current = floating
       win.setAspectRatio(aspect)
@@ -198,6 +200,9 @@ export class FloatingVideo {
       case 'close':
         this.end(floating, command.kind)
         return
+      case 'drag':
+        this.drag(floating, command)
+        return
       case 'pin':
         floating.pinned = !floating.pinned
         this.pin(floating.win, floating.pinned)
@@ -224,6 +229,24 @@ export class FloatingVideo {
         break
     }
     await this.refresh(floating)
+  }
+
+  /**
+   * The window follows the pointer while the video is held. Done here and not by a draggable region of the bar's page (`-webkit-app-region`): a
+   * region takes the mouse events of what it covers, and the whole window is the video, where the pointer moving is what shows the bar.
+   */
+  private drag(floating: Floating, command: Extract<FloatingVideoCommand, { kind: 'drag' }>): void {
+    if (floating.win.isDestroyed()) return
+    const pointer = { x: command.x, y: command.y }
+    if (command.phase === 'start') {
+      const { x, y } = floating.win.getBounds()
+      floating.drag = { pointer, window: { x, y } }
+    } else if (!floating.drag) return
+    else if (command.phase === 'end') floating.drag = null
+    else {
+      const to = dragTarget(floating.drag.window, floating.drag.pointer, pointer)
+      floating.win.setPosition(to.x, to.y)
+    }
   }
 
   /** Ends a floating video: the page is given back as it was, the view goes back to its tab, the window and its bar go. */
