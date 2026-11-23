@@ -315,6 +315,83 @@ Le site les propose (étape « Windows et Linux » des pages Télécharger, donn
 - dans la même machine, le **`.deb`** du workflow installé par `dpkg` (le profil AppArmor est chargé) démarre sans `--no-sandbox` (aucun processus de Lucium n'en porte, dix processus de rendu en mode filtre `Seccomp: 2`) ; « Lucium › Rechercher les mises à jour… » ouvre la boîte « Les mises à jour se font à la main » (texte, deux boutons), « Ouvrir la page Télécharger » ouvre `https://lucium.app/telecharger/` ; Réglages › À propos et mises à jour montre la phrase « Cette version ne se met pas à jour toute seule… » et plus d'interrupteur ; la note de la fenêtre À propos dit où télécharger la dernière version.
 - **dans la machine virtuelle Windows 11 ARM64** (Lucium x64 émulé ; l'installeur du workflow Windows de cette branche, `Lucium-Setup-1.1.4-x64-UNSIGNED-check-build.exe`, commit `5ac9964c`, SHA-256 `df11dd88…09c2` identique côté Mac et invité, installé « juste pour moi » par-dessus la 1.1.3 par l'assistant ; la machine est très lente quand le Mac est chargé : l'installation a pris six minutes) : « Lucium › Rechercher les mises à jour… » ouvre la boîte « Les mises à jour se font à la main » (le texte de la version, deux boutons) ; « Ouvrir la page Télécharger » ouvre `https://lucium.app/telecharger` dans le navigateur par défaut de la machine (Lucium y est le navigateur par défaut : une mini-fenêtre) ; Réglages › À propos et mises à jour montre la phrase « Cette version ne se met pas à jour toute seule… » et plus d'interrupteur. **Non vu sous Windows** : la note de la fenêtre À propos (le même code que sous Linux, où elle est vue), l'anglais. Les changements poussés ensuite ne touchent que le lancement refusé de Linux (`launch-refusal.ts`, `index.ts`), qui se termine aussitôt sous Windows comme avant.
 
+### 8.5 Mettre à jour à la main (bêta Windows et Linux)
+
+La bêta n'a **aucune mise à jour automatique** : les builds de la CI ne portent pas d'adresse de flux, et l'installation par Squirrel n'existe que sous macOS (`src/main/shell/update-source.ts`, fait de plateforme `selfUpdate`). Depuis la 1.1.5, « Lucium › Rechercher les mises à jour… » ouvre la boîte « Les mises à jour se font à la main », dont le bouton ouvre la page Télécharger de lucium.app (clé `menu-actions.les-mises-a-jour-se-font-a-la-main` de `src/shared/i18n-fr.ts`). Une mise à jour est donc un nouveau téléchargement, installé par-dessus l'ancien.
+
+**Statut de la 1.1.7 : non validée.** Décision du chef de projet, le 23 novembre 2026 : tant que les essais à la main du tableau ci-dessous ne sont pas faits, la 1.1.7 n'est pas considérée comme validée sur Windows et Linux, et **rien n'est joint à la Release `v1.1.7` ni publié**. Les étapes ci-dessous sont écrites **d'après la configuration du dépôt** (`electron-builder.yml`, `build/installer.nsh`) et les essais du 18 novembre 2026 (§8.3 et §8.4, versions 1.1.4 et 1.1.5) ; les points marqués « à confirmer » n'ont été relevés sur aucune machine.
+
+#### Windows (10 et 11, x64)
+
+Ce qui est configuré (`electron-builder.yml`, section `nsis`) : installation **par utilisateur** (`perMachine: false`, « Juste pour moi »), assistant (`oneClick: false`), choix du dossier permis, et `deleteAppDataOnUninstall: false` (la désinstallation ne supprime pas les données).
+
+1. **Télécharger** `Lucium-Setup-<version>-x64-beta-unsigned.exe` et `SHA256SUMS` depuis la Release GitHub de la version (liens de la page Télécharger du site).
+2. **Vérifier la somme** (PowerShell, dans le dossier du téléchargement) :
+   ```powershell
+   Get-FileHash .\Lucium-Setup-<version>-x64-beta-unsigned.exe -Algorithm SHA256
+   ```
+   Comparer le `Hash` (en majuscules) à la ligne du fichier dans `SHA256SUMS` (en minuscules) : c'est la même valeur. En cas de différence, ne pas lancer le fichier.
+3. **Fermer Lucium** (Quitter, pas seulement fermer la fenêtre).
+4. **Lancer l'installeur.** SmartScreen affiche « Windows a protégé votre ordinateur » (fichier non signé, éditeur « inconnu ») : cliquer sur *Informations complémentaires*, puis *Exécuter quand même* (écrans vus le 18 novembre 2026 sur la 1.1.4).
+5. **Installer par-dessus** : l'assistant détecte l'installation existante et la met à jour ; garder « Juste pour moi » et le même dossier. Une installation par-dessus la 1.1.3 par l'assistant a été vue le 18 novembre 2026 (version de travail de la 1.1.5, Windows 11 ARM64 en machine virtuelle, six minutes) ; **par-dessus la 1.1.4 avec la 1.1.7 : à faire** (tableau).
+6. **Lancer Lucium** (raccourci du Bureau ou du menu Démarrer) et vérifier la version dans « Lucium › À propos ».
+
+**Où est le profil, ce qui est conservé.** Le dossier de données s'appelle `Lucium` (`productName` ; `electron-builder.yml`, commentaire de tête). Sous Windows, d'après la convention d'Electron, c'est `%APPDATA%\Lucium` (**à confirmer** : non relevé sur une machine) ; il contient notamment `state.json` (onglets, espaces, réglages). L'installeur n'y touche pas : onglets, espaces, historique et réglages doivent rester après la mise à jour (**à faire** : essai « profil conservé »). Faire une copie de ce dossier avant la première mise à jour de la bêta est une précaution raisonnable, pas une obligation connue.
+
+**Désinstaller.** *Paramètres › Applications › Applications installées › Lucium › Désinstaller*. Le profil est conservé (`deleteAppDataOnUninstall: false`) ; le supprimer à la main pour tout effacer. `build/installer.nsh` retire à la désinstallation les clés de registre « navigateur par défaut » (`Software\Clients\StartMenuInternet\Lucium`, `Software\Classes\LuciumURL`, `Software\Classes\lucium`). Constat à traiter du 18 novembre 2026 : après une désinstallation silencieuse suivie de la suppression du dossier, l'assistant a encore dit « Il y a déjà une installation… » (cause non élucidée, §8.3).
+
+#### Linux : paquet `.deb` (Ubuntu, Debian ; recommandé)
+
+1. **Télécharger** `Lucium-<version>-linux-<arch>-beta-unsigned.deb` (`x64` ou `arm64`, selon `uname -m` : `x86_64` ou `aarch64`) et `SHA256SUMS`.
+2. **Vérifier la somme**, dans le dossier qui contient les deux :
+   ```bash
+   sha256sum -c SHA256SUMS --ignore-missing
+   ```
+   La réponse attendue est `OK` pour chaque fichier téléchargé.
+3. **Fermer Lucium**, puis installer :
+   ```bash
+   sudo apt install ./Lucium-<version>-linux-<arch>-beta-unsigned.deb
+   ```
+   `apt` remplace la version installée et, sous Ubuntu 24.04, le script d'installation charge le profil AppArmor `/etc/apparmor.d/lucium` dont le bac à sable a besoin (vérifié en CI et en VM sur la 1.1.5, §8.1). L'application est dans `/opt/Lucium`.
+4. **Relancer** depuis le lanceur d'applications ou avec la commande `lucium`, et vérifier la version dans « Lucium › À propos ».
+5. **Désinstaller** : `sudo apt remove lucium` (nom de paquet tiré de `package.json` ; **à confirmer** par `dpkg -l | grep -i lucium`).
+
+#### Linux : AppImage
+
+1. **Télécharger** `Lucium-<version>-linux-<arch>-beta-unsigned.AppImage` et `SHA256SUMS`, puis vérifier la somme comme ci-dessus.
+2. **Fermer Lucium**, **remplacer l'ancien fichier** par le nouveau (même dossier, ou supprimer l'ancien : une AppImage n'installe rien).
+3. Rendre exécutable puis lancer :
+   ```bash
+   chmod +x Lucium-<version>-linux-<arch>-beta-unsigned.AppImage
+   ./Lucium-<version>-linux-<arch>-beta-unsigned.AppImage
+   ```
+4. Si l'AppImage ne se lance pas faute de FUSE : `sudo apt install libfuse2t64` (Ubuntu 24.04 ne l'a pas par défaut ; vérifié en CI).
+5. **Désinstaller** : supprimer le fichier. Une AppImage ne crée ni entrée de menu ni profil AppArmor.
+
+**Si la boîte « Lucium ne peut pas démarrer » apparaît** (AppImage sous Ubuntu 24.04 et plus récent) : AppArmor restreint les espaces de noms d'utilisateur (`kernel.apparmor_restrict_unprivileged_userns=1`), l'`AppRun` ajoute `--no-sandbox` et Lucium refuse de tourner sans bac à sable (§8.4). Le bac à sable n'est jamais coupé. Deux issues :
+
+- **installer le `.deb`** (il apporte la règle AppArmor) : voie recommandée ;
+- ou, pour un administrateur, jusqu'au prochain redémarrage : `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0`.
+
+Sans `zenity` ni `kdialog`, la boîte n'existe pas : seule la fenêtre d'Ubuntu « L'application Lucium a quitté de façon inattendue » s'affiche (répondre « Ne pas envoyer »), et la ligne explicative n'est que sur la sortie d'erreur (lancer l'AppImage depuis un terminal pour la lire).
+
+**Où est le profil sous Linux.** Dossier `Lucium` sous `$XDG_CONFIG_HOME`, soit `~/.config/Lucium` par défaut (convention d'Electron ; **à confirmer** : non relevé sur une machine). Le `.deb` comme l'AppImage le lisent : la mise à jour n'y touche pas, et `apt remove` ne le supprime pas (**supposé**, à confirmer par l'essai de désinstallation).
+
+#### Essais de la 1.1.7 à la main : état
+
+Tous les essais ci-dessous sont **à faire**. Ils sont lancés en machine virtuelle par la carte 821 (LUC-240) ; **un essai n'est marqué « fait » qu'avec la date, la machine et la source écrites ici par cette carte**, jamais avant. Les essais du 18 novembre 2026 (§8.3, §8.4) portent sur la 1.1.4 et sur la version de travail de la 1.1.5, pas sur la 1.1.7. Les « à faire » d'une machine x64 réelle restent ouverts même si la machine virtuelle est arm64 ou émulée (§8.3).
+
+| Essai | Windows x64 | Linux x64 `.deb` | Linux x64 AppImage | Linux arm64 `.deb` | Linux arm64 AppImage |
+|---|---|---|---|---|---|
+| Installation (somme vérifiée avant) | à faire | à faire | à faire | à faire | à faire |
+| Premier lancement | à faire | à faire | à faire | à faire | à faire |
+| « À propos » affiche 1.1.7 | à faire | à faire | à faire | à faire | à faire |
+| Mise à jour de la 1.1.4 par-dessus | à faire | à faire | à faire (remplacer le fichier) | à faire | à faire (remplacer le fichier) |
+| Profil conservé (onglets, espaces, réglages) | à faire | à faire | à faire | à faire | à faire |
+| Désinstallation | à faire | à faire | à faire (suppression du fichier) | à faire | à faire (suppression du fichier) |
+
+Pour une AppImage, « mise à jour par-dessus » veut dire remplacer le fichier : l'essai reste à faire tant que ce remplacement n'a pas été essayé.
+
 ## 9. Questions ouvertes
 
 1. **Windows et Linux** : ~~sans testeur régulier de chaque système, la préparation ci-dessus ne devient pas une version~~ *tranchée le 18 novembre 2026 par le chef de projet (« les deux en bêta maintenant »)* : une bêta non signée est publiée (§8.3). Une version qui ne soit plus une bêta attend des essais sur des machines réelles et, pour Windows, une signature (question 8).
