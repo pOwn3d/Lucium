@@ -28,7 +28,8 @@ export function localFileUrl(path: unknown): string | null {
   if (path.includes('\0')) return null
   // A Windows path (`C:\a\b.html`, as the command line of Lucium.exe gives it) is a drive and segments; the drive's colon stays in the address.
   const drive = /^([A-Za-z]):[\\/]/.exec(path)
-  if (!drive && !path.startsWith('/')) return null
+  // `//server/share/…` is a network (UNC) path like `\\server\share\…`: as a `file:////` address it would make a connection to that host, so it is refused.
+  if (!drive && (!path.startsWith('/') || path.startsWith('//'))) return null
   const parts = (drive ? path.slice(2).replaceAll('\\', '/') : path).split('/')
   const name = parts[parts.length - 1] ?? ''
   const dot = name.lastIndexOf('.')

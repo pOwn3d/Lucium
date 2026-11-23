@@ -181,7 +181,7 @@ describe('paths and command lines', () => {
   })
 
   it('keeps the files the system opens with Lucium: their path becomes a file address, for the types a tab shows only', () => {
-    expect(linksFromArgv(['C:\\Users\\jane\\Lucium.exe', 'C:\\Users\\jane\\ma page.html', 'c:/docs/a.pdf', '/home/jane/page.htm', '/home/jane/setup.sh', 'C:\\tools\\run.exe', 'relative.html', '\\\\server\\share\\a.html'])).toEqual([
+    expect(linksFromArgv(['C:\\Users\\jane\\Lucium.exe', 'C:\\Users\\jane\\ma page.html', 'c:/docs/a.pdf', '/home/jane/page.htm', '/home/jane/setup.sh', 'C:\\tools\\run.exe', 'relative.html', '\\\\server\\share\\a.html', '//server/share/a.html'])).toEqual([
       'file:///C:/Users/jane/ma%20page.html',
       'file:///c:/docs/a.pdf',
       'file:///home/jane/page.htm'

@@ -40,7 +40,7 @@ describe('localFileUrl', () => {
   })
 
   it('refuses what is not an absolute path of a file: a relative path, an address, an empty text, a NUL, a path too long, a value that is not a text', () => {
-    for (const path of ['a.html', './a.html', '../a.html', 'file:///tmp/a.html', 'https://example.com/a.html', '', '/tmp/a\0.html']) {
+    for (const path of ['a.html', './a.html', '../a.html', 'file:///tmp/a.html', 'https://example.com/a.html', '', '/tmp/a\0.html', '//server/share/a.html', '\\\\server\\share\\a.html']) {
       expect(localFileUrl(path), JSON.stringify(path)).toBeNull()
     }
     expect(localFileUrl(`/${'a'.repeat(LOCAL_PATH_MAX)}.html`)).toBeNull()
