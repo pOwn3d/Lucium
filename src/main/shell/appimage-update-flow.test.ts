@@ -37,7 +37,7 @@ const { createAppImageUpdateInstaller } = await import('./appimage-update')
 const { installerAtQuit, setUpdateInstaller, updateInstaller } = await import('./app-update')
 const { currentUpdateSources } = await import('./update-source')
 
-const RUNNING_AS = '/home/person/Apps/Lucium.AppImage'
+const RUNNING_AS = '/opt/apps/Lucium.AppImage'
 const BUILT_IN = 'https://lucium.app/updates/linux-x64/feed.json'
 const FEED = 'https://lucium.app/updates/linux-x64/appimage/feed.json'
 const FILE_URL = 'https://lucium.app/updates/linux-x64/appimage/Lucium-1.2.0-linux-x64.AppImage'
