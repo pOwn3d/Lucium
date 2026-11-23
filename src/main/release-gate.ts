@@ -228,7 +228,7 @@ export interface JournalEntry {
   tag: { name: string; signatureVerified: boolean } | null
   /** The engine run the publication rests on, or the reason it went without one. */
   engineRun: { endedAt: string; reportSha256: string | null } | { waived: string }
-  /** The system an installer is for (`win32-x64`, `linux-x64`, `linux-arm64`) and its kind; absent for the Mac, whose lines are as they always were. */
+  /** The feed an installer is for (`win32-x64`, `linux-x64-appimage`, `linux-x64-deb`, `linux-arm64-appimage`, `linux-arm64-deb`) and its kind; absent for the Mac, whose lines are as they always were. */
   platform?: string
   kind?: string
   /** For the stable channel: what let the version in. */

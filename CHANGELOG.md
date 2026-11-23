@@ -18,6 +18,7 @@ This version brings every Lucium window forward when you switch to the applicati
 
 - **Windows, updates from Lucium**: “Check for Updates…” reads the signed feed of Windows; after your click Lucium downloads the installer, keeps it only if its size and SHA-256 are the signed ones, and runs it silently after a second click. Nothing runs without your clicks.
 - **Windows, automatic check (off by default)**: a switch of its own in Settings › About and updates, off for everyone; switched on, Lucium asks lucium.app once a day whether a newer version exists. Nothing is downloaded without your click.
+- **Linux, updates from Lucium**: an AppImage downloads its successor beside itself after your click, keeps it only if its size and SHA-256 are the signed ones, and replaces itself after a second click; a .deb is told the exact command and never installed. Same off-by-default automatic check as Windows.
 
 ### Fixed
 

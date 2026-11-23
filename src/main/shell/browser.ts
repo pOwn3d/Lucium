@@ -50,7 +50,7 @@ import { gateWebHardware } from './hardware-gate'
 import { getLockService } from '../lock-service'
 import { getPasswordService } from './password-service'
 import { annotateToolbarFlag } from '@shared/page-annotate'
-import { testChannelOfSnapshot } from './update-source'
+import { testChannelOfSnapshot, updatesByHandOfSnapshot } from './update-source'
 import { t } from '@shared/i18n'
 import { ACTION_NOTICE_MS } from '@shared/toast'
 import { MAX_DOWNLOADS_KEPT, MEMORY_MAX, SLEEP_SWEEP_MS, type WindowMoves } from './browser-base'
@@ -492,6 +492,7 @@ export class Browser extends BrowserLayout {
       ...scrollBarsOfSnapshot(),
       // The build carries a test update channel (a second sealed address): the Settings offer the choice only then.
       ...testChannelOfSnapshot(),
+      ...updatesByHandOfSnapshot(),
       sidePanel: this.sidePanel ? { extensionId: this.sidePanel.extensionId, name: this.sidePanel.name } : null,
       ...this.webPanelOfSnapshot(),
       toast: this.toast

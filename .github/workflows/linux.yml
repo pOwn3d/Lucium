@@ -115,8 +115,9 @@ jobs:
         run: |
           sudo apt-get update
           sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb x11-utils libfuse2t64 zenity
-      # The addresses of the update feeds of this system and architecture, built into app.asar (public: no secret). Nothing reads them yet: a Linux build installs
-      # no update and its checks ignore the built-in address (src/main/shell/update-source.ts); they are here so that the first version that does carries them.
+      # The addresses of the update feeds of this system and architecture, built into app.asar (public: no secret). One build serves the AppImage and the .deb: the
+      # address is the system's, and a copy adds the folder of its own packaging to it (src/shared/linux-install.ts, `linuxFeedAddress`), then reads it only on request
+      # or, if the person switched it on, once a day (src/main/shell/update-source.ts).
       # Never from a .env file (electron.vite.config.ts refuses one): only from this step.
       - name: Build
         env:

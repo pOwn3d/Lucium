@@ -151,8 +151,8 @@ test('auto-update: the feed of the updates is asked while on; off, it is never a
   try {
     // The address of the feed has no control, and the interface may not send it (shared/ipc-policy.ts): it is written by hand in the state file,
     // as the setting is meant to be, and the function is off from the launch on. The switch of the function is the one of the system (shared/platform.ts,
-    // `autoUpdateKey`): `autoUpdate` on macOS and Linux, `windowsAutoUpdate` on Windows, where `autoUpdate` stays ON in this phase to show that it asks nothing.
-    const windows = process.platform === 'win32'
+    // `autoUpdateKey`): `autoUpdate` on macOS, `windowsAutoUpdate` on Windows and Linux, where `autoUpdate` stays ON in this phase to show that it asks nothing.
+    const windows = process.platform !== 'darwin'
     const key = windows ? 'windowsAutoUpdate' : 'autoUpdate'
     const dataDir = running.dataDir
     await waitForStateFile(dataDir)

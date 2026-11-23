@@ -6,21 +6,28 @@ vi.mock('electron', () => ({ app: { isPackaged: false } }))
 const BUILT_IN_FEED = 'https://test.lucium.app/updates/darwin-arm64/feed.json'
 const STABLE_FEED = 'https://lucium.app/updates/darwin-arm64/feed.json'
 
-const { backgroundFeed, builtInFeed, builtInTestFeed, channelFeed, currentBackgroundFeed, currentUpdateSources, hasTestFeed, testChannelAvailable, testChannelOfSnapshot, updateSources } = await import('./update-source')
+const { backgroundFeed, builtInFeed, builtInTestFeed, channelFeed, currentBackgroundFeed, currentUpdateSources, hasTestFeed, testChannelAvailable, testChannelOfSnapshot, updateSources, updatesByHandOfSnapshot } = await import('./update-source')
 
 // The tests of the built-in addresses are the ones of macOS, the system that installs from them: the system is set, whatever machine runs them (a Windows or Linux
 // run reads no built-in address: the tests of that are below).
-// The two switches of the look in the background: macOS and Linux read `autoUpdate`, Windows `windowsAutoUpdate` (shared/platform.ts, `autoUpdateOn`).
+// The two switches of the look in the background: macOS reads `autoUpdate`, Windows and Linux `windowsAutoUpdate` (shared/platform.ts, `autoUpdateOn`).
 const MAC_ON = { autoUpdate: true, windowsAutoUpdate: false }
 const WIN_ON = { autoUpdate: false, windowsAutoUpdate: true }
 const ALL_OFF = { autoUpdate: false, windowsAutoUpdate: false }
 const BOTH_ON = { autoUpdate: true, windowsAutoUpdate: true }
 const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!
 const runningOn = (platform: NodeJS.Platform) => Object.defineProperty(process, 'platform', { value: platform })
-beforeEach(() => runningOn('darwin'))
+// The executable decides whether a copy is a .deb (under /opt or /usr): the tests set it, as the machine that runs them may have its Node anywhere.
+const realExecPath = Object.getOwnPropertyDescriptor(process, 'execPath')!
+const runningFrom = (execPath: string) => Object.defineProperty(process, 'execPath', { value: execPath, configurable: true })
+beforeEach(() => {
+  runningOn('darwin')
+  runningFrom('/home/ana/src/lucium/node_modules/electron/dist/electron')
+})
 afterEach(() => {
   vi.unstubAllEnvs()
   Object.defineProperty(process, 'platform', realPlatform)
+  Object.defineProperty(process, 'execPath', realExecPath)
 })
 
 describe('builtInFeed', () => {
@@ -76,6 +83,7 @@ const facts = (over: Partial<Parameters<typeof updateSources>[0]> = {}): Paramet
   channel: 'stable',
   builtApp: true,
   platform: 'darwin',
+  packaging: null,
   env: undefined,
   setting: '',
   ...over
@@ -99,7 +107,7 @@ describe('updateSources', () => {
     expect(updateSources(facts({ builtApp: false, setting: 'https://set.example/latest' }))).toEqual({ check: 'https://set.example/latest', install: null })
   })
 
-  it('installs nothing outside macOS, nor from a built-in address that is not https', () => {
+  it('installs nothing from a copy that is not an installer of its system (Linux that is no AppImage), nor from a built-in address that is not https', () => {
     expect(updateSources(facts({ platform: 'linux' })).install).toBeNull()
     expect(updateSources(facts({ builtIn: 'http://test.lucium.app/feed.json' })).install).toBeNull()
     expect(updateSources(facts({ builtIn: 'https://bad host/feed.json' })).install).toBeNull()
@@ -218,38 +226,98 @@ describe('the two channels: the setting chooses between two addresses sealed int
   })
 })
 
-// Linux builds carry the address of their feed (linux.yml), and nothing reads it yet: the client of Linux is a later lot.
-describe('Linux, which updates by hand, reads no built-in address', () => {
-  const both = (over: Partial<Parameters<typeof updateSources>[0]> = {}) => facts({ builtIn: STABLE_FEED, builtInTest: BUILT_IN, ...over })
+// Linux builds carry the address of their system's feed (linux.yml), one build for both packagings: each copy reads the folder of its own (shared/linux-install.ts,
+// `linuxFeedAddress`), an AppImage installs from it, a .deb is only told, and a copy that is neither reads none.
+describe('Linux reads the feed of its own packaging, when asked', () => {
+  const LINUX_STABLE = 'https://lucium.app/updates/linux-x64/feed.json'
+  const LINUX_TEST = 'https://test.lucium.app/updates/linux-x64/feed.json'
+  const linux = (packaging: 'appimage' | 'deb' | null, over: Partial<Parameters<typeof updateSources>[0]> = {}) =>
+    facts({ builtIn: LINUX_STABLE, builtInTest: LINUX_TEST, platform: 'linux', packaging, ...over })
 
-  it('checks and installs nothing from it, on either channel, in the menu or in the background', () => {
+  it('checks the folder of the AppImage for an AppImage, and installs from it, on either channel', () => {
+    expect(updateSources(linux('appimage'))).toEqual({ check: 'https://lucium.app/updates/linux-x64/appimage/feed.json', install: 'https://lucium.app/updates/linux-x64/appimage/feed.json' })
+    expect(updateSources(linux('appimage', { channel: 'test' }))).toEqual({ check: 'https://test.lucium.app/updates/linux-x64/appimage/feed.json', install: 'https://test.lucium.app/updates/linux-x64/appimage/feed.json' })
+  })
+
+  it('checks the folder of the .deb for a .deb and installs nothing from it: the person is told the command', () => {
+    expect(updateSources(linux('deb'))).toEqual({ check: 'https://lucium.app/updates/linux-x64/deb/feed.json', install: null })
+    expect(updateSources(linux('deb', { channel: 'test' }))).toEqual({ check: 'https://test.lucium.app/updates/linux-x64/deb/feed.json', install: null })
+  })
+
+  it('reads no built-in address on a copy that is neither, on either channel, in the menu or in the background', () => {
     for (const channel of ['stable', 'test'] as const) {
-      const there = both({ platform: 'linux', channel })
+      const there = linux(null, { channel })
       expect(updateSources(there), channel).toEqual({ check: '', install: null })
-      expect(backgroundFeed(there, MAC_ON), channel).toBeNull()
+      expect(backgroundFeed(there, WIN_ON), channel).toBeNull()
     }
   })
 
-  it('still reads an address given by hand, as it did before the build carried one', () => {
-    expect(updateSources(both({ platform: 'linux', env: 'https://env.example/latest', setting: 'https://set.example/latest' }))).toEqual({ check: 'https://env.example/latest', install: null })
-    expect(backgroundFeed(both({ platform: 'linux', setting: 'https://set.example/latest' }), MAC_ON)).toBe('https://set.example/latest')
+  it('never installs from an address given by hand, nor from a run from the sources', () => {
+    expect(updateSources(linux('appimage', { env: 'https://env.example/feed.json', setting: 'https://set.example/feed.json' })).install).toBe('https://lucium.app/updates/linux-x64/appimage/feed.json')
+    expect(updateSources(linux(null, { env: 'https://env.example/latest', setting: 'https://set.example/latest' }))).toEqual({ check: 'https://env.example/latest', install: null })
+    expect(updateSources(linux('appimage', { builtApp: false }))).toEqual({ check: 'https://lucium.app/updates/linux-x64/appimage/feed.json', install: null })
   })
 
-  it('does not offer the test channel in the Settings, which would show a switch that changes nothing', () => {
-    vi.stubEnv('MAIN_VITE_UPDATE_FEED_TEST', BUILT_IN)
+  it('reads nothing from a built-in address that is not the system’s feed (not https, not ending with feed.json)', () => {
+    for (const builtIn of ['http://lucium.app/updates/linux-x64/feed.json', 'https://lucium.app/updates/linux-x64/', 'https://lucium.app/updates/linux-x64/other.json']) {
+      expect(updateSources(linux('appimage', { builtIn })), builtIn).toEqual({ check: '', install: null })
+    }
+  })
+
+  it('looks in the background only while ITS OWN switch is on (the one of Windows: `windowsAutoUpdate`); the old autoUpdate decides nothing there', () => {
+    for (const packaging of ['appimage', 'deb'] as const) {
+      expect(backgroundFeed(linux(packaging), WIN_ON), packaging).toBe(`https://lucium.app/updates/linux-x64/${packaging}/feed.json`)
+      expect(backgroundFeed(linux(packaging), MAC_ON), packaging).toBeNull()
+      expect(backgroundFeed(linux(packaging), ALL_OFF), packaging).toBeNull()
+    }
+    // The switch is read as a real `true` only.
+    expect(backgroundFeed(linux('appimage'), { autoUpdate: true, windowsAutoUpdate: 'yes' as unknown as boolean })).toBeNull()
+  })
+
+  it('still reads an address given by hand in the background on a copy that is neither, with the switch on', () => {
+    expect(backgroundFeed(linux(null, { setting: 'https://set.example/latest' }), WIN_ON)).toBe('https://set.example/latest')
+    expect(backgroundFeed(linux(null, { setting: 'https://set.example/latest' }), MAC_ON)).toBeNull()
+  })
+
+  it('offers the test channel in the Settings to an AppImage and a .deb that carry a test address, and not to another copy', () => {
+    vi.stubEnv('MAIN_VITE_UPDATE_FEED_TEST', LINUX_TEST)
     runningOn('linux')
+    vi.stubEnv('APPIMAGE', '/home/ana/Apps/Lucium.AppImage')
+    expect(testChannelAvailable()).toBe(true)
+    expect(testChannelOfSnapshot()).toEqual({ updateTestChannel: true })
+    vi.stubEnv('APPIMAGE', '')
+    runningFrom('/opt/Lucium/lucium')
+    expect(testChannelAvailable()).toBe(true)
+    runningFrom('/home/ana/src/lucium/node_modules/electron/dist/electron')
     expect(testChannelAvailable()).toBe(false)
     expect(testChannelOfSnapshot()).toEqual({})
-    runningOn('darwin')
-    expect(testChannelAvailable()).toBe(true)
   })
 
-  it('reads the built-in addresses of this run as nothing, through the current facts', () => {
-    vi.stubEnv('MAIN_VITE_UPDATE_FEED', STABLE_FEED)
+  it('reads the built-in address of this run for the menu through the current facts, by the packaging this run is', () => {
+    vi.stubEnv('MAIN_VITE_UPDATE_FEED', LINUX_STABLE)
     vi.stubEnv('LUCIUM_UPDATE_FEED', undefined)
     runningOn('linux')
+    vi.stubEnv('APPIMAGE', '/home/ana/Apps/Lucium.AppImage')
+    // A run from the sources (the test is not a built application) reads the address for the menu and installs nothing, and reads none in the background.
+    expect(currentUpdateSources({ updateFeedUrl: '', updateChannel: 'stable' })).toEqual({ check: 'https://lucium.app/updates/linux-x64/appimage/feed.json', install: null })
+    expect(currentBackgroundFeed({ updateFeedUrl: '', updateChannel: 'stable', ...WIN_ON })).toBeNull()
+    vi.stubEnv('APPIMAGE', '')
+    runningFrom('/opt/Lucium/lucium')
+    expect(currentUpdateSources({ updateFeedUrl: '', updateChannel: 'stable' })).toEqual({ check: 'https://lucium.app/updates/linux-x64/deb/feed.json', install: null })
+    runningFrom('/home/ana/src/lucium/node_modules/electron/dist/electron')
     expect(currentUpdateSources({ updateFeedUrl: '', updateChannel: 'stable' })).toEqual({ check: '', install: null })
-    expect(currentBackgroundFeed({ updateFeedUrl: '', updateChannel: 'stable', autoUpdate: true, windowsAutoUpdate: false })).toBeNull()
+  })
+
+  it('says in the snapshot that a copy that is neither has no update path, and nothing for an AppImage, a .deb, macOS or Windows', () => {
+    runningOn('linux')
+    vi.stubEnv('APPIMAGE', '')
+    expect(updatesByHandOfSnapshot()).toEqual({ updatesByHand: true })
+    vi.stubEnv('APPIMAGE', '/home/ana/Apps/Lucium.AppImage')
+    expect(updatesByHandOfSnapshot()).toEqual({})
+    runningOn('darwin')
+    expect(updatesByHandOfSnapshot()).toEqual({})
+    runningOn('win32')
+    expect(updatesByHandOfSnapshot()).toEqual({})
   })
 })
 
@@ -292,14 +360,9 @@ describe('Windows reads the built-in address, when asked', () => {
     expect(backgroundFeed(win({ builtApp: false, setting: 'https://set.example/feed.json' }), MAC_ON)).toBeNull()
   })
 
-  it('never reads the Windows switch on the other systems: macOS and Linux follow autoUpdate alone', () => {
+  it('never reads the switch of Windows on macOS: it follows autoUpdate alone', () => {
     expect(backgroundFeed(facts({ platform: 'darwin' }), WIN_ON)).toBeNull()
     expect(backgroundFeed(facts({ platform: 'darwin' }), MAC_ON)).toBe(BUILT_IN)
-    // Linux reads no built-in address (its client is a later lot), only one written by hand, as before.
-    expect(backgroundFeed(facts({ platform: 'linux' }), WIN_ON)).toBeNull()
-    expect(backgroundFeed(facts({ platform: 'linux', setting: 'https://set.example/feed.json' }), WIN_ON)).toBeNull()
-    expect(backgroundFeed(facts({ platform: 'linux' }), MAC_ON)).toBeNull()
-    expect(backgroundFeed(facts({ platform: 'linux', setting: 'https://set.example/feed.json' }), MAC_ON)).toBe('https://set.example/feed.json')
   })
 
   it('offers the test channel in the Settings when the build carries a test address, and not otherwise', () => {

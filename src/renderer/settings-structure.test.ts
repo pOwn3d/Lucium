@@ -270,7 +270,7 @@ describe('what the categories draw', () => {
     expect(update.mock.calls).toEqual([[{ updateChannel: 'test' }], [{ updateChannel: 'stable' }]])
   })
 
-  it('draws the macOS switch of the daily look on macOS, a switch of its own on Windows (off by default, the macOS one never drawn there), and a sentence on Linux', () => {
+  it('draws the macOS switch of the daily look on macOS, a switch of its own on Windows and on Linux (off by default, the macOS one never drawn there), and a sentence on a Linux copy that has no update path', () => {
     const linux = frenchSpaces('Cette version ne se met pas à jour toute seule : téléchargez la dernière sur lucium.app.')
     // macOS, and a snapshot that does not say its system: the switch it always had, and no switch of Windows.
     for (const extra of [{ platform: 'darwin' }, {}]) {
@@ -293,13 +293,24 @@ describe('what the categories draw', () => {
     expect(win).toContain(frenchSpaces('Éteint par défaut : sans cette case, Lucium n’envoie aucune requête de lui-même.'))
     // The rest of the group is where it was.
     expect(win).toContain('data-setting="whatsNewSheet"')
-    // Linux: a sentence, no switch, and nothing of Windows.
+    // Linux (an AppImage or a .deb: the snapshot does not say `updatesByHand`): the same own switch, off by default, with the words of Linux, never the macOS one.
     const lin = markup('about', snapshotWith({}, { platform: 'linux' }))
+    expect(lin).toContain('data-setting="windowsAutoUpdate"')
     expect(lin).not.toContain('data-setting="autoUpdate"')
-    expect(lin).not.toContain('data-setting="windowsAutoUpdate"')
-    expect(lin).not.toContain('Rechercher les mises à jour automatiquement')
-    expect(lin).toContain(linux)
+    expect(lin).toContain('Rechercher les mises à jour automatiquement')
+    expect(lin).not.toContain(linux)
+    expect(lin).toContain(frenchSpaces('Éteint par défaut. Allumé, Lucium demande chaque jour à lucium.app s’il existe une nouvelle version ; rien n’est téléchargé sans votre clic.'))
+    expect(lin).toContain('fichier signé des versions de Linux')
+    expect(lin).not.toContain('versions de Windows')
+    expect(win).not.toContain('versions de Linux')
     expect(lin).toContain('data-setting="whatsNewSheet"')
+    // A Linux copy that is neither (a run from the sources): a sentence, no switch.
+    const bare = markup('about', snapshotWith({}, { platform: 'linux', updatesByHand: true }))
+    expect(bare).not.toContain('data-setting="autoUpdate"')
+    expect(bare).not.toContain('data-setting="windowsAutoUpdate"')
+    expect(bare).not.toContain('Rechercher les mises à jour automatiquement')
+    expect(bare).toContain(linux)
+    expect(bare).toContain('data-setting="whatsNewSheet"')
   })
 
   it('shows the Windows switch off by default and on once chosen, and writes only windowsAutoUpdate (never autoUpdate)', () => {

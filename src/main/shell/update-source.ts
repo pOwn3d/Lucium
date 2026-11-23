@@ -5,7 +5,9 @@
 // Developer ID signature seal). Never from LUCIUM_UPDATE_FEED (another process can set it), never from the `updateFeedUrl` setting (a file of
 // the profile). Squirrel.Mac installs any build signed by the same team: a feed that another party could name could push an older build of ours,
 // so nothing but a built-in address may reach it. The same holds on Windows, where the installer the feed names is run: only the built-in address,
-// signed by a key of the application, ever names one (windows-update.ts). Linux reads no built-in address yet (its client is a later lot).
+// signed by a key of the application, ever names one (windows-update.ts). And on Linux, where an AppImage replaces itself with the file the feed names
+// (appimage-update.ts) and a .deb is only told (deb-update.ts): the built-in address of the system is read in the folder of the packaging the copy is
+// (`linuxFeedAddress`: `…/linux-x64/appimage/feed.json` or `…/deb/feed.json`), and a copy that is neither reads none.
 //
 // Two channels (the maintainer's decision of 7 November 2026): a build carries the stable address, and may carry a test one. The `updateChannel`
 // setting (`stable` by default) only chooses between the two sealed addresses, so that a profile file still cannot name an address: `test` is
@@ -14,13 +16,16 @@
 // The look runs when the user asks (the menu command, the About button), and in the background while the switch of the system is on (auto-update.ts,
 // `backgroundFeed`): the built application then reads the same address as the menu, the built-in one (the maintainer's decision of 5 November 2026: the
 // notice of an update comes by itself). The switch is `autoUpdate` on macOS (on by default) and `windowsAutoUpdate` on Windows (off by default, the maintainer's
-// decision of 23 November 2026: AGENTS.md §5, a request nobody asked for is off; shared/platform.ts, `autoUpdateOn`). A run from the sources never reads the
+// decision of 23 November 2026: AGENTS.md §5, a request nobody asked for is off; shared/platform.ts, `autoUpdateOn`), and the same `windowsAutoUpdate` on Linux.
+// A run from the sources never reads the
 // built-in address in the background. A build without a built-in address keeps the old behaviour: the address of the environment or of the setting, and a
 // download page opened in the browser.
 
 import type { Settings, UpdateChannel } from '@shared/model'
+import { linuxFeedAddress, type LinuxPackaging } from '@shared/linux-install'
 import { autoUpdateOn, updatesByHand } from '@shared/platform'
 import { isBuiltApp } from '../runtime'
+import { currentLinuxInstall } from '../platform/linux-install'
 
 const https = (url: string): boolean => /^https:\/\/\S+$/i.test(url)
 
@@ -35,6 +40,8 @@ export interface UpdateSourceFacts {
   /** The built application (`isBuiltApp`), as opposed to a run from the sources. */
   builtApp: boolean
   platform: NodeJS.Platform
+  /** On Linux, what this copy is installed as (shared/linux-install.ts): its feed is the one of its packaging, and a copy that is neither reads none. Elsewhere null. */
+  packaging: LinuxPackaging | null
   /** LUCIUM_UPDATE_FEED (taken out of the environment of the built application at start-up: runtime.ts). */
   env: string | undefined
   /** The `updateFeedUrl` setting of the profile. */
@@ -44,7 +51,7 @@ export interface UpdateSourceFacts {
 export interface UpdateSources {
   /** The feed the check reads; empty when none is configured. */
   check: string
-  /** The feed the installer installs from (Squirrel.Mac, the NSIS installer of Windows), or null when this run cannot install (not built, not macOS or Windows, no built-in https address). */
+  /** The feed the installer installs from (Squirrel.Mac, the NSIS installer of Windows, the AppImage that replaces itself), or null when this run cannot install (not built, a .deb, which is only told, a copy that is none of the above, no built-in https address). */
   install: string | null
 }
 
@@ -65,11 +72,13 @@ export function channelFeed(facts: Pick<UpdateSourceFacts, 'builtIn' | 'builtInT
  * made with one), and nothing installs.
  */
 export function updateSources(facts: UpdateSourceFacts): UpdateSources {
-  // Windows and Linux builds carry the address of their feed (the CI builds: .github/workflows/windows.yml, linux.yml). Windows reads it (its client is
-  // windows-update.ts); Linux has no client yet: a system that updates by hand reads no built-in address, so that its check, its menu and its Settings do
-  // exactly what they did before the address was there.
-  const builtIn = updatesByHand(facts.platform) ? '' : channelFeed(facts)
-  const install = facts.builtApp && (facts.platform === 'darwin' || facts.platform === 'win32') && https(builtIn) ? builtIn : null
+  // Windows and Linux builds carry the address of their feed (the CI builds: .github/workflows/windows.yml, linux.yml). Windows reads it (windows-update.ts). On
+  // Linux the build is one for both packagings, so the address is the system's and each copy reads the folder of its own (`linuxFeedAddress`); a copy that is
+  // neither an AppImage nor a .deb reads no built-in address, so that its check, its menu and its Settings do what they did before the address was there.
+  const builtIn = facts.platform === 'linux' ? linuxFeedAddress(channelFeed(facts), facts.packaging) : channelFeed(facts)
+  // Only an AppImage installs from it: a .deb is told, with a command to run as root.
+  const installs = facts.platform === 'darwin' || facts.platform === 'win32' || (facts.platform === 'linux' && facts.packaging === 'appimage')
+  const install = facts.builtApp && installs && https(builtIn) ? builtIn : null
   if (install) return { check: install, install }
   return { check: (facts.env ?? facts.setting).trim() || builtIn, install: null }
 }
@@ -98,10 +107,13 @@ export const builtInFeed = (): string => (import.meta.env.MAIN_VITE_UPDATE_FEED 
 export const builtInTestFeed = (): string => (import.meta.env.MAIN_VITE_UPDATE_FEED_TEST ?? '').trim()
 
 /** Whether this build carries a test channel: the Settings show « Recevoir les versions de test » only then (the snapshot's `updateTestChannel`). */
-export const testChannelAvailable = (): boolean => !updatesByHand(process.platform) && hasTestFeed(builtInTestFeed())
+export const testChannelAvailable = (): boolean => !updatesByHand(process.platform, currentLinuxInstall().packaging) && hasTestFeed(builtInTestFeed())
 
 /** What the snapshot of a window says of the build: `updateTestChannel` while it carries a test address, nothing otherwise (the Settings hide the choice then). */
 export const testChannelOfSnapshot = (): { updateTestChannel?: true } => (testChannelAvailable() ? { updateTestChannel: true } : {})
+
+/** What the snapshot of a window says of the update path of this copy: `updatesByHand` when it has none (the Settings then show a sentence, not a switch). */
+export const updatesByHandOfSnapshot = (): { updatesByHand?: true } => (updatesByHand(process.platform, currentLinuxInstall().packaging) ? { updatesByHand: true } : {})
 
 /** The settings the addresses depend on. */
 export type UpdateSourceSettings = Pick<Settings, 'updateFeedUrl' | 'updateChannel'>
@@ -112,6 +124,7 @@ const currentFacts = (settings: UpdateSourceSettings): UpdateSourceFacts => ({
   channel: settings.updateChannel,
   builtApp: isBuiltApp(),
   platform: process.platform,
+  packaging: process.platform === 'linux' ? currentLinuxInstall().packaging : null,
   env: process.env['LUCIUM_UPDATE_FEED'],
   setting: settings.updateFeedUrl
 })

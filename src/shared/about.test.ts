@@ -177,6 +177,10 @@ describe('what the About window says of the engine', () => {
     expect(engine).not.toHaveProperty('updatesByHand')
     expect(aboutEngine({}, 'linux').updatesByHand).toBe(true)
     expect(aboutEngine({}, 'win32')).not.toHaveProperty('updatesByHand')
+    // A Linux copy that is an AppImage or a .deb has an update path; one that is neither has none.
+    expect(aboutEngine({}, 'linux', 'appimage')).not.toHaveProperty('updatesByHand')
+    expect(aboutEngine({}, 'linux', 'deb')).not.toHaveProperty('updatesByHand')
+    expect(aboutEngine({}, 'linux', null).updatesByHand).toBe(true)
     expect(aboutEngine({}, 'win32')).toEqual({ chromium: '', electron: '', platform: 'Windows' })
     // The flags are not part of what a bug report copies.
     expect(aboutReport('0.1.0', aboutEngine({ chrome: '156.0', electron: '45.2' }, 'linux'))).toBe('Lucium 0.1.0 · Chromium 156 · Electron 45 · Linux')

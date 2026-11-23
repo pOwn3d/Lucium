@@ -32,7 +32,7 @@
 // The feed also lists the versions withdrawn from its channel (`withdrawn`, Lucium's own key): a copy that runs one of them reads it in the file it
 // reads anyway and says so (shared/update-check.ts). A withdrawal writes the list, and every later publication carries it.
 //
-// The same publication carries the installers of Windows (NSIS) and of Linux (AppImage, .deb) with `--platform win32-x64|linux-x64|linux-arm64`
+// The same publication carries the installers of Windows (NSIS) and of Linux (AppImage, .deb) with `--platform win32-x64|linux-x64-appimage|linux-x64-deb|linux-arm64-appimage|linux-arm64-deb`
 // (the study of card 819, section 5.5). What is the Mac's alone (the notarization ticket, the fuses of the installed app, the disk image, the
 // record of the build) is not asked of them; in its place the installer is the file that CI built on the tag and the maintainer copied (its SHA-256 is given
 // with `--sha256`, the sum the CI run logged), the tag names the commit, and the feed it writes says which system it is for (`platform`, `arch`, `kind`: signed
@@ -89,9 +89,21 @@ export const MAC_TARGET = 'darwin-arm64'
 export const INSTALLER_KINDS: Readonly<Record<string, readonly string[]>> = {
   'darwin-arm64': ['zip'],
   'win32-x64': ['nsis'],
-  'linux-x64': ['appimage', 'deb'],
-  'linux-arm64': ['appimage', 'deb']
+  'linux-x64-appimage': ['appimage'],
+  'linux-x64-deb': ['deb'],
+  'linux-arm64-appimage': ['appimage'],
+  'linux-arm64-deb': ['deb']
 }
+
+/**
+ * The system of a publication id, without the kind it ends with: `linux-x64-deb` is for `linux-x64`. Linux has one feed per kind (the maintainer's decision of
+ * 23 November 2026: a feed names one sort of installer, so an AppImage and a .deb never replace each other's feed), each in a folder of its own,
+ * `updates/linux-x64/appimage/` and `updates/linux-x64/deb/`; its id is the system and the kind. Windows and the Mac have one kind and no suffix.
+ */
+export const systemOf = (id: string): string => id.replace(/-(?:appimage|deb)$/, '')
+
+/** The architecture of a publication id (`x64`, `arm64`), whatever the kind it ends with. */
+export const archOf = (id: string): string => systemOf(id).slice(systemOf(id).indexOf('-') + 1)
 
 /** The extension of the file of each installer: what tells the kind (an .exe is not an AppImage), as in update-feed-file.ts. */
 export const KIND_EXTENSIONS: Readonly<Record<string, string>> = { zip: '.zip', nsis: '.exe', appimage: '.AppImage', deb: '.deb' }
@@ -118,15 +130,21 @@ export function installerKindOf(fileName: string, target: string): { kind: strin
 export function installerNameProblem(fileName: string, version: string, target: string): string | null {
   if (!/^[A-Za-z0-9._-]+$/.test(fileName)) return `the name of the installer must be plain letters, digits, dots, hyphens and underscores: ${fileName}`
   if (!fileName.includes(`-${version}-`)) return `the installer is not named for ${version} (the name must carry -${version}-): ${fileName}. Copy the installer of the version of package.json`
-  const words = ARCH_WORDS[target.slice(target.indexOf('-') + 1)] ?? []
+  const words = ARCH_WORDS[archOf(target)] ?? []
   if (!words.some((word) => fileName.includes(`-${word}.`) || fileName.includes(`-${word}-`))) return `the name of the installer does not carry the architecture of ${target} (${words.join(' or ')}): ${fileName}`
   return null
 }
 
-/** The https folder of a system on a channel: the Mac's is the one of the repository, the others' sit beside it (`updates/<id>/`). Null when the channel's address is not the Mac's. */
+/**
+ * The https folder of a feed on a channel: the Mac's is the one of the repository, the others' sit beside it (`updates/<system>/`), and a Linux feed is in the folder of
+ * its kind inside its system's (`updates/linux-x64/appimage/`). Null when the channel's address is not the Mac's.
+ */
 export const baseUrlOf = (macBaseUrl: string, target: string): string | null => {
   if (target === MAC_TARGET) return macBaseUrl
-  return macBaseUrl.endsWith(`/${MAC_TARGET}/`) ? `${macBaseUrl.slice(0, -`${MAC_TARGET}/`.length)}${target}/` : null
+  if (!macBaseUrl.endsWith(`/${MAC_TARGET}/`)) return null
+  const system = systemOf(target)
+  const kindFolder = target === system ? '' : `${target.slice(system.length + 1)}/`
+  return `${macBaseUrl.slice(0, -`${MAC_TARGET}/`.length)}${system}/${kindFolder}`
 }
 
 /** The name of the archive the build writes, `Lucium-<version>-arm64.zip`. */
@@ -795,7 +813,7 @@ export function withdrawPlan(plan: { version: string; channel: Channel; sshKey: 
 
 export const makeFeedCommand = (root: string, archive: string, baseUrl: string, target?: { id: string; kind: string }): Command => ({
   program: 'node',
-  args: [join(root, 'scripts', 'make-update-feed.mjs'), archive, baseUrl, ...(target ? ['--target', target.id, '--kind', target.kind] : [])],
+  args: [join(root, 'scripts', 'make-update-feed.mjs'), archive, baseUrl, ...(target ? ['--target', systemOf(target.id), '--kind', target.kind] : [])],
   timeoutMs: 2 * MINUTE
 })
 
@@ -1561,7 +1579,7 @@ export async function publish(input: PublishInput, deps: PublishDeps): Promise<P
     begin('Write the feed', [makeFeed], false)
     const made = deps.run(makeFeed)
     if (made.status !== 0) fail(`scripts/make-update-feed.mjs refused:\n    ${firstLines(made.stderr, 10).replace(/\n/g, '\n    ')}`)
-    const expected: ExpectedRelease = { version: input.version, url: remote.archiveUrl, sha256: weight.sha256, size: weight.size, ...(target ? { target: { platform: target.id.split('-')[0] as string, arch: target.id.split('-')[1] as string, kind: target.kind } } : {}) }
+    const expected: ExpectedRelease = { version: input.version, url: remote.archiveUrl, sha256: weight.sha256, size: weight.size, ...(target ? { target: { platform: systemOf(target.id).split('-')[0] as string, arch: archOf(target.id), kind: target.kind } } : {}) }
     const written = feedProblems(made.stdout, expected)
     if (written.length > 0) fail(`the feed that was written does not describe the archive:\n    ${written.join('\n    ')}`)
     ok(`the feed names ${remote.archiveUrl} with its SHA-256 and size`)

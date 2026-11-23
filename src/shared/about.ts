@@ -3,6 +3,7 @@
 // network; an address is only ever followed when the user clicks it, and then it is an ordinary tab of the browser.
 
 import { t } from './i18n'
+import type { LinuxPackaging } from './linux-install'
 import { updatesByHand } from './platform'
 
 export const ABOUT_NAME = 'Lucium'
@@ -102,7 +103,7 @@ export interface AboutEngine {
   chromium: string
   electron: string
   platform: string
-  /** This system has no update installer (Linux: shared/platform.ts, `updatesByHand`): the window says where to download the latest version instead of naming a setting. Absent on macOS and Windows. */
+  /** This copy has no update path (a Linux copy that is neither an AppImage nor a .deb: shared/platform.ts, `updatesByHand`): the window says where to download the latest version instead of naming a setting. Absent otherwise. */
   updatesByHand?: true
 }
 
@@ -110,14 +111,14 @@ const PLATFORM_NAMES: Readonly<Record<string, string>> = { darwin: 'macOS', win3
 const majorOf = (version: unknown): string => (typeof version === 'string' ? (/^\d+/.exec(version)?.[0] ?? '') : '')
 
 /** What the main process knows (`process.versions`, `process.platform`) as the three words of the window; a version that is not one is left out. */
-export function aboutEngine(versions: { chrome?: unknown; electron?: unknown }, platform: string): AboutEngine {
-  return { chromium: majorOf(versions.chrome), electron: majorOf(versions.electron), platform: PLATFORM_NAMES[platform] ?? platform, ...(updatesByHand(platform) ? { updatesByHand: true as const } : {}) }
+export function aboutEngine(versions: { chrome?: unknown; electron?: unknown }, platform: string, packaging?: LinuxPackaging | null): AboutEngine {
+  return { chromium: majorOf(versions.chrome), electron: majorOf(versions.electron), platform: PLATFORM_NAMES[platform] ?? platform, ...(updatesByHand(platform, packaging) ? { updatesByHand: true as const } : {}) }
 }
 
 /**
  * The note under the button « Rechercher les mises à jour » of the About window. With a background look to switch (macOS and Windows, which has its own switch, off
- * by default, under the same name; and while the engine is not known yet) it says the button looks at once whether or not that switch is on; on Linux, which has
- * none, it says where the button leads.
+ * by default, under the same name, which Linux has too; and while the engine is not known yet) it says the button looks at once whether or not that switch is on; on a
+ * copy that has none (a Linux copy that is neither an AppImage nor a .deb), it says where the button leads.
  */
 export function aboutCheckNote(engine: AboutEngine | null): string {
   return engine?.updatesByHand === true ? t('about-window.cette-version-ne-se-met-pas-a-jour') : t('about-window.cherche-maintenant-setting', { setting: t('features.rechercher-les-mises-a-jour-automatiquement') })

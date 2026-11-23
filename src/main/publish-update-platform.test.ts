@@ -25,6 +25,7 @@ import {
   resolveInput,
   resolveWithdrawal,
   returnProblems,
+  systemOf,
   withdraw,
   withdrawPlan,
   type Channel,
@@ -50,8 +51,8 @@ const SERVERS: ChannelFile = {
   path: '/cfg/publish-channels.json',
   state: 'read',
   config: {
-    test: { host: 'deploy@updates.example', folder: '/srv/updates/test', folders: { 'win32-x64': '/srv/updates/test-win', 'linux-x64': '/srv/updates/test-linux', 'linux-arm64': '/srv/updates/test-linux-arm' } },
-    stable: { host: 'deploy@updates.example', folder: '/srv/updates/stable', folders: { 'win32-x64': '/srv/updates/stable-win', 'linux-x64': '/srv/updates/stable-linux' } }
+    test: { host: 'deploy@updates.example', folder: '/srv/updates/test', folders: { 'win32-x64': '/srv/updates/test-win', 'linux-x64-appimage': '/srv/updates/test-linux/appimage', 'linux-x64-deb': '/srv/updates/test-linux/deb', 'linux-arm64-appimage': '/srv/updates/test-linux-arm/appimage' } },
+    stable: { host: 'deploy@updates.example', folder: '/srv/updates/stable', folders: { 'win32-x64': '/srv/updates/stable-win', 'linux-x64-appimage': '/srv/updates/stable-linux/appimage', 'linux-x64-deb': '/srv/updates/stable-linux/deb' } }
   }
 }
 const channelFor = (name: string, target: string): Channel => {
@@ -78,31 +79,38 @@ afterAll(() => {
 
 describe('the systems of a publication', () => {
   it('are the ones the copies know, with the installers they take (the tables are one)', () => {
-    expect(INSTALLER_KINDS).toEqual(SHARED_KINDS)
-    expect({ ...TARGET_KINDS, [MAC_TARGET]: ['zip'] }).toEqual(INSTALLER_KINDS)
+    // A Linux feed names one kind (one folder per kind): the publication ids are the shared system ids with the kind, and together they take what the system takes.
+    const bySystem: Record<string, string[]> = {}
+    for (const [id, kinds] of Object.entries(INSTALLER_KINDS)) (bySystem[systemOf(id)] ??= []).push(...kinds)
+    expect(bySystem).toEqual(SHARED_KINDS)
+    expect(Object.entries(INSTALLER_KINDS).filter(([, kinds]) => kinds.length !== 1)).toEqual([])
+    expect(bySystem).toEqual({ ...TARGET_KINDS, [MAC_TARGET]: ['zip'] })
     expect({ ...FILE_KIND_EXTENSIONS, zip: '.zip' }).toEqual(KIND_EXTENSIONS)
     expect(FILE_ARCH_WORDS).toEqual(ARCH_WORDS)
   })
 
   it('tell the kind of an installer by its extension, and refuse an extension the system does not take', () => {
     expect(installerKindOf(EXE, WIN)).toEqual({ kind: 'nsis' })
-    expect(installerKindOf(APPIMAGE, 'linux-x64')).toEqual({ kind: 'appimage' })
-    expect(installerKindOf(DEB, 'linux-arm64')).toEqual({ kind: 'deb' })
-    for (const [file, target] of [[EXE, 'linux-x64'], [APPIMAGE, WIN], [DEB, WIN], [`Lucium-${VERSION}-arm64.zip`, WIN], [`${EXE}.withdrawn`, WIN], ['Lucium.AppImage.exe', 'linux-x64']] as const) {
+    expect(installerKindOf(APPIMAGE, 'linux-x64-appimage')).toEqual({ kind: 'appimage' })
+    expect(installerKindOf(DEB, 'linux-arm64-deb')).toEqual({ kind: 'deb' })
+    // One kind per feed: an AppImage is never published into the feed of the .deb, nor the reverse.
+    for (const [file, target] of [[EXE, 'linux-x64-appimage'], [APPIMAGE, 'linux-x64-deb'], [DEB, 'linux-x64-appimage'], [APPIMAGE, WIN], [DEB, WIN], [`Lucium-${VERSION}-arm64.zip`, WIN], [`${EXE}.withdrawn`, WIN], ['Lucium.AppImage.exe', 'linux-x64-appimage']] as const) {
       expect(installerKindOf(file, target), `${file} for ${target}`).toMatchObject({ problem: expect.stringContaining('is not an installer of') })
     }
     expect(installerKindOf(EXE, MAC_TARGET)).toMatchObject({ problem: expect.stringContaining('is not a system whose installer is published here') })
+    // The system alone is no feed on Linux: the kind is in the id.
+    expect(installerKindOf(APPIMAGE, 'linux-x64')).toMatchObject({ problem: expect.stringContaining('is not a system whose installer is published here') })
     expect(installerKindOf(EXE, 'freebsd-x64')).toMatchObject({ problem: expect.any(String) })
   })
 
   it('want the name of an installer to be plain and to carry its version and the architecture of its system', () => {
     expect(installerNameProblem(EXE, VERSION, WIN)).toBeNull()
-    expect(installerNameProblem(APPIMAGE, VERSION, 'linux-x64')).toBeNull()
-    expect(installerNameProblem(DEB, VERSION, 'linux-x64')).toBeNull()
-    expect(installerNameProblem(`Lucium-${VERSION}-linux-arm64.deb`, VERSION, 'linux-arm64')).toBeNull()
+    expect(installerNameProblem(APPIMAGE, VERSION, 'linux-x64-appimage')).toBeNull()
+    expect(installerNameProblem(DEB, VERSION, 'linux-x64-deb')).toBeNull()
+    expect(installerNameProblem(`Lucium-${VERSION}-linux-arm64.deb`, VERSION, 'linux-arm64-deb')).toBeNull()
     expect(installerNameProblem('Lucium-Setup-1.0.1-x64.exe', VERSION, WIN)).toMatch(/not named for 1\.0\.2/)
     expect(installerNameProblem(`Lucium-Setup-${VERSION}-arm64.exe`, VERSION, WIN)).toMatch(/does not carry the architecture of win32-x64/)
-    expect(installerNameProblem(`Lucium-${VERSION}-linux-arm64.AppImage`, VERSION, 'linux-x64')).toMatch(/does not carry the architecture/)
+    expect(installerNameProblem(`Lucium-${VERSION}-linux-arm64.AppImage`, VERSION, 'linux-x64-appimage')).toMatch(/does not carry the architecture/)
     expect(installerNameProblem(`Lucium Setup-${VERSION}-x64.exe`, VERSION, WIN)).toMatch(/must be plain/)
     expect(installerNameProblem(`Lucium-Setup-${VERSION}-x64.exe; rm`, VERSION, WIN)).toMatch(/must be plain/)
   })
@@ -110,7 +118,8 @@ describe('the systems of a publication', () => {
   it('give the installers their own https folder beside the Mac’s, and leave the Mac’s as it is', () => {
     expect(baseUrlOf('https://test.lucium.app/updates/darwin-arm64/', MAC_TARGET)).toBe('https://test.lucium.app/updates/darwin-arm64/')
     expect(baseUrlOf('https://test.lucium.app/updates/darwin-arm64/', WIN)).toBe('https://test.lucium.app/updates/win32-x64/')
-    expect(baseUrlOf('https://lucium.app/updates/darwin-arm64/', 'linux-arm64')).toBe('https://lucium.app/updates/linux-arm64/')
+    expect(baseUrlOf('https://lucium.app/updates/darwin-arm64/', 'linux-arm64-appimage')).toBe('https://lucium.app/updates/linux-arm64/appimage/')
+    expect(baseUrlOf('https://lucium.app/updates/darwin-arm64/', 'linux-x64-deb')).toBe('https://lucium.app/updates/linux-x64/deb/')
     expect(baseUrlOf('https://elsewhere.example/feed/', WIN)).toBeNull()
   })
 })
@@ -119,12 +128,15 @@ describe('the channels of the installers', () => {
   it('take the folder of the system from the file of the servers and the address from the repository; the Mac keeps "folder"', () => {
     expect(channelFor('test', WIN)).toEqual({ host: 'deploy@updates.example', folder: '/srv/updates/test-win', baseUrl: 'https://test.lucium.app/updates/win32-x64/' })
     expect(channelFor('stable', WIN)).toEqual({ host: 'deploy@updates.example', folder: '/srv/updates/stable-win', baseUrl: 'https://lucium.app/updates/win32-x64/' })
-    expect(channelFor('test', 'linux-arm64').folder).toBe('/srv/updates/test-linux-arm')
+    expect(channelFor('test', 'linux-arm64-appimage')).toMatchObject({ folder: '/srv/updates/test-linux-arm/appimage', baseUrl: 'https://test.lucium.app/updates/linux-arm64/appimage/' })
+    // An AppImage and a .deb of one system do not share a folder: one feed names one kind, so neither replaces the other's.
+    expect(channelFor('test', 'linux-x64-appimage').folder).not.toBe(channelFor('test', 'linux-x64-deb').folder)
+    expect(channelFor('test', 'linux-x64-appimage').baseUrl).not.toBe(channelFor('test', 'linux-x64-deb').baseUrl)
     expect(channelFor('test', MAC_TARGET)).toEqual({ host: 'deploy@updates.example', folder: '/srv/updates/test', baseUrl: 'https://test.lucium.app/updates/darwin-arm64/' })
   })
 
   it('never guess the folder of a system from the Mac’s: a system without its entry is refused, and says which', () => {
-    expect(resolveChannel('stable', SERVERS, PUBLIC_CHANNELS, 'linux-arm64')).toMatchObject({ ok: false, message: expect.stringContaining('"folders.linux-arm64" is missing') })
+    expect(resolveChannel('stable', SERVERS, PUBLIC_CHANNELS, 'linux-arm64-appimage')).toMatchObject({ ok: false, message: expect.stringContaining('"folders.linux-arm64-appimage" is missing') })
     const withoutAny = resolveChannel('test', { path: '/c', state: 'read', config: { test: { host: 'deploy@updates.example', folder: '/srv/updates/test' } } }, PUBLIC_CHANNELS, WIN)
     expect(withoutAny).toMatchObject({ ok: false, message: expect.stringContaining('"folders.win32-x64" is missing') })
   })
@@ -186,7 +198,10 @@ describe('the arguments of an installer', () => {
   it('refuse an installer that is not named, and one with the extension of another system', () => {
     expect(resolveInput(parse('--platform', WIN, '--sha256', HASH), env)).toMatchObject({ ok: false, message: expect.stringContaining('name its file') })
     expect(resolveInput(parse(APPIMAGE, '--platform', WIN, '--sha256', HASH), env)).toMatchObject({ ok: false, message: expect.stringContaining('is not an installer of win32-x64') })
-    expect(resolveInput(parse(EXE, '--platform', 'linux-x64', '--sha256', HASH), env)).toMatchObject({ ok: false, message: expect.stringContaining('is not an installer of linux-x64') })
+    expect(resolveInput(parse(EXE, '--platform', 'linux-x64-appimage', '--sha256', HASH), env)).toMatchObject({ ok: false, message: expect.stringContaining('is not an installer of linux-x64-appimage') })
+    expect(resolveInput(parse(DEB, '--platform', 'linux-x64-appimage', '--sha256', HASH), env)).toMatchObject({ ok: false, message: expect.stringContaining('is not an installer of linux-x64-appimage') })
+    // The system alone no longer names a feed on Linux: the kind is part of it.
+    expect(parsePublishArgs([APPIMAGE, '--platform', 'linux-x64', '--sha256', HASH])).toMatchObject({ ok: false })
   })
 
   it('resolve the input of an installer: its kind from its extension, the channel of its system, an attestation of its own beside it', () => {
@@ -209,8 +224,8 @@ describe('the arguments of an installer', () => {
     expect(posixRooted('/work/D:/a')).toBe('/work/D:/a')
   })
   it('resolve the withdrawal of a system on the channel of that system', () => {
-    const resolved = resolveWithdrawal(parse('--withdraw', '1.0.1', '--platform', 'linux-arm64'), env)
-    expect(resolved).toMatchObject({ ok: true, input: { target: 'linux-arm64', channel: { folder: '/srv/updates/test-linux-arm', baseUrl: 'https://test.lucium.app/updates/linux-arm64/' } } })
+    const resolved = resolveWithdrawal(parse('--withdraw', '1.0.1', '--platform', 'linux-arm64-appimage'), env)
+    expect(resolved).toMatchObject({ ok: true, input: { target: 'linux-arm64-appimage', channel: { folder: '/srv/updates/test-linux-arm/appimage', baseUrl: 'https://test.lucium.app/updates/linux-arm64/appimage/' } } })
     const mac = resolveWithdrawal(parse('--withdraw', '1.0.1'), env)
     expect(mac).toMatchObject({ ok: true, input: { channel: { folder: '/srv/updates/test' } } })
     expect(mac.ok && 'target' in mac.input).toBe(false)
@@ -284,6 +299,8 @@ describe('the feed of an installer', () => {
     expect(makeFeedCommand('/repo', '/x/a', 'https://h/u/').args.slice(1)).toEqual(['/x/a', 'https://h/u/'])
     expect(makeFeedCommand('/repo', '/x/a', 'https://h/u/', { id: WIN, kind: 'nsis' }).args.slice(1)).toEqual(['/x/a', 'https://h/u/', '--target', WIN, '--kind', 'nsis'])
     expect(commandLine(makeFeedCommand('/repo', `/x/${EXE}`, 'https://h/u/', { id: WIN, kind: 'nsis' }))).toContain('--target win32-x64 --kind nsis')
+    // A Linux feed id is the system and the kind; the feed it writes says the system (`platform`, `arch`) and the kind apart.
+    expect(makeFeedCommand('/repo', `/x/${DEB}`, 'https://h/u/', { id: 'linux-x64-deb', kind: 'deb' }).args.slice(1)).toEqual([`/x/${DEB}`, 'https://h/u/', '--target', 'linux-x64', '--kind', 'deb'])
   })
 
   it('is checked online for the three words, not only for the installer: a feed that names the right file under the wrong system is not the one that was published', () => {
@@ -304,7 +321,8 @@ describe('the withdrawal of an installer: what the folder holds', () => {
   it('finds the installers of the version and of the system in the listing, and nothing else', () => {
     const listing = [EXE, 'Lucium-Setup-1.0.1-x64.exe', `${EXE}.withdrawn`, `Lucium-${VERSION}-arm64.zip`, 'feed.json', `feed-${VERSION}.json`, APPIMAGE, `Lucium-Setup-${VERSION}-arm64.exe`, '', '.Lucium.part'].join('\n')
     expect(installerFilesOf(listing, VERSION, WIN)).toEqual([EXE])
-    expect(installerFilesOf(listing, VERSION, 'linux-x64')).toEqual([APPIMAGE])
+    expect(installerFilesOf(listing, VERSION, 'linux-x64-appimage')).toEqual([APPIMAGE])
+    expect(installerFilesOf(`${listing}\n${DEB}`, VERSION, 'linux-x64-deb')).toEqual([DEB])
     expect(installerFilesOf(listing, '9.9.9', WIN)).toEqual([])
   })
 
@@ -535,10 +553,12 @@ describe('the publication of an installer', () => {
   })
 
   it('publishes an AppImage and a .deb for their own system and folder', async () => {
-    for (const [file, kind, target] of [[APPIMAGE, 'appimage', 'linux-x64'], [DEB, 'deb', 'linux-x64'], [`Lucium-${VERSION}-linux-arm64.AppImage`, 'appimage', 'linux-arm64']] as const) {
+    for (const [file, kind, target] of [[APPIMAGE, 'appimage', 'linux-x64-appimage'], [DEB, 'deb', 'linux-x64-deb'], [`Lucium-${VERSION}-linux-arm64.AppImage`, 'appimage', 'linux-arm64-appimage']] as const) {
       const w = world({}, target, file, kind)
       expect(await publish(installerInput({}, target, file, kind), w.deps), file).toEqual({ ok: true, dryRun: false })
       expect(JSON.parse(Object.values(w.written)[0] as string), file).toMatchObject({ platform: 'linux', arch: target.split('-')[1], kind })
+      // The folder of its own kind: the file goes where only a feed of that kind lives.
+      expect(w.said.join('\n'), file).toContain(`/${kind}`)
     }
   })
 
@@ -584,7 +604,7 @@ describe('the publication of an installer', () => {
     })
 
     it('does not count a publication of the Mac, nor of another system, for the passage through the test channel', async () => {
-      for (const other of [undefined, 'linux-x64']) {
+      for (const other of [undefined, 'linux-x64-appimage']) {
         const w = world({ journal: gate.journalLine(entryOn(other)) })
         const result = await publish(stable(), w.deps)
         expect(result, String(other)).toMatchObject({ ok: false, problem: expect.stringMatching(/journal has no publication of 1\.0\.2 on the test channel/) })
@@ -595,8 +615,8 @@ describe('the publication of an installer', () => {
       const mac = { version: VERSION, archiveSha256: HASH, attestedBy: 'The maintainer', attestedAt: '2026-11-11T18:30:00Z', checks: { netflixPlays: true, touchIdUnlocksTheVault: true, updateFromPreviousVersion: true }, updatedFrom: '1.0.1' }
       const withMacAttestation = await publish(stable(), world({ attestation: JSON.stringify(mac) }).deps)
       expect(withMacAttestation).toMatchObject({ ok: false, problem: expect.stringMatching(/not of win32-x64[\s\S]*installsOnARealMachine is not true/) })
-      const forLinux = await publish(stable(), world({ attestation: JSON.stringify({ ...ATTESTATION, platform: 'linux-x64' }) }).deps)
-      expect(forLinux).toMatchObject({ ok: false, problem: expect.stringMatching(/attestation of "linux-x64", not of win32-x64/) })
+      const forLinux = await publish(stable(), world({ attestation: JSON.stringify({ ...ATTESTATION, platform: 'linux-x64-appimage' }) }).deps)
+      expect(forLinux).toMatchObject({ ok: false, problem: expect.stringMatching(/attestation of "linux-x64-appimage", not of win32-x64/) })
     })
 
     it('asks the checks of an installer, and shows the file to fill in when there is none', async () => {
@@ -621,7 +641,7 @@ describe('the publication of an installer', () => {
     }
     expect(await carried(published + withdrawn(WIN))).toEqual(['1.0.1'])
     expect(await carried(published + withdrawn(undefined))).toBeUndefined()
-    expect(await carried(published + withdrawn('linux-x64'))).toBeUndefined()
+    expect(await carried(published + withdrawn('linux-x64-appimage'))).toBeUndefined()
   })
 })
 

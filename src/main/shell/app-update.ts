@@ -17,7 +17,7 @@
 // A downloaded update that is not installed now is installed when Lucium quits (Squirrel.Mac), unless the feed, read again at the next look or at
 // the quit, lists it as withdrawn: then Lucium drops it (`dropWithdrawn`, squirrel-staging.ts) and says so.
 
-import { BrowserWindow, autoUpdater, dialog, shell, type MessageBoxOptions } from 'electron'
+import { BrowserWindow, autoUpdater, clipboard, dialog, shell, type MessageBoxOptions } from 'electron'
 import { downloadedVersion, type UpdateOffer } from '@shared/update-check'
 import { UPDATE_NOTICE_MS, droppedUpdateText, updateNoticeText, type DropOutcome, type DroppedNotice, type InstallerState, type UpdateNotice } from '@shared/auto-update'
 import { installFailureReason, type InstallError } from '@shared/update-install'
@@ -25,6 +25,9 @@ import { formatSize } from '@shared/translate-local'
 import { t } from '@shared/i18n'
 import { ownRequestHeaders } from '@shared/own-requests'
 import { compareVersions } from '@shared/versions'
+import { debFileName, debInstallCommand } from '@shared/linux-install'
+import { installerClaim, type InstallerDownload } from '../update-installer-file'
+import { failureReason } from './windows-update'
 import { discardStagedUpdate, LUCIUM_BUNDLE_ID, systemStaging } from './squirrel-staging'
 
 /** What the installer uses of Electron's autoUpdater. */
@@ -58,6 +61,8 @@ export interface Installer extends InstallerState {
   dropWithdrawn(withdrawn: readonly string[]): Promise<DropOutcome>
   /** The application ends: what this installer keeps on the disk for an update that was not installed goes. */
   leave(): void
+  /** What « Installer et relancer » says will happen, for an installer that does something other than Squirrel's or Windows' (the AppImage's swap). Absent, the box says what its kind says. */
+  restartDetail?(version: string): string
 }
 
 export interface UpdateInstallerDeps {
@@ -402,6 +407,12 @@ export function showUpdateNotice(context: InstallContext & { browser: ToastHost 
   const text = updateNoticeText(notice.kind, notice.version, notice.kind === 'restart' ? undefined : notice.offer.size, notice.withdrawn === true, notice.dropped, notice.urgent === true)
   const act = (): void => {
     notice.accepted()
+    // A .deb is never installed by Lucium: the notice leads to the box that gives the command (offerDebUpdate), not to the download page.
+    const adviser = debAdviser()
+    if (adviser && notice.offer.kind === 'deb') {
+      void offerDebUpdate(context, notice.offer, notice.current, adviser).catch((error: unknown) => console.error('[update] the notice of the .deb could not be shown:', error))
+      return
+    }
     if (notice.kind === 'page' || !installer) {
       void shell.openExternal(notice.offer.url).catch((error: unknown) => console.error('[update] the download page could not be opened:', error))
       return
@@ -409,7 +420,9 @@ export function showUpdateNotice(context: InstallContext & { browser: ToastHost 
     if (notice.kind === 'restart' && installer.restart()) return
     startDownload(context, notice.offer, notice.current, installer)
   }
-  context.browser.showToast(text.message, { label: text.action, run: act, second: { label: text.later, run: () => undefined } }, UPDATE_NOTICE_MS)
+  // A .deb notice leads to the box with the command, not to a page: its button says so.
+  const action = debAdviser() && notice.offer.kind === 'deb' ? t('deb-update.voir-la-commande') : text.action
+  context.browser.showToast(text.message, { label: action, run: act, second: { label: text.later, run: () => undefined } }, UPDATE_NOTICE_MS)
 }
 
 async function afterDownload(context: InstallContext, offer: UpdateOffer, current: string, outcome: DownloadOutcome, installer: Installer): Promise<void> {
@@ -434,10 +447,97 @@ async function askRestart(context: InstallContext, version: string, installer: I
   const { response } = await box(context, {
     type: 'question',
     message: t('app-update.lucium-version-est-pret', { version }),
-    detail: installer.installsAtQuit ? t('app-update.lucium-se-ferme-se-remplace-puis-se-rouvre', { version }) : t('windows-update.lucium-se-ferme-l-installeur-le-remplace', { version }),
+    detail: installer.restartDetail ? installer.restartDetail(version) : installer.installsAtQuit ? t('app-update.lucium-se-ferme-se-remplace-puis-se-rouvre', { version }) : t('windows-update.lucium-se-ferme-l-installeur-le-remplace', { version }),
     buttons: [t('app-update.installer-et-relancer'), installer.installsAtQuit ? t('app-update.a-la-prochaine-fermeture') : t('menu-actions.plus-tard')],
     defaultId: 0,
     cancelId: 1
   })
   if (response === 0) installer.restart()
 }
+
+// ---- A .deb: told, never installed ----
+
+/** What the notice of a .deb update needs of the system: the verified download into the Downloads folder, and the clipboard. Absent, a .deb copy is sent to the download page. */
+export interface DebAdviser {
+  /** The architecture of this copy (`process.arch`): it names the file. */
+  arch: string
+  /** The Downloads folder of the person. */
+  downloads: () => string
+  /** Downloads the .deb `offer` names, checks it and puts it in Downloads (update-deb-file.ts). */
+  download: (offer: UpdateOffer) => Promise<InstallerDownload>
+  copy: (text: string) => Promise<void>
+}
+
+let adviser: DebAdviser | null = null
+
+/** Replaces the adviser of this run (main(), and the tests). */
+export function setDebAdviser(next: DebAdviser | null): void {
+  adviser = next
+}
+
+/** The adviser of this run: null off a .deb install. */
+export const debAdviser = (): DebAdviser | null => adviser
+
+/** The real one: the system clipboard (the command is copied only when the person asks). */
+export const systemCopy = (text: string): Promise<void> => clipboard.writeText(text)
+
+/**
+ * The check found a newer version and this copy is a .deb. Installing a package asks for root, and Lucium never raises its own privileges on the strength of a file it
+ * downloaded: the box gives the version, the SHA-256 the feed signs and the exact command, and « Télécharger le paquet » fetches the file (checked against the signed size
+ * and sum) into Downloads for the person to install with that command. Nothing is installed, and nothing is run.
+ */
+export async function offerDebUpdate(context: InstallContext, offer: UpdateOffer, current: string, deb: DebAdviser): Promise<void> {
+  const claim = installerClaim(offer, 'deb')
+  const fileName = debFileName(offer.version, deb.arch)
+  if (!claim || !fileName) {
+    // The feed does not describe a package that can be checked: the download page is the way.
+    const { response } = await box(context, {
+      type: 'info',
+      message: t('app-update.la-version-version-est-disponible', { version: offer.version }),
+      detail: t('menu-actions.vous-utilisez-current-cette-version-n-installe-pas', { current }),
+      buttons: [t('menu-actions.telecharger-manuellement'), t('menu-actions.plus-tard')],
+      defaultId: 0,
+      cancelId: 1
+    })
+    if (response === 0) await shell.openExternal(offer.url)
+    return
+  }
+  const command = debInstallCommand(fileName)
+  const { response } = await box(context, {
+    type: 'info',
+    message: t('app-update.la-version-version-est-disponible', { version: offer.version }),
+    detail: [t('deb-update.avis-intro', { current }), t('deb-update.avis-telechargement', { size: formatSize(claim.size) }), command, t('deb-update.avis-somme', { sha256: claim.sha256 })].join('\n\n'),
+    buttons: [t('deb-update.telecharger-le-paquet'), t('deb-update.copier-la-commande'), t('menu-actions.plus-tard')],
+    defaultId: 0,
+    cancelId: 2
+  })
+  if (response === 1) return copyCommand(deb, command)
+  if (response !== 0) return
+  context.browser?.showToast(t('app-update.telechargement-de-lucium-version-size', { version: offer.version, size: formatSize(claim.size) }), undefined, DOWNLOAD_NOTICE_MS)
+  const done = await deb.download(offer)
+  if (!done.ok) {
+    console.warn(`[update] the .deb of ${offer.version} was not kept (${done.kind}): ${done.detail}`)
+    const failed = await box(context, {
+      type: 'warning',
+      message: t('app-update.la-mise-a-jour-n-a-pas-pu-etre-telechargee'),
+      detail: failureReason(done, { diskFailed: () => t('deb-update.le-fichier-n-a-pas-pu-etre-enregistre', { folder: deb.downloads() }) }),
+      buttons: [t('menu-actions.telecharger-manuellement'), t('app-update.fermer')],
+      defaultId: 1,
+      cancelId: 1
+    })
+    if (failed.response === 0) await shell.openExternal(offer.url)
+    return
+  }
+  const after = await box(context, {
+    type: 'info',
+    message: t('deb-update.paquet-telecharge', { version: offer.version }),
+    detail: [t('deb-update.paquet-pret', { folder: deb.downloads(), sha256: done.sha256 }), command, t('deb-update.paquet-pas-installe')].join('\n\n'),
+    buttons: [t('deb-update.copier-la-commande'), t('app-update.fermer')],
+    defaultId: 1,
+    cancelId: 1
+  })
+  if (after.response === 0) await copyCommand(deb, command)
+}
+
+/** The command on the clipboard; a clipboard that refuses is logged (the box showed the command, so the person can still copy it by hand). */
+const copyCommand = (deb: DebAdviser, command: string): Promise<void> => deb.copy(command).catch((error: unknown) => console.error('[update] the command could not be copied:', error))

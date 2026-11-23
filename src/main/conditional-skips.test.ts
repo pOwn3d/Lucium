@@ -50,6 +50,7 @@ const CONDITIONAL: Readonly<Record<string, { count: number; waitsFor: string }>>
   'src/main/translate/system-stream.test.ts': { count: 1, waitsFor: 'Windows: the stand-in of the macOS helper is a script run by /bin/sh, which Windows cannot start' },
   'src/main/translate/system.test.ts': { count: 1, waitsFor: 'Windows: the stand-in of the macOS helper is a script run by /bin/sh, which Windows cannot start' },
   'src/main/translate/translate.test.ts': { count: 1, waitsFor: 'a user who is not root' },
+  'src/main/update-appimage-file.test.ts': { count: 3, waitsFor: 'a user who is not root (root writes into a folder whose rights were taken away), and not Windows (chmod 555 refuses nothing there): the three tests that make a folder refuse a file' },
   'src/main/update-feed-signature.test.ts': { count: 1, waitsFor: 'Windows: chmod changes no bit there and the mode it reports (666) is not read' },
   'src/main/update-feeds-script.test.ts': { count: 2, waitsFor: 'Windows excluded: the bash script of the build is the maintainer\'s release tooling, run on the maintainer\'s Mac' },
   'src/main/vault-keychain.test.ts': { count: 1, waitsFor: 'macOS on Apple silicon, and the addon built (pnpm build:keychain)' },

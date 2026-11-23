@@ -116,15 +116,22 @@ describe('the background look', () => {
     expect(on.shown.map((n) => n.version)).toEqual(['0.2.2'])
   })
 
-  it('on macOS and Linux, shows the notice with autoUpdate on and never for the Windows switch alone', async () => {
-    for (const platform of ['darwin', 'linux']) {
-      const windowsOnly = launch(profile({ autoUpdate: false, windowsAutoUpdate: true }), { platform, feed: () => FEED, installer: installer() })
-      expect((await windowsOnly.updater.check())?.kind, platform).toBe('available')
-      expect(windowsOnly.shown, platform).toEqual([])
-      const own = launch(profile({ autoUpdate: true, windowsAutoUpdate: false }), { platform, feed: () => FEED, installer: installer() })
-      expect((await own.updater.check())?.kind, platform).toBe('available')
-      expect(own.shown.map((n) => n.version), platform).toEqual(['0.2.2'])
-    }
+  it('on macOS, shows the notice with autoUpdate on and never for the switch of Windows and Linux alone', async () => {
+    const own = launch(profile({ autoUpdate: true, windowsAutoUpdate: false }), { platform: 'darwin', feed: () => FEED, installer: installer() })
+    expect((await own.updater.check())?.kind).toBe('available')
+    expect(own.shown.map((n) => n.version)).toEqual(['0.2.2'])
+    const windowsOnly = launch(profile({ autoUpdate: false, windowsAutoUpdate: true }), { platform: 'darwin', feed: () => FEED, installer: installer() })
+    expect((await windowsOnly.updater.check())?.kind).toBe('available')
+    expect(windowsOnly.shown).toEqual([])
+  })
+
+  it('on Linux, shows the notice with its own switch on and never for the old autoUpdate alone', async () => {
+    const old = launch(profile({ autoUpdate: true, windowsAutoUpdate: false }), { platform: 'linux', feed: () => FEED, installer: installer() })
+    expect((await old.updater.check())?.kind).toBe('available')
+    expect(old.shown).toEqual([])
+    const own = launch(profile({ autoUpdate: false, windowsAutoUpdate: true }), { platform: 'linux', feed: () => FEED, installer: installer() })
+    expect((await own.updater.check())?.kind).toBe('available')
+    expect(own.shown.map((n) => n.version)).toEqual(['0.2.2'])
   })
 
   it('shows nothing when the look fails, and offers the version at the next look that succeeds', async () => {

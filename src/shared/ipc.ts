@@ -450,6 +450,8 @@ export interface UiSnapshot {
   scrollBarsAlways?: true
   /** This build carries a test update channel (a second address sealed into it, main/shell/update-source.ts): Settings › Général offers « Recevoir les versions de test » only then. Absent otherwise. */
   updateTestChannel?: true
+  /** This copy has no update path (a Linux copy that is neither an AppImage nor a .deb: shared/platform.ts, `updatesByHand`): Settings › Général says where to download the latest version instead of showing a switch. Absent otherwise. */
+  updatesByHand?: true
   sidePanel: SidePanelState | null
   /** The web panel docked beside the page, when there is one (it takes the place of an extension's side panel: one at a time). Absent without one. */
   webPanel?: WebPanelState | null
