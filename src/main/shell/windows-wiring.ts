@@ -12,7 +12,7 @@ import type { ElectronEngine } from '../engine/electron-engine'
 import type { HistoryBook } from '../history'
 import type { currentPlatform } from '../platform'
 import type { StateStore, WindowView } from '../store'
-import { dockClickStep } from '../window-lifecycle'
+import { activationPlan, dockClickPlan } from '../window-lifecycle'
 import type { Browser } from './browser'
 import type { LittleArc } from './little'
 import type { OnDemandView } from './on-demand-view'
@@ -95,29 +95,60 @@ export function openExtensionWindows({ browser, windows, little, windowManager }
 }
 
 /**
- * A click on the icon of the Dock while every window is minimized brings the last one back (macOS leaves them in the Dock), and the main window put away
- * when it was closed comes back with its state. The event also fires at launch, so nothing new is opened here: a new window is the Dock menu's
- * "Nouvelle fenêtre", ⌘N, or a second launch of the program.
+ * Switching to the application brings its windows forward, as macOS does for other applications. A click on the icon of the Dock (`activate`, which also fires
+ * at launch) brings every window of the application (the main one, the other ones, the private and guest ones), the last used one on top with the focus; a
+ * minimized window is restored, and the main window put away when it was closed comes back with its state. The Settings window and the mini window are not in
+ * the window manager: they stay as they are. A new window opens only when none is left (a window by choice is the Dock menu's "Nouvelle fenêtre", ⌘N, or a
+ * second launch of the program). What to raise, and in which order: `dockClickPlan`.
+ *
+ * The other ways in (⌘⇥, a click in one of the windows: `did-become-active`, which Electron emits at each activation) raise the windows that are on screen,
+ * without restoring a minimized one, showing a hidden one, or taking the focus (`activationPlan`). Raising windows must not start an activation again: a
+ * guard ignores the events that come while it runs and in the turn after it.
  */
 export function followDockClicks(windowManager: WindowManager): void {
-  app.on('activate', () => {
-    const step = dockClickStep(
-      windowManager.list().map(({ win: each }) => {
-        const destroyed = each.isDestroyed()
-        return { destroyed, visible: !destroyed && each.isVisible(), minimized: !destroyed && each.isMinimized() }
-      })
-    )
-    if (step === 'nothing') return
-    // Every window is gone (the application is quitting): nothing to bring back (newWindow answers null then).
-    if (step === 'open-window') {
-      void windowManager.newWindow({ commandBar: false })
-      return
+  let raising = false
+  const guarded = (run: () => void): void => {
+    if (raising) return
+    raising = true
+    try {
+      run()
+    } finally {
+      setImmediate(() => void (raising = false))
     }
-    const focused = windowManager.focused()
-    if (focused.kind === 'main') return void windowManager.revealMain()
-    const last = focused.win
-    if (last.isDestroyed()) return
-    if (last.isMinimized()) last.restore()
-    last.show()
-  })
+  }
+  const factsOf = (records: ReturnType<WindowManager['list']>) =>
+    records.map(({ id, win: each }) => {
+      const destroyed = each.isDestroyed()
+      return { id, destroyed, visible: !destroyed && each.isVisible(), minimized: !destroyed && each.isMinimized() }
+    })
+
+  app.on('did-become-active', () =>
+    guarded(() => {
+      const records = windowManager.list()
+      const focused = records.find((each) => !each.win.isDestroyed() && each.win.isFocused())
+      for (const id of activationPlan(process.platform, factsOf(records), focused?.id ?? null)) records.find((each) => each.id === id)?.win.moveTop()
+    })
+  )
+
+  app.on('activate', () =>
+    guarded(() => {
+      const records = windowManager.list()
+      const plan = dockClickPlan(process.platform, factsOf(records), windowManager.focused().id)
+      // Every window is gone (the application is quitting): nothing to bring back (newWindow answers null then).
+      if (plan.open) return void windowManager.newWindow({ commandBar: false })
+      const last = plan.raise.at(-1)
+      for (const id of plan.raise) {
+        const record = records.find((each) => each.id === id)
+        if (!record || record.win.isDestroyed()) continue
+        // The main window put away holds no page: it comes back through the manager, which gives them again.
+        if (record.kind === 'main' && windowManager.isMainAway()) {
+          windowManager.revealMain()
+          continue
+        }
+        if (record.win.isMinimized()) record.win.restore()
+        record.win.show()
+        if (id === last) record.win.focus()
+      }
+    })
+  )
 }

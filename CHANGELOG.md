@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Fixed
+
+- **Dock click or switching to Lucium brings every window forward**: on macOS, a click on Lucium's icon in the Dock brings all its windows to the front, minimized ones included; switching to Lucium with ⌘⇥ or a click raises the windows on screen too, without taking the focus.
+
 ## [1.1.7] - 2026-11-23
 
 This version fixes the floating video window: it now shows one bar, Lucium's, and no longer the controls of the site's player.
