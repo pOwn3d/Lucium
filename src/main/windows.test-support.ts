@@ -27,3 +27,6 @@ export function expectNoOtherAccess(path: string): void {
 
 /** A path written with `/` whatever the system: for the tests that compare a path with a text written in the test. */
 export const posix = (path: string): string => path.split(sep).join('/')
+
+/** Like `posix`, without the drive that `path.resolve` puts before a rooted path on Windows ("D:/work" → "/work"): for a path written as "/work/…" in the test. */
+export const posixRooted = (path: string): string => posix(path).replace(/^[A-Za-z]:(?=\/)/, '')

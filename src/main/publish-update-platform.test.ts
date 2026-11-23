@@ -40,7 +40,7 @@ import {
 import * as gate from './release-gate'
 import { ARCH_WORDS as FILE_ARCH_WORDS, KIND_EXTENSIONS as FILE_KIND_EXTENSIONS, TARGET_KINDS, releaseFile, releaseProblems, type ReleaseFacts } from './update-feed-file'
 import { TEST_FEED_KEYS, signedFeed } from './update-feed-keys.test-support'
-import { posix } from './windows.test-support'
+import { posix, posixRooted } from './windows.test-support'
 
 // The publication of the installers of Windows and Linux (the study of card 819, lot 1): the same chain as the Mac's, per system. Nothing here
 // reaches a network or a server: the commands are planned as text and the steps are run against fake effects. What the Mac says, runs, writes and journals is
@@ -199,10 +199,15 @@ describe('the arguments of an installer', () => {
       target: { id: WIN, kind: 'nsis', sha256: HASH },
       dmg: false
     })
-    expect(posix(resolved.input.archive)).toBe(`/work/dist/${EXE}`)
-    expect(posix(resolved.input.attestation)).toBe(`/work/dist/Lucium-${VERSION}-win32-x64.attestation.json`)
+    expect(posixRooted(resolved.input.archive)).toBe(`/work/dist/${EXE}`)
+    expect(posixRooted(resolved.input.attestation)).toBe(`/work/dist/Lucium-${VERSION}-win32-x64.attestation.json`)
   })
 
+  it('compares a resolved path with the text of the test whatever the drive Windows puts before it', () => {
+    expect(posixRooted('D:/work/dist/a.exe')).toBe('/work/dist/a.exe')
+    expect(posixRooted('/work/dist/a.exe')).toBe('/work/dist/a.exe')
+    expect(posixRooted('/work/D:/a')).toBe('/work/D:/a')
+  })
   it('resolve the withdrawal of a system on the channel of that system', () => {
     const resolved = resolveWithdrawal(parse('--withdraw', '1.0.1', '--platform', 'linux-arm64'), env)
     expect(resolved).toMatchObject({ ok: true, input: { target: 'linux-arm64', channel: { folder: '/srv/updates/test-linux-arm', baseUrl: 'https://test.lucium.app/updates/linux-arm64/' } } })

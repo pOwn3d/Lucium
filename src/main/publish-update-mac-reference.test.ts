@@ -1,15 +1,22 @@
 import { createPrivateKey } from 'node:crypto'
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { commandLine, publish, resolveChannel, withdraw, type Channel, type ChannelFile, type Command, type CommandResult, type PublishDeps, type PublishInput, type WithdrawInput } from './publish-update'
 import * as gate from './release-gate'
 import { releaseFile } from './update-feed-file'
 import { FEED_KEY_FILE, feedKeysIn, publicKeyOfPrivate, signFeedText } from './update-feed-signature'
 import { writtenFeed } from './update-feed-keys.test-support'
 import { posix } from './windows.test-support'
+
+// The publication of the Mac runs on the maintainer's Mac and its reference is recorded there, with POSIX paths ("/repo/dist-drm/…"). The paths of this test are
+// written that way, so the code is given the path functions of a Mac on every system: on Windows `join` would turn them into "\\repo\\dist-drm\\…" (and the shell
+// quoting of a command line would then quote them), and the transcript would differ from the reference for a reason that is not the publication's.
+vi.mock('node:path', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:path')>()
+  return { ...actual.posix, default: actual.posix, posix: actual.posix, win32: actual.win32 }
+})
 
 // The publication of the Mac must stay what it was, to the byte, when the publication of the other systems was added to the same code (the study of card 819,
 // lot 1). The reference is the whole of what a publication of the Mac says, runs, writes and journals, recorded from the code as it was before that lot
@@ -18,8 +25,8 @@ import { posix } from './windows.test-support'
 // A fixed key (Ed25519 signs the same bytes the same way): the recorded feeds hold their signatures, and they must not change from one run to the next.
 const PKCS8_ED25519_PREFIX = Buffer.from('302e020100300506032b657004220420', 'hex')
 const PRIVATE_PEM = createPrivateKey({ key: Buffer.concat([PKCS8_ED25519_PREFIX, Buffer.alloc(32, 7)]), format: 'der', type: 'pkcs8' }).export({ format: 'pem', type: 'pkcs8' }).toString()
-const keyFolder = mkdtempSync(join(tmpdir(), 'lucium-mac-reference-key-'))
-writeFileSync(join(keyFolder, FEED_KEY_FILE), PRIVATE_PEM, { mode: 0o600 })
+const keyFolder = mkdtempSync(`${tmpdir()}/lucium-mac-reference-key-`)
+writeFileSync(`${keyFolder}/${FEED_KEY_FILE}`, PRIVATE_PEM, { mode: 0o600 })
 process.on('exit', () => rmSync(keyFolder, { recursive: true, force: true }))
 const FEED_KEYS = feedKeysIn(keyFolder, [publicKeyOfPrivate(PRIVATE_PEM)])
 const signedFeed = (unsigned: string): string => signFeedText(unsigned, [PRIVATE_PEM])
