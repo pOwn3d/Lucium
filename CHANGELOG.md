@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+## [1.1.8] - 2026-11-23
+
+This version brings every Lucium window forward when you switch to the application, improves the floating video window (no scrollbar, and it moves by its video), and brings the update of Windows from Lucium itself, off by default.
+
 ### Added
 
 - **Windows, updates from Lucium**: “Check for Updates…” reads the signed feed of Windows; after your click Lucium downloads the installer, keeps it only if its size and SHA-256 are the signed ones, and runs it silently after a second click. Nothing runs without your clicks.

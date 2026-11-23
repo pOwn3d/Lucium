@@ -2,7 +2,7 @@
 
 Lucium is a web browser: a vulnerability can expose the people who use it. Reports are taken seriously, and you are asked to make them **privately**.
 
-Français : pour signaler une faille, n'ouvrez pas d'issue publique. Écrivez à contact@lucium.app (commencez le sujet par `[security]`), ou utilisez le signalement privé de GitHub (onglet *Security* du dépôt public, *Report a vulnerability*). Vous pouvez écrire en français. Seule la dernière version publiée reçoit les correctifs : le tableau ci-dessous dit laquelle (les versions 0.2.x, 1.0.0, 1.0.1, 1.1.0, 1.1.1, 1.1.2, 1.1.3, 1.1.4, 1.1.5 et 1.1.6 ne sont plus corrigées).
+Français : pour signaler une faille, n'ouvrez pas d'issue publique. Écrivez à contact@lucium.app (commencez le sujet par `[security]`), ou utilisez le signalement privé de GitHub (onglet *Security* du dépôt public, *Report a vulnerability*). Vous pouvez écrire en français. Seule la dernière version publiée reçoit les correctifs : le tableau ci-dessous dit laquelle (les versions 0.2.x, 1.0.0, 1.0.1, 1.1.0, 1.1.1, 1.1.2, 1.1.3, 1.1.4, 1.1.5, 1.1.6 et 1.1.7 ne sont plus corrigées).
 
 ## Supported versions
 
@@ -10,8 +10,9 @@ Fixes are made on `main` and released in the next version; **older releases are 
 
 | Version | Supported |
 |---|---|
-| 1.1.7, the latest release | yes |
+| 1.1.8, the latest release | yes |
 | `main` | yes, fixes are written there before they are released |
+| 1.1.7 | no, update to the latest release |
 | 1.1.6 | no, update to the latest release |
 | 1.1.5 | no, update to the latest release |
 | 1.1.4 | no, update to the latest release |
