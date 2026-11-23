@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultSettings, type Settings } from '@shared/model'
 import type { DropOutcome, DroppedNotice, InstallerState, UpdateNotice } from '@shared/auto-update'
 import type { FeedAnswer } from '@shared/update-check'
+import type { FeedTarget } from '@shared/update-target'
 
 vi.mock('electron', () => ({ app: { getVersion: () => '0.2.1', isPackaged: false, on: vi.fn(), off: vi.fn() }, autoUpdater: {}, BrowserWindow: {}, dialog: {}, net: {}, shell: {} }))
 
@@ -32,7 +33,7 @@ function profile(over: Partial<Settings> = {}) {
 }
 
 /** One launch of Lucium on that profile: a fresh updater, with a feed, a window that may or may not show the notice, and an installer. */
-function launch(p: ReturnType<typeof profile>, options: { answer?: () => FeedAnswer; window?: () => boolean; installer?: InstallerState | null } = {}) {
+function launch(p: ReturnType<typeof profile>, options: { answer?: () => FeedAnswer; window?: () => boolean; installer?: InstallerState | null; target?: FeedTarget } = {}) {
   const shown: UpdateNotice[] = []
   const told: DroppedNotice[] = []
   const fetchFeed = vi.fn(async () => (options.answer ?? (() => releaseFile('0.2.2')))())
@@ -40,6 +41,8 @@ function launch(p: ReturnType<typeof profile>, options: { answer?: () => FeedAns
   const updater = new AutoUpdater({
     settings: p.settings,
     version: '0.2.1',
+    // The feed of this test is a release file of macOS (no `platform`): it is read as one, on whatever system the test runs.
+    target: options.target ?? { platform: 'darwin', arch: 'arm64' },
     feed: (settings) => (settings.autoUpdate ? FEED : null),
     fetchFeed,
     notify: (notice) => {
@@ -74,6 +77,15 @@ const installer = (state: Partial<Record<'canInstall' | 'isDownloading' | 'isRea
 })
 
 describe('the background look', () => {
+  it('offers nothing from a release file that is for another system than the one it runs on', async () => {
+    // The file of macOS, with no `platform`, is for a Mac: a Windows or a Linux copy that was served it (whatever its signature) takes nothing from it.
+    for (const target of [{ platform: 'win32', arch: 'x64' }, { platform: 'linux', arch: 'x64' }] as const) {
+      const { updater, shown } = launch(profile(), { target })
+      expect(await updater.check(), target.platform).toMatchObject({ kind: 'failed' })
+      expect(shown, target.platform).toEqual([])
+    }
+  })
+
   it('offers a newer version in a notice, once, and counts the showing in the profile', async () => {
     const p = profile()
     const run = launch(p, { installer: installer() })

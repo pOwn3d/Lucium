@@ -21,11 +21,15 @@ import { frenchSpaces } from '@shared/french-typography'
 import { anySpace } from './smoke-kit'
 import { feedAnswer, feedFetchInit, updateOutcome } from '@shared/update-check'
 import { feedSignatureCheck } from './shell/update-signature'
+import type { FeedTarget } from '@shared/update-target'
 import { newFeedKeyPair, signFeedText } from './update-feed-signature'
 import { t } from '@shared/i18n'
 import { strictTransportHosts } from './engine/strict-transport'
 import { STRICT_TRANSPORT_FILE, strictTransportStore } from './engine/strict-transport-store'
 import { strictHostsFile } from './smoke-probe-kit'
+
+/** The feeds of this check are the release files of macOS, which carry no `platform` (shared/update-target.ts): they are read as macOS reads them, on whatever system the check runs. */
+const MAC_TARGET: FeedTarget = { platform: 'darwin', arch: 'arm64' }
 
 type Check = (name: string, ok: boolean, detail?: string) => void
 interface Rect {
@@ -506,12 +510,12 @@ async function smokePrivacy(ctx: SmokeContext, check: Check): Promise<void> {
         return feedAnswer(address, await net.fetch(address, feedFetchInit(AbortSignal.timeout(10_000))), feedSignatureCheck(address, [pair.publicKey], (line) => refusals.push(line)))
       }
       const believed = await read('/feed-signed.json')
-      check('a feed signed by a key of the application is believed, and offers its version', believed.ok && updateOutcome('0.0.1', 'https://updates.example/feed.json', believed).kind === 'withdrawn', JSON.stringify(believed))
+      check('a feed signed by a key of the application is believed, and offers its version', believed.ok && updateOutcome('0.0.1', 'https://updates.example/feed.json', believed, MAC_TARGET).kind === 'withdrawn', JSON.stringify(believed))
       check('...and nothing was written to the log for it', refusals.length === 0, refusals.join(' | '))
       for (const [path, why] of [['/feed-unsigned.json', 'no signature'], ['/feed-stranger.json', 'a key the application does not carry'], ['/feed-changed.json', 'a byte changed after the signature']] as const) {
         refusals.length = 0
         const answer = await read(path)
-        const outcome = updateOutcome('0.0.1', 'https://updates.example/feed.json', answer)
+        const outcome = updateOutcome('0.0.1', 'https://updates.example/feed.json', answer, MAC_TARGET)
         check(`a feed with ${why} is refused: no update offered, no version said withdrawn`, !answer.ok && outcome.kind === 'failed', JSON.stringify(outcome))
         check('...with one line in the log that names the address', refusals.length === 1 && refusals[0]?.includes(path) === true, refusals.join(' | '))
       }

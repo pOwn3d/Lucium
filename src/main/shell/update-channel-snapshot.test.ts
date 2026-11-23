@@ -2,7 +2,7 @@
 // while the build carries a test address (shell/update-source.ts, `testChannelOfSnapshot`). The build says it, not the profile: a stand-in of the
 // window takes its snapshot with the address stubbed as electron-vite would have written it.
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createInitialState } from '@shared/sidebar'
 import { fakeBrowser, methodsOf } from './browser-fake.test-support'
 
@@ -11,7 +11,13 @@ vi.mock('../blocking', () => ({ blockingService: () => ({ status: () => 'off', s
 const { Browser } = await import('./browser')
 const shell = methodsOf(Browser.prototype)
 
-afterEach(() => vi.unstubAllEnvs())
+// The test channel is a choice of macOS, the system that installs from the addresses of a build (Windows and Linux hide it: update-source.test.ts): the system is set.
+const realPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!
+beforeEach(() => Object.defineProperty(process, 'platform', { value: 'darwin' }))
+afterEach(() => {
+  vi.unstubAllEnvs()
+  Object.defineProperty(process, 'platform', realPlatform)
+})
 
 /** A window whose snapshot can be taken: the parts it reads are given, the rest is a recorder. */
 function aWindow() {

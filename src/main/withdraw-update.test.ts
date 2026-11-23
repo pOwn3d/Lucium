@@ -4,7 +4,8 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
-import { updateOutcome } from '@shared/update-check'
+import { updateOutcome as updateOutcomeOn, type FeedAnswer } from '@shared/update-check'
+import type { FeedTarget } from '@shared/update-target'
 import {
   FIRST_FEED_VERSION,
   NO_FEED,
@@ -30,6 +31,10 @@ import {
 } from './publish-update'
 import * as gate from './release-gate'
 import { TEST_FEED_KEYS, signedFeed, writtenFeed } from './update-feed-keys.test-support'
+
+// The feeds of these tests are the release files of macOS (they carry no `platform`): read as a Mac reads them.
+const MAC: FeedTarget = { platform: 'darwin', arch: 'arm64' }
+const updateOutcome = (current: string, feedUrl: string, answer: FeedAnswer | null) => updateOutcomeOn(current, feedUrl, answer, MAC)
 
 // The withdrawal of a published version (scripts/publish-update.mjs --withdraw). Nothing here touches a network or a server: the commands are
 // checked as text, and the steps are run against a made-up folder of a channel that records what was run and applies it.

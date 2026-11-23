@@ -18,6 +18,7 @@ import {
 import type { Settings } from '@shared/model'
 import type { FeatureGates } from './feature-gate'
 import { feedAnswer, feedFetchInit, updateOutcome, urgentSecurityFix, withdrawnVersions, type FeedAnswer, type UpdateOffer, type UpdateOutcome } from '@shared/update-check'
+import { runningTarget, type FeedTarget } from '@shared/update-target'
 import { currentBackgroundFeed } from './update-source'
 import { feedSignatureCheck } from './update-signature'
 import { showUpdateNotice, updateInstaller, type InstallContext, type ToastHost } from './app-update'
@@ -28,6 +29,8 @@ export interface AutoUpdateDeps {
   settings: () => Settings
   /** The running version. */
   version: string
+  /** The system this copy runs on (a test's stand-in); absent, the real one. A feed for another system is not read (shared/update-target.ts). */
+  target?: FeedTarget
   /** The feed to read for these settings, or null: the setting is off, or there is no address to read (update-source.ts, `backgroundFeed`). */
   feed: (settings: Settings) => string | null
   fetchFeed: (url: string) => Promise<FeedAnswer>
@@ -74,7 +77,7 @@ export class AutoUpdater {
     const answer = await this.deps.fetchFeed(feed)
     const dropped = await this.dropWithdrawn(answer)
     const told = dropped ? { dropped } : {}
-    const outcome = updateOutcome(this.deps.version, feed, answer)
+    const outcome = updateOutcome(this.deps.version, feed, answer, this.deps.target ?? runningTarget(process.platform, process.arch))
     if (outcome.kind === 'available') {
       // The feed says the flaw is exploited and this version fixes it (shared/update-check.ts): the notice is not held back by the cap.
       const urgent = urgentSecurityFix(answer.ok ? answer.json : null, this.deps.version, outcome.offer.version)

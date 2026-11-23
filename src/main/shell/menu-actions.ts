@@ -6,6 +6,7 @@ import { join } from 'node:path'
 import { app, contentTracing, dialog, net, shell, type BrowserWindow } from 'electron'
 import { importSource } from '@shared/import-sources'
 import { updatesByHand, type PlatformId } from '@shared/platform'
+import { runningTarget } from '@shared/update-target'
 import { browserDataDir, type PathEnv } from '../platform/paths'
 import { exportBookmarks } from './bookmarks-export'
 import { restoredState } from '@shared/sidebar'
@@ -59,7 +60,7 @@ async function readFeed(feed: string): Promise<FeedAnswer> {
 }
 
 /**
- * Windows and Linux (`updatesByHand`): the build carries no update address and no installer, so there is nothing to read and nothing to configure. The box says so
+ * Windows and Linux (`updatesByHand`): the build reads no update address (the one it carries, update-source.ts, is not read yet) and has no installer, so there is nothing to read and nothing to configure. The box says so
  * in plain words, without the name of a setting nobody has, and offers the download page of the site, where the latest version is.
  */
 async function offerManualUpdates(win: BrowserWindow, current: string): Promise<void> {
@@ -94,7 +95,7 @@ export async function checkForUpdates({ win, browser }: FocusedWindow, settings:
     const dropped = await updateInstaller()?.dropWithdrawn(withdrawnVersions(answer.json))
     if (dropped && dropped.kind !== 'kept') browser?.showToast(droppedUpdateText({ version: dropped.version, failed: dropped.kind === 'failed' }), undefined, UPDATE_NOTICE_MS)
   }
-  const outcome = updateOutcome(current, feed, answer)
+  const outcome = updateOutcome(current, feed, answer, runningTarget(process.platform, process.arch))
   switch (outcome.kind) {
     case 'not-configured':
       if (updatesByHand(process.platform)) return offerManualUpdates(win, current)

@@ -1,8 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import { setLanguage } from './i18n'
-import { DOWNLOAD_PAGES, FEED_MAX_BYTES, downloadPageUrl, downloadedVersion, feedAnswer, feedFetchInit, parseFeed, securityFixVersion, updateOutcome, urgentSecurityFix, withdrawnVersions } from './update-check'
+import { DOWNLOAD_PAGES, FEED_MAX_BYTES, downloadPageUrl, downloadedVersion, feedAnswer, feedFetchInit, parseFeed as parseFeedOn, securityFixVersion, updateOutcome as updateOutcomeOn, urgentSecurityFix, withdrawnVersions, type FeedAnswer } from './update-check'
+import type { FeedTarget } from './update-target'
 
 // The order of the versions is tested in versions.test.ts.
+
+// The release files of these tests are the ones of macOS written before `platform` existed: read as a Mac reads them (the files of the other systems: update-target.test.ts and below).
+const MAC: FeedTarget = { platform: 'darwin', arch: 'arm64' }
+const parseFeed = (raw: unknown) => parseFeedOn(raw, MAC)
+const updateOutcome = (current: string, feedUrl: string, answer: FeedAnswer | null) => updateOutcomeOn(current, feedUrl, answer, MAC)
 
 describe('parseFeed', () => {
   it('reads a GitHub latest-release answer', () => {
@@ -24,7 +30,7 @@ describe('parseFeed, the release file of Squirrel.Mac', () => {
   const file = (over: Record<string, unknown> = {}) => ({ currentRelease: '0.2.1', page: 'https://test.lucium.app/telecharger/', releases: [entry('0.2.0', 'https://test.lucium.app/old.zip'), entry('0.2.1')], ...over })
 
   it('reads the entry of currentRelease, as Squirrel does: the archive it installs, its size, the notes and the page', () => {
-    expect(parseFeed(file())).toEqual({ version: '0.2.1', url: 'https://test.lucium.app/telecharger/', notes: 'Essai.', archive: ZIP, size: 128172732 })
+    expect(parseFeed(file())).toEqual({ version: '0.2.1', url: 'https://test.lucium.app/telecharger/', notes: 'Essai.', archive: ZIP, size: 128172732, sha256: 'a'.repeat(64) })
   })
 
   it('gives an interface in English the page and the notes written for it, and the French ones for whatever is missing', () => {
@@ -34,7 +40,7 @@ describe('parseFeed, the release file of Squirrel.Mac', () => {
       setLanguage('fr')
       expect(parseFeed(file({ en }))).toMatchObject({ url: 'https://test.lucium.app/telecharger/', notes: 'Essai.' })
       setLanguage('en')
-      expect(parseFeed(file({ en }))).toEqual({ version: '0.2.1', url: en.page, notes: en.notes, archive: ZIP, size: 128172732 })
+      expect(parseFeed(file({ en }))).toEqual({ version: '0.2.1', url: en.page, notes: en.notes, archive: ZIP, size: 128172732, sha256: 'a'.repeat(64) })
       // A file of before the key, a part missing, a page that is not https, a key of another shape: the French part stands in.
       expect(parseFeed(file())).toMatchObject({ url: 'https://test.lucium.app/telecharger/', notes: 'Essai.' })
       expect(parseFeed(file({ en: { page: en.page, notes: '  ' } }))).toMatchObject({ url: en.page, notes: 'Essai.' })
@@ -105,7 +111,7 @@ describe('the versions the feed lists as withdrawn', () => {
       kind: 'withdrawn',
       current: '0.3.2',
       newer: false,
-      offer: { version: '0.3.1', url: 'https://lucium.app/telecharger/', notes: '', archive: ZIP, size: 5 }
+      offer: { version: '0.3.1', url: 'https://lucium.app/telecharger/', notes: '', archive: ZIP, size: 5, sha256: 'a'.repeat(64) }
     })
   })
 
@@ -296,5 +302,73 @@ describe('the security key of the feed', () => {
     expect(urgentSecurityFix(feed, '1.1.6', '1.2.0')).toBe(false)
     expect(urgentSecurityFix(feed, '1.1.5', '1.1.5')).toBe(false)
     expect(urgentSecurityFix({}, '1.1.5', '1.1.6')).toBe(false)
+  })
+})
+
+describe('parseFeed, the release file of Windows and Linux', () => {
+  const WINDOWS: FeedTarget = { platform: 'win32', arch: 'x64' }
+  const LINUX: FeedTarget = { platform: 'linux', arch: 'x64' }
+  const SUM = 'c0ffee'.repeat(10) + 'abcd'
+  const EXE = 'https://lucium.app/updates/win32-x64/Lucium-Setup-1.2.0-x64.exe'
+  const entry = (over: Record<string, unknown> = {}) => ({ version: '1.2.0', updateTo: { version: '1.2.0', name: 'Lucium 1.2.0', notes: 'Windows.', pub_date: '2026-12-01T09:00:00Z', url: EXE, sha256: SUM, size: 138108571, ...over } })
+  const file = (over: Record<string, unknown> = {}): Record<string, unknown> => ({ currentRelease: '1.2.0', platform: 'win32', arch: 'x64', kind: 'nsis', page: 'https://lucium.app/telecharger/', releases: [entry()], ...over })
+  const without = (key: string) => {
+    const { [key]: _gone, ...rest } = file()
+    return rest
+  }
+
+  it('is read by Windows, with the installer it names, its SHA-256 and its size', () => {
+    expect(parseFeedOn(file(), WINDOWS)).toEqual({ version: '1.2.0', url: 'https://lucium.app/telecharger/', notes: 'Windows.', archive: EXE, size: 138108571, sha256: SUM, kind: 'nsis' })
+    expect(updateOutcomeOn('1.1.7', 'https://f', { ok: true, json: file() }, WINDOWS)).toMatchObject({ kind: 'available', offer: { version: '1.2.0', sha256: SUM, kind: 'nsis' } })
+  })
+
+  it('is read by the Linux it is for, whichever of its installers it names', () => {
+    const appimage = file({ platform: 'linux', kind: 'appimage', releases: [entry({ url: 'https://lucium.app/updates/linux-x64/Lucium-1.2.0-x86_64.AppImage' })] })
+    expect(parseFeedOn(appimage, LINUX)).toMatchObject({ kind: 'appimage', sha256: SUM })
+    expect(parseFeedOn({ ...appimage, kind: 'deb' }, LINUX)).toMatchObject({ kind: 'deb' })
+  })
+
+  it('is not read by another system: a signed file of macOS, of Linux or of the other architecture offers nothing to Windows, and the other way round', () => {
+    expect(parseFeedOn(file({ platform: 'darwin', arch: 'arm64', kind: 'zip' }), WINDOWS)).toBeNull()
+    expect(parseFeedOn(file({ platform: 'linux', kind: 'appimage' }), WINDOWS)).toBeNull()
+    expect(parseFeedOn(file({ arch: 'arm64' }), WINDOWS)).toBeNull()
+    expect(parseFeedOn(file(), LINUX)).toBeNull()
+    expect(parseFeedOn(file(), MAC)).toBeNull()
+    expect(updateOutcomeOn('1.1.7', 'https://f', { ok: true, json: file() }, MAC)).toMatchObject({ kind: 'failed' })
+    expect(updateOutcomeOn('1.1.7', 'https://f', { ok: true, json: file({ platform: 'darwin', arch: 'arm64', kind: 'zip' }) }, WINDOWS)).toMatchObject({ kind: 'failed' })
+  })
+
+  it('is not read at all when it does not say which system it is for: only a Mac reads the files written before the keys', () => {
+    const oldFile = { currentRelease: '1.2.0', page: 'https://lucium.app/telecharger/', releases: [entry({ url: 'https://lucium.app/updates/darwin-arm64/Lucium-1.2.0-arm64.zip' })] }
+    expect(parseFeedOn(oldFile, MAC)).toMatchObject({ version: '1.2.0', sha256: SUM })
+    expect(parseFeedOn(oldFile, WINDOWS)).toBeNull()
+    expect(parseFeedOn(oldFile, LINUX)).toBeNull()
+    expect(updateOutcomeOn('1.1.7', 'https://f', { ok: true, json: oldFile }, WINDOWS)).toMatchObject({ kind: 'failed' })
+    for (const key of ['platform', 'arch', 'kind']) expect(parseFeedOn(without(key), WINDOWS), key).toBeNull()
+  })
+
+  it('must give the SHA-256 and the size of its installer: without them nothing tells the copy what it downloaded is what was published', () => {
+    expect(parseFeedOn(file({ releases: [entry({ sha256: undefined })] }), WINDOWS)).toBeNull()
+    expect(parseFeedOn(file({ releases: [entry({ size: undefined })] }), WINDOWS)).toBeNull()
+    for (const size of [0, -1, 1.5, '138108571', null, 2 ** 60]) expect(parseFeedOn(file({ releases: [entry({ size })] }), WINDOWS), String(size)).toBeNull()
+  })
+
+  it('is unreadable when the SHA-256 is not 64 lowercase hexadecimal digits, for every system', () => {
+    for (const sha256 of ['', SUM.slice(1), `${SUM}0`, SUM.toUpperCase(), `${SUM.slice(1)}g`, 5, null, [SUM]]) {
+      expect(parseFeedOn(file({ releases: [entry({ sha256 })] }), WINDOWS), String(sha256)).toBeNull()
+      expect(parseFeedOn({ currentRelease: '1.2.0', releases: [entry({ sha256 })] }, MAC), String(sha256)).toBeNull()
+    }
+  })
+
+  it('leaves an old file of macOS without a SHA-256 to Squirrel.Mac, which checks it itself, and does not give a kind it did not state', () => {
+    const { sha256: _sum, ...updateTo } = entry().updateTo
+    const offer = parseFeedOn({ currentRelease: '1.2.0', releases: [{ version: '1.2.0', updateTo }] }, MAC)
+    expect(offer).toMatchObject({ version: '1.2.0', archive: EXE })
+    expect(offer).not.toHaveProperty('sha256')
+    expect(offer).not.toHaveProperty('kind')
+  })
+
+  it('does not ask a feed in the shape of a GitHub answer which system it is for: it only names a page', () => {
+    expect(parseFeedOn({ tag_name: 'v1.2.0', html_url: 'https://example.org/releases/v1.2.0' }, WINDOWS)).toMatchObject({ version: '1.2.0' })
   })
 })
