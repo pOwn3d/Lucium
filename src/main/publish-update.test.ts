@@ -972,6 +972,7 @@ describe('the publication', () => {
       ['the ssh key is missing', { missing: [INPUT.sshKey] }, {}, /ssh key .* does not exist/],
       ['scripts/make-update-feed.mjs refuses', { results: { 'make-feed': done('', 1, '❌ the app in the archive is 1.0.1') } }, {}, /make-update-feed\.mjs refused:\s+❌ the app in the archive is 1\.0\.1/],
       ['the feed written has another hash than the archive', { results: { 'make-feed': done(feedText({ sha256: OTHER_HASH })) } }, {}, /does not describe the archive[\s\S]*the SHA-256 is/],
+      ['the feed written is dated after the clock of this machine', { results: { 'make-feed': done(feedText({ pub_date: '2026-11-12T12:05:00Z' })) } }, {}, /the feed to write is dated 2026-11-12T12:05:00Z, after the clock of this machine \(2026-11-12T12:00:00Z\)/],
       ['the archive cannot be read to be weighed', { unreadable: true }, {}, /cannot read .*Lucium-1\.0\.2-arm64\.zip: EACCES: permission denied/],
       // The record of the build is the one of the archive that is weighed: only the feed is wrong.
       ['the feed written has another size than the archive', { weight: { sha256: HASH, size: SIZE + 1 }, buildRecord: JSON.stringify({ ...BUILD_RECORD, archive: { ...BUILD_RECORD.archive, size: SIZE + 1 } }) }, {}, /does not describe the archive[\s\S]*the size is/]
@@ -1478,7 +1479,7 @@ describe('the publication', () => {
   })
 
   describe('what the channel offers now, read before anything is sent', () => {
-    const offering = (version: string, change: { sha256?: string; size?: number } = {}): string =>
+    const offering = (version: string, change: { sha256?: string; size?: number; pub_date?: string } = {}): string =>
       JSON.stringify({ currentRelease: version, releases: [{ version, updateTo: { version, url: ARCHIVE_URL.replace(VERSION, version), sha256: HASH, size: SIZE, ...change } }] })
     const nothingSent = (w: ReturnType<typeof world>): void => {
       expect(w.kinds()).toEqual([...LOCAL, 'read-feed'])
@@ -1510,6 +1511,20 @@ describe('the publication', () => {
       expect(result).toMatchObject({ ok: false, step: 'Read what the channel offers now', published: 'nothing' })
       expect(result.ok ? '' : result.problem).toMatch(/cannot read the feed in place on the server, so nothing is sent: ssh: connection refused/)
       nothingSent(w)
+    })
+
+    it('sends nothing when the feed in place is dated after the feed written: no copy that read it would take this one (shared/update-feed-date.ts)', async () => {
+      const w = world({ results: { 'read-feed': done(offering('1.0.1', { pub_date: '2026-12-01T00:00:00Z' })) } })
+      const result = await publish(INPUT, w.deps)
+      expect(result).toMatchObject({ ok: false, step: 'Read what the channel offers now', published: 'nothing' })
+      expect(result.ok ? '' : result.problem).toMatch(/the feed to write is dated 2026-11-07T09:00:00Z, before the feed in place \(2026-12-01T00:00:00Z\)/)
+      nothingSent(w)
+    })
+
+    it('lets through a feed in place dated the same day as the feed written, or earlier', async () => {
+      for (const date of ['2026-11-07T09:00:00Z', '2026-11-06T09:00:00Z']) {
+        expect(await publish(INPUT, world({ results: { 'read-feed': done(offering('1.0.1', { pub_date: date, sha256: OTHER_HASH })) } }).deps), date).toEqual({ ok: true, dryRun: false })
+      }
     })
 
     it('lets through a lower version in place, the same archive published again, a channel without a feed, and a feed nobody can read', async () => {

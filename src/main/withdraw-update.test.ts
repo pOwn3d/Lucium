@@ -5,10 +5,14 @@ import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterAll, describe, expect, it } from 'vitest'
 import { updateOutcome as updateOutcomeOn, type FeedAnswer } from '@shared/update-check'
+import { judgeFeedDate } from '@shared/update-feed-date'
 import type { FeedTarget } from '@shared/update-target'
 import {
   FIRST_FEED_VERSION,
   NO_FEED,
+  dateProblem,
+  feedDateOf,
+  futureProblem,
   commandLine,
   compareDotted,
   describeWithdrawFailure,
@@ -366,8 +370,8 @@ describe('the withdrawal', () => {
     expect(await withdraw(INPUT, s.deps)).toEqual({ ok: true, dryRun: false, offered: 'earlier version' })
     expect(offeredBy(s.files)).toBe('1.0.1')
     // The feed of 1.0.1 as it was kept, and one thing more: 1.0.2 in its list of withdrawn versions.
-    expect(s.files['feed.json']).toBe(signedFeed(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD])))
-    expect(JSON.parse(TEST_FEED_KEYS.signedPart(s.files['feed.json'] as string) as string)).toEqual({ ...(JSON.parse(unsignedFeedOf('1.0.1')) as object), withdrawn: [BAD] })
+    expect(s.files['feed.json']).toBe(signedFeed(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD], new Date(NOW))))
+    expect(JSON.parse(TEST_FEED_KEYS.signedPart(s.files['feed.json'] as string) as string)).toEqual({ ...(JSON.parse(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [], new Date(NOW))) as object), withdrawn: [BAD] })
     // Nothing of 1.0.2 answers any more, nothing is deleted, and the two other versions are untouched.
     expect(Object.keys(s.files).sort()).toEqual(
       ['feed.json', 'feed-1.0.0.json', 'feed-1.0.1.json', 'feed-1.0.2.json.withdrawn', zip('1.0.0'), dmg('1.0.0'), `${dmg('1.0.0')}.sha256`, zip('1.0.1'), dmg('1.0.1'), `${dmg('1.0.1')}.sha256`, `${zip(BAD)}.withdrawn`, `${dmg(BAD)}.withdrawn`, `${dmg(BAD)}.sha256.withdrawn`].sort()
@@ -412,7 +416,7 @@ describe('the withdrawal', () => {
   it('leaves what the feed offers as it is when it offers another version, lists the version as withdrawn in it, and still sets its files aside', async () => {
     const s = server({ ...published(), 'feed.json': feedOf('1.0.1') })
     expect(await withdraw(INPUT, s.deps)).toEqual({ ok: true, dryRun: false, offered: 'unchanged' })
-    expect(s.files['feed.json']).toBe(signedFeed(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD])))
+    expect(s.files['feed.json']).toBe(signedFeed(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD], new Date(NOW))))
     // The feed, then the files: two commands change the server.
     expect(changes(s.scripts())).toHaveLength(2)
     expect(changes(s.scripts())[1]).toContain('for F in')
@@ -500,7 +504,7 @@ describe('the withdrawal', () => {
     expect(s.ran.filter((command) => command.program === 'curl')).toEqual([])
     const plan = withdrawPlan({ version: BAD, channel: CHANNEL, sshKey: KEY })
     const printed = s.said.join('\n')
-    for (const command of [plan.keepWithdrawnFeed, plan.writeFeed(signedFeed(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD]))), plan.setAsideFiles]) expect(printed).toContain(`$ ${commandLine(command)}   (dry run: not run)`)
+    for (const command of [plan.keepWithdrawnFeed, plan.writeFeed(signedFeed(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD], new Date(NOW)))), plan.setAsideFiles]) expect(printed).toContain(`$ ${commandLine(command)}   (dry run: not run)`)
     expect(printed).toMatch(/Dry run done: nothing was changed on the server/)
   })
 
@@ -767,7 +771,7 @@ describe('the signature of the feed a withdrawal writes', () => {
   it('writes a feed the copies believe, whose signed part is the kept feed with its list', async () => {
     const s = server()
     await withdraw(INPUT, s.deps)
-    expect(TEST_FEED_KEYS.signedPart(s.files['feed.json'] as string)).toBe(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD]))
+    expect(TEST_FEED_KEYS.signedPart(s.files['feed.json'] as string)).toBe(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD], new Date(NOW)))
     expect(s.said.join('\n')).toMatch(/feed-1\.0\.1\.json was signed by a key of the feed/)
   })
 
@@ -823,5 +827,95 @@ describe('the signature of the feed a withdrawal writes', () => {
     const result = await withdraw(INPUT, s.deps)
     expect(result).toMatchObject({ ok: false, step: 'Put the feed of 1.0.1 back' })
     expect(result.ok ? '' : result.problem).toMatch(/it is not, byte for byte, the feed that was signed/)
+  })
+})
+
+// A copy refuses a feed older than the last one it accepted (shared/update-feed-date.ts): the feed a withdrawal writes must be dated at the withdrawal, or the
+// copies that read the feed in place would refuse the very feed that tells them a version was withdrawn.
+describe('the date of the feed a withdrawal writes', () => {
+  const NOW_DATE = '2026-11-21T08:00:00Z'
+  const WINDOWS: FeedTarget = { platform: 'darwin', arch: 'arm64' }
+  const dateOfRelease = (text: string): unknown => (JSON.parse(text) as { releases: Array<{ updateTo: { pub_date: unknown } }> }).releases[0]?.updateTo.pub_date
+
+  it('is the date of the run for the release the feed names, and only that: nothing else of the feed changes', () => {
+    const redated = feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD], new Date(NOW))
+    expect(dateOfRelease(redated)).toBe(NOW_DATE)
+    const plain = JSON.parse(unsignedFeedOf('1.0.1')) as { releases: Array<{ updateTo: Record<string, unknown> }> }
+    const back = JSON.parse(redated) as typeof plain & { withdrawn?: string[] }
+    delete back.withdrawn
+    back.releases[0]!.updateTo['pub_date'] = plain.releases[0]!.updateTo['pub_date']
+    expect(back).toEqual(plain)
+    // Without a date to give, the feed keeps its own, as it always did.
+    expect(dateOfRelease(feedWithWithdrawn(unsignedFeedOf('1.0.1'), [BAD]))).toBe('2026-11-20T09:00:00Z')
+  })
+
+  it('leaves the other releases of the feed alone', () => {
+    const two = JSON.stringify({ currentRelease: '1.0.1', releases: [{ version: '1.0.0', updateTo: { pub_date: '2026-01-01T00:00:00Z' } }, { version: '1.0.1', updateTo: { pub_date: '2026-11-20T09:00:00Z' } }] })
+    const redated = JSON.parse(feedWithWithdrawn(two, [], new Date(NOW))) as { releases: Array<{ updateTo: { pub_date: string } }> }
+    expect(redated.releases.map((release) => release.updateTo.pub_date)).toEqual(['2026-01-01T00:00:00Z', NOW_DATE])
+  })
+
+  it('makes the feed that goes back to an earlier version one that a copy that read the withdrawn version accepts', async () => {
+    const s = server()
+    const before = s.files['feed.json'] as string
+    // What a Mac that read the feed in place (dated 2026-11-20 here, so 1.0.2) keeps as its memory.
+    const memory = { [`${BASE}feed.json`]: Date.parse(dateOfRelease(before) as string) }
+    const kept = JSON.parse(feedOf('1.0.1')) as unknown
+    // The kept feed, put back as it was, is the replay a copy refuses: this is the bug the redating fixes.
+    expect(judgeFeedDate({ ok: true, json: { ...(kept as object), releases: JSON.parse(feedOf('1.0.1')).releases.map((r: { updateTo: object }) => ({ ...r, updateTo: { ...r.updateTo, pub_date: '2026-11-19T09:00:00Z' } })) } }, `${BASE}feed.json`, WINDOWS, memory).answer.ok).toBe(false)
+    expect(await withdraw(INPUT, s.deps)).toMatchObject({ ok: true, offered: 'earlier version' })
+    const written = JSON.parse(TEST_FEED_KEYS.signedPart(s.files['feed.json'] as string) as string) as unknown
+    const judged = judgeFeedDate({ ok: true, json: written }, `${BASE}feed.json`, WINDOWS, memory)
+    expect(judged.answer.ok).toBe(true)
+    expect(updateOutcome('1.0.2', `${BASE}feed.json`, judged.answer)).toMatchObject({ kind: 'withdrawn', newer: false })
+  })
+
+  it('is also the date of the feed that only gains a withdrawn version', async () => {
+    const s = server({ ...published(), 'feed.json': feedOf('1.0.1') })
+    expect(await withdraw(INPUT, s.deps)).toMatchObject({ ok: true, offered: 'unchanged' })
+    expect(dateOfRelease(TEST_FEED_KEYS.signedPart(s.files['feed.json'] as string) as string)).toBe(NOW_DATE)
+  })
+
+  it('stops, with nothing changed on the server, when the feed in place is dated after this run: no copy would take the feed written', async () => {
+    const s = server({ ...published(), 'feed.json': feedOf(BAD, { pub_date: '2026-12-01T00:00:00Z' }) })
+    const result = await withdraw(INPUT, s.deps)
+    expect(result).toMatchObject({ ok: false })
+    expect(result.ok ? '' : result.problem).toMatch(/is dated 2026-11-21T08:00:00Z, before the feed in place \(2026-12-01T00:00:00Z\)/)
+    expect(changes(s.scripts())).toHaveLength(0)
+  })
+
+  it('stops the same way, before anything is listed, when the feed in place offers another version and is dated after this run', async () => {
+    const s = server({ ...published(), 'feed.json': feedOf('1.0.1', { pub_date: '2026-12-01T00:00:00Z' }) })
+    const result = await withdraw(INPUT, s.deps)
+    expect(result).toMatchObject({ ok: false })
+    expect(result.ok ? '' : result.problem).toMatch(/before the feed in place \(2026-12-01T00:00:00Z\)/)
+    expect(changes(s.scripts())).toHaveLength(0)
+  })
+
+  it('is read as a date only in the format Squirrel parses; a feed with none gives no constraint', () => {
+    expect(feedDateOf(unsignedFeedOf('1.0.1'))).toBe(Date.parse('2026-11-20T09:00:00Z'))
+    for (const text of ['', '<html>', '[]', '{}', unsignedFeedOf('1.0.1', { pub_date: 'soon' }), unsignedFeedOf('1.0.1', { pub_date: undefined }), unsignedFeedOf('1.0.1', { pub_date: '2026-11-20T09:00:00.000Z' })]) {
+      expect(feedDateOf(text), text).toBeNull()
+    }
+  })
+
+  it('refuses a feed dated after the clock of this machine, beyond the minute between writing the date and reading the clock', () => {
+    const at = (date: string) => unsignedFeedOf('1.0.1', { pub_date: date })
+    const clock = new Date('2026-11-21T08:00:00Z')
+    expect(futureProblem(at('2026-11-21T08:05:00Z'), clock)).toMatch(/dated 2026-11-21T08:05:00Z, after the clock of this machine \(2026-11-21T08:00:00Z\)/)
+    expect(futureProblem(at('2026-11-21T08:01:01Z'), clock)).not.toBeNull()
+    expect(futureProblem(at('2026-11-21T08:01:00Z'), clock)).toBeNull()
+    expect(futureProblem(at('2026-11-21T08:00:00Z'), clock)).toBeNull()
+    expect(futureProblem(at('2026-01-01T00:00:00Z'), clock)).toBeNull()
+    expect(futureProblem('{}', clock)).toBeNull()
+  })
+
+  it('refuses a feed dated before the one in place, accepts the same date or a later one, and says nothing when a date is missing', () => {
+    const at = (date: string) => unsignedFeedOf('1.0.1', { pub_date: date })
+    expect(dateProblem(at('2026-11-20T09:00:00Z'), at('2026-11-19T09:00:00Z'))).toMatch(/dated 2026-11-19T09:00:00Z, before the feed in place \(2026-11-20T09:00:00Z\)/)
+    expect(dateProblem(at('2026-11-20T09:00:00Z'), at('2026-11-20T09:00:00Z'))).toBeNull()
+    expect(dateProblem(at('2026-11-20T09:00:00Z'), at('2026-11-21T09:00:00Z'))).toBeNull()
+    expect(dateProblem('', at('2026-11-19T09:00:00Z'))).toBeNull()
+    expect(dateProblem(at('2026-11-20T09:00:00Z'), '{}')).toBeNull()
   })
 })
