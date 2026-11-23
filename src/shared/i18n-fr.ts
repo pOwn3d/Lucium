@@ -5037,6 +5037,7 @@ export const fr = {
   'ui.recharger-l-interface': 'Recharger l’interface',
   'update-check.aucune-reponse': 'Aucune réponse',
   'update-check.l-adresse-du-flux-de-mises-a-jour-doit-commencer': 'L’adresse du flux de mises à jour doit commencer par https://',
+  'update-check.le-flux-de-mises-a-jour-est-plus-ancien-que-le-dernier-lu': 'Le flux de mises à jour est plus ancien que le dernier lu : il est refusé, aucune mise à jour n’est proposée.',
   'update-check.le-flux-de-mises-a-jour-est-trop-gros': 'Le flux de mises à jour dépasse {size} Ko : ce n’est pas un fichier de versions, il n’est pas lu.',
   'update-check.le-flux-de-mises-a-jour-a-redirige-vers-une': 'Le flux de mises à jour a redirigé vers une adresse non sécurisée (http://)',
   'update-check.le-flux-de-mises-a-jour-n-a-pas-de-signature-valide': 'Le flux de mises à jour n’a pas de signature valide : aucune mise à jour n’est proposée.',
