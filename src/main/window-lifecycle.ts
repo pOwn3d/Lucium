@@ -54,10 +54,12 @@ export interface DockClickPlan {
  * it ends on top and keeps the keyboard focus. The event also fires at launch: the windows are on screen already then and raising them changes nothing, and
  * a new window opens only when none is left, as `dockClickStep` says. A locked window comes back too: the lock screen covers it, it shows nothing more.
  */
-export function dockClickPlan(platform: string, windows: readonly DockWindowFacts[], lastUsedId: string): DockClickPlan {
+export function dockClickPlan(platform: string, windows: readonly DockWindowFacts[], lastUsedId: string, raiseAll = true): DockClickPlan {
   if (platform !== 'darwin') return { open: false, raise: [] }
   if (dockClickStep(windows) === 'open-window') return { open: true, raise: [] }
   const alive = windows.filter((win) => !win.destroyed)
+  // The setting `raiseAllWindows` off: the Dock brings back the last used window only, as before.
+  if (!raiseAll) return { open: false, raise: alive.filter((win) => win.id === lastUsedId).map((win) => win.id) }
   const rest = alive.filter((win) => win.id !== lastUsedId)
   const last = alive.filter((win) => win.id === lastUsedId)
   return { open: false, raise: [...rest, ...last].map((win) => win.id) }
@@ -70,8 +72,8 @@ export function dockClickPlan(platform: string, windows: readonly DockWindowFact
  * does, `dockClickPlan`), nor show a hidden or destroyed one, and a locked window is not unveiled (its lock screen covers it as before). The plan never gives
  * the focus away: whoever has it keeps it.
  */
-export function activationPlan(platform: string, windows: readonly DockWindowFacts[], focusedId: string | null): string[] {
-  if (platform !== 'darwin') return []
+export function activationPlan(platform: string, windows: readonly DockWindowFacts[], focusedId: string | null, raiseAll = true): string[] {
+  if (platform !== 'darwin' || !raiseAll) return []
   const shown = windows.filter((win) => !win.destroyed && win.visible && !win.minimized)
   return [...shown.filter((win) => win.id !== focusedId), ...shown.filter((win) => win.id === focusedId)].map((win) => win.id)
 }

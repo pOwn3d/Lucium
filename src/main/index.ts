@@ -642,7 +642,7 @@ async function main(): Promise<void> {
   openExternalUrl = links.openExternalUrl
   links.listen()
   // A click on the icon of the Dock brings the last window back, or the main window put away (shell/windows-wiring.ts).
-  followDockClicks(windowManager)
+  followDockClicks(windowManager, () => store.get().settings.raiseAllWindows)
   // Unpackaged extensions from the environment, and the debug aids below, only outside the built application: the dialog stays the way to add one there.
   const fromEnv = development.extensions
   const extensionPaths = [...new Set([...store.get().settings.extensionPaths, ...fromEnv])]

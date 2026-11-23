@@ -106,6 +106,8 @@ function WindowGroups({ snapshot, update }: PaneProps) {
           checked={settings.warnBeforeClosingWindow}
           onChange={(warnBeforeClosingWindow) => update({ warnBeforeClosingWindow })}
         />
+        {/* On by default (the behaviour since 1.1.8); off, the Dock and ⌘⇥ bring back the last used window only. macOS only: the Dock does not exist elsewhere. */}
+        <Check settingKey="raiseAllWindows" label={t('settings.amener-toutes-les-fenetres-au-premier-plan')} hint={t('settings.un-clic-sur-le-dock-ou-cmd-tab-ramene-toutes')} checked={settings.raiseAllWindows} onChange={(raiseAllWindows) => update({ raiseAllWindows })} />
         <Check settingKey="warnBeforeQuitting" label={t('settings.avertir-avant-de-quitter')} checked={settings.warnBeforeQuitting} onChange={(warnBeforeQuitting) => update({ warnBeforeQuitting })} />
       </Group>
     </>

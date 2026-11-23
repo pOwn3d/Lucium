@@ -1203,6 +1203,7 @@ export const NOT_OPTIONAL_SETTINGS: Partial<Record<BooleanSettingKey | 'blockTra
   focusScheduleOn: 'option du mode concentration (focus-mode) : la plage horaire hebdomadaire, en plus du minuteur',
   blockCosmetic: 'option de « Bloquer les publicités et les traqueurs » (block-ads), sans effet quand celui-ci est désactivé',
   blockTrackers: 'option de « Bloquer les publicités et les traqueurs » (block-ads), gardée comme alias explicite pour les traqueurs',
+  raiseAllWindows: 'option des fenêtres (macOS) : un clic sur le Dock ou ⌘⇥ ramène toutes les fenêtres de Lucium au premier plan ; allumée par défaut, comme avant ; coupée, seule la dernière fenêtre utilisée revient, et rien ne tourne de plus ou de moins (deux écouteurs de l’application, lus à chaque événement)',
   sleepSkipAudible: 'option de la mise en veille (sleep)',
   sleepSkipPinned: 'option de la mise en veille (sleep)',
   sleepNotify: 'option de la mise en veille (sleep)',

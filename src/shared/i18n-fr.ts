@@ -3884,6 +3884,8 @@ export const fr = {
   'settings.extension-non-empaquetee-dossier-avec-manifest-json': 'Extension non empaquetée (dossier avec manifest.json)',
   'settings.extensions': 'Extensions',
   'settings.faire-glisser-un-onglet-sur-la-page-pour': 'Glisser un onglet sur la page pour scinder',
+  'settings.amener-toutes-les-fenetres-au-premier-plan': 'Amener toutes les fenêtres au premier plan',
+  'settings.un-clic-sur-le-dock-ou-cmd-tab-ramene-toutes': 'Un clic sur le Dock ou le passage à Lucium ramène toutes ses fenêtres devant ; désactivé, seule la dernière revient.',
   'settings.autres-reglages-des-fenetres': 'Autres réglages des fenêtres',
   'settings.garde-avec-l-archive-jusqu-a-20-adresses': 'Garde jusqu’à 20 pages par onglet archivé : ⇧⌘T et l’archive rétablissent aussi le bouton Précédent. Un onglet dont la mémoire a été libérée, ou pas encore ouvert depuis le lancement, ne garde que son adresse. Les données de Lucium prennent un peu plus de place.',
   'settings.taille-minimale-du-texte-des-pages': 'Taille minimale du texte des pages',

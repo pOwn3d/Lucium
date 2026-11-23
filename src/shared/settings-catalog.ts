@@ -86,7 +86,7 @@ export const SETTINGS_KEYS = {
     'autoArchiveHours', 'tidyPinnedTitles', 'reopenHistory', 'backClosesOpenedTab',
     'tabStateBadges', 'tidyFoldersPosition',
     'dragToSplit', 'scrollSync', 'rememberScroll', 'autoPictureInPicture', 'sitePictureInPictureInLucium',
-    'restoreWindows', 'dragWindowFromToolbar', 'warnBeforeClosingWindow', 'warnBeforeQuitting'
+    'restoreWindows', 'dragWindowFromToolbar', 'raiseAllWindows', 'warnBeforeClosingWindow', 'warnBeforeQuitting'
   ],
   // Moteur de recherche · Propositions de la barre de commandes · Apparence · Recherches rapides · Recherche dans un site · Mots-clés des extensions
   // · Mini-fenêtre et Coup d’œil · Ouverture des liens

@@ -72,6 +72,14 @@ describe('a click on the Dock brings every window forward', () => {
     expect(dockClickPlan('darwin', [dockWin('main', { destroyed: true, visible: false })], 'main')).toEqual({ open: true, raise: [] })
   })
 
+  it('with the setting off, brings the last used window only', () => {
+    const windows = [dockWin('main'), dockWin('window-2', { minimized: true }), dockWin('private-1')]
+    expect(dockClickPlan('darwin', windows, 'window-2', false)).toEqual({ open: false, raise: ['window-2'] })
+    expect(dockClickPlan('darwin', [dockWin('main'), dockWin('window-2', { destroyed: true, visible: false })], 'window-2', false)).toEqual({ open: false, raise: [] })
+    // With every window gone it still opens a new one: the setting only limits what comes back.
+    expect(dockClickPlan('darwin', [], 'main', false)).toEqual({ open: true, raise: [] })
+  })
+
   it('is a macOS matter: the Dock does not exist elsewhere', () => {
     for (const platform of ['win32', 'linux']) expect(dockClickPlan(platform, [dockWin('main'), dockWin('window-2')], 'main'), platform).toEqual({ open: false, raise: [] })
   })
@@ -92,6 +100,10 @@ describe('switching to the application (⌘⇥, a click in a window) brings its 
 
   it('takes the list order when no listed window has the focus', () => {
     expect(activationPlan('darwin', [dockWin('main'), dockWin('window-2')], null)).toEqual(['main', 'window-2'])
+  })
+
+  it('with the setting off, moves nothing', () => {
+    expect(activationPlan('darwin', [dockWin('main'), dockWin('window-2')], 'main', false)).toEqual([])
   })
 
   it('is a macOS matter', () => {

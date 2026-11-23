@@ -104,8 +104,10 @@ export function openExtensionWindows({ browser, windows, little, windowManager }
  * The other ways in (⌘⇥, a click in one of the windows: `did-become-active`, which Electron emits at each activation) raise the windows that are on screen,
  * without restoring a minimized one, showing a hidden one, or taking the focus (`activationPlan`). Raising windows must not start an activation again: a
  * guard ignores the events that come while it runs and in the turn after it.
+ *
+ * `raiseAll` reads the setting `raiseAllWindows` at each event: off, the Dock brings back the last used window only and switching to the application moves nothing.
  */
-export function followDockClicks(windowManager: WindowManager): void {
+export function followDockClicks(windowManager: WindowManager, raiseAll: () => boolean = () => true): void {
   let raising = false
   const guarded = (run: () => void): void => {
     if (raising) return
@@ -126,14 +128,14 @@ export function followDockClicks(windowManager: WindowManager): void {
     guarded(() => {
       const records = windowManager.list()
       const focused = records.find((each) => !each.win.isDestroyed() && each.win.isFocused())
-      for (const id of activationPlan(process.platform, factsOf(records), focused?.id ?? null)) records.find((each) => each.id === id)?.win.moveTop()
+      for (const id of activationPlan(process.platform, factsOf(records), focused?.id ?? null, raiseAll())) records.find((each) => each.id === id)?.win.moveTop()
     })
   )
 
   app.on('activate', () =>
     guarded(() => {
       const records = windowManager.list()
-      const plan = dockClickPlan(process.platform, factsOf(records), windowManager.focused().id)
+      const plan = dockClickPlan(process.platform, factsOf(records), windowManager.focused().id, raiseAll())
       // Every window is gone (the application is quitting): nothing to bring back (newWindow answers null then).
       if (plan.open) return void windowManager.newWindow({ commandBar: false })
       const last = plan.raise.at(-1)
