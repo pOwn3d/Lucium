@@ -458,6 +458,8 @@ export function clampSettings(input: Settings): Settings {
     updateFeedUrl: /^https:\/\/\S+$/i.test(settings.updateFeedUrl.trim()) && !/\p{Cc}/u.test(settings.updateFeedUrl) ? settings.updateFeedUrl.trim().slice(0, 500) : '',
     // A word that is not « test » is the stable channel: a damaged file never puts a person on the channel that may carry defects.
     updateChannel: settings.updateChannel === 'test' ? 'test' : 'stable',
+    // Strictly `true`: a damaged value, a file without the field (every profile of the 1.1.5, whatever its `autoUpdate`) and an old switch left on all give OFF; no migration turns it on.
+    windowsAutoUpdate: settings.windowsAutoUpdate === true,
     updateNotices: cleanUpdateNotices(settings.updateNotices),
     autoArchiveHours: cleanDelay(settings.autoArchiveHours, defaults.autoArchiveHours),
     historyKeepDays: cleanKeepDays(settings.historyKeepDays),

@@ -102,7 +102,7 @@ export interface AboutEngine {
   chromium: string
   electron: string
   platform: string
-  /** This system has no update installer (Windows, Linux: shared/platform.ts, `updatesByHand`): the window says where to download the latest version instead of naming a setting. Absent on macOS. */
+  /** This system has no update installer (Linux: shared/platform.ts, `updatesByHand`): the window says where to download the latest version instead of naming a setting. Absent on macOS and Windows. */
   updatesByHand?: true
 }
 
@@ -115,8 +115,9 @@ export function aboutEngine(versions: { chrome?: unknown; electron?: unknown }, 
 }
 
 /**
- * The note under the button « Rechercher les mises à jour » of the About window. With a background look to switch (macOS, and while the engine is not
- * known yet) it says the button looks at once whether or not that switch is on; on Windows and Linux, which have no such switch, it says where the button leads.
+ * The note under the button « Rechercher les mises à jour » of the About window. With a background look to switch (macOS and Windows, which has its own switch, off
+ * by default, under the same name; and while the engine is not known yet) it says the button looks at once whether or not that switch is on; on Linux, which has
+ * none, it says where the button leads.
  */
 export function aboutCheckNote(engine: AboutEngine | null): string {
   return engine?.updatesByHand === true ? t('about-window.cette-version-ne-se-met-pas-a-jour') : t('about-window.cherche-maintenant-setting', { setting: t('features.rechercher-les-mises-a-jour-automatiquement') })

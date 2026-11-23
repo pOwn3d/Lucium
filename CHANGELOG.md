@@ -10,6 +10,11 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **Windows, updates from Lucium**: “Check for Updates…” reads the signed feed of Windows; after your click Lucium downloads the installer, keeps it only if its size and SHA-256 are the signed ones, and runs it silently after a second click. Nothing runs without your clicks.
+- **Windows, automatic check (off by default)**: a switch of its own in Settings › About and updates, off for everyone; switched on, Lucium asks lucium.app once a day whether a newer version exists. Nothing is downloaded without your click.
+
 ### Fixed
 
 - **Dock click or switching to Lucium brings every window forward**: on macOS, a click on Lucium's icon in the Dock brings all its windows to the front, minimized ones included; switching to Lucium with ⌘⇥ or a click raises the windows on screen too, without taking the focus.

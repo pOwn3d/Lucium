@@ -170,8 +170,9 @@ describe('« Réglages modifiés »', () => {
     expect(changed.length).toBeGreaterThan(100)
     const window = await open('#general', snapshotWith(settings), 'modified')
     const shown = new Set(shownKeys(window))
-    // A row drawn only in a build that carries a test channel; a row drawn only while the local translation is on (the switches are all flipped here).
-    const drawnOnlyWhen = new Set(['updateChannel', 'translateSystemEngine'])
+    // A row drawn only in a build that carries a test channel; a row drawn only while the local translation is on (the switches are all flipped here); the update
+    // switch of Windows, drawn on Windows alone (this window is a Mac's).
+    const drawnOnlyWhen = new Set(['updateChannel', 'translateSystemEngine', 'windowsAutoUpdate'])
     expect(changed.filter((key) => !shown.has(key) && !drawnOnlyWhen.has(key))).toEqual([])
   })
 

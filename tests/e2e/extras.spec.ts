@@ -150,16 +150,19 @@ test('auto-update: the feed of the updates is asked while on; off, it is never a
   const address = `${feed.origin}/feed.json`
   try {
     // The address of the feed has no control, and the interface may not send it (shared/ipc-policy.ts): it is written by hand in the state file,
-    // as the setting is meant to be, and the function is off from the launch on.
+    // as the setting is meant to be, and the function is off from the launch on. The switch of the function is the one of the system (shared/platform.ts,
+    // `autoUpdateKey`): `autoUpdate` on macOS and Linux, `windowsAutoUpdate` on Windows, where `autoUpdate` stays ON in this phase to show that it asks nothing.
+    const windows = process.platform === 'win32'
+    const key = windows ? 'windowsAutoUpdate' : 'autoUpdate'
     const dataDir = running.dataDir
     await waitForStateFile(dataDir)
     await running.close({ keepData: true })
-    editStateOnDisk(dataDir, (state) => Object.assign(state.settings, { autoUpdate: false, updateFeedUrl: address }))
+    editStateOnDisk(dataDir, (state) => Object.assign(state.settings, { autoUpdate: windows, windowsAutoUpdate: false, updateFeedUrl: address }))
     running = await launchLucium({ dataDir, args: ['--ignore-certificate-errors'] })
-    await waitForState(running.page, (s) => s.state.settings['updateFeedUrl'] === address && s.state.settings['autoUpdate'] === false, 'the feed of the state file, the function off')
+    await waitForState(running.page, (s) => s.state.settings['updateFeedUrl'] === address && s.state.settings[key] === false, 'the feed of the state file, the function off')
     await expectStays(() => feed.requests.map((request) => request.path), [], 'the feed is not asked while the function is off', 25_000)
 
-    await setSettings(running.page, { autoUpdate: true })
+    await setSettings(running.page, { [key]: true })
     await expect.poll(() => feed.requests.map((request) => request.path), { timeout: 40_000, intervals: [1000] }).toContain('/feed.json')
   } finally {
     await feed.close()

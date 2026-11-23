@@ -25,7 +25,7 @@ const STATUS_WORDS: Record<CheckStatus, MessageKey> = {
 /** The lines of the check as the page draws them, area by area. */
 export function SecurityCheck({ snapshot }: { snapshot: UiSnapshot }) {
   const { settings, sitePermissions } = snapshot.state
-  const rows = securityCheck({ settings, sitePermissions, extensions: snapshot.extensions, engine: snapshot.engine })
+  const rows = securityCheck({ settings, sitePermissions, extensions: snapshot.extensions, engine: snapshot.engine, platform: snapshot.platform })
   return (
     <>
       {CHECK_AREAS.map((area) => {

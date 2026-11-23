@@ -113,7 +113,7 @@ export const SETTINGS_SYNONYMS: Readonly<Record<string, readonly SearchTarget[]>
   mini: ['littleArcShortcut', 'externalLinksInLittleArc', 'littleArcArchiveHours', 'littleArcNewTabLinks', 'littleArcModifier', 'littleDownloadBubble'],
   // The timer button of the annotation bar changes the automatic clearing: the word on the bar finds its row.
   minuterie: ['annotateAutoClear', 'annotateAutoClearSeconds'],
-  'mise a jour': ['autoUpdate', 'updateChannel', 'webStoreUpdates', 'filterUpdateDays'],
+  'mise a jour': ['autoUpdate', 'windowsAutoUpdate', 'updateChannel', 'webStoreUpdates', 'filterUpdateDays'],
   'mot cle': ['siteSearches', 'searchBangs', 'omniboxKeywords'],
   'mot de passe': ['passwordManager', 'lockEnabled'],
   moteur: ['searchUrlTemplate', 'searchSuggestions'],
@@ -247,7 +247,7 @@ export const SETTINGS_SYNONYMS: Readonly<Record<string, readonly SearchTarget[]>
   launch: ['restoreWindows', 'loadAllTabsAtLaunch'],
   keyboard: ['keyBindings', 'vimKeys'],
   sidebar: ['sidebarRight', 'compactMode', 'sidebarOpacity', 'mediaPlayer'],
-  update: ['autoUpdate', 'updateChannel', 'webStoreUpdates', 'filterUpdateDays'],
+  update: ['autoUpdate', 'windowsAutoUpdate', 'updateChannel', 'webStoreUpdates', 'filterUpdateDays'],
   translation: ['translateLocal', 'translateTarget'],
   autoplay: ['autoplayPolicy', 'siteAutoplay']
 }

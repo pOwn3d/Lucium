@@ -38,7 +38,7 @@ export const PAGE_KEYS: ReadonlySet<SettingKey> = new Set<SettingKey>([
   // Fonctions en option: the page is the catalogue, every line of it at the top (one line a feature, its options under it), and has no fold
   ...SETTINGS_KEYS.features,
   // À propos et mises à jour
-  'autoUpdate', 'whatsNewSheet', 'appIcon'
+  'autoUpdate', 'windowsAutoUpdate', 'whatsNewSheet', 'appIcon'
 ])
 
 /**

@@ -173,26 +173,29 @@ describe('what the About window says of the engine', () => {
     expect(aboutEngine({}, 'freebsd').platform).toBe('freebsd')
   })
 
-  it('says on Windows and Linux, which have no update installer, that updates are by hand, and nothing on macOS (its answer keeps its three words)', () => {
+  it('says on Linux, which has no update installer, that updates are by hand; and nothing on macOS or Windows (their answer keeps its three words)', () => {
     expect(engine).not.toHaveProperty('updatesByHand')
-    expect(aboutEngine({}, 'win32').updatesByHand).toBe(true)
     expect(aboutEngine({}, 'linux').updatesByHand).toBe(true)
-    // The flag is not part of what a bug report copies.
+    expect(aboutEngine({}, 'win32')).not.toHaveProperty('updatesByHand')
+    expect(aboutEngine({}, 'win32')).toEqual({ chromium: '', electron: '', platform: 'Windows' })
+    // The flags are not part of what a bug report copies.
     expect(aboutReport('0.1.0', aboutEngine({ chrome: '156.0', electron: '45.2' }, 'linux'))).toBe('Lucium 0.1.0 · Chromium 156 · Electron 45 · Linux')
+    expect(aboutReport('0.1.0', aboutEngine({ chrome: '156.0', electron: '45.2' }, 'win32'))).toBe('Lucium 0.1.0 · Chromium 156 · Electron 45 · Windows')
   })
 
-  it('gives the note under « Rechercher les mises à jour » by system: the switch it ignores on macOS, where the latest version is on Windows and Linux', () => {
+  it('gives the note under « Rechercher les mises à jour » by system: the switch it ignores on macOS and on Windows (which has its own, off by default, under the same name), where the latest version is on Linux', () => {
     setLanguage('fr')
     const macNote = frenchSpaces('Ce bouton vérifie tout de suite, que « Rechercher les mises à jour automatiquement » soit activé ou non.')
     expect(aboutCheckNote(null)).toBe(macNote)
     expect(aboutCheckNote(engine)).toBe(macNote)
-    for (const system of ['win32', 'linux']) {
-      const note = aboutCheckNote(aboutEngine({}, system))
-      expect(note).toBe(frenchSpaces('Cette version ne se met pas à jour toute seule : ce bouton indique où télécharger la dernière.'))
-      expect(note).not.toContain('automatiquement')
-    }
+    const linux = aboutCheckNote(aboutEngine({}, 'linux'))
+    expect(linux).toBe(frenchSpaces('Cette version ne se met pas à jour toute seule : ce bouton indique où télécharger la dernière.'))
+    expect(linux).not.toContain('automatiquement')
+    // Windows has a switch of the same name (off by default): its note is the macOS one, and sends no one to a download page.
+    expect(aboutCheckNote(aboutEngine({}, 'win32'))).toBe(macNote)
     setLanguage('en')
-    expect(aboutCheckNote(aboutEngine({}, 'win32'))).toBe('This version doesn’t update by itself: this button shows where to download the latest one.')
+    expect(aboutCheckNote(aboutEngine({}, 'linux'))).toBe('This version doesn’t update by itself: this button shows where to download the latest one.')
+    expect(aboutCheckNote(aboutEngine({}, 'win32'))).toBe('Checks right away, whether or not “Check for updates automatically” is on.')
     expect(aboutCheckNote(engine)).toBe('Checks right away, whether or not “Check for updates automatically” is on.')
     setLanguage('fr')
   })

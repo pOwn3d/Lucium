@@ -1400,6 +1400,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'full-url': 'fast',
   'window-drag': 'organise',
   'auto-update': 'protect',
+  'auto-update-windows': 'protect',
   'warn-quit': 'protect',
   'restore-windows': 'organise',
   'sidebar-right': 'organise',

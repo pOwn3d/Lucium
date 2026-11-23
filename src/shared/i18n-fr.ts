@@ -7022,4 +7022,13 @@ export const fr = {
   'discover.verification-nom': 'Vérification de sécurité',
   'discover.verification-resume': 'Une page qui relit, sans rien changer, ce qui protège votre navigation : extensions, autorisations des sites, protections, mises à jour et coffre, avec ce qui mérite un coup d’œil.',
   'discover.verification-ou': 'Dans {path}, la ligne « Vérification de sécurité ».',
+  'windows-update.le-fichier-telecharge-ne-correspond-pas': 'Le fichier téléchargé ne correspond pas à ce que le flux signé annonce (taille ou somme SHA-256) : il a été supprimé et n’a pas été lancé. Rien n’a été installé.',
+  'windows-update.le-fichier-n-a-pas-pu-etre-enregistre': 'Le fichier de la mise à jour n’a pas pu être enregistré dans le dossier temporaire de Lucium : vérifiez la place disponible, puis réessayez.',
+  'windows-update.le-flux-ne-decrit-pas-un-installeur': 'Le flux de mises à jour ne décrit pas un installeur que Lucium peut vérifier (adresse https, somme SHA-256 et taille) : rien n’a été téléchargé.',
+  'windows-update.l-installeur-n-a-pas-pu-etre-lance': 'L’installeur n’a pas pu être lancé : Lucium reste ouvert et rien n’a été remplacé.',
+  'windows-update.lucium-se-ferme-l-installeur-le-remplace': 'Lucium se ferme, l’installeur le remplace par la version {version}, puis Lucium se rouvre avec vos espaces et vos onglets. Les fenêtres privées et les téléchargements en cours ne sont pas gardés. Rien n’est lancé sans ce clic.',
+  'features.rechercher-les-mises-a-jour-automatiquement-windows': 'Rechercher les mises à jour automatiquement (Windows)',
+  'features.lit-le-fichier-des-versions-signe-de-windows': 'Sous Windows, demande à lucium.app, sans cookie, 20 s après le lancement puis une fois par jour, s’il existe une version plus récente, et le dit dans une notice. Éteinte par défaut. Ne télécharge rien sans votre clic.',
+  'settings.windows-recherche-automatique-eteinte-par-defaut': 'Éteint par défaut. Allumé, Lucium demande chaque jour à lucium.app s’il existe une nouvelle version ; rien n’est téléchargé sans votre clic.',
+  'settings.windows-recherche-automatique-ce-qui-est-envoye': 'Éteint par défaut : sans cette case, Lucium n’envoie aucune requête de lui-même. Allumé, 20 s après le lancement puis une fois par jour, Lucium envoie une requête à lucium.app pour lire le fichier signé des versions de Windows. Elle ne porte ni cookie ni identifiant ; le serveur voit votre adresse IP et la version de Lucium. Si une version plus récente existe, une notice le dit au pied de la barre latérale ; rien n’est téléchargé avant votre clic sur « Installer ». « Rechercher les mises à jour… » cherche toujours à votre demande, case cochée ou non.',
 } as const

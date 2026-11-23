@@ -38,7 +38,7 @@ describe('the rows at the top of their page', () => {
       profiles: ['profileNames', 'profiles'],
       // The catalogue is drawn whole: every line of it at the top, and no fold.
       features: [...SETTINGS_KEYS.features],
-      about: ['autoUpdate', 'whatsNewSheet', 'appIcon']
+      about: ['autoUpdate', 'windowsAutoUpdate', 'whatsNewSheet', 'appIcon']
     })
     // The variants of a setting, the regular expressions, the measures, what is right by default: in the fold.
     for (const key of ['forceReduceMotion', 'blockScriptlets', 'blockMode', 'panelSizes', 'webStoreInstall'] as const) {

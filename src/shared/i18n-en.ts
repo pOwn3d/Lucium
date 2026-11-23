@@ -7018,4 +7018,13 @@ export const en: Record<MessageKey, string> = {
   'discover.verification-nom': 'Security check',
   'discover.verification-resume': 'A page that reads again, changing nothing, what protects your browsing: extensions, site permissions, protections, updates and the vault, with what is worth a look.',
   'discover.verification-ou': 'In {path}, the “Security check” row.',
+  'windows-update.le-fichier-telecharge-ne-correspond-pas': 'The downloaded file doesn’t match what the signed feed announces (size or SHA-256 sum): it was deleted and not run. Nothing was installed.',
+  'windows-update.le-fichier-n-a-pas-pu-etre-enregistre': 'The update file couldn’t be saved in Lucium’s temporary folder: check the free space, then try again.',
+  'windows-update.le-flux-ne-decrit-pas-un-installeur': 'The update feed doesn’t describe an installer Lucium can check (https address, SHA-256 sum and size): nothing was downloaded.',
+  'windows-update.l-installeur-n-a-pas-pu-etre-lance': 'The installer couldn’t be started: Lucium stays open and nothing was replaced.',
+  'windows-update.lucium-se-ferme-l-installeur-le-remplace': 'Lucium quits, the installer replaces it with version {version}, then Lucium opens again with your Spaces and tabs. Private windows and downloads in progress are not kept. Nothing runs without this click.',
+  'features.rechercher-les-mises-a-jour-automatiquement-windows': 'Check for updates automatically (Windows)',
+  'features.lit-le-fichier-des-versions-signe-de-windows': 'On Windows, asks lucium.app, with no cookie, 20 s after launch then once a day, whether a newer version exists, and says so in a notice. Off by default. Downloads nothing without your click.',
+  'settings.windows-recherche-automatique-eteinte-par-defaut': 'Off by default. When on, Lucium asks lucium.app once a day whether a new version exists; nothing is downloaded until you click.',
+  'settings.windows-recherche-automatique-ce-qui-est-envoye': 'Off by default: without this box, Lucium sends no request by itself. When on, 20 s after launch then once a day, Lucium sends one request to lucium.app to read the signed release file for Windows. It carries no cookie and no identifier; the server sees your IP address and Lucium’s version. When a newer version exists, a notice says so at the foot of the sidebar; nothing is downloaded before you click “Install”. “Check for Updates…” still looks when you ask, whether the box is checked or not.',
 } as const

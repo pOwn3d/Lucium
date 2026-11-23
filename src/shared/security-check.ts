@@ -4,6 +4,7 @@
 //
 // Pure: the page (src/renderer/SecurityCheck.tsx) draws what this gives. The words are keys of the catalogues, read when the page is drawn.
 
+import { autoUpdateKey, autoUpdateOn } from './platform'
 import { adsBlockingOn } from './blocker'
 import { tp, t, type MessageKey } from './i18n'
 import type { EngineInfo, ExtensionInfo } from './ipc'
@@ -34,6 +35,8 @@ export interface SecurityFacts {
   sitePermissions: Readonly<Record<string, Readonly<Record<string, PermissionDecision>>>>
   extensions: ReadonlyArray<Pick<ExtensionInfo, 'id' | 'enabled' | 'source' | 'update'>>
   engine?: Pick<EngineInfo, 'name' | 'version'>
+  /** The system the application runs on (`snapshot.platform`): it says which switch of the automatic check is the person's (shared/platform.ts, `autoUpdateOn`). Absent, the macOS one. */
+  platform?: string
 }
 
 /** The permissions that give a site a view of the person or of the screen: a remembered « allow » for one of them is worth a second look. */
@@ -93,7 +96,11 @@ export function securityCheck(facts: SecurityFacts): CheckRow[] {
   rows.push(switched('protection', settings.reduceFingerprint, 'prot-fingerprint', 'security-check.prot-fingerprint-on', 'security-check.prot-fingerprint-off', 'protection'))
 
   // Updates: whether the automatic check is switched on (it makes no request in a build that has no feed address, so the line promises no frequency), and the version that runs.
-  rows.push(switched('updates', settings.autoUpdate, 'upd-auto', 'security-check.upd-auto-on', 'security-check.upd-auto-off', 'autoUpdate'))
+  // On Windows the line reads that system's own switch, which is off by default: off is a choice there, said without asking for a look.
+  const updateOn = autoUpdateOn(settings, facts.platform)
+  // `where` is the place of « Mises à jour »: the Windows switch is on the same page as the other one.
+  const updateRow = switched('updates', updateOn, 'upd-auto', 'security-check.upd-auto-on', 'security-check.upd-auto-off', 'autoUpdate')
+  rows.push(!updateOn && autoUpdateKey(facts.platform) === 'windowsAutoUpdate' ? { ...updateRow, status: 'info' } : updateRow)
   if (facts.engine) rows.push({ id: 'upd-version', area: 'updates', status: 'info', text: t('security-check.upd-version', { name: facts.engine.name, version: facts.engine.version }) })
 
   // The vault: said only when the password manager is on; its lock and its fingerprint at each fill.

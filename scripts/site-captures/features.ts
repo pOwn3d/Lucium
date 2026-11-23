@@ -634,6 +634,18 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
     '“Set up in a few questions”, started from Settings › Start here: the privacy question “What to block while you browse?”'
   )),
   setting('fn-auto-update', 'auto-update', t('Rechercher les mises à jour automatiquement', 'Check for updates automatically'), 'about', 'autoUpdate', { why: background }),
+  // The same look for Windows alone (off by default): its row is drawn on Windows only, and the demonstration runs on macOS.
+  {
+    card: 'fn-auto-update-windows',
+    feature: 'auto-update-windows',
+    title: t('Rechercher les mises à jour automatiquement (Windows)', 'Check for updates automatically (Windows)'),
+    evidence: 'none',
+    alt: t(
+      'Réglages › À propos et mises à jour : la ligne « Rechercher les mises à jour automatiquement », éteinte, sous Windows',
+      'Settings › About and updates: the “Check for updates automatically” row, switched off, on Windows'
+    ),
+    todo: 'sa ligne des Réglages n’est dessinée que sous Windows, et la démonstration tourne sous macOS : pas de capture juste ici'
+  },
   // The demonstration never asks before quitting (demo.ts): the row shows the default; it is put back before the application quits.
   setting('fn-warn-quit', 'warn-quit', t('Avertir avant de quitter', 'Warn before quitting'), 'tabs', 'warnBeforeQuitting', { patch: { warnBeforeQuitting: true }, why: 'agit au moment de quitter' }),
   setting('fn-restore-windows', 'restore-windows', t('Rouvrir les fenêtres de la session précédente', 'Reopen windows from the previous session'), 'tabs', 'restoreWindows', { label: t('Quand vous ouvrez Lucium', 'When you open Lucium'), choice: t('Rouvrir mes fenêtres, charger l’onglet affiché', 'Reopen my windows, load the tab shown'), patch: { loadAllTabsAtLaunch: false }, why: 'agit au lancement suivant' }),

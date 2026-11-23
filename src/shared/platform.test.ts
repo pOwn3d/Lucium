@@ -18,6 +18,8 @@ import {
   revealLabel,
   settingsLink,
   splitPathList,
+  autoUpdateKey,
+  autoUpdateOn,
   updatesByHand,
   usesCtrlAlt,
   WINDOWS_DEFAULTS
@@ -37,9 +39,9 @@ describe('platformOf', () => {
 })
 
 describe('updatesByHand: which systems have no update installer', () => {
-  it('is false on macOS, which installs an update itself (Squirrel.Mac), and true on Windows and Linux, which carry no update address', () => {
+  it('is false on macOS (Squirrel.Mac) and on Windows (the NSIS installer of the signed feed), and true on Linux, which has none yet', () => {
     expect(updatesByHand('darwin')).toBe(false)
-    expect(updatesByHand('win32')).toBe(true)
+    expect(updatesByHand('win32')).toBe(false)
     expect(updatesByHand('linux')).toBe(true)
   })
 
@@ -51,13 +53,45 @@ describe('updatesByHand: which systems have no update installer', () => {
   })
 })
 
+describe('autoUpdateKey and autoUpdateOn: which switch commands the look for an update by itself', () => {
+  it('is the Windows switch on Windows alone; every other system, a non-system value included, reads autoUpdate', () => {
+    expect(autoUpdateKey('win32')).toBe('windowsAutoUpdate')
+    expect(autoUpdateKey('darwin')).toBe('autoUpdate')
+    expect(autoUpdateKey('linux')).toBe('autoUpdate')
+    expect(autoUpdateKey('freebsd')).toBe('autoUpdate')
+    for (const value of [undefined, null, 42]) expect(autoUpdateKey(value)).toBe('autoUpdate')
+  })
+
+  it('reads on Windows the Windows switch alone: the old autoUpdate, true without having been chosen, turns nothing on', () => {
+    expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: false }, 'win32')).toBe(false)
+    expect(autoUpdateOn({ autoUpdate: false, windowsAutoUpdate: true }, 'win32')).toBe(true)
+    expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: true }, 'win32')).toBe(true)
+  })
+
+  it('reads elsewhere autoUpdate alone: the Windows switch turns nothing on', () => {
+    for (const platform of ['darwin', 'linux', undefined]) {
+      expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: false }, platform), String(platform)).toBe(true)
+      expect(autoUpdateOn({ autoUpdate: false, windowsAutoUpdate: true }, platform), String(platform)).toBe(false)
+    }
+  })
+
+  it('counts only a real true: a value that is not a boolean is off', () => {
+    expect(autoUpdateOn({ autoUpdate: true, windowsAutoUpdate: 'true' as unknown as boolean }, 'win32')).toBe(false)
+    expect(autoUpdateOn({ autoUpdate: 1 as unknown as boolean, windowsAutoUpdate: false }, 'darwin')).toBe(false)
+  })
+})
+
 describe('facts', () => {
   it('give macOS everything that was written for it, and the other systems none of the macOS-only ones', () => {
-    for (const key of ['trafficLights', 'vibrancy', 'dock', 'touchId', 'globalMenuBar', 'openWithBundle', 'settingsLinks', 'shareSheet', 'openUrlEvent', 'screenRecordingPermission', 'importSafari', 'importArc', 'selfUpdate'] as const) {
+    for (const key of ['trafficLights', 'vibrancy', 'dock', 'touchId', 'globalMenuBar', 'openWithBundle', 'settingsLinks', 'shareSheet', 'openUrlEvent', 'screenRecordingPermission', 'importSafari', 'importArc'] as const) {
       expect(PLATFORM_FACTS.darwin[key], `darwin ${key}`).toBe(true)
       expect(PLATFORM_FACTS.win32[key], `win32 ${key}`).toBe(false)
       expect(PLATFORM_FACTS.linux[key], `linux ${key}`).toBe(false)
     }
+  })
+
+  it('give an installer to macOS and Windows, and none to Linux yet', () => {
+    expect(PLATFORM_IDS.map((id) => PLATFORM_FACTS[id].selfUpdate)).toEqual([true, true, false])
   })
 
   it('leave the spell checker off by default where it would download dictionaries from Chromium’s CDN', () => {

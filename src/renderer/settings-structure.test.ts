@@ -89,7 +89,9 @@ const variants = (): UiSnapshot[] => [
     updateTestChannel: true
   } as Partial<UiSnapshot>),
   // A container exists, the encrypted DNS is a server of one's own, an application is remembered for a type of file: the rows that wait for them are drawn.
-  snapshotWith({ tabContainers: true, containers: [{ id: 'c1', name: 'Travail', color: 'blue' }], dohCustom: true, dohProvider: 'custom', openWithMemory: true, openWithApps: { pdf: '/Applications/Preview.app' } } as unknown as Partial<Settings>)
+  snapshotWith({ tabContainers: true, containers: [{ id: 'c1', name: 'Travail', color: 'blue' }], dohCustom: true, dohProvider: 'custom', openWithMemory: true, openWithApps: { pdf: '/Applications/Preview.app' } } as unknown as Partial<Settings>),
+  // Windows: the row of its own update switch is drawn there, and in place of the one of macOS.
+  snapshotWith({}, { platform: 'win32' })
 ]
 
 /** The category drawn whole (the test of the map wants every row), or one of its parts: its top, its fold « Plus de réglages », or one of its subpages. */
@@ -268,22 +270,49 @@ describe('what the categories draw', () => {
     expect(update.mock.calls).toEqual([[{ updateChannel: 'test' }], [{ updateChannel: 'stable' }]])
   })
 
-  it('draws no « Rechercher les mises à jour automatiquement » switch on Windows and Linux, which install nothing, but a sentence that says how an update is made; macOS keeps the switch', () => {
-    const sentence = frenchSpaces('Cette version ne se met pas à jour toute seule : téléchargez la dernière sur lucium.app.')
-    for (const platform of ['win32', 'linux']) {
-      const html = markup('about', snapshotWith({}, { platform }))
-      expect(html, platform).not.toContain('data-setting="autoUpdate"')
-      expect(html, platform).not.toContain('Rechercher les mises à jour automatiquement')
-      expect(html, platform).toContain(sentence)
-      // The rest of the group is where it was.
-      expect(html, platform).toContain('data-setting="whatsNewSheet"')
-    }
+  it('draws the macOS switch of the daily look on macOS, a switch of its own on Windows (off by default, the macOS one never drawn there), and a sentence on Linux', () => {
+    const linux = frenchSpaces('Cette version ne se met pas à jour toute seule : téléchargez la dernière sur lucium.app.')
+    // macOS, and a snapshot that does not say its system: the switch it always had, and no switch of Windows.
     for (const extra of [{ platform: 'darwin' }, {}]) {
       const html = markup('about', snapshotWith({}, extra))
       expect(html).toContain('data-setting="autoUpdate"')
+      expect(html).not.toContain('data-setting="windowsAutoUpdate"')
       expect(html).toContain('Rechercher les mises à jour automatiquement')
-      expect(html).not.toContain(sentence)
+      expect(html).not.toContain(linux)
     }
+    // Windows: its own switch under the same name, never the macOS one, and nothing says it looks only on demand any more.
+    const win = markup('about', snapshotWith({}, { platform: 'win32' }))
+    expect(win).toContain('data-setting="windowsAutoUpdate"')
+    expect(win).not.toContain('data-setting="autoUpdate"')
+    expect(win).toContain('Rechercher les mises à jour automatiquement')
+    expect(win).not.toContain(linux)
+    expect(win).not.toContain('jamais de lui-même')
+    // Its help says what is sent and that it is off by default.
+    expect(win).toContain(frenchSpaces('Éteint par défaut. Allumé, Lucium demande chaque jour à lucium.app s’il existe une nouvelle version ; rien n’est téléchargé sans votre clic.'))
+    expect(win).toContain('Lucium envoie une requête à lucium.app')
+    expect(win).toContain(frenchSpaces('Éteint par défaut : sans cette case, Lucium n’envoie aucune requête de lui-même.'))
+    // The rest of the group is where it was.
+    expect(win).toContain('data-setting="whatsNewSheet"')
+    // Linux: a sentence, no switch, and nothing of Windows.
+    const lin = markup('about', snapshotWith({}, { platform: 'linux' }))
+    expect(lin).not.toContain('data-setting="autoUpdate"')
+    expect(lin).not.toContain('data-setting="windowsAutoUpdate"')
+    expect(lin).not.toContain('Rechercher les mises à jour automatiquement')
+    expect(lin).toContain(linux)
+    expect(lin).toContain('data-setting="whatsNewSheet"')
+  })
+
+  it('shows the Windows switch off by default and on once chosen, and writes only windowsAutoUpdate (never autoUpdate)', () => {
+    const row = (html: string): string => html.split('data-setting="windowsAutoUpdate"')[1]!.split('data-setting=')[0]!
+    expect(row(markup('about', snapshotWith({}, { platform: 'win32' })))).not.toContain('checked=""')
+    // The old switch, on in every profile of the 1.1.5, does not check the new one.
+    expect(row(markup('about', snapshotWith({ autoUpdate: true }, { platform: 'win32' })))).not.toContain('checked=""')
+    expect(row(markup('about', snapshotWith({ windowsAutoUpdate: true }, { platform: 'win32' })))).toMatch(/role="switch"[^>]*checked=""/)
+    const update = vi.fn()
+    const found = elementsOfCategory('about', snapshotWith({}, { platform: 'win32' }), update).find((element) => element.props['settingKey'] === 'windowsAutoUpdate')
+    ;(found?.props['onChange'] as (on: boolean) => void)(true)
+    ;(found?.props['onChange'] as (on: boolean) => void)(false)
+    expect(update.mock.calls).toEqual([[{ windowsAutoUpdate: true }], [{ windowsAutoUpdate: false }]])
   })
 
   it('no longer sends anyone to Profils, or from Profils to Vie privée, for a setting that has its row in its own category', () => {
