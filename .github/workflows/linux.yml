@@ -158,6 +158,11 @@ jobs:
           # The test files stay out of the package (electron-builder.yml, `files`).
           if grep -q 'out/main/smoke' "$RUNNER_TEMP/deb-contents.txt"; then echo "::error::the package carries an engine test"; exit 1; fi
           file dist/*-UNSIGNED-check-build.AppImage
+          # The AppImage starts with a runtime (the ELF in front of the squashfs). The legacy one listed `libz.so` (no version: only zlib1g-dev has it) on arm64, and
+          # a machine without it printed "error while loading shared libraries" and showed nothing. This runner has zlib1g-dev, so starting the file below cannot
+          # see that: the list of libraries the runtime asks for is read here, and the static runtime (electron-builder toolsets.appimage) asks for none.
+          needed="$(readelf -d dist/*-UNSIGNED-check-build.AppImage | awk '/\(NEEDED\)/ { print $NF }')"
+          if [ -n "$needed" ]; then echo "$needed"; echo "::error::the AppImage runtime asks for shared libraries of the system"; exit 1; fi
           sha256sum dist/*-UNSIGNED-check-build.*
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

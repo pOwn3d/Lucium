@@ -13,6 +13,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 ### Fixed
 
 - **Windows and Linux, opening a file from outside Lucium**: a file named by the launch (double-click, “Open with”) now opens in a tab, and network paths (`\\server\share`) are refused; Lucium also says when it cannot tell whether it is the default browser instead of guessing.
+- **Linux AppImage starts without extra packages**: the arm64 AppImage printed “error while loading shared libraries: libz.so” and showed nothing on an Ubuntu without the zlib1g-dev package. It is now packed with a static runtime that asks the system for no library.
 
 ### Added
 

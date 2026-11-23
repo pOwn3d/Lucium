@@ -1,4 +1,6 @@
+import { execFileSync } from 'node:child_process'
 import { readdirSync, readFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { REPOSITORY_URL } from '@shared/about'
@@ -117,6 +119,18 @@ describe('.github/workflows/linux.yml', () => {
     expect(workflow).toMatch(/name: lucium-linux-\$\{\{ matrix\.arch \}\}-UNSIGNED-check-build\n {10}path: dist\/\*-UNSIGNED-check-build\.\*\n {10}if-no-files-found: error\n {10}retention-days: 7\n/)
   })
 
+  // Beta 1.1.7: the arm64 AppImage printed "error while loading shared libraries: libz.so" on an Ubuntu without zlib1g-dev, because its runtime lists the
+  // library without a version. The runner has the package, so starting the file passes: only the list of libraries can show it.
+  it('fails when the runtime of the AppImage asks for a library of the system', () => {
+    const step = /needed="\$\(readelf -d dist\/\*-UNSIGNED-check-build\.AppImage \| awk '([^']+)'\)"\n\s+if \[ -n "\$needed" \]; then [^\n]*exit 1; fi\n\s+sha256sum /.exec(workflow)
+    expect(step, 'the step that reads the libraries of the runtime').not.toBeNull()
+    // The program is the one the runner runs, applied to what `readelf -d` prints: the legacy arm64 runtime, then a static one (no NEEDED line).
+    const libraries = (readelf: string): string => execFileSync('awk', [step![1]!], { input: readelf, encoding: 'utf8' }).trim()
+    const header = ' 0x000000000000000c (INIT)               0x400\n 0x000000000000001d (RUNPATH)            Library runpath: [/deps/lib]\n'
+    expect(libraries(` 0x0000000000000001 (NEEDED)             Shared library: [libpthread.so.0]\n 0x0000000000000001 (NEEDED)             Shared library: [libz.so]\n${header}`)).toBe('[libpthread.so.0]\n[libz.so]')
+    expect(libraries(header)).toBe('')
+  })
+
   it('fails when the deb carries a file writable by group or others', () => {
     expect(workflow).toContain(`writable="$(awk 'substr($1, 6, 1) == "w" || substr($1, 9, 1) == "w" { print $1, $6 }' "$RUNNER_TEMP/deb-contents.txt")"`)
     expect(workflow).toMatch(/if \[ -n "\$writable" \]; then [^\n]*exit 1; fi/)
@@ -229,6 +243,18 @@ describe('electron-builder.yml', () => {
   it('gives the Linux package a synopsis: the .deb description starts with it, and an empty one is shown as nothing', () => {
     const linux = config.slice(config.indexOf('\nlinux:'))
     expect(linux).toMatch(/^ {2}synopsis: \S.*\S$/m)
+  })
+
+  // Beta 1.1.7: the legacy toolset (the default) gives the arm64 AppImage a runtime that needs `libz.so`, so it did not start on an Ubuntu 24.04 without
+  // zlib1g-dev. The static runtime lists no library, and its version is one electron-builder knows a checksum for (it refuses a download it cannot verify).
+  it('packs the AppImage with the static runtime, not the legacy one that asks the system for libz.so', () => {
+    const version = /^toolsets:\n {2}appimage: '(\d+\.\d+\.\d+)'$/m.exec(config)?.[1]
+    expect(version, 'toolsets.appimage').toBeDefined()
+    expect(version).not.toBe('0.0.0')
+    const builderToolsets = createRequire(createRequire(import.meta.url).resolve('electron-builder/package.json'))('app-builder-lib/out/toolsets/linux.js') as {
+      appimageChecksums: Record<string, Record<string, string>>
+    }
+    expect(Object.keys(builderToolsets.appimageChecksums[version!] ?? {})).toEqual(['appimage-tools-runtime-20251108.tar.gz'])
   })
 
   it('keeps what the macOS build had: unsigned, the directory target first, the fuses', () => {

@@ -7,6 +7,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 ### Corrections
 
 - **Windows et Linux, ouvrir un fichier depuis l’extérieur de Lucium** : un fichier nommé au lancement (double-clic, « Ouvrir avec ») s’ouvre dans un onglet, et les chemins réseau (`\\serveur\partage`) sont refusés ; Lucium dit aussi quand il ne peut pas savoir s’il est le navigateur par défaut, au lieu de deviner.
+- **L’AppImage Linux démarre sans paquet en plus** : l’AppImage arm64 affichait « error while loading shared libraries: libz.so » et rien d’autre sur un Ubuntu sans le paquet zlib1g-dev. Elle est maintenant empaquetée avec un runtime statique, qui ne demande aucune bibliothèque au système.
 
 ### Ajouts
 
