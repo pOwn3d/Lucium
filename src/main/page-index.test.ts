@@ -86,7 +86,8 @@ describe('PageIndexBook', () => {
     expect(book.of('default').size()).toBe(0)
     expect(existsSync(path)).toBe(false)
     expect(readdirSync(d).filter((name) => name.startsWith('page-index.json.corrupt-'))).toHaveLength(1)
-  })
+    // Writes a file of the size of the bound, which is slow on a loaded Windows runner (it timed out at the default 5 s there).
+  }, 30_000)
   it('sets aside a file it cannot read and starts again from none', () => {
     const d = dir()
     writeFileSync(join(d, 'page-index.json'), '{not json')
