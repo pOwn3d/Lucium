@@ -6,7 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Corrections
 
-- **Clic sur le Dock : toutes les fenêtres au premier plan** : sur macOS, un clic sur l'icône de Lucium dans le Dock ramène désormais toutes ses fenêtres devant, y compris celles cachées derrière une autre application ou minimisées ; la dernière utilisée reste dessus et garde le focus.
+- **Clic sur le Dock ou passage à Lucium : toutes les fenêtres au premier plan** : sur macOS, un clic sur l'icône du Dock ramène toutes les fenêtres devant, minimisées comprises ; passer à Lucium par ⌘⇥ ou un clic remonte aussi les fenêtres affichées, sans prendre le focus.
 
 ## [1.1.7] - 2026-11-23
 

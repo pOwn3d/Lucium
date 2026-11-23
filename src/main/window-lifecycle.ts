@@ -62,3 +62,16 @@ export function dockClickPlan(platform: string, windows: readonly DockWindowFact
   const last = alive.filter((win) => win.id === lastUsedId)
   return { open: false, raise: [...rest, ...last].map((win) => win.id) }
 }
+
+/**
+ * What switching to the application does to its windows (macOS, the `did-become-active` event: ⌘⇥, a click in a window, the Dock). Every window that is on
+ * screen comes forward, so that the windows of Lucium appear together as those of the other applications do; the window that has the focus (or, with none,
+ * the last one of the list) goes last, so that it stays on top. Only what is already shown moves: the switcher does not restore a minimized window (the Dock click
+ * does, `dockClickPlan`), nor show a hidden or destroyed one, and a locked window is not unveiled (its lock screen covers it as before). The plan never gives
+ * the focus away: whoever has it keeps it.
+ */
+export function activationPlan(platform: string, windows: readonly DockWindowFacts[], focusedId: string | null): string[] {
+  if (platform !== 'darwin') return []
+  const shown = windows.filter((win) => !win.destroyed && win.visible && !win.minimized)
+  return [...shown.filter((win) => win.id !== focusedId), ...shown.filter((win) => win.id === focusedId)].map((win) => win.id)
+}

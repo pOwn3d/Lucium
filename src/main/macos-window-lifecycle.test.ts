@@ -1,6 +1,6 @@
 // On macOS the application keeps running when its last window closes, and a click on the Dock opens a window.
 import { describe, expect, it } from 'vitest'
-import { dockClickPlan, dockClickStep, lastWindowClosedStep, mainCloseStep, type DockWindowFacts, type WindowFacts } from './window-lifecycle'
+import { activationPlan, dockClickPlan, dockClickStep, lastWindowClosedStep, mainCloseStep, type DockWindowFacts, type WindowFacts } from './window-lifecycle'
 
 const win = (patch: Partial<WindowFacts> = {}): WindowFacts => ({ destroyed: false, visible: true, minimized: false, ...patch })
 
@@ -74,5 +74,27 @@ describe('a click on the Dock brings every window forward', () => {
 
   it('is a macOS matter: the Dock does not exist elsewhere', () => {
     for (const platform of ['win32', 'linux']) expect(dockClickPlan(platform, [dockWin('main'), dockWin('window-2')], 'main'), platform).toEqual({ open: false, raise: [] })
+  })
+})
+
+describe('switching to the application (⌘⇥, a click in a window) brings its windows forward', () => {
+  it('raises every window on screen, the one that has the focus last so that it stays on top', () => {
+    const windows = [dockWin('main'), dockWin('window-2'), dockWin('private-1')]
+    expect(activationPlan('darwin', windows, 'window-2')).toEqual(['main', 'private-1', 'window-2'])
+    expect(activationPlan('darwin', windows, 'main')).toEqual(['window-2', 'private-1', 'main'])
+  })
+
+  it('leaves the minimized, the hidden and the destroyed windows as they are (the switcher does not restore them, the Dock click does)', () => {
+    const windows = [dockWin('main'), dockWin('window-2', { minimized: true }), dockWin('private-1', { visible: false }), dockWin('guest-1', { destroyed: true, visible: false })]
+    expect(activationPlan('darwin', windows, 'main')).toEqual(['main'])
+    expect(activationPlan('darwin', windows.slice(1), 'main')).toEqual([])
+  })
+
+  it('takes the list order when no listed window has the focus', () => {
+    expect(activationPlan('darwin', [dockWin('main'), dockWin('window-2')], null)).toEqual(['main', 'window-2'])
+  })
+
+  it('is a macOS matter', () => {
+    for (const platform of ['win32', 'linux']) expect(activationPlan(platform, [dockWin('main'), dockWin('window-2')], 'main'), platform).toEqual([])
   })
 })

@@ -12,7 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Fixed
 
-- **Dock click brings every window forward**: on macOS, clicking Lucium's icon in the Dock now brings all its windows to the front, even those hidden behind another application, minimized ones included; the last one you used stays on top and keeps the focus.
+- **Dock click or switching to Lucium brings every window forward**: on macOS, a click on Lucium's icon in the Dock brings all its windows to the front, minimized ones included; switching to Lucium with ⌘⇥ or a click raises the windows on screen too, without taking the focus.
 
 ## [1.1.7] - 2026-11-23
 

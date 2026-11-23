@@ -13,9 +13,11 @@ interface FakeOptions {
   visible?: boolean
   minimized?: boolean
   destroyed?: boolean
+  focused?: boolean
+  onMoveTop?: () => void
 }
 
-function fakeWindow(log: string[], { id, kind = 'window', visible = true, minimized = false, destroyed = false }: FakeOptions) {
+function fakeWindow(log: string[], { id, kind = 'window', visible = true, minimized = false, destroyed = false, focused = false, onMoveTop }: FakeOptions) {
   let isMin = minimized
   let isVisible = visible
   const win = {
@@ -24,22 +26,30 @@ function fakeWindow(log: string[], { id, kind = 'window', visible = true, minimi
     isMinimized: () => isMin,
     restore: () => { isMin = false; log.push(`restore:${id}`) },
     show: () => { isVisible = true; log.push(`show:${id}`) },
+    isFocused: () => focused,
+    moveTop: () => { log.push(`moveTop:${id}`); onMoveTop?.() },
     focus: () => void log.push(`focus:${id}`)
   }
   return { id, kind, win }
 }
 
-function click(records: ReturnType<typeof fakeWindow>[], lastUsed: string, log: string[], away = false) {
-  const manager = {
+function manager(records: ReturnType<typeof fakeWindow>[], lastUsed: string, log: string[], away = false) {
+  const fake = {
     list: () => records,
     focused: () => records.find((r) => r.id === lastUsed) ?? records[0]!,
     isMainAway: () => away,
     revealMain: () => void log.push('revealMain'),
     newWindow: () => void log.push('newWindow')
   }
-  followDockClicks(manager as never)
+  followDockClicks(fake as never)
+}
+
+function click(records: ReturnType<typeof fakeWindow>[], lastUsed: string, log: string[], away = false) {
+  manager(records, lastUsed, log, away)
   handlers['activate']!()
 }
+
+const nextTurn = () => new Promise<void>((resolve) => setImmediate(resolve))
 
 describe('followDockClicks', () => {
   // The Dock is a macOS matter (the plan is empty elsewhere): the test holds on whichever system runs it.
@@ -69,5 +79,37 @@ describe('followDockClicks', () => {
     const log: string[] = []
     click([fakeWindow(log, { id: 'main', kind: 'main', destroyed: true, visible: false })], 'main', log)
     expect(log).toEqual(['newWindow'])
+  })
+
+  describe('switching to the application (did-become-active: ⌘⇥, a click in a window)', () => {
+    const switchTo = (records: ReturnType<typeof fakeWindow>[], log: string[], away = false) => {
+      manager(records, 'main', log, away)
+      handlers['did-become-active']!()
+    }
+
+    it('raises every window on screen without taking the focus, the focused one last', () => {
+      const log: string[] = []
+      switchTo([fakeWindow(log, { id: 'main', kind: 'main' }), fakeWindow(log, { id: 'window-2', focused: true }), fakeWindow(log, { id: 'private-1', kind: 'private' })], log)
+      expect(log).toEqual(['moveTop:main', 'moveTop:private-1', 'moveTop:window-2'])
+    })
+
+    it('does not restore a minimized window, show a hidden or put-away one, or touch a destroyed one', () => {
+      const log: string[] = []
+      switchTo([fakeWindow(log, { id: 'main', kind: 'main', visible: false }), fakeWindow(log, { id: 'window-2', minimized: true }), fakeWindow(log, { id: 'private-1', destroyed: true, visible: false }), fakeWindow(log, { id: 'guest-1', focused: true })], log, true)
+      expect(log).toEqual(['moveTop:guest-1'])
+    })
+
+    it('does not start an activation again by raising its windows, and answers the next real one', async () => {
+      const log: string[] = []
+      const again = () => handlers['did-become-active']!()
+      switchTo([fakeWindow(log, { id: 'main', kind: 'main', focused: true, onMoveTop: again }), fakeWindow(log, { id: 'window-2', onMoveTop: again })], log)
+      expect(log).toEqual(['moveTop:window-2', 'moveTop:main'])
+      // An echo that comes in the turn after is ignored too; then the guard is lifted.
+      again()
+      expect(log).toHaveLength(2)
+      await nextTurn()
+      again()
+      expect(log).toHaveLength(2 + 2)
+    })
   })
 })
