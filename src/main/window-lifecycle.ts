@@ -36,3 +36,29 @@ export function dockClickStep(windows: readonly WindowFacts[]): 'nothing' | 'ope
   if (windows.every((win) => win.destroyed)) return 'open-window'
   return 'show-last'
 }
+
+/** A window as the Dock click sees it: what the application knows of it, and the id that finds it again (the id of its record). */
+export interface DockWindowFacts extends WindowFacts {
+  id: string
+}
+
+/** What a click on the icon of the Dock does to the windows: `open` a new one (every window is gone), or `raise` these ones, in this order. */
+export interface DockClickPlan {
+  open: boolean
+  raise: string[]
+}
+
+/**
+ * What a click on the icon of the Dock does (macOS only: the Dock does not exist elsewhere). Every window that is not destroyed comes back to the front,
+ * whether it sat behind another application, was minimized or was hidden, as the Dock of other applications does; the last used one is raised last, so that
+ * it ends on top and keeps the keyboard focus. The event also fires at launch: the windows are on screen already then and raising them changes nothing, and
+ * a new window opens only when none is left, as `dockClickStep` says. A locked window comes back too: the lock screen covers it, it shows nothing more.
+ */
+export function dockClickPlan(platform: string, windows: readonly DockWindowFacts[], lastUsedId: string): DockClickPlan {
+  if (platform !== 'darwin') return { open: false, raise: [] }
+  if (dockClickStep(windows) === 'open-window') return { open: true, raise: [] }
+  const alive = windows.filter((win) => !win.destroyed)
+  const rest = alive.filter((win) => win.id !== lastUsedId)
+  const last = alive.filter((win) => win.id === lastUsedId)
+  return { open: false, raise: [...rest, ...last].map((win) => win.id) }
+}
