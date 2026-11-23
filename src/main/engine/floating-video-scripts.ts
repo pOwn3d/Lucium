@@ -8,6 +8,10 @@
 // part of the page around it that is about its size, where the site draws its subtitles) is put in the top layer (a `popover` shown by the script),
 // above everything else of the page, at the size of the view. Nothing of the document is moved, so a player that draws itself again (React) keeps
 // its elements; a video it replaces is followed (a mutation observer).
+//
+// The site's own controls do not come along: the bar of Lucium's window is the only one (two bars, the site's over the video and Lucium's at the
+// foot, was the report on Twitch). What is about the video in that player and holds something to press or drag is hidden (`CONTROLS`), by what it
+// is (a button, a slider, a link) and not by a class of one site, which the site changes; subtitles and the text a page draws stay.
 
 import type { VideoCommand } from '@shared/floating-video'
 import { FLOATING_LIVE_LAG_SECONDS } from '@shared/floating-video'
@@ -55,6 +59,12 @@ export const FLOAT_FIND = `(() => { ${CHOOSE}
 export const STAGE_SLACK = 1.25
 
 /**
+ * What a control of a site's player is made of, whatever its classes: something to press, drag, choose or type in. A box of the player that is not
+ * the video's own and holds one of these is the site's bar of controls (Twitch's, YouTube's), and is hidden while the video floats.
+ */
+export const CONTROLS = 'button, input, select, textarea, a[href], [role="button"], [role="slider"], [role="switch"], [role="menu"], [role="menuitem"], [role="checkbox"], [role="radio"], [role="toolbar"], [role="tablist"]'
+
+/**
  * Brings the video to fill the page: its player goes into the top layer at the size of the view, the video fills it (letterboxed). Answers
  * `{ staged: true, width, height, live, protected }` (the size of its frames, for the proportions of the window), or `{ staged: false, reason }`.
  * Staged again, it answers the same without doing anything twice.
@@ -91,6 +101,17 @@ export const FLOAT_STAGE = `(() => {
     }
     return stage
   }
+  const HIDDEN = { display: 'none' }
+  const CONTROLS = ${JSON.stringify(CONTROLS)}
+  // The boxes of the player (below it, not the ones the video is in) that hold a control of the site: its bar, its click catcher, its gradients.
+  const controlsOf = (el, video, found) => {
+    for (const child of Array.from(el.children || [])) {
+      if (child === video) continue
+      if (child.contains(video)) controlsOf(child, video, found)
+      else if (child.matches(CONTROLS) || child.querySelector(CONTROLS)) found.push(child)
+    }
+    return found
+  }
   // The page's own values of what is set, kept to be given back: [property, value, priority].
   const put = (el, styles, saved) => {
     for (const name of Object.keys(styles)) {
@@ -110,8 +131,21 @@ export const FLOAT_STAGE = `(() => {
     observer.observe(document, { childList: true, subtree: true })
     if (!current) return
     for (const el of [current.stage, current.video]) observer.observe(el, { attributes: true, attributeFilter: ['style', 'popover', 'hidden'] })
+    for (const hidden of current.hidden) observer.observe(hidden.el, { attributes: true, attributeFilter: ['style'] })
     const root = current.video.getRootNode ? current.video.getRootNode() : null
     if (root && root !== document) observer.observe(root, { childList: true, subtree: true })
+  }
+  // Hides the site's controls found now (a bar the player draws again is found again), and puts back the hiding the page took off.
+  const sweep = () => {
+    if (!current) return
+    for (const el of controlsOf(current.stage, current.video, [])) {
+      let entry = current.hidden.find((hidden) => hidden.el === el)
+      if (!entry) {
+        entry = { el, saved: [] }
+        current.hidden.push(entry)
+      }
+      put(el, HIDDEN, entry.saved)
+    }
   }
   const show = () => {
     if (!current) return
@@ -128,13 +162,14 @@ export const FLOAT_STAGE = `(() => {
   const stage = (video) => {
     const el = stageOf(video)
     const added = !el.hasAttribute('popover')
-    const entry = { video, stage: el, added, stageSaved: [], videoSaved: [] }
+    const entry = { video, stage: el, added, stageSaved: [], videoSaved: [], hidden: [] }
     current = entry
     // No attribute marks the player or the video: the page reads its own elements, and a mark of ours would name the browser to it.
     if (added) el.setAttribute('popover', 'manual')
     put(el, STAGE, entry.stageSaved)
     if (el !== video) put(video, VIDEO, entry.videoSaved)
     el.addEventListener('toggle', onToggle)
+    sweep()
     show()
   }
   const unstage = () => {
@@ -150,6 +185,7 @@ export const FLOAT_STAGE = `(() => {
     if (entry.added) entry.stage.removeAttribute('popover')
     giveBack(entry.stage, entry.stageSaved)
     if (entry.stage !== entry.video) giveBack(entry.video, entry.videoSaved)
+    for (const hidden of entry.hidden) giveBack(hidden.el, hidden.saved)
   }
   const reconcile = (records) => {
     observer.disconnect()
@@ -172,6 +208,8 @@ export const FLOAT_STAGE = `(() => {
         if (current.added && !current.stage.hasAttribute('popover')) current.stage.setAttribute('popover', 'manual')
         show()
       }
+      // What changed in the player (a bar drawn again, a style the page put back) is looked at again; the chat of a page changing is not.
+      if (current && records.some((record) => !record.target || current.stage.contains(record.target))) sweep()
     } finally {
       if (self[key]) watch()
     }

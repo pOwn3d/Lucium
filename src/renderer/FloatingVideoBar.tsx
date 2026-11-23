@@ -1,7 +1,9 @@
-// The bar of Lucium's floating video window (shell/floating-video.ts), laid over the page in the window: at the top, « EN DIRECT » for a live
-// stream, the site, « Garder au premier plan » and the close button; at the foot, play or pause, the sound and its volume, −10 s and +10 s (a recorded
-// video only), the time (or « En direct »), and « Revenir à l'onglet ». A small window keeps pause, the sound and « Revenir à l'onglet ». It shows as the
-// pointer moves over the window and hides 2 s after it stops (shared/floating-video.ts, BarVisibility); what it shows comes from the main process.
+// The bar of Lucium's floating video window (shell/floating-video.ts), laid over the page in the window: at the foot, play or pause, the sound and
+// its volume, −10 s and +10 s (a recorded video only), the time (or « En direct », which takes the stream back to its live edge when it is behind),
+// and « Revenir à l'onglet », which closes the window and gives the video back to its tab. Nothing else is drawn over the picture: the top of the
+// window is only the handle that moves it (no header, no pin, no close button: ⌘W also closes). A small window keeps pause, the sound and
+// « Revenir à l'onglet ». The bar shows as the pointer moves over the window and hides 2 s after it stops (shared/floating-video.ts, BarVisibility);
+// what it shows comes from the main process.
 
 import { useEffect, useMemo, useRef, useState, type FocusEvent } from 'react'
 import { t } from '@shared/i18n'
@@ -42,17 +44,6 @@ const BackGlyph = () => (
     <path d="M12.5 13.5 8 9M8 12.5V9h3.5" {...LINE} strokeWidth={1.5} />
   </svg>
 )
-const PinGlyph = () => (
-  <svg {...GLYPH}>
-    <path d="M7 3.5h6l-1 5 3 3H5l3-3z" {...LINE} strokeWidth={1.5} />
-    <path d="M10 11.5v5" {...LINE} strokeWidth={1.5} />
-  </svg>
-)
-const CloseGlyph = () => (
-  <svg {...GLYPH}>
-    <path d="M5.5 5.5l9 9M14.5 5.5l-9 9" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" />
-  </svg>
-)
 
 export interface FloatingVideoViewProps {
   state: FloatingVideoState | null
@@ -83,26 +74,8 @@ export function FloatingVideoView({ state, visible, width, act, onKeyboard, onSl
   }
   return (
     <div className={`fv${visible ? ' shown' : ''}${compact ? ' compact' : ''}`}>
-      <div className="fv-top" onFocus={keyboard(true)} onBlur={keyboard(false)}>
-        {live &&
-          (facts?.behindLive ? (
-            <button type="button" className="fv-live behind" title={t('floating-video.revenir-au-direct')} aria-label={t('floating-video.revenir-au-direct')} onClick={() => act({ kind: 'live' })}>
-              {t('floating-video.en-direct-pastille')}
-            </button>
-          ) : (
-            <span className="fv-live">{t('floating-video.en-direct-pastille')}</span>
-          ))}
-        {!compact && state?.site ? <span className="fv-site">{state.site}</span> : null}
-        <span className="fv-spacer" />
-        {!compact && (
-          <button type="button" className="fv-icon" aria-pressed={state?.pinned !== false} aria-label={t('floating-video.garder-au-premier-plan')} title={t('floating-video.garder-au-premier-plan')} onClick={() => act({ kind: 'pin' })}>
-            <PinGlyph />
-          </button>
-        )}
-        <button type="button" className="fv-icon" aria-label={t('floating-video.fermer')} title={t('floating-video.fermer-w')} aria-keyshortcuts="Meta+W" onClick={() => act({ kind: 'close' })}>
-          <CloseGlyph />
-        </button>
-      </div>
+      {/* The handle that moves the frameless window: nothing is drawn in it. */}
+      <div className="fv-top" aria-hidden="true" />
       {/* A group, not a toolbar: ← and → seek the video here (see the keys of the window), so they cannot also go from button to button. */}
       <div className="fv-bar" role="group" aria-label={t('floating-video.commandes')} onFocus={keyboard(true)} onBlur={keyboard(false)}>
         <button
@@ -156,7 +129,12 @@ export function FloatingVideoView({ state, visible, width, act, onKeyboard, onSl
             </button>
           </>
         )}
-        {!compact && (
+        {!compact && live && facts?.behindLive ? (
+          <button type="button" className="fv-live behind" onClick={() => act({ kind: 'live' })}>
+            {t('floating-video.revenir-au-direct')}
+          </button>
+        ) : null}
+        {!compact && !(live && facts?.behindLive) && (
           <span className="fv-time" role={time !== null ? 'timer' : undefined} aria-label={time !== null ? t('floating-video.temps') : undefined}>
             {time ?? (live ? t('floating-video.en-direct') : facts === null ? t('floating-video.recherche-de-la-video') : '')}
           </span>

@@ -4,6 +4,14 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+## [1.1.7] - 2026-11-23
+
+Cette version corrige la fenêtre flottante d'une vidéo : elle ne montre plus qu'une barre, celle de Lucium, et plus les contrôles du lecteur du site.
+
+### Corrections
+
+- **Image dans l'image, une seule barre** : dans la fenêtre flottante d'une vidéo (un direct Twitch, par exemple), il ne reste que la barre de Lucium : pause, volume, direct ou position, et retour à l'onglet. Les contrôles du site et l'en-tête sont masqués.
+
 ## [1.1.6] - 2026-11-23
 
 Cette version apporte une navigation plus sûre et plus privée (navigation sûre, protection du réseau, cookies tiers, interrupteur JavaScript par site, avertissements avant un risque), de nouvelles façons de travailler (rappels d’onglets, mode concentration, recherche dans le contenu des pages visitées, vue d’ensemble des onglets, un espace exporté vers un autre Mac) et un panneau Découvrir Lucium avec un conseil du jour.

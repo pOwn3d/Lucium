@@ -83,8 +83,19 @@ class FakeElement {
   removeEventListener(type: string): void {
     this.listeners.delete(type)
   }
+  /** `:popover-open`, and a list of `tag`, `a[href]`, `[role="x"]` (the only selectors the scripts ask). */
   matches(selector: string): boolean {
-    return selector === ':popover-open' ? this.open : false
+    if (selector === ':popover-open') return this.open
+    const tag = this.name.split(/[.#]/)[0]
+    return selector.split(',').some((part) => {
+      const [, wanted = '', attribute = '', value] = /^\s*([a-z]*)(?:\[([a-z-]+)(?:="([^"]*)")?\])?\s*$/.exec(part) ?? []
+      if (!wanted && !attribute) return false
+      if (wanted && wanted !== tag) return false
+      return !attribute || (value === undefined ? this.hasAttribute(attribute) : this.getAttribute(attribute) === value)
+    })
+  }
+  querySelector(selector: string): FakeElement | null {
+    return this.descendants().find((el) => el.matches(selector)) ?? null
   }
   showPopover(): void {
     if (this.refusesPopover) throw new Error('the element is already shown')
@@ -172,6 +183,92 @@ function youtube() {
   const column = new FakeElement('div#primary', { width: 1300, height: 2000 }).append(player)
   return { video, holder, captions, player, column }
 }
+
+/**
+ * Twitch's shape: the player (the size of the video) holds the video, the chat-free overlay of the stream's own text, and the bar of controls (the
+ * pause, volume, settings, theatre and full screen buttons, the progress slider and the LIVE pill) in a box of its own.
+ */
+function twitch() {
+  const video = new FakeVideo()
+  const holder = new FakeElement('div.video-ref', { width: 1280, height: 720 }).append(video)
+  const adText = new FakeElement('div.ad-text', { width: 400, height: 40 })
+  const catcher = new FakeElement('div.click-catcher', { width: 1280, height: 720 })
+  catcher.setAttribute('role', 'button')
+  const pause = new FakeElement('button.pause', { width: 30, height: 30 })
+  const volume = new FakeElement('div.volume', { width: 100, height: 30 })
+  volume.append(new FakeElement('input', { width: 80, height: 10 }))
+  const progress = new FakeElement('div.progress', { width: 1280, height: 8 })
+  progress.setAttribute('role', 'slider')
+  const live = new FakeElement('div.live-pill', { width: 60, height: 30 }).append(new FakeElement('button.live', { width: 60, height: 30 }))
+  const bar = new FakeElement('div.player-controls', { width: 1280, height: 120 }).append(pause, volume, progress, live)
+  const player = new FakeElement('div.player', { width: 1280, height: 720 }).append(holder, adText, catcher, bar)
+  const column = new FakeElement('div.layout', { width: 1300, height: 2000 }).append(player)
+  return { video, holder, adText, catcher, bar, player, column }
+}
+
+describe('the controls of the site', () => {
+  it('hides the bar the site draws over the video, and what only takes clicks, and leaves the text the page draws', () => {
+    const { video, holder, adText, catcher, bar, player, column } = twitch()
+    const { world } = page(column)
+    run(FLOAT_STAGE, world)
+    expect(bar.style.getPropertyValue('display')).toBe('none')
+    expect(bar.style.getPropertyPriority('display')).toBe('important')
+    expect(catcher.style.getPropertyValue('display')).toBe('none')
+    // The video, the box it is in and the text of the page are shown; the player is the one in the top layer.
+    for (const shown of [video, holder, adText, player]) expect(shown.style.getPropertyValue('display')).toBe('')
+    expect(player.open).toBe(true)
+    // No attribute marks the controls: the page reads its own elements.
+    expect([...bar.attributes.keys()]).toEqual([])
+  })
+
+  it('hides a control wherever it is among the ancestors of the video, by what it is and not by the class of the site', () => {
+    const video = new FakeVideo()
+    const slider = new FakeElement('span.anything', { width: 1280, height: 10 })
+    slider.setAttribute('role', 'slider')
+    const inner = new FakeElement('div.inner', { width: 1280, height: 720 }).append(video, slider)
+    const link = new FakeElement('a', { width: 50, height: 20 })
+    link.setAttribute('href', '/x')
+    const player = new FakeElement('section', { width: 1280, height: 720 }).append(inner, link)
+    const { world } = page(player)
+    run(FLOAT_STAGE, world)
+    expect(slider.style.getPropertyValue('display')).toBe('none')
+    expect(link.style.getPropertyValue('display')).toBe('none')
+    expect(inner.style.getPropertyValue('display')).toBe('')
+  })
+
+  it('hides a bar the player draws again, and puts the hiding back when the page takes it off', () => {
+    const { bar, player, column } = twitch()
+    const { world } = page(column)
+    run(FLOAT_STAGE, world)
+    const observer = FakeObserver.all[0]!
+    bar.style.removeProperty('display')
+    observer.fire([{ type: 'attributes' }])
+    expect(bar.style.getPropertyValue('display')).toBe('none')
+    const again = new FakeElement('div.player-controls', { width: 1280, height: 120 }).append(new FakeElement('button', { width: 30, height: 30 }))
+    player.append(again)
+    observer.fire([{ type: 'childList' }])
+    expect(again.style.getPropertyValue('display')).toBe('none')
+  })
+
+  it('gives the controls back with the page, with the values the page had', () => {
+    const { bar, catcher, column } = twitch()
+    bar.style.setProperty('display', 'flex', '')
+    const { world } = page(column)
+    run(FLOAT_STAGE, world)
+    expect(bar.style.getPropertyValue('display')).toBe('none')
+    run(FLOAT_UNSTAGE, world)
+    expect(bar.style.getPropertyValue('display')).toBe('flex')
+    expect(bar.style.getPropertyPriority('display')).toBe('')
+    expect(catcher.style.getPropertyValue('display')).toBe('')
+  })
+
+  it('leaves the subtitles of a player with no controls of its own (YouTube\'s shape without its bars)', () => {
+    const { captions, column } = youtube()
+    const { world } = page(column)
+    run(FLOAT_STAGE, world)
+    expect(captions.style.getPropertyValue('display')).toBe('')
+  })
+})
 
 describe('finding the video', () => {
   it('says whether the page itself has a video to float', () => {

@@ -44,7 +44,8 @@ window.makeAudio = async () => { const x = new Audio(); x.srcObject = dest.strea
 </script></body>`
 
 /** A video with a tone (a canvas and an oscillator in one stream): a page whose media can float in Picture in Picture. */
-const videoPage = `<title>Vidéo</title><body style="margin:0"><video id="v" width="320" height="180"></video><script>
+const videoPage = `<title>Vidéo</title><body style="margin:0"><div id="player" style="position:relative;width:320px;height:180px"><video id="v" width="320" height="180"></video>
+<div id="controls" style="position:absolute;left:0;right:0;bottom:0;height:40px;background:rgba(0,0,0,.6)"><button id="site-pause">Pause</button><input id="site-volume" type="range"></div></div><script>
 const canvas = document.createElement('canvas'); canvas.width = 320; canvas.height = 180; const g = canvas.getContext('2d')
 setInterval(() => { g.fillStyle = 'hsl(' + (Date.now() / 20 % 360) + ',70%,50%)'; g.fillRect(0, 0, 320, 180) }, 50)
 const ctx = new AudioContext(); const dest = ctx.createMediaStreamDestination(); const osc = ctx.createOscillator(); const gain = ctx.createGain()
@@ -501,10 +502,14 @@ export async function smokeIsoMedia(ctx: SmokeContext, check: Check): Promise<vo
   }
   check('media: pressing it floats the video: the tab goes to Lucium\'s floating window', floating, JSON.stringify(runtime().tabs[videoTab]))
   check('media: and the floating window takes over: the player goes', await waitFor(async () => (await rect(bar(videoTab))) === null, 2000), JSON.stringify(runtime().media))
+  // The bar of controls the site draws over its video (as Twitch does) is hidden in the floating window: Lucium's own bar is the only one.
+  const siteControls = `getComputedStyle(document.getElementById('controls')).display`
+  check('media: in the floating window the controls of the site are not shown (only Lucium\'s bar is)', await waitFor(async () => (await inPage<string>(videoTab, siteControls)) === 'none', 2000), String(await inPage<string>(videoTab, siteControls)))
   await select(videoTab)
   check('media: choosing the tab again brings the floating window forward and leaves the video in it (the place of its page offers to bring it back)', lent(), JSON.stringify(runtime().tabs[videoTab]))
   browser.floatingVideoTab(videoTab, 'back')
   check('media: « Revenir à l’onglet » gives the video back to the tab', await waitFor(() => !lent(), 4000), JSON.stringify(runtime().tabs[videoTab]))
+  check('media: and the controls of the site are shown again in the tab', await waitFor(async () => (await inPage<string>(videoTab, siteControls)) !== 'none', 2000), String(await inPage<string>(videoTab, siteControls)))
   // The page puts its video back in place by a script of its own (unstageFloatingVideo), a moment after the window went.
   await sleep(800)
   const FACTS = `(() => { const b = v.getBoundingClientRect(); let played = 0; for (let i = 0; i < v.played.length; i++) played += v.played.end(i) - v.played.start(i); return { playing: !v.paused, ended: v.ended, ready: v.readyState, frames: v.videoWidth + 'x' + v.videoHeight, box: b.width + 'x' + b.height, muted: v.muted, volume: v.volume, tracks: v.audioTracks ? v.audioTracks.length : null, decoded: v.webkitAudioDecodedByteCount, played, time: v.currentTime, stream: !!v.srcObject, inPip: !!document.pictureInPictureElement, top: v.matches(':popover-open, :modal, :fullscreen') } })()`

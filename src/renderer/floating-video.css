@@ -35,7 +35,6 @@ body.floating-video {
   cursor: default;
 }
 
-.fv-top,
 .fv-bar {
   position: absolute;
   display: flex;
@@ -45,27 +44,20 @@ body.floating-video {
   pointer-events: none;
   transition: opacity 0.2s ease;
 }
-.fv.shown .fv-top,
 .fv.shown .fv-bar,
-.fv-top:focus-within,
 .fv-bar:focus-within {
   opacity: 1;
   pointer-events: auto;
 }
 
 .fv-top {
+  position: absolute;
   left: 0;
   right: 0;
   top: 0;
   height: 44px;
-  padding: 0 10px 0 12px;
-  gap: 8px;
-  /* The fade keeps its darkest step down to the foot of the site's name: over a white picture the name stays 4.5:1. */
-  background: linear-gradient(var(--fixed-000000-60), var(--fixed-000000-60) 70%, transparent);
+  /* Only the handle of the window (it has no frame): transparent, it stays where it is while the bar is hidden. */
   -webkit-app-region: drag;
-  /* The handle of the window stays where it is while the bar is hidden, and the pointer shows over it. */
-  pointer-events: auto;
-  cursor: default;
 }
 .fv.compact .fv-top {
   height: 34px;
@@ -88,7 +80,6 @@ body.floating-video {
   height: 36px;
 }
 
-.fv-top button,
 .fv-bar button,
 .fv-bar input {
   -webkit-app-region: no-drag;
@@ -96,13 +87,6 @@ body.floating-video {
 
 .fv-spacer {
   flex: 1;
-}
-
-.fv-site {
-  opacity: 0.9;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .fv-live {
@@ -148,7 +132,6 @@ button.fv-live.behind:hover {
   opacity: 0.4;
 }
 
-.fv-top button:focus-visible,
 .fv-bar button:focus-visible,
 .fv-slider:focus-visible {
   outline: 2px solid var(--fixed-ffffff);
@@ -186,12 +169,10 @@ button.fv-live.behind:hover {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .fv-top,
   .fv-bar {
     transition: none;
   }
 }
-:root[data-motion='reduce'] .fv-top,
 :root[data-motion='reduce'] .fv-bar {
   transition: none;
 }

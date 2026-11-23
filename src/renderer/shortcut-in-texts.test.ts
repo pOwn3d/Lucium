@@ -112,7 +112,7 @@ describe('the texts of the interface', () => {
     'annotate-sheet.annuler-la-derniere-annotation-z', 'annotate-sheet.retablir-z', 'find-replace.remplacer-toutes-les-occurrences', 'panels.occurrence-precedente',
     'annotate-sheet.au-clavier', 'panels.faites-glisser-pour-choisir-la-zone-a-capturer', 'boost-editor.tab-indente-sortie',
     'notes.gras', 'notes.italique', 'notes.liste-de-taches', 'notes.lien', 'notes.cmd-clic-pour-ouvrir-url', 'notes.cmd-clic-pour-ecrire-a', 'notes.le-markdown-se-met-en-forme',
-    'space-manage.descendre-aide', 'space-manage.monter-aide', 'space-manage.glissez-une-ligne', 'floating-video.fermer-w', 'settings.rechercher-un-reglage-f-ou',
+    'space-manage.descendre-aide', 'space-manage.monter-aide', 'space-manage.glissez-une-ligne', 'settings.rechercher-un-reglage-f-ou',
     'toolbar.contraste-de-la-page-description', 'window-share.raccourcis', 'page-annotate.note-raccourci', 'page-annotate.note-raccourci-partage', 'page-annotate.aide-maintien', 'window-share.raccourci-passage', 'window-share.raccourci-pris', 'window-share.raccourci-pris-annotation',
     'settings.annoter-depuis-toute-application', 'settings.annoter-depuis-toute-application-aide', 'settings.touches-d-une-lettre-pour-annoter-aide', 'littlearc.ouvrir-dans-la-fenetre-principale-o', 'littlearc.ouvrir-dans-name-o', 'littlearc.ouvrir-dans-un-onglet-o',
     'guide.quitter', 'guide.quitter-sujet', 'features.demande-une-confirmation-avant-q',
