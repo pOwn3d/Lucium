@@ -37,6 +37,7 @@ const { createAppImageUpdateInstaller } = await import('./appimage-update')
 const { installerAtQuit, setUpdateInstaller, updateInstaller } = await import('./app-update')
 const { currentUpdateSources } = await import('./update-source')
 
+const RUNNING_AS = '/home/person/Apps/Lucium.AppImage'
 const BUILT_IN = 'https://lucium.app/updates/linux-x64/feed.json'
 const FEED = 'https://lucium.app/updates/linux-x64/appimage/feed.json'
 const FILE_URL = 'https://lucium.app/updates/linux-x64/appimage/Lucium-1.2.0-linux-x64.AppImage'
@@ -115,7 +116,9 @@ beforeEach(() => {
   vi.stubEnv('LUCIUM_UPDATE_FEED', undefined)
   vi.stubEnv('MAIN_VITE_UPDATE_FEED', BUILT_IN)
   vi.stubEnv('MAIN_VITE_UPDATE_FEED_TEST', undefined)
-  vi.stubEnv('APPIMAGE', appImage)
+  // The environment of a Linux copy names a POSIX path (that is all the detection accepts); the folder of the test is a real one of this machine, which on Windows is
+  // `C:\\…`. So the variable is the fixed POSIX name and the installer is handed the real file, as `wire` does: the two never have to be the same string.
+  vi.stubEnv('APPIMAGE', RUNNING_AS)
   Object.defineProperty(process, 'platform', { value: 'linux' })
   Object.defineProperty(process, 'arch', { value: 'x64' })
   Object.defineProperty(process, 'execPath', { value: '/tmp/.mount_Lucium1x2/lucium', configurable: true })
