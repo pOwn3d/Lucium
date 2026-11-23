@@ -34,6 +34,9 @@ class FakeWindow extends EventEmitter {
   bounds: { x: number; y: number; width: number; height: number }
   contentView = { addChildView: vi.fn(), removeChildView: vi.fn() }
   setAspectRatio = vi.fn()
+  setPosition = vi.fn((x: number, y: number) => {
+    this.bounds = { ...this.bounds, x, y }
+  })
   setAlwaysOnTop = vi.fn()
   setVisibleOnAllWorkspaces = vi.fn()
   showInactive = vi.fn()
@@ -296,6 +299,35 @@ describe('the bar', () => {
     expect(bars[0]!.webContents.send).toHaveBeenLastCalledWith(Channel.floatingVideoState, { site: 'twitch.tv', pinned: true, tabMuted: true, facts: recorded() })
     send({ kind: 'pin' })
     expect(bars[0]!.webContents.send).toHaveBeenLastCalledWith(Channel.floatingVideoState, expect.objectContaining({ pinned: false }))
+  })
+
+  it('moves the window with the pointer while the video is held, from where the window was, and never reads or drives the video for it', async () => {
+    const { floating, created, send, flush } = setup()
+    const page = fakePage()
+    await floating.float(fakeOwner(), 't', page as never)
+    const win = created[0]!
+    const { x, y } = win.bounds
+    send({ kind: 'drag', phase: 'start', x: 500, y: 400 })
+    send({ kind: 'drag', phase: 'move', x: 460, y: 430 })
+    expect(win.setPosition).toHaveBeenLastCalledWith(x - 40, y + 30)
+    send({ kind: 'drag', phase: 'move', x: 520, y: 380 })
+    // Always from where the window was when the drag began, not from the last move: a lost message does not shift the window.
+    expect(win.setPosition).toHaveBeenLastCalledWith(x + 20, y - 20)
+    send({ kind: 'drag', phase: 'end', x: 520, y: 380 })
+    send({ kind: 'drag', phase: 'move', x: 900, y: 900 })
+    await flush()
+    expect(win.setPosition).toHaveBeenCalledTimes(2)
+    expect(page.floatingVideoCommand).not.toHaveBeenCalled()
+    expect(page.floatingVideoFacts).not.toHaveBeenCalled()
+  })
+
+  it('moves nothing for a drag that did not begin, nor for one of another surface', async () => {
+    const { floating, created, send } = setup()
+    await floating.float(fakeOwner(), 't', fakePage() as never)
+    send({ kind: 'drag', phase: 'move', x: 10, y: 10 })
+    send({ kind: 'drag', phase: 'start', x: 1, y: 1 }, { id: 9999, mainFrame: {} })
+    send({ kind: 'drag', phase: 'move', x: 50, y: 50 })
+    expect(created[0]!.setPosition).not.toHaveBeenCalled()
   })
 
   it('reads the video only while it is on screen', async () => {

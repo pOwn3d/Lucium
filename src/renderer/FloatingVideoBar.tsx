@@ -1,11 +1,11 @@
 // The bar of Lucium's floating video window (shell/floating-video.ts), laid over the page in the window: at the foot, play or pause, the sound and
 // its volume, −10 s and +10 s (a recorded video only), the time (or « En direct », which takes the stream back to its live edge when it is behind),
 // and « Revenir à l'onglet », which closes the window and gives the video back to its tab. Nothing else is drawn over the picture: the top of the
-// window is only the handle that moves it (no header, no pin, no close button: ⌘W also closes). A small window keeps pause, the sound and
+// window is a handle that moves it, and so is the whole video (no header, no pin, no close button: ⌘W also closes). A small window keeps pause, the sound and
 // « Revenir à l'onglet ». The bar shows as the pointer moves over the window and hides 2 s after it stops (shared/floating-video.ts, BarVisibility);
 // what it shows comes from the main process.
 
-import { useEffect, useMemo, useRef, useState, type FocusEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type FocusEvent, type PointerEvent } from 'react'
 import { t } from '@shared/i18n'
 import { api } from './api'
 import { PauseGlyph, PlayGlyph } from './media-glyphs'
@@ -17,6 +17,7 @@ import {
   floatingKeyCommand,
   soundCut,
   timeText,
+  type DragPhase,
   type FloatingVideoCommand,
   type FloatingVideoState
 } from '@shared/floating-video'
@@ -72,8 +73,23 @@ export function FloatingVideoView({ state, visible, width, act, onKeyboard, onSl
     if (!inside && event.currentTarget.contains(event.relatedTarget as Node | null)) return
     onKeyboard?.(inside)
   }
+  // The window is held by its video: it follows the pointer on the screen from the press to the release (the main process moves it). The pointer is
+  // captured, so the drag goes on when it leaves the window, and the bar's own pointer events (hover, buttons) are not taken by a draggable region.
+  const held = useRef<number | null>(null)
+  const grab = (phase: DragPhase) => (event: PointerEvent<HTMLElement>) => {
+    if (phase === 'start') {
+      if (event.button !== 0) return
+      held.current = event.pointerId
+      event.currentTarget.setPointerCapture(event.pointerId)
+    } else if (held.current !== event.pointerId) return
+    // The capture ends with the release or the cancel by itself: the loss of it that follows finds nothing held and says nothing more.
+    else if (phase === 'end') held.current = null
+    act({ kind: 'drag', phase, x: event.screenX, y: event.screenY })
+  }
   return (
     <div className={`fv${visible ? ' shown' : ''}${compact ? ' compact' : ''}`}>
+      {/* The whole video moves the window (under the bar: its buttons and its slider are above it); a click on it does nothing, as before. */}
+      <div className="fv-grab" aria-hidden="true" onPointerDown={grab('start')} onPointerMove={grab('move')} onPointerUp={grab('end')} onPointerCancel={grab('end')} onLostPointerCapture={grab('end')} />
       {/* The handle that moves the frameless window: nothing is drawn in it. */}
       <div className="fv-top" aria-hidden="true" />
       {/* A group, not a toolbar: ← and → seek the video here (see the keys of the window), so they cannot also go from button to button. */}

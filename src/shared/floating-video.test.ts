@@ -12,6 +12,7 @@ import {
   canSeek,
   clockText,
   compactBar,
+  dragTarget,
   floatingBounds,
   floatingKeyCommand,
   muteSteps,
@@ -41,13 +42,13 @@ const live = (over: Partial<FloatingVideoFacts> = {}): FloatingVideoFacts => rec
 
 describe('a message of the bar', () => {
   it('is passed on when it is one of the commands, as it was sent', () => {
-    for (const command of [{ kind: 'toggle' }, { kind: 'mute' }, { kind: 'live' }, { kind: 'back' }, { kind: 'close' }, { kind: 'pin' }, { kind: 'volume', value: 0 }, { kind: 'volume', value: 1 }, { kind: 'seek', seconds: -10 }, { kind: 'seek', seconds: 10 }, { kind: 'watch', on: true }]) {
+    for (const command of [{ kind: 'toggle' }, { kind: 'mute' }, { kind: 'live' }, { kind: 'back' }, { kind: 'close' }, { kind: 'pin' }, { kind: 'volume', value: 0 }, { kind: 'volume', value: 1 }, { kind: 'seek', seconds: -10 }, { kind: 'seek', seconds: 10 }, { kind: 'watch', on: true }, { kind: 'drag', phase: 'start', x: 812, y: 430 }, { kind: 'drag', phase: 'move', x: -40, y: 0 }, { kind: 'drag', phase: 'end', x: 0, y: 1200 }]) {
       expect(parseFloatingCommand(command), JSON.stringify(command)).toEqual(command)
     }
   })
 
   it('is refused otherwise: another kind, a volume out of 0 to 1 or not a number, a jump other than 10 s, a watch that is not a yes or a no', () => {
-    for (const raw of [null, 'toggle', 42, {}, { kind: 'eval' }, { kind: 'volume', value: 1.5 }, { kind: 'volume', value: -0.1 }, { kind: 'volume', value: Number.NaN }, { kind: 'volume', value: '0.5' }, { kind: 'seek', seconds: 600 }, { kind: 'seek', seconds: '10' }, { kind: 'watch', on: 1 }]) {
+    for (const raw of [null, 'toggle', 42, {}, { kind: 'eval' }, { kind: 'volume', value: 1.5 }, { kind: 'volume', value: -0.1 }, { kind: 'volume', value: Number.NaN }, { kind: 'volume', value: '0.5' }, { kind: 'seek', seconds: 600 }, { kind: 'seek', seconds: '10' }, { kind: 'watch', on: 1 }, { kind: 'drag', phase: 'sideways', x: 1, y: 1 }, { kind: 'drag', phase: 'move', x: '12', y: 1 }, { kind: 'drag', phase: 'move', x: Number.NaN, y: 1 }, { kind: 'drag', phase: 'move', x: 1, y: Number.POSITIVE_INFINITY }, { kind: 'drag', phase: 'move', x: 1e9, y: 1 }, { kind: 'drag', x: 1, y: 1 }, { kind: 'drag', phase: 'move', x: 1 }]) {
       expect(parseFloatingCommand(raw), JSON.stringify(raw)).toBeNull()
     }
   })
@@ -55,6 +56,18 @@ describe('a message of the bar', () => {
   it('carries nothing but the command: an extra field of the sender is left behind', () => {
     expect(parseFloatingCommand({ kind: 'toggle', script: 'alert(1)' })).toEqual({ kind: 'toggle' })
     expect(parseFloatingCommand({ kind: 'volume', value: 0.5, extra: true })).toEqual({ kind: 'volume', value: 0.5 })
+    expect(parseFloatingCommand({ kind: 'drag', phase: 'move', x: 5, y: 6, extra: true })).toEqual({ kind: 'drag', phase: 'move', x: 5, y: 6 })
+  })
+
+  it('rounds the position of a drag to whole points of the screen', () => {
+    expect(parseFloatingCommand({ kind: 'drag', phase: 'move', x: 10.6, y: -3.4 })).toEqual({ kind: 'drag', phase: 'move', x: 11, y: -3 })
+  })
+})
+
+describe('moving the window by the video', () => {
+  it('follows the pointer: the window goes where it was, by the distance the pointer went since the drag began', () => {
+    expect(dragTarget({ x: 1000, y: 600 }, { x: 1200, y: 700 }, { x: 1150, y: 760 })).toEqual({ x: 950, y: 660 })
+    expect(dragTarget({ x: 1000, y: 600 }, { x: 1200, y: 700 }, { x: 1200, y: 700 })).toEqual({ x: 1000, y: 600 })
   })
 })
 

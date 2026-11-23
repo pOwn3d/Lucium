@@ -50,6 +50,14 @@ body.floating-video {
   pointer-events: auto;
 }
 
+.fv-grab {
+  position: absolute;
+  inset: 0;
+  /* The window is moved by the pointer's own events (FloatingVideoBar.tsx), not by a draggable region: a region takes the mouse events it covers,
+     and the pointer moving over the video is what shows the bar. */
+  touch-action: none;
+}
+
 .fv-top {
   position: absolute;
   left: 0;

@@ -65,6 +65,14 @@ export type FloatingVideoCommand =
   | { kind: 'close' }
   | { kind: 'pin' }
   | { kind: 'watch'; on: boolean }
+  /** The video is held and moved: where the pointer is on the screen, from the press (`start`) to the release (`end`). */
+  | { kind: 'drag'; phase: DragPhase; x: number; y: number }
+
+export type DragPhase = 'start' | 'move' | 'end'
+const DRAG_PHASES: ReadonlySet<unknown> = new Set<DragPhase>(['start', 'move', 'end'])
+
+/** A position of the pointer on the screen farther than this (in points) is not one: no screen is that wide. */
+const DRAG_LIMIT = 100_000
 
 /** What the window asks of the video, in the page (engine/floating-video-scripts.ts, `floatCommandScript`). */
 export type VideoCommand =
@@ -98,7 +106,21 @@ export function parseFloatingCommand(raw: unknown): FloatingVideoCommand | null 
     const on = (raw as { on?: unknown }).on
     return typeof on === 'boolean' ? { kind, on } : null
   }
+  if (kind === 'drag') {
+    const { phase, x, y } = raw as { phase?: unknown; x?: unknown; y?: unknown }
+    if (!DRAG_PHASES.has(phase) || typeof x !== 'number' || typeof y !== 'number') return null
+    if (!Number.isFinite(x) || !Number.isFinite(y) || Math.abs(x) > DRAG_LIMIT || Math.abs(y) > DRAG_LIMIT) return null
+    return { kind, phase: phase as DragPhase, x: Math.round(x), y: Math.round(y) }
+  }
   return null
+}
+
+/**
+ * Where the window goes while it is held by the video: where it was when the drag began, moved by the distance the pointer went since. Always from
+ * the start, never from the last position: a message that is lost or late does not shift the window.
+ */
+export function dragTarget(origin: { x: number; y: number }, from: { x: number; y: number }, to: { x: number; y: number }): { x: number; y: number } {
+  return { x: origin.x + to.x - from.x, y: origin.y + to.y - from.y }
 }
 
 const finite = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value)
