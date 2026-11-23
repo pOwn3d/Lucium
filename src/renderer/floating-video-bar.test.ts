@@ -30,13 +30,16 @@ beforeEach(() => setLanguage('fr'))
 afterEach(() => setLanguage('fr'))
 
 describe('the bar of a recorded video', () => {
-  it('has, from left to right, pause, the sound and its volume, −10 s and +10 s, the time and « Revenir à l’onglet »; at the top the site, the pin and the close button', () => {
+  it('has, from left to right, pause, the sound and its volume, −10 s and +10 s, the time and « Revenir à l’onglet »; nothing at the top but the handle of the window', () => {
     const { markup, button } = draw(state(recorded()))
-    for (const label of ['Pause', 'Couper le son', 'Volume', frenchSpaces('Reculer de 10 s'), frenchSpaces('Avancer de 10 s'), 'Revenir à l’onglet', 'Garder au premier plan', 'Fermer']) expect(button(label), label).toBeDefined()
+    for (const label of ['Pause', 'Couper le son', 'Volume', frenchSpaces('Reculer de 10 s'), frenchSpaces('Avancer de 10 s'), 'Revenir à l’onglet']) expect(button(label), label).toBeDefined()
+    // No header: not the site, not the pin, not the close button (« Revenir à l’onglet » and ⌘W close the window).
+    for (const label of ['Garder au premier plan', 'Fermer']) expect(button(label), label).toBeUndefined()
+    expect(markup).toContain('<div class="fv-top" aria-hidden="true"></div>')
     expect(markup).toContain('2:05 / 41:10')
     // The time has a role: a name on an element without one is not read, and « 2:05 / 41:10 » alone does not say what it counts.
     expect(markup).toContain(`<span class="fv-time" role="timer" aria-label="${frenchSpaces('Temps écoulé et durée')}">2:05 / 41:10</span>`)
-    expect(markup).toContain('twitch.tv')
+    expect(markup).not.toContain('twitch.tv')
     expect(markup).not.toContain('EN DIRECT')
     expect(markup.indexOf('Pause')).toBeLessThan(markup.indexOf('Couper le son'))
     expect(markup.indexOf('Avancer de 10 s')).toBeLessThan(markup.indexOf('Revenir à l’onglet'))
@@ -54,7 +57,6 @@ describe('the bar of a recorded video', () => {
     expect(button('Pause')!.props['aria-keyshortcuts']).toBe('Space')
     expect(button('Couper le son')!.props['aria-keyshortcuts']).toBe('M')
     expect(button(frenchSpaces('Reculer de 10 s'))!.props['aria-keyshortcuts']).toBe('ArrowLeft')
-    expect(button('Fermer')!.props['title']).toBe('Fermer · ⌘W')
   })
 
   it('offers « Lecture » for a paused or ended video, and has no −10 s for a protected one', () => {
@@ -70,33 +72,29 @@ describe('the bar of a recorded video', () => {
     click(frenchSpaces('Reculer de 10 s'))
     click(frenchSpaces('Avancer de 10 s'))
     click('Revenir à l’onglet')
-    click('Garder au premier plan')
-    click('Fermer')
     ;(button('Volume')!.props['onChange'] as (event: unknown) => void)({ currentTarget: { value: '0.25' } })
-    expect(act.mock.calls.map(([command]) => command)).toEqual([{ kind: 'toggle' }, { kind: 'mute' }, { kind: 'seek', seconds: -10 }, { kind: 'seek', seconds: 10 }, { kind: 'back' }, { kind: 'pin' }, { kind: 'close' }, { kind: 'volume', value: 0.25 }])
-  })
-
-  it('shows the pin as pressed while the window stays above the others', () => {
-    expect(draw(state(recorded())).button('Garder au premier plan')!.props['aria-pressed']).toBe(true)
-    expect(draw(state(recorded(), { pinned: false })).button('Garder au premier plan')!.props['aria-pressed']).toBe(false)
+    expect(act.mock.calls.map(([command]) => command)).toEqual([{ kind: 'toggle' }, { kind: 'mute' }, { kind: 'seek', seconds: -10 }, { kind: 'seek', seconds: 10 }, { kind: 'back' }, { kind: 'volume', value: 0.25 }])
   })
 })
 
 describe('the bar of a live stream', () => {
-  it('says « EN DIRECT » at the top and « En direct » in place of the time, with no −10 s nor +10 s', () => {
+  it('says « En direct » in place of the time, with no −10 s nor +10 s and no « EN DIRECT » over the picture', () => {
     const { markup, button } = draw(state(live()))
-    expect(markup).toContain('EN DIRECT')
+    expect(markup).not.toContain('EN DIRECT')
     expect(markup).toContain('En direct')
     expect(button('Reculer de 10 s')).toBeUndefined()
     expect(button('Avancer de 10 s')).toBeUndefined()
   })
 
-  it('turns « EN DIRECT » into « Revenir au direct » behind the live edge', () => {
-    const { click, act, button } = draw(state(live({ behindLive: true })))
-    expect(button('Revenir au direct')).toBeDefined()
-    click('Revenir au direct')
+  it('offers « Revenir au direct » in the bar, in place of the time, behind the live edge', () => {
+    const { act, markup, elements } = draw(state(live({ behindLive: true })))
+    const back = elements.find((el: Element) => el.props['className'] === 'fv-live behind')
+    expect(back).toBeDefined()
+    expect(markup).toContain('Revenir au direct')
+    expect(markup).not.toContain('class="fv-time"')
+    ;(back!.props['onClick'] as () => void)()
     expect(act).toHaveBeenCalledWith({ kind: 'live' })
-    expect(draw(state(live())).button('Revenir au direct')).toBeUndefined()
+    expect(draw(state(live())).elements.some((el: Element) => el.props['className'] === 'fv-live behind')).toBe(false)
   })
 })
 
@@ -112,11 +110,11 @@ describe('the sound of the bar', () => {
 })
 
 describe('the small window', () => {
-  it('keeps only pause, the sound and « Revenir à l’onglet » at the foot, and « EN DIRECT » and the close button at the top', () => {
+  it('keeps only pause, the sound and « Revenir à l’onglet »', () => {
     const { button, markup } = draw(state(live()), FLOATING_COMPACT_WIDTH - 1)
-    for (const label of ['Pause', 'Couper le son', 'Revenir à l’onglet', 'Fermer']) expect(button(label), label).toBeDefined()
-    for (const label of ['Volume', 'Garder au premier plan', 'Reculer de 10 s']) expect(button(label), label).toBeUndefined()
-    expect(markup).toContain('EN DIRECT')
+    for (const label of ['Pause', 'Couper le son', 'Revenir à l’onglet']) expect(button(label), label).toBeDefined()
+    for (const label of ['Volume', 'Garder au premier plan', 'Fermer', 'Reculer de 10 s']) expect(button(label), label).toBeUndefined()
+    expect(markup).not.toContain('EN DIRECT')
     expect(markup).not.toContain('twitch.tv')
     expect(markup).not.toContain('En direct<')
     expect(markup).toContain('class="fv shown compact"')
@@ -140,8 +138,9 @@ describe('the bar in English', () => {
   it('names its buttons in the language of the interface', () => {
     setLanguage('en')
     const { button, markup } = draw(state(live()))
-    for (const label of ['Pause', 'Mute', 'Volume', 'Back to tab', 'Keep on top', 'Close']) expect(button(label), label).toBeDefined()
-    expect(markup).toContain('LIVE')
+    for (const label of ['Pause', 'Mute', 'Volume', 'Back to tab']) expect(button(label), label).toBeDefined()
+    for (const label of ['Keep on top', 'Close']) expect(button(label), label).toBeUndefined()
+    expect(markup).toContain('Live')
     expect(button('Pause')!.props['title']).toBe('Pause · Space bar')
   })
 })

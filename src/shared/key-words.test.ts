@@ -75,12 +75,11 @@ describe('the sentences of the catalogues', () => {
   it('name the keys of the system once it is said, in both languages', () => {
     setKeyPlatform('linux')
     expect(t('features.demande-une-confirmation-avant-q')).toBe('Demande une confirmation avant Ctrl+Q.')
-    expect(t('floating-video.fermer-w')).toBe('Fermer · Ctrl+W')
     setLanguage('en')
-    expect(t('floating-video.fermer-w')).toBe('Close · Ctrl+W')
+    expect(t('features.demande-une-confirmation-avant-q')).toBe('Asks for confirmation before Ctrl+Q.')
     expect(tIn('fr', 'notes.lien')).toBe('Lien (Ctrl+K)')
     setKeyPlatform('darwin')
-    expect(t('floating-video.fermer-w')).toBe('Close · ⌘W')
+    expect(t('features.demande-une-confirmation-avant-q')).toBe('Asks for confirmation before ⌘Q.')
   })
 
   it('leave what the user typed alone: a name with a ⌘ in it is not a shortcut', () => {

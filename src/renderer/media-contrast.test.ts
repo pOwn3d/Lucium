@@ -2,7 +2,7 @@
 // written or drawn there is measured from the sheets themselves. A control that still works keeps 3:1, a text 4.5:1, whatever the video.
 
 import { describe, expect, it } from 'vitest'
-import { AA_CONTROL, AA_TEXT, compositeOver, contrastRatio, parseColor, type Rgba } from '@shared/contrast'
+import { AA_CONTROL, AA_TEXT, contrastRatio, parseColor, type Rgba } from '@shared/contrast'
 import floatingVideo from './floating-video.css?raw'
 import mediaPlayer from './media-player.css?raw'
 import palette from './palette.css?raw'
@@ -39,21 +39,9 @@ describe('the media player of the sidebar', () => {
 })
 
 describe('the bar of the floating video window', () => {
-  it('writes « EN DIRECT » at 4.5:1 on its red, and on the red of « Revenir au direct » under the pointer', () => {
+  it('writes « Revenir au direct » at 4.5:1 on the red it takes under the pointer', () => {
     const live = ruleOf(floatingVideo, '.fv-live')
     expect(contrastRatio(colourOf(live, 'color'), colourOf(live, 'background'))).toBeGreaterThanOrEqual(AA_TEXT)
     expect(contrastRatio(colourOf(live, 'color'), colourOf(ruleOf(floatingVideo, 'button.fv-live.behind:hover'), 'background'))).toBeGreaterThanOrEqual(AA_TEXT)
-  })
-
-  it('keeps the name of the site at 4.5:1 over a white picture: the fade holds its darkest step down past the foot of the line', () => {
-    const fade = /background:\s*linear-gradient\(var\((--fixed-[0-9a-f-]+)\),\s*var\((--fixed-[0-9a-f-]+)\)\s*(\d+)%,\s*transparent\)/.exec(ruleOf(floatingVideo, '.fv-top'))
-    expect(fade, 'the fade of the top band').not.toBeNull()
-    const [, top, held, until] = fade!
-    expect(held).toBe(top)
-    // The band is 44 px high and the 12 px name sits in its middle: its line ends at about 67 % of the band.
-    expect(Number(until)).toBeGreaterThanOrEqual(68)
-    const ground = compositeOver(fixed(held!), parseColor('#ffffff')!)
-    const name = withAlpha(fixed('--fixed-ffffff'), opacityOf(ruleOf(floatingVideo, '.fv-site')))
-    expect(contrastRatio(name, ground)).toBeGreaterThanOrEqual(AA_TEXT)
   })
 })
