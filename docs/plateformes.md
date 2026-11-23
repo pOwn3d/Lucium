@@ -379,7 +379,7 @@ Sans `zenity` ni `kdialog`, la boîte n'existe pas : seule la fenêtre d'Ubuntu 
 
 #### Essais de la 1.1.7 à la main : état
 
-Tous les essais ci-dessous sont **à faire**. Ils sont lancés en machine virtuelle par la carte 821 (LUC-240) ; **un essai n'est marqué « fait » qu'avec la date, la machine et la source écrites ici par cette carte**, jamais avant. Les essais du 18 novembre 2026 (§8.3, §8.4) portent sur la 1.1.4 et sur la version de travail de la 1.1.5, pas sur la 1.1.7. Les « à faire » d'une machine x64 réelle restent ouverts même si la machine virtuelle est arm64 ou émulée (§8.3).
+Tous les essais ci-dessous sont **à faire**. Ils sont lancés en machine virtuelle à la main (essais de la bêta 1.1.7) ; **un essai n'est marqué « fait » qu'avec la date, la machine et la source écrites ici par cette carte**, jamais avant. Les essais du 18 novembre 2026 (§8.3, §8.4) portent sur la 1.1.4 et sur la version de travail de la 1.1.5, pas sur la 1.1.7. Les « à faire » d'une machine x64 réelle restent ouverts même si la machine virtuelle est arm64 ou émulée (§8.3).
 
 | Essai | Windows x64 | Linux x64 `.deb` | Linux x64 AppImage | Linux arm64 `.deb` | Linux arm64 AppImage |
 |---|---|---|---|---|---|
