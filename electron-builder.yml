@@ -196,6 +196,15 @@ nsis:
   deleteAppDataOnUninstall: false
   # build/installer.nsh is included by electron-builder by itself (its default `include`): the registry entries that make Lucium selectable as default browser.
 
+# The AppImage tools electron-builder packs with. The default ("0.0.0", the legacy toolset) puts in front of the AppImage a dynamic runtime whose arm64 build
+# lists `libz.so` among its libraries (the name without a version, which only the zlib1g-dev package provides) and loads libfuse.so.2 at run time: on an
+# Ubuntu 24.04 without them the file prints "error while loading shared libraries: libz.so" and shows nothing (beta 1.1.7, arm64; the x64 runtime asks for
+# libz.so.1, which every system has). Read in the ELF of the files, not run. "1.0.3" is the static runtime of AppImage/type2-runtime (release 20251108): it
+# lists no library at all, carries its own FUSE and squashfs code, and only calls fusermount. The test src/main/platform/build-files.test.ts and the step "What
+# the packages carry" of .github/workflows/linux.yml keep it so; a GitHub runner has zlib1g-dev, so only that read of the ELF can see the fault.
+toolsets:
+  appimage: '1.0.3'
+
 linux:
   # No build/icons/NxN.png yet: electron-builder converts the macOS icon (Linux falls back to it by itself, written down here to say so).
   icon: build/icon.icns
