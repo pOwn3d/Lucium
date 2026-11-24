@@ -39,6 +39,7 @@ const CONDITIONAL: Readonly<Record<string, { count: number; waitsFor: string }>>
   'src/main/sync/identity.test.ts': { count: 2, waitsFor: 'Windows excluded for the owner-only mode of the identity file (Windows keeps no POSIX mode), and a user who is not root and not Windows for the folder that refuses a file (chmod 500 refuses nothing there, and root writes anywhere)' },
   'src/main/sync/sync-store.test.ts': { count: 1, waitsFor: 'Windows excluded: the owner-only mode of sync.json is a POSIX mode, which Windows does not keep' },
   'src/main/shell/app-icon.test.ts': { count: 2, waitsFor: 'a user who is not root (root writes a bundle whose rights were taken away), and not Windows (a file named Icon plus a carriage return is forbidden there)' },
+  'src/main/shell/appimage-relaunch.test.ts': { count: 1, waitsFor: 'a system with a POSIX shell (/bin/sh, kill -0): the helper of the AppImage relaunch is a shell script, and Windows has no /bin/sh' },
   'src/main/shell/backups.test.ts': { count: 2, waitsFor: 'Windows: chmod 500 does not make a folder refuse a new file there' },
   'src/main/shell/bookmarks-export.test.ts': { count: 1, waitsFor: 'Windows: chmod 555 does not make a folder refuse a new file there' },
   'src/main/shell/bounded-file.test.ts': { count: 2, waitsFor: 'a user who is not root, and not Windows (no mkfifo, no /dev/zero, chmod 000 refuses nothing)' },

@@ -21,11 +21,12 @@ function standIn(name: string): { file: string; marker: string } {
 }
 
 /** The script, as the helper runs it, with no grace; the pid is the one of a process that ends when told to. */
-function runHelper(file: string, pid: number, env: Record<string, string>): ReturnType<typeof realSpawn> {
-  return realSpawn('/bin/sh', ['-c', RELAUNCH_SCRIPT, 'lucium-relaunch', String(pid), file, '5', '0'], { env, stdio: 'ignore' })
+function runHelper(file: string, pid: number, env: Record<string, string>, waitSeconds = 5): ReturnType<typeof realSpawn> {
+  return realSpawn('/bin/sh', ['-c', RELAUNCH_SCRIPT, 'lucium-relaunch', String(pid), file, String(waitSeconds), '0'], { env, stdio: 'ignore' })
 }
 
-describe('the script of the helper', () => {
+// The helper is a POSIX shell script (/bin/sh, kill -0, sleep) for Linux, the only system that has an AppImage: Windows has no /bin/sh, so the run is skipped there.
+describe.skipIf(process.platform === 'win32')('the script of the helper', () => {
   it('does not start the new file while the old process lives, and starts it once that process has ended', async () => {
     const { file, marker } = standIn('waits')
     const old = realSpawn('/bin/sh', ['-c', 'sleep 30'], { stdio: 'ignore' })
@@ -36,6 +37,22 @@ describe('the script of the helper', () => {
     old.kill('SIGKILL')
     await done
     expect(existsSync(marker)).toBe(true)
+  })
+
+  it('gives up waiting after the bound it is given, and starts the new file although the old process still lives', async () => {
+    const { file, marker } = standIn('bounded')
+    const old = realSpawn('/bin/sh', ['-c', 'sleep 30'], { stdio: 'ignore' })
+    try {
+      const helper = runHelper(file, old.pid!, { PATH: process.env.PATH ?? '/usr/bin:/bin' }, 1)
+      const done = new Promise<void>((resolve) => helper.once('exit', () => resolve()))
+      await new Promise((resolve) => setTimeout(resolve, 400))
+      expect(existsSync(marker)).toBe(false)
+      await done
+      expect(existsSync(marker)).toBe(true)
+      expect(() => process.kill(old.pid!, 0)).not.toThrow()
+    } finally {
+      old.kill('SIGKILL')
+    }
   })
 
   it('starts the new file with the environment it is given, and with no variable of the old AppImage when they are not given', async () => {
