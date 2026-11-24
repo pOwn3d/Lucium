@@ -24,6 +24,9 @@ vi.mock('electron', () => ({
   autoUpdater: {},
   BrowserWindow: { getFocusedWindow: () => null }
 }))
+// What starts the new AppImage (a detached helper) is a stand-in: no process is started by a test.
+const relaunchDetached = vi.hoisted(() => vi.fn())
+vi.mock('./appimage-relaunch', () => ({ relaunchAppImageDetached: relaunchDetached }))
 vi.mock('../runtime', async (original) => ({ ...(await original<typeof import('../runtime')>()), isBuiltApp: () => electron.built }))
 const keys = await vi.hoisted(async () => {
   const { newFeedKeyPair } = await import('../update-feed-signature')
@@ -110,6 +113,7 @@ beforeEach(() => {
   downloads = 0
   electron.fetch.mockReset().mockImplementation(network)
   electron.relaunch.mockReset()
+  relaunchDetached.mockReset()
   electron.quit.mockReset()
   electron.showMessageBox.mockReset().mockResolvedValue({ response: 1 })
   electron.openExternal.mockReset().mockResolvedValue(undefined)
@@ -160,12 +164,12 @@ describe('the update of an AppImage from the menu', () => {
     expect(downloads).toBe(1)
     expect(readdirSync(folder).sort()).toEqual(['Lucium.AppImage', 'Lucium.AppImage.update'])
     expect(readFileSync(appImage, 'utf8')).toBe('the appimage that runs')
-    expect(electron.relaunch).not.toHaveBeenCalled()
+    expect(relaunchDetached).not.toHaveBeenCalled()
     expect(record.quit).toBe(0)
     expect(installer.isReady()).toBe(true)
   })
 
-  it('swaps on the second click, keeps the copy that ran, asks for the new one to start when this one ends, and only then quits', async () => {
+  it('swaps on the second click, keeps the copy that ran, starts the new one from a detached helper that waits for this one to end, and only then quits', async () => {
     const installer = wire()
     electron.showMessageBox.mockResolvedValueOnce({ response: 0 }).mockResolvedValueOnce({ response: 1 })
     await menu()
@@ -176,10 +180,11 @@ describe('the update of an AppImage from the menu', () => {
     expect(readFileSync(appImage)).toEqual(Buffer.from(NEW_BYTES))
     expect(readFileSync(files.previous, 'utf8')).toBe('the appimage that runs')
     expect(existsSync(files.staged)).toBe(false)
-    expect(electron.relaunch).toHaveBeenCalledExactlyOnceWith({ execPath: appImage })
+    expect(relaunchDetached).toHaveBeenCalledExactlyOnceWith(appImage)
+    expect(electron.relaunch).not.toHaveBeenCalled()
     expect(record.prepared).toBe(1)
     // The relaunch is asked before the quit, and the state is written before both.
-    expect(electron.relaunch.mock.invocationCallOrder[0]!).toBeLessThan(electron.quit.mock.invocationCallOrder[0]!)
+    expect(relaunchDetached.mock.invocationCallOrder[0]!).toBeLessThan(electron.quit.mock.invocationCallOrder[0]!)
   })
 
   it('runs the swap from « Installer et relancer » in the box, and not from « Plus tard »', async () => {
@@ -205,9 +210,7 @@ describe('the update of an AppImage from the menu', () => {
     await menu()
     await untilBoxes(2)
     await later()
-    electron.relaunch.mockImplementation(() => {
-      throw new Error('cannot spawn')
-    })
+    relaunchDetached.mockRejectedValueOnce(new Error('cannot spawn'))
     const failures = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     expect(installer.restart()).toBe(true)
     await vi.waitFor(() => expect(electron.showMessageBox.mock.calls.length).toBeGreaterThanOrEqual(3))

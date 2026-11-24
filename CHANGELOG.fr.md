@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Corrections
+
+- **AppImage Linux, relance après une mise à jour** : après « Installer et relancer », Lucium se fermait sans revenir, car le nouvel AppImage mourait quand le runtime de l’ancien se terminait. Il est maintenant lancé par un assistant détaché qui attend la fin de l’ancienne copie.
+
 ## [1.1.9] - 2026-11-24
 
 Cette version fait de « amener toutes les fenêtres au premier plan » un réglage (activé par défaut), ouvre le fichier nommé au lancement sous Windows et Linux, et corrige l’AppImage arm64 qui demandait une bibliothèque que personne n’avait.

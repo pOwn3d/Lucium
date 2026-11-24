@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Fixed
+
+- **Linux AppImage, restart after an update**: after “Install and restart”, Lucium closed but did not come back, because the new AppImage died as the old one’s runtime ended. It is now started from a detached helper that waits for the old copy to end.
+
 ## [1.1.9] - 2026-11-24
 
 This version makes bringing every window forward a setting (on by default), opens the file a launch names on Windows and Linux, and fixes the arm64 AppImage that asked for a library nobody had.
