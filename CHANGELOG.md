@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+## [1.1.9] - 2026-11-24
+
+This version makes bringing every window forward a setting (on by default), opens the file a launch names on Windows and Linux, and fixes the arm64 AppImage that asked for a library nobody had.
+
 ### Fixed
 
 - **Windows and Linux, opening a file from outside Lucium**: a file named by the launch (double-click, “Open with”) now opens in a tab, and network paths (`\\server\share`) are refused; Lucium also says when it cannot tell whether it is the default browser instead of guessing.

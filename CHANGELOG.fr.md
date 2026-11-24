@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+## [1.1.9] - 2026-11-24
+
+Cette version fait de « amener toutes les fenêtres au premier plan » un réglage (activé par défaut), ouvre le fichier nommé au lancement sous Windows et Linux, et corrige l’AppImage arm64 qui demandait une bibliothèque que personne n’avait.
+
 ### Corrections
 
 - **Windows et Linux, ouvrir un fichier depuis l’extérieur de Lucium** : un fichier nommé au lancement (double-clic, « Ouvrir avec ») s’ouvre dans un onglet, et les chemins réseau (`\\serveur\partage`) sont refusés ; Lucium dit aussi quand il ne peut pas savoir s’il est le navigateur par défaut, au lieu de deviner.
