@@ -4,14 +4,16 @@
 // 1. « Installer » downloads the AppImage the signed feed of AppImages names, BESIDE the one that runs (update-appimage-file.ts: the same folder, so a rename), and keeps
 //    it only if its size and its SHA-256 are the signed ones, made executable.
 // 2. « Installer et relancer » (a second click) reads the feed once more for a withdrawal, checks the file again on the disk, swaps it in (the running AppImage is kept as
-//    `.previous`), asks Electron to start the new one when this one has ended (`app.relaunch`: a second instance started now would find the first and give up), then quits
-//    through the path of the update of the Mac (the state is written first). The copy that was kept is removed by the new one, once it runs (`removePreviousAppImage`).
+//    `.previous`), starts a detached helper that starts the new one when this one has ended (not `app.relaunch`, whose relauncher dies with the old AppImage's FUSE
+//    runtime: appimage-relaunch.ts; a second instance started now would find the first and give up), then quits through the path of the update of the Mac (the state is
+//    written first). The copy that was kept is removed by the new one, once it runs (`removePreviousAppImage`).
 //
 // A copy whose AppImage cannot be replaced (a folder the person cannot write, a link) installs nothing and is told the download page (`canReplaceAppImage`).
 
 import { app, dialog, net } from 'electron'
 import { ownRequestHeaders } from '@shared/own-requests'
 import { t } from '@shared/i18n'
+import { relaunchAppImageDetached } from './appimage-relaunch'
 import { canReplaceAppImage, discardAppImageUpdate, discardAppImageUpdateNow, downloadAppImage, swapAppImage, undoSwapAppImage, verifyStagedAppImage } from '../update-appimage-file'
 import type { InstallerFetch } from '../update-installer-file'
 import { WindowsUpdateInstaller, type InstallerTexts } from './windows-update'
@@ -40,8 +42,8 @@ export function createAppImageUpdateInstaller(file: string, feed: () => string |
       launch: async () => {
         await swapAppImage(file)
         try {
-          // Started when this copy has ended, from the file that now holds the new version.
-          app.relaunch({ execPath: file })
+          // Started when this copy has ended, from the file that now holds the new version, by a helper that does not depend on this copy's runtime.
+          await relaunchAppImageDetached(file)
         } catch (error) {
           // Nothing was asked to start: the AppImage the person had is put back, and the failure goes to the box of the installer.
           await undoSwapAppImage(file)
