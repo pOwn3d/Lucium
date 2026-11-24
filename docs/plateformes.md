@@ -15,7 +15,7 @@ La variante DRM a son propre document : `docs/drm.md`.
 | Intégration continue | `ci.yml` (tests unitaires et build non signée, à chaque pull request), `smoke-macos.yml` (chaîne moteur : à la main, sur un tag et chaque semaine), `e2e.yml` (chaque nuit), `build.yml` (à la main et sur un tag) | `build.yml` (à la main et sur un tag, ne peut pas le lancer) | `windows.yml` : tests unitaires, installeur NSIS non signé en artefact (installé et désinstallé en silence, registre lu) et E2E, sur chaque pull request, à la main et chaque nuit (E2E) ; aucun n'est un contrôle requis ; `build.yml` (à la main et sur un tag) | `ci.yml` (typage, lint et tests, à chaque envoi et pull request) + **`linux.yml`** (paquets x64 et arm64, démarrage du deb et de l'AppImage, E2E sous Xvfb : sur une pull request qui touche le code, chaque nuit, à la main) + `build.yml` (expérimental) |
 | Ce qui manque | signature + notarisation de la build standard | un Mac Intel (ou Rosetta) pour essayer | tout essai sur une vraie machine x64 (la VM est ARM64, Lucium y est émulé) ; « Applications par défaut » ; signature (aucun certificat : carte à part) | un essai sur un vrai ordinateur (une VM arm64 a servi le 18 novembre 2026, §8.3) ; une extension réelle du Chrome Web Store à service worker (§8 : seules les extensions de sonde du dépôt sont exercées) ; Wayland ; l'AppImage sur Ubuntu 24.04 démarre seulement une fois les espaces de noms d'utilisateur autorisés (le deb n'a besoin de rien) : sinon une boîte dit pourquoi et conseille le deb (§8.4) |
 
-Ce document couvre : ce qui est propre à macOS (§2), la couche de plateforme testée (§3), la configuration `electron-builder.yml` (§5), le brouillon `.github/workflows/build.yml` (§5), le cask Homebrew (§7), le jeu de test Linux en CI et la liste de contrôle d'un premier essai (§8). La couche n'a aucun réglage : elle remplace des appels directs par des appels qui, sur macOS, font la même chose.
+Ce document couvre : ce qui est propre à macOS (§2, dont la liste des fonctions réservées au Mac dans la bêta, §2.5), la couche de plateforme testée (§3), la configuration `electron-builder.yml` (§5), le brouillon `.github/workflows/build.yml` (§5), le cask Homebrew (§7), le jeu de test Linux en CI et la liste de contrôle d'un premier essai (§8). La couche n'a aucun réglage : elle remplace des appels directs par des appels qui, sur macOS, font la même chose.
 
 ## 2. Ce qui est propre à macOS
 
@@ -89,6 +89,28 @@ Méthode : recherche textuelle dans les fichiers de production (`src/` et `scrip
 | `package.json` `package` | `--mac --dir` | inchangé ; pas de script Windows/Linux (la CI appelle `electron-builder` directement) |
 | `package.json` `test:engine` | variable d'environnement et `mktemp` à la syntaxe bash | à lancer depuis un shell bash (Git Bash sous Windows) |
 | `electron-builder.yml` `electronFuses.resetAdHocDarwinSignature` | macOS | ignoré ailleurs |
+
+### 2.5 Propre au Mac dans la bêta Windows et Linux (liste vérifiée)
+
+Décision du chef de projet, 23 novembre 2026 : ces fonctions restent **réservées au Mac pour la bêta**. Aucun code n'est écrit pour leur donner un équivalent (Windows Hello, coffre du système) ; la page Télécharger du site et les notes de version le disent. **Rien de plus n'est promis** : un équivalent n'est ni planifié ni daté.
+
+Source de la liste : les faits de plateforme `PLATFORM_FACTS` (`src/shared/platform.ts`, lignes `win32` et `linux`) et les fichiers cités. Chaque ligne est lue dans le code ; aucune n'a été essayée sur une machine réelle.
+
+| Fonction propre au Mac | Hors macOS | Preuve dans le code |
+|---|---|---|
+| **Touch ID** pour ouvrir le coffre de mots de passe, et « Touch ID à chaque remplissage » | jamais proposé ; le coffre s'ouvre par le mot de passe principal (la phrase) seulement | `touchId: false` (`shared/platform.ts`) ; `NO_TOUCH_ID` (`main/platform/index.ts`) |
+| **Trousseau macOS** qui garde la clé du coffre pour Touch ID (service d'aide XPC `LuciumKeychain`) | absent : la clé n'est confiée à aucun coffre du système | `main/vault-keychain.ts`, `native/vault-keychain/`, `native/vault-xpc/` ; `docs/gestionnaire-mots-de-passe.md` (« Touch ID ») |
+| **Traduction du système** (premier moteur du panneau « Traduire cette page ») | absente ; le moteur local Bergamot reste | `main/translate/system.ts` (en-tête : « on macOS », aide `LuciumTranslate.app`) ; `main/translate/bergamot.ts` |
+| **L'application Raccourcis et AppleScript** (les deux clients de commandes sont propres au Mac) | sans objet. La fonction « Automatisation » (réglage `urlAutomation`), les commandes par adresse `lucium://` et les options de ligne de commande `--new-window` et `--private-window` ne sont pas réservées au Mac : elles restent disponibles, non essayées sous Windows et Linux | `shared/automation-url.ts` (en-tête), `shared/features.ts` (fonction `applescript`), `shared/launch-flags.ts`, `shared/settings-catalog.ts` |
+| **Import depuis Safari et Arc** | non proposés | `importSafari: false`, `importArc: false` ; `main/platform/paths.ts` |
+| **Icône du Dock** | sans objet | `dock: false` ; `app.dock` |
+| **Effet de verre** (matière translucide de la fenêtre) | absent ; fond plein | `vibrancy: false` ; `main/browser.ts` |
+| **Menu unique de l'application** (Services, Masquer, Zoom…) et **feuille de partage du système** | chaque fenêtre porte sa barre ; rôles retirés ; pas de feuille de partage | `globalMenuBar`, `shareSheet` ; `main/platform/menu.ts` |
+| **« Ouvrir avec… »** par une application du Mac | masqué | `openWithBundle: false` ; `main/open-with.ts` |
+| **Correcteur orthographique du système** | coupé par défaut ; Chromium télécharge ses dictionnaires quand on l'active | `systemSpellChecker: false` |
+| **Liens vers les réglages du système** et **demande d'autorisation d'enregistrement d'écran** | boutons non proposés ; pas de demande | `settingsLinks`, `screenRecordingPermission` |
+
+Ce que la bêta garde malgré tout : le coffre de mots de passe s'ouvre par le mot de passe principal (`password-vault.ts`, `writePrivateFile`, correction décrite en §2.2). Les équivalents possibles (Windows Hello, DPAPI ou Credential Manager sous Windows, Secret Service sous Linux) sont des pistes de l'étude de parité, **pas une décision ni un travail en cours**. Windows Hello ne se vérifie pas dans une machine virtuelle.
 
 ## 3. La couche de plateforme
 

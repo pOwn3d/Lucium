@@ -32,6 +32,7 @@ The rule above has **one exception, and only this one**: the Windows installer a
 - Each file is named `…-beta-unsigned.<ext>`, and a `SHA256SUMS` file lists them. Each sum is checked against the log of the CI run that built the file and against the digest GitHub computes for the upload.
 - The Release notes say, in a section of their own and without removing anything the workflow wrote, that Windows and Linux are a beta and unsigned.
 - The download page of the site shows the same sums, the warning of SmartScreen and the fact that updates are done by hand ([docs/plateformes.md](../plateformes.md), section 8.3, « Pour refaire une bêta »).
+- The notes and the download page also say what the beta does not have, because the code reserves it to the Mac: Touch ID and the macOS keychain for the password vault (on Windows and Linux it opens with the main password only), the system translation, the Shortcuts app and AppleScript (the `lucium://` URL commands and the command-line options stay available, not tried on Windows or Linux), the import from Safari and Arc, the Dock icon and the glass effect. The list is checked against the code in [docs/plateformes.md](../plateformes.md), section 2.5 (in French). No equivalent is promised.
 - This ends when Windows is signed and Windows and Linux have been tried on real machines: they are then released like the Mac, and this section is removed.
 
 ## Try the release workflow without releasing (once, before the first tag)
