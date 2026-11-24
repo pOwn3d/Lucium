@@ -3876,6 +3876,8 @@ export const en: Record<MessageKey, string> = {
   'settings.extension-non-empaquetee-dossier-avec-manifest-json': 'Unpacked extension (folder with manifest.json)',
   'settings.extensions': 'Extensions',
   'settings.faire-glisser-un-onglet-sur-la-page-pour': 'Drag a tab onto the page to split',
+  'settings.amener-toutes-les-fenetres-au-premier-plan': 'Bring every window to the front',
+  'settings.un-clic-sur-le-dock-ou-cmd-tab-ramene-toutes': 'A click on the Dock or switching to Lucium brings all its windows forward; when off, only the last used one comes back.',
   'settings.autres-reglages-des-fenetres': 'Other window settings',
   'settings.garde-avec-l-archive-jusqu-a-20-adresses': 'Keeps up to 20 pages per archived tab: ⇧⌘T and the archive also restore the Back button. A tab whose memory was released, or not yet opened since launch, keeps only its address. Lucium’s data takes a little more room.',
   'settings.taille-minimale-du-texte-des-pages': 'Minimum text size on pages',

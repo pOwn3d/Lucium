@@ -548,6 +548,7 @@ const VALID: { [K in keyof Settings]: (value: unknown) => boolean } = {
   showToolbar: bool,
   appIcon: isAppIconId,
   warnBeforeQuitting: bool,
+  raiseAllWindows: bool,
   autoUpdate: bool,
   windowsAutoUpdate: bool,
   chromeNativeHosts: bool,

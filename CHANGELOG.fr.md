@@ -8,6 +8,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 - **Windows et Linux, ouvrir un fichier depuis l’extérieur de Lucium** : un fichier nommé au lancement (double-clic, « Ouvrir avec ») s’ouvre dans un onglet, et les chemins réseau (`\\serveur\partage`) sont refusés ; Lucium dit aussi quand il ne peut pas savoir s’il est le navigateur par défaut, au lieu de deviner.
 
+### Ajouts
+
+- **Amener toutes les fenêtres au premier plan, désormais un réglage** : sur macOS, « Amener toutes les fenêtres au premier plan » (Réglages › Onglets et fenêtres, Autres réglages des fenêtres) est activé par défaut, comme en 1.1.8 ; désactivé, un clic sur le Dock ou ⌘⇥ ne ramène que la dernière fenêtre utilisée.
+
 ## [1.1.8] - 2026-11-23
 
 Cette version ramène toutes les fenêtres de Lucium devant quand on passe à l'application, améliore la fenêtre flottante d'une vidéo (plus de barre de défilement, et on la déplace par la vidéo) et apporte la mise à jour de Windows par Lucium lui-même, éteinte par défaut.

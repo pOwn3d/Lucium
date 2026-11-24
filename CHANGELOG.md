@@ -14,6 +14,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 - **Windows and Linux, opening a file from outside Lucium**: a file named by the launch (double-click, “Open with”) now opens in a tab, and network paths (`\\server\share`) are refused; Lucium also says when it cannot tell whether it is the default browser instead of guessing.
 
+### Added
+
+- **Bring every window to the front, now a setting**: on macOS, “Bring every window to the front” (Settings › Tabs and windows, Other window settings) is on by default, as in 1.1.8; off, a click on the Dock or ⌘⇥ brings back only the last used window.
+
 ## [1.1.8] - 2026-11-23
 
 This version brings every Lucium window forward when you switch to the application, improves the floating video window (no scrollbar, and it moves by its video), and brings the update of Windows from Lucium itself, off by default.

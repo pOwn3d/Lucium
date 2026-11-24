@@ -334,6 +334,7 @@ export function defaultSettings(): Settings {
     spaceSwipe: true,
     dragToSplit: true,
     warnBeforeClosingWindow: false,
+    raiseAllWindows: true,
     modifiedClickBackground: true,
     blankLinkBackground: false,
     showZoomIndicator: true,

@@ -33,7 +33,7 @@ function fakeWindow(log: string[], { id, kind = 'window', visible = true, minimi
   return { id, kind, win }
 }
 
-function manager(records: ReturnType<typeof fakeWindow>[], lastUsed: string, log: string[], away = false) {
+function manager(records: ReturnType<typeof fakeWindow>[], lastUsed: string, log: string[], away = false, raiseAll?: () => boolean) {
   const fake = {
     list: () => records,
     focused: () => records.find((r) => r.id === lastUsed) ?? records[0]!,
@@ -41,7 +41,7 @@ function manager(records: ReturnType<typeof fakeWindow>[], lastUsed: string, log
     revealMain: () => void log.push('revealMain'),
     newWindow: () => void log.push('newWindow')
   }
-  followDockClicks(fake as never)
+  followDockClicks(fake as never, raiseAll)
 }
 
 function click(records: ReturnType<typeof fakeWindow>[], lastUsed: string, log: string[], away = false) {
@@ -61,6 +61,23 @@ describe('followDockClicks', () => {
     const log: string[] = []
     click([fakeWindow(log, { id: 'main', kind: 'main' }), fakeWindow(log, { id: 'window-2' }), fakeWindow(log, { id: 'private-1', kind: 'private' })], 'window-2', log)
     expect(log).toEqual(['show:main', 'show:private-1', 'show:window-2', 'focus:window-2'])
+  })
+
+  it('with the setting off (read at each click), brings the last used window only and moves nothing when switching to the application', () => {
+    const log: string[] = []
+    let on = false
+    const records = [fakeWindow(log, { id: 'main', kind: 'main' }), fakeWindow(log, { id: 'window-2', minimized: true, focused: true })]
+    manager(records, 'window-2', log, false, () => on)
+    handlers['activate']!()
+    expect(log).toEqual(['restore:window-2', 'show:window-2', 'focus:window-2'])
+    log.length = 0
+    handlers['did-become-active']!()
+    expect(log).toEqual([])
+    on = true
+    return nextTurn().then(() => {
+      handlers['activate']!()
+      expect(log).toEqual(['show:main', 'show:window-2', 'focus:window-2'])
+    })
   })
 
   it('restores a minimized window before showing it, and skips a destroyed one', () => {

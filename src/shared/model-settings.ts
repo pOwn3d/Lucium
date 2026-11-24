@@ -570,6 +570,8 @@ export interface Settings {
   /** A tab dragged from the sidebar onto the page shows where the split view would put it. Off: dragging over the page does nothing. */
   dragToSplit: boolean
   /** Ask before closing a window that shows several tabs (never the last window: closing it already is quitting). Off by default. */
+  /** macOS: a click on the Dock icon or switching to Lucium (⌘⇥) brings every window of Lucium forward (main.ts followDockClicks). On by default; off, only the last used window comes back. */
+  raiseAllWindows: boolean
   warnBeforeClosingWindow: boolean
   /** ⌘-click and middle-click on a link open its tab in the background. Off: the new tab comes to the front. */
   modifiedClickBackground: boolean
