@@ -63,6 +63,17 @@ describe('« Définir comme navigateur par défaut »', () => {
   })
 })
 
+describe('when the system gives no answer', () => {
+  it('says it cannot tell, claims neither a yes nor a no, and still offers the button', async () => {
+    asked.defaultBrowser = async () => null
+    const container = await pane()
+    expect(container.textContent).toContain(t('settings.navigateur-par-defaut-inconnu'))
+    expect(container.textContent).not.toContain(t('settings.home-lucium-est-par-defaut'))
+    expect(container.textContent).not.toContain(t('settings.lucium-n-est-pas-votre-navigateur-par'))
+    expect(container.textContent).toContain(t('settings.definir-lucium-par-defaut'))
+  })
+})
+
 describe('« Définir comme navigateur par défaut » on Windows, where the choice is made in the system Settings', () => {
   it('says that Settings is open, and keeps the invitation while Windows keeps another browser', async () => {
     asked.setDefaultBrowser = async () => 'system-settings'

@@ -116,7 +116,7 @@ export function WelcomeSheet() {
     )
     const ask = (): void =>
       void act.defaultBrowser().then(
-        (value) => live && setIsDefault(value),
+        (value) => live && setIsDefault(value === true),
         (error: unknown) => {
           console.warn('[welcome] cannot tell whether Lucium is the default browser:', error)
           if (live) setIsDefault(false)
@@ -137,7 +137,7 @@ export function WelcomeSheet() {
     void act
       .setDefaultBrowser()
       .then(() => act.defaultBrowser())
-      .then(setIsDefault, (error: unknown) => {
+      .then((value) => setIsDefault(value === true), (error: unknown) => {
         console.warn('[welcome] cannot make Lucium the default browser:', error)
         setIsDefault(false)
       })

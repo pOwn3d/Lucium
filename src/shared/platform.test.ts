@@ -180,6 +180,14 @@ describe('paths and command lines', () => {
     expect(linksFromArgv(['/opt/Lucium/lucium', '--no-sandbox', 'https://example.org/a', 'HTTP://example.net', 'file:///etc/passwd', 'javascript:alert(1)', 'mailto:a@b.c'])).toEqual(['https://example.org/a', 'HTTP://example.net'])
   })
 
+  it('keeps the files the system opens with Lucium: their path becomes a file address, for the types a tab shows only', () => {
+    expect(linksFromArgv(['C:\\Users\\jane\\Lucium.exe', 'C:\\Users\\jane\\ma page.html', 'c:/docs/a.pdf', '/home/jane/page.htm', '/home/jane/setup.sh', 'C:\\tools\\run.exe', 'relative.html', '\\\\server\\share\\a.html', '//server/share/a.html'])).toEqual([
+      'file:///C:/Users/jane/ma%20page.html',
+      'file:///c:/docs/a.pdf',
+      'file:///home/jane/page.htm'
+    ])
+  })
+
   it('keeps the commands by address too: lucium://, with its two slashes, and no other scheme', () => {
     expect(linksFromArgv(['lucium', 'lucium://new-tab', 'LUCIUM://open?url=x', 'lucium://search?q=a', 'browser://search?q=a', 'lucium:new-tab', 'lucium//x', 'notlucium://x'])).toEqual(['lucium://new-tab', 'LUCIUM://open?url=x', 'lucium://search?q=a'])
   })

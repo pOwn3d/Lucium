@@ -15,6 +15,9 @@ import {
 import { t } from '@shared/i18n'
 import type { PlatformId } from '@shared/platform'
 
+/** The desktop entry the .deb installs (`/usr/share/applications/lucium.desktop`): what `xdg-settings` names once Lucium is the browser. */
+const LINUX_DESKTOP_ENTRY = 'lucium.desktop'
+
 export interface DefaultBrowserPorts {
   platform: PlatformId
   /** The packaged application: a development copy of Electron never takes the web links (shared/default-browser.ts). */
@@ -25,6 +28,8 @@ export interface DefaultBrowserPorts {
   setClient(scheme: string): boolean
   /** What `reg query <key> /v ProgId` printed, null when the key does not exist; rejects when the program could not be run. */
   queryRegistry(key: string): Promise<string | null>
+  /** Linux: what `xdg-settings get default-web-browser` printed (a desktop entry, `lucium.desktop`), null when it printed nothing; rejects when the program could not be run. */
+  linuxWebBrowser(): Promise<string | null>
   /** `shell.openExternal`. */
   openSettings(url: string): Promise<void>
 }
@@ -46,8 +51,22 @@ export function registryReader(run: RunProgram, systemRoot: string = 'C:\\Window
     })
 }
 
-/** Whether Lucium is the default browser of the system. Windows: what Windows holds for http and https, read from the registry. */
-export async function isDefaultBrowser(ports: DefaultBrowserPorts): Promise<boolean> {
+/**
+ * Whether Lucium is the default browser of the system: yes, no, or `null` when the system gave no answer to trust (the Settings say so instead of claiming a yes or a no).
+ * Windows: what Windows holds for http and https, read from the registry. Linux: Electron's answer, confirmed by the desktop entry `xdg-settings` names, since
+ * Electron's own check can say yes from a state the desktop does not follow (reported on the .deb of Ubuntu 24.04, 23 November 2026; not reproduced here).
+ */
+export async function isDefaultBrowser(ports: DefaultBrowserPorts): Promise<boolean | null> {
+  if (ports.platform === 'linux') {
+    if (!WEB_SCHEMES.every((scheme) => ports.isClient(scheme))) return false
+    try {
+      const entry = await ports.linuxWebBrowser()
+      return entry === null ? null : entry.trim().toLowerCase() === LINUX_DESKTOP_ENTRY
+    } catch (error) {
+      console.warn('[default-browser] cannot read the default browser of the desktop:', error instanceof Error ? error.message : String(error))
+      return null
+    }
+  }
   if (ports.platform !== 'win32') return WEB_SCHEMES.every((scheme) => ports.isClient(scheme))
   const progIds: Record<string, string | null> = {}
   for (const scheme of WEB_SCHEMES) {
@@ -60,20 +79,20 @@ export async function isDefaultBrowser(ports: DefaultBrowserPorts): Promise<bool
         if (progIds[scheme] !== null) break
       }
     } catch (error) {
-      // Not knowing is not a yes: the window offers the button, which only opens Settings.
+      // Not knowing is neither a yes nor a no: the window says it could not tell, and still offers the button, which only opens Settings.
       console.warn(`[default-browser] cannot read the choice Windows holds for ${scheme}:`, error instanceof Error ? error.message : String(error))
-      return false
+      return null
     }
   }
   return windowsChoiceIsLucium(progIds)
 }
 
 /**
- * The same, for the menu, which is built without waiting: Windows cannot be read at once, so the entry is never dimmed there (it only opens Settings,
- * whatever the state).
+ * The same, for the menu, which is built without waiting: Windows and Linux cannot be read at once (the registry, `xdg-settings`), so the entry is never dimmed
+ * there (it only opens Settings, or registers again, whatever the state).
  */
 export function isDefaultBrowserNow(ports: DefaultBrowserPorts): boolean {
-  return ports.platform === 'win32' ? false : WEB_SCHEMES.every((scheme) => ports.isClient(scheme))
+  return ports.platform === 'win32' || ports.platform === 'linux' ? false : WEB_SCHEMES.every((scheme) => ports.isClient(scheme))
 }
 
 /** Asks the system to make Lucium the default browser. Windows: opens Settings on Lucium (an application cannot choose for the user there). */

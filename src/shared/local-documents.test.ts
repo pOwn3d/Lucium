@@ -10,6 +10,13 @@ describe('localFileUrl', () => {
     }
   })
 
+  it('gives the file address of a Windows path, with the drive letter kept and the backslashes turned into slashes', () => {
+    expect(localFileUrl('C:\\Users\\jane\\essai.html')).toBe('file:///C:/Users/jane/essai.html')
+    expect(localFileUrl('d:/a b/#1.html')).toBe('file:///d:/a%20b/%231.html')
+    expect(localFileUrl('C:\\Users\\jane\\setup.exe')).toBeNull()
+    expect(localFileUrl('C:essai.html')).toBeNull()
+  })
+
   it('reads the type whatever its case, and from the last dot only', () => {
     expect(localFileUrl('/tmp/PAGE.HTML')).toBe('file:///tmp/PAGE.HTML')
     expect(localFileUrl('/tmp/archive.tar.html')).toBe('file:///tmp/archive.tar.html')
@@ -33,7 +40,7 @@ describe('localFileUrl', () => {
   })
 
   it('refuses what is not an absolute path of a file: a relative path, an address, an empty text, a NUL, a path too long, a value that is not a text', () => {
-    for (const path of ['a.html', './a.html', '../a.html', 'file:///tmp/a.html', 'https://example.com/a.html', '', '/tmp/a\0.html']) {
+    for (const path of ['a.html', './a.html', '../a.html', 'file:///tmp/a.html', 'https://example.com/a.html', '', '/tmp/a\0.html', '//server/share/a.html', '\\\\server\\share\\a.html']) {
       expect(localFileUrl(path), JSON.stringify(path)).toBeNull()
     }
     expect(localFileUrl(`/${'a'.repeat(LOCAL_PATH_MAX)}.html`)).toBeNull()

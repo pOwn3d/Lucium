@@ -3761,6 +3761,7 @@ export const fr = {
   'settings.lucium-cherche-une-nouvelle-version-au': '20 s après le lancement, puis une fois par jour, Lucium lit le fichier des versions à l’adresse intégrée à l’application. La requête ne porte ni cookie ni identifiant ; le serveur voit votre adresse IP et la version de Lucium. Si une version plus récente existe, une notice le dit au pied de la barre latérale ; rien n’est téléchargé avant votre clic sur « Installer ». Décochée, cette case coupe ces requêtes ; « Rechercher les mises à jour… » cherche toujours à votre demande.',
   'settings.lucium-verifie-chaque-jour-s-il-existe-une': 'Lucium vérifie chaque jour s’il existe une nouvelle version ; rien n’est téléchargé sans votre clic.',
   'settings.cette-version-ne-se-met-pas-a-jour-toute-seule': 'Cette version ne se met pas à jour toute seule : téléchargez la dernière sur lucium.app.',
+  'settings.navigateur-par-defaut-inconnu': 'Impossible de savoir si Lucium est votre navigateur par défaut : le système n’a pas répondu.',
   'settings.lucium-n-est-pas-votre-navigateur-par': 'Lucium n’est pas votre navigateur par défaut.',
   'settings.archivage-et-organisation': 'Archivage et organisation',
   'settings.fermer-et-archiver-les-mini-fenetres-oubliees': `Fermer et archiver les ${little.p} oubliées`,

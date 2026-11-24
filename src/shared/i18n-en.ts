@@ -3754,6 +3754,7 @@ export const en: Record<MessageKey, string> = {
   'settings.lucium-cherche-une-nouvelle-version-au': '20 s after launch, then once a day, Lucium reads the release file at the address built into the app. The request carries no cookie and no identifier; the server sees your IP address and Lucium’s version. When a newer version exists, a notice says so at the foot of the sidebar; nothing is downloaded before you click “Install”. Unchecked, this box stops these requests; “Check for Updates…” still looks when you ask.',
   'settings.lucium-verifie-chaque-jour-s-il-existe-une': 'Lucium checks once a day for a new version; nothing is downloaded until you click.',
   'settings.cette-version-ne-se-met-pas-a-jour-toute-seule': 'This version doesn’t update by itself: download the latest one from lucium.app.',
+  'settings.navigateur-par-defaut-inconnu': 'Can’t tell whether Lucium is your default browser: the system gave no answer.',
   'settings.lucium-n-est-pas-votre-navigateur-par': 'Lucium is not your default browser.',
   'settings.fermer-et-archiver-les-mini-fenetres-oubliees': `Close and archive forgotten ${little.p}`,
   'settings.arrete-les-animations-et-les-transitions-de-l': 'Stops the animations and transitions of the interface.',

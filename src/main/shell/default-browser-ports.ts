@@ -14,6 +14,13 @@ export function systemDefaultBrowserPorts(): DefaultBrowserPorts {
     isClient: (scheme) => app.isDefaultProtocolClient(scheme),
     setClient: (scheme) => app.setAsDefaultProtocolClient(scheme),
     queryRegistry,
+    linuxWebBrowser: () =>
+      new Promise((resolve, reject) => {
+        execFile('xdg-settings', ['get', 'default-web-browser'], { timeout: 5000, windowsHide: true }, (error, stdout) => {
+          if (error) return reject(error)
+          resolve(stdout.trim() === '' ? null : stdout)
+        })
+      }),
     openSettings: (url) => shell.openExternal(url)
   }
 }
