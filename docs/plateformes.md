@@ -388,6 +388,7 @@ Ce qui est configuré (`electron-builder.yml`, section `nsis`) : installation **
    ./Lucium-<version>-linux-<arch>-beta-unsigned.AppImage
    ```
 4. Si l'AppImage ne se lance pas faute de FUSE : `sudo apt install libfuse2t64` (Ubuntu 24.04 ne l'a pas par défaut ; vérifié en CI).
+   Si elle n'ouvre aucune fenêtre et que la sortie d'erreur dit `error while loading shared libraries: libz.so` : `sudo apt install zlib1g-dev` (vu sur Ubuntu 24.04 arm64 en VM, §11.1).
 5. **Désinstaller** : supprimer le fichier. Une AppImage ne crée ni entrée de menu ni profil AppArmor.
 
 **Si la boîte « Lucium ne peut pas démarrer » apparaît** (AppImage sous Ubuntu 24.04 et plus récent) : AppArmor restreint les espaces de noms d'utilisateur (`kernel.apparmor_restrict_unprivileged_userns=1`), l'`AppRun` ajoute `--no-sandbox` et Lucium refuse de tourner sans bac à sable (§8.4). Le bac à sable n'est jamais coupé. Deux issues :
@@ -489,3 +490,32 @@ Décision du chef de projet, le 23 novembre 2026 (option A de l'étude de la car
 ### Linux
 
 L'option existe dans Electron (`titleBarOverlay` est documenté pour `win32,linux` dans l'`electron.d.ts` d'Electron 45) mais le côté des boutons suit la disposition du bureau (GNOME, KDE : boutons à droite ou à gauche) et aucune fenêtre Linux n'a été vue avec elle. `facts.controlsOverlay` y est donc **faux** : barre du système, comme avant. Pour l'activer : passer le fait à vrai, voir une fenêtre sur un bureau, et rendre le côté des boutons au CSS (`env(titlebar-area-x)` est non nul quand ils sont à gauche : la formule de `--controls-w` ne couvre que le côté droit).
+
+## 11. Problèmes connus de la bêta (Windows et Linux)
+
+État au 23 novembre 2026, d'après les essais manuels en machine virtuelle de la 1.1.7 (Windows 11 ARM64 avec Lucium x64 émulé ; Ubuntu 24.04 arm64). Ce qui est écrit ici est ce qui a été vu, pas ce qui est supposé : les « à confirmer » restent ouverts.
+
+### 11.1 AppImage : prérequis `zlib1g-dev` sur Ubuntu 24.04
+
+- **Constat** : sur un Ubuntu 24.04 neuf sans le paquet `zlib1g-dev`, l'AppImage (1.1.4 comme 1.1.7) n'ouvre aucune fenêtre. Seule la sortie d'erreur dit `error while loading shared libraries: libz.so`.
+- **Contournement vu en VM** : `sudo apt install zlib1g-dev`. L'AppImage passe alors à l'étape suivante : la boîte « Lucium ne peut pas démarrer » du §8.4 (AppArmor), puis, avec `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (jusqu'au redémarrage), elle démarre. Le `.deb` s'est installé et lancé sans ce paquet (vu en VM arm64).
+- **À confirmer** : sur Linux x64 (non essayé : la VM est arm64) ; le paquet exact qui apporte `libz.so` n'est pas établi, `zlib1g-dev` est celui qui a résolu l'erreur.
+- **Corrigé ou documenté** : documenté ici (cette section et §8.5) ; la page Télécharger le dira une fois la PR du site fusionnée. Aucune AppImage sans cette dépendance n'est fournie.
+
+### 11.2 Windows : avertissement SmartScreen
+
+L'installeur n'est pas signé. SmartScreen affiche « Windows a protégé votre ordinateur » avec l'éditeur « Éditeur inconnu ». La suite : « Informations complémentaires », puis « Exécuter quand même ». Le bouton n'apparaît qu'après le premier clic. L'avertissement revient à chaque installation et à chaque mise à jour. Un installeur lancé depuis une invite de commandes affiche à la place la boîte « L'éditeur n'a pas pu être vérifié » (« Exécuter »).
+
+Aucune signature n'est promise ici : elle dépend de la question 8 du §9 (titulaire et voie non choisis). Dans la VM, le bouton « Exécuter quand même » n'a pas répondu au clavier (la souris ne fonctionnait pas non plus) : l'installeur a été lancé autrement ; ce n'est pas établi comme un défaut de Lucium.
+
+### 11.3 `.deb` : rapport d'Ubuntu après un `kill -TERM`
+
+Un `kill -TERM` sur Lucium installé par le `.deb` (1.1.7) a produit un rapport d'Ubuntu (SIGTRAP, `/var/crash/_opt_Lucium_lucium.1000.crash`). La fermeture par Ctrl+Q n'en a produit aucun (trois essais). **Connu, cause inconnue** : le code suit le même chemin pour les deux (`app.quit()` après sauvegarde) et un SIGTRAP est un contrôle interne de Chromium, illisible sans le fichier. Rien n'a été changé à l'aveugle. **Demandé** : si l'arrêt est rejoué, joindre `/var/crash/_opt_Lucium_lucium.*.crash` pour lire les symboles.
+
+### 11.4 Ce qui n'a pas été essayé
+
+- **Linux x64** (`.deb` et AppImage) : jamais essayé à la main, seulement par les postes x64 de la CI (§8.1). La VM de ces essais est arm64.
+- **Vidéo flottante** (image dans l'image) : non essayée, aucune vidéo ne se lit dans les VM (rendu logiciel, pas de GPU).
+- **Machine réelle** : aucune (Windows x64, Linux). Accélération graphique, Wayland, performances et lecture de vidéo protégée restent inconnus.
+- **Windows** : essais faits au clavier seulement (la souris de la VM ne répondait pas) ; l'apparence a été changée en éditant `state.json` et non par la liste des Réglages ; l'application a été arrêtée de force avant chaque copie de profil.
+- **Les profils** (`%APPDATA%\Lucium`, `~/.config/Lucium`) ne sont jamais supprimés par la désinstallation.
