@@ -17,6 +17,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 - **Free up memory in three strengths**: the resource panel now has Light, Medium and Strong buttons, each with the tabs it takes and the memory it frees. Strong also takes pinned tabs and kept-awake sites. Undo for 15 seconds. Calls, downloads and unsent text are always spared.
 - **Resources: more tabs, and a limit per tab**: the panel can list up to ten tabs (“Show more”) to find what uses the processor, and “Free up now” no longer waits for a page that does not answer: that tab stays awake and the run goes on.
 - **Free up now holds on a busy Mac**: tabs are asked, then put to sleep, four at a time, with 9 seconds per step instead of 3 for both. The result (“N of M put to sleep” and why the others stayed awake) stays in the panel when it is reopened, until you hide it.
+- **Resources: collapsible sections**: in the panel, the tab list, “Other processes” and “Free up now” fold away with a chevron, or all at once; the long texts sit behind “Details”, except the warning of Strong, which shows as soon as you point at it. Kept while the window lives.
 
 ### Fixed
 

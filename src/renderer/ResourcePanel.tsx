@@ -37,11 +37,13 @@ import {
   type ResourceView
 } from '@shared/resources'
 import { RELEASE_LEVELS, type ReleaseLevel } from '@shared/sleep'
+import { DEFAULT_SECTIONS, allFolded, setAllSections, toggleDetails, toggleSection, warningShown, type ResourceSection, type ResourceSections } from '@shared/resource-sections'
 import { api } from './api'
 import { dismissRelease, patchRelease, releaseMemory, startRelease, subscribeRelease } from './resource-release-memory'
 import { useSystemReducedMotion } from './reduced-motion'
+import { sectionsMemory, subscribeSections, updateSections } from './resource-sections-memory'
 import { Favicon } from './SidebarRows'
-import { CloseGlyph, MoonGlyph } from './sidebar-icons'
+import { ChevronGlyph, CloseGlyph, MoonGlyph } from './sidebar-icons'
 import './resource-panel.css'
 
 /** How long the panel takes to go (`rp-out` in resource-panel.css): it leaves the page once it has. */
@@ -52,6 +54,10 @@ let rememberedSort: ResourceSort = 'memory'
 /** Whether the person opened the longer list (« Voir plus »), kept the same way. */
 let rememberedMore = false
 const ROWS_ID = 'resource-panel-rows'
+const TABS_BODY_ID = 'rp-tabs-body'
+const OTHERS_BODY_ID = 'rp-others-body'
+const RELEASE_BODY_ID = 'rp-release-body'
+const DETAILS_ID = 'rp-release-details'
 
 export interface FooterResourcesProps {
   /** Setting `resourceGauge`. */
@@ -157,6 +163,8 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
   // « Libérer maintenant »: the strength that runs (its buttons wait meanwhile), and the last run, which « Annuler » can still take back. Kept outside the
   // panel (resource-release-memory.ts): a run goes on when the panel is closed, and the sentence that says how it ended is there when it opens again.
   const { running, done, failed: runFailed } = useSyncExternalStore(subscribeRelease, releaseMemory)
+  // Which blocks are folded: kept outside the panel too (resource-sections-memory.ts), so that it opens as it was left.
+  const sections = useSyncExternalStore(subscribeSections, sectionsMemory)
   const latest = useRef<ResourceReport | null>(null)
   const panel = useRef<HTMLDivElement>(null)
   // A row that went (put to sleep, closed) gives the focus to the row that takes its place, once the figures without it come.
@@ -264,6 +272,8 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
         onSort={setSort}
         more={more}
         onMore={setMore}
+        sections={sections}
+        onSections={updateSections}
         notice={done ? releaseNotice(done.outcome, done.freedMb) : running ? tp('resources.liberer-en-cours', running.count) : runFailed ? t('resources.liberer-impossible') : notice}
         onShow={show}
         onSleep={sleep}
@@ -292,6 +302,9 @@ export interface ResourcePanelBodyProps {
   /** The longer list (up to ten rows) is shown, and the way to change it. */
   more?: boolean
   onMore?(more: boolean): void
+  /** Which blocks are folded away, and the way to change it (absent: every block is open and nothing can be folded). */
+  sections?: ResourceSections
+  onSections?(change: (now: ResourceSections) => ResourceSections): void
   /** What the last button did. */
   notice: string
   onShow(tab: ResourceTab): void
@@ -311,7 +324,7 @@ export interface ResourcePanelBodyProps {
 }
 
 /** What the panel draws from its figures: the totals, the share of the Mac's memory, the heaviest tabs, the notice and the two buttons of the foot. */
-export function ResourcePanelBody({ report, sort = 'memory', onSort, more = false, onMore, notice, running = null, undoable = false, onDismiss, onShow, onSleep, onClose, onRelease, onUndo, onTaskManager, onHold }: ResourcePanelBodyProps) {
+export function ResourcePanelBody({ report, sort = 'memory', onSort, more = false, onMore, sections = DEFAULT_SECTIONS, onSections, notice, running = null, undoable = false, onDismiss, onShow, onSleep, onClose, onRelease, onUndo, onTaskManager, onHold }: ResourcePanelBodyProps) {
   const view = report ? viewOf(report, sort, more) : null
   const tabs = view?.tabs ?? []
   const summary = report ? `${formatMemory(report.memoryMb)} · ${t('resources.d-un-coeur', { cpu: formatPercent(report.cpu) })}` : ''
@@ -330,21 +343,56 @@ export function ResourcePanelBody({ report, sort = 'memory', onSort, more = fals
           <span className="rp-percent">{t('resources.pourcent', { n: report.gauge.percent })}</span>
         </div>
       )}
-      {report && onSort && <SortToggle sort={sort} onSort={onSort} />}
+      {report && onSort && (
+        <div className="rp-sortbar">
+          <SortToggle sort={sort} onSort={onSort} />
+          {onSections && (
+            <button type="button" className="rp-foldall" onClick={() => onSections((now) => setAllSections(now, allFolded(now)))}>
+              {allFolded(sections) ? t('resources.tout-deplier') : t('resources.tout-replier')}
+            </button>
+          )}
+        </div>
+      )}
       {!report ? (
         <p className="rp-empty">{t('resources.mesure')}</p>
-      ) : tabs.length === 0 ? (
-        <p className="rp-empty">{t('resources.aucun-onglet-eveille')}</p>
       ) : (
-        <ul id={ROWS_ID} className="rp-rows" aria-label={sort === 'cpu' ? t('resources.onglets-qui-utilisent-le-plus-le-processeur') : t('resources.onglets-qui-consomment-le-plus')} onPointerEnter={() => onHold?.(true)} onPointerLeave={() => onHold?.(false)}>
-          {tabs.map((tab, row) => (
-            <ResourceRow key={tab.tabId} tab={tab} row={row} tabs={tabs} by={sort} onShow={() => onShow(tab)} onSleep={() => onSleep(tab, row)} onClose={() => onClose(tab, row)} />
-          ))}
-        </ul>
+        <section className="rp-section">
+          <SectionTitle
+            section="tabs"
+            bodyId={TABS_BODY_ID}
+            title={t('resources.onglets-titre')}
+            open={sections.open.tabs}
+            onToggle={onSections}
+            aside={sections.open.tabs ? undefined : tp('resources.onglets-resume', tabs.length, { memory: formatMemory(tabs.reduce((total, tab) => total + tab.memoryMb, 0)) })}
+          />
+          <div id={TABS_BODY_ID} hidden={!sections.open.tabs}>
+            {sections.open.tabs && (
+              <>
+                {tabs.length === 0 ? (
+                  <p className="rp-empty">{t('resources.aucun-onglet-eveille')}</p>
+                ) : (
+                  <ul id={ROWS_ID} className="rp-rows" aria-label={sort === 'cpu' ? t('resources.onglets-qui-utilisent-le-plus-le-processeur') : t('resources.onglets-qui-consomment-le-plus')} onPointerEnter={() => onHold?.(true)} onPointerLeave={() => onHold?.(false)}>
+                    {tabs.map((tab, row) => (
+                      <ResourceRow key={tab.tabId} tab={tab} row={row} tabs={tabs} by={sort} onShow={() => onShow(tab)} onSleep={() => onSleep(tab, row)} onClose={() => onClose(tab, row)} />
+                    ))}
+                  </ul>
+                )}
+                {onMore && (more || hasMoreTabs(report)) && <MoreToggle more={more} hidden={view ? Math.max(0, report.more.tabs.length - report.tabs.length) : 0} onMore={onMore} />}
+              </>
+            )}
+          </div>
+        </section>
       )}
-      {report && onMore && (more || hasMoreTabs(report)) && <MoreToggle more={more} hidden={view ? Math.max(0, report.more.tabs.length - report.tabs.length) : 0} onMore={onMore} />}
-      {view && <OtherRow others={view.others} />}
-      <ReleaseLevels levels={report?.levels ?? null} running={running} onRelease={onRelease} />
+      {view && <OtherRow others={view.others} open={sections.open.others} onToggle={onSections ? () => onSections((now) => toggleSection(now, 'others')) : undefined} />}
+      <ReleaseLevels
+        levels={report?.levels ?? null}
+        running={running}
+        onRelease={onRelease}
+        open={sections.open.release}
+        details={sections.details}
+        onToggle={onSections ? () => onSections((now) => toggleSection(now, 'release')) : undefined}
+        onDetails={onSections ? () => onSections(toggleDetails) : undefined}
+      />
       <div className="rp-result">
         <p className="rp-notice" role="status" aria-live="polite">
           {notice}
@@ -366,6 +414,19 @@ export function ResourcePanelBody({ report, sort = 'memory', onSort, more = fals
         </button>
       </div>
     </>
+  )
+}
+
+/** The title of a block that can be folded: a button with a chevron, so that the keyboard (Enter, Space) and a screen reader get the state from `aria-expanded`. */
+function SectionTitle({ section, bodyId, title, open, onToggle, aside }: { section: ResourceSection; bodyId: string; title: string; open: boolean; onToggle: ResourcePanelBodyProps['onSections']; aside?: string | undefined }) {
+  return (
+    <h3 className="rp-section-title">
+      <button type="button" className="rp-fold" data-section={section} aria-expanded={open} aria-controls={bodyId} disabled={!onToggle} onClick={() => onToggle?.((now) => toggleSection(now, section))}>
+        <ChevronGlyph folded={!open} />
+        <span className="rp-fold-name">{title}</span>
+        {aside && <span className="rp-fold-aside">{aside}</span>}
+      </button>
+    </h3>
   )
 }
 
@@ -396,15 +457,20 @@ export function MoreToggle({ more, hidden, onMore }: { more: boolean; hidden: nu
  * What the rows leave out: the graphic process, the interface of the windows, the extensions and the tabs that are not listed, so that the rows add up to the
  * figures of the head. The graphic process, which decodes the video behind a space, is named on its own line.
  */
-export function OtherRow({ others }: { others: ResourceView['others'] }) {
+export function OtherRow({ others, open = true, onToggle }: { others: ResourceView['others']; open?: boolean; onToggle?: (() => void) | undefined }) {
   const gpu = othersGpuLine(others)
   return (
     <div className="rp-others" data-testid="rp-others">
       <span className="rp-icon" aria-hidden="true" />
       <span className="rp-text">
-        <span className="rp-name">{t('resources.autres-processus')}</span>
-        <span className="rp-sub">{othersHint(others)}</span>
-        {gpu && <span className="rp-sub">{gpu}</span>}
+        <button type="button" className="rp-fold" data-section="others" aria-expanded={open} aria-controls={OTHERS_BODY_ID} disabled={!onToggle} onClick={onToggle}>
+          <ChevronGlyph folded={!open} />
+          <span className="rp-name">{t('resources.autres-processus')}</span>
+        </button>
+        <span id={OTHERS_BODY_ID} className="rp-sub-group" hidden={!open}>
+          <span className="rp-sub">{othersHint(others)}</span>
+          {gpu && <span className="rp-sub">{gpu}</span>}
+        </span>
       </span>
       <span className="rp-num">
         <span>{formatMemory(others.memoryMb)}</span>
@@ -421,46 +487,68 @@ const WARN_ID = 'rp-release-warn'
  * as the panel measured it; the warning of the strongest one stays on screen, not only on a hover. A strength with nothing to take is greyed; while a
  * run goes the buttons are `aria-disabled` rather than `disabled`, so that the one that was pressed keeps the keyboard focus.
  */
-export function ReleaseLevels({ levels, running, onRelease }: { levels: readonly ReleasePreview[] | null; running: { level: ReleaseLevel } | null; onRelease(preview: ReleasePreview): void }) {
+export function ReleaseLevels({ levels, running, onRelease, open = true, details = false, onToggle, onDetails }: { levels: readonly ReleasePreview[] | null; running: { level: ReleaseLevel } | null; onRelease(preview: ReleasePreview): void; open?: boolean; details?: boolean; onToggle?: (() => void) | undefined; onDetails?: (() => void) | undefined }) {
+  // The pointer or the focus is on « Fort »: its warning shows then, even with « Détails » closed (it is about what the click is going to do).
+  const [engaged, setEngaged] = useState(false)
   const high = levels?.find((preview) => preview.level === 'high')
   const warning = high ? releaseSitesWarning(high) : null
   const nothing = levels !== null && levels.every((preview) => preview.count === 0)
+  const warnVisible = warningShown({ details, engaged, running: running?.level === 'high' })
   return (
     <section className="rp-release" aria-labelledby="rp-release-title" aria-busy={running !== null}>
       <h3 id="rp-release-title" className="rp-release-title">
-        {t('resources.liberer-titre')}
+        <button type="button" className="rp-fold" data-section="release" aria-expanded={open} aria-controls={RELEASE_BODY_ID} disabled={!onToggle} onClick={onToggle}>
+          <ChevronGlyph folded={!open} />
+          <span className="rp-fold-name">{t('resources.liberer-titre')}</span>
+        </button>
       </h3>
-      <div className="rp-levels" role="group" aria-labelledby="rp-release-title">
-        {RELEASE_LEVELS.map((level) => {
-          const preview = levels?.find((one) => one.level === level)
-          const empty = preview === undefined || preview.count === 0
-          return (
-            <button
-              key={level}
-              type="button"
-              className={`rp-level ${running?.level === level ? 'running' : ''}`}
-              data-level={level}
-              disabled={empty}
-              aria-disabled={running !== null || undefined}
-              aria-describedby={level === 'high' && warning ? WARN_ID : undefined}
-              onClick={() => preview && !running && onRelease(preview)}
-            >
-              <span className="rp-level-text">
-                <b>{releaseLevelName(level)}</b>
-                <span>{releaseLevelHint(level)}</span>
-              </span>
-              <span className="rp-level-figures">{preview ? releaseFigures(preview) : t('resources.mesure')}</span>
+      <div id={RELEASE_BODY_ID} hidden={!open}>
+        {open && (
+          <>
+            <div className="rp-levels" role="group" aria-labelledby="rp-release-title">
+              {RELEASE_LEVELS.map((level) => {
+                const preview = levels?.find((one) => one.level === level)
+                const empty = preview === undefined || preview.count === 0
+                const strong = level === 'high'
+                return (
+                  <button
+                    key={level}
+                    type="button"
+                    className={`rp-level ${running?.level === level ? 'running' : ''}`}
+                    data-level={level}
+                    disabled={empty}
+                    aria-disabled={running !== null || undefined}
+                    aria-describedby={strong && warning ? WARN_ID : undefined}
+                    onPointerEnter={strong ? () => setEngaged(true) : undefined}
+                    onPointerLeave={strong ? () => setEngaged(false) : undefined}
+                    onFocus={strong ? () => setEngaged(true) : undefined}
+                    onBlur={strong ? () => setEngaged(false) : undefined}
+                    onClick={() => preview && !running && onRelease(preview)}
+                  >
+                    <span className="rp-level-text">
+                      <b>{releaseLevelName(level)}</b>
+                      <span>{releaseLevelHint(level)}</span>
+                    </span>
+                    <span className="rp-level-figures">{preview ? releaseFigures(preview) : t('resources.mesure')}</span>
+                  </button>
+                )
+              })}
+            </div>
+            {warning && (
+              <p id={WARN_ID} className="rp-warn" hidden={!warnVisible}>
+                {warning}
+              </p>
+            )}
+            {nothing && <p className="rp-empty">{t('resources.rien-a-endormir')}</p>}
+            <button type="button" className="rp-details" aria-expanded={details} aria-controls={DETAILS_ID} disabled={!onDetails} onClick={onDetails}>
+              {t('resources.details')}
             </button>
-          )
-        })}
+            <p id={DETAILS_ID} className="rp-protected" hidden={!details}>
+              {t('resources.liberer-protege')}
+            </p>
+          </>
+        )}
       </div>
-      {warning && (
-        <p id={WARN_ID} className="rp-warn">
-          {warning}
-        </p>
-      )}
-      {nothing && <p className="rp-empty">{t('resources.rien-a-endormir')}</p>}
-      <p className="rp-protected">{t('resources.liberer-protege')}</p>
     </section>
   )
 }

@@ -74,6 +74,21 @@
 .sidebar .rp-sort button { min-height: 28px; padding: 2px var(--sp-2); border-radius: var(--r-s); background: var(--tile); color: var(--text-2); font-size: var(--t-xs); }
 .sidebar .rp-sort button:hover { background: var(--tile-hover); color: var(--text); }
 .sidebar .rp-sort button[aria-pressed='true'] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--w-semibold); }
+/* The blocks that fold: the title is a button with a chevron, the figures of a folded block stay on its line. */
+.sidebar .rp-section-title { margin: 0; font-size: var(--t-xs); font-weight: var(--w-semibold); }
+.sidebar .rp-fold { display: flex; align-items: center; gap: var(--sp-1); width: 100%; min-height: 28px; padding: 2px var(--sp-1); border-radius: var(--r-s); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); text-align: left; }
+.sidebar .rp-fold:hover:not(:disabled) { background: var(--tile-hover); color: var(--text); }
+.sidebar .rp-fold svg { flex: none; }
+.sidebar .rp-fold-name { min-width: 0; }
+.sidebar .rp-fold-aside { min-width: 0; margin-left: auto; overflow: hidden; color: var(--text-3); font-weight: var(--w-regular); text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.sidebar .rp-sortbar { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.sidebar .rp-foldall { flex: none; min-height: 28px; padding: 2px var(--sp-2); border-radius: var(--r-s); color: var(--text-2); font-size: var(--t-xs); }
+.sidebar .rp-foldall:hover { background: var(--tile-hover); color: var(--text); }
+.sidebar .rp-section [hidden], .sidebar .rp-others [hidden], .sidebar .rp-release [hidden] { display: none; }
+.sidebar .rp-sub-group { display: grid; gap: 1px; }
+.sidebar .rp-others .rp-fold { padding-left: 0; }
+.sidebar .rp-details { display: block; min-height: 28px; margin-top: var(--sp-1); padding: 2px var(--sp-2); border-radius: var(--r-s); color: var(--text-2); font-size: var(--t-xs); text-align: left; }
+.sidebar .rp-details:hover { background: var(--tile-hover); color: var(--text); }
 /* What the rows leave out, with the graphic process on its own line: not a button, it only adds up the rows to the head. */
 .sidebar .rp-more { display: block; width: 100%; min-height: 28px; margin-top: var(--sp-1); padding: 2px var(--sp-2); border-radius: var(--r-s); background: transparent; color: var(--text-2); font-size: var(--t-xs); text-align: left; }
 .sidebar .rp-more:hover { background: var(--tile-hover); color: var(--text); }
@@ -90,7 +105,7 @@
 .sidebar .rp-link { padding: 4px 2px; color: var(--text-2); font-size: var(--t-xs); text-align: left; }
 .sidebar .rp-link:hover { color: var(--text); text-decoration: underline; }
 .sidebar .rp-release { margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--line); }
-.sidebar .rp-release-title { margin: 0 0 var(--sp-1); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); }
+.sidebar .rp-release-title { margin: 0 0 var(--sp-1); font-size: var(--t-xs); font-weight: var(--w-semibold); }
 /* The three strengths one under the other: the width of the panel is too short for three columns that each say what they take and how much. */
 .sidebar .rp-levels { display: grid; gap: var(--sp-1); }
 .sidebar .rp-level {
@@ -119,6 +134,6 @@
 .sidebar .rp-dismiss:hover { background: var(--tile); color: var(--text); }
 .sidebar .rp-dismiss svg { width: 11px; height: 11px; }
 
-.sidebar .rp-show:focus-visible, .sidebar .rp-act:focus-visible, .sidebar .rp-link:focus-visible, .sidebar .rp-level:focus-visible, .sidebar .rp-undo:focus-visible, .sidebar .rp-dismiss:focus-visible, .sidebar .rp-sort button:focus-visible, .sidebar .rp-more:focus-visible {
+.sidebar .rp-show:focus-visible, .sidebar .rp-act:focus-visible, .sidebar .rp-link:focus-visible, .sidebar .rp-level:focus-visible, .sidebar .rp-undo:focus-visible, .sidebar .rp-dismiss:focus-visible, .sidebar .rp-sort button:focus-visible, .sidebar .rp-more:focus-visible, .sidebar .rp-fold:focus-visible, .sidebar .rp-details:focus-visible, .sidebar .rp-foldall:focus-visible {
   outline: var(--focus-width) solid var(--focus); outline-offset: -2px;
 }
