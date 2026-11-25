@@ -73,7 +73,7 @@ import { createBlockHandlerFollower } from './block-handlers'
 import { lastWindowClosedStep } from './window-lifecycle'
 import { installQuitFlow, prepareQuitForUpdate } from './shell/quit-flow'
 import { createUpdateInstaller, installerAtQuit, setDebAdviser, setUpdateInstaller, updateInstaller } from './shell/app-update'
-import { createWindowsUpdateInstaller } from './shell/windows-update-real'
+import { createWindowsUpdateInstaller, sweepInstallerLeftoverAtLaunch } from './shell/windows-update-real'
 import { createAppImageUpdateInstaller } from './shell/appimage-update'
 import { createDebAdviser } from './shell/deb-update-real'
 import { currentLinuxInstall } from './platform/linux-install'
@@ -241,6 +241,8 @@ async function main(): Promise<void> {
   // The copies of another browser's history that an import cut short left in the temporary folder: up to a gigabyte each. Only those untouched
   // for an hour go, so that the copy of an import running in another instance is spared (importers/sqlite.ts). A little later, not before the window shows.
   sweepStaleCopiesSoon(tmpdir())
+  // The installer of a Windows update that was run is left in the temporary folder by the run that quit for it: this launch takes it away.
+  if (process.platform === 'win32') void sweepInstallerLeftoverAtLaunch()
   // The main window is the first view of the shared state (its tabs, spaces and settings); File › New Window adds others.
   const views = new Set<WindowView>()
   const store = new WindowView(sharedStore, selectionOf(sharedStore.get()), views, true)
