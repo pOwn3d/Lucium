@@ -436,6 +436,38 @@ describe('« Libérer maintenant » on a machine that is busy: slow answers, a f
     expect([...main!.pages.keys()].sort()).toEqual(['t0', 't1'])
   })
 
+  it('leaves awake a tab that was visited (shown then left) between the probe and the close, whatever the delay of the rules', async () => {
+    const [main] = many(5)
+    slowPages(main!, 1000, 1000)
+    // While the last page answers its probe, the person opens `t0`, types in it and goes back to the other tab: its mark of departure is newer.
+    const probe = pageOf(main!, 't4')['probeForSleep'] as () => Promise<Probe>
+    pageOf(main!, 't4')['probeForSleep'] = vi.fn(async () => {
+      const answer = await probe()
+      ;(main!.fields['idleSince'] as Map<string, number>).set('t0', Date.now())
+      return answer
+    })
+    const run = release(main!.self)
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(await run).toEqual({ level: 'medium', slept: 4, refused: { unsent: 0, confirm: 0, other: 1, slow: 0 } })
+    expect([...main!.pages.keys()]).toEqual(['t0'])
+    expect(pageOf(main!, 't0')['release']).not.toHaveBeenCalled()
+  })
+
+  it('keeps in the batch of « Annuler » the tabs already freed when a later close fails, and still throws the failure', async () => {
+    const [main] = many(5)
+    slowPages(main!, 10, 10)
+    pageOf(main!, 't4')['release'] = vi.fn(async () => {
+      await later(500, undefined)
+      throw new Error('the engine refused')
+    })
+    const run = release(main!.self)
+    const caught = run.catch((error: Error) => error.message)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(await caught).toBe('the engine refused')
+    expect((main!.fields['releaseBatch'] as Array<{ id: string }>).map((one) => one.id).sort()).toEqual(['t0', 't1', 't2', 't3'])
+    expect(main!.fields['publish']).toHaveBeenCalled()
+  })
+
   it('counts a page that answers its close too late as too slow, and still lets « Annuler » wake it when it does go', async () => {
     const [main] = many(3)
     slowPages(main!, 100, 100)

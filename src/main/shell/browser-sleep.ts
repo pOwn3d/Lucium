@@ -190,7 +190,7 @@ export abstract class BrowserSleep extends BrowserContexts {
     const leader = this.leader
     const wanted = new Set(planReleaseLevels(this.sweepEntries(), this.store.get().settings)[level].ids)
     const outcome: ReleaseOutcome = { level, slept: 0, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 } }
-    const tabs = [...this.group].flatMap((browser) => [...browser.pages].filter(([id]) => wanted.has(id) && !browser.frozen.has(id)).map(([id, page]) => ({ id, page, window: browser })))
+    const tabs = [...this.group].flatMap((browser) => [...browser.pages].filter(([id]) => wanted.has(id) && !browser.frozen.has(id)).map(([id, page]) => ({ id, page, window: browser, idle: browser.idleSince.get(id) })))
     // First pass: every page is asked what it holds (text not sent, Picture in Picture, the rules), a few at a time, and nothing is closed yet: no tab
     // goes before every protection has been looked at. A page that does not answer must not hold the run (and the lock of « one run at a time ») for
     // ever: after `RELEASE_TAB_MS` the tab stays as it is. The waits overlap, so a Mac too busy to answer quickly still gets through all the tabs.
@@ -214,13 +214,29 @@ export abstract class BrowserSleep extends BrowserContexts {
         this.publish()
       }
     }
-    const closed = await mapLimit(going, RELEASE_PARALLEL, (tab) =>
-      withDeadline(RELEASE_TAB_MS, async (expired) => {
-        const result = await tab.window.releaseClose(tab.id, tab.page, level)
-        if (result === 'slept' && expired()) late({ id: tab.id, window: tab.window })
-        return result
-      })
-    )
+    // The tabs this run closed in time: kept apart so that a close that throws still leaves them in the batch « Annuler » wakes.
+    const sleptInTime: number[] = []
+    let closed: Array<Awaited<ReturnType<BrowserSleep['releaseClose']>> | typeof TIMED_OUT>
+    try {
+      closed = await mapLimit(going, RELEASE_PARALLEL, (tab, index) =>
+        withDeadline(RELEASE_TAB_MS, async (expired) => {
+          const result = await tab.window.releaseClose(tab.id, tab.page, level, tab.idle)
+          if (result === 'slept') {
+            if (expired()) late({ id: tab.id, window: tab.window })
+            else sleptInTime.push(index)
+          }
+          return result
+        })
+      )
+    } catch (error) {
+      // The failure is the caller's, but what the run already freed must stay reachable.
+      for (const index of sleptInTime) batch.push({ id: going[index]!.id, window: going[index]!.window })
+      if (batch.length > 0) {
+        leader.releaseBatch = batch
+        this.publish()
+      }
+      throw error
+    }
     closed.forEach((result, index) => {
       const tab = going[index]!
       if (result === TIMED_OUT) outcome.refused.slow++
@@ -253,11 +269,15 @@ export abstract class BrowserSleep extends BrowserContexts {
    * The second pass for one tab: freed unless something changed since the first pass (shown, a sound, a download, a page that went or came back):
    * the rules are asked again, with what the page said then (it had nothing to keep it, or it would not be here). Says what became of it. A close
    * already asked of the engine cannot be taken back (it has its own limit, `RELEASE_ANSWER_MS`); it finishes by itself.
+   * `idle` is the mark of the tab's last departure from the screen as the first pass saw it. On a busy machine the time between the passes is long: a tab
+   * visited meanwhile (text typed, a floating video started there) has a newer mark, and stays awake without a new probe of its page. The floating
+   * window and the other synchronous facts are read again just above.
    */
-  private async releaseClose(id: string, page: Page, level: ReleaseLevel): Promise<'slept' | 'confirm' | 'other'> {
+  private async releaseClose(id: string, page: Page, level: ReleaseLevel, idle: number | undefined): Promise<'slept' | 'confirm' | 'other'> {
     const state = this.store.get()
     const tab = state.tabs.find((one) => one.id === id)
     if (!tab || this.pages.get(id) !== page || this.frozen.has(id)) return 'other'
+    if (this.idleSince.get(id) !== idle) return 'other'
     if (!sleepVerdict(tab, this.sleepRules(state.settings, 'normal').rules, { ...this.sleepFacts(id), probe: ASKED_BEFORE_FREEZING }, { level }).sleep) return 'other'
     if (await this.releasePage(id)) return 'slept'
     return this.pages.has(id) ? 'confirm' : 'other'

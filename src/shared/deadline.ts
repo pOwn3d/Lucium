@@ -48,7 +48,9 @@ export async function mapLimit<T, R>(items: readonly T[], limit: number, work: (
       }
     }
   }
-  await Promise.all(Array.from({ length: Math.max(1, Math.min(Math.floor(limit), items.length)) }, worker))
+  // A limit that is not a number (NaN) would start no worker and return an empty list silently: one at a time is the safe value, as for a limit under one.
+  const width = Number.isNaN(limit) ? 1 : Math.max(1, Math.min(Math.floor(limit), items.length))
+  await Promise.all(Array.from({ length: width }, worker))
   if (failures.length > 0) throw failures[0]
   return results
 }

@@ -78,6 +78,12 @@ describe('mapLimit', () => {
     expect(await mapLimit([1, 2], 0, work)).toEqual([1, 2])
   })
 
+  it('does not return an empty list silently for a limit that is not a number: it runs the items one at a time', async () => {
+    const work = vi.fn(async (n: number) => n)
+    expect(await mapLimit([1, 2, 3], Number.NaN, work)).toEqual([1, 2, 3])
+    expect(work).toHaveBeenCalledTimes(3)
+  })
+
   it('lets the other items finish when one fails, then throws the first failure: nothing is left running behind the caller', async () => {
     let finished = 0
     const run = mapLimit([1, 2, 3, 4], 2, async (n) => {
