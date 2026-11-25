@@ -8,7 +8,8 @@
 //    Nothing is run by the download: the file waits.
 // 3. `restart` (« Installer et relancer », a second click) asks the feed once more whether the version was withdrawn meanwhile, checks the file again on the
 //    disk, runs the installer silently and detached, and quits through the path of the update of the Mac (the state is written first). No installer is run
-//    without these two clicks, and none is run at a quit: « Plus tard » leaves the file where it is, and the next quit removes it.
+//    without these two clicks, and none is run at a quit: « Plus tard » leaves the file where it is, and the next quit removes it. After a run installation the file stays (the system holds it while the installer runs):
+//    the Lucium that the installer starts removes the folder at its launch (shared/installer-leftover.ts).
 //
 // The installer is the NSIS one of electron-builder (oneClick: false, perMachine: false: an installation for the user, no elevation). Its silent arguments, read in
 // the templates of app-builder-lib 26.18 (nsis/installSection.nsh, common.nsh, include/allowOnlyOneInstallerInstance.nsh): `/S` is NSIS's own silent mode;

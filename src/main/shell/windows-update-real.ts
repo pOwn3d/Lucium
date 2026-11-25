@@ -1,7 +1,9 @@
 // The installer of Windows made of the real parts: Electron's network (`net.fetch`, no cookie, no credential), the temporary folder of the application, the
 // NSIS installer started by the system, a failure told in a box. The rules are in windows-update.ts and update-installer-file.ts, which tests drive with stand-ins.
 
+import { join } from 'node:path'
 import { app, dialog, net } from 'electron'
+import { sweepInstallerLeftover } from '@shared/installer-leftover'
 import { ownRequestHeaders } from '@shared/own-requests'
 import { t } from '@shared/i18n'
 import {
@@ -38,4 +40,13 @@ export function createWindowsUpdateInstaller(feed: () => string | null, prepareQ
       void dialog.showMessageBox({ type: 'warning', message: t('app-update.la-mise-a-jour-n-a-pas-pu-etre-installee'), detail: reason }).catch((error: unknown) => console.error('[update] the failure could not be shown:', error)),
     log: (line) => console.warn(line)
   })
+}
+
+/**
+ * At launch: the installer of the update that was run (Windows) is still in the temporary folder, because Lucium quit for it while the system held the file.
+ * Nothing is downloaded or waiting at this point, so the folder is only leftover. Never throws; the outcome is in the log.
+ */
+export function sweepInstallerLeftoverAtLaunch(): Promise<unknown> {
+  const temp = app.getPath('temp')
+  return sweepInstallerLeftover({ temp, folder: installerFolder(temp), join, remove: discardInstallerFolder, log: (line) => console.warn(line) })
 }

@@ -12,6 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Fixed
 
+- **Windows, installer left behind**: after an update, the 134 MB installer stayed in the temporary folder. The new Lucium now removes it when it starts.
 - **Linux AppImage, restart after an update**: after “Install and restart”, Lucium closed but did not come back, because the new AppImage died as the old one’s runtime ended. It is now started from a detached helper that waits for the old copy to end.
 
 ## [1.1.9] - 2026-11-24

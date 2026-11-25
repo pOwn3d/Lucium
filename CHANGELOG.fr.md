@@ -6,6 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Corrections
 
+- **Windows, installeur laissé après la mise à jour** : l’installeur de 134 Mo restait dans le dossier temporaire. Le nouveau Lucium le retire maintenant à son démarrage.
 - **AppImage Linux, relance après une mise à jour** : après « Installer et relancer », Lucium se fermait sans revenir, car le nouvel AppImage mourait quand le runtime de l’ancien se terminait. Il est maintenant lancé par un assistant détaché qui attend la fin de l’ancienne copie.
 
 ## [1.1.9] - 2026-11-24
