@@ -488,11 +488,21 @@ const WARN_ID = 'rp-release-warn'
  * run goes the buttons are `aria-disabled` rather than `disabled`, so that the one that was pressed keeps the keyboard focus.
  */
 export function ReleaseLevels({ levels, running, onRelease, open = true, details = false, onToggle, onDetails }: { levels: readonly ReleasePreview[] | null; running: { level: ReleaseLevel } | null; onRelease(preview: ReleasePreview): void; open?: boolean; details?: boolean; onToggle?: (() => void) | undefined; onDetails?: (() => void) | undefined }) {
-  // The pointer or the focus is on « Fort »: its warning shows then, even with « Détails » closed (it is about what the click is going to do).
-  const [engaged, setEngaged] = useState(false)
+  // The pointer or the focus is on « Fort »: its warning shows then, even with « Détails » closed (it is about what the click is going to do). The two
+  // are kept apart, so that leaving with the pointer does not hide the warning of a button that still has the keyboard focus (and the reverse).
+  const [hovered, setHovered] = useState(false)
+  const [focused, setFocused] = useState(false)
+  const engaged = hovered || focused
   const high = levels?.find((preview) => preview.level === 'high')
   const warning = high ? releaseSitesWarning(high) : null
   const nothing = levels !== null && levels.every((preview) => preview.count === 0)
+  // The strong button goes away with the body when the section folds, and a button that unmounts sends no blur nor leave: forget both here.
+  useEffect(() => {
+    if (!open) {
+      setHovered(false)
+      setFocused(false)
+    }
+  }, [open])
   const warnVisible = warningShown({ details, engaged, running: running?.level === 'high' })
   return (
     <section className="rp-release" aria-labelledby="rp-release-title" aria-busy={running !== null}>
@@ -519,10 +529,11 @@ export function ReleaseLevels({ levels, running, onRelease, open = true, details
                     disabled={empty}
                     aria-disabled={running !== null || undefined}
                     aria-describedby={strong && warning ? WARN_ID : undefined}
-                    onPointerEnter={strong ? () => setEngaged(true) : undefined}
-                    onPointerLeave={strong ? () => setEngaged(false) : undefined}
-                    onFocus={strong ? () => setEngaged(true) : undefined}
-                    onBlur={strong ? () => setEngaged(false) : undefined}
+                    onPointerEnter={strong ? () => setHovered(true) : undefined}
+                    // A finger has no hover: its « leave » comes right after the lift and before the click, which would hide the warning at the moment of acting.
+                    onPointerLeave={strong ? (event) => event.pointerType !== 'touch' && setHovered(false) : undefined}
+                    onFocus={strong ? () => setFocused(true) : undefined}
+                    onBlur={strong ? () => setFocused(false) : undefined}
                     onClick={() => preview && !running && onRelease(preview)}
                   >
                     <span className="rp-level-text">

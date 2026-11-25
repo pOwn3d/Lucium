@@ -419,13 +419,9 @@ describe('the blocks that fold away', () => {
     expect(warn(release({ details: true }))).not.toContain('hidden')
   })
 
-  it('shows the warning of Fort as soon as the pointer or the focus is on that button', () => {
+  it('keeps the rule of the warning of Fort: shown with the pointer, the focus, a run or the details (the events are replayed in resource-panel-warning.test.ts)', () => {
     expect(warningShown({ details: false, engaged: true, running: false })).toBe(true)
     expect(warningShown({ details: false, engaged: false, running: false })).toBe(false)
-    const strong = elementsOf(createElement(ReleaseLevels, { levels: levels(), running: null, onRelease: () => undefined })).filter((element) => element.props['data-level'] === 'high')[0]!
-    expect(typeof strong.props['onPointerEnter']).toBe('function')
-    expect(typeof strong.props['onFocus']).toBe('function')
-    expect(typeof strong.props['onBlur']).toBe('function')
   })
 
   it('folds or unfolds everything with one button, labelled by what it will do', () => {
