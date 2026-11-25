@@ -88,7 +88,7 @@ Preuve qu'Electron ne peut pas appliquer lui-même ces règles ici : dans Electr
 |---|---|---|---|---|
 | 1 | uBlock Origin (classique, MV2) | `webRequest`, `webRequestBlocking`, `<all_urls>`, `storage`, `tabs` | Ne s'installe pas depuis le Store (MV2 refusé, et le Store ne la sert plus) ; chargée depuis un dossier, elle est acceptée avec un avertissement (page Extensions et Réglages) | Élevé : pas de substitut par ce moyen ; le bloqueur intégré de Lucium prend le relais |
 | 2 | uBlock Origin Lite (MV3) | `declarativeNetRequest`, `declarativeNetRequestFeedback`, `storage`, `scripting`, `<all_urls>` | Prévu fonctionnel pour le blocage réseau | Moyen : ses règles sont appliquées par Lucium (mesuré avec une sonde, pas avec cette extension) ; le compteur de requêtes bloquées (`getMatchedRules`, pastille) reste muet ; ses jeux de règles sont gros, le coût par requête n'est pas mesuré |
-| 3 | Dashlane | `storage`, `tabs`, `activeTab`, `scripting`, `nativeMessaging`, `contextMenus`, `<all_urls>` | Partiel | Élevé pour le déverrouillage biométrique (application de bureau absente) ; remplissage probablement possible |
+| 3 | Dashlane | `storage`, `tabs`, `activeTab`, `scripting`, `nativeMessaging`, `contextMenus`, `<all_urls>` | Partiel | Élevé pour le déverrouillage biométrique (application de bureau absente) ; remplissage constaté sur les pages `https://`, absent sur une page `http://` distante (voir la note sous le tableau) |
 | 4 | 1Password | `nativeMessaging`, `storage`, `tabs`, `activeTab`, `scripting`, `contextMenus`, `clipboardWrite`, `<all_urls>` | Partiel | Élevé pour l'intégration à l'application de bureau ; le mode sans application reste à tester |
 | 5 | Bitwarden | `storage`, `tabs`, `activeTab`, `scripting`, `nativeMessaging`, `contextMenus`, `clipboardRead`, `clipboardWrite`, `<all_urls>` | Probablement fonctionnel hors biométrie | Moyen : déverrouillage biométrique (`nativeMessaging`) ; presse-papiers à vérifier |
 | 6 | LastPass | `storage`, `tabs`, `webNavigation`, `webRequest`, `cookies`, `scripting`, `<all_urls>` | Incertain | Moyen : `webRequest` non bloquant est fourni ; sa présence sur le Store et sa connexion restent à essayer |
@@ -106,6 +106,19 @@ Preuve qu'Electron ne peut pas appliquer lui-même ces règles ici : dans Electr
 | 18 | Evernote Web Clipper | `webNavigation`, `tabs`, `storage`, `contextMenus`, `activeTab`, `scripting`, `cookies` (à vérifier) | Partiel | Moyen : connexion par cookies ou `identity` |
 | 19 | Adblock Plus (MV3) | `declarativeNetRequest`, `declarativeNetRequestWithHostAccess`, `storage`, `tabs`, `scripting`, `<all_urls>` | Prévu fonctionnel pour le blocage réseau | Moyen : mêmes réserves que la ligne 2 |
 | 20 | Pocket | `storage`, `tabs`, `activeTab`, `contextMenus` (à vérifier) | **Non disponible** : le Chrome Web Store ne la sert plus | Sans objet |
+
+### Dashlane : le remplissage automatique
+
+Constaté lors d'un essai du 25 novembre 2026, avec un compte réel :
+
+- Sur les pages en `https://`, la saisie automatique de Dashlane fonctionne.
+- Sur une page `http://` d'un appareil distant (un NAS), Dashlane ne remplit rien et affiche « Ce site Web n'est pas sûr ». Nous attribuons ce refus à Dashlane, qui avertit sur les pages non chiffrées ; nous n'avons pas observé ce qu'il lit pour décider.
+
+Ce que Lucium fait ou non :
+
+- Lucium rend l'onglet réel au service worker de l'extension (`src/preload/sender-tab.ts`, avec `keepActiveTabPerWindow` dans `src/main/engine/ece-router.ts` pour l'onglet affiché de chaque fenêtre) ; `src/preload/sender-tab.test.ts` le vérifie.
+- Lucium n'ajoute aucun remplissage sur `http://`, et ni l'isolation du contexte ni `webSecurity` ne sont touchés. Le remède est le `https://` de l'appareil.
+- Non vérifié : un commentaire du code indique que Dashlane lirait `sender.tab.highlighted || sender.tab.active` ; nous ne l'avons pas confirmé auprès de Dashlane et cela n'explique pas le refus sur `http://`.
 
 ## Ce que cela implique
 
