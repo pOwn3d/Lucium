@@ -6,6 +6,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setLanguage } from '@shared/i18n'
+import { DEFAULT_SECTIONS, warningShown, type ResourceSections } from '@shared/resource-sections'
 import { memoryGauge, type ReleasePreview, type ResourceReport, type ResourceTab } from '@shared/resources'
 import panelCss from './resource-panel.css?raw'
 import sidebarSource from './Sidebar.tsx?raw'
@@ -30,6 +31,8 @@ const levels = (patch: Partial<Record<ReleasePreview['level'], Partial<ReleasePr
   { level: 'medium', count: 12, memoryMb: 2150, cpu: 3, siteTabs: 0, ...patch.medium },
   { level: 'high', count: 35, memoryMb: 4900, cpu: 5, siteTabs: 20, ...patch.high }
 ]
+const buttons = (markup: string): string[] => markup.match(/<button[^>]*class="rp-level[^"]*"[^>]*>.*?<\/button>/g) ?? []
+const release = (props: Partial<Parameters<typeof ReleaseLevels>[0]> = {}): string => renderToStaticMarkup(createElement(ReleaseLevels, { levels: levels(), running: null, onRelease: () => undefined, ...props }))
 const OTHERS = { count: 38, memoryMb: 6338, cpu: 24.8, gpuMemoryMb: 1280, gpuCpu: 30 }
 const report = (patch: Partial<ResourceReport> = {}): ResourceReport => {
   const tabs = [tab('Twitch', 584, 7.4), tab('Perso', 278, 0.2, { where: 'Travail', pinned: true }), tab('Home', 1300, 1, { shared: true })]
@@ -125,7 +128,8 @@ describe('what the rows leave out and the ranking', () => {
     expect(others).toContain(frenchSpaces('<span>6,2 Go</span><span>25 %</span>'))
     // It is not a row of a tab: no button, and not counted among the rows the arrow keys walk.
     expect(markup.match(/class="rp-row"/g)).toHaveLength(3)
-    expect(others.slice(0, others.indexOf('</div>'))).not.toContain('<button')
+    // Its only button folds it.
+    expect(others.slice(0, others.indexOf('</div>')).match(/<button/g)).toHaveLength(1)
   })
 
   it('leaves out the line of the graphic process when it is not among the others, and shows nothing before the first figures', () => {
@@ -179,12 +183,12 @@ describe('« Libérer maintenant »', () => {
   })
 
   it('says in full what the strongest one costs, on screen and tied to its button, and what is always spared', () => {
-    const markup = release()
-    expect(markup).toContain(frenchSpaces('<p id="rp-release-warn" class="rp-warn">Dont 20 onglets de sites gardés éveillés : plus de notifications jusqu’à leur réveil.</p>'))
-    expect(buttons(markup)[2]).toContain('aria-describedby="rp-release-warn"')
-    expect(buttons(markup)[0]).not.toContain('aria-describedby')
-    expect(markup).toContain(frenchSpaces('Toujours épargnés : l’onglet affiché, le son'))
-    expect(markup).toContain('Ne jamais mettre cet onglet en veille')
+    const shown = release({ details: true })
+    expect(shown).toContain(frenchSpaces('<p id="rp-release-warn" class="rp-warn">Dont 20 onglets de sites gardés éveillés : plus de notifications jusqu’à leur réveil.</p>'))
+    expect(buttons(shown)[2]).toContain('aria-describedby="rp-release-warn"')
+    expect(buttons(shown)[0]).not.toContain('aria-describedby')
+    expect(shown).toContain(frenchSpaces('<p id="rp-release-details" class="rp-protected">Toujours épargnés : l’onglet affiché, le son'))
+    expect(shown).toContain('Ne jamais mettre cet onglet en veille')
     // Without a tab of a kept site, nothing to warn about.
     expect(release({ levels: levels({ high: { siteTabs: 0 } }) })).not.toContain('rp-warn')
     expect(release({ levels: levels({ high: { siteTabs: 1 } }) })).toContain(frenchSpaces('Dont 1 onglet d’un site gardé éveillé : plus de notifications jusqu’à son réveil.'))
@@ -223,11 +227,11 @@ describe('« Libérer maintenant »', () => {
 
   it('asks for the strength of the button, and ignores a click while another run goes', () => {
     const asked: string[] = []
-    const found = elementsOf(createElement(ReleaseLevels, { levels: levels(), running: null, onRelease: (preview) => asked.push(preview.level) })).filter((element) => element.type === 'button')
+    const found = elementsOf(createElement(ReleaseLevels, { levels: levels(), running: null, onRelease: (preview) => asked.push(preview.level) })).filter((element) => element.props['data-level'] !== undefined)
     ;(found[1]?.props['onClick'] as () => void)()
     ;(found[2]?.props['onClick'] as () => void)()
     expect(asked).toEqual(['medium', 'high'])
-    const busy = elementsOf(createElement(ReleaseLevels, { levels: levels(), running: { level: 'low' }, onRelease: (preview) => asked.push(preview.level) })).filter((element) => element.type === 'button')
+    const busy = elementsOf(createElement(ReleaseLevels, { levels: levels(), running: { level: 'low' }, onRelease: (preview) => asked.push(preview.level) })).filter((element) => element.props['data-level'] !== undefined)
     ;(busy[1]?.props['onClick'] as () => void)()
     expect(asked).toHaveLength(2)
   })
@@ -349,8 +353,8 @@ describe('« Voir plus » of the panel', () => {
   })
 
   it('says nothing when there is nothing to add, and is written in English too', () => {
-    expect(body({ onMore: () => undefined })).not.toContain('rp-more')
-    expect(body({ report: withMore() })).not.toContain('rp-more')
+    expect(body({ onMore: () => undefined })).not.toContain('class="rp-more"')
+    expect(body({ report: withMore() })).not.toContain('class="rp-more"')
     setLanguage('en')
     expect(body({ report: withMore(), onMore: () => undefined })).toContain('Show 3 more tabs')
     expect(body({ report: withMore(), more: true, onMore: () => undefined })).toContain('Show fewer')
@@ -359,5 +363,80 @@ describe('« Voir plus » of the panel', () => {
   it('is a button of the focus order whose focus ring and colors come from the stylesheet tokens', () => {
     expect(panelCss).toMatch(/\.rp-more:focus-visible/)
     expect(panelCss).toMatch(/\.rp-more \{[^}]*min-height: 28px/)
+  })
+})
+
+describe('the blocks that fold away', () => {
+  const folded = (patch: Partial<ResourceSections['open']> = {}, details = false): ResourceSections => ({ open: { ...DEFAULT_SECTIONS.open, ...patch }, details })
+  const fold = (markup: string, section: string): string => new RegExp(`<button[^>]*data-section="${section}"[^>]*>`).exec(markup)?.[0] ?? ''
+
+  it('titles each block with a button that says whether it is open and what it opens (aria-expanded follows the state)', () => {
+    const open = body({ onSections: () => undefined })
+    for (const [section, id] of [['tabs', 'rp-tabs-body'], ['others', 'rp-others-body'], ['release', 'rp-release-body']] as const) {
+      expect(fold(open, section)).toContain('aria-expanded="true"')
+      expect(fold(open, section)).toContain(`aria-controls="${id}"`)
+      expect(open).toContain(`id="${id}"`)
+    }
+    const closed = body({ onSections: () => undefined, sections: folded({ tabs: false, others: false, release: false }) })
+    for (const section of ['tabs', 'others', 'release']) expect(fold(closed, section)).toContain('aria-expanded="false"')
+    expect(fold(body({ onSections: () => undefined, sections: folded({ tabs: false }) }), 'others')).toContain('aria-expanded="true"')
+  })
+
+  it('folds the list of tabs to one line of summary, with the head, the ring bar and the sort still there, and the other states unchanged', () => {
+    const markup = body({ onSort: () => undefined, onSections: () => undefined, sections: folded({ tabs: false }) })
+    expect(markup).not.toContain('rp-row')
+    expect(markup).toContain(frenchSpaces('3 onglets · 2,1 Go'))
+    expect(markup).toContain('class="rp-head"')
+    expect(markup).toContain('role="meter"')
+    expect(markup).toContain('data-sort="cpu"')
+    expect(body({ report: report({ tabs: [], more: { tabs: [], others: OTHERS }, byCpu: { tabs: [], others: OTHERS }, byCpuMore: { tabs: [], others: OTHERS } }) })).toContain('Aucun onglet éveillé')
+    expect(body({ report: null })).toContain('Mesure…')
+    expect(body({ report: null })).not.toContain('data-section="tabs"')
+  })
+
+  it('folds « Autres processus » to its name and figures, and « Libérer maintenant » to its title, without losing the result line', () => {
+    const markup = body({ notice: 'résultat', onSections: () => undefined, sections: folded({ others: false, release: false }) })
+    expect(markup).toMatch(/id="rp-others-body" class="rp-sub-group" hidden=""/)
+    expect(markup).toContain(frenchSpaces('<span>6,2 Go</span><span>25 %</span>'))
+    expect(markup).not.toContain('rp-level')
+    expect(markup).toContain('id="rp-release-body" hidden=""')
+    expect(markup).toContain('>résultat</p>')
+  })
+
+  it('keeps the long texts behind « Détails » (closed by default) without removing them from the page', () => {
+    const closed = release()
+    expect(closed).toContain('class="rp-details" aria-expanded="false" aria-controls="rp-release-details"')
+    expect(closed).toMatch(/id="rp-release-details" class="rp-protected" hidden=""/)
+    expect(release({ details: true })).toMatch(/id="rp-release-details" class="rp-protected">/)
+  })
+
+  it('never hides the warning of Fort while that strength runs or « Détails » is open, and keeps it for a screen reader otherwise', () => {
+    const warn = (markup: string): string => /<p id="rp-release-warn"[^>]*>/.exec(markup)?.[0] ?? ''
+    expect(warn(release())).toContain('hidden=""')
+    expect(buttons(release())[2]).toContain('aria-describedby="rp-release-warn"')
+    expect(warn(release({ running: { level: 'high' } }))).not.toContain('hidden')
+    expect(warn(release({ running: { level: 'low' } }))).toContain('hidden=""')
+    expect(warn(release({ details: true }))).not.toContain('hidden')
+  })
+
+  it('keeps the rule of the warning of Fort: shown with the pointer, the focus, a run or the details (the events are replayed in resource-panel-warning.test.ts)', () => {
+    expect(warningShown({ details: false, engaged: true, running: false })).toBe(true)
+    expect(warningShown({ details: false, engaged: false, running: false })).toBe(false)
+  })
+
+  it('folds or unfolds everything with one button, labelled by what it will do', () => {
+    expect(body({ onSort: () => undefined, onSections: () => undefined })).toContain('class="rp-foldall">Tout replier</button>')
+    expect(body({ onSort: () => undefined, onSections: () => undefined, sections: folded({ tabs: false, others: false, release: false }) })).toContain('class="rp-foldall">Tout déplier</button>')
+    expect(body({ onSort: () => undefined })).not.toContain('rp-foldall')
+    setLanguage('en')
+    expect(body({ onSort: () => undefined, onSections: () => undefined })).toContain('Collapse all')
+  })
+
+  it('gives its buttons the focus ring and the hover of the other buttons, with tokens only', () => {
+    expect(panelCss).toMatch(/\.rp-fold:focus-visible/)
+    expect(panelCss).toMatch(/\.rp-details:focus-visible/)
+    expect(panelCss).toMatch(/\.rp-foldall:focus-visible/)
+    expect(panelCss).toMatch(/\.rp-fold \{[^}]*min-height: 28px/)
+    expect(panelCss).toMatch(/\.rp-release \[hidden\] \{ display: none; \}/)
   })
 })

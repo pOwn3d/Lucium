@@ -11,6 +11,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 - **Libérer la mémoire en trois forces** : le panneau Ressources propose Faible, Moyen et Fort, avec les onglets pris et la mémoire libérée. Fort prend aussi les épinglés et les sites gardés éveillés. « Annuler » pendant 15 secondes. Appels, téléchargements et texte non envoyé sont toujours épargnés.
 - **Ressources : plus d’onglets, et un délai par onglet** : le panneau peut lister jusqu’à dix onglets (« Voir plus ») pour trouver ce qui use le processeur, et « Libérer maintenant » n’attend plus une page qui ne répond pas : cet onglet reste éveillé et l’exécution continue.
 - **Libérer maintenant tient le coup sur un Mac chargé** : les onglets sont interrogés puis mis en veille par groupes de quatre, avec 9 secondes par étape au lieu de 3 pour tout. Le résultat (« N sur M mis en veille » et les raisons) reste affiché à la réouverture du panneau, jusqu’à ce que vous le masquiez.
+- **Ressources : sections repliables** : dans le panneau, la liste d’onglets, « Autres processus » et « Libérer maintenant » se replient d’un chevron, ou tous d’un coup ; les textes longs sont derrière « Détails », sauf l’avertissement de Fort, visible dès que vous le visez. Gardé tant que la fenêtre vit.
 
 ### Corrections
 
