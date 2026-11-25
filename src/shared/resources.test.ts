@@ -16,10 +16,15 @@ import {
   meterShare,
   MEASURED_GAIN_MIN_MB,
   measuredGain,
+  releaseFigures,
+  releaseNotice,
+  releaseSitesWarning,
+  undoNotice,
   parseResourceAction,
   releasePreviews,
   resourceReport,
   sameGauge,
+  type ReleaseOutcome,
   type ResourceTab
 } from './resources'
 import { frenchSpaces } from './french-typography'
@@ -209,5 +214,56 @@ describe('the preview of « Libérer maintenant »', () => {
     expect(measuredGain(5000, 4980)).toBeNull()
     expect(measuredGain(5000, 5400)).toBeNull()
     expect(measuredGain(Number.NaN, 100)).toBeNull()
+  })
+})
+
+describe('the words after « Libérer maintenant »', () => {
+  const outcome = (slept: number, refused: Partial<ReleaseOutcome['refused']> = {}, extra: Partial<ReleaseOutcome> = {}): ReleaseOutcome => ({ level: 'medium', slept, refused: { unsent: 0, confirm: 0, other: 0, ...refused }, ...extra })
+
+  it('says all that went, with what was measured once it is known', () => {
+    expect(releaseNotice(outcome(1), null)).toBe('Onglet mis en veille')
+    expect(releaseNotice(outcome(14), null)).toBe('14 onglets mis en veille')
+    expect(releaseNotice(outcome(14), 2048)).toBe(frenchSpaces('14 onglets mis en veille, ≈ 2 Go libérés (mesuré).'))
+    expect(releaseNotice(outcome(1), 300)).toBe(frenchSpaces('1 onglet mis en veille, ≈ 300 Mo libérés (mesuré).'))
+  })
+
+  it('says how many and why the others stayed awake, by reason', () => {
+    expect(releaseNotice(outcome(11, { unsent: 2, confirm: 1 }), null)).toBe(frenchSpaces('11 sur 14 mis en veille : 2 ont du texte non envoyé, 1 demande une confirmation.'))
+    expect(releaseNotice(outcome(0, { other: 3 }), 900)).toBe(frenchSpaces('0 sur 3 mis en veille : 3 sont protégés ou n’ont pas répondu.'))
+    expect(releaseNotice(outcome(5, { unsent: 1, other: 1 }), null)).toBe(frenchSpaces('5 sur 7 mis en veille : 1 a du texte non envoyé, 1 est protégé ou n’a pas répondu.'))
+  })
+
+  it('says when there was nothing to put to sleep, and when another run was going on', () => {
+    expect(releaseNotice(outcome(0), null)).toBe(frenchSpaces('Aucun onglet à mettre en veille : ceux qui restent sont affichés ou protégés.'))
+    expect(releaseNotice(outcome(0, {}, { busy: true }), null)).toBe('Une mise en veille est déjà en cours.')
+  })
+
+  it('names no title and no address: the reasons are counts', () => {
+    expect(releaseNotice(outcome(2, { unsent: 1 }), null)).not.toMatch(/https?:|\.com/)
+  })
+
+  it('is said in English too', () => {
+    setLanguage('en')
+    expect(releaseNotice(outcome(11, { unsent: 2, confirm: 1 }), null)).toBe('11 of 14 put to sleep: 2 have unsent text, 1 asks for confirmation.')
+    expect(releaseNotice(outcome(3), 1500)).toBe('3 tabs put to sleep, ≈ 1.5 GB freed (measured).')
+    expect(undoNotice(1)).toBe('1 tab is loading again in the background.')
+  })
+
+  it('says what « Annuler » is doing', () => {
+    expect(undoNotice(3)).toBe('3 onglets se rechargent en arrière-plan.')
+    expect(undoNotice(1)).toBe('1 onglet se recharge en arrière-plan.')
+    expect(undoNotice(0)).toBe(frenchSpaces('Aucun onglet à recharger : ils ont été rouverts entre-temps.'))
+  })
+
+  it('writes the figures of a strength: the tabs and the memory, the tabs alone when no process would go, none when empty', () => {
+    expect(releaseFigures({ count: 12, memoryMb: 2150 })).toBe(frenchSpaces('12 onglets · ≈ 2,1 Go'))
+    expect(releaseFigures({ count: 1, memoryMb: 600 })).toBe(frenchSpaces('1 onglet · ≈ 600 Mo'))
+    expect(releaseFigures({ count: 4, memoryMb: 0 })).toBe('4 onglets')
+    expect(releaseFigures({ count: 0, memoryMb: 0 })).toBe('Aucun onglet')
+  })
+
+  it('warns about the kept sites only when the strongest strength takes some', () => {
+    expect(releaseSitesWarning({ siteTabs: 0 })).toBeNull()
+    expect(releaseSitesWarning({ siteTabs: 20 })).toBe(frenchSpaces('Dont 20 onglets de sites gardés éveillés : plus de notifications jusqu’à leur réveil.'))
   })
 })

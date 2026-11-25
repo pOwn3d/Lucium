@@ -77,14 +77,33 @@
 .sidebar .rp-foot { display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2); margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--line); }
 .sidebar .rp-link { padding: 4px 2px; color: var(--text-2); font-size: var(--t-xs); text-align: left; }
 .sidebar .rp-link:hover { color: var(--text); text-decoration: underline; }
-.sidebar .rp-sleep-all {
-  display: inline-flex; align-items: center; gap: 6px; min-height: var(--target); padding: 4px var(--sp-2); border-radius: var(--r-s);
-  background: var(--accent-soft); color: var(--accent-text); font-size: var(--t-xs); font-weight: var(--w-semibold); text-align: left;
+.sidebar .rp-release { margin-top: var(--sp-2); padding-top: var(--sp-2); border-top: 1px solid var(--line); }
+.sidebar .rp-release-title { margin: 0 0 var(--sp-1); color: var(--text-2); font-size: var(--t-xs); font-weight: var(--w-semibold); }
+/* The three strengths one under the other: the width of the panel is too short for three columns that each say what they take and how much. */
+.sidebar .rp-levels { display: grid; gap: var(--sp-1); }
+.sidebar .rp-level {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); min-height: var(--target); padding: 4px var(--sp-2); border-radius: var(--r-s);
+  background: var(--accent-soft); color: var(--accent-text); text-align: left;
 }
-.sidebar .rp-sleep-all:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 24%, transparent); }
-.sidebar .rp-sleep-all:disabled { opacity: 0.5; }
-.sidebar .rp-sleep-all svg { flex: none; width: 12px; height: 12px; }
+.sidebar .rp-level:hover:not(:disabled):not([aria-disabled='true']) { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+.sidebar .rp-level:disabled { opacity: 0.5; }
+.sidebar .rp-level[aria-disabled='true'] { opacity: 0.6; cursor: progress; }
+.sidebar .rp-level.running { opacity: 1; box-shadow: inset 0 0 0 1px var(--accent); }
+.sidebar .rp-level-text { display: grid; min-width: 0; gap: 1px; }
+.sidebar .rp-level-text b { font-size: var(--t-s); font-weight: var(--w-semibold); }
+.sidebar .rp-level-text span { color: var(--text-2); font-size: var(--t-xs); }
+.sidebar .rp-level-figures { flex: none; max-width: 48%; font-size: var(--t-xs); font-variant-numeric: tabular-nums; text-align: right; }
+/* What the strongest one costs, and what always stays awake: written out, so that nothing hangs on a colour or a hover. */
+.sidebar .rp-warn { margin: var(--sp-1) 0 0; padding-left: var(--sp-2); border-left: 2px solid var(--warn); color: var(--text); font-size: var(--t-xs); }
+.sidebar .rp-protected { margin: var(--sp-1) 0 0; color: var(--text-3); font-size: var(--t-xs); }
 
-.sidebar .rp-show:focus-visible, .sidebar .rp-act:focus-visible, .sidebar .rp-link:focus-visible, .sidebar .rp-sleep-all:focus-visible {
+/* What the last button did, and « Annuler » beside it while it can still be taken back. */
+.sidebar .rp-result { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
+.sidebar .rp-result:has(.rp-notice:empty):not(:has(.rp-undo)) { display: none; }
+.sidebar .rp-result .rp-notice { flex: 1; min-width: 0; }
+.sidebar .rp-undo { flex: none; min-height: var(--target); padding: 4px var(--sp-2); border-radius: var(--r-s); background: var(--tile); color: var(--text); font-size: var(--t-xs); font-weight: var(--w-semibold); }
+.sidebar .rp-undo:hover { background: var(--tile-hover); }
+
+.sidebar .rp-show:focus-visible, .sidebar .rp-act:focus-visible, .sidebar .rp-link:focus-visible, .sidebar .rp-level:focus-visible, .sidebar .rp-undo:focus-visible {
   outline: var(--focus-width) solid var(--focus); outline-offset: -2px;
 }

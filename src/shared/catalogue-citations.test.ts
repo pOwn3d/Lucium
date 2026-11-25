@@ -17,7 +17,7 @@ const QUOTES: Readonly<Partial<Record<MessageKey, readonly MessageKey[]>>> = {
   'settings.sites-gardes-eveilles-note': ['ctx.ne-jamais-mettre-cet-onglet-en-veille'],
   'settings.au-dela-l-onglet-quitte-depuis-le-plus': ['ctx.ne-jamais-mettre-cet-onglet-en-veille'],
   'settings.desactive-seuls-l-onglet-affiche-et-les': ['ctx.ne-jamais-mettre-cet-onglet-en-veille'],
-  'resources.tout-endormir-hint': ['ctx.ne-jamais-mettre-cet-onglet-en-veille'],
+  'resources.liberer-protege': ['ctx.ne-jamais-mettre-cet-onglet-en-veille'],
   // a choice of the menu « Mode de veille » (a place of the Settings is a generated `{path}`: shared/settings-path.ts)
   'settings.un-onglet-cache-depuis-ce-delai-ne': ['settings.liberer-la-memoire'],
   // the entries of the menus

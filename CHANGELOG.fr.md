@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Libérer la mémoire en trois forces** : le panneau Ressources propose Faible, Moyen et Fort, avec les onglets pris et la mémoire libérée. Fort prend aussi les épinglés et les sites gardés éveillés. « Annuler » pendant 15 secondes. Appels, téléchargements et texte non envoyé sont toujours épargnés.
+
 ### Corrections
 
 - **AppImage Linux, relance après une mise à jour** : après « Installer et relancer », Lucium se fermait sans revenir, car le nouvel AppImage mourait quand le runtime de l’ancien se terminait. Il est maintenant lancé par un assistant détaché qui attend la fin de l’ancienne copie.

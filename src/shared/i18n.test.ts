@@ -107,7 +107,7 @@ describe('the catalogues', () => {
     // application and leaves a mode. Any other French text that comes back under another key is the same thing, and reads the same.
     const twoMeanings = new Set([
       'Quitter', 'Rechercher', 'Annuler', 'Supprimer', 'Ignorer', 'Actualiser', 'Page précédente', 'Affichage', 'Rétablir', 'Lecture à voix haute',
-      'Précédent', 'Suivant', 'Fine'
+      'Précédent', 'Suivant', 'Fine', 'Faible'
     ])
     const loose = (text: string): string => text.toLowerCase().replace(/\b(the|a|an|this) /g, '').replace(/…$/, '')
     const keysOf = new Map<string, string[]>()

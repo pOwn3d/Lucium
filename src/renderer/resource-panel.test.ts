@@ -6,7 +6,7 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setLanguage } from '@shared/i18n'
-import { memoryGauge, type ResourceReport, type ResourceTab } from '@shared/resources'
+import { memoryGauge, type ReleasePreview, type ResourceReport, type ResourceTab } from '@shared/resources'
 import panelCss from './resource-panel.css?raw'
 import sidebarSource from './Sidebar.tsx?raw'
 
@@ -15,26 +15,31 @@ vi.mock('./api', () => ({
   api: () => ({
     resourcePanel: (open: boolean) => holder.calls.push(open),
     onResources: () => () => undefined,
-    resourceAction: () => (holder.fails ? Promise.reject(new Error('the window is gone')) : Promise.resolve({ slept: 3 }))
+    resourceAction: () => (holder.fails ? Promise.reject(new Error('the window is gone')) : Promise.resolve({ released: { level: 'medium', slept: 3, refused: { unsent: 0, confirm: 0, other: 0 } } }))
   })
 }))
 
-import { FooterResources, ResourcePanelBody, ResourceRow, ask } from './ResourcePanel'
+import { FooterResources, ReleaseLevels, ResourcePanelBody, ResourceRow, ask } from './ResourcePanel'
 import { elementsOf } from './render.test-support'
 import { frenchSpaces } from '@shared/french-typography'
 
 const GB = 1024
 const tab = (tabId: string, memoryMb: number, cpu: number, extra: Partial<ResourceTab> = {}): ResourceTab => ({ tabId, name: tabId, url: `https://${tabId.toLowerCase()}.example/`, memoryMb, cpu, ...extra })
+const levels = (patch: Partial<Record<ReleasePreview['level'], Partial<ReleasePreview>>> = {}): ReleasePreview[] => [
+  { level: 'low', count: 4, memoryMb: 600, cpu: 1, siteTabs: 0, ...patch.low },
+  { level: 'medium', count: 12, memoryMb: 2150, cpu: 3, siteTabs: 0, ...patch.medium },
+  { level: 'high', count: 35, memoryMb: 4900, cpu: 5, siteTabs: 20, ...patch.high }
+]
 const report = (patch: Partial<ResourceReport> = {}): ResourceReport => ({
   memoryMb: 8500,
   cpu: 33.4,
   gauge: memoryGauge(8.3 * GB, 16 * GB, 1),
   tabs: [tab('Twitch', 584, 7.4), tab('Perso', 278, 0.2, { where: 'Travail', pinned: true }), tab('Home', 1300, 1, { shared: true })],
-  hidden: 2,
+  levels: levels(),
   ...patch
 })
 const body = (patch: Partial<Parameters<typeof ResourcePanelBody>[0]> = {}): string =>
-  renderToStaticMarkup(createElement(ResourcePanelBody, { report: report(), notice: '', onShow: () => undefined, onSleep: () => undefined, onClose: () => undefined, onSleepHidden: () => undefined, onTaskManager: () => undefined, ...patch }))
+  renderToStaticMarkup(createElement(ResourcePanelBody, { report: report(), notice: '', onShow: () => undefined, onSleep: () => undefined, onClose: () => undefined, onRelease: () => undefined, onTaskManager: () => undefined, ...patch }))
 
 beforeEach(() => {
   vi.stubGlobal('window', { matchMedia: () => ({ matches: false, addEventListener: () => undefined, removeEventListener: () => undefined }) })
@@ -94,13 +99,7 @@ describe('the panel', () => {
 
   it('says it is measuring before the first figures, and that no tab is awake when none is', () => {
     expect(body({ report: null })).toContain('Mesure…')
-    expect(body({ report: null })).toMatch(/class="rp-sleep-all"[^>]*disabled=""/)
-    expect(body({ report: report({ tabs: [], hidden: 0 }) })).toContain('Aucun onglet éveillé')
-  })
-
-  it('greys « Tout endormir » when no awake tab is hidden', () => {
-    expect(body({ report: report({ hidden: 0 }) })).toMatch(/class="rp-sleep-all"[^>]*disabled=""/)
-    expect(body()).not.toMatch(/class="rp-sleep-all"[^>]*disabled=""/)
+    expect(body({ report: report({ tabs: [] }) })).toContain('Aucun onglet éveillé')
   })
 
   it('says what the last button did, to a screen reader too', () => {
@@ -108,10 +107,99 @@ describe('the panel', () => {
   })
 })
 
+describe('« Libérer maintenant »', () => {
+  const release = (props: Partial<Parameters<typeof ReleaseLevels>[0]> = {}): string => renderToStaticMarkup(createElement(ReleaseLevels, { levels: levels(), running: null, onRelease: () => undefined, ...props }))
+  const buttons = (markup: string): string[] => markup.match(/<button[^>]*class="rp-level[^"]*"[^>]*>.*?<\/button>/g) ?? []
+
+  it('has three buttons, Faible, Moyen and Fort, each with what it takes and how much it frees', () => {
+    const markup = release()
+    const found = buttons(markup)
+    expect(found).toHaveLength(3)
+    expect(found[0]).toContain(frenchSpaces('<b>Faible</b><span>Cachés depuis 10 min ou plus</span>'))
+    expect(found[0]).toContain(frenchSpaces('4 onglets · ≈ 600 Mo'))
+    expect(found[1]).toContain('<b>Moyen</b>')
+    expect(found[1]).toContain(frenchSpaces('12 onglets · ≈ 2,1 Go'))
+    expect(found[2]).toContain('<b>Fort</b><span>Aussi les épinglés et les sites gardés éveillés</span>')
+    expect(found[2]).toContain(frenchSpaces('35 onglets · ≈ 4,8 Go'))
+    expect(markup).toContain('role="group"')
+    expect(markup).toContain('aria-labelledby="rp-release-title"')
+  })
+
+  it('says in full what the strongest one costs, on screen and tied to its button, and what is always spared', () => {
+    const markup = release()
+    expect(markup).toContain(frenchSpaces('<p id="rp-release-warn" class="rp-warn">Dont 20 onglets de sites gardés éveillés : plus de notifications jusqu’à leur réveil.</p>'))
+    expect(buttons(markup)[2]).toContain('aria-describedby="rp-release-warn"')
+    expect(buttons(markup)[0]).not.toContain('aria-describedby')
+    expect(markup).toContain(frenchSpaces('Toujours épargnés : l’onglet affiché, le son'))
+    expect(markup).toContain('Ne jamais mettre cet onglet en veille')
+    // Without a tab of a kept site, nothing to warn about.
+    expect(release({ levels: levels({ high: { siteTabs: 0 } }) })).not.toContain('rp-warn')
+    expect(release({ levels: levels({ high: { siteTabs: 1 } }) })).toContain(frenchSpaces('Dont 1 onglet d’un site gardé éveillé : plus de notifications jusqu’à son réveil.'))
+  })
+
+  it('names the memory only when some would really go (a process another tab keeps frees nothing)', () => {
+    const markup = release({ levels: levels({ low: { count: 1, memoryMb: 0 } }) })
+    expect(buttons(markup)[0]).toContain('<span class="rp-level-figures">1 onglet</span>')
+  })
+
+  it('greys a strength with nothing to take, and says so for all three when every tab is shown or protected', () => {
+    const some = release({ levels: levels({ low: { count: 0, memoryMb: 0 } }) })
+    expect(buttons(some)[0]).toMatch(/disabled=""/)
+    expect(buttons(some)[0]).toContain('Aucun onglet')
+    expect(buttons(some)[1]).not.toMatch(/disabled=""/)
+    expect(some).not.toContain('rp-empty')
+    const none = release({ levels: levels({ low: { count: 0 }, medium: { count: 0 }, high: { count: 0, siteTabs: 0 } }) })
+    expect(buttons(none).every((button) => /disabled=""/.test(button))).toBe(true)
+    expect(none).toContain(frenchSpaces('Aucun onglet à mettre en veille : ceux qui restent sont affichés ou protégés.'))
+  })
+
+  it('waits for the first figures: three buttons that cannot be pressed yet', () => {
+    const markup = release({ levels: null })
+    expect(buttons(markup).every((button) => /disabled=""/.test(button) && button.includes('Mesure…'))).toBe(true)
+    expect(markup).not.toContain('rp-empty')
+  })
+
+  it('is marked busy while a run goes, the buttons stay in the tab order (aria-disabled) and the one that runs is marked', () => {
+    const markup = release({ running: { level: 'high' } })
+    expect(markup).toContain('aria-busy="true"')
+    const found = buttons(markup)
+    expect(found.every((button) => button.includes('aria-disabled="true"') && !/ disabled=""/.test(button))).toBe(true)
+    expect(found[2]).toContain('rp-level running')
+    expect(release()).toContain('aria-busy="false"')
+  })
+
+  it('asks for the strength of the button, and ignores a click while another run goes', () => {
+    const asked: string[] = []
+    const found = elementsOf(createElement(ReleaseLevels, { levels: levels(), running: null, onRelease: (preview) => asked.push(preview.level) })).filter((element) => element.type === 'button')
+    ;(found[1]?.props['onClick'] as () => void)()
+    ;(found[2]?.props['onClick'] as () => void)()
+    expect(asked).toEqual(['medium', 'high'])
+    const busy = elementsOf(createElement(ReleaseLevels, { levels: levels(), running: { level: 'low' }, onRelease: (preview) => asked.push(preview.level) })).filter((element) => element.type === 'button')
+    ;(busy[1]?.props['onClick'] as () => void)()
+    expect(asked).toHaveLength(2)
+  })
+
+  it('offers « Annuler » only while the last run can be taken back', () => {
+    expect(body({ undoable: true })).toContain('class="rp-undo"')
+    expect(body({ undoable: true })).toContain('>Annuler</button>')
+    expect(body()).not.toContain('rp-undo')
+  })
+
+  it('is written in English too, with the same buttons', () => {
+    setLanguage('en')
+    const markup = release()
+    expect(markup).toContain('<b>Light</b><span>Hidden for 10 min or more</span>')
+    expect(markup).toContain('<b>Medium</b>')
+    expect(markup).toContain('<b>Strong</b>')
+    expect(markup).toContain('12 tabs · ≈ 2.1 GB')
+    expect(markup).toContain('Including 20 tabs of kept-awake sites: no notifications until they wake.')
+  })
+})
+
 describe('the rows under the pointer', () => {
   it('tell the panel when the pointer comes on them and leaves them', () => {
     const said: boolean[] = []
-    const list = elementsOf(createElement(ResourcePanelBody, { report: report(), notice: '', onShow: () => undefined, onSleep: () => undefined, onClose: () => undefined, onSleepHidden: () => undefined, onTaskManager: () => undefined, onHold: (held) => said.push(held) })).find((element) => element.props['className'] === 'rp-rows')
+    const list = elementsOf(createElement(ResourcePanelBody, { report: report(), notice: '', onShow: () => undefined, onSleep: () => undefined, onClose: () => undefined, onRelease: () => undefined, onTaskManager: () => undefined, onHold: (held) => said.push(held) })).find((element) => element.props['className'] === 'rp-rows')
     ;(list?.props['onPointerEnter'] as () => void)()
     ;(list?.props['onPointerLeave'] as () => void)()
     expect(said).toEqual([true, false])
@@ -160,7 +248,7 @@ describe('a row', () => {
 
 describe('a button of the panel', () => {
   it('gives the answer of the main process', async () => {
-    expect(await ask({ kind: 'sleep-hidden' })).toEqual({ slept: 3 })
+    expect(await ask({ kind: 'sleep-level', level: 'medium' })).toEqual({ released: { level: 'medium', slept: 3, refused: { unsent: 0, confirm: 0, other: 0 } } })
   })
 
   it('leaves the panel as it is when its request fails, and says so in the console', async () => {

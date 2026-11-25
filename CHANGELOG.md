@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **Free up memory in three strengths**: the resource panel now has Light, Medium and Strong buttons, each with the tabs it takes and the memory it frees. Strong also takes pinned tabs and kept-awake sites. Undo for 15 seconds. Calls, downloads and unsent text are always spared.
+
 ### Fixed
 
 - **Linux AppImage, restart after an update**: after “Install and restart”, Lucium closed but did not come back, because the new AppImage died as the old one’s runtime ended. It is now started from a detached helper that waits for the old copy to end.

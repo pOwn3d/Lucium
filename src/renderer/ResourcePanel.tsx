@@ -4,10 +4,34 @@
 // press outside it or the window losing the focus closes it.
 
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { t } from '@shared/i18n'
+import { t, tp } from '@shared/i18n'
 import { stepProcessRow } from '@shared/processes'
-import { formatMemory, formatPercent, gaugeTip, heldReport, isHot, meterShare, resourceActionDone, type MemoryGauge, type ResourceAction, type ResourceActionReply, type ResourceReport, type ResourceTab } from '@shared/resources'
-import { sleepToastMessage } from '@shared/sleep'
+import {
+  RELEASE_MEASURE_MS,
+  RELEASE_UNDO_MS,
+  formatMemory,
+  formatPercent,
+  gaugeTip,
+  heldReport,
+  isHot,
+  measuredGain,
+  meterShare,
+  releaseFigures,
+  releaseLevelHint,
+  releaseLevelName,
+  releaseNotice,
+  releaseSitesWarning,
+  resourceActionDone,
+  undoNotice,
+  type MemoryGauge,
+  type ReleaseOutcome,
+  type ReleasePreview,
+  type ResourceAction,
+  type ResourceActionReply,
+  type ResourceReport,
+  type ResourceTab
+} from '@shared/resources'
+import { RELEASE_LEVELS, type ReleaseLevel } from '@shared/sleep'
 import { api } from './api'
 import { useSystemReducedMotion } from './reduced-motion'
 import { Favicon } from './SidebarRows'
@@ -109,6 +133,10 @@ export function ask(action: ResourceAction): Promise<ResourceActionReply> {
 export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose: (refocus?: boolean) => void }) {
   const [report, setReport] = useState<ResourceReport | null>(null)
   const [notice, setNotice] = useState('')
+  // « Libérer maintenant »: the strength that runs (its buttons wait meanwhile), and the last run, which « Annuler » can still take back.
+  const [running, setRunning] = useState<{ level: ReleaseLevel; count: number } | null>(null)
+  const [done, setDone] = useState<{ outcome: ReleaseOutcome; before: number | null; freedMb: number | null; undoable: boolean } | null>(null)
+  const latest = useRef<ResourceReport | null>(null)
   const panel = useRef<HTMLDivElement>(null)
   // A row that went (put to sleep, closed) gives the focus to the row that takes its place, once the figures without it come.
   const refocus = useRef<{ tabId: string; row: number; column: Column } | null>(null)
@@ -135,9 +163,21 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
     if (!wanted || !report || report.tabs.some((tab) => tab.tabId === wanted.tabId)) return
     refocus.current = null
     const rows = report.tabs.length
-    ;(rows === 0 ? panel.current?.querySelector<HTMLElement>('.rp-sleep-all:not(:disabled), .rp-link') : cell(Math.min(wanted.row, rows - 1), wanted.column))?.focus()
+    ;(rows === 0 ? panel.current?.querySelector<HTMLElement>('.rp-level:not(:disabled), .rp-link') : cell(Math.min(wanted.row, rows - 1), wanted.column))?.focus()
   }, [report])
 
+  latest.current = report
+  // What the run really freed is measured a few seconds after it (the processes need a moment to go); « Annuler » is offered for a while.
+  const ran = done?.outcome
+  useEffect(() => {
+    if (!ran || ran.slept === 0) return
+    const measure = setTimeout(() => setDone((now) => (now && now.outcome === ran ? { ...now, freedMb: now.before !== null && latest.current ? measuredGain(now.before, latest.current.memoryMb) : null } : now)), RELEASE_MEASURE_MS)
+    const expire = setTimeout(() => setDone((now) => (now && now.outcome === ran ? { ...now, undoable: false } : now)), RELEASE_UNDO_MS)
+    return () => {
+      clearTimeout(measure)
+      clearTimeout(expire)
+    }
+  }, [ran])
   const tabs = report?.tabs ?? []
   const keys = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Escape') {
@@ -162,6 +202,7 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
     refocus.current = { tabId: tab.tabId, row, column }
     acted.current.add(tab.tabId)
     setNotice('')
+    setDone(null)
     void ask({ kind, tabId: tab.tabId }).then((reply) => {
       if (resourceActionDone(reply)) return setNotice(done)
       if (refocus.current?.tabId === tab.tabId) refocus.current = null
@@ -176,18 +217,36 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
     void ask({ kind: 'show', tabId: tab.tabId })
     onClose()
   }
-  const sleepHidden = (): void => {
-    void ask({ kind: 'sleep-hidden' }).then((reply) => setNotice(reply && 'slept' in reply && reply.slept > 0 ? sleepToastMessage(reply.slept) : t('resources.rien-a-endormir')))
+  /** One run at a time: the buttons wait, and a second click is ignored. Closing the panel does not stop the run (the main process finishes it). */
+  const release = (preview: ReleasePreview): void => {
+    if (running) return
+    setNotice('')
+    setDone(null)
+    setRunning({ level: preview.level, count: preview.count })
+    const before = latest.current?.memoryMb ?? null
+    void ask({ kind: 'sleep-level', level: preview.level }).then((reply) => {
+      setRunning(null)
+      if (!reply || !('released' in reply)) return setNotice(t('resources.liberer-impossible'))
+      setDone({ outcome: reply.released, before, freedMb: null, undoable: reply.released.slept > 0 })
+    })
+  }
+  /** « Annuler »: the tabs of the last run load again from their address, in the background. */
+  const undo = (): void => {
+    setDone(null)
+    void ask({ kind: 'undo-level' }).then((reply) => setNotice(reply && 'woken' in reply ? undoNotice(reply.woken) : t('resources.annulation-impossible')))
   }
   return (
     <div id={PANEL_ID} ref={panel} className={`rp-panel ${closing ? 'closing' : ''}`} role="dialog" aria-label={t('resources.ressources')} tabIndex={-1} onKeyDown={keys}>
       <ResourcePanelBody
         report={report}
-        notice={notice}
+        notice={done ? releaseNotice(done.outcome, done.freedMb) : running ? tp('resources.liberer-en-cours', running.count) : notice}
         onShow={show}
         onSleep={sleep}
         onClose={close}
-        onSleepHidden={sleepHidden}
+        running={running}
+        undoable={done?.undoable === true}
+        onRelease={release}
+        onUndo={undo}
         onHold={hold}
         onTaskManager={() => {
           void ask({ kind: 'task-manager' })
@@ -206,14 +265,19 @@ export interface ResourcePanelBodyProps {
   onShow(tab: ResourceTab): void
   onSleep(tab: ResourceTab, row: number): void
   onClose(tab: ResourceTab, row: number): void
-  onSleepHidden(): void
+  /** The strength that runs, or null: its buttons wait. */
+  running?: { level: ReleaseLevel; count: number } | null
+  /** « Annuler » is offered (the last run freed tabs a short while ago). */
+  undoable?: boolean
+  onRelease(preview: ReleasePreview): void
+  onUndo?(): void
   onTaskManager(): void
   /** The pointer comes on the rows, or leaves them: while it is there, the rows keep their places. */
   onHold?(held: boolean): void
 }
 
 /** What the panel draws from its figures: the totals, the share of the Mac's memory, the heaviest tabs, the notice and the two buttons of the foot. */
-export function ResourcePanelBody({ report, notice, onShow, onSleep, onClose, onSleepHidden, onTaskManager, onHold }: ResourcePanelBodyProps) {
+export function ResourcePanelBody({ report, notice, running = null, undoable = false, onShow, onSleep, onClose, onRelease, onUndo, onTaskManager, onHold }: ResourcePanelBodyProps) {
   const tabs = report?.tabs ?? []
   const summary = report ? `${formatMemory(report.memoryMb)} · ${t('resources.d-un-coeur', { cpu: formatPercent(report.cpu) })}` : ''
   return (
@@ -242,19 +306,74 @@ export function ResourcePanelBody({ report, notice, onShow, onSleep, onClose, on
           ))}
         </ul>
       )}
-      <p className="rp-notice" role="status" aria-live="polite">
-        {notice}
-      </p>
+      <ReleaseLevels levels={report?.levels ?? null} running={running} onRelease={onRelease} />
+      <div className="rp-result">
+        <p className="rp-notice" role="status" aria-live="polite">
+          {notice}
+        </p>
+        {undoable && (
+          <button type="button" className="rp-undo" title={t('resources.annuler-hint')} onClick={onUndo}>
+            {t('resources.annuler')}
+          </button>
+        )}
+      </div>
       <div className="rp-foot">
         <button type="button" className="rp-link" onClick={onTaskManager}>
           {t('resources.gestionnaire-complet')}
         </button>
-        <button type="button" className="rp-sleep-all" title={t('resources.tout-endormir-hint')} disabled={!report || report.hidden === 0} onClick={onSleepHidden}>
-          <MoonGlyph />
-          {t('resources.tout-endormir')}
-        </button>
       </div>
     </>
+  )
+}
+
+const WARN_ID = 'rp-release-warn'
+
+/**
+ * « Libérer maintenant »: the three strengths one under the other, each with what it takes (the tabs, and the memory of the processes that would go),
+ * as the panel measured it; the warning of the strongest one stays on screen, not only on a hover. A strength with nothing to take is greyed; while a
+ * run goes the buttons are `aria-disabled` rather than `disabled`, so that the one that was pressed keeps the keyboard focus.
+ */
+export function ReleaseLevels({ levels, running, onRelease }: { levels: readonly ReleasePreview[] | null; running: { level: ReleaseLevel } | null; onRelease(preview: ReleasePreview): void }) {
+  const high = levels?.find((preview) => preview.level === 'high')
+  const warning = high ? releaseSitesWarning(high) : null
+  const nothing = levels !== null && levels.every((preview) => preview.count === 0)
+  return (
+    <section className="rp-release" aria-labelledby="rp-release-title" aria-busy={running !== null}>
+      <h3 id="rp-release-title" className="rp-release-title">
+        {t('resources.liberer-titre')}
+      </h3>
+      <div className="rp-levels" role="group" aria-labelledby="rp-release-title">
+        {RELEASE_LEVELS.map((level) => {
+          const preview = levels?.find((one) => one.level === level)
+          const empty = preview === undefined || preview.count === 0
+          return (
+            <button
+              key={level}
+              type="button"
+              className={`rp-level ${running?.level === level ? 'running' : ''}`}
+              data-level={level}
+              disabled={empty}
+              aria-disabled={running !== null || undefined}
+              aria-describedby={level === 'high' && warning ? WARN_ID : undefined}
+              onClick={() => preview && !running && onRelease(preview)}
+            >
+              <span className="rp-level-text">
+                <b>{releaseLevelName(level)}</b>
+                <span>{releaseLevelHint(level)}</span>
+              </span>
+              <span className="rp-level-figures">{preview ? releaseFigures(preview) : t('resources.mesure')}</span>
+            </button>
+          )
+        })}
+      </div>
+      {warning && (
+        <p id={WARN_ID} className="rp-warn">
+          {warning}
+        </p>
+      )}
+      {nothing && <p className="rp-empty">{t('resources.rien-a-endormir')}</p>}
+      <p className="rp-protected">{t('resources.liberer-protege')}</p>
+    </section>
   )
 }
 

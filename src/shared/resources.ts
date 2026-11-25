@@ -3,9 +3,9 @@
 // the awake tabs that weigh the most, to put to sleep or close in one click. Pure: the main process measures (shell/resource-watch.ts,
 // Browser.resourceTabs), the sidebar draws (renderer/ResourcePanel.tsx).
 
-import { getLanguage, t } from './i18n'
+import { getLanguage, t, tp, type MessageKey } from './i18n'
 import type { RawProcess } from './processes'
-import { RELEASE_LEVELS, type ReleaseLevel, type ReleasePlan } from './sleep'
+import { RELEASE_LEVELS, sleepToastMessage, type ReleaseLevel, type ReleasePlan } from './sleep'
 
 /** How often the figures of the panel are measured again: only while a panel is open, in any window (shell/resource-watch.ts). */
 export const RESOURCE_REFRESH_MS = 2000
@@ -15,6 +15,10 @@ export const RESOURCE_TABS_MAX = 5
 export const GAUGE_WARN_PERCENT = 50
 /** `kern.memorystatus_vm_pressure_level` says 1 (normal), 2 (warning) or 4 (critical): from 2 the ring turns amber. */
 export const PRESSURE_WARN_LEVEL = 2
+/** How long « Annuler » stays after a run of « Libérer maintenant »: fifteen seconds. */
+export const RELEASE_UNDO_MS = 15_000
+/** How long after a run the panel measures what was really freed: the processes need a moment to go. */
+export const RELEASE_MEASURE_MS = 3000
 /** The meter of a row is hot from this memory (MB) or this processor (% of one core). */
 export const HOT_TAB_MB = 1024
 export const HOT_TAB_CPU = 30
@@ -236,4 +240,52 @@ export function gaugeTip(gauge: MemoryGauge | null | undefined): string {
   if (!gauge) return t('resources.ressources-du-navigateur')
   const figures = t('resources.jauge', { memory: formatMemory(gauge.memoryMb), total: formatMemory(gauge.totalMb), percent: gauge.percent })
   return gauge.pressure ? `${figures} · ${t('resources.pression')}` : figures
+}
+
+// ---------- « Libérer maintenant »: the words ----------
+
+const LEVEL_NAMES = { low: 'resources.niveau-faible', medium: 'resources.niveau-moyen', high: 'resources.niveau-fort' } as const satisfies Record<ReleaseLevel, MessageKey>
+const LEVEL_HINTS = { low: 'resources.niveau-faible-hint', medium: 'resources.niveau-moyen-hint', high: 'resources.niveau-fort-hint' } as const satisfies Record<ReleaseLevel, MessageKey>
+
+/** « Faible », « Moyen », « Fort ». */
+export function releaseLevelName(level: ReleaseLevel): string {
+  return t(LEVEL_NAMES[level])
+}
+
+/** What a strength takes, in a few words. */
+export function releaseLevelHint(level: ReleaseLevel): string {
+  return t(LEVEL_HINTS[level])
+}
+
+/** « 4 onglets · ≈ 0,6 Go » (the memory only when some would really go), or « Aucun onglet ». */
+export function releaseFigures(preview: Pick<ReleasePreview, 'count' | 'memoryMb'>): string {
+  if (preview.count === 0) return t('resources.niveau-aucun')
+  return preview.memoryMb > 0 ? tp('resources.niveau-chiffres', preview.count, { memory: formatMemory(preview.memoryMb) }) : tp('resources.niveau-onglets', preview.count)
+}
+
+/** What the strongest strength costs besides memory: the notifications of the sites kept awake stop until their tab wakes. Null when it takes none of these. */
+export function releaseSitesWarning(preview: Pick<ReleasePreview, 'siteTabs'>): string | null {
+  return preview.siteTabs > 0 ? tp('resources.niveau-fort-sites', preview.siteTabs) : null
+}
+
+/** The sentence after a run: all done (with what was measured when it is known), nothing to do, or how many and why the others stayed awake. */
+export function releaseNotice(outcome: ReleaseOutcome, freedMb: number | null): string {
+  if (outcome.busy === true) return t('resources.liberer-deja-en-cours')
+  const { unsent, confirm, other } = outcome.refused
+  const refused = unsent + confirm + other
+  if (refused === 0) {
+    if (outcome.slept === 0) return t('resources.rien-a-endormir')
+    return freedMb === null ? sleepToastMessage(outcome.slept) : tp('resources.liberer-fait-gain', outcome.slept, { memory: formatMemory(freedMb) })
+  }
+  const reasons = [
+    ...(unsent > 0 ? [tp('resources.refus-texte', unsent)] : []),
+    ...(confirm > 0 ? [tp('resources.refus-confirmation', confirm)] : []),
+    ...(other > 0 ? [tp('resources.refus-autre', other)] : [])
+  ].join(', ')
+  return t('resources.liberer-partiel', { slept: outcome.slept, total: outcome.slept + refused, reasons })
+}
+
+/** The sentence after « Annuler »: how many tabs load again (none when the user opened them meanwhile). */
+export function undoNotice(woken: number): string {
+  return woken > 0 ? tp('resources.annulation', woken) : t('resources.annulation-rien')
 }
