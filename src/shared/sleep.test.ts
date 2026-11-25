@@ -3,6 +3,8 @@ import { defaultSettings, type RuntimeState, type SidebarState, type TabItem } f
 import { activeTab, createInitialState, normalize, reduce, type Action, type Ctx } from './sidebar'
 import {
   PRESSURE_AWAKE_MAX,
+  RELEASE_LEVELS,
+  type ReleaseLevel,
   SLEEP_HOSTS_MAX,
   SLEEP_LEVELS,
   checkSleepHost,
@@ -10,6 +12,7 @@ import {
   cleanSleepSettings,
   isSiteExcluded,
   normalizeSleepHost,
+  planReleaseLevels,
   planSweep,
   pressureOfFreeMemory,
   pressureOfLevel,
@@ -21,6 +24,7 @@ import {
   wakesAtLaunch,
   withSleepingEntries,
   type PageProbe,
+  type SleepBlocker,
   type SleepFacts,
   type SleepRules,
   type SweepEntry
@@ -745,5 +749,125 @@ describe('the levels of the sleep', () => {
       balanced: { sleepAfterMinutes: 30, sleepAwakeMax: 12, sleepFreezeAfterMinutes: 0 },
       maximum: { sleepAfterMinutes: 10, sleepAwakeMax: 6, sleepFreezeAfterMinutes: 5 }
     })
+  })
+})
+
+describe('sleepVerdict ({ level }: « Libérer maintenant »)', () => {
+  const at = (level: ReleaseLevel, t = tab(), r = rules(), f = facts()) => reason(sleepVerdict(t, r, f, { level }))
+  const kept = rules({ sleepExcludedHosts: ['example.com'], sleepSkipPinned: true })
+  const keepsAll = (extra: Partial<SleepRules> = {}) => rules({ sleepExcludedHosts: ['example.com'], ...extra })
+
+  it('takes a hidden tab at every strength once the page was asked, without waiting for the delay, even with the delay on « Jamais »', () => {
+    for (const level of RELEASE_LEVELS) {
+      expect(at(level, tab(), rules({ sleepAfterMinutes: 0 }), facts({ idleMs: 11 * MINUTE }))).toBe('sleep')
+      expect(at(level, tab(), rules(), facts({ idleMs: 11 * MINUTE, probe: undefined }))).toBe('unchecked')
+    }
+    expect(at('medium', tab(), rules(), facts({ idleMs: 0 }))).toBe('sleep')
+    expect(at('high', tab(), rules(), facts({ idleMs: 0 }))).toBe('sleep')
+  })
+
+  it('low spares a tab left for less than ten minutes, medium and high do not', () => {
+    expect(at('low', tab(), rules(), facts({ idleMs: 9 * MINUTE }))).toBe('recent')
+    expect(at('low', tab(), rules(), facts({ idleMs: 10 * MINUTE }))).toBe('sleep')
+    expect(at('medium', tab(), rules(), facts({ idleMs: 9 * MINUTE }))).toBe('sleep')
+    expect(at('high', tab(), rules(), facts({ idleMs: 0 }))).toBe('sleep')
+  })
+
+  it('does not count a load under way, as « Actualiser tous les onglets » does not', () => {
+    for (const level of RELEASE_LEVELS) expect(at(level, tab(), rules(), facts({ loading: true }))).toBe('sleep')
+  })
+
+  it('low and medium keep the settings: the pinned tabs they spare, and every tab of a site kept awake', () => {
+    for (const level of ['low', 'medium'] as const) {
+      expect(at(level, tab({ pinned: true }), rules({ sleepSkipPinned: true }))).toBe('pinned')
+      expect(at(level, tab({ pinned: true }), rules({ sleepSkipPinned: false }))).toBe('sleep')
+      expect(at(level, tab(), kept)).toBe('excluded-site')
+      // The site keeper of the sweep does not matter here: a kept site is kept whole (« Actualiser tous les onglets » does so).
+      expect(at(level, tab(), keepsAll(), facts({ siteKeeper: false }))).toBe('sleep')
+      expect(at(level, tab(), keepsAll(), facts())).toBe('excluded-site')
+    }
+  })
+
+  it('high takes the pinned tabs and the tabs of the sites kept awake, whatever the settings say', () => {
+    expect(at('high', tab({ pinned: true }), rules({ sleepSkipPinned: true }))).toBe('sleep')
+    expect(at('high', tab(), kept)).toBe('sleep')
+    expect(at('high', tab({ pinned: true }), kept)).toBe('sleep')
+    expect(at('high', tab(), keepsAll({ sleepExcludedKeepAll: true }))).toBe('sleep')
+  })
+
+  it('never takes, at any strength, what a call or a person depends on', () => {
+    const all = rules({ sleepSkipAudible: false, sleepSkipPinned: false })
+    const guards: Array<[string, SleepBlocker, ReturnType<typeof tab> & Partial<TabItem>, Partial<SleepFacts>]> = [
+      ['the tab on screen', 'selected', tab(), { selected: true }],
+      ['a pane of the split view', 'split-pane', tab(), { visiblePane: true }],
+      ['a floating video', 'floating', tab(), { floating: true }],
+      ['sound, even when the setting spares nothing', 'audible', tab(), { audible: true }],
+      ['the camera, the microphone or the screen', 'capturing', tab(), { capturing: true }],
+      ['a download', 'downloading', tab(), { downloading: true }],
+      ['« Ne jamais mettre en veille »', 'keep-awake', tab({ keepAwake: true }), {}],
+      ['a tab that reloads itself', 'auto-reload', { ...tab(), autoReload: { seconds: 60 } as TabItem['autoReload'] }, {}],
+      ['a Picture in Picture', 'picture-in-picture', tab(), { probe: { pictureInPicture: true, unsentInput: false } }],
+      ['text typed and not sent', 'unsent-input', tab(), { probe: { pictureInPicture: false, unsentInput: true } }],
+      ['a tab without a page', 'no-page', tab(), { awake: false }]
+    ]
+    for (const level of RELEASE_LEVELS) {
+      for (const [what, blocker, t, f] of guards) expect(at(level, t, all, facts(f)), `${level}: ${what}`).toBe(blocker)
+    }
+  })
+
+  it('does not change the other modes', () => {
+    expect(sleepVerdict(tab(), rules(), facts({ idleMs: 0 }), 'auto')).toEqual({ sleep: false, reason: 'recent' })
+    expect(sleepVerdict(tab({ pinned: true }), rules({ sleepSkipPinned: true }), facts(), 'reload')).toEqual({ sleep: false, reason: 'pinned' })
+    expect(sleepVerdict(tab(), rules(), facts({ shownMeanwhile: true }), 'reload')).toEqual({ sleep: false, reason: 'shown-meanwhile' })
+    expect(sleepVerdict(tab(), rules(), facts({ shownMeanwhile: true }), { level: 'medium' })).toEqual({ sleep: true })
+  })
+})
+
+describe('planReleaseLevels', () => {
+  let n = 0
+  const entry = (minutes: number, patch: Partial<Omit<SweepEntry, 'facts' | 'tab'>> & { facts?: Partial<SleepFacts>; tab?: Partial<SweepEntry['tab']> } = {}): SweepEntry => ({
+    id: patch.id ?? `p${++n}`,
+    tab: { ...tab(), ...patch.tab },
+    facts: { ...facts({ idleMs: minutes * MINUTE, probe: undefined }), ...patch.facts },
+    frozen: patch.frozen ?? 'no'
+  })
+  const settings = rules({ sleepExcludedHosts: ['slack.com'], sleepSkipPinned: true })
+  const entries = [
+    entry(30, { id: 'old' }),
+    entry(2, { id: 'fresh' }),
+    entry(60, { id: 'pinned', tab: { pinned: true } }),
+    entry(60, { id: 'slack', tab: { url: 'https://app.slack.com/client' } }),
+    entry(60, { id: 'pinned-slack', tab: { url: 'https://app.slack.com/', pinned: true } }),
+    entry(60, { id: 'shown', facts: { selected: true } }),
+    entry(60, { id: 'sound', facts: { audible: true } }),
+    entry(60, { id: 'call', facts: { capturing: true } }),
+    entry(60, { id: 'frozen', frozen: 'other' }),
+    entry(60, { id: 'never', tab: { keepAwake: true } }),
+    entry(60, { id: 'gone', facts: { awake: false } })
+  ]
+
+  it('lists, for each strength, the tabs that are not protected', () => {
+    const plan = planReleaseLevels(entries, settings)
+    expect(plan.low.ids).toEqual(['old'])
+    expect(plan.medium.ids).toEqual(['old', 'fresh'])
+    expect(plan.high.ids).toEqual(['old', 'fresh', 'pinned', 'slack', 'pinned-slack'])
+  })
+
+  it('never takes less at a stronger strength', () => {
+    const plan = planReleaseLevels(entries, settings)
+    expect(plan.medium.ids).toEqual(expect.arrayContaining(plan.low.ids))
+    expect(plan.high.ids).toEqual(expect.arrayContaining(plan.medium.ids))
+  })
+
+  it('counts the tabs of the sites kept awake that only the strongest strength takes', () => {
+    const plan = planReleaseLevels(entries, settings)
+    expect(plan.low.siteTabs).toBe(0)
+    expect(plan.medium.siteTabs).toBe(0)
+    expect(plan.high.siteTabs).toBe(2)
+  })
+
+  it('has nothing to offer when every tab is shown or protected', () => {
+    const plan = planReleaseLevels([entry(60, { facts: { selected: true } }), entry(60, { facts: { audible: true } })], settings)
+    expect(plan).toEqual({ low: { ids: [], siteTabs: 0 }, medium: { ids: [], siteTabs: 0 }, high: { ids: [], siteTabs: 0 } })
   })
 })

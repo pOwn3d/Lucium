@@ -11,6 +11,7 @@ vi.mock('electron', () => new Proxy({}, { get: () => ({}) }))
 // `Browser.start` runs on a stand-in (browser-start.test.ts): the blocking service and the shims of the extensions are inert, as their own tests run them.
 vi.mock('../blocking', () => ({ blockingService: () => ({ subscribe: () => () => {} }) }))
 vi.mock('./extension-shims', () => ({ ExtensionShims: class {} }))
+vi.mock('./sleep-pressure', () => ({ memoryPressure: () => Promise.resolve('normal') }))
 const { Browser } = await import('./browser')
 const { SLEEP_SWEEP_MS } = await import('./browser-base')
 const shell = methodsOf(Browser.prototype)
@@ -37,7 +38,7 @@ interface WindowSpec {
 }
 
 /** The real methods the stand-ins need to call one another (a stand-in answers `undefined` for anything it was not given). */
-const REAL = ['autoVerdict', 'freezePage', 'sleepFacts', 'sleepRules', 'isShown', 'resourceOwner', 'ownerOf', 'releasePage'] as const
+const REAL = ['autoVerdict', 'freezePage', 'sleepFacts', 'sleepRules', 'isShown', 'resourceOwner', 'ownerOf', 'releasePage', 'sweepEntries', 'releaseOnce', 'releaseLevels'] as const
 
 /** A window of the group, as the methods under test see it. */
 function windowOf(spec: WindowSpec, all: WindowSpec[]) {
@@ -64,6 +65,7 @@ function windowOf(spec: WindowSpec, all: WindowSpec[]) {
     store: { get: () => state },
     pages,
     frozen: new Set(spec.frozen ?? []),
+    autoFrozen: new Set<string>(),
     visible: new Set(spec.shown ?? []),
     shownTabId: spec.shown?.[0],
     windowNames: spec.name ? { own: () => spec.name, others: () => [] } : null,
@@ -89,6 +91,8 @@ function group(...specs: WindowSpec[]) {
   for (const w of windows) Object.assign(w.fields, { group: members, leader: windows[0]!.self })
   // The main window keeps the downloads of the group: one runs, started by the tab `tab-downloading`.
   windows[0]!.fields['downloadSources'] = new Map([['d1', 'tab-downloading']])
+  // What the leader keeps for the whole group.
+  Object.assign(windows[0]!.fields, { sleepKept: new Map(), releaseBatch: [], releasing: null })
   return windows
 }
 
@@ -103,7 +107,7 @@ describe('the tabs of the panel (Browser.resourceTabs)', () => {
       { tabs: [tab('a'), tab('b', { spaceId: 's2' }), tab('frozen'), tab('gone'), tab('locked')], pages: { a: 10, b: 11, frozen: 12, gone: 0, locked: 13 }, frozen: ['frozen'], locked: ['locked'], shown: ['a'] },
       { tabs: [tab('c', { faviconUrl: 'https://c.example/icon.png', pinned: true })], pages: { c: 20 } }
     )
-    const { tabs, hidden } = shell['resourceTabs']!.call(main!.self, raw([10, 584, 7.44], [11, 278], [12, 900], [13, 400], [20, 205])) as { tabs: Array<Record<string, unknown>>; hidden: number }
+    const { tabs } = shell['resourceTabs']!.call(main!.self, raw([10, 584, 7.44], [11, 278], [12, 900], [13, 400], [20, 205])) as { tabs: Array<Record<string, unknown>> }
     expect(tabs).toEqual([
       { tabId: 'a', name: 'A', url: 'https://a.example/', memoryMb: 584, cpu: 7.4 },
       // Another space of this window: its name.
@@ -113,7 +117,6 @@ describe('the tabs of the panel (Browser.resourceTabs)', () => {
     ])
     // A frozen page is asleep, a page with no process has no figure, a locked space names nothing.
     expect(tabs.map((t) => t['tabId'])).not.toContain('frozen')
-    expect(hidden).toBe(2)
     // From the second window, the first is the main one.
     const seen = shell['resourceTabs']!.call(second!.self, raw([10, 584], [11, 278], [20, 205])) as { tabs: Array<Record<string, unknown>> }
     expect(seen.tabs.find((t) => t['tabId'] === 'a')?.['where']).toBe('Fenêtre principale')
@@ -133,45 +136,161 @@ describe('the tabs of the panel (Browser.resourceTabs)', () => {
   })
 })
 
-describe('« Tout mettre en veille sauf l’onglet affiché » (Browser.sleepHiddenTabs)', () => {
-  const windows = (settings: Partial<Settings> = {}) =>
-    group(
-      {
-        tabs: [tab('shown'), tab('plain'), tab('sound'), tab('kept', { keepAwake: true }), tab('tab-downloading'), tab('reloads', { autoReload: { seconds: 30 } })],
-        pages: { shown: 1, plain: 2, sound: 3, kept: 4, 'tab-downloading': 5, reloads: 6 },
-        shown: ['shown'],
-        settings
-      },
-      { tabs: [tab('typed'), tab('other'), tab('frozen'), tab('never', { url: 'https://chat.example/' })], pages: { typed: 7, other: 8, frozen: 9, never: 10 }, frozen: ['frozen'], settings: { sleepExcludedHosts: ['chat.example'], ...settings } }
-    )
+describe('the preview of « Libérer maintenant » (Browser.resourceTabs)', () => {
+  it('counts, for each strength, the tabs it would take and the memory of the processes that would go (a process another tab keeps is not counted)', () => {
+    const [main] = group({
+      tabs: [tab('shown'), tab('plain'), tab('pair-a'), tab('pair-b'), tab('sound'), tab('pin', { pinned: true })],
+      pages: { shown: 1, plain: 2, 'pair-a': 3, 'pair-b': 3, sound: 4, pin: 5 },
+      shown: ['shown'],
+      settings: { sleepSkipPinned: true },
+      own: { idleSince: new Map([['plain', Date.now() - 20 * 60_000]]) }
+    })
+    const { levels } = shell['resourceTabs']!.call(main!.self, raw([1, 900, 40], [2, 300, 2.26], [3, 200, 1], [4, 500], [5, 150, 0.5])) as { levels: Array<Record<string, unknown>> }
+    expect(levels).toEqual([
+      { level: 'low', count: 1, memoryMb: 300, cpu: 2.3, siteTabs: 0 },
+      { level: 'medium', count: 3, memoryMb: 500, cpu: 3.3, siteTabs: 0 },
+      { level: 'high', count: 4, memoryMb: 650, cpu: 3.8, siteTabs: 0 }
+    ])
+  })
 
-  it('puts to sleep the hidden tabs of every window, whatever the delay, and keeps the shown and the protected ones', async () => {
-    // The delay is « Jamais »: the button does not wait for it.
-    const [main, second] = windows({ sleepAfterMinutes: 0 })
-    const slept = (await shell['sleepHiddenTabs']!.call(main!.self)) as string[]
-    expect(slept.sort()).toEqual(['other', 'plain'])
+  it('names the tabs of a kept site that only the strongest strength takes', () => {
+    const [main] = group({ tabs: [tab('chat', { url: 'https://chat.example/' })], pages: { chat: 1 }, settings: { sleepExcludedHosts: ['chat.example'] } })
+    const { levels } = shell['resourceTabs']!.call(main!.self, raw([1, 400])) as { levels: Array<{ count: number; siteTabs: number }> }
+    expect(levels.map((l) => [l.count, l.siteTabs])).toEqual([[0, 0], [0, 0], [1, 1]])
+  })
+})
+
+describe('« Libérer maintenant » (Browser.releaseLevel)', () => {
+  const OLD = Date.now() - 20 * 60_000
+  const windows = (settings: Partial<Settings> = {}, idle: Record<string, number> = {}) => {
+    const common: Partial<Settings> = { sleepAfterMinutes: 0, sleepExcludedHosts: ['chat.example'], sleepSkipPinned: true, ...settings }
+    return group(
+      {
+        tabs: [tab('shown'), tab('plain'), tab('sound'), tab('kept', { keepAwake: true }), tab('tab-downloading'), tab('reloads', { autoReload: { seconds: 30 } }), tab('pin', { pinned: true })],
+        pages: { shown: 1, plain: 2, sound: 3, kept: 4, 'tab-downloading': 5, reloads: 6, pin: 11 },
+        shown: ['shown'],
+        settings: common,
+        own: { idleSince: new Map(Object.entries(idle)) }
+      },
+      { tabs: [tab('typed'), tab('other'), tab('frozen'), tab('never', { url: 'https://chat.example/' })], pages: { typed: 7, other: 8, frozen: 9, never: 10 }, frozen: ['frozen'], settings: common, own: { idleSince: new Map(Object.entries(idle)) } }
+    )
+  }
+  const release = (self: object, level: string) => shell['releaseLevel']!.call(self, level) as Promise<{ level: string; slept: number; refused: Record<string, number>; busy?: true }>
+
+  it('medium puts to sleep every hidden tab of every window, whatever the delay, and keeps what is protected', async () => {
+    // The delay is « Jamais »: the action does not wait for it.
+    const [main, second] = windows()
+    const outcome = await release(main!.self, 'medium')
+    // The text typed and not sent is counted as such, never named.
+    expect(outcome).toEqual({ level: 'medium', slept: 2, refused: { unsent: 1, confirm: 0, other: 0 } })
     // `true`: a sleep, so each page hands its Back / Forward list over (slept-history.ts).
     expect(main!.fields['destroyPage']).toHaveBeenCalledWith('plain', true)
     expect(second!.fields['destroyPage']).toHaveBeenCalledWith('other', true)
-    // Sound, a download, « Ne jamais mettre en veille », a tab that reloads itself, a site never put to sleep, text not sent, the tab on screen: awake.
-    for (const id of ['shown', 'sound', 'kept', 'tab-downloading', 'reloads']) expect(main!.pages.has(id), id).toBe(true)
+    // Sound, a download, « Ne jamais mettre en veille », a tab that reloads itself, a pinned tab and a site kept awake (the settings), text not sent, the tab on screen: awake.
+    for (const id of ['shown', 'sound', 'kept', 'tab-downloading', 'reloads', 'pin']) expect(main!.pages.has(id), id).toBe(true)
     for (const id of ['typed', 'never', 'frozen']) expect(second!.pages.has(id), id).toBe(true)
     expect(main!.fields['publish']).toHaveBeenCalled()
+    expect(main!.fields['releaseBatch']).toEqual([{ id: 'plain', window: main!.self }, { id: 'other', window: second!.self }])
   })
 
-  it('freezes instead when the settings say so', async () => {
+  it('low takes only the tabs left for ten minutes or more', async () => {
+    const [main, second] = windows({}, { other: OLD })
+    expect(await release(main!.self, 'low')).toMatchObject({ slept: 1 })
+    expect(second!.pages.has('other')).toBe(false)
+    expect(main!.pages.has('plain')).toBe(true)
+  })
+
+  it('high also takes the pinned tabs and the tabs of the sites kept awake, and still keeps the protected ones', async () => {
+    const [main, second] = windows()
+    const outcome = await release(main!.self, 'high')
+    expect(outcome.slept).toBe(4)
+    expect(main!.pages.has('pin')).toBe(false)
+    expect(second!.pages.has('never')).toBe(false)
+    for (const id of ['shown', 'sound', 'kept', 'tab-downloading', 'reloads']) expect(main!.pages.has(id), id).toBe(true)
+    expect(second!.pages.has('typed')).toBe(true)
+  })
+
+  it('frees the page even when the settings say to freeze: the point is the memory, and « Annuler » reloads it', async () => {
     const [main, second] = windows({ sleepMode: 'freeze' })
-    const slept = (await shell['sleepHiddenTabs']!.call(main!.self)) as string[]
-    expect(slept.sort()).toEqual(['other', 'plain'])
-    expect(main!.fields['destroyPage']).not.toHaveBeenCalled()
-    expect((main!.pages.get('plain')!.freeze as ReturnType<typeof vi.fn>)).toHaveBeenCalled()
-    expect((second!.pages.get('other')!.freeze as ReturnType<typeof vi.fn>)).toHaveBeenCalled()
+    await release(main!.self, 'medium')
+    expect(main!.fields['destroyPage']).toHaveBeenCalledWith('plain', true)
+    expect(main!.pages.get('plain')).toBeUndefined()
+    expect(second!.pages.get('other')).toBeUndefined()
   })
 
-  it('publishes nothing when nothing could sleep', async () => {
+  it('counts a page that asks to confirm leaving, and keeps it awake', async () => {
+    const [main] = windows()
+    const plain = main!.pages.get('plain') as Record<string, unknown>
+    plain['release'] = vi.fn(async () => false)
+    expect(await release(main!.self, 'medium')).toMatchObject({ slept: 1, refused: { unsent: 1, confirm: 1, other: 0 } })
+    expect(main!.pages.has('plain')).toBe(true)
+  })
+
+  it('answers « busy » to a request made while a run goes on, without starting a second one', async () => {
+    const [main] = windows()
+    let answer: (probe: { pictureInPicture: boolean; unsentInput: boolean }) => void = () => undefined
+    ;(main!.pages.get('plain') as Record<string, unknown>)['probeForSleep'] = () => new Promise((resolve) => (answer = resolve as typeof answer))
+    const first = release(main!.self, 'medium')
+    expect(await release(main!.self, 'high')).toEqual({ level: 'high', slept: 0, refused: { unsent: 0, confirm: 0, other: 0 }, busy: true })
+    answer({ pictureInPicture: false, unsentInput: false })
+    expect((await first).slept).toBe(2)
+    // The run is over: the next request is taken.
+    expect((await release(main!.self, 'medium')).busy).toBeUndefined()
+  })
+
+  it('publishes nothing and keeps the last batch when nothing could sleep', async () => {
     const [main] = group({ tabs: [tab('shown'), tab('sound')], pages: { shown: 1, sound: 2 }, shown: ['shown'] })
-    expect(await shell['sleepHiddenTabs']!.call(main!.self)).toEqual([])
+    const batch = [{ id: 'older', window: main!.self }]
+    main!.fields['releaseBatch'] = batch
+    expect(await release(main!.self, 'medium')).toEqual({ level: 'medium', slept: 0, refused: { unsent: 0, confirm: 0, other: 0 } })
     expect(main!.fields['publish']).not.toHaveBeenCalled()
+    expect(main!.fields['releaseBatch']).toBe(batch)
+  })
+})
+
+describe('« Annuler » (Browser.undoRelease)', () => {
+  const asleep = (id: string) => tab(id)
+  it('gives a page again to the tabs of the last run that are still asleep, in the window that held them, and forgets the batch', async () => {
+    vi.useFakeTimers()
+    try {
+      const wake = vi.fn((_tabs: TabItem[]) => ['x'])
+      const [main, second] = group({ tabs: [asleep('a'), asleep('b')], own: { wakeInBackground: wake } }, { tabs: [asleep('c')], own: { wakeInBackground: wake } })
+      main!.fields['releaseBatch'] = [{ id: 'a', window: main!.self }, { id: 'c', window: second!.self }, { id: 'b', window: main!.self }]
+      expect(await shell['undoRelease']!.call(main!.self)).toBe(3)
+      expect(wake.mock.calls.map(([tabs]) => (tabs as TabItem[]).map((t) => t.id))).toEqual([['a'], ['c'], ['b']])
+      expect(main!.fields['releaseBatch']).toEqual([])
+      // A second click has nothing left.
+      expect(await shell['undoRelease']!.call(main!.self)).toBe(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('leaves alone a tab shown or woken meanwhile (it has a page again), and a window that left the group', async () => {
+    const wake = vi.fn((_tabs: TabItem[]) => ['x'])
+    const [main] = group({ tabs: [asleep('a'), asleep('b')], pages: { b: 2 }, own: { wakeInBackground: wake } })
+    const gone = { store: { get: () => ({ tabs: [asleep('z')] }) }, win: { isDestroyed: () => false } }
+    main!.fields['releaseBatch'] = [{ id: 'a', window: main!.self }, { id: 'b', window: main!.self }, { id: 'z', window: gone }]
+    expect(await shell['undoRelease']!.call(main!.self)).toBe(1)
+    expect(wake.mock.calls.map(([tabs]) => (tabs as TabItem[]).map((t) => t.id))).toEqual([['a']])
+  })
+
+  it('wakes them a few at a time, a gap apart, so that dozens of pages are not made in the same instant', async () => {
+    vi.useFakeTimers()
+    try {
+      const wake = vi.fn((_tabs: TabItem[]) => ['x'])
+      const ids = Array.from({ length: 20 }, (_, i) => `t${i}`)
+      const [main] = group({ tabs: ids.map(asleep), own: { wakeInBackground: wake } })
+      main!.fields['releaseBatch'] = ids.map((id) => ({ id, window: main!.self }))
+      expect(await shell['undoRelease']!.call(main!.self)).toBe(20)
+      expect(wake).toHaveBeenCalledTimes(8)
+      await vi.advanceTimersByTimeAsync(2000)
+      expect(wake).toHaveBeenCalledTimes(16)
+      await vi.advanceTimersByTimeAsync(4000)
+      expect(wake).toHaveBeenCalledTimes(20)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 })
 

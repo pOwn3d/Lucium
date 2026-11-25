@@ -4,7 +4,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Channel } from '@shared/ipc'
 import type { RawProcess } from '@shared/processes'
-import type { ResourceReport, ResourceTab } from '@shared/resources'
+import type { ReleaseOutcome, ReleasePreview, ResourceReport, ResourceTab } from '@shared/resources'
 import type { ScopedIpc } from './ipc-scope'
 import { ResourceWatch } from './resource-watch'
 import { registerResourceIpc, setTaskManagerOpener, type ResourceHost } from './resource-ipc'
@@ -33,6 +33,8 @@ const RAW: RawProcess[] = [
   { pid: 1, type: 'Browser', cpu: 2, memoryKb: 300 * 1024 },
   { pid: 9, type: 'Tab', cpu: 7.4, memoryKb: 584 * 1024 }
 ]
+const LEVELS: ReleasePreview[] = [{ level: 'low', count: 1, memoryMb: 200, cpu: 0, siteTabs: 0 }, { level: 'medium', count: 2, memoryMb: 500, cpu: 1, siteTabs: 0 }, { level: 'high', count: 5, memoryMb: 2000, cpu: 2, siteTabs: 3 }]
+const OUTCOME: ReleaseOutcome = { level: 'medium', slept: 2, refused: { unsent: 1, confirm: 0, other: 0 } }
 const TAB: ResourceTab = { tabId: 't1', name: 'Twitch', url: 'https://twitch.example/', memoryMb: 584, cpu: 7.4 }
 
 function setup(options: { on?: boolean; trusted?: boolean } = {}) {
@@ -44,11 +46,12 @@ function setup(options: { on?: boolean; trusted?: boolean } = {}) {
   const watch = new ResourceWatch({ measure: () => RAW, totalMb: 16_384, pressure: () => Promise.resolve(1), onGauge: () => undefined })
   const host = {
     resources: vi.fn(() => (options.on === false ? null : watch)),
-    resourceTabs: vi.fn(() => ({ tabs: [TAB], hidden: 1 })),
+    resourceTabs: vi.fn(() => ({ tabs: [TAB], levels: LEVELS })),
     sleepTabAnywhere: vi.fn(() => Promise.resolve(true)),
     closeTabAnywhere: vi.fn(() => true),
     showTabAnywhere: vi.fn(() => true),
-    sleepHiddenTabs: vi.fn(() => Promise.resolve(['t1', 't2']))
+    releaseLevel: vi.fn((): Promise<ReleaseOutcome> => Promise.resolve(OUTCOME)),
+    undoRelease: vi.fn(() => Promise.resolve(2))
   } satisfies ResourceHost
   const guard = vi.fn(() => options.trusted !== false)
   const release = registerResourceIpc(ipc, guard, host)
@@ -78,7 +81,7 @@ describe('the resource panel IPC', () => {
     t.panel(sidebar, true)
     expect(sidebar.sent).toHaveLength(1)
     expect(sidebar.sent[0]!.channel).toBe(Channel.resources)
-    expect(sidebar.sent[0]!.report).toMatchObject({ memoryMb: 884, cpu: 9.4, hidden: 1, tabs: [TAB] })
+    expect(sidebar.sent[0]!.report).toMatchObject({ memoryMb: 884, cpu: 9.4, levels: LEVELS, tabs: [TAB] })
     expect(t.host.resourceTabs).toHaveBeenCalledWith(RAW)
     await vi.advanceTimersByTimeAsync(2000)
     expect(sidebar.sent.length).toBeGreaterThanOrEqual(2)
@@ -176,10 +179,55 @@ describe('the buttons of the panel', () => {
     expect(await t.act(contents(25), { kind: 'close', tabId: 'gone' })).toEqual({ done: false })
   })
 
-  it('say how many tabs « Tout endormir » put to sleep', async () => {
+  it('free the tabs of a strength of « Libérer maintenant » and say how it ended, then draw the panels again', async () => {
     const t = setup()
-    expect(await t.act(contents(22), { kind: 'sleep-hidden' })).toEqual({ slept: 2 })
-    expect(t.host.sleepHiddenTabs).toHaveBeenCalledTimes(1)
+    const sidebar = contents(22)
+    t.panel(sidebar, true)
+    await vi.advanceTimersByTimeAsync(0)
+    const before = sidebar.sent.length
+    for (const level of ['low', 'medium', 'high'] as const) {
+      expect(await t.act(sidebar, { kind: 'sleep-level', level })).toEqual({ released: OUTCOME })
+      expect(t.host.releaseLevel).toHaveBeenLastCalledWith(level)
+    }
+    expect(t.host.releaseLevel).toHaveBeenCalledTimes(3)
+    expect(sidebar.sent.length).toBe(before + 3)
+  })
+
+  it('wake the tabs of the last run for « Annuler » and say how many', async () => {
+    const t = setup()
+    expect(await t.act(contents(26), { kind: 'undo-level' })).toEqual({ woken: 2 })
+    expect(t.host.undoRelease).toHaveBeenCalledTimes(1)
+  })
+
+  it('read the strength again: a level that is not one never reaches the browser', async () => {
+    const t = setup()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    for (const level of ['extreme', '', 3, null, undefined, 'LOW', { toString: () => 'low' }]) {
+      expect(await t.act(contents(27), { kind: 'sleep-level', level }), String(level)).toBeNull()
+    }
+    expect(await t.act(contents(27), { kind: 'sleep-hidden' })).toBeNull()
+    expect(t.host.releaseLevel).not.toHaveBeenCalled()
+    expect(warn).toHaveBeenCalledTimes(8)
+  })
+
+  it('refuse the strengths for a sender the guard refuses, and with the function off', async () => {
+    for (const options of [{ trusted: false }, { on: false }]) {
+      const t = setup(options)
+      expect(await t.act(contents(28), { kind: 'sleep-level', level: 'high' }), JSON.stringify(options)).toBeNull()
+      expect(await t.act(contents(28), { kind: 'undo-level' }), JSON.stringify(options)).toBeNull()
+      expect(t.host.releaseLevel).not.toHaveBeenCalled()
+      expect(t.host.undoRelease).not.toHaveBeenCalled()
+    }
+  })
+
+  it('log a run or an undo that fails, with its level and no title or address, and answer that it could not be done', async () => {
+    const t = setup()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    t.host.releaseLevel.mockRejectedValue(new Error('engine gone'))
+    t.host.undoRelease.mockRejectedValue(new Error('window gone'))
+    expect(await t.act(contents(29), { kind: 'sleep-level', level: 'high' })).toBeNull()
+    expect(await t.act(contents(29), { kind: 'undo-level' })).toBeNull()
+    expect(warn.mock.calls.map((call) => call.join(' '))).toEqual([expect.stringContaining('level high failed: engine gone'), expect.stringContaining('failed: window gone')])
   })
 
   it('open the task manager the application gave', async () => {

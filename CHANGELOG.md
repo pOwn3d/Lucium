@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Added
+
+- **Free up memory in three strengths**: the resource panel now has Light, Medium and Strong buttons, each with the tabs it takes and the memory it frees. Strong also takes pinned tabs and kept-awake sites. Undo for 15 seconds. Calls, downloads and unsent text are always spared.
+
 ### Fixed
 
 - **Windows, installer left behind**: after an update, the 134 MB installer stayed in the temporary folder. The new Lucium now removes it when it starts.

@@ -3,8 +3,9 @@
 // the awake tabs that weigh the most, to put to sleep or close in one click. Pure: the main process measures (shell/resource-watch.ts,
 // Browser.resourceTabs), the sidebar draws (renderer/ResourcePanel.tsx).
 
-import { getLanguage, t } from './i18n'
+import { getLanguage, t, tp, type MessageKey } from './i18n'
 import type { RawProcess } from './processes'
+import { RELEASE_LEVELS, sleepToastMessage, type ReleaseLevel, type ReleasePlan } from './sleep'
 
 /** How often the figures of the panel are measured again: only while a panel is open, in any window (shell/resource-watch.ts). */
 export const RESOURCE_REFRESH_MS = 2000
@@ -14,6 +15,10 @@ export const RESOURCE_TABS_MAX = 5
 export const GAUGE_WARN_PERCENT = 50
 /** `kern.memorystatus_vm_pressure_level` says 1 (normal), 2 (warning) or 4 (critical): from 2 the ring turns amber. */
 export const PRESSURE_WARN_LEVEL = 2
+/** How long « Annuler » stays after a run of « Libérer maintenant »: fifteen seconds. */
+export const RELEASE_UNDO_MS = 15_000
+/** How long after a run the panel measures what was really freed: the processes need a moment to go. */
+export const RELEASE_MEASURE_MS = 3000
 /** The meter of a row is hot from this memory (MB) or this processor (% of one core). */
 export const HOT_TAB_MB = 1024
 export const HOT_TAB_CPU = 30
@@ -51,6 +56,19 @@ export interface ResourceTab {
   shared?: true
 }
 
+/** What one strength of « Libérer maintenant » would do right now, as the panel previews it (« jusqu'à »: a page may still refuse when it is asked). */
+export interface ReleasePreview {
+  level: ReleaseLevel
+  /** The tabs it would put to sleep. */
+  count: number
+  /** The memory it would free, in MB: the processes whose tabs all go to sleep, counted once (a process another tab still renders stays). */
+  memoryMb: number
+  /** The processor those processes use, in % of one core. */
+  cpu: number
+  /** How many of the tabs are on a site kept awake: they stop notifying until they wake. Only the strongest strength takes any. */
+  siteTabs: number
+}
+
 /** What the panel draws, sent every 2 s while it is open. */
 export interface ResourceReport {
   /** The memory and the processor of every process of the browser (the summary of the task manager). */
@@ -59,8 +77,8 @@ export interface ResourceReport {
   gauge: MemoryGauge
   /** The heaviest awake tabs, at most `RESOURCE_TABS_MAX`. */
   tabs: ResourceTab[]
-  /** How many awake tabs no window shows: what « Tout mettre en veille sauf l’onglet affiché » may put to sleep (the protected ones among them stay). */
-  hidden: number
+  /** The three strengths of « Libérer maintenant », weakest first. */
+  levels: ReleasePreview[]
 }
 
 /**
@@ -78,13 +96,30 @@ export function heldReport(previous: ResourceReport | null, next: ResourceReport
 }
 
 /** A button of the panel, as the sidebar asks for it. */
-export type ResourceAction = { kind: 'sleep' | 'close' | 'show'; tabId: string } | { kind: 'sleep-hidden' } | { kind: 'task-manager' }
+export type ResourceAction = { kind: 'sleep' | 'close' | 'show'; tabId: string } | { kind: 'sleep-level'; level: ReleaseLevel } | { kind: 'undo-level' } | { kind: 'task-manager' }
+
+/** How a run of « Libérer maintenant » ended: how many tabs went to sleep, and why the others stayed awake (by reason, never by title or address). */
+export interface ReleaseOutcome {
+  level: ReleaseLevel
+  slept: number
+  refused: {
+    /** A field of the page holds text not sent. */
+    unsent: number
+    /** The page asked to confirm leaving. */
+    confirm: number
+    /** Anything else: a video in Picture in Picture, a page that did not answer, a tab shown or protected since the preview. */
+    other: number
+  }
+  /** Another run is going on: this request did nothing. */
+  busy?: true
+}
 
 /**
- * The answer to an action: how many tabs « Tout endormir » put to sleep; whether ☾ or ✕ of a row did what it asks (a tab a lock hides, or one
- * that is gone meanwhile, is refused: the panel must not say it was done); null for the others and for a request that is refused whole.
+ * The answer to an action: how a run of « Libérer maintenant » ended; how many tabs « Annuler » is waking; whether ☾ or ✕ of a row did what it asks
+ * (a tab a lock hides, or one that is gone meanwhile, is refused: the panel must not say it was done); null for the others and for a request that
+ * is refused whole.
  */
-export type ResourceActionReply = { slept: number } | { done: boolean } | null
+export type ResourceActionReply = { released: ReleaseOutcome } | { woken: number } | { done: boolean } | null
 
 /** Whether the answer says that the tab was put to sleep or closed. Anything else (a refusal, no answer, a request that failed) is a tab left as it was. */
 export function resourceActionDone(reply: ResourceActionReply): boolean {
@@ -97,7 +132,9 @@ const TAB_ID_MAX = 256
 export function parseResourceAction(raw: unknown): ResourceAction | null {
   if (typeof raw !== 'object' || raw === null) return null
   const { kind, tabId } = raw as { kind?: unknown; tabId?: unknown }
-  if (kind === 'sleep-hidden' || kind === 'task-manager') return { kind }
+  if (kind === 'undo-level' || kind === 'task-manager') return { kind }
+  const { level } = raw as { level?: unknown }
+  if (kind === 'sleep-level') return typeof level === 'string' && (RELEASE_LEVELS as readonly string[]).includes(level) ? { kind, level: level as ReleaseLevel } : null
   if ((kind === 'sleep' || kind === 'close' || kind === 'show') && typeof tabId === 'string' && tabId.length > 0 && tabId.length <= TAB_ID_MAX) return { kind, tabId }
   return null
 }
@@ -132,9 +169,40 @@ export function heaviestTabs(tabs: readonly ResourceTab[], max = RESOURCE_TABS_M
   return [...tabs].sort((a, b) => b.memoryMb - a.memoryMb || b.cpu - a.cpu || a.name.localeCompare(b.name, getLanguage(), { sensitivity: 'base' })).slice(0, max)
 }
 
-/** What the panel is sent: the figures of every process, the ring, and the heaviest of these awake tabs. */
-export function resourceReport(raw: readonly RawProcess[], tabs: readonly ResourceTab[], hidden: number, gauge: MemoryGauge): ResourceReport {
-  return { memoryMb: Math.round(memoryOf(raw)), cpu: cpuOf(raw), gauge, tabs: heaviestTabs(tabs), hidden }
+/**
+ * What each strength of « Libérer maintenant » would free: the memory and the processor of the processes whose tabs all go to sleep, each counted
+ * once. `pages` is every live page of the group (a tab that stays awake, frozen or shown keeps its process alive, so it is listed too).
+ */
+export function releasePreviews(plans: Record<ReleaseLevel, ReleasePlan>, pages: ReadonlyArray<{ id: string; pid: number }>, raw: readonly RawProcess[]): ReleasePreview[] {
+  const byPid = new Map(raw.filter((p) => p.type === 'Tab').map((p) => [p.pid, p]))
+  const tabsOf = new Map<number, string[]>()
+  for (const { id, pid } of pages) if (pid > 0) tabsOf.set(pid, [...(tabsOf.get(pid) ?? []), id])
+  return RELEASE_LEVELS.map((level) => {
+    const going = new Set(plans[level].ids)
+    let memoryKb = 0
+    let cpu = 0
+    for (const [pid, ids] of tabsOf) {
+      const process = byPid.get(pid)
+      if (!process || !ids.every((id) => going.has(id))) continue
+      memoryKb += Number.isFinite(process.memoryKb) && process.memoryKb > 0 ? process.memoryKb : 0
+      cpu += Number.isFinite(process.cpu) && process.cpu > 0 ? process.cpu : 0
+    }
+    return { level, count: plans[level].ids.length, memoryMb: Math.round(memoryKb / 1024), cpu: Math.round(cpu * 10) / 10, siteTabs: plans[level].siteTabs }
+  })
+}
+
+/** The memory a run really freed, in MB, from the total before and some seconds after: null when nothing measurable went (another tab may have grown meanwhile). */
+export function measuredGain(beforeMb: number, afterMb: number): number | null {
+  const freed = Math.round(beforeMb - afterMb)
+  return Number.isFinite(freed) && freed >= MEASURED_GAIN_MIN_MB ? freed : null
+}
+
+/** Under this a difference of totals is noise, not a gain. */
+export const MEASURED_GAIN_MIN_MB = 50
+
+/** What the panel is sent: the figures of every process, the ring, the heaviest of these awake tabs, and what each strength would free. */
+export function resourceReport(raw: readonly RawProcess[], tabs: readonly ResourceTab[], levels: ReleasePreview[], gauge: MemoryGauge): ResourceReport {
+  return { memoryMb: Math.round(memoryOf(raw)), cpu: cpuOf(raw), gauge, tabs: heaviestTabs(tabs), levels }
 }
 
 /** How full the meter of a row is, from 0 to 1: its memory against the heaviest tab of the list. */
@@ -172,4 +240,52 @@ export function gaugeTip(gauge: MemoryGauge | null | undefined): string {
   if (!gauge) return t('resources.ressources-du-navigateur')
   const figures = t('resources.jauge', { memory: formatMemory(gauge.memoryMb), total: formatMemory(gauge.totalMb), percent: gauge.percent })
   return gauge.pressure ? `${figures} · ${t('resources.pression')}` : figures
+}
+
+// ---------- « Libérer maintenant »: the words ----------
+
+const LEVEL_NAMES = { low: 'resources.niveau-faible', medium: 'resources.niveau-moyen', high: 'resources.niveau-fort' } as const satisfies Record<ReleaseLevel, MessageKey>
+const LEVEL_HINTS = { low: 'resources.niveau-faible-hint', medium: 'resources.niveau-moyen-hint', high: 'resources.niveau-fort-hint' } as const satisfies Record<ReleaseLevel, MessageKey>
+
+/** « Faible », « Moyen », « Fort ». */
+export function releaseLevelName(level: ReleaseLevel): string {
+  return t(LEVEL_NAMES[level])
+}
+
+/** What a strength takes, in a few words. */
+export function releaseLevelHint(level: ReleaseLevel): string {
+  return t(LEVEL_HINTS[level])
+}
+
+/** « 4 onglets · ≈ 0,6 Go » (the memory only when some would really go), or « Aucun onglet ». */
+export function releaseFigures(preview: Pick<ReleasePreview, 'count' | 'memoryMb'>): string {
+  if (preview.count === 0) return t('resources.niveau-aucun')
+  return preview.memoryMb > 0 ? tp('resources.niveau-chiffres', preview.count, { memory: formatMemory(preview.memoryMb) }) : tp('resources.niveau-onglets', preview.count)
+}
+
+/** What the strongest strength costs besides memory: the notifications of the sites kept awake stop until their tab wakes. Null when it takes none of these. */
+export function releaseSitesWarning(preview: Pick<ReleasePreview, 'siteTabs'>): string | null {
+  return preview.siteTabs > 0 ? tp('resources.niveau-fort-sites', preview.siteTabs) : null
+}
+
+/** The sentence after a run: all done (with what was measured when it is known), nothing to do, or how many and why the others stayed awake. */
+export function releaseNotice(outcome: ReleaseOutcome, freedMb: number | null): string {
+  if (outcome.busy === true) return t('resources.liberer-deja-en-cours')
+  const { unsent, confirm, other } = outcome.refused
+  const refused = unsent + confirm + other
+  if (refused === 0) {
+    if (outcome.slept === 0) return t('resources.rien-a-endormir')
+    return freedMb === null ? sleepToastMessage(outcome.slept) : tp('resources.liberer-fait-gain', outcome.slept, { memory: formatMemory(freedMb) })
+  }
+  const reasons = [
+    ...(unsent > 0 ? [tp('resources.refus-texte', unsent)] : []),
+    ...(confirm > 0 ? [tp('resources.refus-confirmation', confirm)] : []),
+    ...(other > 0 ? [tp('resources.refus-autre', other)] : [])
+  ].join(', ')
+  return t('resources.liberer-partiel', { slept: outcome.slept, total: outcome.slept + refused, reasons })
+}
+
+/** The sentence after « Annuler »: how many tabs load again (none when the user opened them meanwhile). */
+export function undoNotice(woken: number): string {
+  return woken > 0 ? tp('resources.annulation', woken) : t('resources.annulation-rien')
 }

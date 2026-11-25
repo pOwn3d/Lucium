@@ -4,11 +4,15 @@
 
 import type { TabResources } from '@shared/ipc'
 import { tabResourcesOf, type RawProcess, type RendererHost } from '@shared/processes'
-import type { ResourceTab } from '@shared/resources'
+import { releasePreviews, type ReleasePreview, type ResourceTab } from '@shared/resources'
+import { planReleaseLevels, type SweepEntry } from '@shared/sleep'
+import { reloadWakeLimit } from '@shared/reload-all'
 import { tabCloseAction } from '@shared/tab-close'
 import { tabName } from '@shared/model'
 import { t } from '@shared/i18n'
 import { BrowserCommands } from './browser-commands'
+import { LAUNCH_WAKE_GAP_MS } from './browser-base'
+import { memoryPressure } from './sleep-pressure'
 
 export abstract class BrowserResources extends BrowserCommands {
   /** Process id → title of the page it renders, for the task manager. */
@@ -110,14 +114,13 @@ export abstract class BrowserResources extends BrowserCommands {
   /**
    * The awake tabs of every window of the group with the figures of the process of their page, for the resource panel (shared/resources.ts ranks
    * them). A frozen page counts as asleep, as its row says; a tab of a locked space is never named, nor a page without a process. `where` is said
-   * from this window: the name of the window a tab lives in when it is another one, its space when it is not the one this window shows. `hidden`
-   * counts the awake tabs no window shows: what « Tout mettre en veille sauf l’onglet affiché » may put to sleep.
+   * from this window: the name of the window a tab lives in when it is another one, its space when it is not the one this window shows. `levels`
+   * previews the three strengths of « Libérer maintenant » over every window of the group, without asking any page.
    */
-  resourceTabs(raw: readonly RawProcess[]): { tabs: ResourceTab[]; hidden: number } {
+  resourceTabs(raw: readonly RawProcess[]): { tabs: ResourceTab[]; levels: ReleasePreview[] } {
     const byPid = new Map(raw.filter((p) => p.type === 'Tab').map((p) => [p.pid, p]))
     const here = this.store.get()
     const found: Array<ResourceTab & { pid: number }> = []
-    let hidden = 0
     ;[...this.group].forEach((browser, index) => {
       if (browser.win.isDestroyed()) return
       const state = browser.store.get()
@@ -128,7 +131,6 @@ export abstract class BrowserResources extends BrowserCommands {
         const tab = state.tabs.find((t) => t.id === id)
         const process = byPid.get(page.processId())
         if (!tab || !process || browser.isTabLocked(tab)) continue
-        if (!this.isShown(id)) hidden++
         const space = window === undefined && tab.spaceId !== here.activeSpaceId ? state.spaces.find((s) => s.id === tab.spaceId)?.name : undefined
         const where = window ?? space
         found.push({
@@ -147,7 +149,47 @@ export abstract class BrowserResources extends BrowserCommands {
     })
     const sharing = new Map<number, number>()
     for (const tab of found) sharing.set(tab.pid, (sharing.get(tab.pid) ?? 0) + 1)
-    return { tabs: found.map(({ pid, ...tab }) => ((sharing.get(pid) ?? 0) > 1 ? { ...tab, shared: true as const } : tab)), hidden }
+    return { tabs: found.map(({ pid, ...tab }) => ((sharing.get(pid) ?? 0) > 1 ? { ...tab, shared: true as const } : tab)), levels: this.releaseLevels(raw) }
+  }
+
+  /**
+   * What each strength of « Libérer maintenant » would do now (`planReleaseLevels`), with the memory of the processes that would go: every live page
+   * of the group counts for its process (a tab that stays awake, frozen, shown or of a locked space keeps it alive; shared/resources.ts, `releasePreviews`).
+   */
+  private releaseLevels(raw: readonly RawProcess[]): ReleasePreview[] {
+    const entries: SweepEntry[] = this.sweepEntries()
+    const plans = planReleaseLevels(entries, this.store.get().settings)
+    const pages = [...this.group].flatMap((browser) => [...browser.pages].map(([id, page]) => ({ id, pid: page.processId() })))
+    return releasePreviews(plans, pages, raw)
+  }
+
+  /**
+   * « Annuler » after « Libérer maintenant »: the tabs of the last run that are still asleep get a page again, which loads their address afresh (the
+   * mode `discard` keeps no page to put back). A few at a time, a gap apart (`wakeAtLaunch` does the same: dozens of pages made at once came on
+   * screen as black rectangles), fewer when macOS says the memory is short; a tab the user showed meanwhile, or of a locked space, is left alone.
+   * Resolves how many tabs are woken (the last ones come a moment later), and forgets the batch.
+   */
+  async undoRelease(): Promise<number> {
+    const batch = this.leader.releaseBatch
+    this.leader.releaseBatch = []
+    const size = reloadWakeLimit(await memoryPressure())
+    // The window that held a page, as long as it is still in the group.
+    const windows = [...this.group]
+    const pending = batch.flatMap(({ id, window }) => {
+      const owner = windows.find((browser) => browser === window)
+      return owner && !this.ownerOf(id) ? [{ id, owner }] : []
+    })
+    const wakeSome = (): void => {
+      for (const { id, owner } of pending.splice(0, size)) {
+        // The window may be gone by now (the application is quitting), or the tab closed or shown meanwhile.
+        const tab = owner.win.isDestroyed() ? undefined : owner.store.get().tabs.find((t) => t.id === id)
+        if (tab) owner.wakeInBackground([tab])
+      }
+      if (pending.length > 0) setTimeout(wakeSome, LAUNCH_WAKE_GAP_MS)
+    }
+    const total = pending.length
+    wakeSome()
+    return total
   }
 
   /** The browser of the group that holds this tab's live page, for a button of the resource panel: none for a tab that is gone, or hidden by the lock. */

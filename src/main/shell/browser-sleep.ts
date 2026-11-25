@@ -3,7 +3,8 @@
 
 import type { SidebarState, SleepMode } from '@shared/model'
 import { iconSent, iconShown, unmarked, type IconMark } from '@shared/icon-mark'
-import { planSweep, sleepToastAction, sleepToastMessage, sleepVerdict, sweepLimits, type MemoryPressure, type PageProbe, type SleepBlocker, type SleepFacts, type SleepRules, type SleepVerdict, type SweepEntry, type SweepPlan } from '@shared/sleep'
+import { planReleaseLevels, planSweep, sleepToastAction, sleepToastMessage, sleepVerdict, sweepLimits, type MemoryPressure, type PageProbe, type ReleaseLevel, type SleepBlocker, type SleepFacts, type SleepRules, type SleepVerdict, type SleepVerdictMode, type SweepEntry, type SweepPlan } from '@shared/sleep'
+import type { ReleaseOutcome } from '@shared/resources'
 import { saverSleepMinutes } from '@shared/battery-saver'
 import type { Page } from '../engine/types'
 import { batterySaver } from './battery-saver'
@@ -168,29 +169,52 @@ export abstract class BrowserSleep extends BrowserContexts {
   }
 
   /**
-   * « Tout mettre en veille sauf l’onglet affiché » (the resource panel of the sidebar): every awake tab no window shows, in every window of the group, goes
-   * to sleep now, whatever the delay says. What spares a tab from the sweep still does (`sleepVerdict` in its `reload` mode: the delay, the time
-   * since it was loaded and a load under way do not count): sound, a download, « Ne jamais mettre en veille » and the sites never put to sleep, a
-   * tab that reloads itself, pinned tabs while they are spared, then, the page asked last, Picture in Picture and text typed and not sent. A frozen
-   * page is asleep already. In the mode of the settings (freeze or discard). Resolves the ids put to sleep.
+   * « Libérer maintenant » (the resource panel of the sidebar): the tabs a strength of the action takes (`planReleaseLevels`; the rules are those of
+   * `sleepVerdict` with `{ level }`) go to sleep now, in every window of the group, whatever the delay and the setting « Jamais » say. The page is
+   * freed (the mode `discard`, whatever the setting says, as the point is the memory): « Annuler » then loads it again from its address. Each
+   * page is asked last, as for the sweep (Picture in Picture, text not sent, a confirmation on leaving) and stays awake when it holds something;
+   * the outcome counts the tabs left by reason. One run at a time for the group (another request is answered `busy`). A run that frees a tab
+   * becomes the batch « Annuler » wakes (`undoRelease`).
    */
-  async sleepHiddenTabs(): Promise<string[]> {
-    const slept: string[] = []
+  releaseLevel(level: ReleaseLevel): Promise<ReleaseOutcome> {
+    const leader = this.leader
+    if (leader.releasing) return Promise.resolve({ level, slept: 0, refused: { unsent: 0, confirm: 0, other: 0 }, busy: true })
+    leader.releasing = this.releaseOnce(level).finally(() => {
+      leader.releasing = null
+    })
+    return leader.releasing
+  }
+
+  private async releaseOnce(level: ReleaseLevel): Promise<ReleaseOutcome> {
+    const wanted = new Set(planReleaseLevels(this.sweepEntries(), this.store.get().settings)[level].ids)
+    const outcome: ReleaseOutcome = { level, slept: 0, refused: { unsent: 0, confirm: 0, other: 0 } }
+    const batch: Array<{ id: string; window: BrowserSleep }> = []
     for (const browser of [...this.group]) {
       for (const id of [...browser.pages.keys()]) {
         const page = browser.pages.get(id)
-        if (!page || browser.frozen.has(id)) continue
-        const verdict = await browser.autoVerdict(id, page, 'reload')
-        if (!verdict?.sleep || browser.pages.get(id) !== page) continue
-        if (browser.store.get().settings.sleepMode === 'freeze') {
-          if (await browser.freezePage(id, page)) slept.push(id)
+        if (!wanted.has(id) || !page || browser.frozen.has(id)) continue
+        const verdict = await browser.autoVerdict(id, page, { level })
+        if (!verdict || browser.pages.get(id) !== page) {
+          outcome.refused.other++
           continue
         }
-        if (await browser.releasePage(id)) slept.push(id)
+        if (!verdict.sleep) {
+          if (verdict.reason === 'unsent-input') outcome.refused.unsent++
+          else outcome.refused.other++
+          if (verdict.reason === 'picture-in-picture' || verdict.reason === 'unsent-input') this.leader.sleepKept.set(id, Date.now())
+          continue
+        }
+        if (await browser.releasePage(id)) {
+          outcome.slept++
+          batch.push({ id, window: browser })
+        } else outcome.refused[browser.pages.has(id) ? 'confirm' : 'other']++
       }
     }
-    if (slept.length > 0) this.publish()
-    return slept
+    if (outcome.slept > 0) {
+      this.leader.releaseBatch = batch
+      this.publish()
+    }
+    return outcome
   }
 
   /**
@@ -210,7 +234,7 @@ export abstract class BrowserSleep extends BrowserContexts {
    * The verdict of the delay for a tab (or of the `reload` rules, see `sleepVerdict`), asking its page when every other rule lets the tab through.
    * Null when the page could not answer. `shownMeanwhile` is asked each time the facts are, for the `reload` verdict.
    */
-  protected async autoVerdict(id: string, page: Page, mode: 'auto' | 'reload' | 'freeze' = 'auto', shownMeanwhile: () => boolean = () => false, pressure: MemoryPressure = 'normal', marks: SweepMarks = {}): Promise<SleepVerdict | null> {
+  protected async autoVerdict(id: string, page: Page, mode: Exclude<SleepVerdictMode, 'manual'> = 'auto', shownMeanwhile: () => boolean = () => false, pressure: MemoryPressure = 'normal', marks: SweepMarks = {}): Promise<SleepVerdict | null> {
     const state = this.store.get()
     const tab = state.tabs.find((t) => t.id === id)
     if (!tab) return null
@@ -233,7 +257,7 @@ export abstract class BrowserSleep extends BrowserContexts {
   }
 
   /** Every page of the window group as the cap sees it. The marks of pages that said they hold something are forgotten once old. */
-  private sweepEntries(): SweepEntry[] {
+  protected sweepEntries(): SweepEntry[] {
     const now = Date.now()
     const kept = this.leader.sleepKept
     for (const [id, at] of kept) if (now - at >= SLEEP_KEPT_MS) kept.delete(id)

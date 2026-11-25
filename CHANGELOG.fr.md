@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Libérer la mémoire en trois forces** : le panneau Ressources propose Faible, Moyen et Fort, avec les onglets pris et la mémoire libérée. Fort prend aussi les épinglés et les sites gardés éveillés. « Annuler » pendant 15 secondes. Appels, téléchargements et texte non envoyé sont toujours épargnés.
+
 ### Corrections
 
 - **Windows, installeur laissé après la mise à jour** : l’installeur de 134 Mo restait dans le dossier temporaire. Le nouveau Lucium le retire maintenant à son démarrage.
