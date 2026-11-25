@@ -43,6 +43,29 @@ export type SleepBlocker =
 
 export type SleepVerdict = { sleep: true } | { sleep: false; reason: SleepBlocker }
 
+/**
+ * The three strengths of « Libérer maintenant » (the resource panel): an action now, not a delay. Do not mix them up with `SleepLevel` below,
+ * which are the presets of the automatic sleep (« Modéré », « Équilibré », « Maximal »).
+ */
+export type ReleaseLevel = 'low' | 'medium' | 'high'
+
+export const RELEASE_LEVELS: readonly ReleaseLevel[] = ['low', 'medium', 'high']
+
+/**
+ * What a strength changes in the rules of `sleepVerdict` (everything else is protected at every strength: the tab on screen, sound, the camera,
+ * the microphone or the screen, a download, a floating video, text not sent, « Ne jamais mettre en veille », a tab that reloads itself).
+ * `minIdleMinutes`: a tab left for less than this is spared. `ignoreSites`: the sites kept awake do not spare their tabs. `ignorePinned`: nor do the
+ * pinned tabs, whatever the setting says.
+ */
+export const RELEASE_RULES: Readonly<Record<ReleaseLevel, { minIdleMinutes: number; ignoreSites: boolean; ignorePinned: boolean }>> = {
+  low: { minIdleMinutes: 10, ignoreSites: false, ignorePinned: false },
+  medium: { minIdleMinutes: 0, ignoreSites: false, ignorePinned: false },
+  high: { minIdleMinutes: 0, ignoreSites: true, ignorePinned: true }
+}
+
+/** How a verdict is asked for: the sweep (`auto`, then `freeze`), a tab by hand, a tab woken by « Actualiser tous les onglets », or a strength of « Libérer maintenant ». */
+export type SleepVerdictMode = 'auto' | 'manual' | 'reload' | 'freeze' | { level: ReleaseLevel }
+
 /** What only the page can tell. Asking costs a round trip to its renderer, so it is done last and only for a tab about to sleep. */
 export interface PageProbe {
   /** A video of the page floats in a Picture in Picture window, which would close with the page. */
@@ -97,29 +120,33 @@ const no = (reason: SleepBlocker): SleepVerdict => ({ sleep: false, reason })
  * verdict without `facts.probe` is `unchecked`, so a caller that forgets to ask the page keeps the tab awake instead of losing text.
  * In `auto`, a tab of a site never put to sleep is spared when it is the one that keeps its site awake (`facts.siteKeeper`; absent: every
  * one is) or when the user keeps them all, and a tab over the cap (`facts.overCap`) does not wait for its delay.
+ * `{ level }` is a strength of « Libérer maintenant » (`RELEASE_RULES`): the rules of `reload` (no delay, a load under way does not count, sound
+ * always spares), except that `low` spares a tab left for less than ten minutes and `high` spares neither the pinned tabs nor the sites kept awake.
  */
-export function sleepVerdict(tab: Pick<TabItem, 'url' | 'pinned' | 'keepAwake' | 'autoReload'>, rules: SleepRules, facts: SleepFacts, mode: 'auto' | 'manual' | 'reload' | 'freeze' = 'auto'): SleepVerdict {
+export function sleepVerdict(tab: Pick<TabItem, 'url' | 'pinned' | 'keepAwake' | 'autoReload'>, rules: SleepRules, facts: SleepFacts, mode: SleepVerdictMode = 'auto'): SleepVerdict {
   if (!facts.awake) return no('no-page')
   if (facts.selected) return no('selected')
   if (facts.visiblePane) return no('split-pane')
   if (facts.floating === true) return no('floating')
   if (mode === 'manual') return { sleep: true }
+  const strength = typeof mode === 'object' ? RELEASE_RULES[mode.level] : null
   const freeze = mode === 'freeze'
   const sweep = mode === 'auto' || freeze
   if (sweep && !(rules.sleepAfterMinutes > 0)) return no('disabled')
   const delayMinutes = freeze ? (rules.sleepFreezeAfterMinutes ?? 0) : rules.sleepAfterMinutes
   if (freeze && !(delayMinutes > 0)) return no('disabled')
-  if (!sweep && facts.shownMeanwhile === true) return no('shown-meanwhile')
+  if (mode === 'reload' && facts.shownMeanwhile === true) return no('shown-meanwhile')
   if (tab.keepAwake) return no('keep-awake')
   if (tab.autoReload) return no('auto-reload')
-  if (isSiteExcluded(tab.url, rules.sleepExcludedHosts) && (freeze || rules.sleepExcludedKeepAll === true || facts.siteKeeper !== false)) return no('excluded-site')
-  if (rules.sleepSkipPinned && tab.pinned) return no('pinned')
+  if (strength?.ignoreSites !== true && isSiteExcluded(tab.url, rules.sleepExcludedHosts) && (freeze || rules.sleepExcludedKeepAll === true || facts.siteKeeper !== false)) return no('excluded-site')
+  if (rules.sleepSkipPinned && tab.pinned && strength?.ignorePinned !== true) return no('pinned')
   if (sweep && facts.loading) return no('loading')
   if ((!sweep || freeze || rules.sleepSkipAudible) && facts.audible) return no('audible')
   if (facts.downloading) return no('downloading')
   if (facts.capturing === true) return no('capturing')
   const early = mode === 'auto' && facts.overCap === true
   if (sweep && !early && facts.idleMs < delayMinutes * 60_000) return no('recent')
+  if (strength && facts.idleMs < strength.minIdleMinutes * 60_000) return no('recent')
   if (!facts.probe) return no('unchecked')
   if (facts.probe.pictureInPicture) return no('picture-in-picture')
   if (facts.probe.unsentInput) return no('unsent-input')
@@ -219,6 +246,33 @@ function siteKeepers(entries: readonly SweepEntry[], rules: SleepRules): Set<str
     if (latest) keepers.add(latest.id)
   }
   return keepers
+}
+
+/** The tabs a strength of « Libérer maintenant » would put to sleep, before the pages are asked (Picture in Picture and text not sent are known only to them). */
+export interface ReleasePlan {
+  /** In the order of the entries: the same tabs as the weaker strengths have, then more (a strength never spares what a weaker one takes). */
+  ids: string[]
+  /** How many of them are on a site kept awake: only `high` takes these, and their notifications stop until the tab wakes. */
+  siteTabs: number
+}
+
+/**
+ * What each strength of « Libérer maintenant » would take, over every page of the window group, without asking the pages: a tab only the page itself
+ * could still keep awake counts (the preview says « jusqu'à »). A frozen page is asleep already. The facts of the entries need no `probe`; `siteKeeper`
+ * and `overCap` are not read (a tab of a kept site is spared by `low` and `medium` whichever it is, as « Actualiser tous les onglets » does).
+ */
+export function planReleaseLevels(entries: readonly SweepEntry[], rules: SleepRules): Record<ReleaseLevel, ReleasePlan> {
+  const plans: Record<ReleaseLevel, ReleasePlan> = { low: { ids: [], siteTabs: 0 }, medium: { ids: [], siteTabs: 0 }, high: { ids: [], siteTabs: 0 } }
+  for (const entry of entries) {
+    if (entry.frozen !== 'no') continue
+    for (const level of RELEASE_LEVELS) {
+      const verdict = sleepVerdict(entry.tab, rules, { ...entry.facts, probe: undefined, siteKeeper: undefined, overCap: undefined }, { level })
+      if (verdict.sleep || verdict.reason !== 'unchecked') continue
+      plans[level].ids.push(entry.id)
+      if (isSiteExcluded(entry.tab.url, rules.sleepExcludedHosts)) plans[level].siteTabs++
+    }
+  }
+  return plans
 }
 
 /**
