@@ -115,9 +115,9 @@ export abstract class BrowserResources extends BrowserCommands {
    * The awake tabs of every window of the group with the figures of the process of their page, for the resource panel (shared/resources.ts ranks
    * them). A frozen page counts as asleep, as its row says; a tab of a locked space is never named, nor a page without a process. `where` is said
    * from this window: the name of the window a tab lives in when it is another one, its space when it is not the one this window shows. `levels`
-   * previews the three strengths of « Libérer maintenant » over every window of the group, without asking any page.
+   * previews the three strengths of « Libérer maintenant » over every window of the group, without asking any page; `pids` gives the process of each tab.
    */
-  resourceTabs(raw: readonly RawProcess[]): { tabs: ResourceTab[]; levels: ReleasePreview[] } {
+  resourceTabs(raw: readonly RawProcess[]): { tabs: ResourceTab[]; levels: ReleasePreview[]; pids: Map<string, number> } {
     const byPid = new Map(raw.filter((p) => p.type === 'Tab').map((p) => [p.pid, p]))
     const here = this.store.get()
     const found: Array<ResourceTab & { pid: number }> = []
@@ -149,7 +149,12 @@ export abstract class BrowserResources extends BrowserCommands {
     })
     const sharing = new Map<number, number>()
     for (const tab of found) sharing.set(tab.pid, (sharing.get(tab.pid) ?? 0) + 1)
-    return { tabs: found.map(({ pid, ...tab }) => ((sharing.get(pid) ?? 0) > 1 ? { ...tab, shared: true as const } : tab)), levels: this.releaseLevels(raw) }
+    return {
+      tabs: found.map(({ pid, ...tab }) => ((sharing.get(pid) ?? 0) > 1 ? { ...tab, shared: true as const } : tab)),
+      levels: this.releaseLevels(raw),
+      // The process of each tab: what the rows leave out of the total is every process that is not one of theirs (shared/resources.ts, `otherProcesses`).
+      pids: new Map(found.map(({ tabId, pid }) => [tabId, pid]))
+    }
   }
 
   /**

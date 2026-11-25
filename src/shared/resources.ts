@@ -69,16 +69,45 @@ export interface ReleasePreview {
   siteTabs: number
 }
 
+/** How the panel ranks its tabs: by memory (the default) or by processor. */
+export type ResourceSort = 'memory' | 'cpu'
+
+/**
+ * Every process the listed tabs do not account for: the graphic process, the interface of each window, the extensions, the network, the tabs that
+ * did not make the list. With the rows it adds up to the totals of the head. A process shared by a listed tab is that tab's, so it is not counted here.
+ */
+export interface OtherProcesses {
+  /** How many processes. */
+  count: number
+  memoryMb: number
+  /** In % of one core. */
+  cpu: number
+  /** The graphic process alone, which is part of the above: it is the one that decodes and composes the videos behind the spaces. */
+  gpuMemoryMb: number
+  gpuCpu: number
+}
+
+/** The rows of the panel for one ranking, and what the rows leave out. */
+export interface ResourceView {
+  tabs: ResourceTab[]
+  others: OtherProcesses
+}
+
 /** What the panel draws, sent every 2 s while it is open. */
-export interface ResourceReport {
+export interface ResourceReport extends ResourceView {
   /** The memory and the processor of every process of the browser (the summary of the task manager). */
   memoryMb: number
   cpu: number
   gauge: MemoryGauge
-  /** The heaviest awake tabs, at most `RESOURCE_TABS_MAX`. */
-  tabs: ResourceTab[]
+  /** `tabs` (the heaviest awake tabs by memory, at most `RESOURCE_TABS_MAX`) and `others` are the ranking by memory; this is the ranking by processor. */
+  byCpu: ResourceView
   /** The three strengths of « Libérer maintenant », weakest first. */
   levels: ReleasePreview[]
+}
+
+/** The rows and the remainder of the ranking the person chose. */
+export function viewOf(report: ResourceReport, sort: ResourceSort): ResourceView {
+  return sort === 'cpu' ? report.byCpu : { tabs: report.tabs, others: report.others }
 }
 
 /**
@@ -89,10 +118,15 @@ export interface ResourceReport {
  */
 export function heldReport(previous: ResourceReport | null, next: ResourceReport, acted: ReadonlySet<string> = new Set()): ResourceReport {
   if (!previous) return next
-  const measured = new Map(next.tabs.map((tab) => [tab.tabId, tab]))
-  const shown = new Set(previous.tabs.map((tab) => tab.tabId))
-  const kept = previous.tabs.filter((tab) => !acted.has(tab.tabId)).map((tab) => measured.get(tab.tabId) ?? tab)
-  return { ...next, tabs: [...kept, ...next.tabs.filter((tab) => !shown.has(tab.tabId) && !acted.has(tab.tabId))] }
+  return { ...next, tabs: heldTabs(previous.tabs, next.tabs, acted), byCpu: { ...next.byCpu, tabs: heldTabs(previous.byCpu.tabs, next.byCpu.tabs, acted) } }
+}
+
+/** The rows of one ranking, kept in their places (see `heldReport`). */
+function heldTabs(previous: readonly ResourceTab[], next: readonly ResourceTab[], acted: ReadonlySet<string>): ResourceTab[] {
+  const measured = new Map(next.map((tab) => [tab.tabId, tab]))
+  const shown = new Set(previous.map((tab) => tab.tabId))
+  const kept = previous.filter((tab) => !acted.has(tab.tabId)).map((tab) => measured.get(tab.tabId) ?? tab)
+  return [...kept, ...next.filter((tab) => !shown.has(tab.tabId) && !acted.has(tab.tabId))]
 }
 
 /** A button of the panel, as the sidebar asks for it. */
@@ -164,9 +198,20 @@ export function sameGauge(a: MemoryGauge | null, b: MemoryGauge | null): boolean
   return a.memoryMb === b.memoryMb && a.totalMb === b.totalMb && a.percent === b.percent && a.pressure === b.pressure && a.warn === b.warn
 }
 
-/** The heaviest tabs first: memory, then the processor to break a tie, then the name; at most `max`. */
-export function heaviestTabs(tabs: readonly ResourceTab[], max = RESOURCE_TABS_MAX): ResourceTab[] {
-  return [...tabs].sort((a, b) => b.memoryMb - a.memoryMb || b.cpu - a.cpu || a.name.localeCompare(b.name, getLanguage(), { sensitivity: 'base' })).slice(0, max)
+/** The heaviest tabs first: by memory then the processor to break a tie, or by processor then memory; the name last; at most `max`. */
+export function heaviestTabs(tabs: readonly ResourceTab[], max = RESOURCE_TABS_MAX, by: ResourceSort = 'memory'): ResourceTab[] {
+  const first = (a: ResourceTab, b: ResourceTab): number => (by === 'cpu' ? b.cpu - a.cpu || b.memoryMb - a.memoryMb : b.memoryMb - a.memoryMb || b.cpu - a.cpu)
+  return [...tabs].sort((a, b) => first(a, b) || a.name.localeCompare(b.name, getLanguage(), { sensitivity: 'base' })).slice(0, max)
+}
+
+/**
+ * What the rows leave out: every process but those of the listed tabs (`listed`: their pids). Without it the head says 5,4 Go and the five rows
+ * add up to 1,5 Go, and the graphic process, the first load of a window with a video behind it, is nowhere to be seen.
+ */
+export function otherProcesses(raw: readonly RawProcess[], listed: ReadonlySet<number>): OtherProcesses {
+  const rest = raw.filter((process) => !listed.has(process.pid))
+  const gpu = rest.filter((process) => process.type === 'GPU')
+  return { count: rest.length, memoryMb: Math.round(memoryOf(rest)), cpu: cpuOf(rest), gpuMemoryMb: Math.round(memoryOf(gpu)), gpuCpu: cpuOf(gpu) }
 }
 
 /**
@@ -200,15 +245,23 @@ export function measuredGain(beforeMb: number, afterMb: number): number | null {
 /** Under this a difference of totals is noise, not a gain. */
 export const MEASURED_GAIN_MIN_MB = 50
 
-/** What the panel is sent: the figures of every process, the ring, the heaviest of these awake tabs, and what each strength would free. */
-export function resourceReport(raw: readonly RawProcess[], tabs: readonly ResourceTab[], levels: ReleasePreview[], gauge: MemoryGauge): ResourceReport {
-  return { memoryMb: Math.round(memoryOf(raw)), cpu: cpuOf(raw), gauge, tabs: heaviestTabs(tabs), levels }
+/**
+ * What the panel is sent: the figures of every process, the ring, the heaviest of these awake tabs by memory and by processor (each with what its rows
+ * leave out), and what each strength would free. `pids`: the process of each tab (a tab it does not name leaves its process among the others).
+ */
+export function resourceReport(raw: readonly RawProcess[], tabs: readonly ResourceTab[], levels: ReleasePreview[], gauge: MemoryGauge, pids: ReadonlyMap<string, number> = new Map()): ResourceReport {
+  const view = (by: ResourceSort): ResourceView => {
+    const listed = heaviestTabs(tabs, RESOURCE_TABS_MAX, by)
+    return { tabs: listed, others: otherProcesses(raw, new Set(listed.flatMap((tab) => pids.get(tab.tabId) ?? []))) }
+  }
+  return { memoryMb: Math.round(memoryOf(raw)), cpu: cpuOf(raw), gauge, ...view('memory'), byCpu: view('cpu'), levels }
 }
 
-/** How full the meter of a row is, from 0 to 1: its memory against the heaviest tab of the list. */
-export function meterShare(tab: Pick<ResourceTab, 'memoryMb'>, tabs: readonly Pick<ResourceTab, 'memoryMb'>[]): number {
-  const heaviest = tabs.reduce((max, other) => Math.max(max, other.memoryMb), 0)
-  return heaviest > 0 ? Math.min(1, Math.max(0, tab.memoryMb / heaviest)) : 0
+/** How full the meter of a row is, from 0 to 1: its memory (or its processor) against the heaviest tab of the list. */
+export function meterShare(tab: Pick<ResourceTab, 'memoryMb' | 'cpu'>, tabs: readonly Pick<ResourceTab, 'memoryMb' | 'cpu'>[], by: ResourceSort = 'memory'): number {
+  const value = (one: Pick<ResourceTab, 'memoryMb' | 'cpu'>): number => (by === 'cpu' ? one.cpu : one.memoryMb)
+  const heaviest = tabs.reduce((max, other) => Math.max(max, value(other)), 0)
+  return heaviest > 0 ? Math.min(1, Math.max(0, value(tab) / heaviest)) : 0
 }
 
 /** Whether the meter of a row is drawn hot: a tab that holds a lot of memory, or keeps a core busy. */
@@ -288,4 +341,14 @@ export function releaseNotice(outcome: ReleaseOutcome, freedMb: number | null): 
 /** The sentence after « Annuler »: how many tabs load again (none when the user opened them meanwhile). */
 export function undoNotice(woken: number): string {
   return woken > 0 ? tp('resources.annulation', woken) : t('resources.annulation-rien')
+}
+
+/** « Autres processus » and what it holds, in a few words. */
+export function othersHint(others: Pick<OtherProcesses, 'count'>): string {
+  return tp('resources.autres-processus-detail', others.count)
+}
+
+/** The graphic process on its own line under « Autres processus », or null when it is not among the others (or uses nothing worth a line). */
+export function othersGpuLine(others: Pick<OtherProcesses, 'gpuMemoryMb' | 'gpuCpu'>): string | null {
+  return others.gpuMemoryMb > 0 || others.gpuCpu > 0 ? t('resources.dont-graphique', { memory: formatMemory(others.gpuMemoryMb), cpu: formatPercent(others.gpuCpu) }) : null
 }

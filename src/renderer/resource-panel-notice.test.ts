@@ -20,6 +20,14 @@ const REPORT: ResourceReport = {
     { tabId: 't1', name: 'Twitch', url: 'https://twitch.example/', memoryMb: 584, cpu: 7.4 },
     { tabId: 't2', name: 'Perso', url: 'https://perso.example/', memoryMb: 278, cpu: 0.2, pinned: true }
   ],
+  others: { count: 4, memoryMb: 1100, cpu: 2.4, gpuMemoryMb: 900, gpuCpu: 1.8 },
+  byCpu: {
+    tabs: [
+      { tabId: 't2', name: 'Perso', url: 'https://perso.example/', memoryMb: 278, cpu: 45, pinned: true },
+      { tabId: 't1', name: 'Twitch', url: 'https://twitch.example/', memoryMb: 584, cpu: 7.4 }
+    ],
+    others: { count: 4, memoryMb: 1100, cpu: 2.4, gpuMemoryMb: 900, gpuCpu: 1.8 }
+  },
   levels: [
     { level: 'low', count: 0, memoryMb: 0, cpu: 0, siteTabs: 0 },
     { level: 'medium', count: 3, memoryMb: 900, cpu: 2, siteTabs: 0 },
@@ -77,6 +85,24 @@ describe('what the main process answers to ☾ and ✕', () => {
     expect(resourceActionDone(null)).toBe(false)
     expect(resourceActionDone({ woken: 3 })).toBe(false)
     expect(resourceActionDone({ released: { level: 'low', slept: 3, refused: { unsent: 0, confirm: 0, other: 0 } } })).toBe(false)
+  })
+})
+
+describe('the ranking of the rows', () => {
+  const rows = (container: Element): string[] => [...container.querySelectorAll('.rp-row .rp-name')].map((el) => el.textContent ?? '')
+
+  it('changes with « Processeur » and « Mémoire », keeps the state of the buttons and is kept for the next panel', async () => {
+    const container = panel()
+    expect(rows(container)).toEqual(['Twitch', 'Perso'])
+    await click(container.querySelector('[data-sort="cpu"]')!)
+    expect(rows(container)).toEqual(['Perso', 'Twitch'])
+    expect(container.querySelector('[data-sort="cpu"]')?.getAttribute('aria-pressed')).toBe('true')
+    expect(container.querySelector('[data-sort="memory"]')?.getAttribute('aria-pressed')).toBe('false')
+    // The panel is closed and opened again: it starts from the ranking chosen last.
+    mounted?.unmount()
+    expect(rows(panel())).toEqual(['Perso', 'Twitch'])
+    await click(mounted!.container.querySelector('[data-sort="memory"]')!)
+    expect(rows(mounted!.container)).toEqual(['Twitch', 'Perso'])
   })
 })
 

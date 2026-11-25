@@ -16,6 +16,8 @@ import {
   isHot,
   measuredGain,
   meterShare,
+  othersGpuLine,
+  othersHint,
   releaseFigures,
   releaseLevelHint,
   releaseLevelName,
@@ -23,13 +25,16 @@ import {
   releaseSitesWarning,
   resourceActionDone,
   undoNotice,
+  viewOf,
   type MemoryGauge,
   type ReleaseOutcome,
   type ReleasePreview,
   type ResourceAction,
   type ResourceActionReply,
   type ResourceReport,
-  type ResourceTab
+  type ResourceSort,
+  type ResourceTab,
+  type ResourceView
 } from '@shared/resources'
 import { RELEASE_LEVELS, type ReleaseLevel } from '@shared/sleep'
 import { api } from './api'
@@ -41,6 +46,8 @@ import './resource-panel.css'
 /** How long the panel takes to go (`rp-out` in resource-panel.css): it leaves the page once it has. */
 export const PANEL_CLOSE_MS = 140
 const PANEL_ID = 'resource-panel'
+/** The ranking the person chose last, kept while the window lives (a panel closed and opened again starts from it). */
+let rememberedSort: ResourceSort = 'memory'
 
 export interface FooterResourcesProps {
   /** Setting `resourceGauge`. */
@@ -133,6 +140,11 @@ export function ask(action: ResourceAction): Promise<ResourceActionReply> {
 export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose: (refocus?: boolean) => void }) {
   const [report, setReport] = useState<ResourceReport | null>(null)
   const [notice, setNotice] = useState('')
+  const [sort, setSortState] = useState<ResourceSort>(rememberedSort)
+  const setSort = (next: ResourceSort): void => {
+    rememberedSort = next
+    setSortState(next)
+  }
   // « Libérer maintenant »: the strength that runs (its buttons wait meanwhile), and the last run, which « Annuler » can still take back.
   const [running, setRunning] = useState<{ level: ReleaseLevel; count: number } | null>(null)
   const [done, setDone] = useState<{ outcome: ReleaseOutcome; before: number | null; freedMb: number | null; undoable: boolean } | null>(null)
@@ -160,11 +172,12 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
   const cell = (row: number, column: Column): HTMLElement | null | undefined => panel.current?.querySelector<HTMLElement>(`[data-row="${row}"] [data-col="${column}"]`)
   useEffect(() => {
     const wanted = refocus.current
-    if (!wanted || !report || report.tabs.some((tab) => tab.tabId === wanted.tabId)) return
+    const shown = report ? viewOf(report, sort).tabs : []
+    if (!wanted || !report || shown.some((tab) => tab.tabId === wanted.tabId)) return
     refocus.current = null
-    const rows = report.tabs.length
+    const rows = shown.length
     ;(rows === 0 ? panel.current?.querySelector<HTMLElement>('.rp-level:not(:disabled), .rp-link') : cell(Math.min(wanted.row, rows - 1), wanted.column))?.focus()
-  }, [report])
+  }, [report, sort])
 
   latest.current = report
   // What the run really freed is measured a few seconds after it (the processes need a moment to go); « Annuler » is offered for a while.
@@ -178,7 +191,7 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
       clearTimeout(expire)
     }
   }, [ran])
-  const tabs = report?.tabs ?? []
+  const tabs = report ? viewOf(report, sort).tabs : []
   const keys = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -239,6 +252,8 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
     <div id={PANEL_ID} ref={panel} className={`rp-panel ${closing ? 'closing' : ''}`} role="dialog" aria-label={t('resources.ressources')} tabIndex={-1} onKeyDown={keys}>
       <ResourcePanelBody
         report={report}
+        sort={sort}
+        onSort={setSort}
         notice={done ? releaseNotice(done.outcome, done.freedMb) : running ? tp('resources.liberer-en-cours', running.count) : notice}
         onShow={show}
         onSleep={sleep}
@@ -260,6 +275,9 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
 export interface ResourcePanelBodyProps {
   /** Null until the first figures come. */
   report: ResourceReport | null
+  /** The ranking of the rows, and the way to change it. */
+  sort?: ResourceSort
+  onSort?(sort: ResourceSort): void
   /** What the last button did. */
   notice: string
   onShow(tab: ResourceTab): void
@@ -277,8 +295,9 @@ export interface ResourcePanelBodyProps {
 }
 
 /** What the panel draws from its figures: the totals, the share of the Mac's memory, the heaviest tabs, the notice and the two buttons of the foot. */
-export function ResourcePanelBody({ report, notice, running = null, undoable = false, onShow, onSleep, onClose, onRelease, onUndo, onTaskManager, onHold }: ResourcePanelBodyProps) {
-  const tabs = report?.tabs ?? []
+export function ResourcePanelBody({ report, sort = 'memory', onSort, notice, running = null, undoable = false, onShow, onSleep, onClose, onRelease, onUndo, onTaskManager, onHold }: ResourcePanelBodyProps) {
+  const view = report ? viewOf(report, sort) : null
+  const tabs = view?.tabs ?? []
   const summary = report ? `${formatMemory(report.memoryMb)} · ${t('resources.d-un-coeur', { cpu: formatPercent(report.cpu) })}` : ''
   return (
     <>
@@ -295,17 +314,19 @@ export function ResourcePanelBody({ report, notice, running = null, undoable = f
           <span className="rp-percent">{t('resources.pourcent', { n: report.gauge.percent })}</span>
         </div>
       )}
+      {report && onSort && <SortToggle sort={sort} onSort={onSort} />}
       {!report ? (
         <p className="rp-empty">{t('resources.mesure')}</p>
       ) : tabs.length === 0 ? (
         <p className="rp-empty">{t('resources.aucun-onglet-eveille')}</p>
       ) : (
-        <ul className="rp-rows" aria-label={t('resources.onglets-qui-consomment-le-plus')} onPointerEnter={() => onHold?.(true)} onPointerLeave={() => onHold?.(false)}>
+        <ul className="rp-rows" aria-label={sort === 'cpu' ? t('resources.onglets-qui-utilisent-le-plus-le-processeur') : t('resources.onglets-qui-consomment-le-plus')} onPointerEnter={() => onHold?.(true)} onPointerLeave={() => onHold?.(false)}>
           {tabs.map((tab, row) => (
-            <ResourceRow key={tab.tabId} tab={tab} row={row} tabs={tabs} onShow={() => onShow(tab)} onSleep={() => onSleep(tab, row)} onClose={() => onClose(tab, row)} />
+            <ResourceRow key={tab.tabId} tab={tab} row={row} tabs={tabs} by={sort} onShow={() => onShow(tab)} onSleep={() => onSleep(tab, row)} onClose={() => onClose(tab, row)} />
           ))}
         </ul>
       )}
+      {view && <OtherRow others={view.others} />}
       <ReleaseLevels levels={report?.levels ?? null} running={running} onRelease={onRelease} />
       <div className="rp-result">
         <p className="rp-notice" role="status" aria-live="polite">
@@ -323,6 +344,42 @@ export function ResourcePanelBody({ report, notice, running = null, undoable = f
         </button>
       </div>
     </>
+  )
+}
+
+/** « Trier par: Mémoire | Processeur »: two buttons, the one pressed is the ranking of the rows. */
+export function SortToggle({ sort, onSort }: { sort: ResourceSort; onSort(sort: ResourceSort): void }) {
+  return (
+    <div className="rp-sort" role="group" aria-label={t('resources.trier-par')}>
+      <span aria-hidden="true">{t('resources.trier-par')}</span>
+      {(['memory', 'cpu'] as const).map((one) => (
+        <button key={one} type="button" data-sort={one} aria-pressed={sort === one} onClick={() => onSort(one)}>
+          {one === 'cpu' ? t('resources.tri-processeur') : t('resources.tri-memoire')}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
+ * What the rows leave out: the graphic process, the interface of the windows, the extensions and the tabs that are not listed, so that the rows add up to the
+ * figures of the head. The graphic process, which decodes the video behind a space, is named on its own line.
+ */
+export function OtherRow({ others }: { others: ResourceView['others'] }) {
+  const gpu = othersGpuLine(others)
+  return (
+    <div className="rp-others" data-testid="rp-others">
+      <span className="rp-icon" aria-hidden="true" />
+      <span className="rp-text">
+        <span className="rp-name">{t('resources.autres-processus')}</span>
+        <span className="rp-sub">{othersHint(others)}</span>
+        {gpu && <span className="rp-sub">{gpu}</span>}
+      </span>
+      <span className="rp-num">
+        <span>{formatMemory(others.memoryMb)}</span>
+        <span>{formatPercent(others.cpu)}</span>
+      </span>
+    </div>
   )
 }
 
@@ -378,7 +435,7 @@ export function ReleaseLevels({ levels, running, onRelease }: { levels: readonly
 }
 
 /** One tab: its icon, its name and where it is, a meter against the heaviest of the list, its figures, then ☾ and ✕. */
-export function ResourceRow({ tab, row, tabs, onShow, onSleep, onClose }: { tab: ResourceTab; row: number; tabs: readonly ResourceTab[]; onShow(): void; onSleep(): void; onClose(): void }) {
+export function ResourceRow({ tab, row, tabs, by = 'memory', onShow, onSleep, onClose }: { tab: ResourceTab; row: number; tabs: readonly ResourceTab[]; by?: ResourceSort; onShow(): void; onSleep(): void; onClose(): void }) {
   const memory = formatMemory(tab.memoryMb)
   const cpu = formatPercent(tab.cpu)
   const named = [t('resources.afficher-name', { name: tab.name }), memory, cpu, ...(tab.where ? [tab.where] : [])].join(' · ')
@@ -392,7 +449,7 @@ export function ResourceRow({ tab, row, tabs, onShow, onSleep, onClose }: { tab:
             {tab.where && <span className="rp-where">{tab.where}</span>}
           </span>
           <span className="rp-meter" aria-hidden="true">
-            <i className={isHot(tab) ? 'hot' : ''} style={{ '--w': meterShare(tab, tabs) } as CSSProperties} />
+            <i className={isHot(tab) ? 'hot' : ''} style={{ '--w': meterShare(tab, tabs, by) } as CSSProperties} />
           </span>
         </span>
         <span className="rp-num" aria-hidden="true">
