@@ -75,6 +75,8 @@
 .sidebar .rp-sort button:hover { background: var(--tile-hover); color: var(--text); }
 .sidebar .rp-sort button[aria-pressed='true'] { background: var(--accent-soft); color: var(--accent-text); font-weight: var(--w-semibold); }
 /* What the rows leave out, with the graphic process on its own line: not a button, it only adds up the rows to the head. */
+.sidebar .rp-more { display: block; width: 100%; min-height: 28px; margin-top: var(--sp-1); padding: 2px var(--sp-2); border-radius: var(--r-s); background: transparent; color: var(--text-2); font-size: var(--t-xs); text-align: left; }
+.sidebar .rp-more:hover { background: var(--tile-hover); color: var(--text); }
 .sidebar .rp-others { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; align-items: start; gap: var(--sp-2); margin-top: var(--sp-1); padding: 6px; border-top: 1px solid var(--line); color: var(--text-2); }
 .sidebar .rp-others .rp-text { gap: 1px; }
 .sidebar .rp-sub { color: var(--text-3); font-size: var(--t-xs); overflow-wrap: anywhere; }
@@ -109,11 +111,14 @@
 
 /* What the last button did, and « Annuler » beside it while it can still be taken back. */
 .sidebar .rp-result { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-2); }
-.sidebar .rp-result:has(.rp-notice:empty):not(:has(.rp-undo)) { display: none; }
+.sidebar .rp-result:has(.rp-notice:empty):not(:has(.rp-undo)):not(:has(.rp-dismiss)) { display: none; }
 .sidebar .rp-result .rp-notice { flex: 1; min-width: 0; }
 .sidebar .rp-undo { flex: none; min-height: var(--target); padding: 4px var(--sp-2); border-radius: var(--r-s); background: var(--tile); color: var(--text); font-size: var(--t-xs); font-weight: var(--w-semibold); }
 .sidebar .rp-undo:hover { background: var(--tile-hover); }
+.sidebar .rp-dismiss { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border-radius: 6px; color: var(--text-3); }
+.sidebar .rp-dismiss:hover { background: var(--tile); color: var(--text); }
+.sidebar .rp-dismiss svg { width: 11px; height: 11px; }
 
-.sidebar .rp-show:focus-visible, .sidebar .rp-act:focus-visible, .sidebar .rp-link:focus-visible, .sidebar .rp-level:focus-visible, .sidebar .rp-undo:focus-visible, .sidebar .rp-sort button:focus-visible {
+.sidebar .rp-show:focus-visible, .sidebar .rp-act:focus-visible, .sidebar .rp-link:focus-visible, .sidebar .rp-level:focus-visible, .sidebar .rp-undo:focus-visible, .sidebar .rp-dismiss:focus-visible, .sidebar .rp-sort button:focus-visible, .sidebar .rp-more:focus-visible {
   outline: var(--focus-width) solid var(--focus); outline-offset: -2px;
 }

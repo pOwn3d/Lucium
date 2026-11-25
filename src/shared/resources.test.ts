@@ -7,6 +7,8 @@ import {
   type ResourceReport,
   GAUGE_WARN_PERCENT,
   RESOURCE_TABS_MAX,
+  RESOURCE_TABS_MORE_MAX,
+  hasMoreTabs,
   cpuOf,
   formatMemory,
   formatPercent,
@@ -156,7 +158,7 @@ describe('the actions the sidebar asks for', () => {
 // The figures come every 2 s, sorted by weight. Under the pointer the rows keep their places: ☾ and ✕ act on the tab a person aimed at.
 describe('heldReport', () => {
   const NO_OTHERS = { count: 0, memoryMb: 0, cpu: 0, gpuMemoryMb: 0, gpuCpu: 0 }
-  const report = (tabs: ResourceTab[], memoryMb = 1000, byCpu: ResourceTab[] = tabs): ResourceReport => ({ memoryMb, cpu: 10, gauge: memoryGauge(4 * 1024, 16 * 1024, 1), tabs, others: NO_OTHERS, byCpu: { tabs: byCpu, others: NO_OTHERS }, levels: [] })
+  const report = (tabs: ResourceTab[], memoryMb = 1000, byCpu: ResourceTab[] = tabs): ResourceReport => ({ memoryMb, cpu: 10, gauge: memoryGauge(4 * 1024, 16 * 1024, 1), tabs, others: NO_OTHERS, byCpu: { tabs: byCpu, others: NO_OTHERS }, more: { tabs, others: NO_OTHERS }, byCpuMore: { tabs: byCpu, others: NO_OTHERS }, levels: [] })
   const ids = (shown: ResourceReport): string[] => shown.tabs.map((entry) => entry.tabId)
 
   it('keeps every row where it is when two tabs swap ranks, and gives each its new figures', () => {
@@ -230,7 +232,7 @@ describe('the preview of « Libérer maintenant »', () => {
 })
 
 describe('the words after « Libérer maintenant »', () => {
-  const outcome = (slept: number, refused: Partial<ReleaseOutcome['refused']> = {}, extra: Partial<ReleaseOutcome> = {}): ReleaseOutcome => ({ level: 'medium', slept, refused: { unsent: 0, confirm: 0, other: 0, ...refused }, ...extra })
+  const outcome = (slept: number, refused: Partial<ReleaseOutcome['refused']> = {}, extra: Partial<ReleaseOutcome> = {}): ReleaseOutcome => ({ level: 'medium', slept, refused: { unsent: 0, confirm: 0, other: 0, slow: 0, ...refused }, ...extra })
 
   it('says all that went, with what was measured once it is known', () => {
     expect(releaseNotice(outcome(1), null)).toBe('Onglet mis en veille')
@@ -243,6 +245,13 @@ describe('the words after « Libérer maintenant »', () => {
     expect(releaseNotice(outcome(11, { unsent: 2, confirm: 1 }), null)).toBe(frenchSpaces('11 sur 14 mis en veille : 2 ont du texte non envoyé, 1 demande une confirmation.'))
     expect(releaseNotice(outcome(0, { other: 3 }), 900)).toBe(frenchSpaces('0 sur 3 mis en veille : 3 sont protégés ou n’ont pas répondu.'))
     expect(releaseNotice(outcome(5, { unsent: 1, other: 1 }), null)).toBe(frenchSpaces('5 sur 7 mis en veille : 1 a du texte non envoyé, 1 est protégé ou n’a pas répondu.'))
+  })
+
+  it('counts the tabs that took too long to answer among the ones left awake, and says so in both languages', () => {
+    expect(releaseNotice(outcome(30, { slow: 2, other: 1 }), null)).toBe(frenchSpaces('30 sur 33 mis en veille : 2 ont mis trop de temps à répondre, 1 est protégé ou n’a pas répondu.'))
+    expect(releaseNotice(outcome(41, { slow: 1 }), null)).toBe(frenchSpaces('41 sur 42 mis en veille : 1 a mis trop de temps à répondre.'))
+    setLanguage('en')
+    expect(releaseNotice(outcome(41, { slow: 1 }), null)).toBe('41 of 42 put to sleep: 1 took too long to answer.')
   })
 
   it('says when there was nothing to put to sleep, and when another run was going on', () => {
@@ -351,5 +360,50 @@ describe('the ranking by processor', () => {
     const rows = [tab('a', 100, 40), tab('b', 900, 10)]
     expect(meterShare(rows[1]!, rows, 'cpu')).toBe(0.25)
     expect(meterShare(rows[1]!, rows)).toBe(1)
+  })
+})
+
+describe('« Voir plus »: the longer list of the panel', () => {
+  const many = Array.from({ length: 12 }, (_, i) => tab(`t${i}`, 1000 - i * 10, i === 8 ? 70 : 1))
+  const raw = [
+    { pid: 1, type: 'Browser', cpu: 2, memoryKb: 400 * 1024 },
+    ...many.map((row, i) => ({ pid: 10 + i, type: 'Tab', cpu: row.cpu, memoryKb: row.memoryMb * 1024 }))
+  ]
+  const pids = new Map(many.map((row, i) => [row.tabId, 10 + i]))
+  const report = resourceReport(raw, many, [], memoryGauge(9000, 32 * GB, 1), pids)
+
+  it(`keeps the first ${RESOURCE_TABS_MAX} rows by default and carries up to ${RESOURCE_TABS_MORE_MAX} for « Voir plus », each list with the remainder of its own`, () => {
+    expect(viewOf(report, 'memory').tabs).toHaveLength(RESOURCE_TABS_MAX)
+    expect(viewOf(report, 'memory', true).tabs).toHaveLength(RESOURCE_TABS_MORE_MAX)
+    expect(viewOf(report, 'cpu', true).tabs).toHaveLength(RESOURCE_TABS_MORE_MAX)
+    expect(viewOf(report, 'memory', true).tabs.slice(0, RESOURCE_TABS_MAX)).toEqual(viewOf(report, 'memory').tabs)
+    expect(viewOf(report, 'memory').others.count).toBe(raw.length - RESOURCE_TABS_MAX)
+    expect(viewOf(report, 'memory', true).others.count).toBe(raw.length - RESOURCE_TABS_MORE_MAX)
+  })
+
+  it('names the busy tab that the five rows hide, and takes its processor out of the others', () => {
+    const busy = many[8]!
+    expect(viewOf(report, 'memory').tabs.map((row) => row.tabId)).not.toContain(busy.tabId)
+    expect(viewOf(report, 'memory', true).tabs.map((row) => row.tabId)).toContain(busy.tabId)
+    expect(viewOf(report, 'memory').others.cpu - viewOf(report, 'memory', true).others.cpu).toBeGreaterThanOrEqual(busy.cpu)
+    // With the ten rows the rows and the others add up to the total of the head.
+    const listed = viewOf(report, 'memory', true).tabs.reduce((sum, row) => sum + row.memoryMb, 0)
+    expect(Math.round(listed + viewOf(report, 'memory', true).others.memoryMb)).toBe(report.memoryMb)
+  })
+
+  it('offers « Voir plus » only when the longer list holds rows the short one does not', () => {
+    expect(hasMoreTabs(report)).toBe(true)
+    const few = resourceReport(raw, many.slice(0, RESOURCE_TABS_MAX), [], memoryGauge(9000, 32 * GB, 1), pids)
+    expect(hasMoreTabs(few)).toBe(false)
+  })
+
+  it('keeps the rows of the longer list in their places under the pointer, as the short one', () => {
+    const swapped = resourceReport(raw, [tab('t0', 100, 1), tab('t1', 5000, 1), ...many.slice(2)], [], memoryGauge(9000, 32 * GB, 1), pids)
+    expect(swapped.more.tabs[0]!.tabId).toBe('t1')
+    const held = heldReport(report, swapped)
+    // `t0` slipped under the others (its figures are kept) and `t10` enters at the end.
+    expect(held.more.tabs.map((row) => row.tabId)).toEqual([...report.more.tabs.map((row) => row.tabId), 't10'])
+    expect(held.more.tabs[0]!.memoryMb).toBe(1000)
+    expect(held.more.tabs[1]!.memoryMb).toBe(5000)
   })
 })

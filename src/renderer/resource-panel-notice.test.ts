@@ -9,6 +9,7 @@ import { setLanguage, t } from '@shared/i18n'
 import type { LuciumApi } from '@shared/ipc'
 import { RELEASE_MEASURE_MS, RELEASE_UNDO_MS, memoryGauge, resourceActionDone, type ReleaseOutcome, type ResourceAction, type ResourceActionReply, type ResourceReport } from '@shared/resources'
 import { ResourcePanel } from './ResourcePanel'
+import { resetReleaseMemory } from './resource-release-memory'
 import { frenchSpaces } from '@shared/french-typography'
 import { click, mount, settle, type Mounted } from './dom.test-support'
 
@@ -28,6 +29,8 @@ const REPORT: ResourceReport = {
     ],
     others: { count: 4, memoryMb: 1100, cpu: 2.4, gpuMemoryMb: 900, gpuCpu: 1.8 }
   },
+  more: { tabs: [], others: { count: 4, memoryMb: 1100, cpu: 2.4, gpuMemoryMb: 900, gpuCpu: 1.8 } },
+  byCpuMore: { tabs: [], others: { count: 4, memoryMb: 1100, cpu: 2.4, gpuMemoryMb: 900, gpuCpu: 1.8 } },
   levels: [
     { level: 'low', count: 0, memoryMb: 0, cpu: 0, siteTabs: 0 },
     { level: 'medium', count: 3, memoryMb: 900, cpu: 2, siteTabs: 0 },
@@ -71,7 +74,10 @@ const named = (container: Element, label: string): Element => {
   return found
 }
 
-beforeEach(() => setLanguage('fr'))
+beforeEach(() => {
+  setLanguage('fr')
+  resetReleaseMemory()
+})
 afterEach(() => {
   mounted?.unmount()
   mounted = null
@@ -84,7 +90,7 @@ describe('what the main process answers to ☾ and ✕', () => {
     expect(resourceActionDone({ done: false })).toBe(false)
     expect(resourceActionDone(null)).toBe(false)
     expect(resourceActionDone({ woken: 3 })).toBe(false)
-    expect(resourceActionDone({ released: { level: 'low', slept: 3, refused: { unsent: 0, confirm: 0, other: 0 } } })).toBe(false)
+    expect(resourceActionDone({ released: { level: 'low', slept: 3, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 } } })).toBe(false)
   })
 })
 
@@ -152,7 +158,7 @@ describe('✕ of a row', () => {
 })
 
 describe('« Libérer maintenant »', () => {
-  const outcome = (patch: Partial<ReleaseOutcome> = {}): ReleaseOutcome => ({ level: 'medium', slept: 3, refused: { unsent: 0, confirm: 0, other: 0 }, ...patch })
+  const outcome = (patch: Partial<ReleaseOutcome> = {}): ReleaseOutcome => ({ level: 'medium', slept: 3, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 }, ...patch })
   const level = (container: Element, name: string): HTMLButtonElement => {
     const found = [...container.querySelectorAll<HTMLButtonElement>('.rp-level')].find((one) => one.querySelector('b')?.textContent === name)
     if (!found) throw new Error(`no strength "${name}"`)
@@ -192,7 +198,7 @@ describe('« Libérer maintenant »', () => {
   it('says how many went and why the others stayed awake, never which', async () => {
     const container = panel()
     await click(level(container, 'Fort'))
-    await settle(() => answer({ released: outcome({ level: 'high', slept: 11, refused: { unsent: 2, confirm: 1, other: 0 } }) }))
+    await settle(() => answer({ released: outcome({ level: 'high', slept: 11, refused: { unsent: 2, confirm: 1, other: 0, slow: 0 } }) }))
     expect(said(container)).toBe(t('resources.liberer-partiel', { slept: 11, total: 14, reasons: `${t('resources.refus-texte.other', { count: 2 })}, ${t('resources.refus-confirmation.one', { count: 1 })}` }))
   })
 
@@ -276,5 +282,97 @@ describe('« Libérer maintenant »', () => {
     await settle(() => answer({ released: outcome() }))
     await click(named(container, t('resources.fermer-name', { name: 'Twitch' })))
     expect(undoButton(container)).toBeNull()
+  })
+  // What the chef saw: the sentence that says how many tabs stayed awake vanished when the panel was opened again.
+  const reopen = (): HTMLElement => {
+    mounted?.unmount()
+    // The same bridge, a new panel: what is asked next is answered by the same `answer`.
+    mounted = mount(createElement(ResourcePanel, { closing: false, onClose: () => undefined }))
+    return mounted.container
+  }
+  const dismissButton = (container: Element): HTMLElement | null => container.querySelector('.rp-dismiss')
+
+  it('keeps the sentence of the last run when the panel is closed and opened again, with its « Annuler »', async () => {
+    const container = panel()
+    await click(level(container, 'Fort'))
+    await settle(() => answer({ released: outcome({ level: 'high', slept: 30, refused: { unsent: 1, confirm: 0, other: 0, slow: 11 } }) }))
+    const sentence = t('resources.liberer-partiel', { slept: 30, total: 42, reasons: `${t('resources.refus-texte.one', { count: 1 })}, ${t('resources.refus-lent.other', { count: 11 })}` })
+    expect(said(container)).toBe(sentence)
+    const again = reopen()
+    expect(said(again)).toBe(sentence)
+    expect(undoButton(again)).not.toBeNull()
+    expect(dismissButton(again)).not.toBeNull()
+  })
+
+  it('catches the answer of a run that ends while the panel is closed, and shows it when it opens', async () => {
+    const container = panel()
+    await click(level(container, 'Moyen'))
+    mounted?.unmount()
+    mounted = null
+    await settle(() => answer({ released: outcome({ slept: 5, refused: { unsent: 0, confirm: 0, other: 0, slow: 2 } }) }))
+    const again = reopen()
+    expect(said(again)).toBe(t('resources.liberer-partiel', { slept: 5, total: 7, reasons: t('resources.refus-lent.other', { count: 2 }) }))
+  })
+
+  it('shows that a run is going on when the panel is opened again before its end, and takes no second run', async () => {
+    const container = panel()
+    await click(level(container, 'Moyen'))
+    const again = reopen()
+    expect(said(again)).toBe(t('resources.liberer-en-cours.other', { count: 3 }))
+    expect(again.querySelector('.rp-release')?.getAttribute('aria-busy')).toBe('true')
+    await click(level(again, 'Fort'))
+    expect(asked).toHaveLength(1)
+    await settle(() => answer({ released: outcome() }))
+    expect(said(again)).toBe('3 onglets mis en veille')
+  })
+
+  it('keeps the sentence until the person closes it, and « Masquer ce résultat » takes it away (and the « Annuler » that went with it)', async () => {
+    const container = panel()
+    await click(level(container, 'Moyen'))
+    await settle(() => answer({ released: outcome({ slept: 2, refused: { unsent: 0, confirm: 0, other: 1, slow: 0 } }) }))
+    await act(async () => void vi.advanceTimersByTime(10 * 60_000))
+    const again = reopen()
+    expect(said(again)).toContain('2 sur 3')
+    await click(dismissButton(again)!)
+    expect(said(again)).toBe('')
+    expect(undoButton(again)).toBeNull()
+    expect(said(reopen())).toBe('')
+  })
+
+  it('replaces the sentence at once when a new run is asked for', async () => {
+    const container = panel()
+    await click(level(container, 'Moyen'))
+    await settle(() => answer({ released: outcome({ slept: 2, refused: { unsent: 0, confirm: 0, other: 1, slow: 0 } }) }))
+    const again = reopen()
+    await click(level(again, 'Fort'))
+    expect(said(again)).toBe(t('resources.liberer-en-cours.other', { count: 5 }))
+    expect(dismissButton(again)).toBeNull()
+    await settle(() => answer({ released: outcome({ level: 'high', slept: 5 }) }))
+    expect(said(again)).toBe('5 onglets mis en veille')
+  })
+
+  it('counts « Annuler » from the end of the run, also for a panel opened late: it is not offered again for fifteen more seconds', async () => {
+    const container = panel()
+    await click(level(container, 'Moyen'))
+    await settle(() => answer({ released: outcome() }))
+    mounted?.unmount()
+    mounted = null
+    await act(async () => void vi.advanceTimersByTime(RELEASE_UNDO_MS + 1000))
+    const late = reopen()
+    expect(said(late)).toBe('3 onglets mis en veille')
+    expect(undoButton(late)).toBeNull()
+  })
+
+  it('does not measure a gain long after the run: the total has moved for other reasons', async () => {
+    const container = panel()
+    await click(level(container, 'Moyen'))
+    await settle(() => answer({ released: outcome() }))
+    mounted?.unmount()
+    mounted = null
+    await act(async () => void vi.advanceTimersByTime(RELEASE_MEASURE_MS + 1000))
+    const late = reopen()
+    push({ ...REPORT, memoryMb: 100 })
+    await act(async () => void vi.advanceTimersByTime(RELEASE_MEASURE_MS))
+    expect(said(late)).toBe('3 onglets mis en veille')
   })
 })
