@@ -28,6 +28,8 @@ export abstract class BrowserSleep extends BrowserContexts {
   private sleepFacts(id: string): SleepFacts {
     const info = this.runtime.tabs[id]
     const group = [...this.group]
+    // One reading of the clock: two readings straddling a millisecond give -1, which the rules take for the delay "never".
+    const now = Date.now()
     return {
       awake: this.pages.has(id),
       selected: group.some((b) => b.shownTabId === id),
@@ -38,7 +40,7 @@ export abstract class BrowserSleep extends BrowserContexts {
       capturing: this.pages.get(id)?.usesCapture?.() === true,
       // Its page is in Lucium's floating window: on screen there, which the page itself cannot say (it is not a Picture in Picture of the system).
       floating: this.leader.floatingVideo?.floatingTab() === id,
-      idleMs: Date.now() - (this.idleSince.get(id) ?? Date.now())
+      idleMs: now - (this.idleSince.get(id) ?? now)
     }
   }
 
