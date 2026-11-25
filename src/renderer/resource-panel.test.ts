@@ -40,6 +40,8 @@ const report = (patch: Partial<ResourceReport> = {}): ResourceReport => {
     tabs,
     others: OTHERS,
     byCpu: { tabs: [tabs[0]!, tabs[2]!, tabs[1]!], others: OTHERS },
+    more: { tabs, others: OTHERS },
+    byCpuMore: { tabs: [tabs[0]!, tabs[2]!, tabs[1]!], others: OTHERS },
     levels: levels(),
     ...patch
   }
@@ -321,5 +323,41 @@ describe('the motion of the panel', () => {
   it('does not move when the system asks for less motion, nor with the setting', () => {
     expect(panelCss).toMatch(/@media \(prefers-reduced-motion: reduce\) \{\s*\.sidebar \.rp-panel, \.sidebar \.rp-panel\.closing \{ animation: none; \}\s*\}/)
     expect(panelCss).toMatch(/:root\[data-motion='reduce'\] \.sidebar \.rp-panel \{ animation: none; \}/)
+  })
+})
+
+describe('« Voir plus » of the panel', () => {
+  const names = (markup: string): string[] => [...markup.matchAll(/<span class="rp-name">([^<]*)<\/span>/g)].map((m) => m[1]!).filter((name) => name !== 'Autres processus')
+  const longer = Array.from({ length: 8 }, (_, i) => tab(`Onglet${i}`, 800 - i * 10, i))
+  const withMore = (): ResourceReport => ({ ...report(), tabs: longer.slice(0, 5), more: { tabs: longer, others: { ...OTHERS, count: 30 } } })
+
+  beforeEach(() => setLanguage('fr'))
+
+  it('offers « Voir 3 onglets de plus » when the longer list holds more rows, as a button that says whether it is open and what it opens', () => {
+    const markup = body({ report: withMore(), onMore: () => undefined })
+    expect(markup).toContain('class="rp-more" aria-expanded="false" aria-controls="resource-panel-rows">Voir 3 onglets de plus</button>')
+    expect(markup).toContain('id="resource-panel-rows"')
+    expect(names(markup)).toHaveLength(5)
+  })
+
+  it('lists up to ten rows, with the others of that list, once opened, and offers « Voir moins »', () => {
+    const markup = body({ report: withMore(), more: true, onMore: () => undefined })
+    expect(names(markup)).toHaveLength(8)
+    expect(markup).toContain('aria-expanded="true"')
+    expect(markup).toContain('Voir moins</button>')
+    expect(frenchSpaces(markup)).toContain('30 processus')
+  })
+
+  it('says nothing when there is nothing to add, and is written in English too', () => {
+    expect(body({ onMore: () => undefined })).not.toContain('rp-more')
+    expect(body({ report: withMore() })).not.toContain('rp-more')
+    setLanguage('en')
+    expect(body({ report: withMore(), onMore: () => undefined })).toContain('Show 3 more tabs')
+    expect(body({ report: withMore(), more: true, onMore: () => undefined })).toContain('Show fewer')
+  })
+
+  it('is a button of the focus order whose focus ring and colors come from the stylesheet tokens', () => {
+    expect(panelCss).toMatch(/\.rp-more:focus-visible/)
+    expect(panelCss).toMatch(/\.rp-more \{[^}]*min-height: 28px/)
   })
 })

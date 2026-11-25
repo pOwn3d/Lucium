@@ -28,6 +28,8 @@ const REPORT: ResourceReport = {
     ],
     others: { count: 4, memoryMb: 1100, cpu: 2.4, gpuMemoryMb: 900, gpuCpu: 1.8 }
   },
+  more: { tabs: [], others: { count: 4, memoryMb: 1100, cpu: 2.4, gpuMemoryMb: 900, gpuCpu: 1.8 } },
+  byCpuMore: { tabs: [], others: { count: 4, memoryMb: 1100, cpu: 2.4, gpuMemoryMb: 900, gpuCpu: 1.8 } },
   levels: [
     { level: 'low', count: 0, memoryMb: 0, cpu: 0, siteTabs: 0 },
     { level: 'medium', count: 3, memoryMb: 900, cpu: 2, siteTabs: 0 },

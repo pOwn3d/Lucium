@@ -1,10 +1,11 @@
 // What the window group does for the resource panel of the sidebar (Browser.resourceTabs, sleepHiddenTabs, closeTabAnywhere, showTabAnywhere),
 // run on stand-ins of its windows (browser-fake.test-support.ts), and how the shell wires its watch (`Browser.start`, run on a stand-in too).
 
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultSettings, type Settings, type TabItem } from '@shared/model'
 import type { RawProcess } from '@shared/processes'
 import { setLanguage } from '@shared/i18n'
+import { RELEASE_TAB_MS } from '@shared/resources'
 import { fakeBrowser, methodsOf } from './browser-fake.test-support'
 
 vi.mock('electron', () => new Proxy({}, { get: () => ({}) }))
@@ -38,7 +39,7 @@ interface WindowSpec {
 }
 
 /** The real methods the stand-ins need to call one another (a stand-in answers `undefined` for anything it was not given). */
-const REAL = ['autoVerdict', 'freezePage', 'sleepFacts', 'sleepRules', 'isShown', 'resourceOwner', 'ownerOf', 'releasePage', 'sweepEntries', 'releaseOnce', 'releaseLevels'] as const
+const REAL = ['autoVerdict', 'freezePage', 'sleepFacts', 'sleepRules', 'isShown', 'resourceOwner', 'ownerOf', 'releasePage', 'sweepEntries', 'releaseOnce', 'releaseTab', 'releaseLevels'] as const
 
 /** A window of the group, as the methods under test see it. */
 function windowOf(spec: WindowSpec, all: WindowSpec[]) {
@@ -257,6 +258,80 @@ describe('« Libérer maintenant » (Browser.releaseLevel)', () => {
     expect(await release(main!.self, 'medium')).toEqual({ level: 'medium', slept: 0, refused: { unsent: 0, confirm: 0, other: 0 } })
     expect(main!.fields['publish']).not.toHaveBeenCalled()
     expect(main!.fields['releaseBatch']).toBe(batch)
+  })
+})
+
+describe('« Libérer maintenant » with a page that does not answer (Browser.releaseLevel)', () => {
+  type Probe = { pictureInPicture: boolean; unsentInput: boolean }
+  const quiet: Probe = { pictureInPicture: false, unsentInput: false }
+  const windows = () => group({ tabs: [tab('a'), tab('mute'), tab('c')], pages: { a: 1, mute: 2, c: 3 }, settings: { sleepAfterMinutes: 0 } })
+  const release = (self: object) => shell['releaseLevel']!.call(self, 'medium') as Promise<{ slept: number; refused: Record<string, number>; busy?: true }>
+  const silence = (window: ReturnType<typeof windows>[number], id: string, probe: () => Promise<Probe>): void => void ((window.pages.get(id) as Record<string, unknown>)['probeForSleep'] = vi.fn(probe))
+
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  it('waits a short time for one tab: well under the five seconds the engine itself gives a page to answer a close', () => {
+    expect(RELEASE_TAB_MS).toBeGreaterThanOrEqual(2000)
+    expect(RELEASE_TAB_MS).toBeLessThanOrEqual(4000)
+  })
+
+  it('leaves the silent tab awake after the delay, counts it among the others, and goes on with the next tabs', async () => {
+    const [main] = windows()
+    silence(main!, 'mute', () => new Promise<Probe>(() => undefined))
+    const run = release(main!.self)
+    await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS)
+    expect(await run).toEqual({ level: 'medium', slept: 2, refused: { unsent: 0, confirm: 0, other: 1 } })
+    expect(main!.pages.has('mute')).toBe(true)
+    expect(main!.pages.has('a')).toBe(false)
+    expect(main!.pages.has('c')).toBe(false)
+    expect(main!.fields['releaseBatch']).toEqual([{ id: 'a', window: main!.self }, { id: 'c', window: main!.self }])
+  })
+
+  it('waits the whole delay for a tab and not a moment more', async () => {
+    const [main] = windows()
+    silence(main!, 'a', () => new Promise<Probe>(() => undefined))
+    let done = false
+    void release(main!.self).then(() => (done = true))
+    await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS - 1)
+    expect(done).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(done).toBe(true)
+  })
+
+  it('frees the lock of the single run: another run is taken once the silent tab is given up', async () => {
+    const [main] = windows()
+    silence(main!, 'a', () => new Promise<Probe>(() => undefined))
+    const run = release(main!.self)
+    expect((await release(main!.self)).busy).toBe(true)
+    await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS)
+    await run
+    expect(main!.fields['releasing']).toBeNull()
+    const next = release(main!.self)
+    await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS)
+    expect((await next).busy).toBeUndefined()
+  })
+
+  it('does not put a tab to sleep when its page answers after the delay', async () => {
+    const [main] = windows()
+    let answer: (probe: Probe) => void = () => undefined
+    silence(main!, 'mute', () => new Promise<Probe>((resolve) => (answer = resolve)))
+    const run = release(main!.self)
+    await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS)
+    await run
+    answer(quiet)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(main!.pages.has('mute')).toBe(true)
+    expect(main!.fields['destroyPage']).not.toHaveBeenCalledWith('mute', true)
+  })
+
+  it('lets a page that answers in time go to sleep as before', async () => {
+    const [main] = windows()
+    silence(main!, 'mute', () => new Promise<Probe>((resolve) => setTimeout(() => resolve(quiet), RELEASE_TAB_MS - 1)))
+    const run = release(main!.self)
+    await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS)
+    expect((await run).slept).toBe(3)
   })
 })
 

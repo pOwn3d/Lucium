@@ -11,12 +11,16 @@ import { RELEASE_LEVELS, sleepToastMessage, type ReleaseLevel, type ReleasePlan 
 export const RESOURCE_REFRESH_MS = 2000
 /** The most tabs the panel lists. */
 export const RESOURCE_TABS_MAX = 5
+/** The most tabs the panel lists once the person asked for more (« Voir plus »): the processor of the tabs below the first five stops hiding in « Autres processus ». */
+export const RESOURCE_TABS_MORE_MAX = 10
 /** From this share of the Mac's memory (in %) the ring turns amber. */
 export const GAUGE_WARN_PERCENT = 50
 /** `kern.memorystatus_vm_pressure_level` says 1 (normal), 2 (warning) or 4 (critical): from 2 the ring turns amber. */
 export const PRESSURE_WARN_LEVEL = 2
 /** How long « Annuler » stays after a run of « Libérer maintenant »: fifteen seconds. */
 export const RELEASE_UNDO_MS = 15_000
+/** The longest « Libérer maintenant » waits for one tab (its page's answer, then its close): after it the tab stays awake, is counted among the others, and the run goes on. */
+export const RELEASE_TAB_MS = 3000
 /** How long after a run the panel measures what was really freed: the processes need a moment to go. */
 export const RELEASE_MEASURE_MS = 3000
 /** The meter of a row is hot from this memory (MB) or this processor (% of one core). */
@@ -101,13 +105,22 @@ export interface ResourceReport extends ResourceView {
   gauge: MemoryGauge
   /** `tabs` (the heaviest awake tabs by memory, at most `RESOURCE_TABS_MAX`) and `others` are the ranking by memory; this is the ranking by processor. */
   byCpu: ResourceView
+  /** The same two rankings with `RESOURCE_TABS_MORE_MAX` rows (« Voir plus »), each with the remainder of its own list. */
+  more: ResourceView
+  byCpuMore: ResourceView
   /** The three strengths of « Libérer maintenant », weakest first. */
   levels: ReleasePreview[]
 }
 
-/** The rows and the remainder of the ranking the person chose. */
-export function viewOf(report: ResourceReport, sort: ResourceSort): ResourceView {
+/** The rows and the remainder of the ranking the person chose, with five rows or (`more`) up to ten. */
+export function viewOf(report: ResourceReport, sort: ResourceSort, more = false): ResourceView {
+  if (more) return sort === 'cpu' ? report.byCpuMore : report.more
   return sort === 'cpu' ? report.byCpu : { tabs: report.tabs, others: report.others }
+}
+
+/** Whether « Voir plus » has anything to add: the longer list holds rows the short one does not. */
+export function hasMoreTabs(report: Pick<ResourceReport, 'tabs' | 'more'>): boolean {
+  return report.more.tabs.length > report.tabs.length
 }
 
 /**
@@ -118,7 +131,13 @@ export function viewOf(report: ResourceReport, sort: ResourceSort): ResourceView
  */
 export function heldReport(previous: ResourceReport | null, next: ResourceReport, acted: ReadonlySet<string> = new Set()): ResourceReport {
   if (!previous) return next
-  return { ...next, tabs: heldTabs(previous.tabs, next.tabs, acted), byCpu: { ...next.byCpu, tabs: heldTabs(previous.byCpu.tabs, next.byCpu.tabs, acted) } }
+  return {
+    ...next,
+    tabs: heldTabs(previous.tabs, next.tabs, acted),
+    byCpu: { ...next.byCpu, tabs: heldTabs(previous.byCpu.tabs, next.byCpu.tabs, acted) },
+    more: { ...next.more, tabs: heldTabs(previous.more.tabs, next.more.tabs, acted) },
+    byCpuMore: { ...next.byCpuMore, tabs: heldTabs(previous.byCpuMore.tabs, next.byCpuMore.tabs, acted) }
+  }
 }
 
 /** The rows of one ranking, kept in their places (see `heldReport`). */
@@ -250,11 +269,11 @@ export const MEASURED_GAIN_MIN_MB = 50
  * leave out), and what each strength would free. `pids`: the process of each tab (a tab it does not name leaves its process among the others).
  */
 export function resourceReport(raw: readonly RawProcess[], tabs: readonly ResourceTab[], levels: ReleasePreview[], gauge: MemoryGauge, pids: ReadonlyMap<string, number> = new Map()): ResourceReport {
-  const view = (by: ResourceSort): ResourceView => {
-    const listed = heaviestTabs(tabs, RESOURCE_TABS_MAX, by)
+  const view = (by: ResourceSort, max: number): ResourceView => {
+    const listed = heaviestTabs(tabs, max, by)
     return { tabs: listed, others: otherProcesses(raw, new Set(listed.flatMap((tab) => pids.get(tab.tabId) ?? []))) }
   }
-  return { memoryMb: Math.round(memoryOf(raw)), cpu: cpuOf(raw), gauge, ...view('memory'), byCpu: view('cpu'), levels }
+  return { memoryMb: Math.round(memoryOf(raw)), cpu: cpuOf(raw), gauge, ...view('memory', RESOURCE_TABS_MAX), byCpu: view('cpu', RESOURCE_TABS_MAX), more: view('memory', RESOURCE_TABS_MORE_MAX), byCpuMore: view('cpu', RESOURCE_TABS_MORE_MAX), levels }
 }
 
 /** How full the meter of a row is, from 0 to 1: its memory (or its processor) against the heaviest tab of the list. */

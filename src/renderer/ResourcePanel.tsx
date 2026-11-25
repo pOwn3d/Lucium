@@ -12,6 +12,7 @@ import {
   formatMemory,
   formatPercent,
   gaugeTip,
+  hasMoreTabs,
   heldReport,
   isHot,
   measuredGain,
@@ -48,6 +49,9 @@ export const PANEL_CLOSE_MS = 140
 const PANEL_ID = 'resource-panel'
 /** The ranking the person chose last, kept while the window lives (a panel closed and opened again starts from it). */
 let rememberedSort: ResourceSort = 'memory'
+/** Whether the person opened the longer list (« Voir plus »), kept the same way. */
+let rememberedMore = false
+const ROWS_ID = 'resource-panel-rows'
 
 export interface FooterResourcesProps {
   /** Setting `resourceGauge`. */
@@ -145,6 +149,11 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
     rememberedSort = next
     setSortState(next)
   }
+  const [more, setMoreState] = useState(rememberedMore)
+  const setMore = (next: boolean): void => {
+    rememberedMore = next
+    setMoreState(next)
+  }
   // « Libérer maintenant »: the strength that runs (its buttons wait meanwhile), and the last run, which « Annuler » can still take back.
   const [running, setRunning] = useState<{ level: ReleaseLevel; count: number } | null>(null)
   const [done, setDone] = useState<{ outcome: ReleaseOutcome; before: number | null; freedMb: number | null; undoable: boolean } | null>(null)
@@ -172,12 +181,12 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
   const cell = (row: number, column: Column): HTMLElement | null | undefined => panel.current?.querySelector<HTMLElement>(`[data-row="${row}"] [data-col="${column}"]`)
   useEffect(() => {
     const wanted = refocus.current
-    const shown = report ? viewOf(report, sort).tabs : []
+    const shown = report ? viewOf(report, sort, more).tabs : []
     if (!wanted || !report || shown.some((tab) => tab.tabId === wanted.tabId)) return
     refocus.current = null
     const rows = shown.length
     ;(rows === 0 ? panel.current?.querySelector<HTMLElement>('.rp-level:not(:disabled), .rp-link') : cell(Math.min(wanted.row, rows - 1), wanted.column))?.focus()
-  }, [report, sort])
+  }, [report, sort, more])
 
   latest.current = report
   // What the run really freed is measured a few seconds after it (the processes need a moment to go); « Annuler » is offered for a while.
@@ -191,7 +200,7 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
       clearTimeout(expire)
     }
   }, [ran])
-  const tabs = report ? viewOf(report, sort).tabs : []
+  const tabs = report ? viewOf(report, sort, more).tabs : []
   const keys = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Escape') {
       event.preventDefault()
@@ -254,6 +263,8 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
         report={report}
         sort={sort}
         onSort={setSort}
+        more={more}
+        onMore={setMore}
         notice={done ? releaseNotice(done.outcome, done.freedMb) : running ? tp('resources.liberer-en-cours', running.count) : notice}
         onShow={show}
         onSleep={sleep}
@@ -278,6 +289,9 @@ export interface ResourcePanelBodyProps {
   /** The ranking of the rows, and the way to change it. */
   sort?: ResourceSort
   onSort?(sort: ResourceSort): void
+  /** The longer list (up to ten rows) is shown, and the way to change it. */
+  more?: boolean
+  onMore?(more: boolean): void
   /** What the last button did. */
   notice: string
   onShow(tab: ResourceTab): void
@@ -295,8 +309,8 @@ export interface ResourcePanelBodyProps {
 }
 
 /** What the panel draws from its figures: the totals, the share of the Mac's memory, the heaviest tabs, the notice and the two buttons of the foot. */
-export function ResourcePanelBody({ report, sort = 'memory', onSort, notice, running = null, undoable = false, onShow, onSleep, onClose, onRelease, onUndo, onTaskManager, onHold }: ResourcePanelBodyProps) {
-  const view = report ? viewOf(report, sort) : null
+export function ResourcePanelBody({ report, sort = 'memory', onSort, more = false, onMore, notice, running = null, undoable = false, onShow, onSleep, onClose, onRelease, onUndo, onTaskManager, onHold }: ResourcePanelBodyProps) {
+  const view = report ? viewOf(report, sort, more) : null
   const tabs = view?.tabs ?? []
   const summary = report ? `${formatMemory(report.memoryMb)} · ${t('resources.d-un-coeur', { cpu: formatPercent(report.cpu) })}` : ''
   return (
@@ -320,12 +334,13 @@ export function ResourcePanelBody({ report, sort = 'memory', onSort, notice, run
       ) : tabs.length === 0 ? (
         <p className="rp-empty">{t('resources.aucun-onglet-eveille')}</p>
       ) : (
-        <ul className="rp-rows" aria-label={sort === 'cpu' ? t('resources.onglets-qui-utilisent-le-plus-le-processeur') : t('resources.onglets-qui-consomment-le-plus')} onPointerEnter={() => onHold?.(true)} onPointerLeave={() => onHold?.(false)}>
+        <ul id={ROWS_ID} className="rp-rows" aria-label={sort === 'cpu' ? t('resources.onglets-qui-utilisent-le-plus-le-processeur') : t('resources.onglets-qui-consomment-le-plus')} onPointerEnter={() => onHold?.(true)} onPointerLeave={() => onHold?.(false)}>
           {tabs.map((tab, row) => (
             <ResourceRow key={tab.tabId} tab={tab} row={row} tabs={tabs} by={sort} onShow={() => onShow(tab)} onSleep={() => onSleep(tab, row)} onClose={() => onClose(tab, row)} />
           ))}
         </ul>
       )}
+      {report && onMore && (more || hasMoreTabs(report)) && <MoreToggle more={more} hidden={view ? Math.max(0, report.more.tabs.length - report.tabs.length) : 0} onMore={onMore} />}
       {view && <OtherRow others={view.others} />}
       <ReleaseLevels levels={report?.levels ?? null} running={running} onRelease={onRelease} />
       <div className="rp-result">
@@ -358,6 +373,15 @@ export function SortToggle({ sort, onSort }: { sort: ResourceSort; onSort(sort: 
         </button>
       ))}
     </div>
+  )
+}
+
+/** « Voir plus / Voir moins »: the list goes from five rows to ten, so that the tabs that use the processor below the first five are named. */
+export function MoreToggle({ more, hidden, onMore }: { more: boolean; hidden: number; onMore(more: boolean): void }) {
+  return (
+    <button type="button" className="rp-more" aria-expanded={more} aria-controls={ROWS_ID} onClick={() => onMore(!more)}>
+      {more ? t('resources.voir-moins') : tp('resources.voir-plus', hidden)}
+    </button>
   )
 }
 
