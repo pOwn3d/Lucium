@@ -10,6 +10,7 @@ import type { OnDemandView } from './on-demand-view'
 import type { OverlayRequest, PassphraseRequest, SettingsAnchor, SettingsPane, ToastProgress, ToastState, UiSnapshot } from '@shared/ipc'
 import type { DeadTabEntry, LoadFailure } from '@shared/dead-tabs'
 import type { ReloadPace, ReloadPhase } from '@shared/reload-all'
+import type { ReleaseOutcome } from '@shared/resources'
 import type { DownloadInfo, FindState, HistoryEntry, PermissionRequest, RuntimeState, SplitView, TabItem } from '@shared/model'
 import type { AuthRequest, Credentials } from '@shared/http-auth'
 import type { DialogRequest, PromptAnswer } from '@shared/page-dialog'
@@ -299,6 +300,13 @@ export abstract class BrowserBase {
   /** Running downloads by id, with the tab that started them: such a tab is not put to sleep. Kept by the leader, for the whole group. */
   protected readonly downloadSources = new Map<string, string>()
   protected sweeping: Promise<string[]> | null = null
+  /** The run of « Libérer maintenant » going on (browser-sleep.ts, `releaseLevel`): another request does not start a second one. Kept by the leader. */
+  protected releasing: Promise<ReleaseOutcome> | null = null
+  /**
+   * The tabs the last run of « Libérer maintenant » put to sleep, each with the window that held its page: what « Annuler » wakes again. Volatile,
+   * kept by the leader, replaced by the next run that frees a tab and emptied by « Annuler ».
+   */
+  protected releaseBatch: Array<{ id: string; window: BrowserBase }> = []
   /** The countdowns of the tabs that reload themselves (made at `start`). */
   protected autoReloader: AutoReloader | null = null
   /** Set while pages are made for tabs that are not on screen (`wakeInBackground`, `wakeAndReload`): the extension runtime calls each new page "active", which must not select its tab. */

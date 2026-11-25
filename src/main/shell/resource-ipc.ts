@@ -5,7 +5,8 @@
 import type { WebContents } from 'electron'
 import { Channel } from '@shared/ipc'
 import type { RawProcess } from '@shared/processes'
-import { parseResourceAction, resourceReport, type ResourceActionReply, type ResourceTab } from '@shared/resources'
+import { parseResourceAction, resourceReport, type ReleaseOutcome, type ReleasePreview, type ResourceActionReply, type ResourceTab } from '@shared/resources'
+import type { ReleaseLevel } from '@shared/sleep'
 import type { ScopedIpc } from './ipc-scope'
 import type { ResourceWatch } from './resource-watch'
 
@@ -13,12 +14,15 @@ import type { ResourceWatch } from './resource-watch'
 export interface ResourceHost {
   /** The watch of the group, while the function is on (null when it is off, and in a private window). */
   resources(): ResourceWatch | null
-  /** The awake tabs of every window of the group with the figures of their page's process, said from this window. */
-  resourceTabs(raw: readonly RawProcess[]): { tabs: ResourceTab[]; hidden: number }
+  /** The awake tabs of every window of the group with the figures of their page's process, said from this window, and what each strength of « Libérer maintenant » would free. */
+  resourceTabs(raw: readonly RawProcess[]): { tabs: ResourceTab[]; levels: ReleasePreview[] }
   sleepTabAnywhere(tabId: string): Promise<boolean>
   closeTabAnywhere(tabId: string): boolean
   showTabAnywhere(tabId: string): boolean
-  sleepHiddenTabs(): Promise<string[]>
+  /** « Libérer maintenant » at this strength, over every window of the group. */
+  releaseLevel(level: ReleaseLevel): Promise<ReleaseOutcome>
+  /** « Annuler »: wakes the tabs of the last run that are still asleep; resolves how many. */
+  undoRelease(): Promise<number>
 }
 
 /** The part of a web contents an open panel holds on to. */
@@ -63,8 +67,8 @@ export function registerResourceIpc(ipcMain: ScopedIpc, guard: (sender: WebConte
     watch.open(sender.id, {
       show: (raw, gauge) => {
         if (sender.isDestroyed()) return false
-        const { tabs, hidden } = browser.resourceTabs(raw)
-        sender.send(Channel.resources, resourceReport(raw, tabs, hidden, gauge))
+        const { tabs, levels } = browser.resourceTabs(raw)
+        sender.send(Channel.resources, resourceReport(raw, tabs, levels, gauge))
         return true
       }
     })
@@ -93,10 +97,22 @@ export function registerResourceIpc(ipcMain: ScopedIpc, guard: (sender: WebConte
       case 'show':
         browser.showTabAnywhere(action.tabId)
         return null
-      case 'sleep-hidden': {
-        const slept = await browser.sleepHiddenTabs()
+      case 'sleep-level': {
+        // An error is said with its context (never a title or an address) and the panel answers that it could not be done.
+        const released = await browser.releaseLevel(action.level).catch((error: unknown) => {
+          console.warn(`[resources] « Libérer maintenant » at the level ${action.level} failed:`, error instanceof Error ? error.message : String(error))
+          return null
+        })
         watch.refresh()
-        return { slept: slept.length }
+        return released ? { released } : null
+      }
+      case 'undo-level': {
+        const woken = await browser.undoRelease().catch((error: unknown) => {
+          console.warn('[resources] « Annuler » after « Libérer maintenant » failed:', error instanceof Error ? error.message : String(error))
+          return null
+        })
+        watch.refresh()
+        return woken === null ? null : { woken }
       }
       case 'task-manager':
         if (taskManagerOpener) taskManagerOpener()

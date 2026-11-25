@@ -584,7 +584,7 @@ export abstract class BrowserReload extends BrowserSleep {
   }
 
   /** Gives these tabs a page without showing them (none of a locked space), then starts the countdowns of those that reload themselves. Returns the ids woken. */
-  private wakeInBackground(tabs: readonly TabItem[]): string[] {
+  protected wakeInBackground(tabs: readonly TabItem[]): string[] {
     const woken: string[] = []
     // The extension runtime calls each new page "active": that is not a selection by the user.
     this.quietPages = true

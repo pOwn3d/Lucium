@@ -14,7 +14,10 @@ import {
   memoryGauge,
   memoryOf,
   meterShare,
+  MEASURED_GAIN_MIN_MB,
+  measuredGain,
   parseResourceAction,
+  releasePreviews,
   resourceReport,
   sameGauge,
   type ResourceTab
@@ -87,16 +90,16 @@ describe('the figures of the panel', () => {
     ]
     expect(memoryOf(raw)).toBe(800)
     expect(cpuOf(raw)).toBe(33.3)
-    const report = resourceReport(raw, [tab('a', 600, 30)], 1, memoryGauge(800, 16 * GB, 1))
+    const report = resourceReport(raw, [tab('a', 600, 30)], [], memoryGauge(800, 16 * GB, 1))
     expect(report.memoryMb).toBe(800)
     expect(report.cpu).toBe(33.3)
-    expect(report.hidden).toBe(1)
+    expect(report.levels).toEqual([])
   })
 
   it(`lists the ${RESOURCE_TABS_MAX} heaviest tabs: memory first, the processor to break a tie`, () => {
     const tabs = [tab('a', 100), tab('b', 584, 1), tab('c', 574, 9), tab('d', 278), tab('e', 584, 7.4), tab('f', 205), tab('g', 172)]
     expect(heaviestTabs(tabs).map((t) => t.tabId)).toEqual(['e', 'b', 'c', 'd', 'f'])
-    expect(resourceReport([], tabs, 0, memoryGauge(0, GB, null)).tabs).toHaveLength(RESOURCE_TABS_MAX)
+    expect(resourceReport([], tabs, [], memoryGauge(0, GB, null)).tabs).toHaveLength(RESOURCE_TABS_MAX)
   })
 
   it('draws the meter of a row against the heaviest tab of the list, hot for a tab that holds a lot or keeps a core busy', () => {
@@ -128,12 +131,15 @@ describe('the actions the sidebar asks for', () => {
     expect(parseResourceAction({ kind: 'sleep', tabId: 't1' })).toEqual({ kind: 'sleep', tabId: 't1' })
     expect(parseResourceAction({ kind: 'close', tabId: 't1' })).toEqual({ kind: 'close', tabId: 't1' })
     expect(parseResourceAction({ kind: 'show', tabId: 't1' })).toEqual({ kind: 'show', tabId: 't1' })
-    expect(parseResourceAction({ kind: 'sleep-hidden', tabId: 'ignored' })).toEqual({ kind: 'sleep-hidden' })
+    expect(parseResourceAction({ kind: 'sleep-level', level: 'low' })).toEqual({ kind: 'sleep-level', level: 'low' })
+    expect(parseResourceAction({ kind: 'sleep-level', level: 'medium', tabId: 'ignored' })).toEqual({ kind: 'sleep-level', level: 'medium' })
+    expect(parseResourceAction({ kind: 'sleep-level', level: 'high' })).toEqual({ kind: 'sleep-level', level: 'high' })
+    expect(parseResourceAction({ kind: 'undo-level', level: 'high' })).toEqual({ kind: 'undo-level' })
     expect(parseResourceAction({ kind: 'task-manager' })).toEqual({ kind: 'task-manager' })
   })
 
   it('refuse anything else', () => {
-    for (const raw of [null, 'sleep', 42, {}, { kind: 'kill', tabId: 't1' }, { kind: 'sleep' }, { kind: 'close', tabId: '' }, { kind: 'show', tabId: 7 }, { kind: 'sleep', tabId: 'x'.repeat(257) }]) {
+    for (const raw of [null, 'sleep', 42, {}, { kind: 'kill', tabId: 't1' }, { kind: 'sleep' }, { kind: 'sleep-hidden' }, { kind: 'sleep-level' }, { kind: 'sleep-level', level: 'extreme' }, { kind: 'sleep-level', level: 7 }, { kind: 'sleep-level', level: '__proto__' }, { kind: 'close', tabId: '' }, { kind: 'show', tabId: 7 }, { kind: 'sleep', tabId: 'x'.repeat(257) }]) {
       expect(parseResourceAction(raw), JSON.stringify(raw)).toBeNull()
     }
   })
@@ -141,7 +147,7 @@ describe('the actions the sidebar asks for', () => {
 
 // The figures come every 2 s, sorted by weight. Under the pointer the rows keep their places: ☾ and ✕ act on the tab a person aimed at.
 describe('heldReport', () => {
-  const report = (tabs: ResourceTab[], memoryMb = 1000): ResourceReport => ({ memoryMb, cpu: 10, gauge: memoryGauge(4 * 1024, 16 * 1024, 1), tabs, hidden: 0 })
+  const report = (tabs: ResourceTab[], memoryMb = 1000): ResourceReport => ({ memoryMb, cpu: 10, gauge: memoryGauge(4 * 1024, 16 * 1024, 1), tabs, levels: [] })
   const ids = (shown: ResourceReport): string[] => shown.tabs.map((entry) => entry.tabId)
 
   it('keeps every row where it is when two tabs swap ranks, and gives each its new figures', () => {
@@ -168,5 +174,40 @@ describe('heldReport', () => {
   it('is the figures as they come before anything was shown', () => {
     const next = report([tab('b', 950), tab('a', 800)])
     expect(heldReport(null, next)).toBe(next)
+  })
+})
+
+describe('the preview of « Libérer maintenant »', () => {
+  const plan = (ids: string[], siteTabs = 0) => ({ ids, siteTabs })
+  const raw = [
+    { pid: 1, type: 'Browser', cpu: 5, memoryKb: 300 * 1024 },
+    { pid: 2, type: 'Tab', cpu: 1.26, memoryKb: 600 * 1024 },
+    { pid: 3, type: 'Tab', cpu: 2, memoryKb: 400 * 1024 },
+    { pid: 4, type: 'GPU', cpu: 30, memoryKb: 1300 * 1024 }
+  ]
+  const pages = [{ id: 'a', pid: 2 }, { id: 'b', pid: 3 }, { id: 'c', pid: 3 }, { id: 'noproc', pid: 0 }]
+
+  it('adds the memory and the processor of the processes whose tabs all go, each counted once', () => {
+    const [low, medium, high] = releasePreviews({ low: plan(['a']), medium: plan(['a', 'b', 'c']), high: plan(['a', 'b', 'c', 'noproc'], 2) }, pages, raw)
+    expect(low).toEqual({ level: 'low', count: 1, memoryMb: 600, cpu: 1.3, siteTabs: 0 })
+    expect(medium).toEqual({ level: 'medium', count: 3, memoryMb: 1000, cpu: 3.3, siteTabs: 0 })
+    expect(high).toEqual({ level: 'high', count: 4, memoryMb: 1000, cpu: 3.3, siteTabs: 2 })
+  })
+
+  it('counts nothing for a tab whose process another tab, that stays awake, still renders', () => {
+    const [low] = releasePreviews({ low: plan(['b']), medium: plan(['b']), high: plan(['b']) }, pages, raw)
+    expect(low).toEqual({ level: 'low', count: 1, memoryMb: 0, cpu: 0, siteTabs: 0 })
+  })
+
+  it('lists the three strengths, weakest first, even when there is nothing to take', () => {
+    expect(releasePreviews({ low: plan([]), medium: plan([]), high: plan([]) }, [], []).map((p) => [p.level, p.count])).toEqual([['low', 0], ['medium', 0], ['high', 0]])
+  })
+
+  it(`calls a difference of totals a gain only from ${MEASURED_GAIN_MIN_MB} MB`, () => {
+    expect(measuredGain(5000, 3000)).toBe(2000)
+    expect(measuredGain(5000, 5000 - MEASURED_GAIN_MIN_MB)).toBe(MEASURED_GAIN_MIN_MB)
+    expect(measuredGain(5000, 4980)).toBeNull()
+    expect(measuredGain(5000, 5400)).toBeNull()
+    expect(measuredGain(Number.NaN, 100)).toBeNull()
   })
 })
