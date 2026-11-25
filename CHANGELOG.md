@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+## [1.1.10] - 2026-11-25
+
+This version completes the resource panel (three strengths of “Free up now”, other processes, sort by processor, automatic pause of the background video, collapsible sections) and fixes the Windows installer left behind and the Linux AppImage that did not restart after an update.
+
 ### Added
 
 - **Resources: other processes and sort by processor**: the panel adds an “Other processes” row (graphics, interface, unlisted tabs) so the rows add up to the total, and a Memory or Processor sort.

@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+## [1.1.10] - 2026-11-25
+
+Cette version complète le panneau Ressources (trois forces pour « Libérer maintenant », autres processus, tri par processeur, pause automatique du fond vidéo, sections repliables) et corrige l’installeur Windows laissé après la mise à jour et l’AppImage Linux qui ne se relançait pas.
+
 ### Ajouts
 
 - **Ressources : autres processus et tri par processeur** : le panneau ajoute une ligne « Autres processus » (graphique, interface, onglets non listés) pour que les lignes retombent sur le total, et un tri Mémoire ou Processeur.
