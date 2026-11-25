@@ -20,8 +20,8 @@ beforeEach(() => {
 })
 
 const video: SpaceBackground = { type: 'video', value: 'v.mp4' }
-const draw = (background: SpaceBackground | undefined, reduceMotion = false, saving?: boolean) => {
-  const tree = createElement(BackgroundVideoControls, { space: { id: 's1', background }, reduceMotion, ...(saving === undefined ? {} : { saving }) })
+const draw = (background: SpaceBackground | undefined, reduceMotion = false, saving?: boolean, autoPause?: 'capture' | 'load') => {
+  const tree = createElement(BackgroundVideoControls, { space: { id: 's1', background }, reduceMotion, ...(saving === undefined ? {} : { saving }), ...(autoPause ? { autoPause } : {}) })
   return { markup: renderToStaticMarkup(tree), buttons: elementsOf(tree).filter((el: Element) => el.type === 'button') }
 }
 
@@ -97,5 +97,25 @@ describe('the controls of a video held still by the battery saver', () => {
     setLanguage('en')
     const markup = draw(video, false, true).markup
     expect(/aria-label="Always play the background video"[^>]*data-tip="([^"]*)"/.exec(markup)?.[1]).toBe('Paused while the battery saver is on')
+  })
+})
+
+describe('the controls of a video held still by a call or by a load', () => {
+  const tipOfAlways = (markup: string): string => /aria-label="Toujours lire la vidéo de fond"[^>]*data-tip="([^"]*)"/.exec(markup)?.[1] ?? ''
+
+  it('say which of the two holds it, on the « Toujours lire » button', () => {
+    expect(tipOfAlways(draw(video, false, true, 'capture').markup)).toBe('En pause pendant l’appel, reprend tout seul')
+    expect(tipOfAlways(draw(video, false, true, 'load').markup)).toBe('En pause tant que le Mac est très sollicité')
+    // Without a reason it is the battery saver, as it was.
+    expect(tipOfAlways(draw(video, false, true).markup)).toBe('En pause tant que le mode économie de batterie est activé')
+  })
+
+  it('do not blame them for a video the space holds still', () => {
+    expect(tipOfAlways(draw({ ...video, paused: true }, false, true, 'capture').markup)).not.toContain('appel')
+  })
+
+  it('say it in English too', () => {
+    setLanguage('en')
+    expect(/aria-label="Always play the background video"[^>]*data-tip="([^"]*)"/.exec(draw(video, false, true, 'load').markup)?.[1]).toBe('Paused while the Mac is heavily loaded')
   })
 })

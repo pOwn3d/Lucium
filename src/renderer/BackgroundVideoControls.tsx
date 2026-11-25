@@ -5,6 +5,7 @@
 import type { Space } from '@shared/model'
 import { toggledAlwaysPlay, toggledVideoPause, videoAlwaysPlays, videoBackgroundPaused } from '@shared/space-media'
 import { t } from '@shared/i18n'
+import type { VideoPauseReason } from '@shared/video-load-pause'
 import { api } from './api'
 import { PauseGlyph, PlayGlyph } from './media-glyphs'
 
@@ -22,9 +23,10 @@ function AlwaysGlyph() {
 
 /**
  * The controls, for the space on screen; nothing when its background is not a video. `reduceMotion`: the system's or Lucium's wish for less motion.
- * `saving`: the battery saver is on, which holds the video still; the second button says so, unless the space already holds it (then the saver changes nothing).
+ * `saving`: the battery saver is on, or a call or a load stops the video by itself (`autoPause` says which): it holds the video still; the second button says so,
+ * unless the space already holds it (then it changes nothing).
  */
-export function BackgroundVideoControls({ space, reduceMotion, saving = false }: { space: Pick<Space, 'id' | 'background'>; reduceMotion: boolean; saving?: boolean }) {
+export function BackgroundVideoControls({ space, reduceMotion, saving = false, autoPause }: { space: Pick<Space, 'id' | 'background'>; reduceMotion: boolean; saving?: boolean; autoPause?: VideoPauseReason | undefined }) {
   const background = space.background
   if (!background || background.type !== 'video' || !background.value) return null
   const paused = videoBackgroundPaused(background, reduceMotion)
@@ -45,7 +47,7 @@ export function BackgroundVideoControls({ space, reduceMotion, saving = false }:
           className="bg-video-button"
           aria-pressed={always}
           aria-label={t('sidebar.toujours-lire-la-video-de-fond')}
-          data-tip={heldBySaver ? t('sidebar.en-pause-tant-que-le-mode-economie-de-batterie-est-active') : always ? t('sidebar.la-video-tourne-tout-le-temps') : t('sidebar.la-video-s-arrete-hors-premier-plan')}
+          data-tip={heldBySaver ? heldTip(autoPause) : always ? t('sidebar.la-video-tourne-tout-le-temps') : t('sidebar.la-video-s-arrete-hors-premier-plan')}
           onClick={() => write(toggledAlwaysPlay(background, reduceMotion))}
         >
           <AlwaysGlyph />
@@ -53,4 +55,11 @@ export function BackgroundVideoControls({ space, reduceMotion, saving = false }:
       </div>
     </div>
   )
+}
+
+/** What the second button says while the video is held still: the call, the load, or else the battery saver. */
+function heldTip(autoPause: VideoPauseReason | undefined): string {
+  if (autoPause === 'capture') return t('sidebar.en-pause-pendant-un-appel')
+  if (autoPause === 'load') return t('sidebar.en-pause-tant-que-le-mac-est-tres-sollicite')
+  return t('sidebar.en-pause-tant-que-le-mode-economie-de-batterie-est-active')
 }

@@ -126,6 +126,7 @@ function AppearanceCategory({ snapshot, update }: PaneProps) {
         <FeatureSwitch id="media-player" snapshot={snapshot} update={update} />
         <FeatureSwitch id="favorite-names" snapshot={snapshot} update={update} />
         <FeatureSwitch id="resource-gauge" snapshot={snapshot} update={update} />
+        <FeatureSwitch id="video-load-pause" snapshot={snapshot} update={update} />
       </SpacesSettings>
       <AppearanceSettings snapshot={snapshot} update={update} />
       <Group title={t('settings.section-pages-web')} className="with-icons">

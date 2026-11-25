@@ -37,6 +37,7 @@ import { HoverCard, useHoverCard, type CardAction } from './HoverCard'
 import { backgroundFileToRead, backgroundObjectPosition, backgroundVideoOnChoice, backgroundVideoOnView, veilIsDark, videoBackgroundPaused, type SpaceBackground } from '@shared/space-media'
 import { useSystemReducedMotion } from './reduced-motion'
 import { BackgroundVideoControls } from './BackgroundVideoControls'
+import { videoHeldStill } from '@shared/video-load-pause'
 import { DRAG_FAVORITE_TYPE, DRAG_FOLDER_TYPE, DRAG_TYPE, locateInFavorites, locateInFolders, locateInList, setDragGhost } from './sidebar-dnd'
 import { ArchiveBoxGlyph, ChevronDownGlyph, PlusGlyph, ReadLaterGlyph, TidyGlyph } from './sidebar-icons'
 import { FooterDownloads } from './DownloadStatus'
@@ -688,7 +689,7 @@ function SidebarBody({ snapshot, space, right }: { snapshot: UiSnapshot; space: 
           act.showMenu({ kind: 'space', id: space.id, sidebar: true })
         }}
       >
-        <SpaceBackgroundLayer space={space} className="sidebar-background" forceReduceMotion={state.settings.forceReduceMotion} saving={snapshot.batterySaverOn === true} />
+        <SpaceBackgroundLayer space={space} className="sidebar-background" forceReduceMotion={state.settings.forceReduceMotion} saving={videoHeldStill(snapshot)} />
         <div className="toolbar">
           {/* Windows, with the toolbar of the pages hidden: the button ☰ is not in a toolbar, so it starts this row (the menu bar is not there either). */}
           {controls && !showToolbar && <AppMenuButton className="icon sidebar-menu" />}
@@ -937,7 +938,7 @@ function SidebarBody({ snapshot, space, right }: { snapshot: UiSnapshot; space: 
         <MediaPlayers state={state} runtime={runtime} />
 
         {/* A video behind the space: Pause / Lire, and whether it goes on behind another window (or stands still for the battery saver). */}
-        <BackgroundVideoControls space={space} reduceMotion={systemReduceMotion || state.settings.forceReduceMotion} saving={snapshot.batterySaverOn === true} />
+        <BackgroundVideoControls space={space} reduceMotion={systemReduceMotion || state.settings.forceReduceMotion} saving={videoHeldStill(snapshot)} autoPause={snapshot.videoLoadPause} />
 
         {/* The region is always there: a screen reader announces a change inside a live region, not one that arrives with its text. */}
         <div className="toast-region" role="status" aria-live="polite" aria-atomic="true">

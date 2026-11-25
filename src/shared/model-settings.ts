@@ -128,6 +128,8 @@ export interface Settings {
   favoriteNames: boolean
   /** The foot of the sidebar has a ring of the memory the browser holds; a click opens the heaviest tabs, to put to sleep or close (shared/resources.ts). */
   resourceGauge: boolean
+  /** The video behind a space stops by itself while a page holds the camera, the microphone or the screen (a call), or while the Mac is loaded, and plays again when that is over (shared/video-load-pause.ts). On by default. */
+  pauseVideoOnLoad: boolean
   /** The bar above the page with back, forward, reload, the address and the extension icons. */
   showToolbar: boolean
   /** The sidebar is at the right of the window and the whole window is mirrored. Off (left) by default. */

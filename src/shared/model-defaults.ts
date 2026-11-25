@@ -143,6 +143,7 @@ export function defaultSettings(): Settings {
     downloadStatusChip: true,
     favoriteNames: false,
     resourceGauge: true,
+    pauseVideoOnLoad: true,
     suggestionsNoticeSeen: false,
     welcomeDone: false,
     firstLaunchDone: false,

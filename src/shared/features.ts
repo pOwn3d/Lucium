@@ -538,6 +538,15 @@ export const FEATURES = [
     cost: ['timer', 'process']
   },
   {
+    id: 'video-load-pause',
+    key: 'pauseVideoOnLoad',
+    get label() { return t('features.pause-automatique-de-la-video-de-fond') },
+    group: 'interface',
+    get description() { return t('features.la-video-derriere-un-espace-s-arrete-pendant-un-appel') },
+    // A reading every 15 s (app.getAppMetrics, the memory pressure of macOS through sysctl, and a look at the pages that hold the camera, the microphone or the screen); nothing while it is off.
+    cost: ['timer', 'process']
+  },
+  {
     id: 'boost-sharing',
     key: 'boostSharing',
     get label() { return t('features.partage-de-retouches-et-de-themes') },
@@ -1354,6 +1363,7 @@ const SUMMARIES: Readonly<Partial<Record<FeatureId, MessageKey>>> = {
   'compact-mode': 'features.une-commande-cache-d-un-coup-la-barre',
   'media-player': 'features.une-barre-au-pied-de-la-barre-laterale',
   'resource-gauge': 'features.un-anneau-au-pied-de-la-barre-laterale',
+  'video-load-pause': 'features.la-video-de-fond-s-arrete-pendant-un-appel',
   'tab-state-badges': 'features.chaque-onglet-montre-s-il-charge-dort-joue',
   'download-status-chip': 'features.l-avancement-d-un-telechargement-s-affiche',
   'whats-new': 'features.apres-une-mise-a-jour-une-feuille-liste-ce'
