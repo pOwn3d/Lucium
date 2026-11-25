@@ -14,8 +14,8 @@ import type { ResourceWatch } from './resource-watch'
 export interface ResourceHost {
   /** The watch of the group, while the function is on (null when it is off, and in a private window). */
   resources(): ResourceWatch | null
-  /** The awake tabs of every window of the group with the figures of their page's process, said from this window, and what each strength of « Libérer maintenant » would free. */
-  resourceTabs(raw: readonly RawProcess[]): { tabs: ResourceTab[]; levels: ReleasePreview[] }
+  /** The awake tabs of every window of the group with the figures of their page's process (and the process of each), said from this window, and what each strength of « Libérer maintenant » would free. */
+  resourceTabs(raw: readonly RawProcess[]): { tabs: ResourceTab[]; levels: ReleasePreview[]; pids: ReadonlyMap<string, number> }
   sleepTabAnywhere(tabId: string): Promise<boolean>
   closeTabAnywhere(tabId: string): boolean
   showTabAnywhere(tabId: string): boolean
@@ -67,8 +67,8 @@ export function registerResourceIpc(ipcMain: ScopedIpc, guard: (sender: WebConte
     watch.open(sender.id, {
       show: (raw, gauge) => {
         if (sender.isDestroyed()) return false
-        const { tabs, levels } = browser.resourceTabs(raw)
-        sender.send(Channel.resources, resourceReport(raw, tabs, levels, gauge))
+        const { tabs, levels, pids } = browser.resourceTabs(raw)
+        sender.send(Channel.resources, resourceReport(raw, tabs, levels, gauge, pids))
         return true
       }
     })

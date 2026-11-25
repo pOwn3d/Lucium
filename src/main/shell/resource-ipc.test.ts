@@ -46,7 +46,7 @@ function setup(options: { on?: boolean; trusted?: boolean } = {}) {
   const watch = new ResourceWatch({ measure: () => RAW, totalMb: 16_384, pressure: () => Promise.resolve(1), onGauge: () => undefined })
   const host = {
     resources: vi.fn(() => (options.on === false ? null : watch)),
-    resourceTabs: vi.fn(() => ({ tabs: [TAB], levels: LEVELS })),
+    resourceTabs: vi.fn(() => ({ tabs: [TAB], levels: LEVELS, pids: new Map<string, number>() })),
     sleepTabAnywhere: vi.fn(() => Promise.resolve(true)),
     closeTabAnywhere: vi.fn(() => true),
     showTabAnywhere: vi.fn(() => true),

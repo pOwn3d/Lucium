@@ -1410,6 +1410,7 @@ export const FEATURE_TASKS: Readonly<Record<FeatureId, DiscoverTask>> = {
   'download-status-chip': 'keep',
   'favorite-names': 'organise',
   'resource-gauge': 'organise',
+  'video-load-pause': 'organise',
   'boost-sharing': 'read',
   'web-store': 'read',
   'strip-copied-links': 'protect',

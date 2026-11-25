@@ -66,6 +66,12 @@ export abstract class BrowserTools extends BrowserMedia {
     return batterySaver().active() ? { batterySaverOn: true } : {}
   }
 
+  /** Why the video behind a space is held still by itself (a call, a load: shell/video-load-guard.ts), for every window of the group; nothing while it plays. */
+  protected videoPauseOfSnapshot(): Pick<UiSnapshot, 'videoLoadPause'> {
+    const reason = this.leader.videoPause
+    return reason ? { videoLoadPause: reason } : {}
+  }
+
   /** View › Mode économie de batterie: on whatever the charge, or off again. A notice says so. */
   setBatterySaverAsked(on: boolean): void {
     if (!this.store.get().settings.batterySaver) return

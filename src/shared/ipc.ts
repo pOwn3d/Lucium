@@ -19,6 +19,7 @@ import type { DeadTabEntry } from './dead-tabs'
 import type { ReloadRunView } from './reload-all'
 import type { ExtensionsTarget } from './extension-page'
 import type { MemoryGauge } from './resources'
+import type { VideoPauseReason } from './video-load-pause'
 
 // Moved to modules of their own, still importable from here.
 export { Channel, InternalChannel } from './ipc-channels'
@@ -446,6 +447,8 @@ export interface UiSnapshot {
   annotateEnabled?: true
   /** The battery saver is on (shared/battery-saver.ts): the video behind a space pauses meanwhile. Absent when it is off. */
   batterySaverOn?: true
+  /** The video behind a space is held still by itself (shared/video-load-pause.ts): a call is on, or the Mac is loaded. Absent while it plays. */
+  videoLoadPause?: VideoPauseReason
   /** The system always shows the scroll bars (macOS: Réglages Système › Apparence, shared/scroll-bars.ts): the lists that hide theirs draw them. Absent otherwise. */
   scrollBarsAlways?: true
   /** This build carries a test update channel (a second address sealed into it, main/shell/update-source.ts): Settings › Général offers « Recevoir les versions de test » only then. Absent otherwise. */

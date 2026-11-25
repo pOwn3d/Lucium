@@ -94,10 +94,10 @@ describe('the table of the features page', () => {
   // the scroll position and the third-party cookies (the cards of the five features added on 21 November 2026), then 147 since the history retention (`fn-history-purge`), the tab overview (`fn-tab-grid`), the bypass of tracking redirects
   // (`fn-bypass-redirects`), safe browsing (`fn-safe-browsing`), the minimum text size (`fn-minimum-font-size`), the tracking pings, the Referer and the
   // HTTPS-only mode (`fn-block-pings`, `fn-trim-referer`, `fn-https-only`), then 151 since the lookalike-address warning, the password-over-http warning, the
-  // warning before a file that can run and the forgetting of unused permissions (`fn-typo-guard`, `fn-warn-insecure-form`, `fn-warn-executable-download`, `fn-forget-unused-permissions`), then 152 since the update switch of Windows (`fn-auto-update-windows`).
-  it('has one scenario per card, 152 of them, with one name per image, made from the id of the card', () => {
+  // warning before a file that can run and the forgetting of unused permissions (`fn-typo-guard`, `fn-warn-insecure-form`, `fn-warn-executable-download`, `fn-forget-unused-permissions`), then 152 since the update switch of Windows (`fn-auto-update-windows`), then 153 with the pause of the background video (`fn-video-load-pause`).
+  it('has one scenario per card, 153 of them, with one name per image, made from the id of the card', () => {
     const cards = FEATURE_SCENARIOS.map((s) => s.card)
-    expect(cards).toHaveLength(152)
+    expect(cards).toHaveLength(153)
     expect(new Set(cards).size).toBe(cards.length)
     const names = FEATURE_SCENARIOS.flatMap((s) => (['fr', 'en'] as const).map((lang) => outputName(s.card, lang)))
     expect(new Set(names).size).toBe(names.length)

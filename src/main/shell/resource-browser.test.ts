@@ -226,6 +226,18 @@ describe('« Libérer maintenant » (Browser.releaseLevel)', () => {
     expect(main!.pages.has('plain')).toBe(true)
   })
 
+  it('marks the tabs that hold something (text not sent, Picture in Picture, a confirmation on leaving) so that the sweep leaves them out of the cap a while', async () => {
+    const [main, second] = windows()
+    ;(second!.pages.get('other') as Record<string, unknown>)['probeForSleep'] = vi.fn(async () => ({ pictureInPicture: true, unsentInput: false }))
+    // A page that asks to confirm leaving is marked by `releasePage`, as the sweep does.
+    ;(main!.pages.get('plain') as Record<string, unknown>)['release'] = vi.fn(async () => false)
+    const before = Date.now()
+    expect(await release(main!.self, 'medium')).toMatchObject({ slept: 0, refused: { unsent: 1, confirm: 1, other: 1 } })
+    const kept = main!.fields['sleepKept'] as Map<string, number>
+    expect([...kept.keys()].sort()).toEqual(['other', 'plain', 'typed'])
+    for (const at of kept.values()) expect(at).toBeGreaterThanOrEqual(before)
+  })
+
   it('answers « busy » to a request made while a run goes on, without starting a second one', async () => {
     const [main] = windows()
     let answer: (probe: { pictureInPicture: boolean; unsentInput: boolean }) => void = () => undefined

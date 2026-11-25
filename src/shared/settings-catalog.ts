@@ -76,7 +76,7 @@ export const SETTINGS_KEYS = {
   appearance: [
     'uiScale', 'minimumFontSize', 'panelSizes', 'forceReduceMotion', 'forceHighContrast', 'forceReduceTransparency',
     'hoverCards', 'interfaceAppearance', 'showZoomIndicator', 'fullUrlInToolbar', 'readableToolbarButton',
-    'sidebarRight', 'compactMode', 'mediaPlayer', 'favoriteNames', 'resourceGauge',
+    'sidebarRight', 'compactMode', 'mediaPlayer', 'favoriteNames', 'resourceGauge', 'pauseVideoOnLoad',
     'windowVibrancy', 'sidebarOpacity', 'windowBorder', 'cardOutline',
     'websiteAppearance', 'readableMode', 'siteReadableMode', 'allowThemeToSites'
   ],
@@ -210,6 +210,7 @@ export const FEATURE_ONLY_SWITCHES = {
   'media-player': 'appearance',
   'favorite-names': 'appearance',
   'resource-gauge': 'appearance',
+  'video-load-pause': 'appearance',
   'tab-state-badges': 'tabs',
   'download-status-chip': 'files',
   'whats-new': 'about'

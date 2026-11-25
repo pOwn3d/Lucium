@@ -11,6 +11,7 @@ import type { OverlayRequest, PassphraseRequest, SettingsAnchor, SettingsPane, T
 import type { DeadTabEntry, LoadFailure } from '@shared/dead-tabs'
 import type { ReloadPace, ReloadPhase } from '@shared/reload-all'
 import type { ReleaseOutcome } from '@shared/resources'
+import type { VideoPauseReason } from '@shared/video-load-pause'
 import type { DownloadInfo, FindState, HistoryEntry, PermissionRequest, RuntimeState, SplitView, TabItem } from '@shared/model'
 import type { AuthRequest, Credentials } from '@shared/http-auth'
 import type { DialogRequest, PromptAnswer } from '@shared/page-dialog'
@@ -566,6 +567,8 @@ export abstract class BrowserBase {
   protected liveFolderService: LiveFolderService | null = null
   /** The figures of the resource gauge at the foot of the sidebar, for the whole group: made while 'resource-gauge' is on, by the main window only (see the gate in `start`). */
   protected resourceWatch: ResourceWatch | null = null
+  /** Why the video behind the spaces is held still by itself, for the whole group (shell/video-load-guard.ts): set on the main window, read through `leader`. */
+  protected videoPause: VideoPauseReason | null = null
   protected liveGapMs = LIVE_GAP_MS
   protected liveAllowHost: ((host: string) => boolean) | null = null
   protected liveStartDelay: number | null = null

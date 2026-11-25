@@ -12,6 +12,8 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
+- **Resources: other processes and sort by processor**: the panel adds an “Other processes” row (graphics, interface, unlisted tabs) so the rows add up to the total, and a Memory or Processor sort.
+- **Automatic pause of the background video**: a space’s video stops by itself during a call (camera, microphone or screen) or when the Mac is heavily loaded, with a notice, and plays again afterwards. Setting in Appearance, on by default.
 - **Free up memory in three strengths**: the resource panel now has Light, Medium and Strong buttons, each with the tabs it takes and the memory it frees. Strong also takes pinned tabs and kept-awake sites. Undo for 15 seconds. Calls, downloads and unsent text are always spared.
 
 ### Fixed

@@ -578,6 +578,7 @@ export const FEATURE_SCENARIOS: readonly FeatureScenario[] = [
     'La jauge des ressources au pied de la barre latérale, ouverte : la mémoire et les onglets qui en prennent le plus',
     'The resource gauge at the foot of the sidebar, open: the memory and the tabs that take the most'
   ), { space: 'work', tab: 'board', resourcePanel: 'open' }, { page: 'shell', selectors: ['.rp-panel'], minWidth: 760 }),
+  setting('fn-video-load-pause', 'video-load-pause', t('Pause automatique du fond des espaces', 'Automatic pause of space backgrounds'), 'appearance', 'pauseVideoOnLoad', { fold: true, why: 'la pause se déclenche pendant un appel ou sous forte charge, que la démonstration ne provoque pas : l’image montre la ligne' }),
   setting('fn-extension-overflow', 'extension-overflow', t('Menu des icônes d’extensions en trop', 'Extension icons overflow menu'), 'tools', 'extensionOverflow', { fold: true, why: needsExtension }),
   setting('fn-read-later-folders', 'read-later-folders', t('Dossiers dans Lire plus tard', 'Folders in Read Later'), 'files', 'useReadLaterFolders', { fold: true, label: t('Classer « Lire plus tard » dans des dossiers', 'Sort “Read Later” into folders'), patch: { useReadLaterFolders: true }, on: true, why: 'les dossiers se créent à la main dans la liste' }),
   command('fn-mode-lisible', undefined, t('Contraste de la page, site par site', 'Page Contrast, site by site'), t(

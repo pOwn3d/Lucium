@@ -30,14 +30,20 @@ const levels = (patch: Partial<Record<ReleasePreview['level'], Partial<ReleasePr
   { level: 'medium', count: 12, memoryMb: 2150, cpu: 3, siteTabs: 0, ...patch.medium },
   { level: 'high', count: 35, memoryMb: 4900, cpu: 5, siteTabs: 20, ...patch.high }
 ]
-const report = (patch: Partial<ResourceReport> = {}): ResourceReport => ({
-  memoryMb: 8500,
-  cpu: 33.4,
-  gauge: memoryGauge(8.3 * GB, 16 * GB, 1),
-  tabs: [tab('Twitch', 584, 7.4), tab('Perso', 278, 0.2, { where: 'Travail', pinned: true }), tab('Home', 1300, 1, { shared: true })],
-  levels: levels(),
-  ...patch
-})
+const OTHERS = { count: 38, memoryMb: 6338, cpu: 24.8, gpuMemoryMb: 1280, gpuCpu: 30 }
+const report = (patch: Partial<ResourceReport> = {}): ResourceReport => {
+  const tabs = [tab('Twitch', 584, 7.4), tab('Perso', 278, 0.2, { where: 'Travail', pinned: true }), tab('Home', 1300, 1, { shared: true })]
+  return {
+    memoryMb: 8500,
+    cpu: 33.4,
+    gauge: memoryGauge(8.3 * GB, 16 * GB, 1),
+    tabs,
+    others: OTHERS,
+    byCpu: { tabs: [tabs[0]!, tabs[2]!, tabs[1]!], others: OTHERS },
+    levels: levels(),
+    ...patch
+  }
+}
 const body = (patch: Partial<Parameters<typeof ResourcePanelBody>[0]> = {}): string =>
   renderToStaticMarkup(createElement(ResourcePanelBody, { report: report(), notice: '', onShow: () => undefined, onSleep: () => undefined, onClose: () => undefined, onRelease: () => undefined, onTaskManager: () => undefined, ...patch }))
 
@@ -104,6 +110,51 @@ describe('the panel', () => {
 
   it('says what the last button did, to a screen reader too', () => {
     expect(body({ notice: '2 onglets mis en veille' })).toContain('<p class="rp-notice" role="status" aria-live="polite">2 onglets mis en veille</p>')
+  })
+})
+
+describe('what the rows leave out and the ranking', () => {
+  it('adds a row « Autres processus » that holds what the rows do not (the figures that make the total), with the graphic process on its own line', () => {
+    const markup = body()
+    const others = markup.slice(markup.indexOf('class="rp-others"'))
+    expect(others).toContain('Autres processus')
+    expect(others).toContain(frenchSpaces('Graphique, interface, onglets non listés · 38 processus'))
+    expect(others).toContain(frenchSpaces('Dont processeur graphique : 1,3 Go · 30 %'))
+    expect(others).toContain(frenchSpaces('<span>6,2 Go</span><span>25 %</span>'))
+    // It is not a row of a tab: no button, and not counted among the rows the arrow keys walk.
+    expect(markup.match(/class="rp-row"/g)).toHaveLength(3)
+    expect(others.slice(0, others.indexOf('</div>'))).not.toContain('<button')
+  })
+
+  it('leaves out the line of the graphic process when it is not among the others, and shows nothing before the first figures', () => {
+    expect(body({ report: report({ others: { ...OTHERS, gpuMemoryMb: 0, gpuCpu: 0 } }) })).not.toContain('Dont processeur graphique')
+    expect(body({ report: null })).not.toContain('rp-others')
+  })
+
+  it('offers « Mémoire » and « Processeur », the ranking of the rows being the one pressed', () => {
+    const markup = body({ onSort: () => undefined })
+    expect(markup).toContain('role="group" aria-label="Trier par"')
+    expect(markup).toContain('data-sort="memory" aria-pressed="true">Mémoire</button>')
+    expect(markup).toContain('data-sort="cpu" aria-pressed="false">Processeur</button>')
+    expect(body({ onSort: () => undefined, sort: 'cpu' })).toContain('data-sort="cpu" aria-pressed="true">Processeur</button>')
+  })
+
+  it('draws the rows of the chosen ranking, and names the list for a screen reader', () => {
+    const names = (markup: string): string[] => [...markup.matchAll(/<span class="rp-name">([^<]*)<\/span>/g)].map((m) => m[1]!).filter((name) => name !== 'Autres processus')
+    expect(names(body())).toEqual(['Twitch', 'Perso', 'Home'])
+    const byCpu = body({ sort: 'cpu' })
+    expect(names(byCpu)).toEqual(['Twitch', 'Home', 'Perso'])
+    expect(byCpu).toContain('aria-label="Onglets qui utilisent le plus le processeur"')
+    expect(body()).toContain('aria-label="Onglets qui consomment le plus"')
+  })
+
+  it('is written in English too', () => {
+    setLanguage('en')
+    const markup = body({ onSort: () => undefined })
+    expect(markup).toContain('Other processes')
+    expect(markup).toContain('Graphics, interface, tabs not listed · 38 processes')
+    expect(markup).toContain('Of which graphics process: 1.3 GB · 30%')
+    expect(markup).toContain('aria-label="Sort by"')
   })
 })
 

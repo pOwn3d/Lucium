@@ -41,6 +41,7 @@ import { FaviconService, requestFetch } from './favicon-service'
 import { siteIconOwner } from '@shared/site-icon'
 import { LiveFolderService } from './live-folders'
 import { ResourceWatch } from './resource-watch'
+import { gateVideoLoad } from './video-load-guard'
 import { memoryPressure } from './sleep-pressure'
 import { processMeter } from './process-meter'
 import { lookAt } from './live-fetch'
@@ -300,6 +301,8 @@ export class Browser extends BrowserLayout {
     })
     // The ring of the resources at the foot of the sidebar and its panel (docs/fonctions.md, `resource-gauge`), for the whole group: the main window's only.
     if (!this.isPrivate() && !this.isSecondary()) this.gates.gate('resource-gauge', { start: () => this.startResourceWatch() })
+    // The video behind a space stops by itself during a call or under a heavy load (docs/fonctions.md, `video-load-pause`), for the whole group: the main window's only.
+    if (!this.isPrivate() && !this.isSecondary()) this.startVideoLoadGate()
     // A private window has no archive to sweep into; the main window sweeps the shared one. No timer and no pass while archiving is off everywhere.
     if (!this.isPrivate() && !this.isSecondary()) gateAutoArchive(this.gates, () => this.dispatch({ type: 'archive/sweep' }))
     // The purge of the old pages of the history (« Garder l'historique : N jours »): the main window only, every profile at once; nothing runs while the delay is 0.
@@ -488,6 +491,7 @@ export class Browser extends BrowserLayout {
       // The page annotation (on by default; LUCIUM_ANNOTATE=0 turns it off, from the sources or in a smoke run only): the toolbar shows its button only then.
       ...annotateToolbarFlag(process.env),
       ...this.saverOfSnapshot(),
+      ...this.videoPauseOfSnapshot(),
       // The system always shows the scroll bars: the lists that hide theirs draw them (shared/scroll-bars.ts).
       ...scrollBarsOfSnapshot(),
       // The build carries a test update channel (a second sealed address): the Settings offer the choice only then.
@@ -544,6 +548,25 @@ export class Browser extends BrowserLayout {
       // A window that is closing (the application quits) is told nothing.
       if (!this.win.isDestroyed()) this.publish()
     }
+  }
+
+  /**
+   * The gate of 'video-load-pause' (shell/video-load-guard.ts): every 15 s the guard looks at the pages of the group that hold the camera, the microphone or
+   * the screen, at the processors and at the memory pressure, and the snapshot carries why the video is held still (the sidebars hold it, as for the
+   * battery saver). A notice says it once for each pause, and the video plays again by itself.
+   */
+  private startVideoLoadGate(): void {
+    gateVideoLoad(this.gates, {
+      measure: processMeter(),
+      capturing: () => [...this.group].some((browser) => [...browser.pages.values()].some((page) => page.usesCapture?.() === true)),
+      pressure: () => memoryPressure().then((level) => level !== 'normal'),
+      paused: () => getLockService()?.isAppLocked() === true,
+      onChange: (reason) => {
+        this.videoPause = reason
+        if (reason && !this.win.isDestroyed()) this.showToast(t(reason === 'capture' ? 'video-load-pause.appel' : 'video-load-pause.charge'))
+        if (!this.win.isDestroyed()) this.publish()
+      }
+    })
   }
 
   /** The watch of the resource panel for this window's group: the main window's, while 'resource-gauge' is on; null in a private window. */

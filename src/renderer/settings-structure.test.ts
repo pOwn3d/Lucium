@@ -165,8 +165,8 @@ describe('the map of the settings (shared/settings-catalog.ts)', () => {
       const only = (FEATURE_ONLY_SWITCHES as Record<string, SettingsPage>)[feature.id]
       if (only !== undefined) expect(pane, feature.id).toBe(only)
     }
-    // The preferences with no row of their own: the compact mode, the media player, the favourite names, the gauge, the states of the tabs, the status of the downloads, the news after an update.
-    expect(Object.keys(FEATURE_ONLY_SWITCHES).sort()).toEqual(['compact-mode', 'download-status-chip', 'favorite-names', 'media-player', 'resource-gauge', 'tab-state-badges', 'whats-new'])
+    // The preferences with no row of their own: the compact mode, the media player, the favourite names, the gauge, the pause of the background video, the states of the tabs, the status of the downloads, the news after an update.
+    expect(Object.keys(FEATURE_ONLY_SWITCHES).sort()).toEqual(['compact-mode', 'download-status-chip', 'favorite-names', 'media-player', 'resource-gauge', 'tab-state-badges', 'video-load-pause', 'whats-new'])
   })
 
   it('has the 11 pages in the order of the sidebar (the welcome page, the 8 categories, the two pages apart), each with its name, its short name and its blurb in both languages', async () => {

@@ -171,9 +171,9 @@ describe('the video behind a space while the battery saver is on', () => {
   })
 
   it('is told by the snapshot of the window to the layer of the video and to its controls', () => {
-    const layersOf = (batterySaverOn: true | undefined) => {
+    const layersOf = (batterySaverOn: true | undefined, videoLoadPause?: 'capture' | 'load') => {
       const { state, space } = twoSpaces()
-      const snapshot = { state, runtime: { tabs: {}, canGoBack: false, canGoForward: false }, engine: {}, extensions: [], downloads: [], find: null, peek: null, sidePanel: null, toast: null, platform: 'darwin', private: false, ...(batterySaverOn ? { batterySaverOn } : {}) } as unknown as UiSnapshot
+      const snapshot = { state, runtime: { tabs: {}, canGoBack: false, canGoForward: false }, engine: {}, extensions: [], downloads: [], find: null, peek: null, sidePanel: null, toast: null, platform: 'darwin', private: false, ...(batterySaverOn ? { batterySaverOn } : {}), ...(videoLoadPause ? { videoLoadPause } : {}) } as unknown as UiSnapshot
       holder.snapshot = snapshot
       const elements = elementsOf(createElement(Sidebar, { snapshot, space }))
       const drawn = elements.filter((element) => (element.type as { name?: string }).name === 'SpaceBackgroundLayer' && element.props['enabled'] !== false)
@@ -182,6 +182,21 @@ describe('the video behind a space while the battery saver is on', () => {
     }
     expect(layersOf(true)).toEqual({ layer: [true], controls: [true] })
     expect(layersOf(undefined)).toEqual({ layer: [false], controls: [false] })
+  })
+
+  it('is told too when a call or a load holds the video by itself, with the reason for the controls', () => {
+    const layersOf = (videoLoadPause: 'capture' | 'load' | undefined) => {
+      const { state, space } = twoSpaces()
+      const snapshot = { state, runtime: { tabs: {}, canGoBack: false, canGoForward: false }, engine: {}, extensions: [], downloads: [], find: null, peek: null, sidePanel: null, toast: null, platform: 'darwin', private: false, ...(videoLoadPause ? { videoLoadPause } : {}) } as unknown as UiSnapshot
+      holder.snapshot = snapshot
+      const elements = elementsOf(createElement(Sidebar, { snapshot, space }))
+      const drawn = elements.filter((element) => (element.type as { name?: string }).name === 'SpaceBackgroundLayer' && element.props['enabled'] !== false)
+      const controls = elements.filter((element) => element.type === BackgroundVideoControls)
+      return { layer: drawn.map((layer) => layer.props['saving']), controls: controls.map((control) => [control.props['saving'], control.props['autoPause']]) }
+    }
+    expect(layersOf('capture')).toEqual({ layer: [true], controls: [[true, 'capture']] })
+    expect(layersOf('load')).toEqual({ layer: [true], controls: [[true, 'load']] })
+    expect(layersOf(undefined)).toEqual({ layer: [false], controls: [[false, undefined]] })
   })
 
   // The effects of BackgroundVideo do not run in a markup render, and the project has no DOM to run them in: the lines that carry the mode into the

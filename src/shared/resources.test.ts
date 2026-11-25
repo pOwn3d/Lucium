@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { setLanguage } from './i18n'
 import {
   heldReport,
+  othersGpuLine,
+  othersHint,
   type ResourceReport,
   GAUGE_WARN_PERCENT,
   RESOURCE_TABS_MAX,
@@ -23,6 +25,7 @@ import {
   parseResourceAction,
   releasePreviews,
   resourceReport,
+  viewOf,
   sameGauge,
   type ReleaseOutcome,
   type ResourceTab
@@ -152,7 +155,8 @@ describe('the actions the sidebar asks for', () => {
 
 // The figures come every 2 s, sorted by weight. Under the pointer the rows keep their places: ☾ and ✕ act on the tab a person aimed at.
 describe('heldReport', () => {
-  const report = (tabs: ResourceTab[], memoryMb = 1000): ResourceReport => ({ memoryMb, cpu: 10, gauge: memoryGauge(4 * 1024, 16 * 1024, 1), tabs, levels: [] })
+  const NO_OTHERS = { count: 0, memoryMb: 0, cpu: 0, gpuMemoryMb: 0, gpuCpu: 0 }
+  const report = (tabs: ResourceTab[], memoryMb = 1000, byCpu: ResourceTab[] = tabs): ResourceReport => ({ memoryMb, cpu: 10, gauge: memoryGauge(4 * 1024, 16 * 1024, 1), tabs, others: NO_OTHERS, byCpu: { tabs: byCpu, others: NO_OTHERS }, levels: [] })
   const ids = (shown: ResourceReport): string[] => shown.tabs.map((entry) => entry.tabId)
 
   it('keeps every row where it is when two tabs swap ranks, and gives each its new figures', () => {
@@ -179,6 +183,14 @@ describe('heldReport', () => {
   it('is the figures as they come before anything was shown', () => {
     const next = report([tab('b', 950), tab('a', 800)])
     expect(heldReport(null, next)).toBe(next)
+  })
+
+  it('holds the ranking by processor in its places too, and lets go of a row acted on in both', () => {
+    const shown = report([tab('a', 900), tab('b', 500)], 1000, [tab('b', 500, 40), tab('a', 900, 5)])
+    const held = heldReport(shown, report([tab('a', 900), tab('b', 500)], 1000, [tab('a', 900, 60), tab('b', 500, 10)]))
+    expect(held.byCpu.tabs.map((entry) => [entry.tabId, entry.cpu])).toEqual([['b', 10], ['a', 60]])
+    const acted = heldReport(shown, report([tab('a', 900)], 1000, [tab('a', 900, 5)]), new Set(['b']))
+    expect([ids(acted), acted.byCpu.tabs.map((entry) => entry.tabId)]).toEqual([['a'], ['a']])
   })
 })
 
@@ -265,5 +277,79 @@ describe('the words after « Libérer maintenant »', () => {
   it('warns about the kept sites only when the strongest strength takes some', () => {
     expect(releaseSitesWarning({ siteTabs: 0 })).toBeNull()
     expect(releaseSitesWarning({ siteTabs: 20 })).toBe(frenchSpaces('Dont 20 onglets de sites gardés éveillés : plus de notifications jusqu’à leur réveil.'))
+  })
+})
+
+describe('what the rows leave out (« Autres processus »)', () => {
+  const raw = [
+    { pid: 1, type: 'Browser', cpu: 2, memoryKb: 400 * 1024 },
+    { pid: 2, type: 'Tab', cpu: 1, memoryKb: 600 * 1024 },
+    { pid: 3, type: 'Tab', cpu: 40, memoryKb: 300 * 1024 },
+    { pid: 4, type: 'GPU', cpu: 30.04, memoryKb: 1200 * 1024 },
+    { pid: 5, type: 'Tab', cpu: 0.5, memoryKb: 100 * 1024 },
+    { pid: 6, type: 'Utility', cpu: 3, memoryKb: 50 * 1024 }
+  ]
+  const tabs = [tab('heavy', 600, 1), tab('busy', 300, 40), tab('light', 100, 0.5)]
+  const pids = new Map([['heavy', 2], ['busy', 3], ['light', 5]])
+  const gauge = memoryGauge(2650, 16 * GB, 1)
+
+  it('adds up with the rows to the totals of the head: the total is the listed processes plus the others, each process once', () => {
+    const report = resourceReport(raw, tabs, [], gauge, pids)
+    const listed = report.tabs.reduce((sum, row) => sum + row.memoryMb, 0)
+    expect(listed + report.others.memoryMb).toBe(report.memoryMb)
+    expect(report.others).toEqual({ count: 3, memoryMb: 1650, cpu: 35, gpuMemoryMb: 1200, gpuCpu: 30 })
+  })
+
+  it('counts the process of a tab that did not make the list among the others (the five rows only)', () => {
+    const many = [tab('big', 600), tab('b', 500), tab('c', 400), tab('d', 300), tab('e', 200), tab('small', 100)]
+    const report = resourceReport(raw, many, [], gauge, new Map([['big', 2], ['b', 10], ['c', 11], ['d', 12], ['e', 13], ['small', 5]]))
+    expect(report.tabs.map((row) => row.tabId)).not.toContain('small')
+    // `small` is process 5: it is not a listed one, so it stays among the others with the browser, the GPU, the utility and the busy tab (3).
+    expect(report.others.count).toBe(raw.length - 1)
+  })
+
+  it('counts a process shared by two listed tabs once, as theirs', () => {
+    const shared = [tab('a', 600), tab('b', 600)]
+    const report = resourceReport(raw, shared, [], gauge, new Map([['a', 2], ['b', 2]]))
+    expect(report.others.memoryMb).toBe(report.memoryMb - 600)
+  })
+
+  it('names the graphic process on its own, and says nothing of it when it is not among the others', () => {
+    setLanguage('fr')
+    expect(othersGpuLine(resourceReport(raw, tabs, [], gauge, pids).others)).toBe(frenchSpaces('Dont processeur graphique : 1,2 Go · 30 %'))
+    expect(othersGpuLine({ gpuMemoryMb: 0, gpuCpu: 0 })).toBeNull()
+    expect(othersHint({ count: 3 })).toContain('3 processus')
+  })
+})
+
+describe('the ranking by processor', () => {
+  const tabs = [tab('big', 900, 2), tab('busy', 200, 45), tab('mid', 500, 9), tab('calm', 400, 0.5), tab('x', 100, 9), tab('y', 50, 30), tab('z', 10, 1)]
+
+  it('lists the tabs that use the most processor first (memory breaks a tie), where the default ranking lists the heaviest', () => {
+    expect(heaviestTabs(tabs, RESOURCE_TABS_MAX, 'cpu').map((row) => row.tabId)).toEqual(['busy', 'y', 'mid', 'x', 'big'])
+    expect(heaviestTabs(tabs).map((row) => row.tabId)).toEqual(['big', 'mid', 'calm', 'busy', 'x'])
+  })
+
+  it('is carried by the report next to the ranking by memory, with the remainder of its own list, and chosen with `viewOf`', () => {
+    const raw = [
+      { pid: 1, type: 'Tab', cpu: 45, memoryKb: 200 * 1024 },
+      { pid: 2, type: 'Tab', cpu: 2, memoryKb: 900 * 1024 },
+      { pid: 3, type: 'Tab', cpu: 0, memoryKb: 20 * 1024 },
+      { pid: 4, type: 'GPU', cpu: 12, memoryKb: 300 * 1024 }
+    ]
+    // Six tabs: `busy` (the processor) and `big` (the memory) each leave one of the others out of the five rows of the other ranking.
+    const six = [tab('busy', 1, 45), tab('big', 900, 2), tab('d', 800), tab('e', 700), tab('f', 600), tab('g', 500)]
+    const report = resourceReport(raw, six, [], memoryGauge(1420, 16 * GB, 1), new Map([['busy', 1], ['big', 2], ['d', 3], ['e', 7], ['f', 8], ['g', 9]]))
+    expect(viewOf(report, 'memory').tabs.map((row) => row.tabId)).toEqual(['big', 'd', 'e', 'f', 'g'])
+    expect(viewOf(report, 'cpu').tabs.map((row) => row.tabId)).toEqual(['busy', 'big', 'd', 'e', 'f'])
+    // By memory `busy` (process 1) is left out: it is among the others, with the GPU. By processor `g` is, but its process is not one of those measured.
+    expect(report.others).toMatchObject({ count: 2, memoryMb: 500, cpu: 57, gpuMemoryMb: 300 })
+    expect(report.byCpu.others).toMatchObject({ count: 1, memoryMb: 300, cpu: 12, gpuMemoryMb: 300 })
+  })
+
+  it('draws the meter against the heaviest processor in this ranking', () => {
+    const rows = [tab('a', 100, 40), tab('b', 900, 10)]
+    expect(meterShare(rows[1]!, rows, 'cpu')).toBe(0.25)
+    expect(meterShare(rows[1]!, rows)).toBe(1)
   })
 })
