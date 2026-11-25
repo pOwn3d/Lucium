@@ -15,7 +15,7 @@ vi.mock('./api', () => ({
   api: () => ({
     resourcePanel: (open: boolean) => holder.calls.push(open),
     onResources: () => () => undefined,
-    resourceAction: () => (holder.fails ? Promise.reject(new Error('the window is gone')) : Promise.resolve({ released: { level: 'medium', slept: 3, refused: { unsent: 0, confirm: 0, other: 0 } } }))
+    resourceAction: () => (holder.fails ? Promise.reject(new Error('the window is gone')) : Promise.resolve({ released: { level: 'medium', slept: 3, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 } } }))
   })
 }))
 
@@ -301,7 +301,7 @@ describe('a row', () => {
 
 describe('a button of the panel', () => {
   it('gives the answer of the main process', async () => {
-    expect(await ask({ kind: 'sleep-level', level: 'medium' })).toEqual({ released: { level: 'medium', slept: 3, refused: { unsent: 0, confirm: 0, other: 0 } } })
+    expect(await ask({ kind: 'sleep-level', level: 'medium' })).toEqual({ released: { level: 'medium', slept: 3, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 } } })
   })
 
   it('leaves the panel as it is when its request fails, and says so in the console', async () => {

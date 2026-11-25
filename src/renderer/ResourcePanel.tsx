@@ -3,7 +3,7 @@
 // no listener, no request. Open, the main process sends its figures every 2 s (one measure for every panel open, in any window), and Escape, a
 // press outside it or the window losing the focus closes it.
 
-import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { t, tp } from '@shared/i18n'
 import { stepProcessRow } from '@shared/processes'
 import {
@@ -28,7 +28,6 @@ import {
   undoNotice,
   viewOf,
   type MemoryGauge,
-  type ReleaseOutcome,
   type ReleasePreview,
   type ResourceAction,
   type ResourceActionReply,
@@ -39,6 +38,7 @@ import {
 } from '@shared/resources'
 import { RELEASE_LEVELS, type ReleaseLevel } from '@shared/sleep'
 import { api } from './api'
+import { dismissRelease, patchRelease, releaseMemory, startRelease, subscribeRelease } from './resource-release-memory'
 import { useSystemReducedMotion } from './reduced-motion'
 import { Favicon } from './SidebarRows'
 import { CloseGlyph, MoonGlyph } from './sidebar-icons'
@@ -154,9 +154,9 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
     rememberedMore = next
     setMoreState(next)
   }
-  // « Libérer maintenant »: the strength that runs (its buttons wait meanwhile), and the last run, which « Annuler » can still take back.
-  const [running, setRunning] = useState<{ level: ReleaseLevel; count: number } | null>(null)
-  const [done, setDone] = useState<{ outcome: ReleaseOutcome; before: number | null; freedMb: number | null; undoable: boolean } | null>(null)
+  // « Libérer maintenant »: the strength that runs (its buttons wait meanwhile), and the last run, which « Annuler » can still take back. Kept outside the
+  // panel (resource-release-memory.ts): a run goes on when the panel is closed, and the sentence that says how it ended is there when it opens again.
+  const { running, done, failed: runFailed } = useSyncExternalStore(subscribeRelease, releaseMemory)
   const latest = useRef<ResourceReport | null>(null)
   const panel = useRef<HTMLDivElement>(null)
   // A row that went (put to sleep, closed) gives the focus to the row that takes its place, once the figures without it come.
@@ -189,17 +189,23 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
   }, [report, sort, more])
 
   latest.current = report
-  // What the run really freed is measured a few seconds after it (the processes need a moment to go); « Annuler » is offered for a while.
+  // What the run really freed is measured a few seconds after it (the processes need a moment to go); « Annuler » is offered for a while. Both count from
+  // the moment the run ended, so a panel opened later neither measures a figure that has nothing to do with the run nor offers « Annuler » for longer.
   const ran = done?.outcome
+  const ranAt = done?.at ?? 0
   useEffect(() => {
     if (!ran || ran.slept === 0) return
-    const measure = setTimeout(() => setDone((now) => (now && now.outcome === ran ? { ...now, freedMb: now.before !== null && latest.current ? measuredGain(now.before, latest.current.memoryMb) : null } : now)), RELEASE_MEASURE_MS)
-    const expire = setTimeout(() => setDone((now) => (now && now.outcome === ran ? { ...now, undoable: false } : now)), RELEASE_UNDO_MS)
-    return () => {
-      clearTimeout(measure)
-      clearTimeout(expire)
+    const elapsed = Math.max(0, Date.now() - ranAt)
+    const timers: Array<ReturnType<typeof setTimeout>> = []
+    const measure = (): void => {
+      const before = releaseMemory().done?.before ?? null
+      patchRelease(ran, { freedMb: before !== null && latest.current ? measuredGain(before, latest.current.memoryMb) : null })
     }
-  }, [ran])
+    if (elapsed < RELEASE_MEASURE_MS) timers.push(setTimeout(measure, RELEASE_MEASURE_MS - elapsed))
+    if (elapsed >= RELEASE_UNDO_MS) patchRelease(ran, { undoable: false })
+    else timers.push(setTimeout(() => patchRelease(ran, { undoable: false }), RELEASE_UNDO_MS - elapsed))
+    return () => timers.forEach(clearTimeout)
+  }, [ran, ranAt])
   const tabs = report ? viewOf(report, sort, more).tabs : []
   const keys = (event: ReactKeyboardEvent<HTMLDivElement>): void => {
     if (event.key === 'Escape') {
@@ -220,16 +226,16 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
    * ☾ and ✕ of a row. What was done is said once the main process answered that it was: said at the click, a screen reader heard « Onglet mis
    * en veille » for a tab that was refused or a request that was lost. A tab left as it is keeps its row, and nothing waits for it to go.
    */
-  const actOn = (tab: ResourceTab, row: number, column: 1 | 2, kind: 'sleep' | 'close', done: string, failed: string): void => {
+  const actOn = (tab: ResourceTab, row: number, column: 1 | 2, kind: 'sleep' | 'close', said: string, refused: string): void => {
     refocus.current = { tabId: tab.tabId, row, column }
     acted.current.add(tab.tabId)
     setNotice('')
-    setDone(null)
+    dismissRelease()
     void ask({ kind, tabId: tab.tabId }).then((reply) => {
-      if (resourceActionDone(reply)) return setNotice(done)
+      if (resourceActionDone(reply)) return setNotice(said)
       if (refocus.current?.tabId === tab.tabId) refocus.current = null
       acted.current.delete(tab.tabId)
-      setNotice(failed)
+      setNotice(refused)
     })
   }
   const sleep = (tab: ResourceTab, row: number): void => actOn(tab, row, 1, 'sleep', t('taskmanager.onglet-mis-en-veille'), t('resources.veille-impossible'))
@@ -243,18 +249,11 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
   const release = (preview: ReleasePreview): void => {
     if (running) return
     setNotice('')
-    setDone(null)
-    setRunning({ level: preview.level, count: preview.count })
-    const before = latest.current?.memoryMb ?? null
-    void ask({ kind: 'sleep-level', level: preview.level }).then((reply) => {
-      setRunning(null)
-      if (!reply || !('released' in reply)) return setNotice(t('resources.liberer-impossible'))
-      setDone({ outcome: reply.released, before, freedMb: null, undoable: reply.released.slept > 0 })
-    })
+    startRelease(preview, latest.current?.memoryMb ?? null, ask)
   }
   /** « Annuler »: the tabs of the last run load again from their address, in the background. */
   const undo = (): void => {
-    setDone(null)
+    dismissRelease()
     void ask({ kind: 'undo-level' }).then((reply) => setNotice(reply && 'woken' in reply ? undoNotice(reply.woken) : t('resources.annulation-impossible')))
   }
   return (
@@ -265,12 +264,13 @@ export function ResourcePanel({ closing, onClose }: { closing: boolean; onClose:
         onSort={setSort}
         more={more}
         onMore={setMore}
-        notice={done ? releaseNotice(done.outcome, done.freedMb) : running ? tp('resources.liberer-en-cours', running.count) : notice}
+        notice={done ? releaseNotice(done.outcome, done.freedMb) : running ? tp('resources.liberer-en-cours', running.count) : runFailed ? t('resources.liberer-impossible') : notice}
         onShow={show}
         onSleep={sleep}
         onClose={close}
         running={running}
         undoable={done?.undoable === true}
+        onDismiss={done ? dismissRelease : undefined}
         onRelease={release}
         onUndo={undo}
         onHold={hold}
@@ -301,6 +301,8 @@ export interface ResourcePanelBodyProps {
   running?: { level: ReleaseLevel; count: number } | null
   /** « Annuler » is offered (the last run freed tabs a short while ago). */
   undoable?: boolean
+  /** The run's sentence can be closed (it stays until it is, or until a new run replaces it). */
+  onDismiss?(): void
   onRelease(preview: ReleasePreview): void
   onUndo?(): void
   onTaskManager(): void
@@ -309,7 +311,7 @@ export interface ResourcePanelBodyProps {
 }
 
 /** What the panel draws from its figures: the totals, the share of the Mac's memory, the heaviest tabs, the notice and the two buttons of the foot. */
-export function ResourcePanelBody({ report, sort = 'memory', onSort, more = false, onMore, notice, running = null, undoable = false, onShow, onSleep, onClose, onRelease, onUndo, onTaskManager, onHold }: ResourcePanelBodyProps) {
+export function ResourcePanelBody({ report, sort = 'memory', onSort, more = false, onMore, notice, running = null, undoable = false, onDismiss, onShow, onSleep, onClose, onRelease, onUndo, onTaskManager, onHold }: ResourcePanelBodyProps) {
   const view = report ? viewOf(report, sort, more) : null
   const tabs = view?.tabs ?? []
   const summary = report ? `${formatMemory(report.memoryMb)} · ${t('resources.d-un-coeur', { cpu: formatPercent(report.cpu) })}` : ''
@@ -350,6 +352,11 @@ export function ResourcePanelBody({ report, sort = 'memory', onSort, more = fals
         {undoable && (
           <button type="button" className="rp-undo" title={t('resources.annuler-hint')} onClick={onUndo}>
             {t('resources.annuler')}
+          </button>
+        )}
+        {onDismiss && (
+          <button type="button" className="rp-dismiss" aria-label={t('resources.masquer-resultat')} title={t('resources.masquer-resultat')} onClick={onDismiss}>
+            <CloseGlyph />
           </button>
         )}
       </div>

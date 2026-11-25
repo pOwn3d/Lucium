@@ -28,3 +28,27 @@ export function withDeadline<T>(ms: number, work: (expired: () => boolean) => Pr
     )
   })
 }
+
+/**
+ * Runs `work` on every item with at most `limit` of them in flight at once, and resolves their results in the order of the items. The next item starts
+ * the moment a slot frees (a slow one holds only its own slot, not a whole group). When one fails the others still finish, then the first failure is
+ * thrown: nothing is left running behind the caller.
+ */
+export async function mapLimit<T, R>(items: readonly T[], limit: number, work: (item: T, index: number) => Promise<R>): Promise<R[]> {
+  const results = new Array<R>(items.length)
+  const failures: unknown[] = []
+  let next = 0
+  const worker = async (): Promise<void> => {
+    while (next < items.length) {
+      const index = next++
+      try {
+        results[index] = await work(items[index] as T, index)
+      } catch (error) {
+        failures.push(error)
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.max(1, Math.min(Math.floor(limit), items.length)) }, worker))
+  if (failures.length > 0) throw failures[0]
+  return results
+}

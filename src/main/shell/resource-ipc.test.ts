@@ -34,7 +34,7 @@ const RAW: RawProcess[] = [
   { pid: 9, type: 'Tab', cpu: 7.4, memoryKb: 584 * 1024 }
 ]
 const LEVELS: ReleasePreview[] = [{ level: 'low', count: 1, memoryMb: 200, cpu: 0, siteTabs: 0 }, { level: 'medium', count: 2, memoryMb: 500, cpu: 1, siteTabs: 0 }, { level: 'high', count: 5, memoryMb: 2000, cpu: 2, siteTabs: 3 }]
-const OUTCOME: ReleaseOutcome = { level: 'medium', slept: 2, refused: { unsent: 1, confirm: 0, other: 0 } }
+const OUTCOME: ReleaseOutcome = { level: 'medium', slept: 2, refused: { unsent: 1, confirm: 0, other: 0, slow: 0 } }
 const TAB: ResourceTab = { tabId: 't1', name: 'Twitch', url: 'https://twitch.example/', memoryMb: 584, cpu: 7.4 }
 
 function setup(options: { on?: boolean; trusted?: boolean } = {}) {

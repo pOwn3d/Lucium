@@ -9,7 +9,8 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 - **Ressources : autres processus et tri par processeur** : le panneau ajoute une ligne « Autres processus » (graphique, interface, onglets non listés) pour que les lignes retombent sur le total, et un tri Mémoire ou Processeur.
 - **Pause automatique du fond vidéo** : la vidéo d’un espace s’arrête seule pendant un appel (caméra, micro ou écran) ou quand le Mac est très sollicité, avec un message, et reprend à la fin. Réglage dans Apparence, activé par défaut.
 - **Libérer la mémoire en trois forces** : le panneau Ressources propose Faible, Moyen et Fort, avec les onglets pris et la mémoire libérée. Fort prend aussi les épinglés et les sites gardés éveillés. « Annuler » pendant 15 secondes. Appels, téléchargements et texte non envoyé sont toujours épargnés.
-- **Ressources : plus d’onglets, et un délai par onglet** : le panneau peut lister jusqu’à dix onglets (« Voir plus ») pour trouver ce qui use le processeur, et « Libérer maintenant » n’attend plus une page qui ne répond pas : après 3 secondes l’onglet reste éveillé et l’exécution continue.
+- **Ressources : plus d’onglets, et un délai par onglet** : le panneau peut lister jusqu’à dix onglets (« Voir plus ») pour trouver ce qui use le processeur, et « Libérer maintenant » n’attend plus une page qui ne répond pas : cet onglet reste éveillé et l’exécution continue.
+- **Libérer maintenant tient le coup sur un Mac chargé** : les onglets sont interrogés puis mis en veille par groupes de quatre, avec 9 secondes par étape au lieu de 3 pour tout. Le résultat (« N sur M mis en veille » et les raisons) reste affiché à la réouverture du panneau, jusqu’à ce que vous le masquiez.
 
 ### Corrections
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { TIMED_OUT, withDeadline } from './deadline'
+import { TIMED_OUT, mapLimit, withDeadline } from './deadline'
 
 beforeEach(() => vi.useFakeTimers())
 afterEach(() => vi.useRealTimers())
@@ -42,5 +42,52 @@ describe('withDeadline', () => {
     await expect(result).resolves.toBe(TIMED_OUT)
     expect(warn).toHaveBeenCalledWith('[deadline] the work failed after its time was up:', 'late boom')
     warn.mockRestore()
+  })
+})
+
+describe('mapLimit', () => {
+  const later = <T>(ms: number, value: T): Promise<T> => new Promise((resolve) => setTimeout(() => resolve(value), ms))
+
+  it('never has more than the limit in flight, and takes the next item the moment a slot frees', async () => {
+    let inFlight = 0
+    let peak = 0
+    const starts: number[] = []
+    const run = mapLimit([1000, 1000, 3000, 1000, 1000], 2, async (ms, index) => {
+      starts[index] = Date.now()
+      peak = Math.max(peak, ++inFlight)
+      await later(ms, undefined)
+      inFlight--
+    })
+    await vi.advanceTimersByTimeAsync(4000)
+    await run
+    expect(peak).toBe(2)
+    // Item 2 (3 s) holds one slot only: items 3 and 4 go through the other one, one after the other.
+    expect(starts.map((at) => at - starts[0]!)).toEqual([0, 0, 1000, 1000, 2000])
+  })
+
+  it('gives the results in the order of the items, whatever the order they finish in', async () => {
+    const run = mapLimit(['a', 'b', 'c'], 3, (name, index) => later((3 - index) * 100, name.toUpperCase()))
+    await vi.advanceTimersByTimeAsync(300)
+    expect(await run).toEqual(['A', 'B', 'C'])
+  })
+
+  it('does not run anything for no items, and treats a limit below one as one', async () => {
+    const work = vi.fn(async (n: number) => n)
+    expect(await mapLimit([], 4, work)).toEqual([])
+    expect(work).not.toHaveBeenCalled()
+    expect(await mapLimit([1, 2], 0, work)).toEqual([1, 2])
+  })
+
+  it('lets the other items finish when one fails, then throws the first failure: nothing is left running behind the caller', async () => {
+    let finished = 0
+    const run = mapLimit([1, 2, 3, 4], 2, async (n) => {
+      await later(100, undefined)
+      if (n === 1) throw new Error('first')
+      finished++
+    })
+    const caught = run.catch((error: Error) => error.message)
+    await vi.advanceTimersByTimeAsync(500)
+    expect(await caught).toBe('first')
+    expect(finished).toBe(3)
   })
 })

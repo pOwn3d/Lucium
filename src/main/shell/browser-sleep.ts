@@ -4,8 +4,8 @@
 import type { SidebarState, SleepMode } from '@shared/model'
 import { iconSent, iconShown, unmarked, type IconMark } from '@shared/icon-mark'
 import { planReleaseLevels, planSweep, sleepToastAction, sleepToastMessage, sleepVerdict, sweepLimits, type MemoryPressure, type PageProbe, type ReleaseLevel, type SleepBlocker, type SleepFacts, type SleepRules, type SleepVerdict, type SleepVerdictMode, type SweepEntry, type SweepPlan } from '@shared/sleep'
-import { RELEASE_TAB_MS, type ReleaseOutcome } from '@shared/resources'
-import { TIMED_OUT, withDeadline } from '@shared/deadline'
+import { RELEASE_PARALLEL, RELEASE_TAB_MS, type ReleaseOutcome } from '@shared/resources'
+import { TIMED_OUT, mapLimit, withDeadline } from '@shared/deadline'
 import { saverSleepMinutes } from '@shared/battery-saver'
 import type { Page } from '../engine/types'
 import { batterySaver } from './battery-saver'
@@ -179,7 +179,7 @@ export abstract class BrowserSleep extends BrowserContexts {
    */
   releaseLevel(level: ReleaseLevel): Promise<ReleaseOutcome> {
     const leader = this.leader
-    if (leader.releasing) return Promise.resolve({ level, slept: 0, refused: { unsent: 0, confirm: 0, other: 0 }, busy: true })
+    if (leader.releasing) return Promise.resolve({ level, slept: 0, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 }, busy: true })
     leader.releasing = this.releaseOnce(level).finally(() => {
       leader.releasing = null
     })
@@ -187,41 +187,78 @@ export abstract class BrowserSleep extends BrowserContexts {
   }
 
   private async releaseOnce(level: ReleaseLevel): Promise<ReleaseOutcome> {
+    const leader = this.leader
     const wanted = new Set(planReleaseLevels(this.sweepEntries(), this.store.get().settings)[level].ids)
-    const outcome: ReleaseOutcome = { level, slept: 0, refused: { unsent: 0, confirm: 0, other: 0 } }
+    const outcome: ReleaseOutcome = { level, slept: 0, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 } }
+    const tabs = [...this.group].flatMap((browser) => [...browser.pages].filter(([id]) => wanted.has(id) && !browser.frozen.has(id)).map(([id, page]) => ({ id, page, window: browser })))
+    // First pass: every page is asked what it holds (text not sent, Picture in Picture, the rules), a few at a time, and nothing is closed yet: no tab
+    // goes before every protection has been looked at. A page that does not answer must not hold the run (and the lock of « one run at a time ») for
+    // ever: after `RELEASE_TAB_MS` the tab stays as it is. The waits overlap, so a Mac too busy to answer quickly still gets through all the tabs.
+    const asked = await mapLimit(tabs, RELEASE_PARALLEL, (tab) => withDeadline(RELEASE_TAB_MS, (expired) => tab.window.releaseAsk(tab.id, tab.page, level, expired)))
+    const going: typeof tabs = []
+    asked.forEach((result, index) => {
+      const tab = tabs[index]!
+      if (result === TIMED_OUT) outcome.refused.slow++
+      else if (result === 'go') going.push(tab)
+      else outcome.refused[result]++
+    })
+    // Second pass: the tabs that may go are closed, a few at a time. A close that comes after its time is up still happens (it cannot be taken
+    // back): the tab then joins the batch « Annuler » wakes, so that nothing the run did is out of its reach.
     const batch: Array<{ id: string; window: BrowserSleep }> = []
-    for (const browser of [...this.group]) {
-      for (const id of [...browser.pages.keys()]) {
-        const page = browser.pages.get(id)
-        if (!wanted.has(id) || !page || browser.frozen.has(id)) continue
-        // A page that does not answer must not hold the run (and the lock of « one run at a time ») for ever: after `RELEASE_TAB_MS` the tab stays as it is.
-        const result = await withDeadline(RELEASE_TAB_MS, (expired) => browser.releaseTab(id, page, level, expired))
-        if (result === TIMED_OUT) outcome.refused.other++
-        else if (result === 'slept') {
-          outcome.slept++
-          batch.push({ id, window: browser })
-        } else outcome.refused[result]++
+    const before = leader.releaseBatch
+    const late = (entry: { id: string; window: BrowserSleep }): void => {
+      batch.push(entry)
+      // Not when a newer run took the batch meanwhile: that one is what « Annuler » wakes now.
+      if (leader.releaseBatch === before || leader.releaseBatch === batch) {
+        leader.releaseBatch = batch
+        this.publish()
       }
     }
-    if (outcome.slept > 0) {
-      this.leader.releaseBatch = batch
+    const closed = await mapLimit(going, RELEASE_PARALLEL, (tab) =>
+      withDeadline(RELEASE_TAB_MS, async (expired) => {
+        const result = await tab.window.releaseClose(tab.id, tab.page, level)
+        if (result === 'slept' && expired()) late({ id: tab.id, window: tab.window })
+        return result
+      })
+    )
+    closed.forEach((result, index) => {
+      const tab = going[index]!
+      if (result === TIMED_OUT) outcome.refused.slow++
+      else if (result === 'slept') {
+        outcome.slept++
+        batch.push({ id: tab.id, window: tab.window })
+      } else outcome.refused[result]++
+    })
+    if (batch.length > 0) {
+      leader.releaseBatch = batch
       this.publish()
     }
     return outcome
   }
 
   /**
-   * One tab of a run of « Libérer maintenant »: asked its verdict, then freed. Says what became of it. `expired` tells that the run gave up on this tab
-   * (`RELEASE_TAB_MS`): a page whose verdict comes that late is left awake, the run having counted it among the others and gone on. A close already
-   * asked of the engine cannot be taken back (it has its own limit, `RELEASE_ANSWER_MS`); it finishes by itself.
+   * The first pass for one tab of a run of « Libérer maintenant »: its verdict, asking the page last. Says whether the tab may be closed (`go`) or why not.
+   * `expired` tells that the run gave up on this tab (`RELEASE_TAB_MS`): a page whose verdict comes that late is left awake, the run having counted it among
+   * the others and gone on.
    */
-  private async releaseTab(id: string, page: Page, level: ReleaseLevel, expired: () => boolean): Promise<'slept' | 'unsent' | 'confirm' | 'other'> {
+  private async releaseAsk(id: string, page: Page, level: ReleaseLevel, expired: () => boolean): Promise<'go' | 'unsent' | 'other'> {
     const verdict = await this.autoVerdict(id, page, { level })
     if (!verdict || this.pages.get(id) !== page || expired()) return 'other'
-    if (!verdict.sleep) {
-      if (verdict.reason === 'picture-in-picture' || verdict.reason === 'unsent-input') this.leader.sleepKept.set(id, Date.now())
-      return verdict.reason === 'unsent-input' ? 'unsent' : 'other'
-    }
+    if (verdict.sleep) return 'go'
+    if (verdict.reason === 'picture-in-picture' || verdict.reason === 'unsent-input') this.leader.sleepKept.set(id, Date.now())
+    return verdict.reason === 'unsent-input' ? 'unsent' : 'other'
+  }
+
+  /**
+   * The second pass for one tab: freed unless something changed since the first pass (shown, a sound, a download, a page that went or came back):
+   * the rules are asked again, with what the page said then (it had nothing to keep it, or it would not be here). Says what became of it. A close
+   * already asked of the engine cannot be taken back (it has its own limit, `RELEASE_ANSWER_MS`); it finishes by itself.
+   */
+  private async releaseClose(id: string, page: Page, level: ReleaseLevel): Promise<'slept' | 'confirm' | 'other'> {
+    const state = this.store.get()
+    const tab = state.tabs.find((one) => one.id === id)
+    if (!tab || this.pages.get(id) !== page || this.frozen.has(id)) return 'other'
+    if (!sleepVerdict(tab, this.sleepRules(state.settings, 'normal').rules, { ...this.sleepFacts(id), probe: ASKED_BEFORE_FREEZING }, { level }).sleep) return 'other'
     if (await this.releasePage(id)) return 'slept'
     return this.pages.has(id) ? 'confirm' : 'other'
   }

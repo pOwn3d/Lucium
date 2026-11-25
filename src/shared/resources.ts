@@ -19,8 +19,14 @@ export const GAUGE_WARN_PERCENT = 50
 export const PRESSURE_WARN_LEVEL = 2
 /** How long « Annuler » stays after a run of « Libérer maintenant »: fifteen seconds. */
 export const RELEASE_UNDO_MS = 15_000
-/** The longest « Libérer maintenant » waits for one tab (its page's answer, then its close): after it the tab stays awake, is counted among the others, and the run goes on. */
-export const RELEASE_TAB_MS = 3000
+/**
+ * The longest « Libérer maintenant » waits for one step of one tab (the page's answer about what it holds, then, in a second pass, its close): after it the
+ * tab is counted among the ones that were too slow, and the run goes on. Above what the engine itself gives a page (3 s to answer, 5 s to answer a close),
+ * so that only a machine too busy to get to the page at all trips it: a busy Mac answers in seconds, not in three.
+ */
+export const RELEASE_TAB_MS = 9000
+/** How many tabs « Libérer maintenant » asks (then closes) at once: the waits overlap, but a Mac that is already short of processor is not asked for dozens of pages together. */
+export const RELEASE_PARALLEL = 4
 /** How long after a run the panel measures what was really freed: the processes need a moment to go. */
 export const RELEASE_MEASURE_MS = 3000
 /** The meter of a row is hot from this memory (MB) or this processor (% of one core). */
@@ -162,6 +168,8 @@ export interface ReleaseOutcome {
     confirm: number
     /** Anything else: a video in Picture in Picture, a page that did not answer, a tab shown or protected since the preview. */
     other: number
+    /** The page (or its close) did not answer within `RELEASE_TAB_MS`: the tab was left as it was, and a close already asked may still go through (« Annuler » takes it too). */
+    slow: number
   }
   /** Another run is going on: this request did nothing. */
   busy?: true
@@ -343,8 +351,8 @@ export function releaseSitesWarning(preview: Pick<ReleasePreview, 'siteTabs'>): 
 /** The sentence after a run: all done (with what was measured when it is known), nothing to do, or how many and why the others stayed awake. */
 export function releaseNotice(outcome: ReleaseOutcome, freedMb: number | null): string {
   if (outcome.busy === true) return t('resources.liberer-deja-en-cours')
-  const { unsent, confirm, other } = outcome.refused
-  const refused = unsent + confirm + other
+  const { unsent, confirm, other, slow } = outcome.refused
+  const refused = unsent + confirm + other + slow
   if (refused === 0) {
     if (outcome.slept === 0) return t('resources.rien-a-endormir')
     return freedMb === null ? sleepToastMessage(outcome.slept) : tp('resources.liberer-fait-gain', outcome.slept, { memory: formatMemory(freedMb) })
@@ -352,6 +360,7 @@ export function releaseNotice(outcome: ReleaseOutcome, freedMb: number | null): 
   const reasons = [
     ...(unsent > 0 ? [tp('resources.refus-texte', unsent)] : []),
     ...(confirm > 0 ? [tp('resources.refus-confirmation', confirm)] : []),
+    ...(slow > 0 ? [tp('resources.refus-lent', slow)] : []),
     ...(other > 0 ? [tp('resources.refus-autre', other)] : [])
   ].join(', ')
   return t('resources.liberer-partiel', { slept: outcome.slept, total: outcome.slept + refused, reasons })

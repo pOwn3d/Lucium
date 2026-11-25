@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultSettings, type Settings, type TabItem } from '@shared/model'
 import type { RawProcess } from '@shared/processes'
 import { setLanguage } from '@shared/i18n'
-import { RELEASE_TAB_MS } from '@shared/resources'
+import { RELEASE_PARALLEL, RELEASE_TAB_MS } from '@shared/resources'
 import { fakeBrowser, methodsOf } from './browser-fake.test-support'
 
 vi.mock('electron', () => new Proxy({}, { get: () => ({}) }))
@@ -15,6 +15,7 @@ vi.mock('./extension-shims', () => ({ ExtensionShims: class {} }))
 vi.mock('./sleep-pressure', () => ({ memoryPressure: () => Promise.resolve('normal') }))
 const { Browser } = await import('./browser')
 const { SLEEP_SWEEP_MS } = await import('./browser-base')
+const { RELEASE_ANSWER_MS, SLEEP_PROBE_TIMEOUT_MS } = await import('../engine/electron-page-scripts')
 const shell = methodsOf(Browser.prototype)
 
 afterEach(() => {
@@ -39,7 +40,7 @@ interface WindowSpec {
 }
 
 /** The real methods the stand-ins need to call one another (a stand-in answers `undefined` for anything it was not given). */
-const REAL = ['autoVerdict', 'freezePage', 'sleepFacts', 'sleepRules', 'isShown', 'resourceOwner', 'ownerOf', 'releasePage', 'sweepEntries', 'releaseOnce', 'releaseTab', 'releaseLevels'] as const
+const REAL = ['autoVerdict', 'freezePage', 'sleepFacts', 'sleepRules', 'isShown', 'resourceOwner', 'ownerOf', 'releasePage', 'sweepEntries', 'releaseOnce', 'releaseAsk', 'releaseClose', 'releaseLevels'] as const
 
 /** A window of the group, as the methods under test see it. */
 function windowOf(spec: WindowSpec, all: WindowSpec[]) {
@@ -183,7 +184,7 @@ describe('« Libérer maintenant » (Browser.releaseLevel)', () => {
     const [main, second] = windows()
     const outcome = await release(main!.self, 'medium')
     // The text typed and not sent is counted as such, never named.
-    expect(outcome).toEqual({ level: 'medium', slept: 2, refused: { unsent: 1, confirm: 0, other: 0 } })
+    expect(outcome).toEqual({ level: 'medium', slept: 2, refused: { unsent: 1, confirm: 0, other: 0, slow: 0 } })
     // `true`: a sleep, so each page hands its Back / Forward list over (slept-history.ts).
     expect(main!.fields['destroyPage']).toHaveBeenCalledWith('plain', true)
     expect(second!.fields['destroyPage']).toHaveBeenCalledWith('other', true)
@@ -223,7 +224,7 @@ describe('« Libérer maintenant » (Browser.releaseLevel)', () => {
     const [main] = windows()
     const plain = main!.pages.get('plain') as Record<string, unknown>
     plain['release'] = vi.fn(async () => false)
-    expect(await release(main!.self, 'medium')).toMatchObject({ slept: 1, refused: { unsent: 1, confirm: 1, other: 0 } })
+    expect(await release(main!.self, 'medium')).toMatchObject({ slept: 1, refused: { unsent: 1, confirm: 1, other: 0, slow: 0 } })
     expect(main!.pages.has('plain')).toBe(true)
   })
 
@@ -233,7 +234,7 @@ describe('« Libérer maintenant » (Browser.releaseLevel)', () => {
     // A page that asks to confirm leaving is marked by `releasePage`, as the sweep does.
     ;(main!.pages.get('plain') as Record<string, unknown>)['release'] = vi.fn(async () => false)
     const before = Date.now()
-    expect(await release(main!.self, 'medium')).toMatchObject({ slept: 0, refused: { unsent: 1, confirm: 1, other: 1 } })
+    expect(await release(main!.self, 'medium')).toMatchObject({ slept: 0, refused: { unsent: 1, confirm: 1, other: 1, slow: 0 } })
     const kept = main!.fields['sleepKept'] as Map<string, number>
     expect([...kept.keys()].sort()).toEqual(['other', 'plain', 'typed'])
     for (const at of kept.values()) expect(at).toBeGreaterThanOrEqual(before)
@@ -244,7 +245,7 @@ describe('« Libérer maintenant » (Browser.releaseLevel)', () => {
     let answer: (probe: { pictureInPicture: boolean; unsentInput: boolean }) => void = () => undefined
     ;(main!.pages.get('plain') as Record<string, unknown>)['probeForSleep'] = () => new Promise((resolve) => (answer = resolve as typeof answer))
     const first = release(main!.self, 'medium')
-    expect(await release(main!.self, 'high')).toEqual({ level: 'high', slept: 0, refused: { unsent: 0, confirm: 0, other: 0 }, busy: true })
+    expect(await release(main!.self, 'high')).toEqual({ level: 'high', slept: 0, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 }, busy: true })
     answer({ pictureInPicture: false, unsentInput: false })
     expect((await first).slept).toBe(2)
     // The run is over: the next request is taken.
@@ -255,7 +256,7 @@ describe('« Libérer maintenant » (Browser.releaseLevel)', () => {
     const [main] = group({ tabs: [tab('shown'), tab('sound')], pages: { shown: 1, sound: 2 }, shown: ['shown'] })
     const batch = [{ id: 'older', window: main!.self }]
     main!.fields['releaseBatch'] = batch
-    expect(await release(main!.self, 'medium')).toEqual({ level: 'medium', slept: 0, refused: { unsent: 0, confirm: 0, other: 0 } })
+    expect(await release(main!.self, 'medium')).toEqual({ level: 'medium', slept: 0, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 } })
     expect(main!.fields['publish']).not.toHaveBeenCalled()
     expect(main!.fields['releaseBatch']).toBe(batch)
   })
@@ -271,17 +272,17 @@ describe('« Libérer maintenant » with a page that does not answer (Browser.re
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
-  it('waits a short time for one tab: well under the five seconds the engine itself gives a page to answer a close', () => {
-    expect(RELEASE_TAB_MS).toBeGreaterThanOrEqual(2000)
-    expect(RELEASE_TAB_MS).toBeLessThanOrEqual(4000)
+  it('waits for one step of one tab longer than the engine itself gives a page to answer (its probe, its close): only a page that is out of reach is given up', () => {
+    expect(RELEASE_TAB_MS).toBeGreaterThan(Math.max(SLEEP_PROBE_TIMEOUT_MS, RELEASE_ANSWER_MS))
+    expect(RELEASE_TAB_MS).toBeLessThanOrEqual(12_000)
   })
 
-  it('leaves the silent tab awake after the delay, counts it among the others, and goes on with the next tabs', async () => {
+  it('leaves the silent tab awake after the delay, counts it as too slow, and goes on with the other tabs', async () => {
     const [main] = windows()
     silence(main!, 'mute', () => new Promise<Probe>(() => undefined))
     const run = release(main!.self)
     await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS)
-    expect(await run).toEqual({ level: 'medium', slept: 2, refused: { unsent: 0, confirm: 0, other: 1 } })
+    expect(await run).toEqual({ level: 'medium', slept: 2, refused: { unsent: 0, confirm: 0, other: 0, slow: 1 } })
     expect(main!.pages.has('mute')).toBe(true)
     expect(main!.pages.has('a')).toBe(false)
     expect(main!.pages.has('c')).toBe(false)
@@ -332,6 +333,162 @@ describe('« Libérer maintenant » with a page that does not answer (Browser.re
     const run = release(main!.self)
     await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS)
     expect((await run).slept).toBe(3)
+  })
+})
+
+describe('« Libérer maintenant » on a machine that is busy: slow answers, a few tabs at a time (Browser.releaseLevel)', () => {
+  type Probe = { pictureInPicture: boolean; unsentInput: boolean }
+  const quiet: Probe = { pictureInPicture: false, unsentInput: false }
+  const ids = (n: number): string[] => Array.from({ length: n }, (_, i) => `t${i}`)
+  const many = (n: number, own: Record<string, unknown> = {}) => group({ tabs: ids(n).map((id) => tab(id)), pages: Object.fromEntries(ids(n).map((id, i) => [id, i + 1])), settings: { sleepAfterMinutes: 0 }, own })
+  const release = (self: object) => shell['releaseLevel']!.call(self, 'medium') as Promise<{ slept: number; refused: Record<string, number>; busy?: true }>
+  type Page = Record<string, unknown>
+  const pageOf = (window: ReturnType<typeof many>[number], id: string): Page => window.pages.get(id) as Page
+  const later = <T>(ms: number, value: T): Promise<T> => new Promise((resolve) => setTimeout(() => resolve(value), ms))
+
+  /** Every page answers its probe after `probeMs` and its close after `closeMs`; says how many answers were waited for at the same time, and in what order things happened. */
+  function slowPages(window: ReturnType<typeof many>[number], probeMs: number, closeMs: number) {
+    const seen = { inFlight: 0, peak: 0, events: [] as string[] }
+    const wait = async <T>(label: string, ms: number, value: T): Promise<T> => {
+      seen.peak = Math.max(seen.peak, ++seen.inFlight)
+      try {
+        return await later(ms, value)
+      } finally {
+        seen.inFlight--
+        seen.events.push(label)
+      }
+    }
+    for (const id of window.pages.keys()) {
+      const page = pageOf(window, id)
+      page['probeForSleep'] = vi.fn(() => wait(`probed:${id}`, probeMs, quiet))
+      page['release'] = vi.fn(() => {
+        seen.events.push(`closing:${id}`)
+        return wait(`closed:${id}`, closeMs, true)
+      })
+    }
+    return seen
+  }
+
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  // The case of the machine at 217 % of a core: 2 s to answer the page, 2 s to close it. Asked one tab after the other with 3 s for both, none could go.
+  it('puts every tab to sleep although each one takes four seconds to be asked and closed (more than the old three seconds for both)', async () => {
+    const [main] = many(8)
+    slowPages(main!, 2000, 2000)
+    const run = release(main!.self)
+    await vi.advanceTimersByTimeAsync(2000 * 2 * 2)
+    expect(await run).toEqual({ level: 'medium', slept: 8, refused: { unsent: 0, confirm: 0, other: 0, slow: 0 } })
+    expect(main!.pages.size).toBe(0)
+    expect((main!.fields['releaseBatch'] as unknown[]).length).toBe(8)
+  })
+
+  it(`asks and closes ${RELEASE_PARALLEL} tabs at a time, no more and not one by one: twelve tabs of two seconds take three rounds a pass, not twelve`, async () => {
+    const [main] = many(12)
+    const seen = slowPages(main!, 2000, 2000)
+    let ended = false
+    void release(main!.self).then(() => (ended = true))
+    await vi.advanceTimersByTimeAsync(11_999)
+    expect(ended).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(ended).toBe(true)
+    expect(seen.peak).toBe(RELEASE_PARALLEL)
+  })
+
+  it('looks at every protection before it closes anything: no page is closed until every page has been asked', async () => {
+    const [main] = many(6)
+    const seen = slowPages(main!, 1000, 1000)
+    const run = release(main!.self)
+    await vi.advanceTimersByTimeAsync(10_000)
+    await run
+    const firstClose = seen.events.findIndex((event) => event.startsWith('closing:'))
+    const lastProbe = seen.events.map((event) => event.startsWith('probed:')).lastIndexOf(true)
+    expect(firstClose).toBeGreaterThan(-1)
+    expect(lastProbe).toBeLessThan(firstClose)
+  })
+
+  it('never closes a tab whose page said it holds something, whatever the others do', async () => {
+    const [main] = many(6)
+    slowPages(main!, 1000, 1000)
+    pageOf(main!, 't2')['probeForSleep'] = vi.fn(() => later(1500, { pictureInPicture: false, unsentInput: true }))
+    pageOf(main!, 't4')['probeForSleep'] = vi.fn(() => later(500, { pictureInPicture: true, unsentInput: false }))
+    const run = release(main!.self)
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(await run).toEqual({ level: 'medium', slept: 4, refused: { unsent: 1, confirm: 0, other: 1, slow: 0 } })
+    expect([...main!.pages.keys()].sort()).toEqual(['t2', 't4'])
+    expect(pageOf(main!, 't2')['release']).not.toHaveBeenCalled()
+    expect(pageOf(main!, 't4')['release']).not.toHaveBeenCalled()
+  })
+
+  it('does not close a tab that was shown, or began to play, between the two passes', async () => {
+    const [main] = many(5)
+    slowPages(main!, 1000, 1000)
+    // The last page to answer is the one whose answer comes while the others wait: by then `t0` is on screen and `t1` plays a sound.
+    pageOf(main!, 't4')['probeForSleep'] = vi.fn(async () => {
+      await later(3000, undefined)
+      ;(main!.fields['visible'] as Set<string>).add('t0')
+      ;((main!.fields['runtime'] as { tabs: Record<string, { audible: boolean }> }).tabs['t1'] as { audible: boolean }).audible = true
+      return quiet
+    })
+    const run = release(main!.self)
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(await run).toEqual({ level: 'medium', slept: 3, refused: { unsent: 0, confirm: 0, other: 2, slow: 0 } })
+    expect([...main!.pages.keys()].sort()).toEqual(['t0', 't1'])
+  })
+
+  it('counts a page that answers its close too late as too slow, and still lets « Annuler » wake it when it does go', async () => {
+    const [main] = many(3)
+    slowPages(main!, 100, 100)
+    pageOf(main!, 't1')['release'] = vi.fn(() => later(RELEASE_TAB_MS + 3000, true))
+    const run = release(main!.self)
+    await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS + 200)
+    // The run gave up on t1 and ended: two went, one is « too slow », and the batch of « Annuler » holds the two that went.
+    expect(await run).toEqual({ level: 'medium', slept: 2, refused: { unsent: 0, confirm: 0, other: 0, slow: 1 } })
+    expect((main!.fields['releaseBatch'] as Array<{ id: string }>).map((one) => one.id)).toEqual(['t0', 't2'])
+    expect(main!.pages.has('t1')).toBe(true)
+    // Its close ends later: the page is gone, and it joins the batch.
+    await vi.advanceTimersByTimeAsync(3000)
+    expect(main!.pages.has('t1')).toBe(false)
+    expect((main!.fields['releaseBatch'] as Array<{ id: string }>).map((one) => one.id).sort()).toEqual(['t0', 't1', 't2'])
+    expect(main!.fields['publish']).toHaveBeenCalled()
+  })
+
+  it('puts the late tab in the batch of a run that slept nothing else, and not in the batch of a newer run', async () => {
+    const [first] = many(1)
+    slowPages(first!, 100, 100)
+    pageOf(first!, 't0')['release'] = vi.fn(() => later(RELEASE_TAB_MS + 2000, true))
+    const run = release(first!.self)
+    await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS + 200)
+    expect((await run).refused.slow).toBe(1)
+    await vi.advanceTimersByTimeAsync(2000)
+    expect((first!.fields['releaseBatch'] as Array<{ id: string }>).map((one) => one.id)).toEqual(['t0'])
+
+    const [second] = many(1)
+    slowPages(second!, 100, 100)
+    pageOf(second!, 't0')['release'] = vi.fn(() => later(RELEASE_TAB_MS + 2000, true))
+    const newer = [{ id: 'elsewhere', window: second!.self }]
+    const other = release(second!.self)
+    await vi.advanceTimersByTimeAsync(RELEASE_TAB_MS + 200)
+    await other
+    // A newer run took the batch meanwhile: what « Annuler » wakes is that one.
+    second!.fields['releaseBatch'] = newer
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(second!.fields['releaseBatch']).toBe(newer)
+    expect(newer).toEqual([{ id: 'elsewhere', window: second!.self }])
+  })
+
+  it('goes on to the end when a close fails: the others are not left running, the lock is freed, and the failure is the caller’s', async () => {
+    const [main] = many(5)
+    slowPages(main!, 10, 10)
+    pageOf(main!, 't1')['release'] = vi.fn(async () => {
+      throw new Error('the engine refused')
+    })
+    const run = release(main!.self)
+    const caught = run.catch((error: Error) => error.message)
+    await vi.advanceTimersByTimeAsync(1000)
+    expect(await caught).toBe('the engine refused')
+    expect(main!.pages.has('t1')).toBe(true)
+    expect(main!.fields['releasing']).toBeNull()
   })
 })
 

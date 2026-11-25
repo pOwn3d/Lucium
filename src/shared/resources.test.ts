@@ -232,7 +232,7 @@ describe('the preview of « Libérer maintenant »', () => {
 })
 
 describe('the words after « Libérer maintenant »', () => {
-  const outcome = (slept: number, refused: Partial<ReleaseOutcome['refused']> = {}, extra: Partial<ReleaseOutcome> = {}): ReleaseOutcome => ({ level: 'medium', slept, refused: { unsent: 0, confirm: 0, other: 0, ...refused }, ...extra })
+  const outcome = (slept: number, refused: Partial<ReleaseOutcome['refused']> = {}, extra: Partial<ReleaseOutcome> = {}): ReleaseOutcome => ({ level: 'medium', slept, refused: { unsent: 0, confirm: 0, other: 0, slow: 0, ...refused }, ...extra })
 
   it('says all that went, with what was measured once it is known', () => {
     expect(releaseNotice(outcome(1), null)).toBe('Onglet mis en veille')
@@ -245,6 +245,13 @@ describe('the words after « Libérer maintenant »', () => {
     expect(releaseNotice(outcome(11, { unsent: 2, confirm: 1 }), null)).toBe(frenchSpaces('11 sur 14 mis en veille : 2 ont du texte non envoyé, 1 demande une confirmation.'))
     expect(releaseNotice(outcome(0, { other: 3 }), 900)).toBe(frenchSpaces('0 sur 3 mis en veille : 3 sont protégés ou n’ont pas répondu.'))
     expect(releaseNotice(outcome(5, { unsent: 1, other: 1 }), null)).toBe(frenchSpaces('5 sur 7 mis en veille : 1 a du texte non envoyé, 1 est protégé ou n’a pas répondu.'))
+  })
+
+  it('counts the tabs that took too long to answer among the ones left awake, and says so in both languages', () => {
+    expect(releaseNotice(outcome(30, { slow: 2, other: 1 }), null)).toBe(frenchSpaces('30 sur 33 mis en veille : 2 ont mis trop de temps à répondre, 1 est protégé ou n’a pas répondu.'))
+    expect(releaseNotice(outcome(41, { slow: 1 }), null)).toBe(frenchSpaces('41 sur 42 mis en veille : 1 a mis trop de temps à répondre.'))
+    setLanguage('en')
+    expect(releaseNotice(outcome(41, { slow: 1 }), null)).toBe('41 of 42 put to sleep: 1 took too long to answer.')
   })
 
   it('says when there was nothing to put to sleep, and when another run was going on', () => {
