@@ -247,8 +247,16 @@ describe('the window the tabs leave', () => {
     expect(leavesWindowEmpty('moved', state, 'main')).toBe(false)
   })
 
-  it('stays open when every window lists the same tabs (the setting off): nothing leaves it', () => {
+  it('stays open when every window lists the same tabs (the setting off), even with no pinned tab', () => {
     const { s } = setup()
-    expect(leavesWindowEmpty('moved', s, 'window-1')).toBe(false)
+    // Two unpinned tabs and nothing else: no tab carries the key of window-2, yet the window still lists them all.
+    const unpinned = { ...s, tabs: s.tabs.map((t) => ({ ...t, pinned: false })) }
+    expect(leavesWindowEmpty('moved', unpinned, 'window-2')).toBe(false)
+  })
+
+  it('closes on its last non pinned tab when the setting is on', () => {
+    const { s } = setup({ independent: true })
+    const unpinned = { ...s, tabs: s.tabs.map((t) => ({ ...t, pinned: false, windowKey: 'main' })) }
+    expect(leavesWindowEmpty('moved', unpinned, 'window-2')).toBe(true)
   })
 })
