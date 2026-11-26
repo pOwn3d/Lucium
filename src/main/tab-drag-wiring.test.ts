@@ -33,7 +33,8 @@ const tab = (id: string) => ({ id, spaceId: base.activeSpaceId, url: `https://${
 const state: SidebarState = { ...base, tabs: [tab('a'), tab('b')] }
 
 /** Two windows of one group: the main one (the leader, which keeps the ledger of the drags) and a second one. */
-function twoWindows(options: { private?: boolean; locked?: boolean } = {}) {
+function twoWindows(options: { private?: boolean; locked?: boolean; state?: SidebarState } = {}) {
+  const shown = options.state ?? state
   const tabDrags = new TabDragLedger()
   const group = new Set<unknown>()
   const make = (key: string, extra: Record<string, unknown> = {}): FakeBrowser & { own: Record<string, unknown>; requested: () => number } => {
@@ -43,13 +44,13 @@ function twoWindows(options: { private?: boolean; locked?: boolean } = {}) {
       isPrivate: () => options.private === true,
       isWindowLocked: () => false,
       namesLockedTarget: () => options.locked === true,
-      store: { get: () => state, root: () => ({ get: () => state }) },
+      store: { get: () => shown, root: () => ({ get: () => shown }) },
       group,
       tabDrags,
       tabDragExpiry: null,
       carriedHistory: new Map([['a', []]]),
       publishQueue: { request: () => void requested++, cancel: () => {} },
-      win: { isDestroyed: () => false, focus: vi.fn() },
+      win: { isDestroyed: () => false, focus: vi.fn(), close: vi.fn() },
       ...extra
     }
     const fake = fakeBrowser(own)
@@ -138,6 +139,35 @@ describe('the browser of a window', () => {
     privateWindows.tabDrags.begin('window-2', [{ id: 'b' }])
     shell['dropForeignTabs']!.call(privateWindows.main.self, { kind: 'today' })
     expect(transfer.runTransfer).toHaveBeenCalledTimes(1)
+  })
+
+  describe('the window the tabs left', () => {
+    // Windows with tabs of their own: both tabs belong to the main window, so window-2 lists none once its tab has gone.
+    const own: SidebarState = { ...state, settings: { ...state.settings, independentWindows: true } }
+    const closes = async (result: string, shownState: SidebarState = own) => {
+      transfer.runTransfer.mockReturnValueOnce(result)
+      const w = twoWindows({ state: shownState })
+      w.tabDrags.begin('window-2', [{ id: 'b' }])
+      shell['dropForeignTabs']!.call(w.main.self, { kind: 'today' })
+      await new Promise((resolve) => setImmediate(resolve))
+      return { second: (w.second.own['win'] as { close: ReturnType<typeof vi.fn> }).close, main: (w.main.own['win'] as { close: ReturnType<typeof vi.fn> }).close }
+    }
+
+    it('closes once it is empty, and the window the tabs landed in stays open', async () => {
+      const { second, main } = await closes('moved')
+      expect(second).toHaveBeenCalledTimes(1)
+      expect(main).not.toHaveBeenCalled()
+    })
+
+    it('stays open after a move that failed or was refused: no tab is lost', async () => {
+      expect((await closes('failed')).second).not.toHaveBeenCalled()
+      expect((await closes('refused')).second).not.toHaveBeenCalled()
+    })
+
+    it('stays open while it still lists a tab', async () => {
+      const keeps: SidebarState = { ...own, tabs: [...own.tabs, { ...tab('c'), windowKey: 'window-2' }] }
+      expect((await closes('moved', keeps)).second).not.toHaveBeenCalled()
+    })
   })
 
   it('lets go of the pages it carried history for, once a drop is done', () => {

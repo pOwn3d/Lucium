@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+### Fixed
+
+- **Dragging the last tab out of a window**: the window it came from now closes instead of keeping its old page on screen. A window that keeps a tab stays open, and so does the main window.
+
 ## [1.1.10] - 2026-11-25
 
 This version completes the resource panel (three strengths of “Free up now”, other processes, sort by processor, automatic pause of the background video, collapsible sections) and fixes the Windows installer left behind and the Linux AppImage that did not restart after an update.

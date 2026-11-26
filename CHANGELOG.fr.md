@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Corrections
+
+- **Glisser le dernier onglet d’une fenêtre** : la fenêtre d’origine se ferme au lieu de garder son ancienne page à l’écran. Une fenêtre qui garde un onglet reste ouverte, comme la fenêtre principale.
+
 ## [1.1.10] - 2026-11-25
 
 Cette version complète le panneau Ressources (trois forces pour « Libérer maintenant », autres processus, tri par processeur, pause automatique du fond vidéo, sections repliables) et corrige l’installeur Windows laissé après la mise à jour et l’AppImage Linux qui ne se relançait pas.
