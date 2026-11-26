@@ -104,7 +104,8 @@ export function decideTransfer(request: TransferRequest): TransferDecision {
 /**
  * Whether the window the tabs left closes once a move is done. Only after a move that landed: a refused or failed one changes nothing, and a window is
  * never closed on a tab that may not have arrived. With the setting off every window lists the same tabs, so none is ever left empty.
- * With windows that have tabs of their own, the window must list no tab at all (the pinned ones are everybody's, so a window that still shows one stays);
+ * With windows that have tabs of their own, the window must hold no tab at all, of any kind (the pinned ones are everybody's, and the page of a favourite is
+ * shown without being a row, so a window that still has one stays);
  * the main window is never closed this way, it is the one the application lives in (macOS puts it away, elsewhere
  * closing it quits), and it stays open, empty.
  */
@@ -112,5 +113,7 @@ export function leavesWindowEmpty(result: 'moved' | 'refused' | 'failed', shared
   if (result !== 'moved' || fromKey === MAIN_WINDOW_KEY) return false
   // With the setting off every window lists the same tabs (no tab carries a window key): none of them is ever left empty by a move.
   if (!windowsAreIndependent(shared)) return false
-  return !onlyTabsOf(shared, fromKey).tabs.some(isListedTab)
+  // Any tab the window's view holds is a page it can show: a favourite's page (no sidebar row), a special page, Settings, an empty new tab. When in doubt the
+  // window stays open: closing one that shows a page is worse than leaving an empty one.
+  return onlyTabsOf(shared, fromKey).tabs.length === 0
 }

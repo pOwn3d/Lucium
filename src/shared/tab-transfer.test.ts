@@ -254,6 +254,16 @@ describe('the window the tabs leave', () => {
     expect(leavesWindowEmpty('moved', unpinned, 'window-2')).toBe(false)
   })
 
+  it('stays open on the page of a favourite: it is no row of the sidebar, yet the window shows it', () => {
+    const { s, id } = setup({ independent: true })
+    // window-2 owns the page of a favourite (w1, not pinned); the tab dragged away (a) has already gone to main with the rest.
+    const base = { ...s, tabs: s.tabs.map((t) => ({ ...t, pinned: false, windowKey: 'main' })) }
+    const withPage = { ...base, tabs: base.tabs.map((t) => (t.id === id('w1') ? { ...t, favoriteId: 'fav1', windowKey: 'window-2' } : t)) }
+    expect(leavesWindowEmpty('moved', withPage, 'window-2')).toBe(false)
+    // The same window with no page at all closes.
+    expect(leavesWindowEmpty('moved', base, 'window-2')).toBe(true)
+  })
+
   it('closes on its last non pinned tab when the setting is on', () => {
     const { s } = setup({ independent: true })
     const unpinned = { ...s, tabs: s.tabs.map((t) => ({ ...t, pinned: false, windowKey: 'main' })) }
