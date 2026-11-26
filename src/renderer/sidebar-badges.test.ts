@@ -139,13 +139,13 @@ describe('the failed and frozen marks, from the events of the page to the row', 
 describe('the marks, as the shell writes them where the row reads them', () => {
   /** Anything a method reaches that the test does not care for: callable, with any property, and answering nothing. */
   const nothing: unknown = new Proxy(() => undefined, { get: (_target, key) => (key === 'then' ? undefined : nothing) })
-  const REAL = new Set(['onPageUpdate', 'handlePageUpdate', 'markIcon', 'showIcon', 'setAwake', 'thawPage', 'freezePage'])
+  const REAL = new Set(['onPageUpdate', 'handlePageUpdate', 'readTitleUnread', 'markIcon', 'showIcon', 'setAwake', 'thawPage', 'freezePage'])
 
   /** A window with the tab `a` in the background, its page showing an error page when `error.on` says so. */
   function shell(badges = true) {
     const error = { on: false }
     const page = { showsError: () => error.on, freeze: async () => true, thaw: async () => undefined }
-    const state = { settings: { tabStateBadges: badges }, tabs: [{ ...tab }] }
+    const state = { settings: { tabStateBadges: badges, siteUnreadOff: [] as string[] }, tabs: [{ ...tab }] }
     const target: Record<string, unknown> = {
       runtime: { tabs: { a: { ...awake } }, canGoBack: false, canGoForward: false },
       store: { get: () => state, dispatch: () => undefined },

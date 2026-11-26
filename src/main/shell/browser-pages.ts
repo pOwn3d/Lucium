@@ -7,6 +7,7 @@ import type { ClosedHistory, SidebarState, TabItem } from '@shared/model'
 import { failedAfter } from '@shared/tab-state'
 import { sameData } from '@shared/row-equality'
 import type { UnreadReading } from '@shared/tab-messages'
+import { isUnreadOff } from '@shared/unread-sites'
 import { LEAVE_FULLSCREEN, fullscreenReported, type FullscreenStep } from '@shared/html-fullscreen'
 import { parseCssColor } from '@shared/theme'
 import { profileOfSpace, profileRecordsHistory } from '@shared/profiles'
@@ -431,16 +432,41 @@ export abstract class BrowserPages extends BrowserTools {
     }, PAGE_INDEX_SETTLE_MS).unref()
   }
 
+  /** What the row of a tab may show of its unread messages: nothing for a site whose count is turned off (the memory of its titles is dropped, so that turning it back on starts from the next title). */
+  private shownUnread(id: string): UnreadReading | undefined {
+    const url = this.store.get().tabs.find((t) => t.id === id)?.url ?? ''
+    if (isUnreadOff(this.store.get().settings.siteUnreadOff, url)) {
+      this.unread.forget(id)
+      return undefined
+    }
+    return this.unread.current(id)
+  }
+
+  /** The list of sites without a count changed: every row is looked at again, so that a count already on screen goes now. */
+  refreshAllUnread(): void {
+    for (const id of Object.keys(this.runtime.tabs)) this.refreshUnread(id)
+  }
+
   /** What the row of a tab shows of its unread messages changed with no title to say it (a held badge ran out, or the tab came on screen): the windows are told. */
   protected refreshUnread(id: string): void {
     const entry = this.runtime.tabs[id]
     if (!entry) return
     const { unread: _count, unreadMark: _mark, ...rest } = entry
-    const shown = this.unread.current(id)
+    const shown = this.shownUnread(id)
     const next = { ...rest, ...(shown?.count !== undefined ? { unread: shown.count } : {}), ...(shown?.mark !== undefined ? { unreadMark: shown.mark } : {}) }
     if (sameData(entry, next)) return
     this.runtime = { ...this.runtime, tabs: { ...this.runtime.tabs, [id]: next } }
     this.publish()
+  }
+
+  /** A title arrived: what it says is read for a site that shows counts; a site without one keeps no memory of its titles. */
+  private readTitleUnread(id: string, title: string): UnreadReading | undefined {
+    const url = this.store.get().tabs.find((t) => t.id === id)?.url ?? ''
+    if (isUnreadOff(this.store.get().settings.siteUnreadOff, url)) {
+      this.unread.forget(id)
+      return undefined
+    }
+    return this.unread.title(id, title, url)
   }
 
   private onPageUpdate(id: string, patch: PageUpdate): void {
@@ -523,7 +549,7 @@ export abstract class BrowserPages extends BrowserTools {
     // that blinks its title does not make the badge blink: what a title said is held for a moment (shell/unread-watch.ts).
     const known = this.runtime.tabs[id]
     const unread: UnreadReading | undefined =
-      title === undefined ? (known?.unread !== undefined ? { count: known.unread } : known?.unreadMark !== undefined ? { mark: known.unreadMark } : undefined) : this.unread.title(id, title, this.store.get().tabs.find((t) => t.id === id)?.url ?? '')
+      title === undefined ? (known?.unread !== undefined ? { count: known.unread } : known?.unreadMark !== undefined ? { mark: known.unreadMark } : undefined) : this.readTitleUnread(id, title)
     // A certificate let through for the page's site (« Non sécurisé »): the page tells it with each address it commits, and when something it loads came over one.
     const untrusted = patch.untrustedCertificate ?? wasUntrusted === true
     this.runtime = {

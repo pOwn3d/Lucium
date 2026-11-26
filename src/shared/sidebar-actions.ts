@@ -188,6 +188,7 @@ export type Action =
   | { type: 'siteclear/site'; site: string; on: boolean; tabId?: string }
   /** JavaScript off (`off`) or on again for a site (its exact host): its pages load without running a script. Taken from the tab it is made from, as the ones above. */
   | { type: 'javascript/site'; site: string; off: boolean; tabId?: string }
+  | { type: 'unread/site'; site: string; off: boolean; tabId?: string }
   /** A custom filter list the main process has just installed (its rules are on disk). Never dispatched by the interface. */
   | { type: 'filterlist/add'; list: CustomFilterList }
   /** A custom filter list whose rules the main process has just deleted. Never dispatched by the interface. */

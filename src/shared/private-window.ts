@@ -129,7 +129,8 @@ const PRIVATE_ACTIONS = new Set<Action['type']>([
   'blocking/exempt-site',
   // Same for a site's autoplay choice. "Effacer à la fermeture" (siteclear/site) is not here: a private session is thrown away whole, so there is nothing to list.
   'autoplay/site',
-  'javascript/site'
+  'javascript/site',
+  'unread/site'
 ])
 
 /** The action to run, or null when the private window refuses it (spaces, profiles, pins, folders, favourites, Tweaks, archive, import). */

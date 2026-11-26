@@ -10,6 +10,7 @@ import { connectionState, hostnameOf } from '@shared/url'
 import { isDeveloperUrl } from '@shared/developer-mode'
 import { MEDIA_PERMISSION, mayRemember, sitePermissionRows } from '@shared/permissions'
 import { isJavascriptOff, javascriptHostOf } from '@shared/site-javascript'
+import { isUnreadOff } from '@shared/unread-sites'
 import { AUTOPLAY_LABELS, autoplayHostOf, autoplayModeFor, siteAutoplayOf, type AutoplayMode } from '@shared/autoplay'
 import { BOOST_NAME_MAX } from '@shared/boost-share'
 import { renamedBoost } from '@shared/boost-rows'
@@ -36,13 +37,14 @@ const SCC_TILES: Array<{ id: string; title: string; path: string }> = [
 const TRANSLATE_TILE = { id: 'translate', get title() { return t('translate.translate') }, path: 'M3 5h8M7 3v2M5 5c0 3 2 5 5 6M9 5c0 2-2 5-5 6M11 17l3.500-8L18 17M12.200 14.500h4.600' }
 const QR_TILE = { id: 'qr', get title() { return t('qr-panel.code-qr') }, path: 'M3 3h5v5H3zM12 3h5v5h-5zM3 12h5v5H3zM12 12h2v2h-2zM16 12v5M12 16h2' }
 
-/** Glyphs of the setting rows, drawn in the disc: a hammer, a gear, an eraser, a moon and a speaker. */
+/** Glyphs of the setting rows, drawn in the disc: a hammer, a gear, an eraser, a bell, a moon and a speaker. */
 const ROW_GLYPHS = {
   developer: 'm4 16 7.500-7.500M9 5l3-2 4.500 4.500-2 3-2.500-.500L9.500 7.500z',
   pip: 'M10 12.500a2.500 2.500 0 1 0 0-5 2.500 2.500 0 0 0 0 5ZM10 2.500v2M10 15.500v2M2.500 10h2M15.500 10h2M4.700 4.700l1.400 1.400M13.900 13.900l1.400 1.400M4.700 15.300l1.400-1.400M13.900 6.100l1.400-1.400',
   erase: 'M3.500 12.500 10 6l5 5-4.500 4.500H7zM7 15.500h8M8 8l5 5',
   sound: 'M4 8.500h2.500L10 5.500v9l-3.500-3H4zM13 7.500a3.500 3.500 0 0 1 0 5',
   code: 'M7 6 3 10l4 4M13 6l4 4-4 4M11.500 4l-3 12',
+  bell: 'M5 14.500h10l-1.500-2V9a3.500 3.500 0 0 0-7 0v3.500zM8.500 16.500a1.500 1.500 0 0 0 3 0',
   moon: 'M16 11.500A6.500 6.500 0 1 1 8.500 4a5.200 5.200 0 0 0 7.500 7.500z'
 } as const
 
@@ -466,6 +468,9 @@ export function SitePanel({ closing = false }: { closing?: boolean }) {
   const clearable = !snapshot.private && tab.private !== true && clearHostOfUrl(tab.url) !== null
   // JavaScript of the site: offered for every web page, but for a private tab (its sites are not kept).
   const javascriptShown = tab.private !== true && javascriptHostOf(tab.url) !== null
+  // The unread count of the site: offered for every web page but a private tab's (its sites are not kept).
+  const unreadShown = tab.private !== true && autoplayHostOf(tab.url) !== null
+  const unreadOff = isUnreadOff(state.settings.siteUnreadOff, tab.url)
   const javascriptOff = isJavascriptOff(state.settings.siteJavascriptOff, tab.url)
   const clearOnClose = state.settings.siteDataClearOnCloseEnabled && isClearedOnClose(state.settings.siteDataClearOnClose, tab.url)
   // The readable mode of the site: its own choice, else the default. Nothing is written for a private tab or window (their sites are not kept).
@@ -493,7 +498,7 @@ export function SitePanel({ closing = false }: { closing?: boolean }) {
     denied: decisions.filter((d) => d === 'deny').length,
     clearOnClose: clearable && clearOnClose,
     // What is on for this site. Automatic Picture in Picture is not counted: it is one setting for every site, shown here for its switch.
-    displayOn: [developer, readableShown && shownReadable !== 'original', autoplayShown && ownAutoplay === 'allow', javascriptShown && javascriptOff].filter(Boolean).length,
+    displayOn: [developer, readableShown && shownReadable !== 'original', autoplayShown && ownAutoplay === 'allow', javascriptShown && javascriptOff, unreadShown && unreadOff].filter(Boolean).length,
     boosts: boosts.length,
     boostsOn: boosts.filter((b) => b.enabled).length,
     extensions: profileExtensions.length
@@ -594,6 +599,17 @@ export function SitePanel({ closing = false }: { closing?: boolean }) {
               <span className="scc-setting-text">
                 <strong>{t('site-panel.javascript')}</strong>
                 <span>{javascriptOff ? t('site-panel.javascript-bloque') : t('site-panel.javascript-autorise')}</span>
+              </span>
+            </button>
+          )}
+          {unreadShown && (
+            <button className="scc-setting" title={t('site-panel.notifications-hint')} role="switch" aria-checked={!unreadOff} onClick={() => void act.dispatch({ type: 'unread/site', site: tab.url, off: !unreadOff, tabId: tab.id })}>
+              <Disc on={!unreadOff}>
+                <RowGlyph path={ROW_GLYPHS.bell} />
+              </Disc>
+              <span className="scc-setting-text">
+                <strong>{t('site-panel.notifications')}</strong>
+                <span>{unreadOff ? t('site-panel.notifications-masque') : t('site-panel.notifications-affiche')}</span>
               </span>
             </button>
           )}

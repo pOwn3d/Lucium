@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+### Ajouts
+
+- **Compteur de messages par site** : une ligne « Compteur de messages » dans le panneau du site masque le nombre de non-lus et la marque sur les onglets de ce site, quand son titre les donne mal. Les autres sites le gardent ; un clic le rétablit.
+
 ### Corrections
 
 - **Glisser le dernier onglet d’une fenêtre** : la fenêtre d’origine se ferme au lieu de garder son ancienne page à l’écran. Une fenêtre qui garde un onglet reste ouverte, comme la fenêtre principale.
