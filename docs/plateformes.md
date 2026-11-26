@@ -2,7 +2,7 @@
 
 La variante DRM a son propre document : `docs/drm.md`.
 
-**Règle de lecture.** Lucium n'est écrit, mesuré et lancé à la main que sur macOS, Apple silicon. Pour Windows, une suite de tests automatique (`windows.yml`, §5.1) et, depuis le 18 novembre 2026, une machine virtuelle ont servi (§8.3). Pour Linux, depuis le 17 novembre 2026, un jeu de test automatique (`linux.yml`, §8) construit les paquets et lance l'application sur un runner Ubuntu 24.04 de GitHub : ce qui y passe est dit « *vérifié en CI* ». Ce qui est *vérifié* l'est par des tests unitaires qui jouent un autre système sur un Mac, par la lecture du code d'`electron-builder` installé, par la validation de la configuration contre son schéma et, pour Linux, par ces exécutions en CI. Ce qui est *supposé* est dit comme tel. **Aucune machine réelle n'a servi, ni sous Windows ni sous Linux** : les écrans ont été vus dans deux machines virtuelles le 18 novembre 2026 (Windows 11 ARM64, Ubuntu 24.04 arm64, §8.3). Rien n'est signé. **Depuis le 18 novembre 2026, une bêta non signée de Windows et de Linux est publiée** (version 1.1.4, §8.3) : les fichiers sont joints à la Release GitHub `v1.1.4` et la page Télécharger du site les propose.
+**Règle de lecture.** Lucium n'est écrit, mesuré et lancé à la main que sur macOS, Apple silicon. Pour Windows, une suite de tests automatique (`windows.yml`, §5.1) et, depuis le 18 novembre 2026, une machine virtuelle ont servi (§8.3). Pour Linux, depuis le 17 novembre 2026, un jeu de test automatique (`linux.yml`, §8) construit les paquets et lance l'application sur un runner Ubuntu 24.04 de GitHub : ce qui y passe est dit « *vérifié en CI* ». Ce qui est *vérifié* l'est par des tests unitaires qui jouent un autre système sur un Mac, par la lecture du code d'`electron-builder` installé, par la validation de la configuration contre son schéma et, pour Linux, par ces exécutions en CI. Ce qui est *supposé* est dit comme tel. **Aucune machine réelle n'a servi, ni sous Windows ni sous Linux** : les écrans ont été vus dans deux machines virtuelles le 18 novembre 2026 (Windows 11 ARM64, Ubuntu 24.04 arm64, §8.3). Rien n'est signé. **Depuis le 18 novembre 2026, une bêta non signée de Windows et de Linux est publiée** (1.1.4, refaite en 1.1.10 le 26 novembre 2026, §8.3) : les fichiers sont joints à la Release GitHub de la version (`v1.1.10` aujourd'hui) et la page Télécharger du site les propose.
 
 ## 1. En une page
 
@@ -11,7 +11,7 @@ La variante DRM a son propre document : `docs/drm.md`.
 | Code de l'application | testé (tests unitaires, suites moteur) | identique, jamais lancé | relu, couche écrite ; **tests unitaires et E2E (Playwright) joués en CI** sur `windows-latest` (§5.1), **jamais essayé à la main** | tests unitaires et 187 des 188 tests E2E passent en CI (Ubuntu 24.04, écran virtuel, bac à sable actif ; le 188e, la comparaison visuelle des Réglages, est sauté hors macOS) ; **jamais vu sur un vrai bureau** |
 | Empaquetage | `pnpm package` (dossier `.app`) | `dmg` + `zip` x64 préparés | NSIS x64 **construit en CI** et **publié en bêta** (§8.3) | AppImage + deb x64 et arm64 **construits en CI** ; le deb s'installe et démarre sur Ubuntu 24.04 ; **publiés en bêta** (§8.3) |
 | Signature | aucune (ad hoc) ; variante DRM : Developer ID, notarisée | aucune | aucune (SmartScreen avertit : vu en VM, §8.3) | aucune |
-| Distribution | image disque signée et notarisée, servie par lucium.app (variante DRM) | aucune | **bêta non signée** : fichiers joints à la Release GitHub `v1.1.4`, liens et sommes sur la page Télécharger (18 novembre 2026) | **bêta non signée**, idem ; mises à jour à la main (aucun flux) |
+| Distribution | image disque signée et notarisée, servie par lucium.app (variante DRM) | aucune | **bêta non signée** : fichiers joints à la Release GitHub `v1.1.10`, liens et sommes sur la page Télécharger (bêta du 18 novembre 2026, refaite en 1.1.10 le 26 novembre 2026, §8.3) | **bêta non signée**, idem ; mises à jour à la main, automatiques éteintes par défaut et aucun flux publié (§8.5) |
 | Intégration continue | `ci.yml` (tests unitaires et build non signée, à chaque pull request), `smoke-macos.yml` (chaîne moteur : à la main, sur un tag et chaque semaine), `e2e.yml` (chaque nuit), `build.yml` (à la main et sur un tag) | `build.yml` (à la main et sur un tag, ne peut pas le lancer) | `windows.yml` : tests unitaires, installeur NSIS non signé en artefact (installé et désinstallé en silence, registre lu) et E2E, sur chaque pull request, à la main et chaque nuit (E2E) ; aucun n'est un contrôle requis ; `build.yml` (à la main et sur un tag) | `ci.yml` (typage, lint et tests, à chaque envoi et pull request) + **`linux.yml`** (paquets x64 et arm64, démarrage du deb et de l'AppImage, E2E sous Xvfb : sur une pull request qui touche le code, chaque nuit, à la main) + `build.yml` (expérimental) |
 | Ce qui manque | signature + notarisation de la build standard | un Mac Intel (ou Rosetta) pour essayer | tout essai sur une vraie machine x64 (la VM est ARM64, Lucium y est émulé) ; « Applications par défaut » ; signature (aucun certificat : carte à part) | un essai sur un vrai ordinateur (une VM arm64 a servi le 18 novembre 2026, §8.3) ; une extension réelle du Chrome Web Store à service worker (§8 : seules les extensions de sonde du dépôt sont exercées) ; Wayland ; l'AppImage sur Ubuntu 24.04 démarre seulement une fois les espaces de noms d'utilisateur autorisés (le deb n'a besoin de rien) : sinon une boîte dit pourquoi et conseille le deb (§8.4) |
 
@@ -306,7 +306,26 @@ Le site les propose (étape « Windows et Linux » des pages Télécharger, donn
 
 **Constats à traiter (hors de cette publication)** : (1) l'AppImage sur Ubuntu 24.04 échoue sans message de Lucium à l'écran (la raison n'est que sur la sortie d'erreur) : **traité en 1.1.5, §8.4** ; (2) la boîte de la vérification de mise à jour parle de `updateFeedUrl` à quelqu'un qui n'a rien configuré, et l'interrupteur automatique paraît actif : **traité en 1.1.5, voir « Mises à jour » ci-dessus** ; (3) après une désinstallation silencieuse suivie de la suppression du dossier, l'assistant a encore dit « Il y a déjà une installation… » (une clé d'installation restée, non élucidé) ; (4) la barre de titre de la 1.1.4 est celle du système avec les menus natifs : la barre unique du §10 n'est que dans `main` et viendra avec la 1.1.5.
 
-**Pour refaire une bêta** : lancer `windows.yml` et `linux.yml` sur le tag voulu, vérifier chaque fichier, les renommer, les joindre à la Release (`gh release upload`) avec un nouveau `SHA256SUMS`, changer `betaPlatforms` et les blocs des pages Télécharger, vérifier en ligne que chaque lien répond et que les sommes sont les bonnes.
+**Refaite pour la 1.1.10 le 26 novembre 2026** (même exception, mêmes conditions ; décisions du chef de projet du 25 novembre 2026 : « Oui, inclus-la » et « déploie en prod »). Écarts avec la bêta 1.1.4, dits ici parce que les conditions de `docs/community/release-process.md` en parlent :
+
+- **Où les fichiers ont été construits.** Le workflow `build.yml` du tag saute l'empaquetage ; les fichiers viennent des runs `windows.yml` (45648124305) et `linux.yml` (45648124185) de la pull request de version #253, sur le commit `da4a7fec`, dont l'arbre Git (`338bf880…`) est identique à celui du tag `v1.1.10` et du commit de fusion `b211aa6f`. Ils n'ont donc pas été lancés « sur le tag » : c'est le même arbre, pas la même référence.
+- **Sommes** : celles des journaux des runs Linux (`sha256sum`) ; pour Windows, le journal n'imprime pas la somme de l'installeur, elle est celle de l'archive d'artefact de GitHub (`cd7a05a5…`, qui ne contient que ce fichier, 140 766 679 octets, même taille que sur la Release).
+- **Contenu lu sans rien lancer** : le champ `Version` des deux `.deb` vaut `1.1.10` ; l'en-tête ELF des deux AppImage (x64 et arm64) n'a aucun `DT_NEEDED` (runtime statique, donc ni `libz.so` ni `libfuse2`).
+- **Nom du fichier de sommes** : `SHA256SUMS.txt` (et non `SHA256SUMS` comme en 1.1.4).
+- **Notes de la Release** : laissées telles quelles à la demande du chef de projet ; la section « Windows et Linux : bêta non signée » exigée par `release-process.md` n'y a **pas** été ajoutée (le chef peut la demander).
+- **Mises à jour** : les builds portent l'adresse de leur flux (lot 3), mais **aucun flux Windows ni Linux n'est publié** et la recherche automatique est éteinte par défaut (§8.5, §8.6). Aucune publication de flux n'a été faite avec cette bêta.
+
+| Fichier (Release `v1.1.10`) | Octets | SHA-256 |
+|---|---|---|
+| `Lucium-Setup-1.1.10-x64-beta-unsigned.exe` | 140 766 679 | `d0a38f25ea61cfb8c2d8c360bc8420f75076096d38187c56e6200c41fa6362ec` |
+| `Lucium-1.1.10-linux-x64-beta-unsigned.deb` | 120 082 836 | `8517f4911a1bc5d18aee9075a8c9f1058e51e0f2a2ff72fd2152705167ef79c1` |
+| `Lucium-1.1.10-linux-x64-beta-unsigned.AppImage` | 139 658 900 | `35ab3985ddc3ca626a5e5a76607def6f70adf43ced2eee31281e378bcd747840` |
+| `Lucium-1.1.10-linux-arm64-beta-unsigned.deb` | 115 158 332 | `6c99d9468d0b11317764d7a82e1ed73c71c15256a15c52e20f1ccf801bc860e3` |
+| `Lucium-1.1.10-linux-arm64-beta-unsigned.AppImage` | 139 770 480 | `605c0f13ea813158e9e35f5603fb13406cdc7b4165e4ec7d8605f63651f2f307` |
+
+Les essais à la main en machine virtuelle (Windows 11 ARM64, Ubuntu 24.04 arm64) portent sur les versions 1.1.7 et 1.1.9 (§8.5), **pas sur les fichiers de la 1.1.10 eux-mêmes**.
+
+**Pour refaire une bêta** : lancer `windows.yml` et `linux.yml` sur le tag voulu (ou reprendre les paquets des runs de la pull request de version, si leur arbre Git est celui du tag : `git rev-parse <tag>^{tree}`), vérifier chaque fichier, les renommer, les joindre à la Release (`gh release upload`) avec un nouveau `SHA256SUMS.txt`, changer `betaPlatforms` et les blocs des pages Télécharger, vérifier en ligne que chaque lien répond et que les sommes sont les bonnes.
 
 ### 8.4 L'AppImage sur Ubuntu 24.04 : pourquoi rien ne s'affichait, et ce qui s'affiche depuis la 1.1.5 (carte 469)
 
@@ -339,35 +358,35 @@ Le site les propose (étape « Windows et Linux » des pages Télécharger, donn
 
 ### 8.5 Mettre à jour à la main (bêta Windows et Linux)
 
-La bêta 1.1.4 n'a **aucune mise à jour automatique** : ses builds ne portent pas d'adresse de flux, et l'installation par Squirrel n'existe que sous macOS (`src/main/shell/update-source.ts`, `updatesByHand`). Les copies qui portent l'adresse de leur flux (§8.6) se mettent à jour autrement ; la 1.1.4 devra une dernière fois être remplacée à la main. Depuis la 1.1.5, « Lucium › Rechercher les mises à jour… » ouvre la boîte « Les mises à jour se font à la main », dont le bouton ouvre la page Télécharger de lucium.app (clé `menu-actions.les-mises-a-jour-se-font-a-la-main` de `src/shared/i18n-fr.ts`). Une mise à jour est donc un nouveau téléchargement, installé par-dessus l'ancien.
+La bêta 1.1.4 n'avait **aucune mise à jour automatique** : ses builds ne portaient pas d'adresse de flux, et l'installation par Squirrel n'existe que sous macOS (`src/main/shell/update-source.ts`, `updatesByHand`). Depuis le lot 3 (§8.6), les builds portent l'adresse de leur flux, mais la recherche automatique est **éteinte par défaut** et **aucun flux Windows ni Linux n'est publié** (`https://lucium.app/updates/win32-x64/feed.json` et `…/linux-x64/appimage/feed.json` répondent 404 le 26 novembre 2026) : « Rechercher les mises à jour… » ne trouve donc aucune version, et toute mise à jour reste **à la main**. La 1.1.4 devra une dernière fois être remplacée à la main. Depuis la 1.1.5, « Lucium › Rechercher les mises à jour… » ouvre la boîte « Les mises à jour se font à la main », dont le bouton ouvre la page Télécharger de lucium.app (clé `menu-actions.les-mises-a-jour-se-font-a-la-main` de `src/shared/i18n-fr.ts`). Une mise à jour est donc un nouveau téléchargement, installé par-dessus l'ancien.
 
-**Statut de la 1.1.7 : non validée.** Décision du chef de projet, le 23 novembre 2026 : tant que les essais à la main du tableau ci-dessous ne sont pas faits, la 1.1.7 n'est pas considérée comme validée sur Windows et Linux, et **rien n'est joint à la Release `v1.1.7` ni publié**. Les étapes ci-dessous sont écrites **d'après la configuration du dépôt** (`electron-builder.yml`, `build/installer.nsh`) et les essais du 18 novembre 2026 (§8.3 et §8.4, versions 1.1.4 et 1.1.5) ; les points marqués « à confirmer » n'ont été relevés sur aucune machine.
+**Statut : publiée en bêta avec la 1.1.10 (26 novembre 2026).** La décision du 23 novembre 2026 (rien n'est publié tant que les essais à la main ne sont pas faits) a été levée par le chef de projet le 25 novembre 2026, ses conditions étant remplies : les essais en machine virtuelle de la 1.1.7 (23 novembre) puis du lot 5 (24 novembre : mise à jour N→N+1 sous Windows 11 ARM64 et Ubuntu 24.04 arm64) sont faits (tableau ci-dessous). La 1.1.7 n'a jamais été publiée ; la 1.1.8 et la 1.1.9 non plus en bêta. Les étapes ci-dessous sont celles de la page Télécharger ; les points marqués « à confirmer » n'ont pas été relevés sur une machine.
 
 #### Windows (10 et 11, x64)
 
 Ce qui est configuré (`electron-builder.yml`, section `nsis`) : installation **par utilisateur** (`perMachine: false`, « Juste pour moi »), assistant (`oneClick: false`), choix du dossier permis, et `deleteAppDataOnUninstall: false` (la désinstallation ne supprime pas les données).
 
-1. **Télécharger** `Lucium-Setup-<version>-x64-beta-unsigned.exe` et `SHA256SUMS` depuis la Release GitHub de la version (liens de la page Télécharger du site).
+1. **Télécharger** `Lucium-Setup-<version>-x64-beta-unsigned.exe` et `SHA256SUMS.txt` depuis la Release GitHub de la version (liens de la page Télécharger du site).
 2. **Vérifier la somme** (PowerShell, dans le dossier du téléchargement) :
    ```powershell
    Get-FileHash .\Lucium-Setup-<version>-x64-beta-unsigned.exe -Algorithm SHA256
    ```
-   Comparer le `Hash` (en majuscules) à la ligne du fichier dans `SHA256SUMS` (en minuscules) : c'est la même valeur. En cas de différence, ne pas lancer le fichier.
+   Comparer le `Hash` (en majuscules) à la ligne du fichier dans `SHA256SUMS.txt` (en minuscules) : c'est la même valeur. En cas de différence, ne pas lancer le fichier.
 3. **Fermer Lucium** (Quitter, pas seulement fermer la fenêtre).
 4. **Lancer l'installeur.** SmartScreen affiche « Windows a protégé votre ordinateur » (fichier non signé, éditeur « inconnu ») : cliquer sur *Informations complémentaires*, puis *Exécuter quand même* (écrans vus le 18 novembre 2026 sur la 1.1.4).
-5. **Installer par-dessus** : l'assistant détecte l'installation existante et la met à jour ; garder « Juste pour moi » et le même dossier. Une installation par-dessus la 1.1.3 par l'assistant a été vue le 18 novembre 2026 (version de travail de la 1.1.5, Windows 11 ARM64 en machine virtuelle, six minutes) ; **par-dessus la 1.1.4 avec la 1.1.7 : à faire** (tableau).
+5. **Installer par-dessus** : l'assistant détecte l'installation existante et la met à jour ; garder « Juste pour moi » et le même dossier. Une installation par-dessus la 1.1.3 par l'assistant a été vue le 18 novembre 2026 (version de travail de la 1.1.5, Windows 11 ARM64 en machine virtuelle, six minutes) ; par-dessus la 1.1.4 avec la 1.1.7 : fait le 23 novembre 2026 (tableau).
 6. **Lancer Lucium** (raccourci du Bureau ou du menu Démarrer) et vérifier la version dans « Lucium › À propos ».
 
-**Où est le profil, ce qui est conservé.** Le dossier de données s'appelle `Lucium` (`productName` ; `electron-builder.yml`, commentaire de tête). Sous Windows, d'après la convention d'Electron, c'est `%APPDATA%\Lucium` (**à confirmer** : non relevé sur une machine) ; il contient notamment `state.json` (onglets, espaces, réglages). L'installeur n'y touche pas : onglets, espaces, historique et réglages doivent rester après la mise à jour (**à faire** : essai « profil conservé »). Faire une copie de ce dossier avant la première mise à jour de la bêta est une précaution raisonnable, pas une obligation connue.
+**Où est le profil, ce qui est conservé.** Le dossier de données s'appelle `Lucium` (`productName` ; `electron-builder.yml`, commentaire de tête). Sous Windows, d'après la convention d'Electron, c'est `%APPDATA%\Lucium` (relevé en machine virtuelle le 23 novembre 2026) ; il contient notamment `state.json` (onglets, espaces, réglages). L'installeur n'y touche pas : onglets, espaces, historique et réglages doivent rester après la mise à jour (vu le 23 novembre 2026 en machine virtuelle : onglet épinglé et thème sombre conservés). Faire une copie de ce dossier avant la première mise à jour de la bêta est une précaution raisonnable, pas une obligation connue.
 
 **Désinstaller.** *Paramètres › Applications › Applications installées › Lucium › Désinstaller*. Le profil est conservé (`deleteAppDataOnUninstall: false`) ; le supprimer à la main pour tout effacer. `build/installer.nsh` retire à la désinstallation les clés de registre « navigateur par défaut » (`Software\Clients\StartMenuInternet\Lucium`, `Software\Classes\LuciumURL`, `Software\Classes\lucium`). Constat à traiter du 18 novembre 2026 : après une désinstallation silencieuse suivie de la suppression du dossier, l'assistant a encore dit « Il y a déjà une installation… » (cause non élucidée, §8.3).
 
 #### Linux : paquet `.deb` (Ubuntu, Debian ; recommandé)
 
-1. **Télécharger** `Lucium-<version>-linux-<arch>-beta-unsigned.deb` (`x64` ou `arm64`, selon `uname -m` : `x86_64` ou `aarch64`) et `SHA256SUMS`.
+1. **Télécharger** `Lucium-<version>-linux-<arch>-beta-unsigned.deb` (`x64` ou `arm64`, selon `uname -m` : `x86_64` ou `aarch64`) et `SHA256SUMS.txt`.
 2. **Vérifier la somme**, dans le dossier qui contient les deux :
    ```bash
-   sha256sum -c SHA256SUMS --ignore-missing
+   sha256sum -c SHA256SUMS.txt --ignore-missing
    ```
    La réponse attendue est `OK` pour chaque fichier téléchargé.
 3. **Fermer Lucium**, puis installer :
@@ -380,15 +399,14 @@ Ce qui est configuré (`electron-builder.yml`, section `nsis`) : installation **
 
 #### Linux : AppImage
 
-1. **Télécharger** `Lucium-<version>-linux-<arch>-beta-unsigned.AppImage` et `SHA256SUMS`, puis vérifier la somme comme ci-dessus.
+1. **Télécharger** `Lucium-<version>-linux-<arch>-beta-unsigned.AppImage` et `SHA256SUMS.txt`, puis vérifier la somme comme ci-dessus.
 2. **Fermer Lucium**, **remplacer l'ancien fichier** par le nouveau (même dossier, ou supprimer l'ancien : une AppImage n'installe rien).
 3. Rendre exécutable puis lancer :
    ```bash
    chmod +x Lucium-<version>-linux-<arch>-beta-unsigned.AppImage
    ./Lucium-<version>-linux-<arch>-beta-unsigned.AppImage
    ```
-4. Si l'AppImage ne se lance pas faute de FUSE : `sudo apt install libfuse2t64` (Ubuntu 24.04 ne l'a pas par défaut ; vérifié en CI).
-   Si elle n'ouvre aucune fenêtre et que la sortie d'erreur dit `error while loading shared libraries: libz.so` : `sudo apt install zlib1g-dev` (vu sur Ubuntu 24.04 arm64 en VM, §11.1).
+4. Depuis la 1.1.9, l'AppImage est empaquetée avec un **runtime statique** : elle ne demande plus `zlib1g-dev` ni, vu en machine virtuelle arm64 avec la 1.1.9, `libfuse2t64`. Si un système affiche malgré tout une erreur de FUSE : `sudo apt install libfuse2t64`. (Les bêtes 1.1.4 à 1.1.7 demandaient `zlib1g-dev`, §11.1.)
 5. **Désinstaller** : supprimer le fichier. Une AppImage ne crée ni entrée de menu ni profil AppArmor.
 
 **Si la boîte « Lucium ne peut pas démarrer » apparaît** (AppImage sous Ubuntu 24.04 et plus récent) : AppArmor restreint les espaces de noms d'utilisateur (`kernel.apparmor_restrict_unprivileged_userns=1`), l'`AppRun` ajoute `--no-sandbox` et Lucium refuse de tourner sans bac à sable (§8.4). Le bac à sable n'est jamais coupé. Deux issues :
@@ -400,20 +418,19 @@ Sans `zenity` ni `kdialog`, la boîte n'existe pas : seule la fenêtre d'Ubuntu 
 
 **Où est le profil sous Linux.** Dossier `Lucium` sous `$XDG_CONFIG_HOME`, soit `~/.config/Lucium` par défaut (convention d'Electron ; **à confirmer** : non relevé sur une machine). Le `.deb` comme l'AppImage le lisent : la mise à jour n'y touche pas, et `apt remove` ne le supprime pas (**supposé**, à confirmer par l'essai de désinstallation).
 
-#### Essais de la 1.1.7 à la main : état
+#### Essais à la main en machine virtuelle : état au 26 novembre 2026
 
-Tous les essais ci-dessous sont **à faire**. Ils sont lancés en machine virtuelle à la main (essais de la bêta 1.1.7) ; **un essai n'est marqué « fait » qu'avec la date, la machine et la source écrites ici par cette carte**, jamais avant. Les essais du 18 novembre 2026 (§8.3, §8.4) portent sur la 1.1.4 et sur la version de travail de la 1.1.5, pas sur la 1.1.7. Les « à faire » d'une machine x64 réelle restent ouverts même si la machine virtuelle est arm64 ou émulée (§8.3).
+Essais faits sur la **1.1.7** (23 novembre 2026, carte de parité) et sur la **1.1.9** (24 novembre 2026, lot 5 : mise à jour par le client, flux local signé par une clé d'essai, jamais la clé de production). **Aucun n'a été fait sur les fichiers de la 1.1.10** (§8.3). Machines : Windows 11 ARM64 (Lucium x64 émulé) et Ubuntu 24.04 arm64, VM sans fenêtre au premier plan. Sources : cartes d'essais, rapports gardés hors dépôt.
 
-| Essai | Windows x64 | Linux x64 `.deb` | Linux x64 AppImage | Linux arm64 `.deb` | Linux arm64 AppImage |
+| Essai | Windows (x64 émulé) | Linux x64 `.deb` | Linux x64 AppImage | Linux arm64 `.deb` | Linux arm64 AppImage |
 |---|---|---|---|---|---|
-| Installation (somme vérifiée avant) | à faire | à faire | à faire | à faire | à faire |
-| Premier lancement | à faire | à faire | à faire | à faire | à faire |
-| « À propos » affiche 1.1.7 | à faire | à faire | à faire | à faire | à faire |
-| Mise à jour de la 1.1.4 par-dessus | à faire | à faire | à faire (remplacer le fichier) | à faire | à faire (remplacer le fichier) |
-| Profil conservé (onglets, espaces, réglages) | à faire | à faire | à faire | à faire | à faire |
-| Désinstallation | à faire | à faire | à faire (suppression du fichier) | à faire | à faire (suppression du fichier) |
+| Installation, premier lancement, « À propos » (1.1.7) | fait, marche (SmartScreen vu) | non essayé (aucune VM x64) | non essayé | fait, marche | fait : ne marche pas sans `zlib1g-dev` (corrigé en 1.1.9, démarre sans) |
+| Mise à jour de la 1.1.4 par-dessus (1.1.7) | fait, marche | non essayé | non essayé | fait, marche | fait, marche (remplacer le fichier) |
+| Profil conservé (onglets, espaces, réglages) | fait, conservé | non essayé | non essayé | fait, conservé | fait, conservé |
+| Désinstallation | fait, le profil reste | non essayé | non essayé | fait, le profil reste | fait (suppression du fichier) |
+| Mise à jour par le client N→N+1 (1.1.9) | fait : deux clics, installeur silencieux, relance seule en ~51 s ; Defender 0 détection, Smart App Control (évaluation) 0 blocage | non essayé | non essayé | non essayé (le client ne fait qu'indiquer la commande) | fait après le correctif de la relance (PR #245) : relance seule en ~1,1 s, copie `.previous` retirée |
 
-Pour une AppImage, « mise à jour par-dessus » veut dire remplacer le fichier : l'essai reste à faire tant que ce remplacement n'a pas été essayé.
+Pour une AppImage, « mise à jour par-dessus » veut dire remplacer le fichier. Une machine x64 réelle, un bureau réel et la première publication d'un flux de production restent à faire.
 
 
 ### 8.6 Les mises à jour de Linux par le flux signé (lot 3, carte 854 ; non essayé sur machine)
@@ -428,7 +445,7 @@ Décision du chef de projet, le 23 novembre 2026 (option A de l'étude de la car
 
 **.deb** (`src/main/update-deb-file.ts`, `offerDebUpdate` dans `src/main/shell/app-update.ts`) : **Lucium n'installe jamais un .deb et ne lance jamais `sudo` ni `pkexec`** (installer un paquet demande root ; une élévation déclenchée par un fichier téléchargé est exactement ce qu'on refuse). La boîte et la notice donnent la version, la taille, le SHA-256 du flux signé et la commande exacte (`sudo apt install ./Lucium-<version>-linux-<amd64|arm64>.deb`). « Télécharger le paquet » (après clic) met le fichier, vérifié par taille et somme dans un dossier privé, dans le dossier Téléchargements de la personne, sous un nom que Lucium fait lui-même ; un fichier de ce nom qui n'est pas le même n'est jamais écrasé. « Copier la commande » la met dans le presse-papiers.
 
-**Non essayé** (AGENTS.md §1 ; l'essai N→N+1 en VM Ubuntu 24.04 est le lot 5) : la relance détachée d'un AppImage réel après la correction (le défaut de la relance par `app.relaunch` a été vu en VM le 24 nov. ; le rejeu N→N+1 avec l'assistant détaché reste à faire), le comportement sur un dossier monté sans droit de renommage, le bureau (GNOME) face à la boîte et à la notice, le téléchargement dans Téléchargements d'un bureau en français (`app.getPath('downloads')`).
+**Non essayé** (AGENTS.md §1 ; l'essai N→N+1 en VM Ubuntu 24.04 est le lot 5) : la relance détachée sur un bureau réel (le défaut de la relance par `app.relaunch` a été vu en VM le 24 nov. ; le rejeu N→N+1 avec l'assistant détaché a réussi en VM le même jour), le comportement sur un dossier monté sans droit de renommage, le bureau (GNOME) face à la boîte et à la notice, le téléchargement dans Téléchargements d'un bureau en français (`app.getPath('downloads')`).
 
 ## 9. Questions ouvertes
 
@@ -493,14 +510,14 @@ L'option existe dans Electron (`titleBarOverlay` est documenté pour `win32,linu
 
 ## 11. Problèmes connus de la bêta (Windows et Linux)
 
-État au 23 novembre 2026, d'après les essais manuels en machine virtuelle de la 1.1.7 (Windows 11 ARM64 avec Lucium x64 émulé ; Ubuntu 24.04 arm64). Ce qui est écrit ici est ce qui a été vu, pas ce qui est supposé : les « à confirmer » restent ouverts.
+État au 26 novembre 2026, d'après les essais manuels en machine virtuelle de la 1.1.7 et de la 1.1.9 (Windows 11 ARM64 avec Lucium x64 émulé ; Ubuntu 24.04 arm64). Ce qui est écrit ici est ce qui a été vu, pas ce qui est supposé : les « à confirmer » restent ouverts.
 
-### 11.1 AppImage : prérequis `zlib1g-dev` sur Ubuntu 24.04
+### 11.1 AppImage : prérequis `zlib1g-dev` sur Ubuntu 24.04 (corrigé en 1.1.9)
 
-- **Constat** : sur un Ubuntu 24.04 neuf sans le paquet `zlib1g-dev`, l'AppImage (1.1.4 comme 1.1.7) n'ouvre aucune fenêtre. Seule la sortie d'erreur dit `error while loading shared libraries: libz.so`.
-- **Contournement vu en VM** : `sudo apt install zlib1g-dev`. L'AppImage passe alors à l'étape suivante : la boîte « Lucium ne peut pas démarrer » du §8.4 (AppArmor), puis, avec `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (jusqu'au redémarrage), elle démarre. Le `.deb` s'est installé et lancé sans ce paquet (vu en VM arm64).
-- **À confirmer** : sur Linux x64 (non essayé : la VM est arm64) ; le paquet exact qui apporte `libz.so` n'est pas établi, `zlib1g-dev` est celui qui a résolu l'erreur.
-- **Corrigé ou documenté** : documenté ici (cette section et §8.5) ; la page Télécharger le dira une fois la PR du site fusionnée. Aucune AppImage sans cette dépendance n'est fournie.
+- **Constat (1.1.4 et 1.1.7)** : sur un Ubuntu 24.04 neuf sans le paquet `zlib1g-dev`, l'AppImage n'ouvrait aucune fenêtre ; seule la sortie d'erreur disait `error while loading shared libraries: libz.so`.
+- **Corrigé** : PR #243 (1.1.9), l'AppImage est empaquetée avec un runtime statique. Vu en VM (Ubuntu 24.04 arm64, 1.1.9) : sans `zlib1g-dev` ni `libfuse2t64`, plus d'erreur `libz.so` ; la boîte « Lucium ne peut pas démarrer » du §8.4 s'affiche quand les espaces de noms sont restreints, et avec `sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0` (jusqu'au redémarrage) elle démarre. Dans les fichiers de la 1.1.10 (x64 et arm64), l'ELF de l'AppImage n'a aucun `DT_NEEDED` (lu, non lancé).
+- **À confirmer** : le démarrage de l'AppImage **x64** sur une machine (non essayé : la VM est arm64) et celui des fichiers de la 1.1.10 eux-mêmes.
+- **Autres constats corrigés dans la 1.1.10** : la relance de l'AppImage après une mise à jour (« Installer et relancer » fermait Lucium sans le rouvrir, PR #245), et l'installeur de 134 Mo qui restait dans le dossier temporaire de Windows après une mise à jour (retiré au lancement suivant).
 
 ### 11.2 Windows : avertissement SmartScreen
 
@@ -508,9 +525,9 @@ L'installeur n'est pas signé. SmartScreen affiche « Windows a protégé votre 
 
 Aucune signature n'est promise ici : elle dépend de la question 8 du §9 (titulaire et voie non choisis). Dans la VM, le bouton « Exécuter quand même » n'a pas répondu au clavier (la souris ne fonctionnait pas non plus) : l'installeur a été lancé autrement ; ce n'est pas établi comme un défaut de Lucium.
 
-### 11.3 `.deb` : rapport d'Ubuntu après un `kill -TERM`
+### 11.3 `.deb` : rapport d'Ubuntu après un `kill -TERM` (cause trouvée, pas un défaut de Lucium)
 
-Un `kill -TERM` sur Lucium installé par le `.deb` (1.1.7) a produit un rapport d'Ubuntu (SIGTRAP, `/var/crash/_opt_Lucium_lucium.1000.crash`). La fermeture par Ctrl+Q n'en a produit aucun (trois essais). **Connu, cause inconnue** : le code suit le même chemin pour les deux (`app.quit()` après sauvegarde) et un SIGTRAP est un contrôle interne de Chromium, illisible sans le fichier. Rien n'a été changé à l'aveugle. **Demandé** : si l'arrêt est rejoué, joindre `/var/crash/_opt_Lucium_lucium.*.crash` pour lire les symboles.
+Un `kill -TERM` sur Lucium installé par le `.deb` (1.1.7) avait produit un rapport d'Ubuntu (SIGTRAP, `/var/crash/_opt_Lucium_lucium.1000.crash`). Rejoué le 24 novembre 2026 sur la 1.1.9 avec les symboles officiels d'Electron 45.2.1 : le processus principal appelle `IntentionallyCrashBrowserForUnusableGpuProcess` (« GPU process isn't usable. Goodbye. »), un plantage voulu de Chromium quand le processus GPU est mort trois fois. `pkill -TERM -x lucium` tue aussi les processus auxiliaires (zygotes) et y mène (3 fois sur 3) ; Ctrl+Q, le menu et un SIGTERM sur le seul processus principal n'en produisent aucun. Rien à corriger dans la fermeture de Lucium. Pour arrêter Lucium à la main sous Linux : le menu, ou le seul processus principal, jamais `pkill -x lucium`.
 
 ### 11.4 Ce qui n'a pas été essayé
 
