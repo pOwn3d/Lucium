@@ -9,7 +9,7 @@ import { isListedTab, type SidebarState, type TabItem, type TabRuntime } from '.
 import { containerOfTab } from './containers'
 import { profileOfSpace } from './profiles'
 import { placeFromWindow, type DropTarget, type Placement, type WindowTab } from './dnd'
-import { windowsAreIndependent } from './window-tabs'
+import { MAIN_WINDOW_KEY, onlyTabsOf, windowsAreIndependent } from './window-tabs'
 
 /** A window taking part in a move. */
 export interface TransferWindow {
@@ -99,4 +99,15 @@ export function decideTransfer(request: TransferRequest): TransferDecision {
     placement,
     select: unique[0]!.id
   }
+}
+
+/**
+ * Whether the window the tabs left closes once a move is done. Only after a move that landed: a refused or failed one changes nothing, and a window is
+ * never closed on a tab that may not have arrived. The window must list no tab at all (windows with tabs of their own: the pinned ones are everybody's, so
+ * a window that still shows one stays); the main window is never closed this way, it is the one the application lives in (macOS puts it away, elsewhere
+ * closing it quits), and it stays open, empty.
+ */
+export function leavesWindowEmpty(result: 'moved' | 'refused' | 'failed', shared: SidebarState, fromKey: string): boolean {
+  if (result !== 'moved' || fromKey === MAIN_WINDOW_KEY) return false
+  return !onlyTabsOf(shared, fromKey).tabs.some(isListedTab)
 }

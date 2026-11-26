@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { SidebarState } from './model'
 import { createInitialState, reduce, type Action, type Ctx } from './sidebar'
 import { project, selectionOf, blankSelection } from './window-selection'
-import { changesSession, decideTransfer, tabIsLive, type TransferOrder, type TransferRequest } from './tab-transfer'
+import { changesSession, decideTransfer, leavesWindowEmpty, tabIsLive, type TransferOrder, type TransferRequest } from './tab-transfer'
 import type { DropTarget } from './dnd'
 
 let counter = 0
@@ -202,5 +202,53 @@ describe('windows with tabs of their own', () => {
     expect(out.spaceId).toBe(comm)
     expect(out.respace).toEqual([id('w2')])
     expect(work).not.toBe(comm)
+  })
+})
+
+describe('the window the tabs leave', () => {
+  // Windows with tabs of their own: "window-1" owns w1 and w2, "main" owns the rest.
+  const own = (extra: { independent?: boolean } = { independent: true }) => {
+    const w = setup(extra)
+    const owned = { ...w.s, tabs: w.s.tabs.map((t) => (t.spaceId === w.work ? { ...t, windowKey: 'window-1' } : t)) }
+    // Nothing pinned but w1 (the setup pins b too): a pinned tab is listed by every window.
+    return { ...w, owned: { ...owned, tabs: owned.tabs.map((t) => (t.id === w.id('b') ? { ...t, pinned: false } : t)) } }
+  }
+  /** The shared state after the tabs `ids` went to `key`. */
+  const given = (state: SidebarState, ids: string[], key: string): SidebarState => ({ ...state, tabs: state.tabs.map((t) => (ids.includes(t.id) ? { ...t, windowKey: key } : t)) })
+
+  it('closes when the move took its last tab', () => {
+    const { owned, id } = own()
+    // w1 is pinned (shared by every window): the only tab left to window-1 is w2, unpinned first.
+    const state = given({ ...owned, tabs: owned.tabs.map((t) => (t.id === id('w1') ? { ...t, pinned: false } : t)) }, [id('w1'), id('w2')], 'main')
+    expect(leavesWindowEmpty('moved', state, 'window-1')).toBe(true)
+  })
+
+  it('stays open while it keeps a tab, and when the dragged tabs are only some of its own', () => {
+    const { owned, id } = own()
+    const unpinned = { ...owned, tabs: owned.tabs.map((t) => (t.id === id('w1') ? { ...t, pinned: false } : t)) }
+    expect(leavesWindowEmpty('moved', given(unpinned, [id('w2')], 'main'), 'window-1')).toBe(false)
+  })
+
+  it('stays open on a pinned tab: pinned tabs are everybody\'s, the window still lists it', () => {
+    const { owned, id } = own()
+    expect(leavesWindowEmpty('moved', given(owned, [id('w2')], 'main'), 'window-1')).toBe(false)
+  })
+
+  it('never closes after a refused or a failed move: no tab is lost', () => {
+    const { owned, id } = own()
+    const empty = given({ ...owned, tabs: owned.tabs.map((t) => (t.id === id('w1') ? { ...t, pinned: false } : t)) }, [id('w1'), id('w2')], 'main')
+    expect(leavesWindowEmpty('refused', empty, 'window-1')).toBe(false)
+    expect(leavesWindowEmpty('failed', empty, 'window-1')).toBe(false)
+  })
+
+  it('never closes the main window, even left empty', () => {
+    const { owned } = own()
+    const state = { ...owned, tabs: owned.tabs.map((t) => ({ ...t, windowKey: 'window-1', pinned: false })) }
+    expect(leavesWindowEmpty('moved', state, 'main')).toBe(false)
+  })
+
+  it('stays open when every window lists the same tabs (the setting off): nothing leaves it', () => {
+    const { s } = setup()
+    expect(leavesWindowEmpty('moved', s, 'window-1')).toBe(false)
   })
 })

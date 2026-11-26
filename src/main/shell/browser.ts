@@ -31,7 +31,7 @@ import { showSystemNotice } from './system-notice'
 import { batterySaver } from './battery-saver'
 import { scrollBarsOfSnapshot, systemScrollBars } from './system-scroll-bars'
 import { runTransfer, type TransferResult, type TransferSide } from './tab-transfer'
-import { tabIsLive } from '@shared/tab-transfer'
+import { leavesWindowEmpty, tabIsLive } from '@shared/tab-transfer'
 import { NEW_WINDOW, windowMoveRefusal, type WindowChoice } from '@shared/window-move'
 import { sendToWindow } from './window-move'
 import { PageWatcher } from './page-watch'
@@ -668,6 +668,9 @@ export class Browser extends BrowserLayout {
       for (const id of ids) this.carriedHistory.delete(id)
       // A drop does not bring a window to the front: the tabs that landed here are the ones the user works with now (the keys go to the window in front).
       if (result === 'moved' && !this.win.isDestroyed()) this.win.focus()
+      // The window the last tab left has nothing to show and would keep its old page: it closes (never after a refused or failed move, never the main window).
+      // Next tick: the drag that started in that window is still ending.
+      if (leavesWindowEmpty(result, this.store.root().get(), source.windowKey())) setImmediate(() => !source.win.isDestroyed() && source.win.close())
     }
     this.publish()
   }
