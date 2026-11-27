@@ -176,6 +176,7 @@ src/shared/        Logique pure, sans Electron, 100 % testée
   proxy.ts           proxy HTTP / SOCKS : adresse validée (sans identifiant), réglage global ou par profil, ce qu'on demande à `session.setProxy`
   cookies.ts         « Cookies par site » : regroupement par site (jamais la valeur), liste « garder toujours », cookies à nettoyer
   site-zoom.ts       zoom mémorisé par site (paliers de Chromium)
+  unread-sites.ts   « Compteur de messages » par site : liste d'hôtes (`siteUnreadOff`), nettoyage, ajout, sous-domaines suivis
   panel-scale.ts     taille des fenêtres et des panneaux, par écran : clé d'un écran (nom + taille + densité, jamais l'`id` d'Electron), choix retenus (`Settings.panelSizes`, bornés et nettoyés), taille « Automatique » d'après l'écran, facteur borné à la fenêtre, panneaux concernés (`PANEL_PLACEMENT`), taille des fenêtres à part, règle de la notice, aperçu
   reader.ts          mode lecture : validation de l'article extrait, document sans script (CSP) qui l'affiche ; reader-sanitize.ts nettoie le HTML de l'article avant qu'il y entre (liste d'éléments et d'attributs autorisés, passe unique)
   web-tools.ts       les outils web (sept interrupteurs, tous désactivés par défaut) : relecture des réglages ; qr.ts (encodeur QR maison, versions 1 à 10, niveau M), page-tools.ts (scripts dans les pages : canal par la console signé d'un secret par page), autoscroll.ts, gestures.ts, scroll-sync.ts, read-aloud.ts, page-watch.ts (règles des pages surveillées), battery-saver.ts

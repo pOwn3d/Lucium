@@ -8,6 +8,7 @@ import { normalizeSleepHost, setSiteExcluded } from './sleep'
 import { setJavascriptOff } from './site-javascript'
 import { normalizeBlockHost, setBlockingExempt, withSiteBlockMode } from './blocker'
 import { withSiteAutoplay } from './autoplay'
+import { withSiteUnreadOff } from './unread-sites'
 import { withSiteReadable } from './readable-mode'
 import { setClearedOnClose } from './site-clear'
 import { CUSTOM_LISTS_MAX, cleanCustomFilterLists, withCustomListEnabled } from './custom-filter-lists'
@@ -21,7 +22,7 @@ import { USAGE_KEY_PREFIX, fromPrivateTab, onlyPrivateTabsOn } from './sidebar-h
 import { USAGE_KEY_MAX, usageAfterPick, usageWithPageBack, usageWithoutPages } from './command-bar-usage'
 import { activeTab } from './sidebar-selectors'
 
-/** The actions on the settings and what is decided per site (blocking, sleep, autoplay, readable mode, permissions, filter lists, Tweaks, the side panel) (settings/, blocking/, sleep/, autoplay/, readable/, siteclear/, extension/, developer/, permission/, filterlist/, boost/, commandbar/, sidepanel/); undefined for the others. */
+/** The actions on the settings and what is decided per site (blocking, sleep, autoplay, readable mode, permissions, filter lists, Tweaks, the side panel) (settings/, blocking/, sleep/, autoplay/, unread/, readable/, siteclear/, extension/, developer/, permission/, filterlist/, boost/, commandbar/, sidepanel/); undefined for the others. */
 export function reduceSettings(state: SidebarState, action: Action, ctx: Ctx): SidebarState | undefined {
   switch (action.type) {
     case 'sleep/exclude-site': {
@@ -51,6 +52,13 @@ export function reduceSettings(state: SidebarState, action: Action, ctx: Ctx): S
       // the key. A file that holds a choice keeps the key on, so that the version that reads it again applies the choice it was told to make.
       const perSite = Object.keys(next).length > 0 ? true : state.settings.autoplayPerSite
       return JSON.stringify(next) === JSON.stringify(before) && perSite === state.settings.autoplayPerSite ? state : { ...state, settings: { ...state.settings, siteAutoplay: next, autoplayPerSite: perSite } }
+    }
+    case 'unread/site': {
+      if (fromPrivateTab(state, action.tabId)) return state
+      const before = state.settings.siteUnreadOff
+      // Only a real true hides the count (the interface is not trusted); anything else puts the site back.
+      const next = withSiteUnreadOff(before, action.site, action.off === true)
+      return next.length === before.length && next.every((host, i) => host === before[i]) ? state : { ...state, settings: { ...state.settings, siteUnreadOff: next } }
     }
     case 'javascript/site': {
       if (fromPrivateTab(state, action.tabId)) return state

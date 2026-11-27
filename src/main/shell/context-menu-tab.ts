@@ -20,6 +20,8 @@ import { NEW_WINDOW } from '@shared/window-move'
 import { branchOf, childrenOf } from '@shared/tab-tree'
 import { clearHostOfUrl, isClearedOnClose } from '@shared/site-clear'
 import { isSiteExcluded } from '@shared/sleep'
+import { isUnreadOff } from '@shared/unread-sites'
+import { autoplayHostOf } from '@shared/autoplay'
 import { hostnameOf } from '@shared/url'
 import { t } from '@shared/i18n'
 import { workViewSaveRefusal } from '@shared/work-views'
@@ -138,6 +140,7 @@ export function tabMenuItems(target: Extract<MenuTarget, { kind: 'tab' }>, brows
   const erasedAtClose = state.settings.siteDataClearOnCloseEnabled && isClearedOnClose(state.settings.siteDataClearOnClose, tab.url)
   // The shortcuts shown at the right of an entry are the user's own (Réglages › Raccourcis). A shortcut acts on the tab on screen, so it is shown only on
   // the entries of that tab: on another tab's menu it would promise something else than what the entry does.
+  const unreadOff = isUnreadOff(state.settings.siteUnreadOff, tab.url)
   const onScreen = activeTab(state)?.id === tab.id
   const key = (id: string): Pick<Item, 'accelerator' | 'registerAccelerator'> => {
     const accelerator = onScreen ? effectiveAccelerator(id, state.settings.keyBindings) : undefined
@@ -234,7 +237,11 @@ export function tabMenuItems(target: Extract<MenuTarget, { kind: 'tab' }>, brows
         // "Mute" is greyed out for a page that makes no sound.
         entry('mute', { label: muted ? t('ctx.reactiver-le-son') : t('ctx.couper-le-son'), enabled: awake && (muted || info?.audible === true), ...key('muteTab'), click: () => browser.toggleMute(tab.id) }),
         ...captureMenuItems(info?.capturedBy, () => browser.stopTabCapture(tab.id)),
-        entry('reload', autoReloadMenuItem(tab, browser, isPlusAnchor(target.anchor) ? target.anchor : undefined))
+        entry('reload', autoReloadMenuItem(tab, browser, isPlusAnchor(target.anchor) ? target.anchor : undefined)),
+        // The unread count of the site, as the site panel offers it (same action): a private tab or window keeps no site list, and a page without a web host has no site.
+        ...(browser.isPrivate() || tab.private === true || autoplayHostOf(tab.url) === null
+          ? []
+          : ([{ label: t('ctx.masquer-le-compteur-de-messages-de-ce-site'), type: 'checkbox', checked: unreadOff, click: act({ type: 'unread/site', site: tab.url, off: !unreadOff, tabId: tab.id }) }] satisfies Item[]))
       ]),
       block(t('ctx.bloc-organiser'), [
         entry('pin', { label: tab.pinned ? t('ctx.desepingler') : t('ctx.epingler'), ...key('pin'), click: act({ type: tab.pinned ? 'tab/unpin' : 'tab/pin', id: tab.id }) }),

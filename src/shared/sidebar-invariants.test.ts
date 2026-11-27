@@ -274,6 +274,7 @@ const GENERATORS: Generators = {
   'autoplay/site': (g) => ({ type: 'autoplay/site', site: g.pick(['a.example', 'b.example']), mode: g.pick(['allow', 'block', null] as const), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
   'readable/site': (g) => ({ type: 'readable/site', site: g.pick(['a.example', 'b.example']), mode: g.pick(['original', 'dark', 'light', null] as const), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
   'javascript/site': (g) => ({ type: 'javascript/site', site: g.pick(['a.example', 'b.example']), off: g.chance(0.5), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
+  'unread/site': (g) => ({ type: 'unread/site', site: g.pick(['a.example', 'b.example']), off: g.chance(0.5), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
   'siteclear/site': (g) => ({ type: 'siteclear/site', site: g.pick(['a.example', 'b.example']), on: g.chance(0.5), ...(g.chance(0.5) ? { tabId: g.tabId() } : {}) }),
   'filterlist/add': (g) => {
     const id = `custom-${g.int(4).toString(16).padStart(8, '0')}`
@@ -837,7 +838,7 @@ const EVERYDAY: Array<Action['type']> = [
   'split/create', 'split/create', 'split/create', 'split/remove', 'split/move', 'split/ratios', 'split/orientation', 'split/orientation', 'split/restore', 'split/layout', 'split/layout', 'split/grid', 'split/grid',
   'archive/restore', 'archive/restore-last', 'archive/sweep', 'tab/tree-collapse', 'tab/tree-detach', 'settings/update', 'tab/back-to-origin', 'import/merge', 'import/revert',
   'container/create', 'container/update', 'container/rule', 'container/permission', 'container/delete', 'tab/set-container', 'space/panel-add', 'space/panel-remove', 'bookmark/add', 'bookmark/tag-rename', 'bookmark/tag-delete', 'bookmark/edit', 'readlater/add', 'readlater/move', 'readlater-folder/create', 'readlater-folder/collapse', 'tabs/reset-pinned', 'tab/back-to-anchor', 'tab/separate', 'tab/replace-anchor', 'livefolder/result', 'livefolder/refresh', 'livefolder/edit', 'livefolder/edit', 'livefolder/create', 'filterlist/add', 'filterlist/enable', 'filterlist/remove', 'favicon/fill', 'tab/forget-origin',
-  'session/save', 'session/restore', 'space/reopen', 'livefolder/create',
+  'session/save', 'session/restore', 'space/reopen', 'livefolder/create', 'permission/forget-visits', 'archive/forget-pages',
   'view/save', 'view/save', 'view/open', 'view/open', 'view/edit', 'view/capture', 'view/capture', 'view/reset', 'view/move', 'view/remove', 'view/restore', 'view/create',
   'sync/apply', 'sync/apply', 'sync/apply'
 ]

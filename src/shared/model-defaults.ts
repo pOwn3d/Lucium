@@ -253,6 +253,7 @@ export function defaultSettings(): Settings {
     autoplayPolicy: 'block',
     spellCheck: 'auto',
     siteAutoplay: {},
+    siteUnreadOff: [],
     autoplayPerSite: true,
     siteDataClearOnCloseEnabled: false,
     siteDataClearOnClose: [],
