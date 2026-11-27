@@ -60,7 +60,7 @@
     "koffi": "3.3.8",
     "react": "19.3.1",
     "react-dom": "19.3.1",
-    "tldts": "7.5.4"
+    "tldts": "7.5.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.65.1",
