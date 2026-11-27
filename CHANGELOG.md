@@ -10,6 +10,10 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ## [Unreleased]
 
+## [1.1.11] - 2026-11-27
+
+This version adds a switch to hide the unread count of a site, fixes the window that stayed on screen when its last tab was dragged out, and updates the development and build tools.
+
 ### Added
 
 - **Message count per site**: a “Message count” row in the site panel hides the unread count and the mark on the tabs of that site, for sites whose title gives it wrongly. Other sites keep it; one click brings it back. The same switch is in the right-click menu of a tab, under Customize.

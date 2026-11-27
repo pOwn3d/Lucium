@@ -4,6 +4,10 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ## [Unreleased]
 
+## [1.1.11] - 2026-11-27
+
+Cette version ajoute un réglage pour masquer le compteur de messages d’un site, corrige la fenêtre qui restait à l’écran quand on en sortait le dernier onglet, et met à jour les outils de développement et de construction.
+
 ### Ajouts
 
 - **Compteur de messages par site** : une ligne « Compteur de messages » dans le panneau du site masque le nombre de non-lus et la marque sur les onglets de ce site, quand son titre les donne mal. Les autres sites le gardent ; un clic le rétablit. La même case est dans le menu du clic droit d’un onglet, section Personnaliser.
