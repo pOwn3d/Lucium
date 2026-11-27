@@ -6,7 +6,7 @@ Les changements visibles de Lucium, en français. C'est ce texte que la feuille 
 
 ### Ajouts
 
-- **Compteur de messages par site** : une ligne « Compteur de messages » dans le panneau du site masque le nombre de non-lus et la marque sur les onglets de ce site, quand son titre les donne mal. Les autres sites le gardent ; un clic le rétablit.
+- **Compteur de messages par site** : une ligne « Compteur de messages » dans le panneau du site masque le nombre de non-lus et la marque sur les onglets de ce site, quand son titre les donne mal. Les autres sites le gardent ; un clic le rétablit. La même case est dans le menu du clic droit d’un onglet, section Personnaliser.
 
 ### Corrections
 

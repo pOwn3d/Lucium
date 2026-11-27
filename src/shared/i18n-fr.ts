@@ -1013,6 +1013,7 @@ export const fr = {
   'ctx.fermer-l-onglet': 'Fermer l’onglet',
   'ctx.fermer-les-autres-onglets-du-jour': 'Fermer les autres onglets du jour',
   'ctx.garder-tous-les-onglets-de-ce-site-eveilles': 'Garder tous les onglets de ce site éveillés',
+  'ctx.masquer-le-compteur-de-messages-de-ce-site': 'Masquer le compteur de messages de ce site',
   'ctx.garder-un-onglet-de-ce-site-eveille': 'Garder un onglet de ce site éveillé',
   'ctx.geler-garde-la-page-en-memoire': 'Geler (garde la page en mémoire)',
   'ctx.impossible-de-copier-dans-le-presse-papiers': 'Impossible de copier dans le presse-papiers.',

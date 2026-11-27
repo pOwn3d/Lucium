@@ -1009,6 +1009,7 @@ export const en: Record<MessageKey, string> = {
   'ctx.fermer-l-onglet': 'Close Tab',
   'ctx.fermer-les-autres-onglets-du-jour': 'Close Other Today Tabs',
   'ctx.garder-tous-les-onglets-de-ce-site-eveilles': 'Keep Every Tab of This Site Awake',
+  'ctx.masquer-le-compteur-de-messages-de-ce-site': 'Hide the Message Count of This Site',
   'ctx.garder-un-onglet-de-ce-site-eveille': 'Keep One Tab of This Site Awake',
   'ctx.geler-garde-la-page-en-memoire': 'Freeze (keeps the page in memory)',
   'ctx.impossible-de-copier-dans-le-presse-papiers': 'Couldn’t copy to the clipboard.',

@@ -12,7 +12,7 @@ The “Nouveautés” sheet of the application shows the section of its version,
 
 ### Added
 
-- **Message count per site**: a “Message count” row in the site panel hides the unread count and the mark on the tabs of that site, for sites whose title gives it wrongly. Other sites keep it; one click brings it back.
+- **Message count per site**: a “Message count” row in the site panel hides the unread count and the mark on the tabs of that site, for sites whose title gives it wrongly. Other sites keep it; one click brings it back. The same switch is in the right-click menu of a tab, under Personnaliser.
 
 ### Fixed
 
