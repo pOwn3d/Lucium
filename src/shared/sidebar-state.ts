@@ -42,6 +42,7 @@ import { cleanMinimumFontSize } from './min-font-size'
 import { cleanPanelSizes } from './panel-scale'
 import { cleanSiteZoom } from './site-zoom'
 import { cleanAutoplayPolicy, cleanSiteAutoplay } from './autoplay'
+import { cleanSiteUnreadOff } from './unread-sites'
 import { cleanSpellCheck } from './spell-check'
 import { cleanClearOnClose } from './site-clear'
 import { cleanClearAllKeep } from './clear-all'
@@ -413,6 +414,7 @@ export function clampSettings(input: Settings): Settings {
     autoplayPolicy: cleanAutoplayPolicy(settings.autoplayPolicy),
     spellCheck: cleanSpellCheck(settings.spellCheck),
     siteAutoplay: cleanSiteAutoplay(settings.siteAutoplay),
+    siteUnreadOff: cleanSiteUnreadOff(settings.siteUnreadOff),
     autoplayPerSite: settings.autoplayPerSite !== false,
     siteDataClearOnCloseEnabled: settings.siteDataClearOnCloseEnabled === true,
     siteDataClearOnClose: cleanClearOnClose(settings.siteDataClearOnClose),
