@@ -17,7 +17,7 @@ const shell = methodsOf(Browser.prototype)
 
 /** A window whose tab `t1` has a live page, on screen or not, at rest: loaded, silent, no unread count. */
 function pageHost(own: Record<string, unknown> = {}) {
-  const state = { tabs: [{ id: 't1', url: 'https://mail.example/', title: 'Mail', spaceId: 's', pinned: false, createdAt: 1, lastActiveAt: 1 }], settings: { tabStateBadges: false } }
+  const state = { tabs: [{ id: 't1', url: 'https://mail.example/', title: 'Mail', spaceId: 's', pinned: false, createdAt: 1, lastActiveAt: 1 }], settings: { tabStateBadges: false, siteUnreadOff: [] as string[] } }
   const fields = {
     runtime: { canGoBack: false, canGoForward: false, tabs: { t1: { loading: false, audible: false, muted: false, awake: true } } },
     store: { get: () => state, dispatch: vi.fn() },
@@ -34,6 +34,10 @@ function pageHost(own: Record<string, unknown> = {}) {
     publish: vi.fn(),
     refreshPageColor: vi.fn(async () => undefined),
     handlePageUpdate: shell['handlePageUpdate'],
+    readTitleUnread: shell['readTitleUnread'],
+    shownUnread: shell['shownUnread'],
+    refreshAllUnread: shell['refreshAllUnread'],
+    refreshUnread: shell['refreshUnread'],
     leader: { backgroundEvents: 0 },
     ...own
   }
@@ -226,7 +230,7 @@ describe('the unread messages of a tab follow its titles, and do not blink with 
   /** A window with a Slack tab `t1` (off screen by default, in a window not in front) whose unread memory is the real one, wired as the window wires it. */
   function slackHost(over: { visible?: Set<string>; focused?: boolean } = {}) {
     vi.useFakeTimers({ now: 5_000_000 })
-    const state = { tabs: [{ id: 't1', url: 'https://app.slack.com/client/T1/D1', title: 'Loic', spaceId: 's', pinned: false, createdAt: 1, lastActiveAt: 1 }], settings: { tabStateBadges: false } }
+    const state = { tabs: [{ id: 't1', url: 'https://app.slack.com/client/T1/D1', title: 'Loic', spaceId: 's', pinned: false, createdAt: 1, lastActiveAt: 1 }], settings: { tabStateBadges: false, siteUnreadOff: [] as string[] } }
     const visible = over.visible ?? new Set<string>()
     const host = pageHost({ visible, store: { get: () => state, dispatch: vi.fn() }, win: { isDestroyed: () => false, isFocused: () => over.focused === true }, refreshUnread: shell['refreshUnread'] })
     const unread = new UnreadWatch({
@@ -236,8 +240,43 @@ describe('the unread messages of a tab follow its titles, and do not blink with 
     })
     host.fields.unread = unread as never
     const entry = () => (host.fields.runtime as { tabs: Record<string, { unread?: number; unreadMark?: string }> }).tabs['t1']!
-    return { ...host, entry, unread }
+    return { ...host, entry, unread, state }
   }
+
+  // A site whose count is turned off: its row shows neither the count nor the mark, whatever its title says; the others keep them.
+  it('shows no count and no mark for a site whose count is turned off, and keeps showing them for another site', () => {
+    const off = slackHost()
+    off.state.settings.siteUnreadOff = ['slack.com']
+    off.update({ title: '(2) Loic - Slack' })
+    off.update({ title: '! Loic - Slack' })
+    expect(off.entry().unread).toBeUndefined()
+    expect(off.entry().unreadMark).toBeUndefined()
+    expect(off.unread.current('t1')).toBeUndefined()
+    // A neighbouring site that is not on the list (a list entry is a domain, not a prefix of a host) is read as before.
+    const kept = slackHost()
+    kept.state.settings.siteUnreadOff = ['lack.com', 'other.example']
+    kept.update({ title: '(2) Loic - Slack' })
+    expect(kept.entry().unread).toBe(2)
+    // The global switch of the badges does not decide it.
+    expect(kept.state.settings.tabStateBadges).toBe(false)
+  })
+
+  it('takes the count already on screen away when the site is turned off, and shows the next title again once it is turned back on', () => {
+    const { update, entry, state, fields } = slackHost()
+    update({ title: '(2) Loic - Slack' })
+    expect(entry().unread).toBe(2)
+    state.settings.siteUnreadOff = ['app.slack.com']
+    fields.publish.mockClear()
+    shell['refreshAllUnread']!.call(fakeBrowser(fields).self)
+    expect(entry().unread).toBeUndefined()
+    expect(fields.publish).toHaveBeenCalledTimes(1)
+    state.settings.siteUnreadOff = []
+    // Nothing comes back by itself (the memory was dropped), the next title says it.
+    shell['refreshAllUnread']!.call(fakeBrowser(fields).self)
+    expect(entry().unread).toBeUndefined()
+    update({ title: '(3) Loic - Slack' })
+    expect(entry().unread).toBe(3)
+  })
 
   it('shows the count a Slack title says, and the mark of a title that has none', () => {
     const { update, entry } = slackHost()

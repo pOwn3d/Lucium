@@ -122,7 +122,7 @@ const BEFORE: Record<string, string[]> = {
     'Archiver les autres onglets', 'Archiver les onglets en dessous', 'Archiver les onglets au-dessus', 'Épingler', 'Ajouter aux favoris',
     'Déplacer vers le haut', 'Déplacer vers le bas', 'Déplacer vers l’espace', '  🎨 Autre', 'Déplacer vers la fenêtre', '  Nouvelle fenêtre', 'Retirer de la vue scindée', 'Empiler les volets (vertical)', 'Enregistrer comme vue de travail…', 'Ajouter un onglet à la vue scindée',
     '  d.example.org', '  a.example.org', '  child.example.org', 'Recharger automatiquement', '  Désactivé', frenchSpaces('  5 s'), frenchSpaces('  10 s'), frenchSpaces('  30 s'), frenchSpaces('  1 min'), frenchSpaces('  2 min'),
-    frenchSpaces('  5 min'), frenchSpaces('  10 min'), '  Personnalisé…', 'Mettre en veille', 'Geler (garde la page en mémoire)', 'Ne jamais mettre cet onglet en veille',
+    frenchSpaces('  5 min'), frenchSpaces('  10 min'), '  Personnalisé…', 'Masquer le compteur de messages de ce site', 'Mettre en veille', 'Geler (garde la page en mémoire)', 'Ne jamais mettre cet onglet en veille',
     'Garder un onglet de ce site éveillé', 'Effacer les données du site à la fermeture', 'Lire plus tard', 'Me le rappeler', '  Ce soir', '  Demain matin', '  Dans une semaine', 'Ouvrir dans un conteneur', '  Travail',
     '  Sans conteneur', 'Toujours ouvrir b.example.org dans', '  Travail', '  Aucun conteneur (retirer la règle)', 'Ajouter aux signets',
     'Ouvrir comme application', 'Fermer l’onglet', 'Fermer les autres onglets du jour'
@@ -131,7 +131,7 @@ const BEFORE: Record<string, string[]> = {
     'Copier le lien', 'Partager', 'Changer l’icône…', 'Renommer…', 'Couper le son', 'Ajouter une vue scindée', 'Dupliquer', 'Archiver l’onglet',
     'Archiver les autres onglets', 'Archiver les onglets en dessous', 'Replier les onglets enfants', 'Archiver l’onglet et ses onglets enfants', 'Épingler',
     'Ajouter aux favoris', 'Déplacer vers le haut', 'Déplacer vers le bas', 'Déplacer vers l’espace', '  🎨 Autre', 'Déplacer vers la fenêtre', '  Nouvelle fenêtre', 'Vue scindée avec…', '  d.example.org', '  child.example.org', 'Recharger automatiquement',
-    '  Désactivé', frenchSpaces('  5 s'), frenchSpaces('  10 s'), frenchSpaces('  30 s'), frenchSpaces('  1 min'), frenchSpaces('  2 min'), frenchSpaces('  5 min'), frenchSpaces('  10 min'), '  Personnalisé…', 'Mettre en veille',
+    '  Désactivé', frenchSpaces('  5 s'), frenchSpaces('  10 s'), frenchSpaces('  30 s'), frenchSpaces('  1 min'), frenchSpaces('  2 min'), frenchSpaces('  5 min'), frenchSpaces('  10 min'), '  Personnalisé…', 'Masquer le compteur de messages de ce site', 'Mettre en veille',
     'Geler (garde la page en mémoire)', 'Ne jamais mettre cet onglet en veille', 'Garder un onglet de ce site éveillé',
     'Effacer les données du site à la fermeture', 'Lire plus tard', 'Me le rappeler', '  Ce soir', '  Demain matin', '  Dans une semaine', 'Ouvrir dans un conteneur', '  Travail', '  Sans conteneur',
     'Toujours ouvrir a.example.org dans', '  Travail', '  Aucun conteneur (retirer la règle)', 'Ajouter aux signets', 'Ouvrir comme application',
@@ -141,7 +141,7 @@ const BEFORE: Record<string, string[]> = {
     'Copier le lien', 'Partager', 'Changer l’icône…', 'Renommer…', 'Couper le son', 'Ajouter une vue scindée', 'Dupliquer', 'Archiver l’onglet',
     'Archiver les autres onglets', 'Archiver les onglets en dessous', 'Archiver les onglets au-dessus', 'Sortir l’onglet de son parent', 'Épingler',
     'Ajouter aux favoris', 'Déplacer vers le haut', 'Déplacer vers le bas', 'Déplacer vers l’espace', '  🎨 Autre', 'Déplacer vers la fenêtre', '  Nouvelle fenêtre', 'Vue scindée avec…', '  d.example.org', '  a.example.org', 'Recharger automatiquement',
-    '  Désactivé', frenchSpaces('  5 s'), frenchSpaces('  10 s'), frenchSpaces('  30 s'), frenchSpaces('  1 min'), frenchSpaces('  2 min'), frenchSpaces('  5 min'), frenchSpaces('  10 min'), '  Personnalisé…', 'Mettre en veille',
+    '  Désactivé', frenchSpaces('  5 s'), frenchSpaces('  10 s'), frenchSpaces('  30 s'), frenchSpaces('  1 min'), frenchSpaces('  2 min'), frenchSpaces('  5 min'), frenchSpaces('  10 min'), '  Personnalisé…', 'Masquer le compteur de messages de ce site', 'Mettre en veille',
     'Geler (garde la page en mémoire)', 'Ne jamais mettre cet onglet en veille', 'Garder un onglet de ce site éveillé',
     'Effacer les données du site à la fermeture', 'Lire plus tard', 'Me le rappeler', '  Ce soir', '  Demain matin', '  Dans une semaine', 'Ouvrir dans un conteneur', '  Travail', '  Sans conteneur',
     'Toujours ouvrir child.example.org dans', '  Travail', '  Aucun conteneur (retirer la règle)', 'Ajouter aux signets', 'Ouvrir comme application',
@@ -151,7 +151,7 @@ const BEFORE: Record<string, string[]> = {
     'Copier le lien', 'Partager', 'Changer l’icône…', 'Renommer…', 'Couper le son', 'Ajouter une vue scindée', 'Dupliquer', 'Mettre en veille', 'Désépingler',
     'Revenir à l’adresse épinglée', 'Remplacer l’adresse épinglée par la page actuelle', 'Séparer de l’onglet épinglé', 'Ajouter aux favoris',
     'Déplacer vers le haut', 'Déplacer vers le bas', 'Déplacer vers l’espace', '  🎨 Autre', 'Déplacer vers la fenêtre', '  Nouvelle fenêtre', 'Vue scindée avec…', '  a.example.org', '  child.example.org', 'Recharger automatiquement', '  Désactivé', frenchSpaces('  5 s'),
-    frenchSpaces('  10 s'), frenchSpaces('  30 s'), frenchSpaces('  1 min'), frenchSpaces('  2 min'), frenchSpaces('  5 min'), frenchSpaces('  10 min'), '  Personnalisé…', 'Geler (garde la page en mémoire)',
+    frenchSpaces('  10 s'), frenchSpaces('  30 s'), frenchSpaces('  1 min'), frenchSpaces('  2 min'), frenchSpaces('  5 min'), frenchSpaces('  10 min'), '  Personnalisé…', 'Masquer le compteur de messages de ce site', 'Geler (garde la page en mémoire)',
     'Ne jamais mettre cet onglet en veille', 'Garder un onglet de ce site éveillé', 'Effacer les données du site à la fermeture', 'Lire plus tard', 'Me le rappeler', '  Ce soir', '  Demain matin', '  Dans une semaine',
     'Ouvrir dans un conteneur', '  Travail', '  Sans conteneur', 'Toujours ouvrir d.example.org dans', '  Travail', '  Aucun conteneur (retirer la règle)',
     'Ajouter aux signets', 'Ouvrir comme application', 'Fermer l’onglet', 'Fermer les autres onglets du jour'
@@ -239,6 +239,28 @@ describe('the blocks', () => {
     const { items } = menu({ kind: 'tab', id: f.a }, f.state)
     expect(flat(blockOf(items, 'Veille'))).toEqual(['Mettre en veille', 'Geler (garde la page en mémoire)', 'Ne jamais mettre cet onglet en veille', 'Garder un onglet de ce site éveillé'])
     expect(flat(blockOf(items, 'Archiver et fermer')).slice(-2)).toEqual(['Fermer l’onglet', 'Fermer les autres onglets du jour'])
+  })
+
+  it('offers the message count of the site in Personnaliser, checked once the site is on the list, and sends the same action as the site panel', () => {
+    const LABEL = 'Masquer le compteur de messages de ce site'
+    const shown = menu({ kind: 'tab', id: f.a }, f.state)
+    const row = find(blockOf(shown.items, 'Personnaliser'), LABEL)
+    expect(row.type).toBe('checkbox')
+    expect(row.checked).toBe(false)
+    press(row)
+    expect(shown.dispatched).toEqual([{ type: 'unread/site', site: 'https://a.example.org/', off: true, tabId: f.a }])
+    const hidden = menu({ kind: 'tab', id: f.a }, run(f.state, { type: 'unread/site', site: 'https://a.example.org/', off: true }))
+    const back = find(blockOf(hidden.items, 'Personnaliser'), LABEL)
+    expect(back.checked).toBe(true)
+    press(back)
+    expect(hidden.dispatched).toEqual([{ type: 'unread/site', site: 'https://a.example.org/', off: false, tabId: f.a }])
+  })
+
+  it('has no message-count entry for a private tab', () => {
+    const state = run(f.state, { type: 'tab/open', url: 'https://p.example.org/', private: true })
+    const tab = state.tabs.find((x) => x.url === 'https://p.example.org/')!
+    expect(tab.private).toBe(true)
+    expect(flat(blockOf(menu({ kind: 'tab', id: tab.id }, state).items, 'Personnaliser'))).not.toContain('Masquer le compteur de messages de ce site')
   })
 
   it('names what the list of sites keeps awake: one tab of the site, or every one when Réglages keeps them all', () => {

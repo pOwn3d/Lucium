@@ -391,6 +391,8 @@ export interface Settings {
   spellCheck: SpellCheckChoice
   /** Autoplay for one site (host without "www.", its subdomains too): a site not listed follows `autoplayPolicy`. */
   siteAutoplay: Record<string, AutoplayMode>
+  /** Sites whose tabs show no unread count and no mark (host without "www.", its subdomains too); the other sites keep them. Kept per site, no global switch (see unread-sites.ts). */
+  siteUnreadOff: string[]
   /**
    * Deprecated, read by nothing: it was « Un réglage pour chaque site », a switch that turned off the per-site choices of autoplay and their row in the
    * site panel. The choices of the sites always apply now; the key stays so that an older state file loads and keeps it.

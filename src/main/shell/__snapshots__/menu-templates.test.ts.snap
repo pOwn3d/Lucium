@@ -337,6 +337,7 @@ exports[`the context menus of the sidebar, as built > of a tab in a private wind
   - checked=false label="10 min" type="radio" click
   - type="separator"
   - checked=false label="Personnalisé…" type="radio" click
+- checked=false label="Masquer le compteur de messages de ce site" type="checkbox" click
 - label="Organiser" type="header"
 - accelerator="CmdOrCtrl+D" label="Épingler" registerAccelerator=false icon=pin(template) click
 - label="Ajouter aux favoris" icon=star(template) click
@@ -392,6 +393,7 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - checked=false label="10 min" type="radio" click
   - type="separator"
   - checked=false label="Personnalisé…" type="radio" click
+- checked=false label="Masquer le compteur de messages de ce site" type="checkbox" click
 - label="Organiser" type="header"
 - accelerator="CmdOrCtrl+D" label="Épingler" registerAccelerator=false icon=pin(template) click
 - label="Ajouter aux favoris" icon=star(template) click
@@ -458,6 +460,7 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - checked=false label="10 min" type="radio" click
   - type="separator"
   - checked=false label="Personnalisé…" type="radio" click
+- checked=false label="Masquer le compteur de messages de ce site" type="checkbox" click
 - type="separator"
 - label="Épingler" icon=pin(template) click
 - label="Ajouter aux favoris" icon=star(template) click
@@ -525,6 +528,7 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - checked=false label="10 min" type="radio" click
   - type="separator"
   - checked=false label="Personnalisé…" type="radio" click
+- checked=false label="Masquer le compteur de messages de ce site" type="checkbox" click
 - label="Organiser" type="header"
 - label="Désépingler" icon=pin(template) click
 - label="Revenir à l’adresse épinglée" icon=reload(template) click
@@ -594,6 +598,7 @@ exports[`the context menus of the sidebar, as built > of a tab: on screen with a
   - checked=false label="10 min" type="radio" click
   - type="separator"
   - checked=false label="Personnalisé…" type="radio" click
+- checked=false label="Masquer le compteur de messages de ce site" type="checkbox" click
 - label="Organiser" type="header"
 - label="Épingler" icon=pin(template) click
 - label="Ajouter aux favoris" icon=star(template) click
