@@ -45,9 +45,9 @@ react-dom 19.3.1 | MIT | https://github.com/react/react
 resolve-protobuf-schema 2.1.0 | MIT | https://github.com/mafintosh/resolve-protobuf-schema
 scheduler 0.28.0 | MIT | https://github.com/react/react
 supports-color 7.2.0 | MIT | https://github.com/chalk/supports-color
-tldts 7.5.4 | MIT | https://github.com/remusao/tldts
+tldts 7.5.5 | MIT | https://github.com/remusao/tldts
 tldts-core 7.4.22 | MIT | https://github.com/remusao/tldts
-tldts-core 7.5.4 | MIT | https://github.com/remusao/tldts
+tldts-core 7.5.5 | MIT | https://github.com/remusao/tldts
 tldts-experimental 7.4.22 | MIT | https://github.com/remusao/tldts
 
 Prebuilt binaries, one package per system and processor. A build carries the one of the system it is made
@@ -1529,7 +1529,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
 ====================================================================================================
-MIT: tldts 7.5.4, tldts-core 7.4.22, tldts-core 7.5.4, tldts-experimental 7.4.22
+MIT: tldts 7.5.5, tldts-core 7.4.22, tldts-core 7.5.5, tldts-experimental 7.4.22
 (LICENSE)
 ====================================================================================================
 
