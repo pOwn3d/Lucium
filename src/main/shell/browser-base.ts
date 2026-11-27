@@ -756,6 +756,7 @@ export abstract class BrowserBase {
   protected abstract publish(): void
   protected abstract publishHere(): void
   protected abstract refreshUnread(id: string): void
+  abstract refreshAllUnread(): void
   protected abstract sendMissedSnapshot(): void
   protected abstract requestFilter(): RequestBlocker | null
   abstract showToast(message: string, action?: { label: string; run: () => void; second?: { label: string; run: () => void } }, durationMs?: number, more?: ToastMore): void

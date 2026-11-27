@@ -194,6 +194,8 @@ export abstract class BrowserActions extends BrowserNetwork {
     // JavaScript was switched for a site: the response hook follows the list, and the pages of that site (every tab on it, here) load again, since
     // the policy comes with the answer of the server and a page already loaded keeps the scripts it runs.
     if (action.type === 'javascript/site' && this.store.get().settings.siteJavascriptOff !== state.settings.siteJavascriptOff) this.javascriptChanged(action)
+    // The count of a site was turned off (or back on): the row of every tab of the site, in every window, drops the count it shows now, or takes the next title.
+    if (action.type === 'unread/site' && this.store.get().settings.siteUnreadOff !== state.settings.siteUnreadOff) for (const browser of this.group) browser.refreshAllUnread()
     // A site's readable mode changed (from its panel, the menu or the command bar): the pages of that site, in every window, are looked at again.
     if (action.type === 'readable/site' && this.store.get().settings.siteReadableMode !== state.settings.siteReadableMode) this.refreshDark()
     // A restored session opens its pages in the background: the notice says how many came back (the command bar has no other feedback).
